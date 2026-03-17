@@ -47,6 +47,12 @@ const routes: RouteRecordRaw[] = [
     component: () => import("./views/SettingsView.vue"),
     meta: { title: "設定" },
   },
+  {
+    path: "/licenses",
+    name: "licenses",
+    component: () => import("./views/LicensesView.vue"),
+    meta: { title: "OSSライセンス" },
+  },
 ];
 
 const router = createRouter({

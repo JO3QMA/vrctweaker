@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
+    "licenses:generate": "license-checker --json --out src/data/licenses.json",
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -32,6 +33,7 @@
     "@typescript-eslint/parser": "^7.18.0",
     "eslint": "^8.57.0",
     "eslint-plugin-vue": "^9.25.0",
+    "license-checker": "^25.0.1",
     "vue-eslint-parser": "^9.4.3"
   }
 }

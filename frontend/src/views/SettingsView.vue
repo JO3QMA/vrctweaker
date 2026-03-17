@@ -188,6 +188,18 @@
       </p>
     </section>
     <section class="settings-section">
+      <h2>OSS ライセンス</h2>
+      <p class="hint">
+        本アプリケーションで使用しているオープンソースソフトウェアのライセンス一覧を確認できます。
+      </p>
+      <router-link
+        to="/licenses"
+        class="btn-licenses"
+      >
+        OSS ライセンス一覧を表示
+      </router-link>
+    </section>
+    <section class="settings-section">
       <h2>DBメンテナンス</h2>
       <p
         class="hint"
@@ -555,6 +567,21 @@ function doClearFriendsCache() {
   font-size: 0.9rem;
   color: var(--error, #ef4444);
   margin: 0;
+}
+
+.btn-licenses {
+  display: inline-block;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: var(--bg-primary);
+  border-radius: var(--radius);
+  text-decoration: none;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+}
+.btn-licenses:hover {
+  opacity: 0.9;
 }
 
 /* DB Maintenance */
