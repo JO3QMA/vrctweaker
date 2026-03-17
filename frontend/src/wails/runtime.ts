@@ -2,17 +2,17 @@
 // When running in Wails, these are injected by the runtime
 
 export interface WailsRuntime {
-  WindowMinimise?: () => void
-  WindowToggleMaximise?: () => void
-  Quit?: () => void
+  WindowMinimise?: () => void;
+  WindowToggleMaximise?: () => void;
+  Quit?: () => void;
 }
 
 declare global {
   interface Window {
-    runtime?: WailsRuntime
+    runtime?: WailsRuntime;
   }
 }
 
 export function getRuntime(): WailsRuntime | undefined {
-  return typeof window !== 'undefined' ? window.runtime : undefined
+  return typeof window !== "undefined" ? window.runtime : undefined;
 }

@@ -1,8 +1,6 @@
 <template>
   <div class="friends-view">
-    <h1 class="page-title">
-      フレンド
-    </h1>
+    <h1 class="page-title">フレンド</h1>
     <div class="friends-header">
       <div class="tabs">
         <button
@@ -24,16 +22,15 @@
         type="button"
         class="btn-refresh"
         :disabled="!isLoggedIn || refreshLoading"
-        :title="isLoggedIn ? 'フレンド一覧をAPIから再取得' : 'ログインが必要です'"
+        :title="
+          isLoggedIn ? 'フレンド一覧をAPIから再取得' : 'ログインが必要です'
+        "
         @click="doRefresh"
       >
-        {{ refreshLoading ? '更新中...' : '更新' }}
+        {{ refreshLoading ? "更新中..." : "更新" }}
       </button>
     </div>
-    <p
-      v-if="!isLoggedIn"
-      class="hint"
-    >
+    <p v-if="!isLoggedIn" class="hint">
       フレンド一覧の更新にはログインが必要です。設定画面でログインしてください。
     </p>
     <div class="friends-section">
@@ -46,7 +43,7 @@
           @click="selected = f"
         >
           <span class="friend-name">{{ f.displayName }}</span>
-          <span class="friend-status">{{ f.status || '—' }}</span>
+          <span class="friend-status">{{ f.status || "—" }}</span>
           <button
             type="button"
             class="btn-favorite"
@@ -61,26 +58,27 @@
           v-if="filteredFriends.length === 0 && !loading"
           class="empty-message"
         >
-          {{ activeTab === 'online' ? 'オンラインのフレンドはいません' : 'オフラインのフレンドはいません' }}
+          {{
+            activeTab === "online"
+              ? "オンラインのフレンドはいません"
+              : "オフラインのフレンドはいません"
+          }}
         </p>
       </div>
-      <div
-        v-if="selected"
-        class="friend-detail"
-      >
+      <div v-if="selected" class="friend-detail">
         <h3>詳細</h3>
         <dl class="detail-list">
           <dt>表示名</dt>
           <dd>{{ selected.displayName }}</dd>
           <dt>ステータス</dt>
-          <dd>{{ selected.status || '—' }}</dd>
+          <dd>{{ selected.status || "—" }}</dd>
         </dl>
         <label class="favorite-toggle">
           <input
             v-model="selected.isFavorite"
             type="checkbox"
             @change="applyFavorite(selected)"
-          >
+          />
           お気に入り
         </label>
       </div>
@@ -89,58 +87,59 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { App } from '../wails/app'
-import type { FriendCacheDTO } from '../wails/app'
+import { ref, computed, onMounted } from "vue";
+import { App } from "../wails/app";
+import type { FriendCacheDTO } from "../wails/app";
 
-const activeTab = ref<'online' | 'offline'>('online')
-const friends = ref<FriendCacheDTO[]>([])
-const selected = ref<FriendCacheDTO | null>(null)
-const isLoggedIn = ref(false)
-const loading = ref(true)
-const refreshLoading = ref(false)
+const activeTab = ref<"online" | "offline">("online");
+const friends = ref<FriendCacheDTO[]>([]);
+const selected = ref<FriendCacheDTO | null>(null);
+const isLoggedIn = ref(false);
+const loading = ref(true);
+const refreshLoading = ref(false);
 
 const filteredFriends = computed(() => {
-  const list = friends.value
-  const isOffline = (s: string) => !s || s.toLowerCase() === 'offline'
-  if (activeTab.value === 'online') {
-    return list.filter((f) => !isOffline(f.status))
+  const list = friends.value;
+  const isOffline = (s: string) => !s || s.toLowerCase() === "offline";
+  if (activeTab.value === "online") {
+    return list.filter((f) => !isOffline(f.status));
   }
-  return list.filter((f) => isOffline(f.status))
-})
+  return list.filter((f) => isOffline(f.status));
+});
 
 onMounted(async () => {
-  await loadFriends()
-  isLoggedIn.value = await App.isLoggedIn()
-})
+  await loadFriends();
+  isLoggedIn.value = await App.isLoggedIn();
+});
 
 async function loadFriends() {
-  loading.value = true
+  loading.value = true;
   try {
-    friends.value = await App.friends()
+    friends.value = await App.friends();
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 async function doRefresh() {
-  if (!isLoggedIn.value) return
-  refreshLoading.value = true
+  if (!isLoggedIn.value) return;
+  refreshLoading.value = true;
   try {
-    await App.refreshFriends()
-    await loadFriends()
+    await App.refreshFriends();
+    await loadFriends();
     selected.value =
-      friends.value.find((f) => f.vrcUserId === selected.value?.vrcUserId) ?? null
+      friends.value.find((f) => f.vrcUserId === selected.value?.vrcUserId) ??
+      null;
   } finally {
-    refreshLoading.value = false
+    refreshLoading.value = false;
   }
 }
 
 async function toggleFavorite(f: FriendCacheDTO) {
-  const next = !f.isFavorite
+  const next = !f.isFavorite;
   try {
-    await App.setFavorite(f.vrcUserId, next)
-    f.isFavorite = next
+    await App.setFavorite(f.vrcUserId, next);
+    f.isFavorite = next;
   } catch {
     // 失敗時は変化なし（一覧の星ボタンではまだ反映していない）
   }
@@ -148,9 +147,9 @@ async function toggleFavorite(f: FriendCacheDTO) {
 
 async function applyFavorite(f: FriendCacheDTO) {
   try {
-    await App.setFavorite(f.vrcUserId, f.isFavorite)
+    await App.setFavorite(f.vrcUserId, f.isFavorite);
   } catch {
-    f.isFavorite = !f.isFavorite
+    f.isFavorite = !f.isFavorite;
   }
 }
 </script>

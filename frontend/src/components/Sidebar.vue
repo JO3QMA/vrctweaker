@@ -1,25 +1,15 @@
 <template>
   <nav class="sidebar">
     <ul class="sidebar-menu">
-      <li
-        v-for="item in menuItems"
-        :key="item.path"
-      >
-        <router-link
-          :to="item.path"
-          class="sidebar-link"
-          active-class="active"
-        >
+      <li v-for="item in menuItems" :key="item.path">
+        <router-link :to="item.path" class="sidebar-link" active-class="active">
           <span class="sidebar-icon">{{ item.icon }}</span>
           <span class="sidebar-label">{{ item.label }}</span>
         </router-link>
       </li>
     </ul>
     <div class="sidebar-footer">
-      <router-link
-        to="/settings"
-        class="sidebar-link settings-link"
-      >
+      <router-link to="/settings" class="sidebar-link settings-link">
         <span class="sidebar-icon">⚙️</span>
         <span class="sidebar-label">設定</span>
       </router-link>
@@ -29,13 +19,13 @@
 
 <script setup lang="ts">
 const menuItems = [
-  { path: '/', icon: '🏠', label: 'ダッシュボード' },
-  { path: '/launcher', icon: '🚀', label: 'ランチャー' },
-  { path: '/gallery', icon: '🖼️', label: 'ギャラリー' },
-  { path: '/activity', icon: '📊', label: 'アクティビティ' },
-  { path: '/friends', icon: '👥', label: 'フレンド' },
-  { path: '/automation', icon: '🤖', label: 'オートメーション' },
-]
+  { path: "/", icon: "🏠", label: "ダッシュボード" },
+  { path: "/launcher", icon: "🚀", label: "ランチャー" },
+  { path: "/gallery", icon: "🖼️", label: "ギャラリー" },
+  { path: "/activity", icon: "📊", label: "アクティビティ" },
+  { path: "/friends", icon: "👥", label: "フレンド" },
+  { path: "/automation", icon: "🤖", label: "オートメーション" },
+];
 </script>
 
 <style scoped>
@@ -59,7 +49,9 @@ const menuItems = [
   gap: 0.75rem;
   padding: 0.6rem 1rem;
   color: var(--text-secondary);
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .sidebar-link:hover,

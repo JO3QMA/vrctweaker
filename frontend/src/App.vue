@@ -5,10 +5,7 @@
       <Sidebar />
       <main class="main-content">
         <router-view v-slot="{ Component }">
-          <transition
-            name="fade"
-            mode="out-in"
-          >
+          <transition name="fade" mode="out-in">
             <component :is="Component" />
           </transition>
         </router-view>
@@ -18,8 +15,8 @@
 </template>
 
 <script setup lang="ts">
-import TitleBar from './components/TitleBar.vue'
-import Sidebar from './components/Sidebar.vue'
+import TitleBar from "./components/TitleBar.vue";
+import Sidebar from "./components/Sidebar.vue";
 </script>
 
 <style scoped>

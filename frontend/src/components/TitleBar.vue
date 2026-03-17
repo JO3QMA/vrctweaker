@@ -1,48 +1,27 @@
 <template>
-  <div
-    class="title-bar"
-    style="--wails-draggable: drag"
-  >
+  <div class="title-bar" style="--wails-draggable: drag">
     <span class="title-bar-text">VRChat Tweaker</span>
-    <div
-      class="title-bar-actions"
-      style="--wails-draggable: no-drag"
-    >
-      <button
-        class="title-bar-btn"
-        @click="minimize"
-      >
-        −
-      </button>
-      <button
-        class="title-bar-btn"
-        @click="maximize"
-      >
-        □
-      </button>
-      <button
-        class="title-bar-btn close"
-        @click="close"
-      >
-        ×
-      </button>
+    <div class="title-bar-actions" style="--wails-draggable: no-drag">
+      <button class="title-bar-btn" @click="minimize">−</button>
+      <button class="title-bar-btn" @click="maximize">□</button>
+      <button class="title-bar-btn close" @click="close">×</button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { getRuntime } from '../wails/runtime'
+import { getRuntime } from "../wails/runtime";
 
 function minimize() {
-  getRuntime()?.WindowMinimise?.()
+  getRuntime()?.WindowMinimise?.();
 }
 
 function maximize() {
-  getRuntime()?.WindowToggleMaximise?.()
+  getRuntime()?.WindowToggleMaximise?.();
 }
 
 function close() {
-  getRuntime()?.Quit?.()
+  getRuntime()?.Quit?.();
 }
 </script>
 
@@ -77,7 +56,9 @@ function close() {
   color: var(--text-secondary);
   font-size: 16px;
   line-height: 1;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .title-bar-btn:hover {
