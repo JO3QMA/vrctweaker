@@ -85,13 +85,17 @@
           :key="enc.id"
           class="timeline-item"
         >
-          <span class="timeline-time">{{ formatEncounteredAt(enc.encounteredAt) }}</span>
+          <span class="timeline-time">{{
+            formatEncounteredAt(enc.encounteredAt)
+          }}</span>
           <span class="timeline-name">{{ enc.displayName }}</span>
           <span
             class="timeline-action"
             :class="enc.action"
-          >{{ actionLabel(enc.action) }}</span>
-          <span class="timeline-instance">{{ enc.instanceId || '—' }}</span>
+          >{{
+            actionLabel(enc.action)
+          }}</span>
+          <span class="timeline-instance">{{ enc.instanceId || "—" }}</span>
         </li>
       </ul>
     </section>
@@ -99,95 +103,99 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { App, type UserEncounterDTO, type ActivityStatsDTO } from '../wails/app'
+import { ref, computed, onMounted } from "vue";
+import {
+  App,
+  type UserEncounterDTO,
+  type ActivityStatsDTO,
+} from "../wails/app";
 
-const encounters = ref<UserEncounterDTO[]>([])
-const encountersLoading = ref(false)
-const displayNameFilter = ref('')
+const encounters = ref<UserEncounterDTO[]>([]);
+const encountersLoading = ref(false);
+const displayNameFilter = ref("");
 
-const stats = ref<ActivityStatsDTO>({ dailyPlaySeconds: [], topWorlds: [] })
-const statsLoading = ref(false)
+const stats = ref<ActivityStatsDTO>({ dailyPlaySeconds: [], topWorlds: [] });
+const statsLoading = ref(false);
 
 const maxBarSeconds = computed(() => {
-  const daily = stats.value.dailyPlaySeconds
-  if (daily.length === 0) return 1
-  return Math.max(...daily.map((d) => d.seconds), 1)
-})
+  const daily = stats.value.dailyPlaySeconds;
+  if (daily.length === 0) return 1;
+  return Math.max(...daily.map((d) => d.seconds), 1);
+});
 
 const filteredEncounters = computed(() => {
-  const list = encounters.value
-  const q = displayNameFilter.value.trim().toLowerCase()
-  if (!q) return list
-  return list.filter((e) => e.displayName.toLowerCase().includes(q))
-})
+  const list = encounters.value;
+  const q = displayNameFilter.value.trim().toLowerCase();
+  if (!q) return list;
+  return list.filter((e) => e.displayName.toLowerCase().includes(q));
+});
 
 function formatDateShort(dateStr: string): string {
   try {
-    const d = new Date(dateStr + 'T12:00:00Z')
-    const m = d.getMonth() + 1
-    const day = d.getDate()
-    return `${m}/${day}`
+    const d = new Date(dateStr + "T12:00:00Z");
+    const m = d.getMonth() + 1;
+    const day = d.getDate();
+    return `${m}/${day}`;
   } catch {
-    return dateStr
+    return dateStr;
   }
 }
 
 function formatSeconds(seconds: number): string {
-  if (seconds < 60) return `${seconds}秒`
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  if (s === 0) return `${m}分`
-  return `${m}分${s}秒`
+  if (seconds < 60) return `${seconds}秒`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  if (s === 0) return `${m}分`;
+  return `${m}分${s}秒`;
 }
 
 function barWidthPercent(day: { date: string; seconds: number }): number {
-  const max = maxBarSeconds.value
-  return Math.min(100, (day.seconds / max) * 100)
+  const max = maxBarSeconds.value;
+  return Math.min(100, (day.seconds / max) * 100);
 }
 
 function formatEncounteredAt(iso: string): string {
   try {
-    const d = new Date(iso)
-    return d.toLocaleString('ja-JP')
+    const d = new Date(iso);
+    return d.toLocaleString("ja-JP");
   } catch {
-    return iso
+    return iso;
   }
 }
 
 function actionLabel(action: string): string {
-  if (action === 'join') return '参加'
-  if (action === 'leave') return '退出'
-  return action
+  if (action === "join") return "参加";
+  if (action === "leave") return "退出";
+  return action;
 }
 
 async function loadEncounters(): Promise<void> {
-  encountersLoading.value = true
+  encountersLoading.value = true;
   try {
-    encounters.value = await App.encounters()
+    encounters.value = await App.encounters();
   } finally {
-    encountersLoading.value = false
+    encountersLoading.value = false;
   }
 }
 
 async function loadStats(): Promise<void> {
-  statsLoading.value = true
+  statsLoading.value = true;
   try {
-    const to = new Date()
-    const from = new Date()
-    from.setDate(from.getDate() - 6)
-    const fromStr = from.toISOString().slice(0, 10)
-    const toStr = to.toISOString().slice(0, 10)
-    stats.value = await App.getActivityStats(fromStr, toStr)
+    const to = new Date();
+    const from = new Date();
+    from.setDate(from.getDate() - 6);
+    const fromStr = from.toISOString().slice(0, 10);
+    const toStr = to.toISOString().slice(0, 10);
+    stats.value = await App.getActivityStats(fromStr, toStr);
   } finally {
-    statsLoading.value = false
+    statsLoading.value = false;
   }
 }
 
 onMounted(() => {
-  loadEncounters()
-  loadStats()
-})
+  loadEncounters();
+  loadStats();
+});
 </script>
 
 <style scoped>

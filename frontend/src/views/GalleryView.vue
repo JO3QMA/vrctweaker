@@ -65,9 +65,9 @@
         <dt>撮影日時</dt>
         <dd>{{ formatTakenAt(selected.takenAt) }}</dd>
         <dt>ワールド名</dt>
-        <dd>{{ selected.worldName || '—' }}</dd>
+        <dd>{{ selected.worldName || "—" }}</dd>
         <dt>World ID</dt>
-        <dd>{{ selected.worldId || '—' }}</dd>
+        <dd>{{ selected.worldId || "—" }}</dd>
         <dt>ファイルパス</dt>
         <dd class="file-path">
           {{ selected.filePath }}
@@ -92,89 +92,98 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { App, type ScreenshotDTO, type ScreenshotSearchDTO } from '../wails/app'
+import { ref, onMounted, computed } from "vue";
+import {
+  App,
+  type ScreenshotDTO,
+  type ScreenshotSearchDTO,
+} from "../wails/app";
 
-const list = ref<ScreenshotDTO[]>([])
-const selected = ref<ScreenshotDTO | null>(null)
-const loading = ref(false)
-const filterWorldId = ref('')
+const list = ref<ScreenshotDTO[]>([]);
+const selected = ref<ScreenshotDTO | null>(null);
+const loading = ref(false);
+const filterWorldId = ref("");
 
 const joinButtonTitle = computed(() => {
-  if (!selected.value?.worldId || selected.value.worldId.trim() === '') {
-    return 'World ID がありません'
+  if (!selected.value?.worldId || selected.value.worldId.trim() === "") {
+    return "World ID がありません";
   }
-  return 'このワールドへJoin'
-})
+  return "このワールドへJoin";
+});
 
 function pathToFileUrl(path: string): string {
-  const normalized = path.replace(/\\/g, '/')
+  const normalized = path.replace(/\\/g, "/");
   if (normalized.match(/^[a-zA-Z]:/)) {
-    return 'file:///' + normalized
+    return "file:///" + normalized;
   }
-  if (normalized.startsWith('/')) {
-    return 'file://' + normalized
+  if (normalized.startsWith("/")) {
+    return "file://" + normalized;
   }
-  return 'file:///' + normalized
+  return "file:///" + normalized;
 }
 
 function thumbnailSrc(item: ScreenshotDTO): string {
-  return pathToFileUrl(item.filePath)
+  return pathToFileUrl(item.filePath);
 }
 
 function onThumbnailError(e: Event): void {
-  const img = e.target as HTMLImageElement
-  img.src = 'data:image/svg+xml,' + encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90" viewBox="0 0 120 90"><rect fill="#333" width="120" height="90"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12">画像なし</text></svg>',
-  )
+  const img = e.target as HTMLImageElement;
+  img.src =
+    "data:image/svg+xml," +
+    encodeURIComponent(
+      '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90" viewBox="0 0 120 90"><rect fill="#333" width="120" height="90"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12">画像なし</text></svg>',
+    );
 }
 
 function formatTakenAt(takenAt?: string): string {
-  if (!takenAt) return '—'
+  if (!takenAt) return "—";
   try {
-    const d = new Date(takenAt)
-    return d.toLocaleString('ja-JP')
+    const d = new Date(takenAt);
+    return d.toLocaleString("ja-JP");
   } catch {
-    return takenAt
+    return takenAt;
   }
 }
 
 async function load(): Promise<void> {
-  loading.value = true
+  loading.value = true;
   try {
-    const wid = filterWorldId.value.trim()
+    const wid = filterWorldId.value.trim();
     if (wid) {
-      const filter: ScreenshotSearchDTO = { worldId: wid }
-      list.value = await App.searchScreenshots(filter)
+      const filter: ScreenshotSearchDTO = { worldId: wid };
+      list.value = await App.searchScreenshots(filter);
     } else {
-      list.value = await App.screenshots('')
+      list.value = await App.screenshots("");
     }
-    if (selected.value && !list.value.find((s) => s.id === selected.value?.id)) {
-      selected.value = null
+    if (
+      selected.value &&
+      !list.value.find((s) => s.id === selected.value?.id)
+    ) {
+      selected.value = null;
     }
   } finally {
-    loading.value = false
+    loading.value = false;
   }
 }
 
 function select(item: ScreenshotDTO): void {
-  selected.value = item
-  joinError.value = null
+  selected.value = item;
+  joinError.value = null;
 }
 
-const joinError = ref<string | null>(null)
+const joinError = ref<string | null>(null);
 
 async function onJoin(): Promise<void> {
-  if (!selected.value?.worldId || selected.value.worldId.trim() === '') return
-  joinError.value = null
+  if (!selected.value?.worldId || selected.value.worldId.trim() === "") return;
+  joinError.value = null;
   try {
-    await App.joinWorldFromScreenshot(selected.value.id)
+    await App.joinWorldFromScreenshot(selected.value.id);
   } catch (err) {
-    joinError.value = err instanceof Error ? err.message : String(err)
+    joinError.value = err instanceof Error ? err.message : String(err);
   }
 }
 
-onMounted(load)
+onMounted(load);
 </script>
 
 <style scoped>
@@ -238,7 +247,9 @@ onMounted(load)
   overflow: hidden;
   cursor: pointer;
   border: 2px solid transparent;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
 }
 
 .grid-item:hover,

@@ -23,9 +23,9 @@ type ScreenshotRepository interface {
 
 // ScreenshotFilter provides optional filtering for List.
 type ScreenshotFilter struct {
-	WorldID       string
-	FromDate      *time.Time
-	ToDate        *time.Time
-	WorldName     string
+	WorldID        string
+	FromDate       *time.Time
+	ToDate         *time.Time
+	WorldName      string
 	FilePathPrefix string // filters file_path starting with this prefix (for directory-scoped queries)
 }

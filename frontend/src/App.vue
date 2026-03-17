@@ -18,8 +18,8 @@
 </template>
 
 <script setup lang="ts">
-import TitleBar from './components/TitleBar.vue'
-import Sidebar from './components/Sidebar.vue'
+import TitleBar from "./components/TitleBar.vue";
+import Sidebar from "./components/Sidebar.vue";
 </script>
 
 <style scoped>

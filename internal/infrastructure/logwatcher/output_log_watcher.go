@@ -41,9 +41,9 @@ type OutputLogWatcher struct {
 	handler EventHandler
 	logger  Logger
 
-	mu       sync.Mutex
-	status   string // "idle", "running", "stopped"
-	lastErr  error
+	mu        sync.Mutex
+	status    string // "idle", "running", "stopped"
+	lastErr   error
 	lastErrAt time.Time
 }
 
@@ -148,8 +148,8 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 		w.setErr(nil)
 		br := bufio.NewReaderSize(f, readBufferSize)
 
-		readLoop:
-			for {
+	readLoop:
+		for {
 			select {
 			case <-ctx.Done():
 				break readLoop

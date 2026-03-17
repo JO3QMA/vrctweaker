@@ -74,15 +74,15 @@ type sessionPattern struct {
 // Default log patterns. Extensible via table-driven config.
 var (
 	// OnPlayerJoined DisplayName (usr_xxxx) or OnPlayerJoined DisplayName
-	encounterJoinRE = regexp.MustCompile(`(?i)OnPlayerJoined\s+(\S.*?)\s*\((usr_[a-zA-Z0-9_-]+)\)`)
+	encounterJoinRE     = regexp.MustCompile(`(?i)OnPlayerJoined\s+(\S.*?)\s*\((usr_[a-zA-Z0-9_-]+)\)`)
 	encounterJoinNoIDRE = regexp.MustCompile(`(?i)OnPlayerJoined\s+(\S.+?)(?:\s+\(usr_|$)`)
 
 	// OnPlayerLeft DisplayName (usr_xxxx) or OnPlayerLeft DisplayName
-	encounterLeaveRE = regexp.MustCompile(`(?i)OnPlayerLeft\s+(\S.*?)\s*\((usr_[a-zA-Z0-9_-]+)\)`)
+	encounterLeaveRE     = regexp.MustCompile(`(?i)OnPlayerLeft\s+(\S.*?)\s*\((usr_[a-zA-Z0-9_-]+)\)`)
 	encounterLeaveNoIDRE = regexp.MustCompile(`(?i)OnPlayerLeft\s+(\S.+?)(?:\s+\(usr_|$)`)
 
 	// Session: Joining room / Joining or Creating Room / Entering room
-	sessionStartRE = regexp.MustCompile(`(?i)(?:Joining|Entering)\s+(?:or\s+Creating\s+)?(?:room|Room)[\s:]*([a-zA-Z0-9_-]+(?::[a-zA-Z0-9_-]+)?)?`)
+	sessionStartRE     = regexp.MustCompile(`(?i)(?:Joining|Entering)\s+(?:or\s+Creating\s+)?(?:room|Room)[\s:]*([a-zA-Z0-9_-]+(?::[a-zA-Z0-9_-]+)?)?`)
 	sessionStartWrldRE = regexp.MustCompile(`(?i)Joining\s+(wrld_[a-zA-Z0-9_-]+:[a-zA-Z0-9]+)`)
 
 	// Session end

@@ -1,0 +1,33 @@
+---
+description: TDD ワークフロー - テスト駆動開発と検証ループ。コード変更時は必ず適用。
+globs: "**/*.go, **/*.ts, **/*.vue"
+alwaysApply: true
+---
+
+# TDD ワークフロー
+
+コードの変更を行う際、以下の原則に従う。
+
+## テスト駆動開発（TDD）
+
+1. **テストを先に記述する**
+   - 実装前に、期待する振る舞いをテストで定義する
+   - 失敗するテスト（Red）を書く → 実装する（Green） → リファクタリング（Refactor）
+
+2. **単体テストは必ず作成する**
+   - 新規の関数・メソッド・コンポーネントには対応するテストを必ず追加する
+   - Go: `*_test.go` を同パッケージに配置
+   - Vue/TS: `*.spec.ts` または `*.test.ts` を対応するディレクトリに配置
+
+## 実装完了時の検証ループ
+
+実装が終わったら以下を**必ず実行**する：
+
+1. **fmt（フォーマット）**: `make fmt` または `go fmt ./...` と `cd frontend && pnpm run format`
+2. **テスト**: `make test` または `go test -v -race -cover ./internal/...` と `cd frontend && pnpm run test`
+3. **Linter**: `make lint` または `golangci-lint run ./...` と `cd frontend && pnpm run lint && pnpm exec vue-tsc --noEmit`
+
+**エラーが発生した場合**:
+- 原因を特定し修正する
+- 修正後、再度 **1→2→3** を実行する
+- 全てパスするまで繰り返す

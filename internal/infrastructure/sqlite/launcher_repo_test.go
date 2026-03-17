@@ -19,8 +19,8 @@ func TestLauncherProfileRepository_CRUD(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if err := migrate(db); err != nil {
-		t.Fatal(err)
+	if migrateErr := migrate(db); migrateErr != nil {
+		t.Fatal(migrateErr)
 	}
 	repo := NewLauncherProfileRepository(db)
 	ctx := context.Background()
@@ -31,8 +31,8 @@ func TestLauncherProfileRepository_CRUD(t *testing.T) {
 		Arguments: "--no-vr",
 		IsDefault: true,
 	}
-	if err := repo.Save(ctx, p); err != nil {
-		t.Fatal(err)
+	if saveErr := repo.Save(ctx, p); saveErr != nil {
+		t.Fatal(saveErr)
 	}
 
 	list, err := repo.List(ctx)

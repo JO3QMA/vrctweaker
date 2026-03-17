@@ -8,5 +8,5 @@ type AutomationRule struct {
 	ConditionJSON string // JSON parameters for the trigger
 	ActionType    string // e.g., change_status
 	ActionPayload string // JSON parameters for the action
-	IsEnabled    bool
+	IsEnabled     bool
 }

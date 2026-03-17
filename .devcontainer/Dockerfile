@@ -15,14 +15,14 @@ RUN apt-get update \
     mingw-w64 \
   && rm -rf /var/lib/apt/lists/*
 
-# Node.js (LTS v20+) + pnpm (via Corepack)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-  && apt-get update \
-  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nodejs \
-  && rm -rf /var/lib/apt/lists/* \
-  && corepack enable \
-  && corepack prepare pnpm@latest --activate
+# Wails は webkit2gtk-4.0 を参照するが、Debian Bookworm+ では 4.1 のみ提供されるため互換用シンボリックリンクを作成
+RUN arch=$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || echo "x86_64-linux-gnu") \
+  && ln -sf /usr/include/webkitgtk-4.1 /usr/include/webkitgtk-4.0 \
+  && ln -sf /usr/lib/${arch}/pkgconfig/webkit2gtk-4.1.pc /usr/lib/${arch}/pkgconfig/webkit2gtk-4.0.pc
 
 # Wails CLI (global install)
 RUN go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+# golangci-lint (used in CI)
+RUN go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 

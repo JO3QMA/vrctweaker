@@ -21,8 +21,8 @@ func TestMaintenance_ClearEncounters_Integration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if err := migrate(db); err != nil {
-		t.Fatal(err)
+	if migrateErr := migrate(db); migrateErr != nil {
+		t.Fatal(migrateErr)
 	}
 
 	encounterRepo := NewUserEncounterRepository(db)
@@ -37,8 +37,8 @@ func TestMaintenance_ClearEncounters_Integration(t *testing.T) {
 		InstanceID:    "inst_yyy",
 		EncounteredAt: time.Now().UTC(),
 	}
-	if err := encounterRepo.Save(ctx, e); err != nil {
-		t.Fatal(err)
+	if saveErr := encounterRepo.Save(ctx, e); saveErr != nil {
+		t.Fatal(saveErr)
 	}
 
 	list, err := encounterRepo.List(ctx, nil)
@@ -74,21 +74,21 @@ func TestMaintenance_ClearScreenshots_Integration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if err := migrate(db); err != nil {
-		t.Fatal(err)
+	if migrateErr := migrate(db); migrateErr != nil {
+		t.Fatal(migrateErr)
 	}
 
 	screenshotRepo := NewScreenshotRepository(db)
 	ctx := context.Background()
 
 	s := &media.Screenshot{
-		ID:       "scr-1",
-		FilePath: "/path/to/screenshot.png",
-		WorldID:  "wrld_xxx",
+		ID:        "scr-1",
+		FilePath:  "/path/to/screenshot.png",
+		WorldID:   "wrld_xxx",
 		WorldName: "Test World",
 	}
-	if err := screenshotRepo.Save(ctx, s); err != nil {
-		t.Fatal(err)
+	if saveErr := screenshotRepo.Save(ctx, s); saveErr != nil {
+		t.Fatal(saveErr)
 	}
 
 	list, err := screenshotRepo.List(ctx, nil)
@@ -124,8 +124,8 @@ func TestMaintenance_ClearFriendsCache_Integration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if err := migrate(db); err != nil {
-		t.Fatal(err)
+	if migrateErr := migrate(db); migrateErr != nil {
+		t.Fatal(migrateErr)
 	}
 
 	friendRepo := NewFriendCacheRepository(db)
@@ -138,8 +138,8 @@ func TestMaintenance_ClearFriendsCache_Integration(t *testing.T) {
 		IsFavorite:  false,
 		LastUpdated: time.Now().UTC(),
 	}
-	if err := friendRepo.Save(ctx, f); err != nil {
-		t.Fatal(err)
+	if saveErr := friendRepo.Save(ctx, f); saveErr != nil {
+		t.Fatal(saveErr)
 	}
 
 	list, err := friendRepo.List(ctx)

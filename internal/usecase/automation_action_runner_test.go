@@ -10,9 +10,9 @@ import (
 )
 
 type mockStatusSetter struct {
-	mu      sync.Mutex
-	called  []string
-	err     error
+	mu     sync.Mutex
+	called []string
+	err    error
 }
 
 func (m *mockStatusSetter) SetStatus(ctx context.Context, status string) error {

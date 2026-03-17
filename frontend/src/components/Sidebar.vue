@@ -29,13 +29,13 @@
 
 <script setup lang="ts">
 const menuItems = [
-  { path: '/', icon: '🏠', label: 'ダッシュボード' },
-  { path: '/launcher', icon: '🚀', label: 'ランチャー' },
-  { path: '/gallery', icon: '🖼️', label: 'ギャラリー' },
-  { path: '/activity', icon: '📊', label: 'アクティビティ' },
-  { path: '/friends', icon: '👥', label: 'フレンド' },
-  { path: '/automation', icon: '🤖', label: 'オートメーション' },
-]
+  { path: "/", icon: "🏠", label: "ダッシュボード" },
+  { path: "/launcher", icon: "🚀", label: "ランチャー" },
+  { path: "/gallery", icon: "🖼️", label: "ギャラリー" },
+  { path: "/activity", icon: "📊", label: "アクティビティ" },
+  { path: "/friends", icon: "👥", label: "フレンド" },
+  { path: "/automation", icon: "🤖", label: "オートメーション" },
+];
 </script>
 
 <style scoped>
@@ -59,7 +59,9 @@ const menuItems = [
   gap: 0.75rem;
   padding: 0.6rem 1rem;
   color: var(--text-secondary);
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 
 .sidebar-link:hover,

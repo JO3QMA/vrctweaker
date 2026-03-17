@@ -26,9 +26,9 @@ func parseDateRange(fromISO, toISO string) (from, to time.Time, err error) {
 
 // ActivityUseCase handles log parsing, play sessions, and user encounters.
 type ActivityUseCase struct {
-	playRepo     activity.PlaySessionRepository
+	playRepo      activity.PlaySessionRepository
 	encounterRepo activity.UserEncounterRepository
-	settingsRepo settings.AppSettingsRepository
+	settingsRepo  settings.AppSettingsRepository
 }
 
 // NewActivityUseCase creates a new ActivityUseCase.
@@ -38,9 +38,9 @@ func NewActivityUseCase(
 	settingsRepo settings.AppSettingsRepository,
 ) *ActivityUseCase {
 	return &ActivityUseCase{
-		playRepo:     playRepo,
+		playRepo:      playRepo,
 		encounterRepo: encounterRepo,
-		settingsRepo: settingsRepo,
+		settingsRepo:  settingsRepo,
 	}
 }
 

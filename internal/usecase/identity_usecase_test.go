@@ -57,12 +57,12 @@ func (m *mockFriendRepo) DeleteAll(_ context.Context) (int64, error) {
 
 // mockAPIClient implements vrchatapi.VRChatAPIClient for tests.
 type mockAPIClient struct {
-	loginToken   string
-	loginErr     error
-	token        string
-	getFriends   []vrchatapi.Friend
+	loginToken    string
+	loginErr      error
+	token         string
+	getFriends    []vrchatapi.Friend
 	getFriendsErr error
-	setStatusErr error
+	setStatusErr  error
 }
 
 func (m *mockAPIClient) Login(_ context.Context, _, _, _ string) (string, error) {
@@ -98,8 +98,8 @@ func TestIdentityUseCase_IsLoggedIn(t *testing.T) {
 	}
 
 	// Set token -> logged in
-	if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, "token"); err != nil {
-		t.Fatalf("credStore.Set: %v", err)
+	if setErr := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, "token"); setErr != nil {
+		t.Fatalf("credStore.Set: %v", setErr)
 	}
 	ok, err = uc.IsLoggedIn(ctx)
 	if err != nil {

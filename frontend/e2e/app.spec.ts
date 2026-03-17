@@ -45,22 +45,25 @@ test.describe('VRChat Tweaker', () => {
 
   test.describe('Launcher', () => {
     test('displays profile list and editor', async ({ page }) => {
-      await page.goto('/launcher')
+      await page.goto('/#/launcher')
       await expect(page.locator('h1')).toContainText('ランチャー')
-      // モックのデフォルトプロファイルが表示される
       await expect(page.getByText('デフォルトプロファイル')).toBeVisible()
       await expect(page.getByText('既定')).toBeVisible()
     })
 
     test('can add new profile', async ({ page }) => {
-      await page.goto('/launcher')
+      await page.goto('/#/launcher')
+      await expect(page.locator('h1')).toContainText('ランチャー')
       await page.getByRole('button', { name: '+ 新規プロファイル' }).click()
+      await expect(page.locator('.profile-editor')).toBeVisible()
       await expect(page.locator('input[type="text"]').first()).toHaveValue('新しいプロファイル')
     })
 
     test('can edit profile and click save', async ({ page }) => {
-      await page.goto('/launcher')
+      await page.goto('/#/launcher')
+      await expect(page.locator('h1')).toContainText('ランチャー')
       await page.getByText('デフォルトプロファイル').click()
+      await expect(page.locator('.profile-editor')).toBeVisible()
       const nameInput = page.locator('.profile-editor input[type="text"]').first()
       await nameInput.fill('編集したプロファイル')
       await expect(nameInput).toHaveValue('編集したプロファイル')
@@ -72,17 +75,21 @@ test.describe('VRChat Tweaker', () => {
 
   test.describe('Settings', () => {
     test('displays path settings and log retention', async ({ page }) => {
-      await page.goto('/settings')
+      await page.goto('/#/settings')
       await expect(page.locator('h1')).toContainText('設定')
       await expect(page.getByText('VRChat ログイン')).toBeVisible()
       await expect(page.getByText('パス設定')).toBeVisible()
       await expect(page.getByText('ログ・データ管理')).toBeVisible()
-      await expect(page.getByText('遭遇記録の保存期間')).toBeVisible()
+      await expect(page.getByText(/遭遇記録の保存期間/)).toBeVisible()
     })
 
     test('log retention input has default value', async ({ page }) => {
-      await page.goto('/settings')
-      const retentionInput = page.locator('input[type="number"]').first()
+      await page.goto('/#/settings')
+      await expect(page.locator('h1')).toContainText('設定')
+      const retentionInput = page.locator(
+        'section:has(h2:has-text("ログ・データ管理")) input[type="number"]',
+      )
+      await retentionInput.scrollIntoViewIfNeeded()
       await expect(retentionInput).toHaveValue('30')
     })
   })

@@ -21,14 +21,14 @@ import (
 
 // App struct holds the application state and use cases.
 type App struct {
-	ctx            context.Context
-	launcher       *usecase.LauncherUseCase
-	media          *usecase.MediaUseCase
-	activity       *usecase.ActivityUseCase
-	identity       *usecase.IdentityUseCase
-	automation     *usecase.AutomationUseCase
-	settings       *usecase.SettingsUseCase
-	dbMaintenance  *usecase.DBMaintenanceUseCase
+	ctx           context.Context
+	launcher      *usecase.LauncherUseCase
+	media         *usecase.MediaUseCase
+	activity      *usecase.ActivityUseCase
+	identity      *usecase.IdentityUseCase
+	automation    *usecase.AutomationUseCase
+	settings      *usecase.SettingsUseCase
+	dbMaintenance *usecase.DBMaintenanceUseCase
 }
 
 // NewApp creates a new App application struct.
@@ -45,8 +45,8 @@ func (a *App) startup(ctx context.Context) {
 		runtime.LogError(ctx, "failed to get data dir: "+err.Error())
 		return
 	}
-	if err := os.MkdirAll(dataDir, 0700); err != nil {
-		runtime.LogError(ctx, "failed to create data dir: "+err.Error())
+	if mkdirErr := os.MkdirAll(dataDir, 0700); mkdirErr != nil {
+		runtime.LogError(ctx, "failed to create data dir: "+mkdirErr.Error())
 		return
 	}
 
@@ -117,8 +117,8 @@ func (a *App) startOutputLogWatcher(ctx context.Context, eventBus event.EventBus
 	publishHandler := logwatcher.NewEventPublishingHandler(eventBus, ctx, logger)
 	handler := logwatcher.NewMultiHandler(activityHandler, publishHandler)
 	watcher := logwatcher.NewOutputLogWatcher(path, parser, handler, logger)
-	if err := watcher.Start(ctx); err != nil {
-		runtime.LogError(ctx, "failed to start output_log watcher: "+err.Error())
+	if startErr := watcher.Start(ctx); startErr != nil {
+		runtime.LogError(ctx, "failed to start output_log watcher: "+startErr.Error())
 		return
 	}
 	runtime.LogInfo(ctx, "output_log watcher started for "+path)
