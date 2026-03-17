@@ -1,17 +1,24 @@
 # vrchat-tweaker Makefile
 # フルビルド、front/backendビルド、lint、fmt、test、e2e を実行
 
-.PHONY: all build build-front build-back lint fmt test test-e2e clean help
+.PHONY: all build build-native build-windows build-front build-back lint fmt test test-e2e clean help
 
 # デフォルトターゲット
 all: build
 
 # --- ビルド ---
 
-## フルビルド（frontend + backend、Wails アプリ全体）
-## wails build が内部で frontend:build を実行する
-build:
+## フルビルド（native + Windows、Wails アプリ全体）
+## Linux/WSL から Windows クロスコンパイルには mingw-w64 が必要
+build: build-native build-windows
+
+## ネイティブプラットフォームのみビルド
+build-native:
 	wails build
+
+## Windows 版のみビルド（linux/WSL からは mingw-w64 が必要）
+build-windows:
+	wails build -platform windows/amd64
 
 ## フロントエンドのみビルド
 build-front:
@@ -88,7 +95,9 @@ help:
 	@echo "vrchat-tweaker Makefile"
 	@echo ""
 	@echo "ビルド:"
-	@echo "  make build         - フルビルド（frontend + backend）"
+	@echo "  make build         - フルビルド（native + Windows）"
+	@echo "  make build-native  - ネイティブプラットフォームのみビルド"
+	@echo "  make build-windows - Windows 版のみビルド"
 	@echo "  make build-front   - フロントエンドのみビルド"
 	@echo "  make build-back    - バックエンド（Go）のみビルド"
 	@echo ""
