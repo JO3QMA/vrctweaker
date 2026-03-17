@@ -117,6 +117,7 @@ func (uc *LauncherUseCase) launchWindowsWithArgs(ctx context.Context, args []str
 	if vrchatPath == "" {
 		vrchatPath = defaultVRChatPathWindows()
 	}
+	vrchatPath = resolveVRChatPathWindows(vrchatPath)
 	if _, err := os.Stat(vrchatPath); err != nil {
 		return fmt.Errorf("vrchat not found at %s: %w", vrchatPath, err)
 	}
@@ -208,6 +209,21 @@ func parseLaunchArgs(s string) []string {
 }
 
 func defaultVRChatPathWindows() string {
-	// Typical Steam install path for VRChat
-	return "C:\\Program Files (x86)\\Steam\\steamapps\\common\\VRChat\\VRChat.exe"
+	// Use launch.exe (not VRChat.exe). Running VRChat.exe directly causes offline testing mode.
+	// launch.exe is the proper entry point that connects to VRChat servers.
+	return "C:\\Program Files (x86)\\Steam\\steamapps\\common\\VRChat\\launch.exe"
+}
+
+// resolveVRChatPathWindows converts VRChat.exe path to launch.exe when applicable,
+// so VRChat starts online instead of in offline testing mode.
+func resolveVRChatPathWindows(path string) string {
+	if path == "" {
+		return path
+	}
+	const vrchatExe = "vrchat.exe"
+	pathLower := strings.ToLower(path)
+	if strings.HasSuffix(pathLower, vrchatExe) {
+		return path[:len(path)-len(vrchatExe)] + "launch.exe"
+	}
+	return path
 }

@@ -87,7 +87,7 @@
               id="vrchat-path"
               v-model="pathSettings.vrchatPathWindows"
               type="text"
-              placeholder="例: C:\Program Files (x86)\Steam\steamapps\common\VRChat\VRChat.exe"
+              placeholder="例: C:\Program Files (x86)\Steam\steamapps\common\VRChat\launch.exe"
               @change="savePathSettings"
             >
             <button
@@ -160,7 +160,7 @@
         </div>
       </div>
       <p class="hint">
-        VRChatの起動とログ監視で使用します。空の場合はデフォルトパスを使用します。
+        VRChatの起動とログ監視で使用します。launch.exeを指定してください（VRChat.exe直接起動はオフラインモードになります）。空の場合はデフォルトパスを使用します。
       </p>
     </section>
     <section class="settings-section">

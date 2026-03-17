@@ -36,7 +36,7 @@ func TestSettingsUseCase_GetPathSettings_SetPathSettings_roundtrip(t *testing.T)
 	ctx := context.Background()
 
 	ps := &PathSettings{
-		VRChatPathWindows: `C:\Program Files (x86)\Steam\steamapps\common\VRChat\VRChat.exe`,
+		VRChatPathWindows: `C:\Program Files (x86)\Steam\steamapps\common\VRChat\launch.exe`,
 		SteamPathLinux:    "/usr/bin/steam",
 		OutputLogPath:     "/home/user/.local/share/Steam/logs/output_log.txt",
 	}

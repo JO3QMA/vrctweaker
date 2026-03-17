@@ -138,3 +138,25 @@ func TestParseLaunchArgs(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveVRChatPathWindows(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"empty", "", ""},
+		{"VRChat.exe", `C:\Program Files\Steam\steamapps\common\VRChat\VRChat.exe`, `C:\Program Files\Steam\steamapps\common\VRChat\launch.exe`},
+		{"VRChat.exe lowercase", `D:\Games\VRChat\VRChat.exe`, `D:\Games\VRChat\launch.exe`},
+		{"already launch.exe", `C:\VRChat\launch.exe`, `C:\VRChat\launch.exe`},
+		{"other exe", `C:\Some\other.exe`, `C:\Some\other.exe`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := resolveVRChatPathWindows(tt.in)
+			if got != tt.want {
+				t.Errorf("resolveVRChatPathWindows(%q) = %q, want %q", tt.in, got, tt.want)
+			}
+		})
+	}
+}
