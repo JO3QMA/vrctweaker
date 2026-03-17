@@ -15,14 +15,6 @@ RUN apt-get update \
     mingw-w64 \
   && rm -rf /var/lib/apt/lists/*
 
-# Node.js (LTS v20+) + pnpm (via Corepack)
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-  && apt-get update \
-  && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nodejs \
-  && rm -rf /var/lib/apt/lists/* \
-  && corepack enable \
-  && corepack prepare pnpm@latest --activate
-
 # Wails CLI (global install)
 RUN go install github.com/wailsapp/wails/v2/cmd/wails@latest
 

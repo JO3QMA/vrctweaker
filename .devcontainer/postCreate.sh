@@ -14,6 +14,6 @@ if [[ -f "go.mod" ]]; then
 fi
 
 if [[ -f "frontend/package.json" ]]; then
-  cd frontend && pnpm install && cd ..
+  cd frontend && pnpm install && pnpm exec playwright install chromium && cd ..
 fi
 

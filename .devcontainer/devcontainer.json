@@ -4,6 +4,13 @@
     "dockerfile": "Dockerfile"
   },
   "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20",
+      "pnpmVersion": "latest"
+    },
+    "ghcr.io/schlich/devcontainer-features/playwright:0": {
+      "browsers": "chromium"
+    },
     "ghcr.io/devcontainers/features/github-cli:1": {}
   },
   "remoteUser": "vscode",
