@@ -21,7 +21,9 @@
   "containerEnv": {
     "GOMODCACHE": "/home/vscode/.gomodcache",
     "GOPATH": "/home/vscode/go",
-    "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0"
+    "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0",
+    "WEBKIT_DISABLE_COMPOSITING_MODE": "1",
+    "NO_AT_BRIDGE": "1"
   },
   "postCreateCommand": "bash .devcontainer/postCreate.sh",
   "forwardPorts": [5173, 34115],
