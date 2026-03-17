@@ -8,13 +8,14 @@ linters:
   disable:
     - bodyclose
     - noctx
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-  govet:
-    check-shadowing: true
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
+  settings:
+    errcheck:
+      check-type-assertions: true
+    govet:
+      enable:
+        - shadow
+  exclusions:
+    rules:
+      - path: '_test\.go'
+        linters:
+          - errcheck
