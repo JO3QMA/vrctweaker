@@ -1,36 +1,20 @@
 <template>
   <div class="settings-view">
-    <h1 class="page-title">
-      設定
-    </h1>
+    <h1 class="page-title">設定</h1>
     <section class="settings-section">
       <h2>VRChat ログイン</h2>
-      <div
-        v-if="isLoggedIn"
-        class="login-status"
-      >
+      <div v-if="isLoggedIn" class="login-status">
         <span class="logged-in-label">ログイン済み</span>
         <div class="login-actions">
-          <button
-            type="button"
-            class="btn-refresh"
-            @click="refreshFriends"
-          >
+          <button type="button" class="btn-refresh" @click="refreshFriends">
             フレンド一覧を更新
           </button>
-          <button
-            type="button"
-            class="btn-logout"
-            @click="logout"
-          >
+          <button type="button" class="btn-logout" @click="logout">
             ログアウト
           </button>
         </div>
       </div>
-      <div
-        v-else
-        class="login-form"
-      >
+      <div v-else class="login-form">
         <div class="form-row">
           <label for="login-username">ユーザー名</label>
           <input
@@ -39,7 +23,7 @@
             type="text"
             placeholder="VRChat ユーザー名"
             autocomplete="username"
-          >
+          />
         </div>
         <div class="form-row">
           <label for="login-password">パスワード</label>
@@ -49,7 +33,7 @@
             type="password"
             placeholder="パスワード"
             autocomplete="current-password"
-          >
+          />
         </div>
         <div class="form-row">
           <label for="login-2fa">2FAコード（オプション）</label>
@@ -59,12 +43,9 @@
             type="text"
             placeholder="6桁の認証コード"
             autocomplete="one-time-code"
-          >
+          />
         </div>
-        <p
-          v-if="loginError"
-          class="login-error"
-        >
+        <p v-if="loginError" class="login-error">
           {{ loginError }}
         </p>
         <button
@@ -89,7 +70,7 @@
               type="text"
               placeholder="例: C:\Program Files (x86)\Steam\steamapps\common\VRChat\launch.exe"
               @change="savePathSettings"
-            >
+            />
             <button
               type="button"
               class="btn-validate"
@@ -119,7 +100,7 @@
               type="text"
               placeholder="例: steam または /usr/bin/steam"
               @change="savePathSettings"
-            >
+            />
             <button
               type="button"
               class="btn-validate"
@@ -147,7 +128,7 @@
               type="text"
               placeholder="例: C:\Users\...\AppData\LocalLow\VRChat\VRChat\output_log.txt"
               @change="savePathSettings"
-            >
+            />
             <button
               type="button"
               class="btn-validate"
@@ -181,24 +162,16 @@
           min="1"
           max="365"
           @change="saveRetention"
-        >
+        />
       </div>
-      <p class="hint">
-        この日数を過ぎたuser_encountersは自動削除されます
-      </p>
+      <p class="hint">この日数を過ぎたuser_encountersは自動削除されます</p>
     </section>
     <section class="settings-section">
       <h2>DBメンテナンス</h2>
-      <p
-        class="hint"
-        style="margin-bottom: 1rem"
-      >
+      <p class="hint" style="margin-bottom: 1rem">
         データベースの最適化と、各テーブルのクリア操作を行います。操作前に確認ダイアログが表示されます。
       </p>
-      <p
-        v-if="maintenanceError"
-        class="maintenance-error"
-      >
+      <p v-if="maintenanceError" class="maintenance-error">
         {{ maintenanceError }}
       </p>
       <div class="maintenance-actions">

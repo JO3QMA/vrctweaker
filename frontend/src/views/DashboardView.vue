@@ -1,14 +1,8 @@
 <template>
   <div class="dashboard">
-    <h1 class="page-title">
-      ダッシュボード
-    </h1>
+    <h1 class="page-title">ダッシュボード</h1>
     <div class="quick-actions">
-      <button
-        class="launch-btn"
-        :disabled="!defaultProfile"
-        @click="launch"
-      >
+      <button class="launch-btn" :disabled="!defaultProfile" @click="launch">
         {{
           defaultProfile
             ? `VRChat 起動 (${defaultProfile.name})`
@@ -16,9 +10,7 @@
         }}
       </button>
       <div class="status-panel">
-        <p class="status-label">
-          クイックステータス
-        </p>
+        <p class="status-label">クイックステータス</p>
         <div class="status-buttons">
           <button
             v-for="s in statusOptions"

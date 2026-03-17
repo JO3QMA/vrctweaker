@@ -1,16 +1,9 @@
 <template>
   <div class="launcher-view">
-    <h1 class="page-title">
-      ランチャー
-    </h1>
+    <h1 class="page-title">ランチャー</h1>
     <div class="profiles-section">
       <div class="profiles-list">
-        <button
-          class="btn-add"
-          @click="addNew"
-        >
-          + 新規プロファイル
-        </button>
+        <button class="btn-add" @click="addNew">+ 新規プロファイル</button>
         <div
           v-for="p in profiles"
           :key="p.id"
@@ -19,47 +12,25 @@
           @click="select(p)"
         >
           <span class="profile-name">{{ p.name }}</span>
-          <span
-            v-if="p.isDefault"
-            class="badge"
-          >既定</span>
+          <span v-if="p.isDefault" class="badge">既定</span>
         </div>
       </div>
-      <div
-        v-if="selected"
-        class="profile-editor"
-      >
+      <div v-if="selected" class="profile-editor">
         <label>プロファイル名</label>
-        <input
-          v-model="selected.name"
-          type="text"
-        >
+        <input v-model="selected.name" type="text" />
         <label>起動引数</label>
         <input
           v-model="selected.arguments"
           type="text"
           placeholder="--no-vr --clear-cache"
-        >
+        />
         <label>
-          <input
-            v-model="selected.isDefault"
-            type="checkbox"
-          >
+          <input v-model="selected.isDefault" type="checkbox" />
           デフォルトに設定
         </label>
         <div class="editor-actions">
-          <button
-            class="btn-save"
-            @click="save"
-          >
-            保存
-          </button>
-          <button
-            class="btn-launch"
-            @click="launch"
-          >
-            この設定で起動
-          </button>
+          <button class="btn-save" @click="save">保存</button>
+          <button class="btn-launch" @click="launch">この設定で起動</button>
         </div>
       </div>
     </div>
