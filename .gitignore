@@ -6,6 +6,7 @@ build/bin/
 
 # Frontend
 frontend/node_modules/
+frontend/package.json.md5
 frontend/dist/
 frontend/.pnpm-store/
 frontend/wailsjs/
