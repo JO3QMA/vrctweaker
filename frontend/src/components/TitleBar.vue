@@ -1,27 +1,27 @@
 <template>
   <div
     class="title-bar"
-    data-wails-drag
+    style="--wails-draggable: drag"
   >
     <span class="title-bar-text">VRChat Tweaker</span>
-    <div class="title-bar-actions">
+    <div
+      class="title-bar-actions"
+      style="--wails-draggable: no-drag"
+    >
       <button
         class="title-bar-btn"
-        data-wails-no-drag
         @click="minimize"
       >
         −
       </button>
       <button
         class="title-bar-btn"
-        data-wails-no-drag
         @click="maximize"
       >
         □
       </button>
       <button
         class="title-bar-btn close"
-        data-wails-no-drag
         @click="close"
       >
         ×
