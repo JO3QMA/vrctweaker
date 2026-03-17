@@ -4,6 +4,8 @@
 
 `docs/features` の機能を実装する際は、**feature-implementation-pipeline** Skill を使用する。
 
+パイプラインは **TDD**（テスト駆動開発）に則り、**テストを先に書く**。実装完了後は **fmt → テスト → Lint** の検証ループを、全パスするまで繰り返す。
+
 ### 使い方
 
 1. **単一機能の実装**
@@ -26,10 +28,10 @@
 
 | ステップ | Agent | 役割 |
 |----------|-------|------|
-| 1. Plan | planner | 仕様から実装計画を作成 |
-| 2. Build | implementer | 計画に基づきコード実装 |
+| 1. Plan | planner | 仕様から実装計画を作成（テスト観点含む） |
+| 2. Build | implementer | TDD で実装（テスト先、単体テスト必須） |
 | 3. Review | reviewer | 変更のコードレビュー |
-| 4. QA | qa | Lint・テスト実行 |
+| 4. QA | qa | fmt → テスト → Lint、失敗時は修正して再実行 |
 
 各 Agent は `.cursor/agents/` に定義され、`mcp_task` で起動される。  
 依存関係は `.cursor/skills/feature-implementation-pipeline/reference-dependencies.md` に明示。
@@ -42,5 +44,10 @@
 
 ## プロジェクトルール
 
+- `.cursor/rules/tdd-workflow.mdc`: TDD と検証ループ（常時適用）
 - `.cursor/rules/go-conventions.mdc`: Go の規約
 - `.cursor/rules/vue-conventions.mdc`: Vue/TypeScript の規約
+
+## スキル
+
+- **tdd-workflow**: テスト駆動開発と fmt→test→lint の検証ループ。コード変更時に適用。

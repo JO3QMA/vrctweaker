@@ -12,10 +12,10 @@ docs/features の機能仕様を読み、実装計画→実装→レビュー→
 
 ## パイプライン概要
 
-1. **Plan**: 機能ドキュメントから実装計画を作成
-2. **Build**: 計画に基づき実装
+1. **Plan**: 機能ドキュメントから実装計画を作成（タスクにテスト観点を含める）
+2. **Build**: 計画に基づき**TDD で実装**（テストを先に書く、単体テストは必須）
 3. **Review**: 変更をコードレビュー
-4. **QA**: Lint・テスト実行、問題を報告
+4. **QA**: fmt → テスト → Lint を実行、失敗時は修正を依頼し**全パスまで繰り返す**
 
 ## トリガー
 
@@ -51,13 +51,13 @@ docs/features の機能仕様を読み、実装計画→実装→レビュー→
 
 結果を `plan_output` として保持。
 
-### Step 2: Implementer（実装）
+### Step 2: Implementer（実装・TDD）
 
 1. `.cursor/agents/implementer.md` の本文を取得
 2. `mcp_task` を呼ぶ:
    - `subagent_type`: `generalPurpose`
-   - `description`: `Implement feature from plan`
-   - `prompt`: [implementer.md の本文] + 改行 + `実装計画:` + 改行 + [Step 1 の plan_output] + 改行 + `上記に従い実装せよ。`
+   - `description`: `Implement feature from plan using TDD`
+   - `prompt`: [implementer.md の本文] + 改行 + `実装計画:` + 改行 + [Step 1 の plan_output] + 改行 + `上記に従い TDD（テストを先に書く、単体テスト必須）で実装せよ。`
 
 ### Step 3: Reviewer（レビュー）
 
@@ -67,21 +67,25 @@ docs/features の機能仕様を読み、実装計画→実装→レビュー→
    - `description`: `Code review of implementation changes`
    - `prompt`: [reviewer.md の本文] + 改行 + `git diff で変更を確認し、 Critical/Suggestion/Nice でレビューせよ。`
 
-### Step 4: QA（品質保証）
+### Step 4: QA（品質保証・検証ループ）
 
 `mcp_task` で `shell` を起動:
 - `subagent_type`: `shell`
-- `description`: `Run Go tests, golangci-lint, Vue lint and tests`
-- `prompt`: 以下を実行せよ:
-  1. `cd /workspaces/vrctweaker && go test -v -race -cover ./internal/...`
-  2. `cd /workspaces/vrctweaker && golangci-lint run ./...`
-  3. `cd /workspaces/vrctweaker/frontend && pnpm run lint && pnpm exec vue-tsc --noEmit && pnpm run test`
+- `description`: `Run fmt, Go tests, golangci-lint, Vue lint and tests`
+- `prompt`: 以下を**順に**実行せよ:
+  1. `cd /workspaces/vrctweaker && make fmt`
+  2. `cd /workspaces/vrctweaker && make test`
+  3. `cd /workspaces/vrctweaker && make lint`
 
-（golangci-lint を必ず含める。CI と同等）
+（fmt を最初に実行。golangci-lint を必ず含める。CI と同等）
 
 もしくは `generalPurpose` で `.cursor/agents/qa.md` の本文 + 上記コマンド実行指示を渡す。
 
-失敗時は報告を受け、必要なら Implementer に戻す（修正依頼をプロンプトに含める）。
+**失敗時**:
+1. エラー内容を報告する
+2. Implementer に修正を依頼する（修正依頼をプロンプトに含める）
+3. 修正後、**1. make fmt から再度 QA を実行**する
+4. 全パスするまで 2→3 を繰り返す
 
 ## 並列と順序
 
