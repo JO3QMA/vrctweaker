@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "build": "pnpm run licenses:generate && vue-tsc -b && vite build",
     "licenses:generate": "license-checker --json --out src/data/licenses.json",
     "preview": "vite preview",
     "test": "vitest run",
