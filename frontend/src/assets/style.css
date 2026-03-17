@@ -1,0 +1,58 @@
+/* VRChat Tweaker - Dark theme base */
+:root {
+  --bg-primary: #1b2636;
+  --bg-secondary: #243447;
+  --bg-tertiary: #2d3f54;
+  --text-primary: #e8eaed;
+  --text-secondary: #9aa0a6;
+  --accent: #5c9ce6;
+  --accent-hover: #7ab3f0;
+  --danger: #e57373;
+  --success: #81c784;
+  --border: #3d4f66;
+  --radius: 8px;
+  --sidebar-width: 220px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 14px;
+}
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100vh;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--accent-hover);
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+}

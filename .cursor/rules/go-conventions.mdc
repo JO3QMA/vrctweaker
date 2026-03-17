@@ -1,0 +1,25 @@
+---
+description: Go coding conventions for VRChat Tweaker backend
+globs: "**/*.go"
+alwaysApply: false
+---
+
+# Go コーディング規約
+
+## 構造
+- `internal/domain`: エンティティ、リポジトリインターフェース
+- `internal/usecase`: ビジネスロジック
+- `internal/infrastructure`: DB、外部API実装
+
+## 命名
+- インターフェース: `XxxRepository`, `XxxUseCase`
+- UUID: `github.com/google/uuid` 使用
+- コンテキスト: 第1引数は `ctx context.Context`
+
+## エラーハンドリング
+```go
+// エラーは呼び出し元に返す。握りつぶさない
+if err != nil {
+    return fmt.Errorf("failed to save: %w", err)
+}
+```

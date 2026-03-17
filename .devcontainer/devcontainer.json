@@ -1,0 +1,24 @@
+{
+  "name": "VRChat Tweaker Dev",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "GOMODCACHE": "/home/vscode/.gomodcache",
+    "GOPATH": "/home/vscode/go"
+  },
+  "postCreateCommand": "bash .devcontainer/postCreate.sh",
+  "forwardPorts": [5173, 34115],
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "Vue.volar",
+        "qwtel.sqlite-viewer",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  }
+}
+

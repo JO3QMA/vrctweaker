@@ -1,0 +1,21 @@
+---
+description: Vue/TypeScript conventions for VRChat Tweaker frontend
+globs: "frontend/**/*.{vue,ts,tsx}"
+alwaysApply: false
+---
+
+# Vue / TypeScript 規約
+
+## 構成
+- Composition API 使用
+- TypeScript 厳格モード
+- Wails: `window.go.main.App` 経由でバックエンド呼び出し
+
+## 命名
+- コンポーネント: PascalCase
+- composables: useXxx
+- ビュー: XxxView.vue
+
+## スタイル
+- 既存の views 配下の構造に合わせる
+- 必要な場合は scoped CSS

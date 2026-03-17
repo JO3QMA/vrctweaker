@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  go:
+    name: Go Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: go.sum
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+
+      - name: Test
+        run: go test -v -race -cover ./internal/...
+
+  vue:
+    name: Vue Frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 8
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install
+        run: cd frontend && pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: cd frontend && pnpm run lint
+
+      - name: Type check
+        run: cd frontend && pnpm exec vue-tsc --noEmit
+
+      - name: Test
+        run: cd frontend && pnpm run test
+
+      - name: Install Playwright browsers
+        run: cd frontend && pnpm exec playwright install --with-deps chromium
+
+      - name: E2E Test
+        run: cd frontend && pnpm run test:e2e

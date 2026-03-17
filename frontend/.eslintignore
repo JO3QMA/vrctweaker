@@ -1,0 +1,7 @@
+# Build outputs and generated files
+dist
+playwright-report
+test-results
+*.local
+node_modules
+coverage

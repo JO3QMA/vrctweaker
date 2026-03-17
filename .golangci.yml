@@ -1,0 +1,20 @@
+version: "2"
+linters:
+  enable:
+    - errcheck
+    - staticcheck
+    - govet
+    - ineffassign
+  disable:
+    - bodyclose
+    - noctx
+linters-settings:
+  errcheck:
+    check-type-assertions: true
+  govet:
+    check-shadowing: true
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck

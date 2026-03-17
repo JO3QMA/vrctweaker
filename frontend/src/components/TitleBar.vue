@@ -1,0 +1,92 @@
+<template>
+  <div
+    class="title-bar"
+    data-wails-drag
+  >
+    <span class="title-bar-text">VRChat Tweaker</span>
+    <div class="title-bar-actions">
+      <button
+        class="title-bar-btn"
+        data-wails-no-drag
+        @click="minimize"
+      >
+        −
+      </button>
+      <button
+        class="title-bar-btn"
+        data-wails-no-drag
+        @click="maximize"
+      >
+        □
+      </button>
+      <button
+        class="title-bar-btn close"
+        data-wails-no-drag
+        @click="close"
+      >
+        ×
+      </button>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { getRuntime } from '../wails/runtime'
+
+function minimize() {
+  getRuntime()?.WindowMinimise?.()
+}
+
+function maximize() {
+  getRuntime()?.WindowToggleMaximise?.()
+}
+
+function close() {
+  getRuntime()?.Quit?.()
+}
+</script>
+
+<style scoped>
+.title-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+  padding: 0 0.5rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+
+.title-bar-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.title-bar-actions {
+  display: flex;
+  gap: 0;
+}
+
+.title-bar-btn {
+  width: 40px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 16px;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+}
+
+.title-bar-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.title-bar-btn.close:hover {
+  background: var(--danger);
+  color: white;
+}
+</style>
