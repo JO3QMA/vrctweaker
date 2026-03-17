@@ -3,10 +3,18 @@
   "build": {
     "dockerfile": "Dockerfile"
   },
+  "features": {
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
   "remoteUser": "vscode",
+  "initializeCommand": "mkdir -p \"${localEnv:HOME}${localEnv:USERPROFILE}/.config/gh\"",
+  "mounts": [
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.config/gh,target=/home/vscode/.config/gh,type=bind,consistency=cached"
+  ],
   "containerEnv": {
     "GOMODCACHE": "/home/vscode/.gomodcache",
-    "GOPATH": "/home/vscode/go"
+    "GOPATH": "/home/vscode/go",
+    "COREPACK_ENABLE_DOWNLOAD_PROMPT": "0"
   },
   "postCreateCommand": "bash .devcontainer/postCreate.sh",
   "forwardPorts": [5173, 34115],

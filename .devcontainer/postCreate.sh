@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Disable Corepack download prompt (non-interactive)
+export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+
 # Use writable workspace for Go module cache (avoids /go permission issues)
 export GOMODCACHE="${GOMODCACHE:-$(pwd)/.gomodcache}"
 export GOPATH="${GOPATH:-$(pwd)/.go}"
