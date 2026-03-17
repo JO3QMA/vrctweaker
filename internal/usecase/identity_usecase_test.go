@@ -98,8 +98,8 @@ func TestIdentityUseCase_IsLoggedIn(t *testing.T) {
 	}
 
 	// Set token -> logged in
-	if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, "token"); err != nil {
-		t.Fatalf("credStore.Set: %v", err)
+	if setErr := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, "token"); setErr != nil {
+		t.Fatalf("credStore.Set: %v", setErr)
 	}
 	ok, err = uc.IsLoggedIn(ctx)
 	if err != nil {

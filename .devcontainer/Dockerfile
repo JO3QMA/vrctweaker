@@ -18,3 +18,6 @@ RUN apt-get update \
 # Wails CLI (global install)
 RUN go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
+# golangci-lint (used in CI)
+RUN go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+

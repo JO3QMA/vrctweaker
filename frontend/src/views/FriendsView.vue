@@ -1,6 +1,8 @@
 <template>
   <div class="friends-view">
-    <h1 class="page-title">フレンド</h1>
+    <h1 class="page-title">
+      フレンド
+    </h1>
     <div class="friends-header">
       <div class="tabs">
         <button
@@ -30,7 +32,10 @@
         {{ refreshLoading ? "更新中..." : "更新" }}
       </button>
     </div>
-    <p v-if="!isLoggedIn" class="hint">
+    <p
+      v-if="!isLoggedIn"
+      class="hint"
+    >
       フレンド一覧の更新にはログインが必要です。設定画面でログインしてください。
     </p>
     <div class="friends-section">
@@ -65,7 +70,10 @@
           }}
         </p>
       </div>
-      <div v-if="selected" class="friend-detail">
+      <div
+        v-if="selected"
+        class="friend-detail"
+      >
         <h3>詳細</h3>
         <dl class="detail-list">
           <dt>表示名</dt>
@@ -78,7 +86,7 @@
             v-model="selected.isFavorite"
             type="checkbox"
             @change="applyFavorite(selected)"
-          />
+          >
           お気に入り
         </label>
       </div>

@@ -63,8 +63,8 @@ func (c *Client) Login(ctx context.Context, username, password, twoFactorCode st
 	}
 
 	// POST /auth/twofactorauth/totp/verify
-	if err := c.verifyTwoFactor(ctx, loginClient, authCookie, twoFactorCode); err != nil {
-		return "", err
+	if verifyErr := c.verifyTwoFactor(ctx, loginClient, authCookie, twoFactorCode); verifyErr != nil {
+		return "", verifyErr
 	}
 
 	// GET /auth/user again to get authToken
