@@ -32,3 +32,4 @@ test-results/
 
 #
 .pnpm-store/
+/docs/ai_dlc/
