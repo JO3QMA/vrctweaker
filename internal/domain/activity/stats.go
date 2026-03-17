@@ -7,7 +7,7 @@ import (
 
 // DailyPlaySeconds represents play time for a single date.
 type DailyPlaySeconds struct {
-	Date   string // YYYY-MM-DD
+	Date    string // YYYY-MM-DD
 	Seconds int
 }
 

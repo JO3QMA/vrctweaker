@@ -21,14 +21,14 @@ import (
 
 // App struct holds the application state and use cases.
 type App struct {
-	ctx            context.Context
-	launcher       *usecase.LauncherUseCase
-	media          *usecase.MediaUseCase
-	activity       *usecase.ActivityUseCase
-	identity       *usecase.IdentityUseCase
-	automation     *usecase.AutomationUseCase
-	settings       *usecase.SettingsUseCase
-	dbMaintenance  *usecase.DBMaintenanceUseCase
+	ctx           context.Context
+	launcher      *usecase.LauncherUseCase
+	media         *usecase.MediaUseCase
+	activity      *usecase.ActivityUseCase
+	identity      *usecase.IdentityUseCase
+	automation    *usecase.AutomationUseCase
+	settings      *usecase.SettingsUseCase
+	dbMaintenance *usecase.DBMaintenanceUseCase
 }
 
 // NewApp creates a new App application struct.

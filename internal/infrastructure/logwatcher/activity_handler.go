@@ -10,8 +10,8 @@ import (
 
 // ActivityEventHandler bridges parsed log events to ActivityUseCase.
 type ActivityEventHandler struct {
-	uc  *usecase.ActivityUseCase
-	ctx context.Context
+	uc     *usecase.ActivityUseCase
+	ctx    context.Context
 	logger Logger
 }
 

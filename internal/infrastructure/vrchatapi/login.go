@@ -15,7 +15,7 @@ import (
 
 // authUserResponse is the response from GET /auth/user.
 type authUserResponse struct {
-	AuthToken             string `json:"authToken"`
+	AuthToken             string   `json:"authToken"`
 	RequiresTwoFactorAuth []string `json:"requiresTwoFactorAuth"`
 }
 

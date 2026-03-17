@@ -21,20 +21,20 @@ func TestAggregatePlaySessions(t *testing.T) {
 	to = time.Date(to.Year(), to.Month(), to.Day(), 23, 59, 59, 999999999, time.UTC)
 
 	tests := []struct {
-		name     string
-		sessions []*PlaySession
-		from     time.Time
-		to       time.Time
+		name      string
+		sessions  []*PlaySession
+		from      time.Time
+		to        time.Time
 		wantDaily []DailyPlaySeconds
-		wantTop  []TopWorldSummary
+		wantTop   []TopWorldSummary
 	}{
 		{
-			name:     "empty sessions returns empty arrays",
-			sessions: nil,
-			from:     from,
-			to:       to,
+			name:      "empty sessions returns empty arrays",
+			sessions:  nil,
+			from:      from,
+			to:        to,
 			wantDaily: []DailyPlaySeconds{},
-			wantTop:  nil,
+			wantTop:   nil,
 		},
 		{
 			name: "single session same day",
@@ -68,8 +68,8 @@ func TestAggregatePlaySessions(t *testing.T) {
 			from: from,
 			to:   to,
 			wantDaily: []DailyPlaySeconds{
-				{Date: "2024-01-01", Seconds: 7200},  // 22:00-24:00
-				{Date: "2024-01-02", Seconds: 7200},  // 00:00-02:00
+				{Date: "2024-01-01", Seconds: 7200}, // 22:00-24:00
+				{Date: "2024-01-02", Seconds: 7200}, // 00:00-02:00
 			},
 			wantTop: []TopWorldSummary{
 				{WorldID: "_total", WorldName: "全セッション", Seconds: 14400, Sessions: 1},

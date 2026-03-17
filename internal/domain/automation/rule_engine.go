@@ -7,21 +7,21 @@ import (
 
 // TriggerTypes and ActionTypes for validation.
 const (
-	TriggerAFKDetected   = "afk_detected"
-	TriggerFriendJoined  = "friend_joined"
-	ActionChangeStatus   = "change_status"
+	TriggerAFKDetected  = "afk_detected"
+	TriggerFriendJoined = "friend_joined"
+	ActionChangeStatus  = "change_status"
 )
 
 // EvalContext provides data for rule evaluation.
 type EvalContext struct {
 	TriggerType string
-	Payload    map[string]interface{}
+	Payload     map[string]interface{}
 }
 
 // EvalResult represents the outcome of rule evaluation.
 type EvalResult struct {
-	ShouldFire bool
-	ActionType string
+	ShouldFire    bool
+	ActionType    string
 	ActionPayload map[string]interface{}
 }
 
