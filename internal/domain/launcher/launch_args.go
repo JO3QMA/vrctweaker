@@ -69,6 +69,7 @@ var (
 	forceD3D11            = "-force-d3d11"
 	forceVulkan           = "-force-vulkan"
 	nographics            = "-nographics"
+	batchmode             = "-batchmode" // -nographics requires -batchmode (Unity headless)
 	logArg                = "-log"
 	processPriorityPrefix = "--process-priority="
 	adapterArg            = "-adapter"
@@ -162,6 +163,24 @@ func ParseLaunchArgsForGUI(args string) *LaunchArgsParsed {
 	}
 	p.Custom = strings.TrimSpace(strings.Join(customParts, " "))
 	return p
+}
+
+// removeToken removes the first occurrence of tok from space-separated s, preserving rest.
+func removeToken(s, tok string) string {
+	if s == "" || tok == "" {
+		return s
+	}
+	tokens := parseLaunchArgsTokens(s)
+	var out []string
+	removed := false
+	for _, t := range tokens {
+		if !removed && t == tok {
+			removed = true
+			continue
+		}
+		out = append(out, t)
+	}
+	return strings.TrimSpace(strings.Join(out, " "))
 }
 
 // parseLaunchArgsTokens splits args string into tokens (supports quoted values).
@@ -265,7 +284,8 @@ func MergeLaunchArgsForGUI(p *LaunchArgsParsed) string {
 	case RenderBackendVulkan:
 		parts = append(parts, forceVulkan)
 	case RenderBackendNoGraphics:
-		parts = append(parts, nographics)
+		// Unity: -nographics requires -batchmode (headless)
+		parts = append(parts, batchmode, nographics)
 	}
 	if p.Log {
 		parts = append(parts, logArg)
@@ -277,7 +297,14 @@ func MergeLaunchArgsForGUI(p *LaunchArgsParsed) string {
 		parts = append(parts, adapterArg, strconv.Itoa(p.Adapter))
 	}
 	if p.Custom != "" {
-		parts = append(parts, strings.TrimSpace(p.Custom))
+		custom := strings.TrimSpace(p.Custom)
+		// Avoid duplicating -batchmode when nographics already adds it
+		if p.RenderBackend == RenderBackendNoGraphics {
+			custom = removeToken(custom, batchmode)
+		}
+		if custom != "" {
+			parts = append(parts, custom)
+		}
 	}
 	return strings.TrimSpace(strings.Join(parts, " "))
 }

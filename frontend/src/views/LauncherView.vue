@@ -1,16 +1,9 @@
 <template>
   <div class="launcher-view">
-    <h1 class="page-title">
-      ランチャー
-    </h1>
+    <h1 class="page-title">ランチャー</h1>
     <div class="profiles-section">
       <div class="profiles-list">
-        <button
-          class="btn-add"
-          @click="addNew"
-        >
-          + 新規プロファイル
-        </button>
+        <button class="btn-add" @click="addNew">+ 新規プロファイル</button>
         <div
           v-for="p in profiles"
           :key="p.id"
@@ -19,30 +12,17 @@
           @click="select(p)"
         >
           <span class="profile-name">{{ p.name }}</span>
-          <span
-            v-if="p.isDefault"
-            class="badge"
-          >既定</span>
+          <span v-if="p.isDefault" class="badge">既定</span>
         </div>
       </div>
-      <div
-        v-if="selected"
-        class="profile-editor"
-      >
+      <div v-if="selected" class="profile-editor">
         <label>プロファイル名</label>
-        <input
-          v-model="selected.name"
-          type="text"
-        >
+        <input v-model="selected.name" type="text" />
         <label>起動引数</label>
         <div class="launch-args-gui">
           <div class="vr-mode-section">
             <label class="block-label">VRモード</label>
-            <div
-              class="toggle-group"
-              role="group"
-              aria-label="VRモード"
-            >
+            <div class="toggle-group" role="group" aria-label="VRモード">
               <label
                 class="toggle-option"
                 :class="{ active: launchArgs.vrMode === 'desktop' }"
@@ -52,7 +32,7 @@
                   type="radio"
                   value="desktop"
                   data-testid="vr-mode-desktop"
-                >
+                />
                 <span>デスクトップモード</span>
               </label>
               <label
@@ -64,7 +44,7 @@
                   type="radio"
                   value=""
                   data-testid="vr-mode-none"
-                >
+                />
                 <span>無設定</span>
               </label>
               <label
@@ -76,7 +56,7 @@
                   type="radio"
                   value="vr"
                   data-testid="vr-mode-vr"
-                >
+                />
                 <span>強制VRモード</span>
               </label>
             </div>
@@ -86,16 +66,12 @@
               v-model="launchArgs.clearCache"
               type="checkbox"
               data-testid="clear-cache-checkbox"
-            >
+            />
             起動前にキャッシュをクリア
           </label>
           <div class="screen-mode-section">
             <label class="block-label">表示モード</label>
-            <div
-              class="toggle-group"
-              role="group"
-              aria-label="表示モード"
-            >
+            <div class="toggle-group" role="group" aria-label="表示モード">
               <label
                 class="toggle-option"
                 :class="{ active: launchArgs.screenMode === 'fullscreen' }"
@@ -105,7 +81,7 @@
                   type="radio"
                   value="fullscreen"
                   data-testid="screen-mode-fullscreen"
-                >
+                />
                 <span>フルスクリーン</span>
               </label>
               <label
@@ -117,7 +93,7 @@
                   type="radio"
                   value="windowed"
                   data-testid="screen-mode-windowed"
-                >
+                />
                 <span>ウィンドウ</span>
               </label>
               <label
@@ -129,7 +105,7 @@
                   type="radio"
                   value="popupwindow"
                   data-testid="screen-mode-popupwindow"
-                >
+                />
                 <span>仮想フルスクリーン</span>
               </label>
             </div>
@@ -142,7 +118,7 @@
                   min="0"
                   placeholder="幅"
                   data-testid="screen-width-input"
-                >
+                />
                 <span class="resolution-sep">×</span>
                 <input
                   v-model.number="launchArgs.screenHeight"
@@ -150,7 +126,7 @@
                   min="0"
                   placeholder="高さ"
                   data-testid="screen-height-input"
-                >
+                />
               </div>
             </div>
           </div>
@@ -162,7 +138,7 @@
                   v-model="launchArgs.fpfc"
                   type="checkbox"
                   data-testid="fpfc-checkbox"
-                >
+                />
                 FPFC（-fpfc）ワールド制作用カメラ
               </label>
               <label>
@@ -173,14 +149,14 @@
                   min="0"
                   placeholder="0=省略"
                   data-testid="fps-input"
-                >
+                />
               </label>
               <label class="checkbox-row">
                 <input
                   v-model="launchArgs.safe"
                   type="checkbox"
                   data-testid="safe-checkbox"
-                >
+                />
                 セーフモード（-safe）
               </label>
               <label class="checkbox-row">
@@ -188,7 +164,7 @@
                   v-model="launchArgs.noSplash"
                   type="checkbox"
                   data-testid="nosplash-checkbox"
-                >
+                />
                 スプラッシュスキップ（-nosplash）
               </label>
               <label class="checkbox-row">
@@ -196,7 +172,7 @@
                   v-model="launchArgs.noAudio"
                   type="checkbox"
                   data-testid="noaudio-checkbox"
-                >
+                />
                 オーディオ無効（-noaudio）
               </label>
               <label class="checkbox-row">
@@ -204,7 +180,7 @@
                   v-model="launchArgs.skipRegistry"
                   type="checkbox"
                   data-testid="skip-registry-checkbox"
-                >
+                />
                 レジストリ登録スキップ（--skip-registry-install）
               </label>
               <div class="render-backend-section">
@@ -223,7 +199,7 @@
                       type="radio"
                       value=""
                       data-testid="render-backend-default"
-                    >
+                    />
                     <span>無設定</span>
                   </label>
                   <label
@@ -235,7 +211,7 @@
                       type="radio"
                       value="d3d11"
                       data-testid="render-backend-d3d11"
-                    >
+                    />
                     <span>DirectX 11</span>
                   </label>
                   <label
@@ -247,7 +223,7 @@
                       type="radio"
                       value="vulkan"
                       data-testid="render-backend-vulkan"
-                    >
+                    />
                     <span>Vulkan</span>
                   </label>
                   <label
@@ -261,7 +237,7 @@
                       type="radio"
                       value="nographics"
                       data-testid="render-backend-nographics"
-                    >
+                    />
                     <span>NoGraphics</span>
                   </label>
                 </div>
@@ -271,7 +247,7 @@
                   v-model="launchArgs.log"
                   type="checkbox"
                   data-testid="log-checkbox"
-                >
+                />
                 ログ出力（-log）
               </label>
               <label>
@@ -282,7 +258,7 @@
                   min="0"
                   placeholder="0=省略、2=高"
                   data-testid="process-priority-input"
-                >
+                />
               </label>
               <label>
                 GPUアダプター（-adapter N）
@@ -292,7 +268,7 @@
                   min="-1"
                   placeholder="-1=自動、0=1枚目、1=2枚目..."
                   data-testid="adapter-input"
-                >
+                />
               </label>
             </div>
           </details>
@@ -302,28 +278,15 @@
             type="text"
             placeholder="-batchmode -nographics"
             data-testid="custom-args-input"
-          >
+          />
         </div>
         <label>
-          <input
-            v-model="selected.isDefault"
-            type="checkbox"
-          >
+          <input v-model="selected.isDefault" type="checkbox" />
           デフォルトに設定
         </label>
         <div class="editor-actions">
-          <button
-            class="btn-save"
-            @click="save"
-          >
-            保存
-          </button>
-          <button
-            class="btn-launch"
-            @click="launch"
-          >
-            この設定で起動
-          </button>
+          <button class="btn-save" @click="save">保存</button>
+          <button class="btn-launch" @click="launch">この設定で起動</button>
           <button
             v-if="selected.id"
             type="button"

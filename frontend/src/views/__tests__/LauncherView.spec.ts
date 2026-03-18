@@ -117,7 +117,8 @@ describe("LauncherView", () => {
         if (dto.skipRegistry) parts.push("--skip-registry-install");
         if (dto.renderBackend === "d3d11") parts.push("-force-d3d11");
         if (dto.renderBackend === "vulkan") parts.push("-force-vulkan");
-        if (dto.renderBackend === "nographics") parts.push("-nographics");
+        if (dto.renderBackend === "nographics")
+          parts.push("-batchmode", "-nographics");
         if (dto.log) parts.push("-log");
         if (dto.processPriority)
           parts.push(`--process-priority=${dto.processPriority}`);

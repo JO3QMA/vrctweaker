@@ -256,7 +256,12 @@ func TestMergeLaunchArgsForGUI(t *testing.T) {
 		{
 			name: "render backend nographics",
 			p:    &LaunchArgsParsed{RenderBackend: RenderBackendNoGraphics, Adapter: -1},
-			want: "-nographics",
+			want: "-batchmode -nographics",
+		},
+		{
+			name: "render backend nographics with custom (batchmode deduped)",
+			p:    &LaunchArgsParsed{RenderBackend: RenderBackendNoGraphics, Custom: "-batchmode -other", Adapter: -1},
+			want: "-batchmode -nographics -other",
 		},
 		{
 			name: "nil safe",
