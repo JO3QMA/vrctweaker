@@ -19,12 +19,11 @@ const (
 	VrModeVR      = "vr"
 )
 
-// RenderBackend is the exclusive render/display mode: default, d3d11, vulkan, or nographics.
+// RenderBackend is the exclusive render/display mode: default, d3d11, or vulkan.
 const (
-	RenderBackendDefault    = ""
-	RenderBackendD3D11      = "d3d11"
-	RenderBackendVulkan     = "vulkan"
-	RenderBackendNoGraphics = "nographics"
+	RenderBackendDefault = ""
+	RenderBackendD3D11   = "d3d11"
+	RenderBackendVulkan  = "vulkan"
 )
 
 // LaunchArgsParsed holds GUI-friendly parsed launch arguments.
@@ -42,7 +41,7 @@ type LaunchArgsParsed struct {
 	NoSplash        bool   // -nosplash
 	NoAudio         bool   // -noaudio
 	SkipRegistry    bool   // --skip-registry-install
-	RenderBackend   string // ""|d3d11|vulkan|nographics (exclusive: -force-d3d11, -force-vulkan, -nographics)
+	RenderBackend   string // ""|d3d11|vulkan (exclusive: -force-d3d11, -force-vulkan)
 	Log             bool   // -log
 	ProcessPriority int    // --process-priority=N, 0=omit
 	Adapter         int    // -adapter N (0-based GPU index), -1=omit
@@ -68,8 +67,6 @@ var (
 	skipRegistry          = "--skip-registry-install"
 	forceD3D11            = "-force-d3d11"
 	forceVulkan           = "-force-vulkan"
-	nographics            = "-nographics"
-	batchmode             = "-batchmode" // -nographics requires -batchmode (Unity headless)
 	logArg                = "-log"
 	processPriorityPrefix = "--process-priority="
 	adapterArg            = "-adapter"
@@ -135,8 +132,6 @@ func ParseLaunchArgsForGUI(args string) *LaunchArgsParsed {
 			p.NoAudio = true
 		case tok == skipRegistry:
 			p.SkipRegistry = true
-		case tok == nographics:
-			p.RenderBackend = RenderBackendNoGraphics
 		case tok == forceD3D11:
 			p.RenderBackend = RenderBackendD3D11
 		case tok == forceVulkan:
@@ -163,24 +158,6 @@ func ParseLaunchArgsForGUI(args string) *LaunchArgsParsed {
 	}
 	p.Custom = strings.TrimSpace(strings.Join(customParts, " "))
 	return p
-}
-
-// removeToken removes the first occurrence of tok from space-separated s, preserving rest.
-func removeToken(s, tok string) string {
-	if s == "" || tok == "" {
-		return s
-	}
-	tokens := parseLaunchArgsTokens(s)
-	var out []string
-	removed := false
-	for _, t := range tokens {
-		if !removed && t == tok {
-			removed = true
-			continue
-		}
-		out = append(out, t)
-	}
-	return strings.TrimSpace(strings.Join(out, " "))
 }
 
 // parseLaunchArgsTokens splits args string into tokens (supports quoted values).
@@ -283,9 +260,6 @@ func MergeLaunchArgsForGUI(p *LaunchArgsParsed) string {
 		parts = append(parts, forceD3D11)
 	case RenderBackendVulkan:
 		parts = append(parts, forceVulkan)
-	case RenderBackendNoGraphics:
-		// Unity: -nographics requires -batchmode (headless)
-		parts = append(parts, batchmode, nographics)
 	}
 	if p.Log {
 		parts = append(parts, logArg)
@@ -297,14 +271,7 @@ func MergeLaunchArgsForGUI(p *LaunchArgsParsed) string {
 		parts = append(parts, adapterArg, strconv.Itoa(p.Adapter))
 	}
 	if p.Custom != "" {
-		custom := strings.TrimSpace(p.Custom)
-		// Avoid duplicating -batchmode when nographics already adds it
-		if p.RenderBackend == RenderBackendNoGraphics {
-			custom = removeToken(custom, batchmode)
-		}
-		if custom != "" {
-			parts = append(parts, custom)
-		}
+		parts = append(parts, strings.TrimSpace(p.Custom))
 	}
 	return strings.TrimSpace(strings.Join(parts, " "))
 }

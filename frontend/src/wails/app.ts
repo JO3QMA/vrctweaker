@@ -22,7 +22,7 @@ export interface LaunchArgsParsedDTO {
   noSplash: boolean;
   noAudio: boolean;
   skipRegistry: boolean;
-  renderBackend: "" | "d3d11" | "vulkan" | "nographics";
+  renderBackend: "" | "d3d11" | "vulkan";
   log: boolean;
   processPriority: number;
   adapter: number; // 0-based GPU index, -1=omit

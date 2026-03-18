@@ -226,20 +226,6 @@
                     />
                     <span>Vulkan</span>
                   </label>
-                  <label
-                    class="toggle-option"
-                    :class="{
-                      active: launchArgs.renderBackend === 'nographics',
-                    }"
-                  >
-                    <input
-                      v-model="launchArgs.renderBackend"
-                      type="radio"
-                      value="nographics"
-                      data-testid="render-backend-nographics"
-                    />
-                    <span>NoGraphics</span>
-                  </label>
                 </div>
               </div>
               <label class="checkbox-row">
@@ -276,7 +262,7 @@
           <input
             v-model="launchArgs.custom"
             type="text"
-            placeholder="-batchmode -nographics"
+            placeholder="-batchmode"
             data-testid="custom-args-input"
           />
         </div>

@@ -97,13 +97,13 @@ func TestParseLaunchArgsForGUI(t *testing.T) {
 			wantAdapter:       -1,
 		},
 		{
-			name:              "render backend nographics",
+			name:              "nographics goes to custom",
 			args:              "-batchmode -nographics",
 			wantVrMode:        "",
 			wantCache:         false,
 			wantScreen:        "",
-			wantCustom:        "-batchmode",
-			wantRenderBackend: RenderBackendNoGraphics,
+			wantCustom:        "-batchmode -nographics",
+			wantRenderBackend: "",
 			wantAdapter:       -1,
 		},
 		{
@@ -254,16 +254,6 @@ func TestMergeLaunchArgsForGUI(t *testing.T) {
 			want: "-force-vulkan",
 		},
 		{
-			name: "render backend nographics",
-			p:    &LaunchArgsParsed{RenderBackend: RenderBackendNoGraphics, Adapter: -1},
-			want: "-batchmode -nographics",
-		},
-		{
-			name: "render backend nographics with custom (batchmode deduped)",
-			p:    &LaunchArgsParsed{RenderBackend: RenderBackendNoGraphics, Custom: "-batchmode -other", Adapter: -1},
-			want: "-batchmode -nographics -other",
-		},
-		{
 			name: "nil safe",
 			p:    nil,
 			want: "",
@@ -333,14 +323,11 @@ func TestParseMergeRoundtrip(t *testing.T) {
 }
 
 func TestParseLaunchArgsForGUI_preservesCustomOrdering(t *testing.T) {
-	// -nographics is parsed as RenderBackend, -batchmode stays in Custom
+	// -batchmode -nographics are unknown to GUI, both go to Custom
 	in := "  -batchmode  -nographics  "
 	got := ParseLaunchArgsForGUI(in)
-	if got.Custom == "" {
-		t.Error("expected non-empty Custom for -batchmode")
-	}
-	if got.RenderBackend != RenderBackendNoGraphics {
-		t.Errorf("expected RenderBackend nographics, got %q", got.RenderBackend)
+	if got.Custom != "-batchmode -nographics" {
+		t.Errorf("expected Custom %q, got %q", "-batchmode -nographics", got.Custom)
 	}
 	// Roundtrip: merge then parse again
 	merged := MergeLaunchArgsForGUI(got)

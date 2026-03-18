@@ -60,7 +60,7 @@ describe("LauncherView", () => {
           noSplash: false,
           noAudio: false,
           skipRegistry: false,
-          renderBackend: "" as "" | "d3d11" | "vulkan" | "nographics",
+          renderBackend: "" as "" | "d3d11" | "vulkan",
           log: false,
           processPriority: 0,
           adapter: -1,
@@ -70,9 +70,8 @@ describe("LauncherView", () => {
           vrMode = "desktop";
         else if (args.includes("-vr")) vrMode = "vr";
 
-        let renderBackend: "" | "d3d11" | "vulkan" | "nographics" = "";
-        if (args.includes("-nographics")) renderBackend = "nographics";
-        else if (args.includes("-force-vulkan")) renderBackend = "vulkan";
+        let renderBackend: "" | "d3d11" | "vulkan" = "";
+        if (args.includes("-force-vulkan")) renderBackend = "vulkan";
         else if (args.includes("-force-d3d11")) renderBackend = "d3d11";
 
         let adapter = -1;
@@ -117,8 +116,6 @@ describe("LauncherView", () => {
         if (dto.skipRegistry) parts.push("--skip-registry-install");
         if (dto.renderBackend === "d3d11") parts.push("-force-d3d11");
         if (dto.renderBackend === "vulkan") parts.push("-force-vulkan");
-        if (dto.renderBackend === "nographics")
-          parts.push("-batchmode", "-nographics");
         if (dto.log) parts.push("-log");
         if (dto.processPriority)
           parts.push(`--process-priority=${dto.processPriority}`);
@@ -260,9 +257,9 @@ describe("LauncherView", () => {
     expect(wrapper.find('[data-testid="render-backend-d3d11"]').exists()).toBe(
       true,
     );
-    expect(
-      wrapper.find('[data-testid="render-backend-nographics"]').exists(),
-    ).toBe(true);
+    expect(wrapper.find('[data-testid="render-backend-vulkan"]').exists()).toBe(
+      true,
+    );
     expect(wrapper.find('[data-testid="screen-mode-windowed"]').exists()).toBe(
       true,
     );

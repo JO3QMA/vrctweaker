@@ -34,7 +34,7 @@ type LaunchArgsParsedDTO struct {
 	NoSplash        bool   `json:"noSplash"`
 	NoAudio         bool   `json:"noAudio"`
 	SkipRegistry    bool   `json:"skipRegistry"`
-	RenderBackend   string `json:"renderBackend"` // ""|d3d11|vulkan|nographics (exclusive)
+	RenderBackend   string `json:"renderBackend"` // ""|d3d11|vulkan (exclusive)
 	Log             bool   `json:"log"`
 	ProcessPriority int    `json:"processPriority"`
 	Adapter         int    `json:"adapter"` // -adapter N (0-based GPU index), -1=omit
