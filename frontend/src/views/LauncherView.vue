@@ -424,6 +424,7 @@ async function launch() {
   display: flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
   padding: 0.4rem 0.6rem;
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
