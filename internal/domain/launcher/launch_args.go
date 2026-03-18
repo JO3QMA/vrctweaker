@@ -19,6 +19,14 @@ const (
 	VrModeVR      = "vr"
 )
 
+// RenderBackend is the exclusive render/display mode: default, d3d11, vulkan, or nographics.
+const (
+	RenderBackendDefault    = ""
+	RenderBackendD3D11      = "d3d11"
+	RenderBackendVulkan     = "vulkan"
+	RenderBackendNoGraphics = "nographics"
+)
+
 // LaunchArgsParsed holds GUI-friendly parsed launch arguments.
 type LaunchArgsParsed struct {
 	// 一般設定
@@ -34,8 +42,7 @@ type LaunchArgsParsed struct {
 	NoSplash        bool   // -nosplash
 	NoAudio         bool   // -noaudio
 	SkipRegistry    bool   // --skip-registry-install
-	ForceD3D11      bool   // -force-d3d11
-	ForceVulkan     bool   // -force-vulkan
+	RenderBackend   string // ""|d3d11|vulkan|nographics (exclusive: -force-d3d11, -force-vulkan, -nographics)
 	Log             bool   // -log
 	ProcessPriority int    // --process-priority=N, 0=omit
 	Custom          string // remaining args as-is
@@ -60,6 +67,7 @@ var (
 	skipRegistry          = "--skip-registry-install"
 	forceD3D11            = "-force-d3d11"
 	forceVulkan           = "-force-vulkan"
+	nographics            = "-nographics"
 	logArg                = "-log"
 	processPriorityPrefix = "--process-priority="
 )
@@ -124,10 +132,12 @@ func ParseLaunchArgsForGUI(args string) *LaunchArgsParsed {
 			p.NoAudio = true
 		case tok == skipRegistry:
 			p.SkipRegistry = true
+		case tok == nographics:
+			p.RenderBackend = RenderBackendNoGraphics
 		case tok == forceD3D11:
-			p.ForceD3D11 = true
+			p.RenderBackend = RenderBackendD3D11
 		case tok == forceVulkan:
-			p.ForceVulkan = true
+			p.RenderBackend = RenderBackendVulkan
 		case tok == logArg:
 			p.Log = true
 		case strings.HasPrefix(tok, processPriorityPrefix):
@@ -240,11 +250,13 @@ func MergeLaunchArgsForGUI(p *LaunchArgsParsed) string {
 	if p.SkipRegistry {
 		parts = append(parts, skipRegistry)
 	}
-	if p.ForceD3D11 {
+	switch p.RenderBackend {
+	case RenderBackendD3D11:
 		parts = append(parts, forceD3D11)
-	}
-	if p.ForceVulkan {
+	case RenderBackendVulkan:
 		parts = append(parts, forceVulkan)
+	case RenderBackendNoGraphics:
+		parts = append(parts, nographics)
 	}
 	if p.Log {
 		parts = append(parts, logArg)

@@ -22,8 +22,7 @@ export interface LaunchArgsParsedDTO {
   noSplash: boolean;
   noAudio: boolean;
   skipRegistry: boolean;
-  forceD3d11: boolean;
-  forceVulkan: boolean;
+  renderBackend: "" | "d3d11" | "vulkan" | "nographics";
   log: boolean;
   processPriority: number;
   custom: string;
@@ -195,8 +194,7 @@ export const App = {
       noSplash: false,
       noAudio: false,
       skipRegistry: false,
-      forceD3d11: false,
-      forceVulkan: false,
+      renderBackend: "",
       log: false,
       processPriority: 0,
       custom: "",

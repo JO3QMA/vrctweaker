@@ -7,116 +7,139 @@ import (
 
 func TestParseLaunchArgsForGUI(t *testing.T) {
 	tests := []struct {
-		name       string
-		args       string
-		wantVrMode string
-		wantCache  bool
-		wantScreen string
-		wantCustom string
+		name              string
+		args              string
+		wantVrMode        string
+		wantCache         bool
+		wantScreen        string
+		wantCustom        string
+		wantRenderBackend string
 	}{
 		{
-			name:       "empty",
-			args:       "",
-			wantVrMode: "",
-			wantCache:  false,
-			wantScreen: "",
-			wantCustom: "",
+			name:              "empty",
+			args:              "",
+			wantVrMode:        "",
+			wantCache:         false,
+			wantScreen:        "",
+			wantCustom:        "",
+			wantRenderBackend: "",
 		},
 		{
-			name:       "no-vr short",
-			args:       "-no-vr",
-			wantVrMode: VrModeDesktop,
-			wantCache:  false,
-			wantScreen: "",
-			wantCustom: "",
+			name:              "no-vr short",
+			args:              "-no-vr",
+			wantVrMode:        VrModeDesktop,
+			wantCache:         false,
+			wantScreen:        "",
+			wantCustom:        "",
+			wantRenderBackend: "",
 		},
 		{
-			name:       "no-vr long",
-			args:       "--no-vr",
-			wantVrMode: VrModeDesktop,
-			wantCache:  false,
-			wantScreen: "",
-			wantCustom: "",
+			name:              "no-vr long",
+			args:              "--no-vr",
+			wantVrMode:        VrModeDesktop,
+			wantCache:         false,
+			wantScreen:        "",
+			wantCustom:        "",
+			wantRenderBackend: "",
 		},
 		{
-			name:       "vr",
-			args:       "-vr",
-			wantVrMode: VrModeVR,
-			wantCache:  false,
-			wantScreen: "",
-			wantCustom: "",
+			name:              "vr",
+			args:              "-vr",
+			wantVrMode:        VrModeVR,
+			wantCache:         false,
+			wantScreen:        "",
+			wantCustom:        "",
+			wantRenderBackend: "",
 		},
 		{
-			name:       "clear-cache",
-			args:       "--clear-cache",
-			wantVrMode: "",
-			wantCache:  true,
-			wantScreen: "",
-			wantCustom: "",
+			name:              "clear-cache",
+			args:              "--clear-cache",
+			wantVrMode:        "",
+			wantCache:         true,
+			wantScreen:        "",
+			wantCustom:        "",
+			wantRenderBackend: "",
 		},
 		{
-			name:       "fullscreen on",
-			args:       "-screen-fullscreen 1",
-			wantVrMode: "",
-			wantCache:  false,
-			wantScreen: ScreenModeFullscreen,
-			wantCustom: "",
+			name:              "fullscreen on",
+			args:              "-screen-fullscreen 1",
+			wantVrMode:        "",
+			wantCache:         false,
+			wantScreen:        ScreenModeFullscreen,
+			wantCustom:        "",
+			wantRenderBackend: "",
 		},
 		{
-			name:       "fullscreen off",
-			args:       "-screen-fullscreen 0",
-			wantVrMode: "",
-			wantCache:  false,
-			wantScreen: "",
-			wantCustom: "",
+			name:              "fullscreen off",
+			args:              "-screen-fullscreen 0",
+			wantVrMode:        "",
+			wantCache:         false,
+			wantScreen:        "",
+			wantCustom:        "",
+			wantRenderBackend: "",
 		},
 		{
-			name:       "custom only",
-			args:       "-batchmode -nographics",
-			wantVrMode: "",
-			wantCache:  false,
-			wantScreen: "",
-			wantCustom: "-batchmode -nographics",
+			name:              "custom only",
+			args:              "-batchmode",
+			wantVrMode:        "",
+			wantCache:         false,
+			wantScreen:        "",
+			wantCustom:        "-batchmode",
+			wantRenderBackend: "",
 		},
 		{
-			name:       "mixed GUI and custom",
-			args:       "--no-vr --clear-cache -batchmode",
-			wantVrMode: VrModeDesktop,
-			wantCache:  true,
-			wantScreen: "",
-			wantCustom: "-batchmode",
+			name:              "render backend nographics",
+			args:              "-batchmode -nographics",
+			wantVrMode:        "",
+			wantCache:         false,
+			wantScreen:        "",
+			wantCustom:        "-batchmode",
+			wantRenderBackend: RenderBackendNoGraphics,
 		},
 		{
-			name:       "backward compat manual no-vr",
-			args:       "-no-vr -screen-fullscreen 1 -custom-arg value",
-			wantVrMode: VrModeDesktop,
-			wantCache:  false,
-			wantScreen: ScreenModeFullscreen,
-			wantCustom: "-custom-arg value",
+			name:              "mixed GUI and custom",
+			args:              "--no-vr --clear-cache -batchmode",
+			wantVrMode:        VrModeDesktop,
+			wantCache:         true,
+			wantScreen:        "",
+			wantCustom:        "-batchmode",
+			wantRenderBackend: "",
 		},
 		{
-			name:       "all GUI items",
-			args:       "--no-vr --clear-cache -screen-fullscreen 1",
-			wantVrMode: VrModeDesktop,
-			wantCache:  true,
-			wantScreen: ScreenModeFullscreen,
-			wantCustom: "",
+			name:              "backward compat manual no-vr",
+			args:              "-no-vr -screen-fullscreen 1 -custom-arg value",
+			wantVrMode:        VrModeDesktop,
+			wantCache:         false,
+			wantScreen:        ScreenModeFullscreen,
+			wantCustom:        "-custom-arg value",
+			wantRenderBackend: "",
 		},
 		{
-			name:       "windowed",
-			args:       "-windowed",
-			wantVrMode: "",
-			wantCache:  false,
-			wantScreen: ScreenModeWindowed,
-			wantCustom: "",
+			name:              "all GUI items",
+			args:              "--no-vr --clear-cache -screen-fullscreen 1",
+			wantVrMode:        VrModeDesktop,
+			wantCache:         true,
+			wantScreen:        ScreenModeFullscreen,
+			wantCustom:        "",
+			wantRenderBackend: "",
 		},
 		{
-			name:       "popupwindow",
-			args:       "-popupwindow",
-			wantVrMode: "",
-			wantCache:  false,
-			wantScreen: ScreenModePopupWindow,
-			wantCustom: "",
+			name:              "windowed",
+			args:              "-windowed",
+			wantVrMode:        "",
+			wantCache:         false,
+			wantScreen:        ScreenModeWindowed,
+			wantCustom:        "",
+			wantRenderBackend: "",
+		},
+		{
+			name:              "popupwindow",
+			args:              "-popupwindow",
+			wantVrMode:        "",
+			wantCache:         false,
+			wantScreen:        ScreenModePopupWindow,
+			wantCustom:        "",
+			wantRenderBackend: "",
 		},
 	}
 	for _, tt := range tests {
@@ -133,6 +156,9 @@ func TestParseLaunchArgsForGUI(t *testing.T) {
 			}
 			if got.Custom != tt.wantCustom {
 				t.Errorf("ParseLaunchArgsForGUI().Custom = %q, want %q", got.Custom, tt.wantCustom)
+			}
+			if got.RenderBackend != tt.wantRenderBackend {
+				t.Errorf("ParseLaunchArgsForGUI().RenderBackend = %q, want %q", got.RenderBackend, tt.wantRenderBackend)
 			}
 		})
 	}
@@ -180,6 +206,21 @@ func TestMergeLaunchArgsForGUI(t *testing.T) {
 			want: "-no-vr --clear-cache -screen-fullscreen 1 -log",
 		},
 		{
+			name: "render backend d3d11",
+			p:    &LaunchArgsParsed{RenderBackend: RenderBackendD3D11},
+			want: "-force-d3d11",
+		},
+		{
+			name: "render backend vulkan",
+			p:    &LaunchArgsParsed{RenderBackend: RenderBackendVulkan},
+			want: "-force-vulkan",
+		},
+		{
+			name: "render backend nographics",
+			p:    &LaunchArgsParsed{RenderBackend: RenderBackendNoGraphics},
+			want: "-nographics",
+		},
+		{
 			name: "nil safe",
 			p:    nil,
 			want: "",
@@ -189,9 +230,9 @@ func TestMergeLaunchArgsForGUI(t *testing.T) {
 			p: &LaunchArgsParsed{
 				VrMode: VrModeVR, FPFC: true, ScreenMode: ScreenModePopupWindow,
 				ScreenWidth: 1280, ScreenHeight: 720, FPS: 72,
-				Safe: true, NoSplash: true, ProcessPriority: 2,
+				Safe: true, NoSplash: true, RenderBackend: RenderBackendD3D11, ProcessPriority: 2,
 			},
-			want: "-vr -fpfc -popupwindow -screen-width 1280 -screen-height 720 --fps=72 -safe -nosplash --process-priority=2",
+			want: "-vr -fpfc -popupwindow -screen-width 1280 -screen-height 720 --fps=72 -safe -nosplash -force-d3d11 --process-priority=2",
 		},
 	}
 	for _, tt := range tests {
@@ -209,8 +250,8 @@ func TestParseLaunchArgsForGUI_Detailed(t *testing.T) {
 	got := ParseLaunchArgsForGUI(in)
 	if got.VrMode != VrModeVR || !got.FPFC || got.ScreenMode != ScreenModePopupWindow || got.ScreenWidth != 1280 || got.ScreenHeight != 720 ||
 		got.FPS != 72 || !got.Safe || !got.NoSplash || !got.NoAudio || !got.SkipRegistry ||
-		!got.ForceD3D11 || !got.Log || got.ProcessPriority != 2 {
-		t.Errorf("ParseLaunchArgsForGUI(detailed) = %+v, want VrMode=vr/FPFC/PopupWindow/ScreenWidth=1280/ScreenHeight=720/FPS=72/...", got)
+		got.RenderBackend != RenderBackendD3D11 || !got.Log || got.ProcessPriority != 2 {
+		t.Errorf("ParseLaunchArgsForGUI(detailed) = %+v, want VrMode=vr/FPFC/PopupWindow/ScreenWidth=1280/ScreenHeight=720/FPS=72/RenderBackend=d3d11/...", got)
 	}
 }
 
@@ -239,13 +280,16 @@ func TestParseMergeRoundtrip(t *testing.T) {
 }
 
 func TestParseLaunchArgsForGUI_preservesCustomOrdering(t *testing.T) {
-	// Custom args should preserve their original order and trimming
+	// -nographics is parsed as RenderBackend, -batchmode stays in Custom
 	in := "  -batchmode  -nographics  "
 	got := ParseLaunchArgsForGUI(in)
 	if got.Custom == "" {
-		t.Error("expected non-empty Custom for custom args")
+		t.Error("expected non-empty Custom for -batchmode")
 	}
-	// Roundtrip: merge then parse again, custom should still be recognizable
+	if got.RenderBackend != RenderBackendNoGraphics {
+		t.Errorf("expected RenderBackend nographics, got %q", got.RenderBackend)
+	}
+	// Roundtrip: merge then parse again
 	merged := MergeLaunchArgsForGUI(got)
 	reparsed := ParseLaunchArgsForGUI(merged)
 	if !reflect.DeepEqual(got, reparsed) {

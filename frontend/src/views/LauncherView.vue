@@ -207,22 +207,65 @@
                 >
                 レジストリ登録スキップ（--skip-registry-install）
               </label>
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.forceD3d11"
-                  type="checkbox"
-                  data-testid="force-d3d11-checkbox"
+              <div class="render-backend-section">
+                <label class="block-label">レンダーパイプライン（排他）</label>
+                <div
+                  class="toggle-group"
+                  role="group"
+                  aria-label="レンダーパイプライン"
                 >
-                DirectX 11強制（-force-d3d11）
-              </label>
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.forceVulkan"
-                  type="checkbox"
-                  data-testid="force-vulkan-checkbox"
-                >
-                Vulkan強制（-force-vulkan）
-              </label>
+                  <label
+                    class="toggle-option"
+                    :class="{ active: launchArgs.renderBackend === '' }"
+                  >
+                    <input
+                      v-model="launchArgs.renderBackend"
+                      type="radio"
+                      value=""
+                      data-testid="render-backend-default"
+                    >
+                    <span>無設定</span>
+                  </label>
+                  <label
+                    class="toggle-option"
+                    :class="{ active: launchArgs.renderBackend === 'd3d11' }"
+                  >
+                    <input
+                      v-model="launchArgs.renderBackend"
+                      type="radio"
+                      value="d3d11"
+                      data-testid="render-backend-d3d11"
+                    >
+                    <span>DirectX 11</span>
+                  </label>
+                  <label
+                    class="toggle-option"
+                    :class="{ active: launchArgs.renderBackend === 'vulkan' }"
+                  >
+                    <input
+                      v-model="launchArgs.renderBackend"
+                      type="radio"
+                      value="vulkan"
+                      data-testid="render-backend-vulkan"
+                    >
+                    <span>Vulkan</span>
+                  </label>
+                  <label
+                    class="toggle-option"
+                    :class="{
+                      active: launchArgs.renderBackend === 'nographics',
+                    }"
+                  >
+                    <input
+                      v-model="launchArgs.renderBackend"
+                      type="radio"
+                      value="nographics"
+                      data-testid="render-backend-nographics"
+                    >
+                    <span>NoGraphics</span>
+                  </label>
+                </div>
+              </div>
               <label class="checkbox-row">
                 <input
                   v-model="launchArgs.log"
@@ -306,8 +349,7 @@ const defaultLaunchArgs = (): LaunchArgsParsedDTO => ({
   noSplash: false,
   noAudio: false,
   skipRegistry: false,
-  forceD3d11: false,
-  forceVulkan: false,
+  renderBackend: "",
   log: false,
   processPriority: 0,
   custom: "",
@@ -457,7 +499,8 @@ async function confirmDelete() {
   border-top: 1px solid var(--border);
 }
 .vr-mode-section,
-.screen-mode-section {
+.screen-mode-section,
+.render-backend-section {
   margin: 0.75rem 0;
 }
 .block-label {

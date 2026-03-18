@@ -34,8 +34,7 @@ type LaunchArgsParsedDTO struct {
 	NoSplash        bool   `json:"noSplash"`
 	NoAudio         bool   `json:"noAudio"`
 	SkipRegistry    bool   `json:"skipRegistry"`
-	ForceD3D11      bool   `json:"forceD3d11"`
-	ForceVulkan     bool   `json:"forceVulkan"`
+	RenderBackend   string `json:"renderBackend"` // ""|d3d11|vulkan|nographics (exclusive)
 	Log             bool   `json:"log"`
 	ProcessPriority int    `json:"processPriority"`
 	Custom          string `json:"custom"`
@@ -78,8 +77,7 @@ func toLaunchArgsParsedDTO(p *launcher.LaunchArgsParsed) LaunchArgsParsedDTO {
 		NoSplash:        p.NoSplash,
 		NoAudio:         p.NoAudio,
 		SkipRegistry:    p.SkipRegistry,
-		ForceD3D11:      p.ForceD3D11,
-		ForceVulkan:     p.ForceVulkan,
+		RenderBackend:   p.RenderBackend,
 		Log:             p.Log,
 		ProcessPriority: p.ProcessPriority,
 		Custom:          p.Custom,
@@ -99,8 +97,7 @@ func fromLaunchArgsParsedDTO(d LaunchArgsParsedDTO) *launcher.LaunchArgsParsed {
 		NoSplash:        d.NoSplash,
 		NoAudio:         d.NoAudio,
 		SkipRegistry:    d.SkipRegistry,
-		ForceD3D11:      d.ForceD3D11,
-		ForceVulkan:     d.ForceVulkan,
+		RenderBackend:   d.RenderBackend,
 		Log:             d.Log,
 		ProcessPriority: d.ProcessPriority,
 		Custom:          d.Custom,
