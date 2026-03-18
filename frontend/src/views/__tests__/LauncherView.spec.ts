@@ -48,8 +48,25 @@ describe("LauncherView", () => {
     mockLaunchProfiles.mockResolvedValue([...sampleProfiles]);
     mockParseLaunchArgsForGUI.mockImplementation(
       async (args: string): Promise<LaunchArgsParsedDTO> => {
+        const base = {
+          vr: false,
+          fpfc: false,
+          windowed: false,
+          screenWidth: 0,
+          screenHeight: 0,
+          fps: 0,
+          safe: false,
+          noSplash: false,
+          noAudio: false,
+          skipRegistry: false,
+          forceD3d11: false,
+          forceVulkan: false,
+          log: false,
+          processPriority: 0,
+        };
         if (args.includes("--no-vr")) {
           return {
+            ...base,
             noVr: true,
             clearCache: args.includes("--clear-cache"),
             fullscreen: args.includes("-screen-fullscreen 1"),
@@ -57,6 +74,7 @@ describe("LauncherView", () => {
           };
         }
         return {
+          ...base,
           noVr: false,
           clearCache: false,
           fullscreen: false,
@@ -70,6 +88,23 @@ describe("LauncherView", () => {
         if (dto.noVr) parts.push("-no-vr");
         if (dto.clearCache) parts.push("--clear-cache");
         if (dto.fullscreen) parts.push("-screen-fullscreen 1");
+        if (dto.vr) parts.push("-vr");
+        if (dto.fpfc) parts.push("-fpfc");
+        if (dto.windowed) parts.push("-windowed");
+        if (dto.screenWidth)
+          parts.push("-screen-width", String(dto.screenWidth));
+        if (dto.screenHeight)
+          parts.push("-screen-height", String(dto.screenHeight));
+        if (dto.fps) parts.push(`--fps=${dto.fps}`);
+        if (dto.safe) parts.push("-safe");
+        if (dto.noSplash) parts.push("-nosplash");
+        if (dto.noAudio) parts.push("-noaudio");
+        if (dto.skipRegistry) parts.push("--skip-registry-install");
+        if (dto.forceD3d11) parts.push("-force-d3d11");
+        if (dto.forceVulkan) parts.push("-force-vulkan");
+        if (dto.log) parts.push("-log");
+        if (dto.processPriority)
+          parts.push(`--process-priority=${dto.processPriority}`);
         if (dto.custom) parts.push(dto.custom);
         return parts.join(" ");
       },
@@ -177,6 +212,33 @@ describe("LauncherView", () => {
       }),
     );
     expect(mockSaveLaunchProfile).toHaveBeenCalled();
+  });
+
+  it("renders detailed settings when expanded", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+    const card = wrapper.findAll(".profile-card")[0];
+    await card?.trigger("click");
+    await flushPromises();
+
+    const details = wrapper.find(".details-advanced");
+    expect(details.exists()).toBe(true);
+    const summary = details.find("summary");
+    expect(summary.text()).toContain("詳細設定");
+
+    await summary.trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="vr-checkbox"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="fpfc-checkbox"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="windowed-checkbox"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.find('[data-testid="screen-width-input"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.find('[data-testid="fps-input"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="safe-checkbox"]').exists()).toBe(true);
   });
 
   it("launch uses current GUI state via merge and launchVRChatWithArgs", async () => {

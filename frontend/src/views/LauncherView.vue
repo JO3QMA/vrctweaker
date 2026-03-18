@@ -60,6 +60,134 @@
             >
             フルスクリーン（-screen-fullscreen 1）
           </label>
+          <details class="details-advanced">
+            <summary>詳細設定</summary>
+            <div class="launch-args-advanced">
+              <label class="checkbox-row">
+                <input
+                  v-model="launchArgs.vr"
+                  type="checkbox"
+                  data-testid="vr-checkbox"
+                >
+                強制VRモード（-vr）
+              </label>
+              <label class="checkbox-row">
+                <input
+                  v-model="launchArgs.fpfc"
+                  type="checkbox"
+                  data-testid="fpfc-checkbox"
+                >
+                FPFC（-fpfc）ワールド制作用カメラ
+              </label>
+              <label class="checkbox-row">
+                <input
+                  v-model="launchArgs.windowed"
+                  type="checkbox"
+                  data-testid="windowed-checkbox"
+                >
+                ウィンドウモード（-windowed）
+              </label>
+              <div class="number-row">
+                <label>
+                  解像度
+                  <span class="hint">幅</span>
+                  <input
+                    v-model.number="launchArgs.screenWidth"
+                    type="number"
+                    min="0"
+                    placeholder="0=省略"
+                    data-testid="screen-width-input"
+                  >
+                </label>
+                <label>
+                  <span class="hint">高さ</span>
+                  <input
+                    v-model.number="launchArgs.screenHeight"
+                    type="number"
+                    min="0"
+                    placeholder="0=省略"
+                    data-testid="screen-height-input"
+                  >
+                </label>
+              </div>
+              <label>
+                FPS制限（--fps=N）
+                <input
+                  v-model.number="launchArgs.fps"
+                  type="number"
+                  min="0"
+                  placeholder="0=省略"
+                  data-testid="fps-input"
+                >
+              </label>
+              <label class="checkbox-row">
+                <input
+                  v-model="launchArgs.safe"
+                  type="checkbox"
+                  data-testid="safe-checkbox"
+                >
+                セーフモード（-safe）
+              </label>
+              <label class="checkbox-row">
+                <input
+                  v-model="launchArgs.noSplash"
+                  type="checkbox"
+                  data-testid="nosplash-checkbox"
+                >
+                スプラッシュスキップ（-nosplash）
+              </label>
+              <label class="checkbox-row">
+                <input
+                  v-model="launchArgs.noAudio"
+                  type="checkbox"
+                  data-testid="noaudio-checkbox"
+                >
+                オーディオ無効（-noaudio）
+              </label>
+              <label class="checkbox-row">
+                <input
+                  v-model="launchArgs.skipRegistry"
+                  type="checkbox"
+                  data-testid="skip-registry-checkbox"
+                >
+                レジストリ登録スキップ（--skip-registry-install）
+              </label>
+              <label class="checkbox-row">
+                <input
+                  v-model="launchArgs.forceD3d11"
+                  type="checkbox"
+                  data-testid="force-d3d11-checkbox"
+                >
+                DirectX 11強制（-force-d3d11）
+              </label>
+              <label class="checkbox-row">
+                <input
+                  v-model="launchArgs.forceVulkan"
+                  type="checkbox"
+                  data-testid="force-vulkan-checkbox"
+                >
+                Vulkan強制（-force-vulkan）
+              </label>
+              <label class="checkbox-row">
+                <input
+                  v-model="launchArgs.log"
+                  type="checkbox"
+                  data-testid="log-checkbox"
+                >
+                ログ出力（-log）
+              </label>
+              <label>
+                プロセス優先度（--process-priority=N）
+                <input
+                  v-model.number="launchArgs.processPriority"
+                  type="number"
+                  min="0"
+                  placeholder="0=省略、2=高"
+                  data-testid="process-priority-input"
+                >
+              </label>
+            </div>
+          </details>
           <label>カスタム引数（上級者向け）</label>
           <input
             v-model="launchArgs.custom"
@@ -106,6 +234,20 @@ const defaultLaunchArgs = (): LaunchArgsParsedDTO => ({
   noVr: false,
   clearCache: false,
   fullscreen: false,
+  vr: false,
+  fpfc: false,
+  windowed: false,
+  screenWidth: 0,
+  screenHeight: 0,
+  fps: 0,
+  safe: false,
+  noSplash: false,
+  noAudio: false,
+  skipRegistry: false,
+  forceD3d11: false,
+  forceVulkan: false,
+  log: false,
+  processPriority: 0,
   custom: "",
 });
 
@@ -141,9 +283,21 @@ function addNew() {
   launchArgs.value = defaultLaunchArgs();
 }
 
+function sanitizeLaunchArgs(a: LaunchArgsParsedDTO): LaunchArgsParsedDTO {
+  return {
+    ...a,
+    screenWidth: Math.max(0, Number(a.screenWidth) || 0),
+    screenHeight: Math.max(0, Number(a.screenHeight) || 0),
+    fps: Math.max(0, Number(a.fps) || 0),
+    processPriority: Math.max(0, Number(a.processPriority) || 0),
+  };
+}
+
 async function save() {
   if (!selected.value) return;
-  const argsStr = await App.mergeLaunchArgsForGUI(launchArgs.value);
+  const argsStr = await App.mergeLaunchArgsForGUI(
+    sanitizeLaunchArgs(launchArgs.value),
+  );
   selected.value.arguments = argsStr;
   await App.saveLaunchProfile(selected.value);
   profiles.value = await App.launchProfiles();
@@ -151,7 +305,9 @@ async function save() {
 
 async function launch() {
   if (!selected.value) return;
-  const argsStr = await App.mergeLaunchArgsForGUI(launchArgs.value);
+  const argsStr = await App.mergeLaunchArgsForGUI(
+    sanitizeLaunchArgs(launchArgs.value),
+  );
   await App.launchVRChatWithArgs(argsStr);
 }
 </script>
@@ -206,6 +362,46 @@ async function launch() {
 }
 .launch-args-gui {
   margin-top: 0.5rem;
+}
+.details-advanced {
+  margin: 0.75rem 0;
+  padding: 0.5rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.details-advanced summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.launch-args-advanced {
+  margin-top: 0.75rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+.number-row {
+  display: flex;
+  gap: 1rem;
+  margin: 0.5rem 0;
+}
+.number-row label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.number-row input,
+.launch-args-advanced input[type="number"] {
+  width: 6rem;
+  padding: 0.35rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+}
+.hint {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
 }
 .checkbox-row {
   display: flex;

@@ -23,10 +23,24 @@ type LaunchProfileDTO struct {
 
 // LaunchArgsParsedDTO is the GUI-parsed launch arguments.
 type LaunchArgsParsedDTO struct {
-	NoVr       bool   `json:"noVr"`
-	ClearCache bool   `json:"clearCache"`
-	Fullscreen bool   `json:"fullscreen"`
-	Custom     string `json:"custom"`
+	NoVr            bool   `json:"noVr"`
+	ClearCache      bool   `json:"clearCache"`
+	Fullscreen      bool   `json:"fullscreen"`
+	VR              bool   `json:"vr"`
+	FPFC            bool   `json:"fpfc"`
+	Windowed        bool   `json:"windowed"`
+	ScreenWidth     int    `json:"screenWidth"`
+	ScreenHeight    int    `json:"screenHeight"`
+	FPS             int    `json:"fps"`
+	Safe            bool   `json:"safe"`
+	NoSplash        bool   `json:"noSplash"`
+	NoAudio         bool   `json:"noAudio"`
+	SkipRegistry    bool   `json:"skipRegistry"`
+	ForceD3D11      bool   `json:"forceD3d11"`
+	ForceVulkan     bool   `json:"forceVulkan"`
+	Log             bool   `json:"log"`
+	ProcessPriority int    `json:"processPriority"`
+	Custom          string `json:"custom"`
 }
 
 func toLaunchProfileDTOs(list []*launcher.LaunchProfile) []LaunchProfileDTO {
@@ -55,19 +69,47 @@ func toLaunchArgsParsedDTO(p *launcher.LaunchArgsParsed) LaunchArgsParsedDTO {
 		return LaunchArgsParsedDTO{}
 	}
 	return LaunchArgsParsedDTO{
-		NoVr:       p.NoVR,
-		ClearCache: p.ClearCache,
-		Fullscreen: p.Fullscreen,
-		Custom:     p.Custom,
+		NoVr:            p.NoVR,
+		ClearCache:      p.ClearCache,
+		Fullscreen:      p.Fullscreen,
+		VR:              p.VR,
+		FPFC:            p.FPFC,
+		Windowed:        p.Windowed,
+		ScreenWidth:     p.ScreenWidth,
+		ScreenHeight:    p.ScreenHeight,
+		FPS:             p.FPS,
+		Safe:            p.Safe,
+		NoSplash:        p.NoSplash,
+		NoAudio:         p.NoAudio,
+		SkipRegistry:    p.SkipRegistry,
+		ForceD3D11:      p.ForceD3D11,
+		ForceVulkan:     p.ForceVulkan,
+		Log:             p.Log,
+		ProcessPriority: p.ProcessPriority,
+		Custom:          p.Custom,
 	}
 }
 
 func fromLaunchArgsParsedDTO(d LaunchArgsParsedDTO) *launcher.LaunchArgsParsed {
 	return &launcher.LaunchArgsParsed{
-		NoVR:       d.NoVr,
-		ClearCache: d.ClearCache,
-		Fullscreen: d.Fullscreen,
-		Custom:     d.Custom,
+		NoVR:            d.NoVr,
+		ClearCache:      d.ClearCache,
+		Fullscreen:      d.Fullscreen,
+		VR:              d.VR,
+		FPFC:            d.FPFC,
+		Windowed:        d.Windowed,
+		ScreenWidth:     d.ScreenWidth,
+		ScreenHeight:    d.ScreenHeight,
+		FPS:             d.FPS,
+		Safe:            d.Safe,
+		NoSplash:        d.NoSplash,
+		NoAudio:         d.NoAudio,
+		SkipRegistry:    d.SkipRegistry,
+		ForceD3D11:      d.ForceD3D11,
+		ForceVulkan:     d.ForceVulkan,
+		Log:             d.Log,
+		ProcessPriority: d.ProcessPriority,
+		Custom:          d.Custom,
 	}
 }
 

@@ -14,6 +14,20 @@ export interface LaunchArgsParsedDTO {
   noVr: boolean;
   clearCache: boolean;
   fullscreen: boolean;
+  vr: boolean;
+  fpfc: boolean;
+  windowed: boolean;
+  screenWidth: number;
+  screenHeight: number;
+  fps: number;
+  safe: boolean;
+  noSplash: boolean;
+  noAudio: boolean;
+  skipRegistry: boolean;
+  forceD3d11: boolean;
+  forceVulkan: boolean;
+  log: boolean;
+  processPriority: number;
   custom: string;
 }
 
@@ -174,6 +188,20 @@ export const App = {
       noVr: false,
       clearCache: false,
       fullscreen: false,
+      vr: false,
+      fpfc: false,
+      windowed: false,
+      screenWidth: 0,
+      screenHeight: 0,
+      fps: 0,
+      safe: false,
+      noSplash: false,
+      noAudio: false,
+      skipRegistry: false,
+      forceD3d11: false,
+      forceVulkan: false,
+      log: false,
+      processPriority: 0,
       custom: "",
     });
   },

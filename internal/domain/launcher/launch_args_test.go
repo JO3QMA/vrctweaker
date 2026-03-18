@@ -160,6 +160,15 @@ func TestMergeLaunchArgsForGUI(t *testing.T) {
 			p:    nil,
 			want: "",
 		},
+		{
+			name: "detailed options",
+			p: &LaunchArgsParsed{
+				VR: true, FPFC: true, Windowed: true,
+				ScreenWidth: 1280, ScreenHeight: 720, FPS: 72,
+				Safe: true, NoSplash: true, ProcessPriority: 2,
+			},
+			want: "-vr -fpfc -windowed -screen-width 1280 -screen-height 720 --fps=72 -safe -nosplash --process-priority=2",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -168,6 +177,16 @@ func TestMergeLaunchArgsForGUI(t *testing.T) {
 				t.Errorf("MergeLaunchArgsForGUI() = %q, want %q", got, tt.want)
 			}
 		})
+	}
+}
+
+func TestParseLaunchArgsForGUI_Detailed(t *testing.T) {
+	in := "-vr -fpfc -windowed -screen-width 1280 -screen-height 720 --fps=72 -safe -nosplash -noaudio --skip-registry-install -force-d3d11 -log --process-priority=2"
+	got := ParseLaunchArgsForGUI(in)
+	if !got.VR || !got.FPFC || !got.Windowed || got.ScreenWidth != 1280 || got.ScreenHeight != 720 ||
+		got.FPS != 72 || !got.Safe || !got.NoSplash || !got.NoAudio || !got.SkipRegistry ||
+		!got.ForceD3D11 || !got.Log || got.ProcessPriority != 2 {
+		t.Errorf("ParseLaunchArgsForGUI(detailed) = %+v, want VR/FPFC/Windowed/ScreenWidth=1280/ScreenHeight=720/FPS=72/Safe/NoSplash/NoAudio/SkipRegistry/ForceD3D11/Log/ProcessPriority=2", got)
 	}
 }
 
@@ -180,14 +199,14 @@ func TestParseMergeRoundtrip(t *testing.T) {
 		{"no-vr", "-no-vr"},
 		{"all gui", "--no-vr --clear-cache -screen-fullscreen 1"},
 		{"with custom", "--no-vr -batchmode -custom value"},
+		{"detailed", "-vr -fpfc -windowed -screen-width 1280 -screen-height 720 --fps=72 -safe -nosplash"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			parsed := ParseLaunchArgsForGUI(tt.in)
 			merged := MergeLaunchArgsForGUI(parsed)
 			reparsed := ParseLaunchArgsForGUI(merged)
-			if parsed.NoVR != reparsed.NoVR || parsed.ClearCache != reparsed.ClearCache ||
-				parsed.Fullscreen != reparsed.Fullscreen || parsed.Custom != reparsed.Custom {
+			if !reflect.DeepEqual(parsed, reparsed) {
 				t.Errorf("roundtrip mismatch: in=%q -> merged=%q, parsed=%+v reparsed=%+v",
 					tt.in, merged, parsed, reparsed)
 			}
