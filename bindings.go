@@ -37,6 +37,7 @@ type LaunchArgsParsedDTO struct {
 	RenderBackend   string `json:"renderBackend"` // ""|d3d11|vulkan|nographics (exclusive)
 	Log             bool   `json:"log"`
 	ProcessPriority int    `json:"processPriority"`
+	Adapter         int    `json:"adapter"` // -adapter N (0-based GPU index), -1=omit
 	Custom          string `json:"custom"`
 }
 
@@ -80,6 +81,7 @@ func toLaunchArgsParsedDTO(p *launcher.LaunchArgsParsed) LaunchArgsParsedDTO {
 		RenderBackend:   p.RenderBackend,
 		Log:             p.Log,
 		ProcessPriority: p.ProcessPriority,
+		Adapter:         p.Adapter,
 		Custom:          p.Custom,
 	}
 }
@@ -100,6 +102,7 @@ func fromLaunchArgsParsedDTO(d LaunchArgsParsedDTO) *launcher.LaunchArgsParsed {
 		RenderBackend:   d.RenderBackend,
 		Log:             d.Log,
 		ProcessPriority: d.ProcessPriority,
+		Adapter:         d.Adapter,
 		Custom:          d.Custom,
 	}
 }

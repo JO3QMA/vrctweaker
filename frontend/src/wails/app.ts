@@ -25,6 +25,7 @@ export interface LaunchArgsParsedDTO {
   renderBackend: "" | "d3d11" | "vulkan" | "nographics";
   log: boolean;
   processPriority: number;
+  adapter: number; // 0-based GPU index, -1=omit
   custom: string;
 }
 
@@ -197,6 +198,7 @@ export const App = {
       renderBackend: "",
       log: false,
       processPriority: 0,
+      adapter: -1,
       custom: "",
     });
   },

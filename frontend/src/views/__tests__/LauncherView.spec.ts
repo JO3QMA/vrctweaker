@@ -63,6 +63,7 @@ describe("LauncherView", () => {
           renderBackend: "" as "" | "d3d11" | "vulkan" | "nographics",
           log: false,
           processPriority: 0,
+          adapter: -1,
         };
         let vrMode: "" | "desktop" | "vr" = "";
         if (args.includes("--no-vr") || args.includes("-no-vr"))
@@ -73,6 +74,10 @@ describe("LauncherView", () => {
         if (args.includes("-nographics")) renderBackend = "nographics";
         else if (args.includes("-force-vulkan")) renderBackend = "vulkan";
         else if (args.includes("-force-d3d11")) renderBackend = "d3d11";
+
+        let adapter = -1;
+        const adapterMatch = args.match(/-adapter\s+(\d+)/);
+        if (adapterMatch) adapter = parseInt(adapterMatch[1], 10);
 
         return {
           ...base,
@@ -86,6 +91,7 @@ describe("LauncherView", () => {
                 ? "windowed"
                 : "",
           renderBackend,
+          adapter,
           custom: args.includes("-batchmode") ? "-batchmode" : "",
         };
       },
@@ -115,6 +121,7 @@ describe("LauncherView", () => {
         if (dto.log) parts.push("-log");
         if (dto.processPriority)
           parts.push(`--process-priority=${dto.processPriority}`);
+        if (dto.adapter >= 0) parts.push("-adapter", String(dto.adapter));
         if (dto.custom) parts.push(dto.custom);
         return parts.join(" ");
       },
@@ -161,7 +168,8 @@ describe("LauncherView", () => {
       clearCache: true,
       screenMode: "fullscreen",
       custom: "-batchmode",
-    });
+      adapter: -1,
+    } as LaunchArgsParsedDTO);
 
     const cardWithCache = wrapper.findAll(".profile-card")[1];
     await cardWithCache?.trigger("click");
@@ -199,7 +207,8 @@ describe("LauncherView", () => {
       clearCache: false,
       screenMode: "",
       custom: "",
-    });
+      adapter: -1,
+    } as LaunchArgsParsedDTO);
     await flushPromises();
 
     const desktopRadio = wrapper.find('[data-testid="vr-mode-desktop"]');
@@ -261,6 +270,7 @@ describe("LauncherView", () => {
     );
     expect(wrapper.find('[data-testid="fps-input"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="safe-checkbox"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="adapter-input"]').exists()).toBe(true);
   });
 
   it("launch uses current GUI state via merge and launchVRChatWithArgs", async () => {

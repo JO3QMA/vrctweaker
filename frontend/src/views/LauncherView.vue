@@ -284,6 +284,16 @@
                   data-testid="process-priority-input"
                 >
               </label>
+              <label>
+                GPUアダプター（-adapter N）
+                <input
+                  v-model.number="launchArgs.adapter"
+                  type="number"
+                  min="-1"
+                  placeholder="-1=自動、0=1枚目、1=2枚目..."
+                  data-testid="adapter-input"
+                >
+              </label>
             </div>
           </details>
           <label>カスタム引数（上級者向け）</label>
@@ -352,6 +362,7 @@ const defaultLaunchArgs = (): LaunchArgsParsedDTO => ({
   renderBackend: "",
   log: false,
   processPriority: 0,
+  adapter: -1,
   custom: "",
 });
 
@@ -388,12 +399,14 @@ function addNew() {
 }
 
 function sanitizeLaunchArgs(a: LaunchArgsParsedDTO): LaunchArgsParsedDTO {
+  const adapter = Number(a.adapter);
   return {
     ...a,
     screenWidth: Math.max(0, Number(a.screenWidth) || 0),
     screenHeight: Math.max(0, Number(a.screenHeight) || 0),
     fps: Math.max(0, Number(a.fps) || 0),
     processPriority: Math.max(0, Number(a.processPriority) || 0),
+    adapter: Number.isInteger(adapter) && adapter >= -1 ? adapter : -1,
   };
 }
 

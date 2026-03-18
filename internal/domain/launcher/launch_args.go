@@ -45,6 +45,7 @@ type LaunchArgsParsed struct {
 	RenderBackend   string // ""|d3d11|vulkan|nographics (exclusive: -force-d3d11, -force-vulkan, -nographics)
 	Log             bool   // -log
 	ProcessPriority int    // --process-priority=N, 0=omit
+	Adapter         int    // -adapter N (0-based GPU index), -1=omit
 	Custom          string // remaining args as-is
 }
 
@@ -70,12 +71,13 @@ var (
 	nographics            = "-nographics"
 	logArg                = "-log"
 	processPriorityPrefix = "--process-priority="
+	adapterArg            = "-adapter"
 )
 
 // ParseLaunchArgsForGUI parses a launch arguments string into GUI fields.
 // Detects known args; everything else goes to Custom. Order of custom args is preserved.
 func ParseLaunchArgsForGUI(args string) *LaunchArgsParsed {
-	p := &LaunchArgsParsed{}
+	p := &LaunchArgsParsed{Adapter: -1}
 	if args == "" {
 		return p
 	}
@@ -145,6 +147,13 @@ func ParseLaunchArgsForGUI(args string) *LaunchArgsParsed {
 				if n, err := strconv.Atoi(v); err == nil && n >= 0 {
 					p.ProcessPriority = n
 				}
+			}
+		case tok == adapterArg:
+			if i+1 < len(tokens) {
+				if n, err := strconv.Atoi(tokens[i+1]); err == nil && n >= 0 {
+					p.Adapter = n
+				}
+				i++
 			}
 		default:
 			customParts = append(customParts, tok)
@@ -263,6 +272,9 @@ func MergeLaunchArgsForGUI(p *LaunchArgsParsed) string {
 	}
 	if p.ProcessPriority > 0 {
 		parts = append(parts, processPriorityPrefix+strconv.Itoa(p.ProcessPriority))
+	}
+	if p.Adapter >= 0 {
+		parts = append(parts, adapterArg, strconv.Itoa(p.Adapter))
 	}
 	if p.Custom != "" {
 		parts = append(parts, strings.TrimSpace(p.Custom))
