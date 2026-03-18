@@ -36,14 +36,51 @@
         >
         <label>起動引数</label>
         <div class="launch-args-gui">
-          <label class="checkbox-row">
-            <input
-              v-model="launchArgs.noVr"
-              type="checkbox"
-              data-testid="no-vr-checkbox"
+          <div class="vr-mode-section">
+            <label class="block-label">VRモード</label>
+            <div
+              class="toggle-group"
+              role="group"
+              aria-label="VRモード"
             >
-            デスクトップモードで起動（-no-vr）
-          </label>
+              <label
+                class="toggle-option"
+                :class="{ active: launchArgs.vrMode === 'desktop' }"
+              >
+                <input
+                  v-model="launchArgs.vrMode"
+                  type="radio"
+                  value="desktop"
+                  data-testid="vr-mode-desktop"
+                >
+                <span>デスクトップモード</span>
+              </label>
+              <label
+                class="toggle-option"
+                :class="{ active: launchArgs.vrMode === '' }"
+              >
+                <input
+                  v-model="launchArgs.vrMode"
+                  type="radio"
+                  value=""
+                  data-testid="vr-mode-none"
+                >
+                <span>無設定</span>
+              </label>
+              <label
+                class="toggle-option"
+                :class="{ active: launchArgs.vrMode === 'vr' }"
+              >
+                <input
+                  v-model="launchArgs.vrMode"
+                  type="radio"
+                  value="vr"
+                  data-testid="vr-mode-vr"
+                >
+                <span>強制VRモード</span>
+              </label>
+            </div>
+          </div>
           <label class="checkbox-row">
             <input
               v-model="launchArgs.clearCache"
@@ -120,14 +157,6 @@
           <details class="details-advanced">
             <summary>詳細設定</summary>
             <div class="launch-args-advanced">
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.vr"
-                  type="checkbox"
-                  data-testid="vr-checkbox"
-                >
-                強制VRモード（-vr）
-              </label>
               <label class="checkbox-row">
                 <input
                   v-model="launchArgs.fpfc"
@@ -257,10 +286,9 @@ import {
 } from "../wails/app";
 
 const defaultLaunchArgs = (): LaunchArgsParsedDTO => ({
-  noVr: false,
+  vrMode: "",
   clearCache: false,
   screenMode: "",
-  vr: false,
   fpfc: false,
   screenWidth: 0,
   screenHeight: 0,
@@ -405,6 +433,7 @@ async function launch() {
   padding-top: 0.5rem;
   border-top: 1px solid var(--border);
 }
+.vr-mode-section,
 .screen-mode-section {
   margin: 0.75rem 0;
 }

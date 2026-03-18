@@ -11,10 +11,9 @@ export interface LaunchProfileDTO {
 }
 
 export interface LaunchArgsParsedDTO {
-  noVr: boolean;
+  vrMode: "" | "desktop" | "vr";
   clearCache: boolean;
   screenMode: "" | "fullscreen" | "windowed" | "popupwindow";
-  vr: boolean;
   fpfc: boolean;
   screenWidth: number;
   screenHeight: number;
@@ -184,10 +183,9 @@ export const App = {
   },
   async parseLaunchArgsForGUI(args: string): Promise<LaunchArgsParsedDTO> {
     return callApp((a) => a.ParseLaunchArgsForGUI(args), {
-      noVr: false,
+      vrMode: "",
       clearCache: false,
       screenMode: "",
-      vr: false,
       fpfc: false,
       screenWidth: 0,
       screenHeight: 0,

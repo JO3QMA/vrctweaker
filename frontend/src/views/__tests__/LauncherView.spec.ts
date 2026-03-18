@@ -49,7 +49,6 @@ describe("LauncherView", () => {
     mockParseLaunchArgsForGUI.mockImplementation(
       async (args: string): Promise<LaunchArgsParsedDTO> => {
         const base = {
-          vr: false,
           fpfc: false,
           screenWidth: 0,
           screenHeight: 0,
@@ -63,39 +62,35 @@ describe("LauncherView", () => {
           log: false,
           processPriority: 0,
         };
-        if (args.includes("--no-vr")) {
-          return {
-            ...base,
-            noVr: true,
-            clearCache: args.includes("--clear-cache"),
-            screenMode: args.includes("-screen-fullscreen 1")
-              ? "fullscreen"
-              : args.includes("-popupwindow")
-                ? "popupwindow"
-                : args.includes("-windowed")
-                  ? "windowed"
-                  : "",
-            custom: args.includes("-batchmode") ? "-batchmode" : "",
-          };
-        }
+        let vrMode: "" | "desktop" | "vr" = "";
+        if (args.includes("--no-vr") || args.includes("-no-vr"))
+          vrMode = "desktop";
+        else if (args.includes("-vr")) vrMode = "vr";
+
         return {
           ...base,
-          noVr: false,
-          clearCache: false,
-          screenMode: "",
-          custom: args.trim() || "",
+          vrMode,
+          clearCache: args.includes("--clear-cache"),
+          screenMode: args.includes("-screen-fullscreen 1")
+            ? "fullscreen"
+            : args.includes("-popupwindow")
+              ? "popupwindow"
+              : args.includes("-windowed")
+                ? "windowed"
+                : "",
+          custom: args.includes("-batchmode") ? "-batchmode" : "",
         };
       },
     );
     mockMergeLaunchArgsForGUI.mockImplementation(
       async (dto: LaunchArgsParsedDTO): Promise<string> => {
         const parts: string[] = [];
-        if (dto.noVr) parts.push("-no-vr");
+        if (dto.vrMode === "desktop") parts.push("-no-vr");
+        if (dto.vrMode === "vr") parts.push("-vr");
         if (dto.clearCache) parts.push("--clear-cache");
         if (dto.screenMode === "fullscreen") parts.push("-screen-fullscreen 1");
         if (dto.screenMode === "windowed") parts.push("-windowed");
         if (dto.screenMode === "popupwindow") parts.push("-popupwindow");
-        if (dto.vr) parts.push("-vr");
         if (dto.fpfc) parts.push("-fpfc");
         if (dto.screenWidth)
           parts.push("-screen-width", String(dto.screenWidth));
@@ -125,7 +120,7 @@ describe("LauncherView", () => {
     expect(wrapper.find(".page-title").text()).toBe("ランチャー");
   });
 
-  it("renders GUI items: desktop mode, clear cache, screen mode toggle, custom args", async () => {
+  it("renders GUI items: VR mode toggle, clear cache, screen mode toggle, custom args", async () => {
     const wrapper = mount(LauncherView);
     await flushPromises();
     // Select first profile to show editor
@@ -133,7 +128,9 @@ describe("LauncherView", () => {
     await card?.trigger("click");
     await flushPromises();
 
-    expect(wrapper.find('[data-testid="no-vr-checkbox"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="vr-mode-desktop"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="vr-mode-none"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="vr-mode-vr"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="clear-cache-checkbox"]').exists()).toBe(
       true,
     );
@@ -150,7 +147,7 @@ describe("LauncherView", () => {
     await flushPromises();
 
     mockParseLaunchArgsForGUI.mockResolvedValue({
-      noVr: true,
+      vrMode: "desktop",
       clearCache: true,
       screenMode: "fullscreen",
       custom: "-batchmode",
@@ -164,7 +161,7 @@ describe("LauncherView", () => {
       "--no-vr --clear-cache -screen-fullscreen 1",
     );
 
-    const noVrCheckbox = wrapper.find('[data-testid="no-vr-checkbox"]');
+    const desktopRadio = wrapper.find('[data-testid="vr-mode-desktop"]');
     const clearCacheCheckbox = wrapper.find(
       '[data-testid="clear-cache-checkbox"]',
     );
@@ -173,7 +170,7 @@ describe("LauncherView", () => {
     );
     const customInput = wrapper.find('[data-testid="custom-args-input"]');
 
-    expect((noVrCheckbox.element as HTMLInputElement).checked).toBe(true);
+    expect((desktopRadio.element as HTMLInputElement).checked).toBe(true);
     expect((clearCacheCheckbox.element as HTMLInputElement).checked).toBe(true);
     expect((fullscreenRadio.element as HTMLInputElement).checked).toBe(true);
     expect((customInput.element as HTMLInputElement).value).toBe("-batchmode");
@@ -188,15 +185,15 @@ describe("LauncherView", () => {
     await flushPromises();
 
     mockParseLaunchArgsForGUI.mockResolvedValue({
-      noVr: true,
+      vrMode: "desktop",
       clearCache: false,
       screenMode: "",
       custom: "",
     });
     await flushPromises();
 
-    const noVrCheckbox = wrapper.find('[data-testid="no-vr-checkbox"]');
-    await noVrCheckbox.setValue(true);
+    const desktopRadio = wrapper.find('[data-testid="vr-mode-desktop"]');
+    await desktopRadio.setValue("desktop");
     const clearCacheCheckbox = wrapper.find(
       '[data-testid="clear-cache-checkbox"]',
     );
@@ -211,7 +208,7 @@ describe("LauncherView", () => {
 
     expect(mockMergeLaunchArgsForGUI).toHaveBeenCalledWith(
       expect.objectContaining({
-        noVr: true,
+        vrMode: "desktop",
         clearCache: true,
         screenMode: "",
         custom: "-batchmode",
@@ -235,7 +232,7 @@ describe("LauncherView", () => {
     await summary.trigger("click");
     await flushPromises();
 
-    expect(wrapper.find('[data-testid="vr-checkbox"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="vr-mode-vr"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="fpfc-checkbox"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="screen-mode-windowed"]').exists()).toBe(
       true,
@@ -257,8 +254,8 @@ describe("LauncherView", () => {
 
     mockMergeLaunchArgsForGUI.mockResolvedValue("--no-vr -screen-fullscreen 1");
 
-    const noVrCheckbox = wrapper.find('[data-testid="no-vr-checkbox"]');
-    await noVrCheckbox.setValue(true);
+    const desktopRadio = wrapper.find('[data-testid="vr-mode-desktop"]');
+    await desktopRadio.setValue("desktop");
     const fullscreenRadio = wrapper.find(
       '[data-testid="screen-mode-fullscreen"]',
     );
@@ -271,7 +268,7 @@ describe("LauncherView", () => {
 
     expect(mockMergeLaunchArgsForGUI).toHaveBeenCalledWith(
       expect.objectContaining({
-        noVr: true,
+        vrMode: "desktop",
         screenMode: "fullscreen",
       }),
     );

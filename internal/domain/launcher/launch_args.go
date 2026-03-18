@@ -12,14 +12,20 @@ const (
 	ScreenModePopupWindow = "popupwindow"
 )
 
+// VrMode is the VR launch mode: desktop (-no-vr), none (無設定), or vr (-vr).
+const (
+	VrModeDesktop = "desktop"
+	VrModeNone    = ""
+	VrModeVR      = "vr"
+)
+
 // LaunchArgsParsed holds GUI-friendly parsed launch arguments.
 type LaunchArgsParsed struct {
 	// 一般設定
-	NoVR       bool   // -no-vr or --no-vr
+	VrMode     string // desktop|""|vr (replaces NoVR+VR)
 	ClearCache bool   // --clear-cache (app-specific, not passed to VRChat)
 	ScreenMode string // fullscreen|windowed|popupwindow (replaces Fullscreen+Windowed)
 	// 詳細設定
-	VR              bool   // -vr (強制VRモード)
 	FPFC            bool   // -fpfc (First Person Flying Camera)
 	ScreenWidth     int    // -screen-width N, 0=omit
 	ScreenHeight    int    // -screen-height N, 0=omit
@@ -72,7 +78,9 @@ func ParseLaunchArgsForGUI(args string) *LaunchArgsParsed {
 		tok := tokens[i]
 		switch {
 		case tok == noVrShort || tok == noVrLong:
-			p.NoVR = true
+			p.VrMode = VrModeDesktop
+		case tok == vr:
+			p.VrMode = VrModeVR
 		case tok == clearCache:
 			p.ClearCache = true
 		case tok == screenFull:
@@ -82,8 +90,6 @@ func ParseLaunchArgsForGUI(args string) *LaunchArgsParsed {
 				}
 				i++
 			}
-		case tok == vr:
-			p.VR = true
 		case tok == fpfc:
 			p.FPFC = true
 		case tok == windowed:
@@ -193,10 +199,10 @@ func MergeLaunchArgsForGUI(p *LaunchArgsParsed) string {
 		return ""
 	}
 	var parts []string
-	if p.NoVR {
+	switch p.VrMode {
+	case VrModeDesktop:
 		parts = append(parts, noVrShort)
-	}
-	if p.VR {
+	case VrModeVR:
 		parts = append(parts, vr)
 	}
 	if p.ClearCache {
