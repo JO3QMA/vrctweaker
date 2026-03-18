@@ -1,25 +1,15 @@
 <template>
   <nav class="sidebar">
     <ul class="sidebar-menu">
-      <li
-        v-for="item in menuItems"
-        :key="item.path"
-      >
-        <router-link
-          :to="item.path"
-          class="sidebar-link"
-          active-class="active"
-        >
+      <li v-for="item in menuItems" :key="item.path">
+        <router-link :to="item.path" class="sidebar-link" active-class="active">
           <span class="sidebar-icon">{{ item.icon }}</span>
           <span class="sidebar-label">{{ item.label }}</span>
         </router-link>
       </li>
     </ul>
     <div class="sidebar-footer">
-      <router-link
-        to="/settings"
-        class="sidebar-link settings-link"
-      >
+      <router-link to="/settings" class="sidebar-link settings-link">
         <span class="sidebar-icon">⚙️</span>
         <span class="sidebar-label">設定</span>
       </router-link>

@@ -1,8 +1,6 @@
 <template>
   <div class="licenses-view">
-    <h1 class="page-title">
-      OSS ライセンス
-    </h1>
+    <h1 class="page-title">OSS ライセンス</h1>
     <p class="intro">
       本アプリケーションで使用しているオープンソースソフトウェア（OSS）のライセンス一覧です。
     </p>
@@ -19,10 +17,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="[key, info] in npmLicenses"
-              :key="key"
-            >
+            <tr v-for="[key, info] in npmLicenses" :key="key">
               <td class="package-name">
                 {{ info.name }}
               </td>
@@ -40,10 +35,7 @@
                 >
                   {{ truncateUrl(info.repository) }}
                 </a>
-                <span
-                  v-else
-                  class="no-repo"
-                >-</span>
+                <span v-else class="no-repo">-</span>
               </td>
             </tr>
           </tbody>
@@ -62,10 +54,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr
-              v-for="pkg in goLicenses"
-              :key="pkg.path"
-            >
+            <tr v-for="pkg in goLicenses" :key="pkg.path">
               <td class="package-name">
                 {{ pkg.path }}
               </td>
@@ -82,10 +71,7 @@
                 >
                   {{ truncateUrl(pkg.repository) }}
                 </a>
-                <span
-                  v-else
-                  class="no-repo"
-                >-</span>
+                <span v-else class="no-repo">-</span>
               </td>
             </tr>
           </tbody>
