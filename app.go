@@ -11,6 +11,7 @@ import (
 	"vrchat-tweaker/internal/domain/activity"
 	"vrchat-tweaker/internal/domain/automation"
 	"vrchat-tweaker/internal/domain/event"
+	"vrchat-tweaker/internal/domain/launcher"
 	"vrchat-tweaker/internal/domain/media"
 	"vrchat-tweaker/internal/infrastructure/desktop"
 	"vrchat-tweaker/internal/infrastructure/logwatcher"
@@ -154,8 +155,27 @@ func (a *App) LaunchProfiles() ([]LaunchProfileDTO, error) {
 	return toLaunchProfileDTOs(list), nil
 }
 
+// LaunchVRChatWithArgs starts VRChat with the given arguments string (from GUI state).
+// Use when launching with current GUI settings without saving first.
+func (a *App) LaunchVRChatWithArgs(args string) error {
+	ps, err := a.settings.GetPathSettings(a.ctx)
+	if err != nil {
+		return err
+	}
+	vrchatPath := ""
+	steamPath := ""
+	outputLogPath := ""
+	if ps != nil {
+		vrchatPath = ps.VRChatPathWindows
+		steamPath = ps.SteamPathLinux
+		outputLogPath = ps.OutputLogPath
+	}
+	return a.launcher.LaunchWithArgs(a.ctx, args, vrchatPath, steamPath, outputLogPath)
+}
+
 // LaunchVRChat starts VRChat with the given profile ID.
 // Uses path settings (VRChat/Steam paths) from app_settings when configured.
+// Passes outputLogPath for --clear-cache cache dir resolution.
 func (a *App) LaunchVRChat(profileID string) error {
 	ps, err := a.settings.GetPathSettings(a.ctx)
 	if err != nil {
@@ -163,11 +183,13 @@ func (a *App) LaunchVRChat(profileID string) error {
 	}
 	vrchatPath := ""
 	steamPath := ""
+	outputLogPath := ""
 	if ps != nil {
 		vrchatPath = ps.VRChatPathWindows
 		steamPath = ps.SteamPathLinux
+		outputLogPath = ps.OutputLogPath
 	}
-	return a.launcher.LaunchVRChat(a.ctx, profileID, vrchatPath, steamPath)
+	return a.launcher.LaunchVRChat(a.ctx, profileID, vrchatPath, steamPath, outputLogPath)
 }
 
 // JoinWorld launches VRChat into the specified world using default profile.
@@ -179,11 +201,13 @@ func (a *App) JoinWorld(worldID string) error {
 	}
 	vrchatPath := ""
 	steamPath := ""
+	outputLogPath := ""
 	if ps != nil {
 		vrchatPath = ps.VRChatPathWindows
 		steamPath = ps.SteamPathLinux
+		outputLogPath = ps.OutputLogPath
 	}
-	return a.launcher.LaunchToWorld(a.ctx, "", worldID, vrchatPath, steamPath)
+	return a.launcher.LaunchToWorld(a.ctx, "", worldID, vrchatPath, steamPath, outputLogPath)
 }
 
 // JoinWorldFromScreenshot launches VRChat into the world associated with the screenshot.
@@ -205,6 +229,17 @@ func (a *App) JoinWorldFromScreenshot(screenshotID string) error {
 // SaveLaunchProfile persists a launch profile.
 func (a *App) SaveLaunchProfile(p LaunchProfileDTO) error {
 	return a.launcher.SaveProfile(a.ctx, toLaunchProfile(p))
+}
+
+// ParseLaunchArgsForGUI parses a launch arguments string into GUI fields.
+func (a *App) ParseLaunchArgsForGUI(args string) LaunchArgsParsedDTO {
+	p := launcher.ParseLaunchArgsForGUI(args)
+	return toLaunchArgsParsedDTO(p)
+}
+
+// MergeLaunchArgsForGUI builds a launch arguments string from GUI state.
+func (a *App) MergeLaunchArgsForGUI(dto LaunchArgsParsedDTO) string {
+	return launcher.MergeLaunchArgsForGUI(fromLaunchArgsParsedDTO(dto))
 }
 
 // --- Settings bindings ---

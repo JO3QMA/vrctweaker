@@ -1,7 +1,11 @@
 package usecase
 
 import (
+	"os"
+	"path/filepath"
 	"reflect"
+	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -136,6 +140,99 @@ func TestParseLaunchArgs(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestResolveVRCacheDir(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("ResolveVRCacheDir Windows path logic; skip on non-Windows")
+	}
+	tests := []struct {
+		name          string
+		outputLogPath string
+		wantPrefix    string
+		wantSuffix    string
+	}{
+		{
+			name:          "from output_log_path",
+			outputLogPath: `C:\Users\test\AppData\LocalLow\VRChat\VRChat\output_log.txt`,
+			wantSuffix:    `VRChat\Cache-WindowsPlayer`,
+		},
+		{
+			name:          "empty uses default",
+			outputLogPath: "",
+			wantSuffix:    `VRChat\VRChat\Cache-WindowsPlayer`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := ResolveVRCacheDir(tt.outputLogPath)
+			if err != nil {
+				t.Errorf("ResolveVRCacheDir() error = %v", err)
+				return
+			}
+			if tt.wantSuffix != "" && !strings.HasSuffix(filepath.FromSlash(got), tt.wantSuffix) {
+				t.Errorf("ResolveVRCacheDir() = %q, want suffix %q", got, tt.wantSuffix)
+			}
+		})
+	}
+}
+
+func TestFilterClearCacheFromArgs(t *testing.T) {
+	tests := []struct {
+		name    string
+		args    []string
+		wantOut []string
+		wantHad bool
+	}{
+		{"none", []string{"-no-vr", "-batchmode"}, []string{"-no-vr", "-batchmode"}, false},
+		{"has clear-cache", []string{"-no-vr", "--clear-cache", "-batchmode"}, []string{"-no-vr", "-batchmode"}, true},
+		{"only clear-cache", []string{"--clear-cache"}, []string{}, true},
+		{"empty", []string{}, []string{}, false},
+		{"clear-cache first", []string{"--clear-cache", "-no-vr"}, []string{"-no-vr"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotOut, gotHad := FilterClearCacheFromArgs(tt.args)
+			if !reflect.DeepEqual(gotOut, tt.wantOut) {
+				t.Errorf("FilterClearCacheFromArgs() out = %v, want %v", gotOut, tt.wantOut)
+			}
+			if gotHad != tt.wantHad {
+				t.Errorf("FilterClearCacheFromArgs() had = %v, want %v", gotHad, tt.wantHad)
+			}
+		})
+	}
+}
+
+func TestClearCacheBeforeLaunch_Integration(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("ResolveVRCacheDir returns empty on non-Windows; skip integration test")
+	}
+	// Use temp dir to verify cache deletion without touching real files
+	dir := t.TempDir()
+	cacheDir := filepath.Join(dir, "Cache-WindowsPlayer")
+	if err := os.MkdirAll(filepath.Join(cacheDir, "sub"), 0755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	// Simulate output_log at .../VRChat/output_log.txt
+	outputLogPath := filepath.Join(dir, "output_log.txt")
+	if err := os.WriteFile(outputLogPath, []byte("x"), 0644); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	// Resolve: parent of output_log = dir, so cache = dir/Cache-WindowsPlayer
+	got, err := ResolveVRCacheDir(outputLogPath)
+	if err != nil {
+		t.Fatalf("ResolveVRCacheDir: %v", err)
+	}
+	if got != cacheDir {
+		t.Fatalf("ResolveVRCacheDir = %q, want %q", got, cacheDir)
+	}
+	// Delete and verify
+	if err := clearVRCacheDir(cacheDir); err != nil {
+		t.Fatalf("clearVRCacheDir: %v", err)
+	}
+	if _, err := os.Stat(cacheDir); !os.IsNotExist(err) {
+		t.Errorf("cache dir should be deleted, got err=%v", err)
 	}
 }
 

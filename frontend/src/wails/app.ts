@@ -10,6 +10,13 @@ export interface LaunchProfileDTO {
   updatedAt?: string;
 }
 
+export interface LaunchArgsParsedDTO {
+  noVr: boolean;
+  clearCache: boolean;
+  fullscreen: boolean;
+  custom: string;
+}
+
 export interface ScreenshotDTO {
   id: string;
   filePath: string;
@@ -84,6 +91,9 @@ interface AppBindings {
   Greet(name: string): Promise<string>;
   LaunchProfiles(): Promise<LaunchProfileDTO[]>;
   LaunchVRChat(profileID: string): Promise<void>;
+  LaunchVRChatWithArgs(args: string): Promise<void>;
+  ParseLaunchArgsForGUI(args: string): Promise<LaunchArgsParsedDTO>;
+  MergeLaunchArgsForGUI(dto: LaunchArgsParsedDTO): Promise<string>;
   JoinWorld(worldId: string): Promise<void>;
   JoinWorldFromScreenshot(screenshotId: string): Promise<void>;
   SaveLaunchProfile(p: LaunchProfileDTO): Promise<void>;
@@ -155,6 +165,20 @@ export const App = {
   },
   async launchVRChat(profileID: string): Promise<void> {
     return callApp((a) => a.LaunchVRChat(profileID), undefined);
+  },
+  async launchVRChatWithArgs(args: string): Promise<void> {
+    return callApp((a) => a.LaunchVRChatWithArgs(args), undefined);
+  },
+  async parseLaunchArgsForGUI(args: string): Promise<LaunchArgsParsedDTO> {
+    return callApp((a) => a.ParseLaunchArgsForGUI(args), {
+      noVr: false,
+      clearCache: false,
+      fullscreen: false,
+      custom: "",
+    });
+  },
+  async mergeLaunchArgsForGUI(dto: LaunchArgsParsedDTO): Promise<string> {
+    return callApp((a) => a.MergeLaunchArgsForGUI(dto), "");
   },
   async joinWorld(worldId: string): Promise<void> {
     return callApp((a) => a.JoinWorld(worldId), undefined);

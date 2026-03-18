@@ -35,11 +35,39 @@
           type="text"
         >
         <label>起動引数</label>
-        <input
-          v-model="selected.arguments"
-          type="text"
-          placeholder="--no-vr --clear-cache"
-        >
+        <div class="launch-args-gui">
+          <label class="checkbox-row">
+            <input
+              v-model="launchArgs.noVr"
+              type="checkbox"
+              data-testid="no-vr-checkbox"
+            >
+            デスクトップモードで起動（-no-vr）
+          </label>
+          <label class="checkbox-row">
+            <input
+              v-model="launchArgs.clearCache"
+              type="checkbox"
+              data-testid="clear-cache-checkbox"
+            >
+            起動前にキャッシュをクリア
+          </label>
+          <label class="checkbox-row">
+            <input
+              v-model="launchArgs.fullscreen"
+              type="checkbox"
+              data-testid="fullscreen-checkbox"
+            >
+            フルスクリーン（-screen-fullscreen 1）
+          </label>
+          <label>カスタム引数（上級者向け）</label>
+          <input
+            v-model="launchArgs.custom"
+            type="text"
+            placeholder="-batchmode -nographics"
+            data-testid="custom-args-input"
+          >
+        </div>
         <label>
           <input
             v-model="selected.isDefault"
@@ -68,21 +96,39 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from "vue";
-import { App, type LaunchProfileDTO } from "../wails/app";
+import {
+  App,
+  type LaunchProfileDTO,
+  type LaunchArgsParsedDTO,
+} from "../wails/app";
+
+const defaultLaunchArgs = (): LaunchArgsParsedDTO => ({
+  noVr: false,
+  clearCache: false,
+  fullscreen: false,
+  custom: "",
+});
 
 const profiles = ref<LaunchProfileDTO[]>([]);
 const selected = ref<LaunchProfileDTO | null>(null);
+const launchArgs = ref<LaunchArgsParsedDTO>(defaultLaunchArgs());
+
+async function syncLaunchArgsFromProfile(p: LaunchProfileDTO) {
+  launchArgs.value = await App.parseLaunchArgsForGUI(p.arguments);
+}
 
 onMounted(async () => {
   profiles.value = await App.launchProfiles();
   if (profiles.value.length > 0 && !selected.value) {
-    selected.value =
-      profiles.value.find((p) => p.isDefault) ?? profiles.value[0];
+    const p = profiles.value.find((p) => p.isDefault) ?? profiles.value[0];
+    selected.value = { ...p };
+    await syncLaunchArgsFromProfile(p);
   }
 });
 
-function select(p: LaunchProfileDTO) {
+async function select(p: LaunchProfileDTO) {
   selected.value = { ...p };
+  await syncLaunchArgsFromProfile(p);
 }
 
 function addNew() {
@@ -92,17 +138,21 @@ function addNew() {
     arguments: "",
     isDefault: profiles.value.length === 0,
   };
+  launchArgs.value = defaultLaunchArgs();
 }
 
 async function save() {
   if (!selected.value) return;
+  const argsStr = await App.mergeLaunchArgsForGUI(launchArgs.value);
+  selected.value.arguments = argsStr;
   await App.saveLaunchProfile(selected.value);
   profiles.value = await App.launchProfiles();
 }
 
 async function launch() {
   if (!selected.value) return;
-  await App.launchVRChat(selected.value.id);
+  const argsStr = await App.mergeLaunchArgsForGUI(launchArgs.value);
+  await App.launchVRChatWithArgs(argsStr);
 }
 </script>
 
@@ -153,6 +203,19 @@ async function launch() {
   display: block;
   margin: 0.5rem 0 0.2rem;
   font-size: 0.85rem;
+}
+.launch-args-gui {
+  margin-top: 0.5rem;
+}
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.3rem 0;
+  cursor: pointer;
+}
+.checkbox-row input {
+  margin: 0;
 }
 .profile-editor input[type="text"] {
   width: 100%;

@@ -21,6 +21,14 @@ type LaunchProfileDTO struct {
 	UpdatedAt *string `json:"updatedAt,omitempty"`
 }
 
+// LaunchArgsParsedDTO is the GUI-parsed launch arguments.
+type LaunchArgsParsedDTO struct {
+	NoVr       bool   `json:"noVr"`
+	ClearCache bool   `json:"clearCache"`
+	Fullscreen bool   `json:"fullscreen"`
+	Custom     string `json:"custom"`
+}
+
 func toLaunchProfileDTOs(list []*launcher.LaunchProfile) []LaunchProfileDTO {
 	out := make([]LaunchProfileDTO, len(list))
 	for i, p := range list {
@@ -40,6 +48,27 @@ func toLaunchProfileDTOs(list []*launcher.LaunchProfile) []LaunchProfileDTO {
 		}
 	}
 	return out
+}
+
+func toLaunchArgsParsedDTO(p *launcher.LaunchArgsParsed) LaunchArgsParsedDTO {
+	if p == nil {
+		return LaunchArgsParsedDTO{}
+	}
+	return LaunchArgsParsedDTO{
+		NoVr:       p.NoVR,
+		ClearCache: p.ClearCache,
+		Fullscreen: p.Fullscreen,
+		Custom:     p.Custom,
+	}
+}
+
+func fromLaunchArgsParsedDTO(d LaunchArgsParsedDTO) *launcher.LaunchArgsParsed {
+	return &launcher.LaunchArgsParsed{
+		NoVR:       d.NoVr,
+		ClearCache: d.ClearCache,
+		Fullscreen: d.Fullscreen,
+		Custom:     d.Custom,
+	}
 }
 
 func toLaunchProfile(d LaunchProfileDTO) *launcher.LaunchProfile {
