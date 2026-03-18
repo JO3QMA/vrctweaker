@@ -8,12 +8,14 @@ const {
   mockParseLaunchArgsForGUI,
   mockMergeLaunchArgsForGUI,
   mockSaveLaunchProfile,
+  mockDeleteLaunchProfile,
   mockLaunchVRChatWithArgs,
 } = vi.hoisted(() => ({
   mockLaunchProfiles: vi.fn(),
   mockParseLaunchArgsForGUI: vi.fn(),
   mockMergeLaunchArgsForGUI: vi.fn(),
   mockSaveLaunchProfile: vi.fn(),
+  mockDeleteLaunchProfile: vi.fn(),
   mockLaunchVRChatWithArgs: vi.fn(),
 }));
 
@@ -23,6 +25,7 @@ vi.mock("../../wails/app", () => ({
     parseLaunchArgsForGUI: mockParseLaunchArgsForGUI,
     mergeLaunchArgsForGUI: mockMergeLaunchArgsForGUI,
     saveLaunchProfile: mockSaveLaunchProfile,
+    deleteLaunchProfile: mockDeleteLaunchProfile,
     launchVRChatWithArgs: mockLaunchVRChatWithArgs,
   },
 }));
@@ -111,6 +114,7 @@ describe("LauncherView", () => {
       },
     );
     mockSaveLaunchProfile.mockResolvedValue(undefined);
+    mockDeleteLaunchProfile.mockResolvedValue(undefined);
     mockLaunchVRChatWithArgs.mockResolvedValue(undefined);
   });
 
@@ -274,6 +278,63 @@ describe("LauncherView", () => {
     );
     expect(mockLaunchVRChatWithArgs).toHaveBeenCalledWith(
       "--no-vr -screen-fullscreen 1",
+    );
+  });
+
+  it("shows delete button only for saved profiles and deletes on confirm", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    const card = wrapper.findAll(".profile-card")[0];
+    await card?.trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="delete-profile-btn"]').exists()).toBe(
+      true,
+    );
+
+    mockDeleteLaunchProfile.mockResolvedValue(undefined);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    const deleteBtn = wrapper.find('[data-testid="delete-profile-btn"]');
+    await deleteBtn.trigger("click");
+    await flushPromises();
+
+    expect(confirmSpy).toHaveBeenCalledWith("「Default」を削除しますか？");
+    expect(mockDeleteLaunchProfile).toHaveBeenCalledWith("1");
+    expect(mockLaunchProfiles).toHaveBeenCalled();
+
+    confirmSpy.mockRestore();
+  });
+
+  it("does not delete when user cancels confirmation", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    const card = wrapper.findAll(".profile-card")[1];
+    await card?.trigger("click");
+    await flushPromises();
+
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    const deleteBtn = wrapper.find('[data-testid="delete-profile-btn"]');
+    await deleteBtn.trigger("click");
+    await flushPromises();
+
+    expect(mockDeleteLaunchProfile).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it("does not show delete button for new unsaved profile", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    const addBtn = wrapper.find(".btn-add");
+    await addBtn.trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="delete-profile-btn"]').exists()).toBe(
+      false,
     );
   });
 });

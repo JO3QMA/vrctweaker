@@ -231,6 +231,11 @@ func (a *App) SaveLaunchProfile(p LaunchProfileDTO) error {
 	return a.launcher.SaveProfile(a.ctx, toLaunchProfile(p))
 }
 
+// DeleteLaunchProfile removes a launch profile by ID.
+func (a *App) DeleteLaunchProfile(id string) error {
+	return a.launcher.DeleteProfile(a.ctx, id)
+}
+
 // ParseLaunchArgsForGUI parses a launch arguments string into GUI fields.
 func (a *App) ParseLaunchArgsForGUI(args string) LaunchArgsParsedDTO {
 	p := launcher.ParseLaunchArgsForGUI(args)

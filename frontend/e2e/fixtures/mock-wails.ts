@@ -44,6 +44,7 @@ export function getMockWailsInitScript(): string {
         Greet: () => Promise.resolve('Hello, Welcome!'),
         LaunchProfiles: () => Promise.resolve(profiles),
         SaveLaunchProfile: () => Promise.resolve(),
+        DeleteLaunchProfile: () => Promise.resolve(),
         LaunchVRChat: () => Promise.resolve(),
         JoinWorld: () => Promise.resolve(),
         JoinWorldFromScreenshot: () => Promise.resolve(),

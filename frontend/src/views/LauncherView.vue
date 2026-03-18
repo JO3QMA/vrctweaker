@@ -271,6 +271,15 @@
           >
             この設定で起動
           </button>
+          <button
+            v-if="selected.id"
+            type="button"
+            class="btn-delete"
+            data-testid="delete-profile-btn"
+            @click="confirmDelete"
+          >
+            削除
+          </button>
         </div>
       </div>
     </div>
@@ -362,6 +371,20 @@ async function launch() {
     sanitizeLaunchArgs(launchArgs.value),
   );
   await App.launchVRChatWithArgs(argsStr);
+}
+
+async function confirmDelete() {
+  if (!selected.value?.id) return;
+  if (!window.confirm(`「${selected.value.name}」を削除しますか？`)) return;
+  await App.deleteLaunchProfile(selected.value.id);
+  selected.value = null;
+  launchArgs.value = defaultLaunchArgs();
+  profiles.value = await App.launchProfiles();
+  if (profiles.value.length > 0) {
+    const p = profiles.value.find((pr) => pr.isDefault) ?? profiles.value[0];
+    selected.value = { ...p };
+    await syncLaunchArgsFromProfile(p);
+  }
 }
 </script>
 
@@ -574,5 +597,19 @@ async function launch() {
 .btn-launch {
   background: var(--accent);
   color: white;
+}
+.btn-delete {
+  margin-left: auto;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.btn-delete:hover {
+  background: rgba(220, 53, 69, 0.15);
+  color: #dc3545;
+  border-color: #dc3545;
 }
 </style>

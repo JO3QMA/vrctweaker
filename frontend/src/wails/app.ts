@@ -109,6 +109,7 @@ interface AppBindings {
   JoinWorld(worldId: string): Promise<void>;
   JoinWorldFromScreenshot(screenshotId: string): Promise<void>;
   SaveLaunchProfile(p: LaunchProfileDTO): Promise<void>;
+  DeleteLaunchProfile(id: string): Promise<void>;
   GetLogRetentionDays(): Promise<number>;
   SetLogRetentionDays(days: number): Promise<void>;
   GetPathSettings(): Promise<PathSettingsDTO>;
@@ -212,6 +213,9 @@ export const App = {
   },
   async saveLaunchProfile(p: LaunchProfileDTO): Promise<void> {
     return callApp((a) => a.SaveLaunchProfile(p), undefined);
+  },
+  async deleteLaunchProfile(id: string): Promise<void> {
+    return callApp((a) => a.DeleteLaunchProfile(id), undefined);
   },
   async getLogRetentionDays(): Promise<number> {
     return callApp((a) => a.GetLogRetentionDays(), 30);
