@@ -23,22 +23,37 @@ type LaunchProfileDTO struct {
 
 // LaunchArgsParsedDTO is the GUI-parsed launch arguments.
 type LaunchArgsParsedDTO struct {
-	VrMode          string `json:"vrMode"` // desktop|""|vr
-	ClearCache      bool   `json:"clearCache"`
-	ScreenMode      string `json:"screenMode"` // fullscreen|windowed|popupwindow
-	FPFC            bool   `json:"fpfc"`
-	ScreenWidth     int    `json:"screenWidth"`
-	ScreenHeight    int    `json:"screenHeight"`
-	FPS             int    `json:"fps"`
-	Safe            bool   `json:"safe"`
-	NoSplash        bool   `json:"noSplash"`
-	NoAudio         bool   `json:"noAudio"`
-	SkipRegistry    bool   `json:"skipRegistry"`
-	RenderBackend   string `json:"renderBackend"` // ""|d3d11|vulkan (exclusive)
-	Log             bool   `json:"log"`
-	ProcessPriority int    `json:"processPriority"`
-	Adapter         int    `json:"adapter"` // -adapter N (0-based GPU index), -1=omit
-	Custom          string `json:"custom"`
+	VrMode                      string `json:"vrMode"` // desktop|""|vr
+	ClearCache                  bool   `json:"clearCache"`
+	ScreenMode                  string `json:"screenMode"` // fullscreen|windowed|popupwindow
+	FPFC                        bool   `json:"fpfc"`
+	ScreenWidth                 int    `json:"screenWidth"`
+	ScreenHeight                int    `json:"screenHeight"`
+	FPS                         int    `json:"fps"`
+	Safe                        bool   `json:"safe"`
+	NoSplash                    bool   `json:"noSplash"`
+	NoAudio                     bool   `json:"noAudio"`
+	SkipRegistry                bool   `json:"skipRegistry"`
+	RenderBackend               string `json:"renderBackend"` // ""|d3d11|vulkan (exclusive)
+	Log                         bool   `json:"log"`
+	ProcessPriority             int    `json:"processPriority"`    // -2..2, -999=omit
+	MainThreadPriority          int    `json:"mainThreadPriority"` // -2..2, -999=omit
+	Adapter                     int    `json:"adapter"`            // -adapter N (0-based GPU index), -1=omit
+	Monitor                     int    `json:"monitor"`            // -monitor N (1-based), 0=omit
+	Profile                     int    `json:"profile"`            // --profile=X, -1=omit
+	EnableDebugGui              bool   `json:"enableDebugGui"`
+	EnableSDKLogLevels          bool   `json:"enableSDKLogLevels"`
+	EnableUdonDebugLogging      bool   `json:"enableUdonDebugLogging"`
+	Midi                        string `json:"midi"`
+	WatchWorlds                 bool   `json:"watchWorlds"`
+	WatchAvatars                bool   `json:"watchAvatars"`
+	IgnoreTrackers              string `json:"ignoreTrackers"`
+	VideoDecoding               string `json:"videoDecoding"` // ""|software|hardware
+	DisableAMDStutterWorkaround bool   `json:"disableAMDStutterWorkaround"`
+	OSC                         string `json:"osc"`
+	Affinity                    string `json:"affinity"`
+	EnforceWorldServerChecks    bool   `json:"enforceWorldServerChecks"`
+	Custom                      string `json:"custom"`
 }
 
 func toLaunchProfileDTOs(list []*launcher.LaunchProfile) []LaunchProfileDTO {
@@ -67,43 +82,73 @@ func toLaunchArgsParsedDTO(p *launcher.LaunchArgsParsed) LaunchArgsParsedDTO {
 		return LaunchArgsParsedDTO{}
 	}
 	return LaunchArgsParsedDTO{
-		VrMode:          p.VrMode,
-		ClearCache:      p.ClearCache,
-		ScreenMode:      p.ScreenMode,
-		FPFC:            p.FPFC,
-		ScreenWidth:     p.ScreenWidth,
-		ScreenHeight:    p.ScreenHeight,
-		FPS:             p.FPS,
-		Safe:            p.Safe,
-		NoSplash:        p.NoSplash,
-		NoAudio:         p.NoAudio,
-		SkipRegistry:    p.SkipRegistry,
-		RenderBackend:   p.RenderBackend,
-		Log:             p.Log,
-		ProcessPriority: p.ProcessPriority,
-		Adapter:         p.Adapter,
-		Custom:          p.Custom,
+		VrMode:                      p.VrMode,
+		ClearCache:                  p.ClearCache,
+		ScreenMode:                  p.ScreenMode,
+		FPFC:                        p.FPFC,
+		ScreenWidth:                 p.ScreenWidth,
+		ScreenHeight:                p.ScreenHeight,
+		FPS:                         p.FPS,
+		Safe:                        p.Safe,
+		NoSplash:                    p.NoSplash,
+		NoAudio:                     p.NoAudio,
+		SkipRegistry:                p.SkipRegistry,
+		RenderBackend:               p.RenderBackend,
+		Log:                         p.Log,
+		ProcessPriority:             p.ProcessPriority,
+		MainThreadPriority:          p.MainThreadPriority,
+		Adapter:                     p.Adapter,
+		Monitor:                     p.Monitor,
+		Profile:                     p.Profile,
+		EnableDebugGui:              p.EnableDebugGui,
+		EnableSDKLogLevels:          p.EnableSDKLogLevels,
+		EnableUdonDebugLogging:      p.EnableUdonDebugLogging,
+		Midi:                        p.Midi,
+		WatchWorlds:                 p.WatchWorlds,
+		WatchAvatars:                p.WatchAvatars,
+		IgnoreTrackers:              p.IgnoreTrackers,
+		VideoDecoding:               p.VideoDecoding,
+		DisableAMDStutterWorkaround: p.DisableAMDStutterWorkaround,
+		OSC:                         p.OSC,
+		Affinity:                    p.Affinity,
+		EnforceWorldServerChecks:    p.EnforceWorldServerChecks,
+		Custom:                      p.Custom,
 	}
 }
 
 func fromLaunchArgsParsedDTO(d LaunchArgsParsedDTO) *launcher.LaunchArgsParsed {
 	return &launcher.LaunchArgsParsed{
-		VrMode:          d.VrMode,
-		ClearCache:      d.ClearCache,
-		ScreenMode:      d.ScreenMode,
-		FPFC:            d.FPFC,
-		ScreenWidth:     d.ScreenWidth,
-		ScreenHeight:    d.ScreenHeight,
-		FPS:             d.FPS,
-		Safe:            d.Safe,
-		NoSplash:        d.NoSplash,
-		NoAudio:         d.NoAudio,
-		SkipRegistry:    d.SkipRegistry,
-		RenderBackend:   d.RenderBackend,
-		Log:             d.Log,
-		ProcessPriority: d.ProcessPriority,
-		Adapter:         d.Adapter,
-		Custom:          d.Custom,
+		VrMode:                      d.VrMode,
+		ClearCache:                  d.ClearCache,
+		ScreenMode:                  d.ScreenMode,
+		FPFC:                        d.FPFC,
+		ScreenWidth:                 d.ScreenWidth,
+		ScreenHeight:                d.ScreenHeight,
+		FPS:                         d.FPS,
+		Safe:                        d.Safe,
+		NoSplash:                    d.NoSplash,
+		NoAudio:                     d.NoAudio,
+		SkipRegistry:                d.SkipRegistry,
+		RenderBackend:               d.RenderBackend,
+		Log:                         d.Log,
+		ProcessPriority:             d.ProcessPriority,
+		MainThreadPriority:          d.MainThreadPriority,
+		Adapter:                     d.Adapter,
+		Monitor:                     d.Monitor,
+		Profile:                     d.Profile,
+		EnableDebugGui:              d.EnableDebugGui,
+		EnableSDKLogLevels:          d.EnableSDKLogLevels,
+		EnableUdonDebugLogging:      d.EnableUdonDebugLogging,
+		Midi:                        d.Midi,
+		WatchWorlds:                 d.WatchWorlds,
+		WatchAvatars:                d.WatchAvatars,
+		IgnoreTrackers:              d.IgnoreTrackers,
+		VideoDecoding:               d.VideoDecoding,
+		DisableAMDStutterWorkaround: d.DisableAMDStutterWorkaround,
+		OSC:                         d.OSC,
+		Affinity:                    d.Affinity,
+		EnforceWorldServerChecks:    d.EnforceWorldServerChecks,
+		Custom:                      d.Custom,
 	}
 }
 

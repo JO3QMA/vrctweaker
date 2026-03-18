@@ -1,10 +1,31 @@
 <template>
-  <div class="title-bar" style="--wails-draggable: drag">
+  <div
+    class="title-bar"
+    style="--wails-draggable: drag"
+  >
     <span class="title-bar-text">VRChat Tweaker</span>
-    <div class="title-bar-actions" style="--wails-draggable: no-drag">
-      <button class="title-bar-btn" @click="minimize">−</button>
-      <button class="title-bar-btn" @click="maximize">□</button>
-      <button class="title-bar-btn close" @click="close">×</button>
+    <div
+      class="title-bar-actions"
+      style="--wails-draggable: no-drag"
+    >
+      <button
+        class="title-bar-btn"
+        @click="minimize"
+      >
+        −
+      </button>
+      <button
+        class="title-bar-btn"
+        @click="maximize"
+      >
+        □
+      </button>
+      <button
+        class="title-bar-btn close"
+        @click="close"
+      >
+        ×
+      </button>
     </div>
   </div>
 </template>

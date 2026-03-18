@@ -210,47 +210,47 @@ func TestMergeLaunchArgsForGUI(t *testing.T) {
 	}{
 		{
 			name: "empty",
-			p:    &LaunchArgsParsed{Adapter: -1},
+			p:    &LaunchArgsParsed{Adapter: -1, Profile: -1, ProcessPriority: PriorityOmit, MainThreadPriority: PriorityOmit},
 			want: "",
 		},
 		{
 			name: "vrMode desktop only",
-			p:    &LaunchArgsParsed{VrMode: VrModeDesktop, Adapter: -1},
+			p:    &LaunchArgsParsed{VrMode: VrModeDesktop, Adapter: -1, Profile: -1, ProcessPriority: PriorityOmit, MainThreadPriority: PriorityOmit},
 			want: "-no-vr",
 		},
 		{
 			name: "clearCache only",
-			p:    &LaunchArgsParsed{ClearCache: true, Adapter: -1},
+			p:    &LaunchArgsParsed{ClearCache: true, Adapter: -1, Profile: -1, ProcessPriority: PriorityOmit, MainThreadPriority: PriorityOmit},
 			want: "--clear-cache",
 		},
 		{
 			name: "fullscreen on only",
-			p:    &LaunchArgsParsed{ScreenMode: ScreenModeFullscreen, Adapter: -1},
+			p:    &LaunchArgsParsed{ScreenMode: ScreenModeFullscreen, Adapter: -1, Profile: -1, ProcessPriority: PriorityOmit, MainThreadPriority: PriorityOmit},
 			want: "-screen-fullscreen 1",
 		},
 		{
 			name: "fullscreen off",
-			p:    &LaunchArgsParsed{ScreenMode: "", Adapter: -1},
+			p:    &LaunchArgsParsed{ScreenMode: "", Adapter: -1, Profile: -1, ProcessPriority: PriorityOmit, MainThreadPriority: PriorityOmit},
 			want: "",
 		},
 		{
 			name: "custom only",
-			p:    &LaunchArgsParsed{Custom: "-batchmode", Adapter: -1},
+			p:    &LaunchArgsParsed{Custom: "-batchmode", Adapter: -1, Profile: -1, ProcessPriority: PriorityOmit, MainThreadPriority: PriorityOmit},
 			want: "-batchmode",
 		},
 		{
 			name: "all combined",
-			p:    &LaunchArgsParsed{VrMode: VrModeDesktop, ClearCache: true, ScreenMode: ScreenModeFullscreen, Custom: "-log", Adapter: -1},
+			p:    &LaunchArgsParsed{VrMode: VrModeDesktop, ClearCache: true, ScreenMode: ScreenModeFullscreen, Custom: "-log", Adapter: -1, Profile: -1, ProcessPriority: PriorityOmit, MainThreadPriority: PriorityOmit},
 			want: "-no-vr --clear-cache -screen-fullscreen 1 -log",
 		},
 		{
 			name: "render backend d3d11",
-			p:    &LaunchArgsParsed{RenderBackend: RenderBackendD3D11, Adapter: -1},
+			p:    &LaunchArgsParsed{RenderBackend: RenderBackendD3D11, Adapter: -1, Profile: -1, ProcessPriority: PriorityOmit, MainThreadPriority: PriorityOmit},
 			want: "-force-d3d11",
 		},
 		{
 			name: "render backend vulkan",
-			p:    &LaunchArgsParsed{RenderBackend: RenderBackendVulkan, Adapter: -1},
+			p:    &LaunchArgsParsed{RenderBackend: RenderBackendVulkan, Adapter: -1, Profile: -1, ProcessPriority: PriorityOmit, MainThreadPriority: PriorityOmit},
 			want: "-force-vulkan",
 		},
 		{
@@ -260,12 +260,12 @@ func TestMergeLaunchArgsForGUI(t *testing.T) {
 		},
 		{
 			name: "adapter 0",
-			p:    &LaunchArgsParsed{Adapter: 0},
+			p:    &LaunchArgsParsed{Adapter: 0, Profile: -1, ProcessPriority: PriorityOmit, MainThreadPriority: PriorityOmit},
 			want: "-adapter 0",
 		},
 		{
 			name: "adapter 1",
-			p:    &LaunchArgsParsed{Adapter: 1},
+			p:    &LaunchArgsParsed{Adapter: 1, Profile: -1, ProcessPriority: PriorityOmit, MainThreadPriority: PriorityOmit},
 			want: "-adapter 1",
 		},
 		{
@@ -273,7 +273,7 @@ func TestMergeLaunchArgsForGUI(t *testing.T) {
 			p: &LaunchArgsParsed{
 				VrMode: VrModeVR, FPFC: true, ScreenMode: ScreenModePopupWindow,
 				ScreenWidth: 1280, ScreenHeight: 720, FPS: 72,
-				Safe: true, NoSplash: true, RenderBackend: RenderBackendD3D11, ProcessPriority: 2, Adapter: 1,
+				Safe: true, NoSplash: true, RenderBackend: RenderBackendD3D11, ProcessPriority: 2, Profile: -1, MainThreadPriority: PriorityOmit, Adapter: 1,
 			},
 			want: "-vr -fpfc -popupwindow -screen-width 1280 -screen-height 720 --fps=72 -safe -nosplash -force-d3d11 --process-priority=2 -adapter 1",
 		},
@@ -295,6 +295,64 @@ func TestParseLaunchArgsForGUI_Detailed(t *testing.T) {
 		got.FPS != 72 || !got.Safe || !got.NoSplash || !got.NoAudio || !got.SkipRegistry ||
 		got.RenderBackend != RenderBackendD3D11 || !got.Log || got.ProcessPriority != 2 || got.Adapter != 1 {
 		t.Errorf("ParseLaunchArgsForGUI(detailed) = %+v, want VrMode=vr/FPFC/PopupWindow/ScreenWidth=1280/ScreenHeight=720/FPS=72/RenderBackend=d3d11/Adapter=1/...", got)
+	}
+}
+
+func TestParseLaunchArgsForGUI_NewOptions(t *testing.T) {
+	in := "--profile=1 --enable-debug-gui --enable-sdk-log-levels --enable-udon-debug-logging --midi=MyDevice --watch-worlds --watch-avatars --ignore-trackers=a,b --disable-hw-video-decoding --disable-amd-stutter-workaround --osc=9000:127.0.0.1:9001 --affinity=FF -monitor 2 --main-thread-priority=1 --enforce-world-server-checks"
+	got := ParseLaunchArgsForGUI(in)
+	if got.Profile != 1 || !got.EnableDebugGui || !got.EnableSDKLogLevels || !got.EnableUdonDebugLogging ||
+		got.Midi != "MyDevice" || !got.WatchWorlds || !got.WatchAvatars || got.IgnoreTrackers != "a,b" ||
+		got.VideoDecoding != VideoDecodingSoftware || !got.DisableAMDStutterWorkaround ||
+		got.OSC != "9000:127.0.0.1:9001" || got.Affinity != "FF" || got.Monitor != 2 ||
+		got.MainThreadPriority != 1 || !got.EnforceWorldServerChecks {
+		t.Errorf("ParseLaunchArgsForGUI(new options) = %+v", got)
+	}
+}
+
+func TestParseLaunchArgsForGUI_ProcessPriorityRange(t *testing.T) {
+	for _, tt := range []struct {
+		in   string
+		want int
+	}{
+		{"--process-priority=-2", -2},
+		{"--process-priority=-1", -1},
+		{"--process-priority=0", 0},
+		{"--process-priority=1", 1},
+		{"--process-priority=2", 2},
+	} {
+		got := ParseLaunchArgsForGUI(tt.in)
+		if got.ProcessPriority != tt.want {
+			t.Errorf("ParseLaunchArgsForGUI(%q).ProcessPriority = %d, want %d", tt.in, got.ProcessPriority, tt.want)
+		}
+	}
+}
+
+func TestMergeLaunchArgsForGUI_NewOptions(t *testing.T) {
+	p := &LaunchArgsParsed{
+		Profile:                     1,
+		EnableDebugGui:              true,
+		EnableSDKLogLevels:          true,
+		EnableUdonDebugLogging:      true,
+		Midi:                        "MyDevice",
+		WatchWorlds:                 true,
+		WatchAvatars:                true,
+		IgnoreTrackers:              "a,b",
+		VideoDecoding:               VideoDecodingHardware,
+		DisableAMDStutterWorkaround: true,
+		OSC:                         "9000:127.0.0.1:9001",
+		Affinity:                    "FF",
+		Monitor:                     2,
+		MainThreadPriority:          1,
+		EnforceWorldServerChecks:    true,
+		Adapter:                     -1,
+		ProcessPriority:             PriorityOmit,
+	}
+	got := MergeLaunchArgsForGUI(p)
+	// Order follows MergeLaunchArgsForGUI output sequence
+	want := "-monitor 2 --profile=1 --enable-debug-gui --enable-sdk-log-levels --enable-udon-debug-logging --midi=MyDevice --watch-worlds --watch-avatars --ignore-trackers=a,b --enable-hw-video-decoding --disable-amd-stutter-workaround --osc=9000:127.0.0.1:9001 --affinity=FF --main-thread-priority=1 --enforce-world-server-checks"
+	if got != want {
+		t.Errorf("MergeLaunchArgsForGUI() = %q, want %q", got, want)
 	}
 }
 

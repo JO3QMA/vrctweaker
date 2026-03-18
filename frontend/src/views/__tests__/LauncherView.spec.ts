@@ -19,16 +19,20 @@ const {
   mockLaunchVRChatWithArgs: vi.fn(),
 }));
 
-vi.mock("../../wails/app", () => ({
-  App: {
-    launchProfiles: mockLaunchProfiles,
-    parseLaunchArgsForGUI: mockParseLaunchArgsForGUI,
-    mergeLaunchArgsForGUI: mockMergeLaunchArgsForGUI,
-    saveLaunchProfile: mockSaveLaunchProfile,
-    deleteLaunchProfile: mockDeleteLaunchProfile,
-    launchVRChatWithArgs: mockLaunchVRChatWithArgs,
-  },
-}));
+vi.mock("../../wails/app", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../wails/app")>();
+  return {
+    ...actual,
+    App: {
+      launchProfiles: mockLaunchProfiles,
+      parseLaunchArgsForGUI: mockParseLaunchArgsForGUI,
+      mergeLaunchArgsForGUI: mockMergeLaunchArgsForGUI,
+      saveLaunchProfile: mockSaveLaunchProfile,
+      deleteLaunchProfile: mockDeleteLaunchProfile,
+      launchVRChatWithArgs: mockLaunchVRChatWithArgs,
+    },
+  };
+});
 
 const sampleProfiles: LaunchProfileDTO[] = [
   {
@@ -62,8 +66,23 @@ describe("LauncherView", () => {
           skipRegistry: false,
           renderBackend: "" as "" | "d3d11" | "vulkan",
           log: false,
-          processPriority: 0,
+          processPriority: -999,
+          mainThreadPriority: -999,
           adapter: -1,
+          monitor: 0,
+          profile: -1,
+          enableDebugGui: false,
+          enableSDKLogLevels: false,
+          enableUdonDebugLogging: false,
+          midi: "",
+          watchWorlds: false,
+          watchAvatars: false,
+          ignoreTrackers: "",
+          videoDecoding: "" as "" | "software" | "hardware",
+          disableAMDStutterWorkaround: false,
+          osc: "",
+          affinity: "",
+          enforceWorldServerChecks: false,
         };
         let vrMode: "" | "desktop" | "vr" = "";
         if (args.includes("--no-vr") || args.includes("-no-vr"))
@@ -117,7 +136,11 @@ describe("LauncherView", () => {
         if (dto.renderBackend === "d3d11") parts.push("-force-d3d11");
         if (dto.renderBackend === "vulkan") parts.push("-force-vulkan");
         if (dto.log) parts.push("-log");
-        if (dto.processPriority)
+        if (
+          typeof dto.processPriority === "number" &&
+          dto.processPriority >= -2 &&
+          dto.processPriority <= 2
+        )
           parts.push(`--process-priority=${dto.processPriority}`);
         if (dto.adapter >= 0) parts.push("-adapter", String(dto.adapter));
         if (dto.custom) parts.push(dto.custom);

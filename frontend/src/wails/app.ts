@@ -24,10 +24,28 @@ export interface LaunchArgsParsedDTO {
   skipRegistry: boolean;
   renderBackend: "" | "d3d11" | "vulkan";
   log: boolean;
-  processPriority: number;
+  processPriority: number; // -2..2, -999=omit
+  mainThreadPriority: number; // -2..2, -999=omit
   adapter: number; // 0-based GPU index, -1=omit
+  monitor: number; // 1-based, 0=omit
+  profile: number; // --profile=X, -1=omit
+  enableDebugGui: boolean;
+  enableSDKLogLevels: boolean;
+  enableUdonDebugLogging: boolean;
+  midi: string;
+  watchWorlds: boolean;
+  watchAvatars: boolean;
+  ignoreTrackers: string;
+  videoDecoding: "" | "software" | "hardware";
+  disableAMDStutterWorkaround: boolean;
+  osc: string;
+  affinity: string;
+  enforceWorldServerChecks: boolean;
   custom: string;
 }
+
+/** -999 = omit for process/main thread priority */
+export const PRIORITY_OMIT = -999;
 
 export interface ScreenshotDTO {
   id: string;
@@ -197,8 +215,23 @@ export const App = {
       skipRegistry: false,
       renderBackend: "",
       log: false,
-      processPriority: 0,
+      processPriority: PRIORITY_OMIT,
+      mainThreadPriority: PRIORITY_OMIT,
       adapter: -1,
+      monitor: 0,
+      profile: -1,
+      enableDebugGui: false,
+      enableSDKLogLevels: false,
+      enableUdonDebugLogging: false,
+      midi: "",
+      watchWorlds: false,
+      watchAvatars: false,
+      ignoreTrackers: "",
+      videoDecoding: "",
+      disableAMDStutterWorkaround: false,
+      osc: "",
+      affinity: "",
+      enforceWorldServerChecks: false,
       custom: "",
     });
   },
