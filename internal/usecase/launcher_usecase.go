@@ -58,7 +58,7 @@ func (uc *LauncherUseCase) DeleteProfile(ctx context.Context, id string) error {
 }
 
 // LaunchVRChat runs VRChat with the given profile. vrchatPath and steamPath are optional overrides.
-func (uc *LauncherUseCase) LaunchVRChat(ctx context.Context, profileID string, vrchatPath, steamPath string) error {
+func (uc *LauncherUseCase) LaunchVRChat(ctx context.Context, profileID string, vrchatPath, steamPath, outputLogPath string) error {
 	profile, err := uc.repo.GetByID(ctx, profileID)
 	if err != nil {
 		return err
@@ -66,13 +66,22 @@ func (uc *LauncherUseCase) LaunchVRChat(ctx context.Context, profileID string, v
 	if profile == nil {
 		return fmt.Errorf("profile not found: %s", profileID)
 	}
-	args := parseLaunchArgs(profile.Arguments)
+	return uc.LaunchWithArgs(ctx, profile.Arguments, vrchatPath, steamPath, outputLogPath)
+}
+
+// LaunchWithArgs runs VRChat with the given arguments string.
+// Used when launching with current GUI state without saving first.
+func (uc *LauncherUseCase) LaunchWithArgs(ctx context.Context, argsStr, vrchatPath, steamPath, outputLogPath string) error {
+	args, err := uc.prepareLaunchArgs(ctx, parseLaunchArgs(argsStr), outputLogPath)
+	if err != nil {
+		return err
+	}
 	return uc.launchWithArgs(ctx, args, vrchatPath, steamPath)
 }
 
 // LaunchToWorld runs VRChat with the given profile and launches into the specified world.
 // Uses vrchat://launch?id=<worldID> URL scheme. profileID may be empty to use default profile.
-func (uc *LauncherUseCase) LaunchToWorld(ctx context.Context, profileID, worldID string, vrchatPath, steamPath string) error {
+func (uc *LauncherUseCase) LaunchToWorld(ctx context.Context, profileID, worldID string, vrchatPath, steamPath, outputLogPath string) error {
 	worldID = strings.TrimSpace(worldID)
 	if worldID == "" {
 		return fmt.Errorf("world_id is required for Join World")
@@ -81,7 +90,11 @@ func (uc *LauncherUseCase) LaunchToWorld(ctx context.Context, profileID, worldID
 	if err != nil {
 		return err
 	}
-	args := BuildJoinWorldArgs(profile.Arguments, worldID)
+	baseArgs := BuildJoinWorldArgs(profile.Arguments, worldID)
+	args, err := uc.prepareLaunchArgs(ctx, baseArgs, outputLogPath)
+	if err != nil {
+		return err
+	}
 	return uc.launchWithArgs(ctx, args, vrchatPath, steamPath)
 }
 
@@ -91,6 +104,11 @@ func BuildJoinWorldArgs(baseArgsStr string, worldID string) []string {
 	base := parseLaunchArgs(baseArgsStr)
 	joinURL := "vrchat://launch?id=" + strings.TrimSpace(worldID)
 	return append(base, joinURL)
+}
+
+// prepareLaunchArgs returns args as-is (no pre-processing).
+func (uc *LauncherUseCase) prepareLaunchArgs(ctx context.Context, args []string, outputLogPath string) ([]string, error) {
+	return args, nil
 }
 
 func (uc *LauncherUseCase) getProfileOrDefault(ctx context.Context, profileID string) (*launcher.LaunchProfile, error) {

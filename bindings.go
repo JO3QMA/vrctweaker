@@ -21,6 +21,33 @@ type LaunchProfileDTO struct {
 	UpdatedAt *string `json:"updatedAt,omitempty"`
 }
 
+// LaunchArgsParsedDTO is the GUI-parsed launch arguments.
+type LaunchArgsParsedDTO struct {
+	NoVR                        bool   `json:"noVr"`       // -no-vr (デスクトップモード)
+	ScreenMode                  string `json:"screenMode"` // fullscreen|windowed|popupwindow
+	ScreenWidth                 int    `json:"screenWidth"`
+	ScreenHeight                int    `json:"screenHeight"`
+	FPS                         int    `json:"fps"`
+	SkipRegistry                bool   `json:"skipRegistry"`
+	ProcessPriority             int    `json:"processPriority"`    // -2..2, -999=omit
+	MainThreadPriority          int    `json:"mainThreadPriority"` // -2..2, -999=omit
+	Monitor                     int    `json:"monitor"`            // -monitor N (1-based), 0=omit
+	Profile                     int    `json:"profile"`            // --profile=X, -1=omit
+	EnableDebugGui              bool   `json:"enableDebugGui"`
+	EnableSDKLogLevels          bool   `json:"enableSDKLogLevels"`
+	EnableUdonDebugLogging      bool   `json:"enableUdonDebugLogging"`
+	Midi                        string `json:"midi"`
+	WatchWorlds                 bool   `json:"watchWorlds"`
+	WatchAvatars                bool   `json:"watchAvatars"`
+	IgnoreTrackers              string `json:"ignoreTrackers"`
+	VideoDecoding               string `json:"videoDecoding"` // ""|software|hardware
+	DisableAMDStutterWorkaround bool   `json:"disableAMDStutterWorkaround"`
+	OSC                         string `json:"osc"`
+	Affinity                    string `json:"affinity"`
+	EnforceWorldServerChecks    bool   `json:"enforceWorldServerChecks"`
+	Custom                      string `json:"custom"`
+}
+
 func toLaunchProfileDTOs(list []*launcher.LaunchProfile) []LaunchProfileDTO {
 	out := make([]LaunchProfileDTO, len(list))
 	for i, p := range list {
@@ -40,6 +67,65 @@ func toLaunchProfileDTOs(list []*launcher.LaunchProfile) []LaunchProfileDTO {
 		}
 	}
 	return out
+}
+
+func toLaunchArgsParsedDTO(p *launcher.LaunchArgsParsed) LaunchArgsParsedDTO {
+	if p == nil {
+		return LaunchArgsParsedDTO{}
+	}
+	return LaunchArgsParsedDTO{
+		NoVR:                        p.NoVR,
+		ScreenMode:                  p.ScreenMode,
+		ScreenWidth:                 p.ScreenWidth,
+		ScreenHeight:                p.ScreenHeight,
+		FPS:                         p.FPS,
+		SkipRegistry:                p.SkipRegistry,
+		ProcessPriority:             p.ProcessPriority,
+		MainThreadPriority:          p.MainThreadPriority,
+		Monitor:                     p.Monitor,
+		Profile:                     p.Profile,
+		EnableDebugGui:              p.EnableDebugGui,
+		EnableSDKLogLevels:          p.EnableSDKLogLevels,
+		EnableUdonDebugLogging:      p.EnableUdonDebugLogging,
+		Midi:                        p.Midi,
+		WatchWorlds:                 p.WatchWorlds,
+		WatchAvatars:                p.WatchAvatars,
+		IgnoreTrackers:              p.IgnoreTrackers,
+		VideoDecoding:               p.VideoDecoding,
+		DisableAMDStutterWorkaround: p.DisableAMDStutterWorkaround,
+		OSC:                         p.OSC,
+		Affinity:                    p.Affinity,
+		EnforceWorldServerChecks:    p.EnforceWorldServerChecks,
+		Custom:                      p.Custom,
+	}
+}
+
+func fromLaunchArgsParsedDTO(d LaunchArgsParsedDTO) *launcher.LaunchArgsParsed {
+	return &launcher.LaunchArgsParsed{
+		NoVR:                        d.NoVR,
+		ScreenMode:                  d.ScreenMode,
+		ScreenWidth:                 d.ScreenWidth,
+		ScreenHeight:                d.ScreenHeight,
+		FPS:                         d.FPS,
+		SkipRegistry:                d.SkipRegistry,
+		ProcessPriority:             d.ProcessPriority,
+		MainThreadPriority:          d.MainThreadPriority,
+		Monitor:                     d.Monitor,
+		Profile:                     d.Profile,
+		EnableDebugGui:              d.EnableDebugGui,
+		EnableSDKLogLevels:          d.EnableSDKLogLevels,
+		EnableUdonDebugLogging:      d.EnableUdonDebugLogging,
+		Midi:                        d.Midi,
+		WatchWorlds:                 d.WatchWorlds,
+		WatchAvatars:                d.WatchAvatars,
+		IgnoreTrackers:              d.IgnoreTrackers,
+		VideoDecoding:               d.VideoDecoding,
+		DisableAMDStutterWorkaround: d.DisableAMDStutterWorkaround,
+		OSC:                         d.OSC,
+		Affinity:                    d.Affinity,
+		EnforceWorldServerChecks:    d.EnforceWorldServerChecks,
+		Custom:                      d.Custom,
+	}
 }
 
 func toLaunchProfile(d LaunchProfileDTO) *launcher.LaunchProfile {

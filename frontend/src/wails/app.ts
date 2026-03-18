@@ -10,6 +10,35 @@ export interface LaunchProfileDTO {
   updatedAt?: string;
 }
 
+export interface LaunchArgsParsedDTO {
+  noVr: boolean; // -no-vr (デスクトップモード)
+  screenMode: "" | "fullscreen" | "windowed" | "popupwindow";
+  screenWidth: number;
+  screenHeight: number;
+  fps: number;
+  skipRegistry: boolean;
+  processPriority: number; // -2..2, -999=omit
+  mainThreadPriority: number; // -2..2, -999=omit
+  monitor: number; // 1-based, 0=omit
+  profile: number; // --profile=X, -1=omit
+  enableDebugGui: boolean;
+  enableSDKLogLevels: boolean;
+  enableUdonDebugLogging: boolean;
+  midi: string;
+  watchWorlds: boolean;
+  watchAvatars: boolean;
+  ignoreTrackers: string;
+  videoDecoding: "" | "software" | "hardware";
+  disableAMDStutterWorkaround: boolean;
+  osc: string;
+  affinity: string;
+  enforceWorldServerChecks: boolean;
+  custom: string;
+}
+
+/** -999 = omit for process/main thread priority */
+export const PRIORITY_OMIT = -999;
+
 export interface ScreenshotDTO {
   id: string;
   filePath: string;
@@ -84,9 +113,13 @@ interface AppBindings {
   Greet(name: string): Promise<string>;
   LaunchProfiles(): Promise<LaunchProfileDTO[]>;
   LaunchVRChat(profileID: string): Promise<void>;
+  LaunchVRChatWithArgs(args: string): Promise<void>;
+  ParseLaunchArgsForGUI(args: string): Promise<LaunchArgsParsedDTO>;
+  MergeLaunchArgsForGUI(dto: LaunchArgsParsedDTO): Promise<string>;
   JoinWorld(worldId: string): Promise<void>;
   JoinWorldFromScreenshot(screenshotId: string): Promise<void>;
   SaveLaunchProfile(p: LaunchProfileDTO): Promise<void>;
+  DeleteLaunchProfile(id: string): Promise<void>;
   GetLogRetentionDays(): Promise<number>;
   SetLogRetentionDays(days: number): Promise<void>;
   GetPathSettings(): Promise<PathSettingsDTO>;
@@ -156,6 +189,39 @@ export const App = {
   async launchVRChat(profileID: string): Promise<void> {
     return callApp((a) => a.LaunchVRChat(profileID), undefined);
   },
+  async launchVRChatWithArgs(args: string): Promise<void> {
+    return callApp((a) => a.LaunchVRChatWithArgs(args), undefined);
+  },
+  async parseLaunchArgsForGUI(args: string): Promise<LaunchArgsParsedDTO> {
+    return callApp((a) => a.ParseLaunchArgsForGUI(args), {
+      noVr: false,
+      screenMode: "",
+      screenWidth: 0,
+      screenHeight: 0,
+      fps: 90,
+      skipRegistry: false,
+      processPriority: PRIORITY_OMIT,
+      mainThreadPriority: PRIORITY_OMIT,
+      monitor: 0,
+      profile: -1,
+      enableDebugGui: false,
+      enableSDKLogLevels: false,
+      enableUdonDebugLogging: false,
+      midi: "",
+      watchWorlds: false,
+      watchAvatars: false,
+      ignoreTrackers: "",
+      videoDecoding: "",
+      disableAMDStutterWorkaround: false,
+      osc: "",
+      affinity: "",
+      enforceWorldServerChecks: false,
+      custom: "",
+    });
+  },
+  async mergeLaunchArgsForGUI(dto: LaunchArgsParsedDTO): Promise<string> {
+    return callApp((a) => a.MergeLaunchArgsForGUI(dto), "");
+  },
   async joinWorld(worldId: string): Promise<void> {
     return callApp((a) => a.JoinWorld(worldId), undefined);
   },
@@ -164,6 +230,9 @@ export const App = {
   },
   async saveLaunchProfile(p: LaunchProfileDTO): Promise<void> {
     return callApp((a) => a.SaveLaunchProfile(p), undefined);
+  },
+  async deleteLaunchProfile(id: string): Promise<void> {
+    return callApp((a) => a.DeleteLaunchProfile(id), undefined);
   },
   async getLogRetentionDays(): Promise<number> {
     return callApp((a) => a.GetLogRetentionDays(), 30);

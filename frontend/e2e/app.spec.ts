@@ -48,7 +48,8 @@ test.describe('VRChat Tweaker', () => {
       await page.goto('/#/launcher')
       await expect(page.locator('h1')).toContainText('ランチャー')
       await expect(page.getByText('デフォルトプロファイル')).toBeVisible()
-      await expect(page.getByText('既定')).toBeVisible()
+      // プロファイルカードの既定バッジのみ対象（動画デコーディングの「既定」と区別）
+      await expect(page.locator('.profiles-list .badge').getByText('既定')).toBeVisible()
     })
 
     test('can add new profile', async ({ page }) => {
