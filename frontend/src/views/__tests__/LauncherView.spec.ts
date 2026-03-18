@@ -149,6 +149,17 @@ describe("LauncherView", () => {
     mockParseLaunchArgsForGUI.mockResolvedValue({
       noVr: false,
       screenMode: "fullscreen",
+      screenWidth: 0,
+      screenHeight: 0,
+      fps: 0,
+      processPriority: -999,
+      mainThreadPriority: -999,
+      monitor: 0,
+      profile: -1,
+      midi: "",
+      ignoreTrackers: "",
+      osc: "",
+      affinity: "",
       custom: "-batchmode",
     } as LaunchArgsParsedDTO);
 
@@ -180,6 +191,17 @@ describe("LauncherView", () => {
     mockParseLaunchArgsForGUI.mockResolvedValue({
       noVr: false,
       screenMode: "",
+      screenWidth: 0,
+      screenHeight: 0,
+      fps: 0,
+      processPriority: -999,
+      mainThreadPriority: -999,
+      monitor: 0,
+      profile: -1,
+      midi: "",
+      ignoreTrackers: "",
+      osc: "",
+      affinity: "",
       custom: "",
     } as LaunchArgsParsedDTO);
     await flushPromises();
@@ -223,10 +245,12 @@ describe("LauncherView", () => {
     expect(wrapper.find('[data-testid="screen-mode-windowed"]').exists()).toBe(
       true,
     );
-    expect(wrapper.find('[data-testid="screen-width-input"]').exists()).toBe(
+    expect(
+      wrapper.find('[data-testid="resolution-enabled-checkbox"]').exists(),
+    ).toBe(true);
+    expect(wrapper.find('[data-testid="fps-enabled-checkbox"]').exists()).toBe(
       true,
     );
-    expect(wrapper.find('[data-testid="fps-input"]').exists()).toBe(true);
   });
 
   it("launch uses current GUI state via merge and launchVRChatWithArgs", async () => {
