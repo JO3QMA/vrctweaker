@@ -373,7 +373,7 @@ const defaultLaunchArgs = (): LaunchArgsParsedDTO => ({
   screenMode: "",
   screenWidth: 0,
   screenHeight: 0,
-  fps: 0,
+  fps: 90,
   skipRegistry: false,
   processPriority: PRIORITY_OMIT,
   mainThreadPriority: PRIORITY_OMIT,
