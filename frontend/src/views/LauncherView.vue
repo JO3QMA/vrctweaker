@@ -36,6 +36,14 @@
         >
         <label>起動引数</label>
         <div class="launch-args-gui">
+          <label class="checkbox-row">
+            <input
+              v-model="launchArgs.noVr"
+              type="checkbox"
+              data-testid="no-vr-checkbox"
+            >
+            デスクトップモードで起動（-no-vr）
+          </label>
           <div class="screen-mode-section">
             <label class="block-label">表示モード</label>
             <div
@@ -361,6 +369,7 @@ import {
 } from "../wails/app";
 
 const defaultLaunchArgs = (): LaunchArgsParsedDTO => ({
+  noVr: false,
   screenMode: "",
   screenWidth: 0,
   screenHeight: 0,
@@ -536,7 +545,6 @@ async function confirmDelete() {
   padding-top: 0.5rem;
   border-top: 1px solid var(--border);
 }
-.vr-mode-section,
 .screen-mode-section,
 .render-backend-section {
   margin: 0.75rem 0;

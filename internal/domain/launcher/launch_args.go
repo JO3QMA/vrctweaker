@@ -26,6 +26,7 @@ const PriorityOmit = -999
 // Per https://docs.vrchat.com/docs/launch-options
 type LaunchArgsParsed struct {
 	// 一般設定
+	NoVR       bool   // -no-vr or --no-vr (デスクトップモード)
 	ScreenMode string // fullscreen|windowed|popupwindow (replaces Fullscreen+Windowed)
 	// 詳細設定
 	ScreenWidth                 int    // -screen-width N, 0=omit
@@ -52,6 +53,8 @@ type LaunchArgsParsed struct {
 }
 
 var (
+	noVrShort                   = "-no-vr"
+	noVrLong                    = "--no-vr"
 	screenFull                  = "-screen-fullscreen"
 	fullscreen1                 = "-screen-fullscreen 1"
 	windowed                    = "-windowed"
@@ -96,6 +99,8 @@ func ParseLaunchArgsForGUI(args string) *LaunchArgsParsed {
 	for i < len(tokens) {
 		tok := tokens[i]
 		switch {
+		case tok == noVrShort || tok == noVrLong:
+			p.NoVR = true
 		case tok == screenFull:
 			if i+1 < len(tokens) {
 				if tokens[i+1] == "1" {
@@ -251,6 +256,9 @@ func MergeLaunchArgsForGUI(p *LaunchArgsParsed) string {
 		return ""
 	}
 	var parts []string
+	if p.NoVR {
+		parts = append(parts, noVrShort)
+	}
 	switch p.ScreenMode {
 	case ScreenModeFullscreen:
 		parts = append(parts, fullscreen1)

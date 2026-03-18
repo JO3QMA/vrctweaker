@@ -23,6 +23,7 @@ type LaunchProfileDTO struct {
 
 // LaunchArgsParsedDTO is the GUI-parsed launch arguments.
 type LaunchArgsParsedDTO struct {
+	NoVR                        bool   `json:"noVr"`       // -no-vr (デスクトップモード)
 	ScreenMode                  string `json:"screenMode"` // fullscreen|windowed|popupwindow
 	ScreenWidth                 int    `json:"screenWidth"`
 	ScreenHeight                int    `json:"screenHeight"`
@@ -73,6 +74,7 @@ func toLaunchArgsParsedDTO(p *launcher.LaunchArgsParsed) LaunchArgsParsedDTO {
 		return LaunchArgsParsedDTO{}
 	}
 	return LaunchArgsParsedDTO{
+		NoVR:                        p.NoVR,
 		ScreenMode:                  p.ScreenMode,
 		ScreenWidth:                 p.ScreenWidth,
 		ScreenHeight:                p.ScreenHeight,
@@ -100,6 +102,7 @@ func toLaunchArgsParsedDTO(p *launcher.LaunchArgsParsed) LaunchArgsParsedDTO {
 
 func fromLaunchArgsParsedDTO(d LaunchArgsParsedDTO) *launcher.LaunchArgsParsed {
 	return &launcher.LaunchArgsParsed{
+		NoVR:                        d.NoVR,
 		ScreenMode:                  d.ScreenMode,
 		ScreenWidth:                 d.ScreenWidth,
 		ScreenHeight:                d.ScreenHeight,

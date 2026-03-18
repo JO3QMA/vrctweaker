@@ -9,72 +9,84 @@ func TestParseLaunchArgsForGUI(t *testing.T) {
 	tests := []struct {
 		name       string
 		args       string
+		wantNoVR   bool
 		wantScreen string
 		wantCustom string
 	}{
 		{
 			name:       "empty",
 			args:       "",
+			wantNoVR:   false,
 			wantScreen: "",
 			wantCustom: "",
 		},
 		{
-			name:       "no-vr goes to custom",
+			name:       "no-vr parsed as NoVR",
 			args:       "-no-vr",
+			wantNoVR:   true,
 			wantScreen: "",
-			wantCustom: "-no-vr",
+			wantCustom: "",
 		},
 		{
 			name:       "clear-cache goes to custom",
 			args:       "--clear-cache",
+			wantNoVR:   false,
 			wantScreen: "",
 			wantCustom: "--clear-cache",
 		},
 		{
 			name:       "fullscreen on",
 			args:       "-screen-fullscreen 1",
+			wantNoVR:   false,
 			wantScreen: ScreenModeFullscreen,
 			wantCustom: "",
 		},
 		{
 			name:       "fullscreen off",
 			args:       "-screen-fullscreen 0",
+			wantNoVR:   false,
 			wantScreen: "",
 			wantCustom: "",
 		},
 		{
 			name:       "custom only",
 			args:       "-batchmode",
+			wantNoVR:   false,
 			wantScreen: "",
 			wantCustom: "-batchmode",
 		},
 		{
 			name:       "nographics goes to custom",
 			args:       "-batchmode -nographics",
+			wantNoVR:   false,
 			wantScreen: "",
 			wantCustom: "-batchmode -nographics",
 		},
 		{
-			name:       "mixed screen and custom",
+			name:       "mixed no-vr screen and custom",
 			args:       "--no-vr -screen-fullscreen 1 -batchmode",
+			wantNoVR:   true,
 			wantScreen: ScreenModeFullscreen,
-			wantCustom: "--no-vr -batchmode",
+			wantCustom: "-batchmode",
 		},
 		{
 			name:       "windowed",
 			args:       "-windowed",
+			wantNoVR:   false,
 			wantScreen: ScreenModeWindowed,
 			wantCustom: "",
 		},
 		{
 			name:       "popupwindow",
 			args:       "-popupwindow",
+			wantNoVR:   false,
 			wantScreen: ScreenModePopupWindow,
 			wantCustom: "",
 		},
 		{
 			name:       "adapter goes to custom",
 			args:       "-adapter 0",
+			wantNoVR:   false,
 			wantScreen: "",
 			wantCustom: "-adapter 0",
 		},
@@ -82,6 +94,9 @@ func TestParseLaunchArgsForGUI(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := ParseLaunchArgsForGUI(tt.args)
+			if got.NoVR != tt.wantNoVR {
+				t.Errorf("ParseLaunchArgsForGUI().NoVR = %v, want %v", got.NoVR, tt.wantNoVR)
+			}
 			if got.ScreenMode != tt.wantScreen {
 				t.Errorf("ParseLaunchArgsForGUI().ScreenMode = %q, want %q", got.ScreenMode, tt.wantScreen)
 			}
@@ -102,6 +117,11 @@ func TestMergeLaunchArgsForGUI(t *testing.T) {
 			name: "empty",
 			p:    &LaunchArgsParsed{Profile: -1, ProcessPriority: PriorityOmit, MainThreadPriority: PriorityOmit},
 			want: "",
+		},
+		{
+			name: "no-vr only",
+			p:    &LaunchArgsParsed{NoVR: true, Profile: -1, ProcessPriority: PriorityOmit, MainThreadPriority: PriorityOmit},
+			want: "-no-vr",
 		},
 		{
 			name: "fullscreen on only",

@@ -56,6 +56,7 @@ describe("LauncherView", () => {
     mockParseLaunchArgsForGUI.mockImplementation(
       async (args: string): Promise<LaunchArgsParsedDTO> => {
         const base = {
+          noVr: args.includes("-no-vr") || args.includes("--no-vr"),
           screenWidth: 0,
           screenHeight: 0,
           fps: 0,
@@ -93,6 +94,7 @@ describe("LauncherView", () => {
     mockMergeLaunchArgsForGUI.mockImplementation(
       async (dto: LaunchArgsParsedDTO): Promise<string> => {
         const parts: string[] = [];
+        if (dto.noVr) parts.push("-no-vr");
         if (dto.screenMode === "fullscreen") parts.push("-screen-fullscreen 1");
         if (dto.screenMode === "windowed") parts.push("-windowed");
         if (dto.screenMode === "popupwindow") parts.push("-popupwindow");
@@ -123,7 +125,7 @@ describe("LauncherView", () => {
     expect(wrapper.find(".page-title").text()).toBe("ランチャー");
   });
 
-  it("renders GUI items: screen mode toggle, custom args", async () => {
+  it("renders GUI items: desktop mode checkbox, screen mode toggle, custom args", async () => {
     const wrapper = mount(LauncherView);
     await flushPromises();
     // Select first profile to show editor
@@ -131,6 +133,7 @@ describe("LauncherView", () => {
     await card?.trigger("click");
     await flushPromises();
 
+    expect(wrapper.find('[data-testid="no-vr-checkbox"]').exists()).toBe(true);
     expect(
       wrapper.find('[data-testid="screen-mode-fullscreen"]').exists(),
     ).toBe(true);
@@ -144,6 +147,7 @@ describe("LauncherView", () => {
     await flushPromises();
 
     mockParseLaunchArgsForGUI.mockResolvedValue({
+      noVr: false,
       screenMode: "fullscreen",
       custom: "-batchmode",
     } as LaunchArgsParsedDTO);
@@ -174,6 +178,7 @@ describe("LauncherView", () => {
     await flushPromises();
 
     mockParseLaunchArgsForGUI.mockResolvedValue({
+      noVr: false,
       screenMode: "",
       custom: "",
     } as LaunchArgsParsedDTO);

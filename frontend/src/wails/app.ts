@@ -11,6 +11,7 @@ export interface LaunchProfileDTO {
 }
 
 export interface LaunchArgsParsedDTO {
+  noVr: boolean; // -no-vr (デスクトップモード)
   screenMode: "" | "fullscreen" | "windowed" | "popupwindow";
   screenWidth: number;
   screenHeight: number;
@@ -193,6 +194,7 @@ export const App = {
   },
   async parseLaunchArgsForGUI(args: string): Promise<LaunchArgsParsedDTO> {
     return callApp((a) => a.ParseLaunchArgsForGUI(args), {
+      noVr: false,
       screenMode: "",
       screenWidth: 0,
       screenHeight: 0,
