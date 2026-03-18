@@ -51,7 +51,6 @@ describe("LauncherView", () => {
         const base = {
           vr: false,
           fpfc: false,
-          windowed: false,
           screenWidth: 0,
           screenHeight: 0,
           fps: 0,
@@ -69,7 +68,13 @@ describe("LauncherView", () => {
             ...base,
             noVr: true,
             clearCache: args.includes("--clear-cache"),
-            fullscreen: args.includes("-screen-fullscreen 1"),
+            screenMode: args.includes("-screen-fullscreen 1")
+              ? "fullscreen"
+              : args.includes("-popupwindow")
+                ? "popupwindow"
+                : args.includes("-windowed")
+                  ? "windowed"
+                  : "",
             custom: args.includes("-batchmode") ? "-batchmode" : "",
           };
         }
@@ -77,7 +82,7 @@ describe("LauncherView", () => {
           ...base,
           noVr: false,
           clearCache: false,
-          fullscreen: false,
+          screenMode: "",
           custom: args.trim() || "",
         };
       },
@@ -87,10 +92,11 @@ describe("LauncherView", () => {
         const parts: string[] = [];
         if (dto.noVr) parts.push("-no-vr");
         if (dto.clearCache) parts.push("--clear-cache");
-        if (dto.fullscreen) parts.push("-screen-fullscreen 1");
+        if (dto.screenMode === "fullscreen") parts.push("-screen-fullscreen 1");
+        if (dto.screenMode === "windowed") parts.push("-windowed");
+        if (dto.screenMode === "popupwindow") parts.push("-popupwindow");
         if (dto.vr) parts.push("-vr");
         if (dto.fpfc) parts.push("-fpfc");
-        if (dto.windowed) parts.push("-windowed");
         if (dto.screenWidth)
           parts.push("-screen-width", String(dto.screenWidth));
         if (dto.screenHeight)
@@ -119,7 +125,7 @@ describe("LauncherView", () => {
     expect(wrapper.find(".page-title").text()).toBe("ランチャー");
   });
 
-  it("renders GUI items: desktop mode, clear cache, fullscreen, custom args", async () => {
+  it("renders GUI items: desktop mode, clear cache, screen mode toggle, custom args", async () => {
     const wrapper = mount(LauncherView);
     await flushPromises();
     // Select first profile to show editor
@@ -131,9 +137,9 @@ describe("LauncherView", () => {
     expect(wrapper.find('[data-testid="clear-cache-checkbox"]').exists()).toBe(
       true,
     );
-    expect(wrapper.find('[data-testid="fullscreen-checkbox"]').exists()).toBe(
-      true,
-    );
+    expect(
+      wrapper.find('[data-testid="screen-mode-fullscreen"]').exists(),
+    ).toBe(true);
     expect(wrapper.find('[data-testid="custom-args-input"]').exists()).toBe(
       true,
     );
@@ -146,7 +152,7 @@ describe("LauncherView", () => {
     mockParseLaunchArgsForGUI.mockResolvedValue({
       noVr: true,
       clearCache: true,
-      fullscreen: true,
+      screenMode: "fullscreen",
       custom: "-batchmode",
     });
 
@@ -162,14 +168,14 @@ describe("LauncherView", () => {
     const clearCacheCheckbox = wrapper.find(
       '[data-testid="clear-cache-checkbox"]',
     );
-    const fullscreenCheckbox = wrapper.find(
-      '[data-testid="fullscreen-checkbox"]',
+    const fullscreenRadio = wrapper.find(
+      '[data-testid="screen-mode-fullscreen"]',
     );
     const customInput = wrapper.find('[data-testid="custom-args-input"]');
 
     expect((noVrCheckbox.element as HTMLInputElement).checked).toBe(true);
     expect((clearCacheCheckbox.element as HTMLInputElement).checked).toBe(true);
-    expect((fullscreenCheckbox.element as HTMLInputElement).checked).toBe(true);
+    expect((fullscreenRadio.element as HTMLInputElement).checked).toBe(true);
     expect((customInput.element as HTMLInputElement).value).toBe("-batchmode");
   });
 
@@ -184,7 +190,7 @@ describe("LauncherView", () => {
     mockParseLaunchArgsForGUI.mockResolvedValue({
       noVr: true,
       clearCache: false,
-      fullscreen: false,
+      screenMode: "",
       custom: "",
     });
     await flushPromises();
@@ -207,7 +213,7 @@ describe("LauncherView", () => {
       expect.objectContaining({
         noVr: true,
         clearCache: true,
-        fullscreen: false,
+        screenMode: "",
         custom: "-batchmode",
       }),
     );
@@ -231,7 +237,7 @@ describe("LauncherView", () => {
 
     expect(wrapper.find('[data-testid="vr-checkbox"]').exists()).toBe(true);
     expect(wrapper.find('[data-testid="fpfc-checkbox"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="windowed-checkbox"]').exists()).toBe(
+    expect(wrapper.find('[data-testid="screen-mode-windowed"]').exists()).toBe(
       true,
     );
     expect(wrapper.find('[data-testid="screen-width-input"]').exists()).toBe(
@@ -253,10 +259,10 @@ describe("LauncherView", () => {
 
     const noVrCheckbox = wrapper.find('[data-testid="no-vr-checkbox"]');
     await noVrCheckbox.setValue(true);
-    const fullscreenCheckbox = wrapper.find(
-      '[data-testid="fullscreen-checkbox"]',
+    const fullscreenRadio = wrapper.find(
+      '[data-testid="screen-mode-fullscreen"]',
     );
-    await fullscreenCheckbox.setValue(true);
+    await fullscreenRadio.setValue("fullscreen");
     await flushPromises();
 
     const launchBtn = wrapper.find(".btn-launch");
@@ -266,7 +272,7 @@ describe("LauncherView", () => {
     expect(mockMergeLaunchArgsForGUI).toHaveBeenCalledWith(
       expect.objectContaining({
         noVr: true,
-        fullscreen: true,
+        screenMode: "fullscreen",
       }),
     );
     expect(mockLaunchVRChatWithArgs).toHaveBeenCalledWith(

@@ -25,10 +25,9 @@ type LaunchProfileDTO struct {
 type LaunchArgsParsedDTO struct {
 	NoVr            bool   `json:"noVr"`
 	ClearCache      bool   `json:"clearCache"`
-	Fullscreen      bool   `json:"fullscreen"`
+	ScreenMode      string `json:"screenMode"` // fullscreen|windowed|popupwindow
 	VR              bool   `json:"vr"`
 	FPFC            bool   `json:"fpfc"`
-	Windowed        bool   `json:"windowed"`
 	ScreenWidth     int    `json:"screenWidth"`
 	ScreenHeight    int    `json:"screenHeight"`
 	FPS             int    `json:"fps"`
@@ -71,10 +70,9 @@ func toLaunchArgsParsedDTO(p *launcher.LaunchArgsParsed) LaunchArgsParsedDTO {
 	return LaunchArgsParsedDTO{
 		NoVr:            p.NoVR,
 		ClearCache:      p.ClearCache,
-		Fullscreen:      p.Fullscreen,
+		ScreenMode:      p.ScreenMode,
 		VR:              p.VR,
 		FPFC:            p.FPFC,
-		Windowed:        p.Windowed,
 		ScreenWidth:     p.ScreenWidth,
 		ScreenHeight:    p.ScreenHeight,
 		FPS:             p.FPS,
@@ -94,10 +92,9 @@ func fromLaunchArgsParsedDTO(d LaunchArgsParsedDTO) *launcher.LaunchArgsParsed {
 	return &launcher.LaunchArgsParsed{
 		NoVR:            d.NoVr,
 		ClearCache:      d.ClearCache,
-		Fullscreen:      d.Fullscreen,
+		ScreenMode:      d.ScreenMode,
 		VR:              d.VR,
 		FPFC:            d.FPFC,
-		Windowed:        d.Windowed,
 		ScreenWidth:     d.ScreenWidth,
 		ScreenHeight:    d.ScreenHeight,
 		FPS:             d.FPS,

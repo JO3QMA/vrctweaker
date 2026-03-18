@@ -5,16 +5,22 @@ import (
 	"strings"
 )
 
+// ScreenMode is the display mode: fullscreen, windowed, or popupwindow (virtual fullscreen).
+const (
+	ScreenModeFullscreen  = "fullscreen"
+	ScreenModeWindowed    = "windowed"
+	ScreenModePopupWindow = "popupwindow"
+)
+
 // LaunchArgsParsed holds GUI-friendly parsed launch arguments.
 type LaunchArgsParsed struct {
 	// 一般設定
-	NoVR       bool // -no-vr or --no-vr
-	ClearCache bool // --clear-cache (app-specific, not passed to VRChat)
-	Fullscreen bool // -screen-fullscreen 1
+	NoVR       bool   // -no-vr or --no-vr
+	ClearCache bool   // --clear-cache (app-specific, not passed to VRChat)
+	ScreenMode string // fullscreen|windowed|popupwindow (replaces Fullscreen+Windowed)
 	// 詳細設定
 	VR              bool   // -vr (強制VRモード)
 	FPFC            bool   // -fpfc (First Person Flying Camera)
-	Windowed        bool   // -windowed
 	ScreenWidth     int    // -screen-width N, 0=omit
 	ScreenHeight    int    // -screen-height N, 0=omit
 	FPS             int    // --fps=N, 0=omit
@@ -38,6 +44,7 @@ var (
 	vr                    = "-vr"
 	fpfc                  = "-fpfc"
 	windowed              = "-windowed"
+	popupwindow           = "-popupwindow"
 	screenWidthArg        = "-screen-width"
 	screenHeightArg       = "-screen-height"
 	fpsPrefix             = "--fps="
@@ -71,7 +78,7 @@ func ParseLaunchArgsForGUI(args string) *LaunchArgsParsed {
 		case tok == screenFull:
 			if i+1 < len(tokens) {
 				if tokens[i+1] == "1" {
-					p.Fullscreen = true
+					p.ScreenMode = ScreenModeFullscreen
 				}
 				i++
 			}
@@ -80,7 +87,9 @@ func ParseLaunchArgsForGUI(args string) *LaunchArgsParsed {
 		case tok == fpfc:
 			p.FPFC = true
 		case tok == windowed:
-			p.Windowed = true
+			p.ScreenMode = ScreenModeWindowed
+		case tok == popupwindow:
+			p.ScreenMode = ScreenModePopupWindow
 		case tok == screenWidthArg:
 			if i+1 < len(tokens) {
 				if n, err := strconv.Atoi(tokens[i+1]); err == nil && n > 0 {
@@ -193,14 +202,16 @@ func MergeLaunchArgsForGUI(p *LaunchArgsParsed) string {
 	if p.ClearCache {
 		parts = append(parts, clearCache)
 	}
-	if p.Fullscreen {
-		parts = append(parts, fullscreen1)
-	}
 	if p.FPFC {
 		parts = append(parts, fpfc)
 	}
-	if p.Windowed {
+	switch p.ScreenMode {
+	case ScreenModeFullscreen:
+		parts = append(parts, fullscreen1)
+	case ScreenModeWindowed:
 		parts = append(parts, windowed)
+	case ScreenModePopupWindow:
+		parts = append(parts, popupwindow)
 	}
 	if p.ScreenWidth > 0 {
 		parts = append(parts, screenWidthArg, strconv.Itoa(p.ScreenWidth))

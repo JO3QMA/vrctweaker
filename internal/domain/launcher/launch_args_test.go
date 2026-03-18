@@ -11,7 +11,7 @@ func TestParseLaunchArgsForGUI(t *testing.T) {
 		args       string
 		wantNoVr   bool
 		wantCache  bool
-		wantFull   bool
+		wantScreen string
 		wantCustom string
 	}{
 		{
@@ -19,7 +19,7 @@ func TestParseLaunchArgsForGUI(t *testing.T) {
 			args:       "",
 			wantNoVr:   false,
 			wantCache:  false,
-			wantFull:   false,
+			wantScreen: "",
 			wantCustom: "",
 		},
 		{
@@ -27,7 +27,7 @@ func TestParseLaunchArgsForGUI(t *testing.T) {
 			args:       "-no-vr",
 			wantNoVr:   true,
 			wantCache:  false,
-			wantFull:   false,
+			wantScreen: "",
 			wantCustom: "",
 		},
 		{
@@ -35,7 +35,7 @@ func TestParseLaunchArgsForGUI(t *testing.T) {
 			args:       "--no-vr",
 			wantNoVr:   true,
 			wantCache:  false,
-			wantFull:   false,
+			wantScreen: "",
 			wantCustom: "",
 		},
 		{
@@ -43,7 +43,7 @@ func TestParseLaunchArgsForGUI(t *testing.T) {
 			args:       "--clear-cache",
 			wantNoVr:   false,
 			wantCache:  true,
-			wantFull:   false,
+			wantScreen: "",
 			wantCustom: "",
 		},
 		{
@@ -51,7 +51,7 @@ func TestParseLaunchArgsForGUI(t *testing.T) {
 			args:       "-screen-fullscreen 1",
 			wantNoVr:   false,
 			wantCache:  false,
-			wantFull:   true,
+			wantScreen: ScreenModeFullscreen,
 			wantCustom: "",
 		},
 		{
@@ -59,7 +59,7 @@ func TestParseLaunchArgsForGUI(t *testing.T) {
 			args:       "-screen-fullscreen 0",
 			wantNoVr:   false,
 			wantCache:  false,
-			wantFull:   false,
+			wantScreen: "",
 			wantCustom: "",
 		},
 		{
@@ -67,7 +67,7 @@ func TestParseLaunchArgsForGUI(t *testing.T) {
 			args:       "-batchmode -nographics",
 			wantNoVr:   false,
 			wantCache:  false,
-			wantFull:   false,
+			wantScreen: "",
 			wantCustom: "-batchmode -nographics",
 		},
 		{
@@ -75,7 +75,7 @@ func TestParseLaunchArgsForGUI(t *testing.T) {
 			args:       "--no-vr --clear-cache -batchmode",
 			wantNoVr:   true,
 			wantCache:  true,
-			wantFull:   false,
+			wantScreen: "",
 			wantCustom: "-batchmode",
 		},
 		{
@@ -83,7 +83,7 @@ func TestParseLaunchArgsForGUI(t *testing.T) {
 			args:       "-no-vr -screen-fullscreen 1 -custom-arg value",
 			wantNoVr:   true,
 			wantCache:  false,
-			wantFull:   true,
+			wantScreen: ScreenModeFullscreen,
 			wantCustom: "-custom-arg value",
 		},
 		{
@@ -91,7 +91,23 @@ func TestParseLaunchArgsForGUI(t *testing.T) {
 			args:       "--no-vr --clear-cache -screen-fullscreen 1",
 			wantNoVr:   true,
 			wantCache:  true,
-			wantFull:   true,
+			wantScreen: ScreenModeFullscreen,
+			wantCustom: "",
+		},
+		{
+			name:       "windowed",
+			args:       "-windowed",
+			wantNoVr:   false,
+			wantCache:  false,
+			wantScreen: ScreenModeWindowed,
+			wantCustom: "",
+		},
+		{
+			name:       "popupwindow",
+			args:       "-popupwindow",
+			wantNoVr:   false,
+			wantCache:  false,
+			wantScreen: ScreenModePopupWindow,
 			wantCustom: "",
 		},
 	}
@@ -104,8 +120,8 @@ func TestParseLaunchArgsForGUI(t *testing.T) {
 			if got.ClearCache != tt.wantCache {
 				t.Errorf("ParseLaunchArgsForGUI().ClearCache = %v, want %v", got.ClearCache, tt.wantCache)
 			}
-			if got.Fullscreen != tt.wantFull {
-				t.Errorf("ParseLaunchArgsForGUI().Fullscreen = %v, want %v", got.Fullscreen, tt.wantFull)
+			if got.ScreenMode != tt.wantScreen {
+				t.Errorf("ParseLaunchArgsForGUI().ScreenMode = %q, want %q", got.ScreenMode, tt.wantScreen)
 			}
 			if got.Custom != tt.wantCustom {
 				t.Errorf("ParseLaunchArgsForGUI().Custom = %q, want %q", got.Custom, tt.wantCustom)
@@ -137,12 +153,12 @@ func TestMergeLaunchArgsForGUI(t *testing.T) {
 		},
 		{
 			name: "fullscreen on only",
-			p:    &LaunchArgsParsed{Fullscreen: true},
+			p:    &LaunchArgsParsed{ScreenMode: ScreenModeFullscreen},
 			want: "-screen-fullscreen 1",
 		},
 		{
 			name: "fullscreen off",
-			p:    &LaunchArgsParsed{Fullscreen: false},
+			p:    &LaunchArgsParsed{ScreenMode: ""},
 			want: "",
 		},
 		{
@@ -152,7 +168,7 @@ func TestMergeLaunchArgsForGUI(t *testing.T) {
 		},
 		{
 			name: "all combined",
-			p:    &LaunchArgsParsed{NoVR: true, ClearCache: true, Fullscreen: true, Custom: "-log"},
+			p:    &LaunchArgsParsed{NoVR: true, ClearCache: true, ScreenMode: ScreenModeFullscreen, Custom: "-log"},
 			want: "-no-vr --clear-cache -screen-fullscreen 1 -log",
 		},
 		{
@@ -163,11 +179,11 @@ func TestMergeLaunchArgsForGUI(t *testing.T) {
 		{
 			name: "detailed options",
 			p: &LaunchArgsParsed{
-				VR: true, FPFC: true, Windowed: true,
+				VR: true, FPFC: true, ScreenMode: ScreenModePopupWindow,
 				ScreenWidth: 1280, ScreenHeight: 720, FPS: 72,
 				Safe: true, NoSplash: true, ProcessPriority: 2,
 			},
-			want: "-vr -fpfc -windowed -screen-width 1280 -screen-height 720 --fps=72 -safe -nosplash --process-priority=2",
+			want: "-vr -fpfc -popupwindow -screen-width 1280 -screen-height 720 --fps=72 -safe -nosplash --process-priority=2",
 		},
 	}
 	for _, tt := range tests {
@@ -181,12 +197,12 @@ func TestMergeLaunchArgsForGUI(t *testing.T) {
 }
 
 func TestParseLaunchArgsForGUI_Detailed(t *testing.T) {
-	in := "-vr -fpfc -windowed -screen-width 1280 -screen-height 720 --fps=72 -safe -nosplash -noaudio --skip-registry-install -force-d3d11 -log --process-priority=2"
+	in := "-vr -fpfc -popupwindow -screen-width 1280 -screen-height 720 --fps=72 -safe -nosplash -noaudio --skip-registry-install -force-d3d11 -log --process-priority=2"
 	got := ParseLaunchArgsForGUI(in)
-	if !got.VR || !got.FPFC || !got.Windowed || got.ScreenWidth != 1280 || got.ScreenHeight != 720 ||
+	if !got.VR || !got.FPFC || got.ScreenMode != ScreenModePopupWindow || got.ScreenWidth != 1280 || got.ScreenHeight != 720 ||
 		got.FPS != 72 || !got.Safe || !got.NoSplash || !got.NoAudio || !got.SkipRegistry ||
 		!got.ForceD3D11 || !got.Log || got.ProcessPriority != 2 {
-		t.Errorf("ParseLaunchArgsForGUI(detailed) = %+v, want VR/FPFC/Windowed/ScreenWidth=1280/ScreenHeight=720/FPS=72/Safe/NoSplash/NoAudio/SkipRegistry/ForceD3D11/Log/ProcessPriority=2", got)
+		t.Errorf("ParseLaunchArgsForGUI(detailed) = %+v, want VR/FPFC/PopupWindow/ScreenWidth=1280/ScreenHeight=720/FPS=72/...", got)
 	}
 }
 
@@ -199,7 +215,7 @@ func TestParseMergeRoundtrip(t *testing.T) {
 		{"no-vr", "-no-vr"},
 		{"all gui", "--no-vr --clear-cache -screen-fullscreen 1"},
 		{"with custom", "--no-vr -batchmode -custom value"},
-		{"detailed", "-vr -fpfc -windowed -screen-width 1280 -screen-height 720 --fps=72 -safe -nosplash"},
+		{"detailed", "-vr -fpfc -popupwindow -screen-width 1280 -screen-height 720 --fps=72 -safe -nosplash"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

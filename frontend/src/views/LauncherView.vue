@@ -52,14 +52,71 @@
             >
             起動前にキャッシュをクリア
           </label>
-          <label class="checkbox-row">
-            <input
-              v-model="launchArgs.fullscreen"
-              type="checkbox"
-              data-testid="fullscreen-checkbox"
+          <div class="screen-mode-section">
+            <label class="block-label">表示モード</label>
+            <div
+              class="toggle-group"
+              role="group"
+              aria-label="表示モード"
             >
-            フルスクリーン（-screen-fullscreen 1）
-          </label>
+              <label
+                class="toggle-option"
+                :class="{ active: launchArgs.screenMode === 'fullscreen' }"
+              >
+                <input
+                  v-model="launchArgs.screenMode"
+                  type="radio"
+                  value="fullscreen"
+                  data-testid="screen-mode-fullscreen"
+                >
+                <span>フルスクリーン</span>
+              </label>
+              <label
+                class="toggle-option"
+                :class="{ active: launchArgs.screenMode === 'windowed' }"
+              >
+                <input
+                  v-model="launchArgs.screenMode"
+                  type="radio"
+                  value="windowed"
+                  data-testid="screen-mode-windowed"
+                >
+                <span>ウィンドウ</span>
+              </label>
+              <label
+                class="toggle-option"
+                :class="{ active: launchArgs.screenMode === 'popupwindow' }"
+              >
+                <input
+                  v-model="launchArgs.screenMode"
+                  type="radio"
+                  value="popupwindow"
+                  data-testid="screen-mode-popupwindow"
+                >
+                <span>仮想フルスクリーン</span>
+              </label>
+            </div>
+            <div class="resolution-row">
+              <label class="resolution-label">解像度</label>
+              <div class="resolution-inputs">
+                <input
+                  v-model.number="launchArgs.screenWidth"
+                  type="number"
+                  min="0"
+                  placeholder="幅"
+                  data-testid="screen-width-input"
+                >
+                <span class="resolution-sep">×</span>
+                <input
+                  v-model.number="launchArgs.screenHeight"
+                  type="number"
+                  min="0"
+                  placeholder="高さ"
+                  data-testid="screen-height-input"
+                >
+              </div>
+            </div>
+          </div>
           <details class="details-advanced">
             <summary>詳細設定</summary>
             <div class="launch-args-advanced">
@@ -79,37 +136,6 @@
                 >
                 FPFC（-fpfc）ワールド制作用カメラ
               </label>
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.windowed"
-                  type="checkbox"
-                  data-testid="windowed-checkbox"
-                >
-                ウィンドウモード（-windowed）
-              </label>
-              <div class="number-row">
-                <label>
-                  解像度
-                  <span class="hint">幅</span>
-                  <input
-                    v-model.number="launchArgs.screenWidth"
-                    type="number"
-                    min="0"
-                    placeholder="0=省略"
-                    data-testid="screen-width-input"
-                  >
-                </label>
-                <label>
-                  <span class="hint">高さ</span>
-                  <input
-                    v-model.number="launchArgs.screenHeight"
-                    type="number"
-                    min="0"
-                    placeholder="0=省略"
-                    data-testid="screen-height-input"
-                  >
-                </label>
-              </div>
               <label>
                 FPS制限（--fps=N）
                 <input
@@ -233,10 +259,9 @@ import {
 const defaultLaunchArgs = (): LaunchArgsParsedDTO => ({
   noVr: false,
   clearCache: false,
-  fullscreen: false,
+  screenMode: "",
   vr: false,
   fpfc: false,
-  windowed: false,
   screenWidth: 0,
   screenHeight: 0,
   fps: 0,
@@ -379,6 +404,86 @@ async function launch() {
   margin-top: 0.75rem;
   padding-top: 0.5rem;
   border-top: 1px solid var(--border);
+}
+.screen-mode-section {
+  margin: 0.75rem 0;
+}
+.block-label {
+  display: block;
+  margin-bottom: 0.4rem;
+  font-size: 0.85rem;
+}
+.toggle-group {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+.toggle-option {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.6rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.toggle-option:first-of-type {
+  border-radius: var(--radius) 0 0 var(--radius);
+}
+.toggle-option:not(:first-of-type):not(:last-of-type) {
+  border-radius: 0;
+}
+.toggle-option:last-of-type {
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.toggle-option:first-of-type:last-of-type {
+  border-radius: var(--radius);
+}
+.toggle-option:hover {
+  background: var(--bg-secondary);
+}
+.toggle-option.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: white;
+}
+.toggle-option input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.resolution-row {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.resolution-label {
+  font-size: 0.85rem;
+}
+.resolution-inputs {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.resolution-inputs input {
+  width: 6rem;
+  padding: 0.4rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+}
+.resolution-sep {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
 }
 .number-row {
   display: flex;
