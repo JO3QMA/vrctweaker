@@ -11,22 +11,13 @@ export interface LaunchProfileDTO {
 }
 
 export interface LaunchArgsParsedDTO {
-  vrMode: "" | "desktop" | "vr";
-  clearCache: boolean;
   screenMode: "" | "fullscreen" | "windowed" | "popupwindow";
-  fpfc: boolean;
   screenWidth: number;
   screenHeight: number;
   fps: number;
-  safe: boolean;
-  noSplash: boolean;
-  noAudio: boolean;
   skipRegistry: boolean;
-  renderBackend: "" | "d3d11" | "vulkan";
-  log: boolean;
   processPriority: number; // -2..2, -999=omit
   mainThreadPriority: number; // -2..2, -999=omit
-  adapter: number; // 0-based GPU index, -1=omit
   monitor: number; // 1-based, 0=omit
   profile: number; // --profile=X, -1=omit
   enableDebugGui: boolean;
@@ -202,22 +193,13 @@ export const App = {
   },
   async parseLaunchArgsForGUI(args: string): Promise<LaunchArgsParsedDTO> {
     return callApp((a) => a.ParseLaunchArgsForGUI(args), {
-      vrMode: "",
-      clearCache: false,
       screenMode: "",
-      fpfc: false,
       screenWidth: 0,
       screenHeight: 0,
       fps: 0,
-      safe: false,
-      noSplash: false,
-      noAudio: false,
       skipRegistry: false,
-      renderBackend: "",
-      log: false,
       processPriority: PRIORITY_OMIT,
       mainThreadPriority: PRIORITY_OMIT,
-      adapter: -1,
       monitor: 0,
       profile: -1,
       enableDebugGui: false,

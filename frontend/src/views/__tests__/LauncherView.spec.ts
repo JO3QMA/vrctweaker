@@ -38,13 +38,13 @@ const sampleProfiles: LaunchProfileDTO[] = [
   {
     id: "1",
     name: "Default",
-    arguments: "--no-vr",
+    arguments: "-screen-fullscreen 1",
     isDefault: true,
   },
   {
     id: "2",
-    name: "With cache clear",
-    arguments: "--no-vr --clear-cache -screen-fullscreen 1",
+    name: "With fullscreen",
+    arguments: "-screen-fullscreen 1 -windowed",
     isDefault: false,
   },
 ];
@@ -56,19 +56,12 @@ describe("LauncherView", () => {
     mockParseLaunchArgsForGUI.mockImplementation(
       async (args: string): Promise<LaunchArgsParsedDTO> => {
         const base = {
-          fpfc: false,
           screenWidth: 0,
           screenHeight: 0,
           fps: 0,
-          safe: false,
-          noSplash: false,
-          noAudio: false,
           skipRegistry: false,
-          renderBackend: "" as "" | "d3d11" | "vulkan",
-          log: false,
           processPriority: -999,
           mainThreadPriority: -999,
-          adapter: -1,
           monitor: 0,
           profile: -1,
           enableDebugGui: false,
@@ -84,23 +77,8 @@ describe("LauncherView", () => {
           affinity: "",
           enforceWorldServerChecks: false,
         };
-        let vrMode: "" | "desktop" | "vr" = "";
-        if (args.includes("--no-vr") || args.includes("-no-vr"))
-          vrMode = "desktop";
-        else if (args.includes("-vr")) vrMode = "vr";
-
-        let renderBackend: "" | "d3d11" | "vulkan" = "";
-        if (args.includes("-force-vulkan")) renderBackend = "vulkan";
-        else if (args.includes("-force-d3d11")) renderBackend = "d3d11";
-
-        let adapter = -1;
-        const adapterMatch = args.match(/-adapter\s+(\d+)/);
-        if (adapterMatch) adapter = parseInt(adapterMatch[1], 10);
-
         return {
           ...base,
-          vrMode,
-          clearCache: args.includes("--clear-cache"),
           screenMode: args.includes("-screen-fullscreen 1")
             ? "fullscreen"
             : args.includes("-popupwindow")
@@ -108,8 +86,6 @@ describe("LauncherView", () => {
               : args.includes("-windowed")
                 ? "windowed"
                 : "",
-          renderBackend,
-          adapter,
           custom: args.includes("-batchmode") ? "-batchmode" : "",
         };
       },
@@ -117,32 +93,21 @@ describe("LauncherView", () => {
     mockMergeLaunchArgsForGUI.mockImplementation(
       async (dto: LaunchArgsParsedDTO): Promise<string> => {
         const parts: string[] = [];
-        if (dto.vrMode === "desktop") parts.push("-no-vr");
-        if (dto.vrMode === "vr") parts.push("-vr");
-        if (dto.clearCache) parts.push("--clear-cache");
         if (dto.screenMode === "fullscreen") parts.push("-screen-fullscreen 1");
         if (dto.screenMode === "windowed") parts.push("-windowed");
         if (dto.screenMode === "popupwindow") parts.push("-popupwindow");
-        if (dto.fpfc) parts.push("-fpfc");
         if (dto.screenWidth)
           parts.push("-screen-width", String(dto.screenWidth));
         if (dto.screenHeight)
           parts.push("-screen-height", String(dto.screenHeight));
         if (dto.fps) parts.push(`--fps=${dto.fps}`);
-        if (dto.safe) parts.push("-safe");
-        if (dto.noSplash) parts.push("-nosplash");
-        if (dto.noAudio) parts.push("-noaudio");
         if (dto.skipRegistry) parts.push("--skip-registry-install");
-        if (dto.renderBackend === "d3d11") parts.push("-force-d3d11");
-        if (dto.renderBackend === "vulkan") parts.push("-force-vulkan");
-        if (dto.log) parts.push("-log");
         if (
           typeof dto.processPriority === "number" &&
           dto.processPriority >= -2 &&
           dto.processPriority <= 2
         )
           parts.push(`--process-priority=${dto.processPriority}`);
-        if (dto.adapter >= 0) parts.push("-adapter", String(dto.adapter));
         if (dto.custom) parts.push(dto.custom);
         return parts.join(" ");
       },
@@ -158,7 +123,7 @@ describe("LauncherView", () => {
     expect(wrapper.find(".page-title").text()).toBe("ランチャー");
   });
 
-  it("renders GUI items: VR mode toggle, clear cache, screen mode toggle, custom args", async () => {
+  it("renders GUI items: screen mode toggle, custom args", async () => {
     const wrapper = mount(LauncherView);
     await flushPromises();
     // Select first profile to show editor
@@ -166,12 +131,6 @@ describe("LauncherView", () => {
     await card?.trigger("click");
     await flushPromises();
 
-    expect(wrapper.find('[data-testid="vr-mode-desktop"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="vr-mode-none"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="vr-mode-vr"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="clear-cache-checkbox"]').exists()).toBe(
-      true,
-    );
     expect(
       wrapper.find('[data-testid="screen-mode-fullscreen"]').exists(),
     ).toBe(true);
@@ -185,32 +144,23 @@ describe("LauncherView", () => {
     await flushPromises();
 
     mockParseLaunchArgsForGUI.mockResolvedValue({
-      vrMode: "desktop",
-      clearCache: true,
       screenMode: "fullscreen",
       custom: "-batchmode",
-      adapter: -1,
     } as LaunchArgsParsedDTO);
 
-    const cardWithCache = wrapper.findAll(".profile-card")[1];
-    await cardWithCache?.trigger("click");
+    const card2 = wrapper.findAll(".profile-card")[1];
+    await card2?.trigger("click");
     await flushPromises();
 
     expect(mockParseLaunchArgsForGUI).toHaveBeenLastCalledWith(
-      "--no-vr --clear-cache -screen-fullscreen 1",
+      "-screen-fullscreen 1 -windowed",
     );
 
-    const desktopRadio = wrapper.find('[data-testid="vr-mode-desktop"]');
-    const clearCacheCheckbox = wrapper.find(
-      '[data-testid="clear-cache-checkbox"]',
-    );
     const fullscreenRadio = wrapper.find(
       '[data-testid="screen-mode-fullscreen"]',
     );
     const customInput = wrapper.find('[data-testid="custom-args-input"]');
 
-    expect((desktopRadio.element as HTMLInputElement).checked).toBe(true);
-    expect((clearCacheCheckbox.element as HTMLInputElement).checked).toBe(true);
     expect((fullscreenRadio.element as HTMLInputElement).checked).toBe(true);
     expect((customInput.element as HTMLInputElement).value).toBe("-batchmode");
   });
@@ -224,20 +174,15 @@ describe("LauncherView", () => {
     await flushPromises();
 
     mockParseLaunchArgsForGUI.mockResolvedValue({
-      vrMode: "desktop",
-      clearCache: false,
       screenMode: "",
       custom: "",
-      adapter: -1,
     } as LaunchArgsParsedDTO);
     await flushPromises();
 
-    const desktopRadio = wrapper.find('[data-testid="vr-mode-desktop"]');
-    await desktopRadio.setValue("desktop");
-    const clearCacheCheckbox = wrapper.find(
-      '[data-testid="clear-cache-checkbox"]',
+    const fullscreenRadio = wrapper.find(
+      '[data-testid="screen-mode-fullscreen"]',
     );
-    await clearCacheCheckbox.setValue(true);
+    await fullscreenRadio.setValue("fullscreen");
     const customInput = wrapper.find('[data-testid="custom-args-input"]');
     await customInput.setValue("-batchmode");
     await flushPromises();
@@ -248,9 +193,7 @@ describe("LauncherView", () => {
 
     expect(mockMergeLaunchArgsForGUI).toHaveBeenCalledWith(
       expect.objectContaining({
-        vrMode: "desktop",
-        clearCache: true,
-        screenMode: "",
+        screenMode: "fullscreen",
         custom: "-batchmode",
       }),
     );
@@ -272,17 +215,6 @@ describe("LauncherView", () => {
     await summary.trigger("click");
     await flushPromises();
 
-    expect(wrapper.find('[data-testid="vr-mode-vr"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="fpfc-checkbox"]').exists()).toBe(true);
-    expect(
-      wrapper.find('[data-testid="render-backend-default"]').exists(),
-    ).toBe(true);
-    expect(wrapper.find('[data-testid="render-backend-d3d11"]').exists()).toBe(
-      true,
-    );
-    expect(wrapper.find('[data-testid="render-backend-vulkan"]').exists()).toBe(
-      true,
-    );
     expect(wrapper.find('[data-testid="screen-mode-windowed"]').exists()).toBe(
       true,
     );
@@ -290,8 +222,6 @@ describe("LauncherView", () => {
       true,
     );
     expect(wrapper.find('[data-testid="fps-input"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="safe-checkbox"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="adapter-input"]').exists()).toBe(true);
   });
 
   it("launch uses current GUI state via merge and launchVRChatWithArgs", async () => {
@@ -302,10 +232,8 @@ describe("LauncherView", () => {
     await card?.trigger("click");
     await flushPromises();
 
-    mockMergeLaunchArgsForGUI.mockResolvedValue("--no-vr -screen-fullscreen 1");
+    mockMergeLaunchArgsForGUI.mockResolvedValue("-screen-fullscreen 1");
 
-    const desktopRadio = wrapper.find('[data-testid="vr-mode-desktop"]');
-    await desktopRadio.setValue("desktop");
     const fullscreenRadio = wrapper.find(
       '[data-testid="screen-mode-fullscreen"]',
     );
@@ -318,12 +246,11 @@ describe("LauncherView", () => {
 
     expect(mockMergeLaunchArgsForGUI).toHaveBeenCalledWith(
       expect.objectContaining({
-        vrMode: "desktop",
         screenMode: "fullscreen",
       }),
     );
     expect(mockLaunchVRChatWithArgs).toHaveBeenCalledWith(
-      "--no-vr -screen-fullscreen 1",
+      "-screen-fullscreen 1",
     );
   });
 

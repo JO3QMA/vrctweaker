@@ -1,15 +1,30 @@
 <template>
   <div class="activity-view">
-    <h1 class="page-title">アクティビティ</h1>
+    <h1 class="page-title">
+      アクティビティ
+    </h1>
 
     <!-- 統計セクション（直近7日） -->
     <section class="stats-section">
-      <h2 class="section-title">プレイ時間（直近7日）</h2>
-      <div v-if="statsLoading" class="loading">読み込み中…</div>
-      <div v-else-if="stats.dailyPlaySeconds.length === 0" class="empty-stats">
+      <h2 class="section-title">
+        プレイ時間（直近7日）
+      </h2>
+      <div
+        v-if="statsLoading"
+        class="loading"
+      >
+        読み込み中…
+      </div>
+      <div
+        v-else-if="stats.dailyPlaySeconds.length === 0"
+        class="empty-stats"
+      >
         データがありません
       </div>
-      <div v-else class="bar-chart">
+      <div
+        v-else
+        class="bar-chart"
+      >
         <div
           v-for="day in stats.dailyPlaySeconds"
           :key="day.date"
@@ -29,7 +44,9 @@
 
     <!-- タイムラインセクション -->
     <section class="timeline-section">
-      <h2 class="section-title">遭遇ログ（Join/Leave）</h2>
+      <h2 class="section-title">
+        遭遇ログ（Join/Leave）
+      </h2>
 
       <!-- フィルタ -->
       <div class="filters">
@@ -38,15 +55,31 @@
           type="text"
           placeholder="表示名で検索"
           class="filter-input"
-        />
-        <button class="btn-refresh" @click="loadEncounters">更新</button>
+        >
+        <button
+          class="btn-refresh"
+          @click="loadEncounters"
+        >
+          更新
+        </button>
       </div>
 
-      <div v-if="encountersLoading" class="loading">読み込み中…</div>
-      <div v-else-if="filteredEncounters.length === 0" class="empty">
+      <div
+        v-if="encountersLoading"
+        class="loading"
+      >
+        読み込み中…
+      </div>
+      <div
+        v-else-if="filteredEncounters.length === 0"
+        class="empty"
+      >
         遭遇ログがありません。
       </div>
-      <ul v-else class="timeline">
+      <ul
+        v-else
+        class="timeline"
+      >
         <li
           v-for="enc in filteredEncounters"
           :key="enc.id"
@@ -56,7 +89,10 @@
             formatEncounteredAt(enc.encounteredAt)
           }}</span>
           <span class="timeline-name">{{ enc.displayName }}</span>
-          <span class="timeline-action" :class="enc.action">{{
+          <span
+            class="timeline-action"
+            :class="enc.action"
+          >{{
             actionLabel(enc.action)
           }}</span>
           <span class="timeline-instance">{{ enc.instanceId || "—" }}</span>

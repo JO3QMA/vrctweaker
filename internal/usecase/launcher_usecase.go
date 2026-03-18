@@ -7,7 +7,6 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -16,8 +15,6 @@ import (
 	"github.com/google/uuid"
 	"vrchat-tweaker/internal/domain/launcher"
 )
-
-const cacheDirName = "Cache-WindowsPlayer"
 
 // LauncherUseCase handles launch profile and VRChat launch logic.
 type LauncherUseCase struct {
@@ -61,7 +58,6 @@ func (uc *LauncherUseCase) DeleteProfile(ctx context.Context, id string) error {
 }
 
 // LaunchVRChat runs VRChat with the given profile. vrchatPath and steamPath are optional overrides.
-// outputLogPath is used to resolve cache dir for --clear-cache (optional).
 func (uc *LauncherUseCase) LaunchVRChat(ctx context.Context, profileID string, vrchatPath, steamPath, outputLogPath string) error {
 	profile, err := uc.repo.GetByID(ctx, profileID)
 	if err != nil {
@@ -74,7 +70,6 @@ func (uc *LauncherUseCase) LaunchVRChat(ctx context.Context, profileID string, v
 }
 
 // LaunchWithArgs runs VRChat with the given arguments string.
-// Handles --clear-cache (deletes cache before launch, strips from args).
 // Used when launching with current GUI state without saving first.
 func (uc *LauncherUseCase) LaunchWithArgs(ctx context.Context, argsStr, vrchatPath, steamPath, outputLogPath string) error {
 	args, err := uc.prepareLaunchArgs(ctx, parseLaunchArgs(argsStr), outputLogPath)
@@ -86,7 +81,6 @@ func (uc *LauncherUseCase) LaunchWithArgs(ctx context.Context, argsStr, vrchatPa
 
 // LaunchToWorld runs VRChat with the given profile and launches into the specified world.
 // Uses vrchat://launch?id=<worldID> URL scheme. profileID may be empty to use default profile.
-// outputLogPath is used to resolve cache dir for --clear-cache (optional).
 func (uc *LauncherUseCase) LaunchToWorld(ctx context.Context, profileID, worldID string, vrchatPath, steamPath, outputLogPath string) error {
 	worldID = strings.TrimSpace(worldID)
 	if worldID == "" {
@@ -112,22 +106,9 @@ func BuildJoinWorldArgs(baseArgsStr string, worldID string) []string {
 	return append(base, joinURL)
 }
 
-// prepareLaunchArgs handles --clear-cache: deletes cache dir if present, returns args without --clear-cache.
+// prepareLaunchArgs returns args as-is (no pre-processing).
 func (uc *LauncherUseCase) prepareLaunchArgs(ctx context.Context, args []string, outputLogPath string) ([]string, error) {
-	filtered, hadClearCache := FilterClearCacheFromArgs(args)
-	if !hadClearCache {
-		return filtered, nil
-	}
-	cacheDir, err := ResolveVRCacheDir(outputLogPath)
-	if err != nil {
-		return nil, fmt.Errorf("resolve cache dir: %w", err)
-	}
-	if cacheDir != "" {
-		if err := clearVRCacheDir(cacheDir); err != nil {
-			return nil, fmt.Errorf("clear cache: %w", err)
-		}
-	}
-	return filtered, nil
+	return args, nil
 }
 
 func (uc *LauncherUseCase) getProfileOrDefault(ctx context.Context, profileID string) (*launcher.LaunchProfile, error) {
@@ -263,42 +244,4 @@ func resolveVRChatPathWindows(path string) string {
 		return path[:len(path)-len(vrchatExe)] + "launch.exe"
 	}
 	return path
-}
-
-// ResolveVRCacheDir returns the VRChat cache directory path.
-// If outputLogPath is set, uses its parent dir + Cache-WindowsPlayer.
-// Otherwise uses %USERPROFILE%\AppData\LocalLow\VRChat\VRChat\Cache-WindowsPlayer (Windows only).
-// Linux is not supported (returns empty string).
-func ResolveVRCacheDir(outputLogPath string) (string, error) {
-	if runtime.GOOS != "windows" {
-		return "", nil // Linux not supported per spec
-	}
-	if outputLogPath != "" {
-		parent := filepath.Dir(outputLogPath)
-		return filepath.Join(parent, cacheDirName), nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, "AppData", "LocalLow", "VRChat", "VRChat", cacheDirName), nil
-}
-
-// FilterClearCacheFromArgs removes --clear-cache from args and returns (filtered, hadClearCache).
-func FilterClearCacheFromArgs(args []string) ([]string, bool) {
-	out := make([]string, 0, len(args))
-	had := false
-	for _, a := range args {
-		if a == "--clear-cache" {
-			had = true
-			continue
-		}
-		out = append(out, a)
-	}
-	return out, had
-}
-
-// clearVRCacheDir deletes the VRChat cache directory.
-func clearVRCacheDir(dir string) error {
-	return os.RemoveAll(dir)
 }

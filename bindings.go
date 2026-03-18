@@ -23,22 +23,13 @@ type LaunchProfileDTO struct {
 
 // LaunchArgsParsedDTO is the GUI-parsed launch arguments.
 type LaunchArgsParsedDTO struct {
-	VrMode                      string `json:"vrMode"` // desktop|""|vr
-	ClearCache                  bool   `json:"clearCache"`
 	ScreenMode                  string `json:"screenMode"` // fullscreen|windowed|popupwindow
-	FPFC                        bool   `json:"fpfc"`
 	ScreenWidth                 int    `json:"screenWidth"`
 	ScreenHeight                int    `json:"screenHeight"`
 	FPS                         int    `json:"fps"`
-	Safe                        bool   `json:"safe"`
-	NoSplash                    bool   `json:"noSplash"`
-	NoAudio                     bool   `json:"noAudio"`
 	SkipRegistry                bool   `json:"skipRegistry"`
-	RenderBackend               string `json:"renderBackend"` // ""|d3d11|vulkan (exclusive)
-	Log                         bool   `json:"log"`
 	ProcessPriority             int    `json:"processPriority"`    // -2..2, -999=omit
 	MainThreadPriority          int    `json:"mainThreadPriority"` // -2..2, -999=omit
-	Adapter                     int    `json:"adapter"`            // -adapter N (0-based GPU index), -1=omit
 	Monitor                     int    `json:"monitor"`            // -monitor N (1-based), 0=omit
 	Profile                     int    `json:"profile"`            // --profile=X, -1=omit
 	EnableDebugGui              bool   `json:"enableDebugGui"`
@@ -82,22 +73,13 @@ func toLaunchArgsParsedDTO(p *launcher.LaunchArgsParsed) LaunchArgsParsedDTO {
 		return LaunchArgsParsedDTO{}
 	}
 	return LaunchArgsParsedDTO{
-		VrMode:                      p.VrMode,
-		ClearCache:                  p.ClearCache,
 		ScreenMode:                  p.ScreenMode,
-		FPFC:                        p.FPFC,
 		ScreenWidth:                 p.ScreenWidth,
 		ScreenHeight:                p.ScreenHeight,
 		FPS:                         p.FPS,
-		Safe:                        p.Safe,
-		NoSplash:                    p.NoSplash,
-		NoAudio:                     p.NoAudio,
 		SkipRegistry:                p.SkipRegistry,
-		RenderBackend:               p.RenderBackend,
-		Log:                         p.Log,
 		ProcessPriority:             p.ProcessPriority,
 		MainThreadPriority:          p.MainThreadPriority,
-		Adapter:                     p.Adapter,
 		Monitor:                     p.Monitor,
 		Profile:                     p.Profile,
 		EnableDebugGui:              p.EnableDebugGui,
@@ -118,22 +100,13 @@ func toLaunchArgsParsedDTO(p *launcher.LaunchArgsParsed) LaunchArgsParsedDTO {
 
 func fromLaunchArgsParsedDTO(d LaunchArgsParsedDTO) *launcher.LaunchArgsParsed {
 	return &launcher.LaunchArgsParsed{
-		VrMode:                      d.VrMode,
-		ClearCache:                  d.ClearCache,
 		ScreenMode:                  d.ScreenMode,
-		FPFC:                        d.FPFC,
 		ScreenWidth:                 d.ScreenWidth,
 		ScreenHeight:                d.ScreenHeight,
 		FPS:                         d.FPS,
-		Safe:                        d.Safe,
-		NoSplash:                    d.NoSplash,
-		NoAudio:                     d.NoAudio,
 		SkipRegistry:                d.SkipRegistry,
-		RenderBackend:               d.RenderBackend,
-		Log:                         d.Log,
 		ProcessPriority:             d.ProcessPriority,
 		MainThreadPriority:          d.MainThreadPriority,
-		Adapter:                     d.Adapter,
 		Monitor:                     d.Monitor,
 		Profile:                     d.Profile,
 		EnableDebugGui:              d.EnableDebugGui,

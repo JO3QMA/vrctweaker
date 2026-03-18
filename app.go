@@ -175,7 +175,6 @@ func (a *App) LaunchVRChatWithArgs(args string) error {
 
 // LaunchVRChat starts VRChat with the given profile ID.
 // Uses path settings (VRChat/Steam paths) from app_settings when configured.
-// Passes outputLogPath for --clear-cache cache dir resolution.
 func (a *App) LaunchVRChat(profileID string) error {
 	ps, err := a.settings.GetPathSettings(a.ctx)
 	if err != nil {

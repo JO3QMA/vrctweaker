@@ -1,9 +1,16 @@
 <template>
   <div class="launcher-view">
-    <h1 class="page-title">ランチャー</h1>
+    <h1 class="page-title">
+      ランチャー
+    </h1>
     <div class="profiles-section">
       <div class="profiles-list">
-        <button class="btn-add" @click="addNew">+ 新規プロファイル</button>
+        <button
+          class="btn-add"
+          @click="addNew"
+        >
+          + 新規プロファイル
+        </button>
         <div
           v-for="p in profiles"
           :key="p.id"
@@ -12,66 +19,30 @@
           @click="select(p)"
         >
           <span class="profile-name">{{ p.name }}</span>
-          <span v-if="p.isDefault" class="badge">既定</span>
+          <span
+            v-if="p.isDefault"
+            class="badge"
+          >既定</span>
         </div>
       </div>
-      <div v-if="selected" class="profile-editor">
+      <div
+        v-if="selected"
+        class="profile-editor"
+      >
         <label>プロファイル名</label>
-        <input v-model="selected.name" type="text" />
+        <input
+          v-model="selected.name"
+          type="text"
+        >
         <label>起動引数</label>
         <div class="launch-args-gui">
-          <div class="vr-mode-section">
-            <label class="block-label">VRモード</label>
-            <div class="toggle-group" role="group" aria-label="VRモード">
-              <label
-                class="toggle-option"
-                :class="{ active: launchArgs.vrMode === 'desktop' }"
-              >
-                <input
-                  v-model="launchArgs.vrMode"
-                  type="radio"
-                  value="desktop"
-                  data-testid="vr-mode-desktop"
-                />
-                <span>デスクトップモード</span>
-              </label>
-              <label
-                class="toggle-option"
-                :class="{ active: launchArgs.vrMode === '' }"
-              >
-                <input
-                  v-model="launchArgs.vrMode"
-                  type="radio"
-                  value=""
-                  data-testid="vr-mode-none"
-                />
-                <span>無設定</span>
-              </label>
-              <label
-                class="toggle-option"
-                :class="{ active: launchArgs.vrMode === 'vr' }"
-              >
-                <input
-                  v-model="launchArgs.vrMode"
-                  type="radio"
-                  value="vr"
-                  data-testid="vr-mode-vr"
-                />
-                <span>強制VRモード</span>
-              </label>
-            </div>
-          </div>
-          <label class="checkbox-row">
-            <input
-              v-model="launchArgs.clearCache"
-              type="checkbox"
-              data-testid="clear-cache-checkbox"
-            />
-            起動前にキャッシュをクリア
-          </label>
           <div class="screen-mode-section">
             <label class="block-label">表示モード</label>
-            <div class="toggle-group" role="group" aria-label="表示モード">
+            <div
+              class="toggle-group"
+              role="group"
+              aria-label="表示モード"
+            >
               <label
                 class="toggle-option"
                 :class="{ active: launchArgs.screenMode === 'fullscreen' }"
@@ -81,7 +52,7 @@
                   type="radio"
                   value="fullscreen"
                   data-testid="screen-mode-fullscreen"
-                />
+                >
                 <span>フルスクリーン</span>
               </label>
               <label
@@ -93,7 +64,7 @@
                   type="radio"
                   value="windowed"
                   data-testid="screen-mode-windowed"
-                />
+                >
                 <span>ウィンドウ</span>
               </label>
               <label
@@ -105,7 +76,7 @@
                   type="radio"
                   value="popupwindow"
                   data-testid="screen-mode-popupwindow"
-                />
+                >
                 <span>仮想フルスクリーン</span>
               </label>
             </div>
@@ -118,7 +89,7 @@
                   min="0"
                   placeholder="幅"
                   data-testid="screen-width-input"
-                />
+                >
                 <span class="resolution-sep">×</span>
                 <input
                   v-model.number="launchArgs.screenHeight"
@@ -126,7 +97,7 @@
                   min="0"
                   placeholder="高さ"
                   data-testid="screen-height-input"
-                />
+                >
               </div>
             </div>
             <label>
@@ -137,20 +108,12 @@
                 min="0"
                 placeholder="0=省略、1=1番目"
                 data-testid="monitor-input"
-              />
+              >
             </label>
           </div>
           <details class="details-advanced">
             <summary>詳細設定</summary>
             <div class="launch-args-advanced">
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.fpfc"
-                  type="checkbox"
-                  data-testid="fpfc-checkbox"
-                />
-                FPFC（-fpfc）ワールド制作用カメラ
-              </label>
               <label>
                 FPS制限（--fps=N）
                 <input
@@ -159,92 +122,15 @@
                   min="0"
                   placeholder="0=省略"
                   data-testid="fps-input"
-                />
-              </label>
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.safe"
-                  type="checkbox"
-                  data-testid="safe-checkbox"
-                />
-                セーフモード（-safe）
-              </label>
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.noSplash"
-                  type="checkbox"
-                  data-testid="nosplash-checkbox"
-                />
-                スプラッシュスキップ（-nosplash）
-              </label>
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.noAudio"
-                  type="checkbox"
-                  data-testid="noaudio-checkbox"
-                />
-                オーディオ無効（-noaudio）
+                >
               </label>
               <label class="checkbox-row">
                 <input
                   v-model="launchArgs.skipRegistry"
                   type="checkbox"
                   data-testid="skip-registry-checkbox"
-                />
-                レジストリ登録スキップ（--skip-registry-install）
-              </label>
-              <div class="render-backend-section">
-                <label class="block-label">レンダーパイプライン（排他）</label>
-                <div
-                  class="toggle-group"
-                  role="group"
-                  aria-label="レンダーパイプライン"
                 >
-                  <label
-                    class="toggle-option"
-                    :class="{ active: launchArgs.renderBackend === '' }"
-                  >
-                    <input
-                      v-model="launchArgs.renderBackend"
-                      type="radio"
-                      value=""
-                      data-testid="render-backend-default"
-                    />
-                    <span>無設定</span>
-                  </label>
-                  <label
-                    class="toggle-option"
-                    :class="{ active: launchArgs.renderBackend === 'd3d11' }"
-                  >
-                    <input
-                      v-model="launchArgs.renderBackend"
-                      type="radio"
-                      value="d3d11"
-                      data-testid="render-backend-d3d11"
-                    />
-                    <span>DirectX 11</span>
-                  </label>
-                  <label
-                    class="toggle-option"
-                    :class="{ active: launchArgs.renderBackend === 'vulkan' }"
-                  >
-                    <input
-                      v-model="launchArgs.renderBackend"
-                      type="radio"
-                      value="vulkan"
-                      data-testid="render-backend-vulkan"
-                    />
-                    <span>Vulkan</span>
-                  </label>
-                </div>
-              </div>
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.log"
-                  type="checkbox"
-                  data-testid="log-checkbox"
-                />
-                ログ出力（-log）
+                レジストリ登録スキップ（--skip-registry-install）
               </label>
               <label>
                 プロセス優先度（--process-priority=N）
@@ -255,7 +141,7 @@
                   max="2"
                   placeholder="-999=未設定、-2～2"
                   data-testid="process-priority-input"
-                />
+                >
               </label>
               <label>
                 メインスレッド優先度（--main-thread-priority=N）
@@ -266,7 +152,7 @@
                   max="2"
                   placeholder="-999=未設定、-2～2"
                   data-testid="main-thread-priority-input"
-                />
+                >
               </label>
               <label>
                 プロファイル（--profile=N）
@@ -276,17 +162,7 @@
                   min="-1"
                   placeholder="-1=省略、0=既定"
                   data-testid="profile-input"
-                />
-              </label>
-              <label>
-                GPUアダプター（-adapter N）
-                <input
-                  v-model.number="launchArgs.adapter"
-                  type="number"
-                  min="-1"
-                  placeholder="-1=自動、0=1枚目、1=2枚目..."
-                  data-testid="adapter-input"
-                />
+                >
               </label>
             </div>
           </details>
@@ -298,7 +174,7 @@
                   v-model="launchArgs.enableDebugGui"
                   type="checkbox"
                   data-testid="enable-debug-gui-checkbox"
-                />
+                >
                 デバッグGUI（--enable-debug-gui）
               </label>
               <label class="checkbox-row">
@@ -306,7 +182,7 @@
                   v-model="launchArgs.enableSDKLogLevels"
                   type="checkbox"
                   data-testid="enable-sdk-log-levels-checkbox"
-                />
+                >
                 SDKログ拡張（--enable-sdk-log-levels）
               </label>
               <label class="checkbox-row">
@@ -314,7 +190,7 @@
                   v-model="launchArgs.enableUdonDebugLogging"
                   type="checkbox"
                   data-testid="enable-udon-debug-logging-checkbox"
-                />
+                >
                 Udonデバッグログ（--enable-udon-debug-logging）
               </label>
               <label class="checkbox-row">
@@ -322,7 +198,7 @@
                   v-model="launchArgs.watchWorlds"
                   type="checkbox"
                   data-testid="watch-worlds-checkbox"
-                />
+                >
                 ワールド監視（--watch-worlds）
               </label>
               <label class="checkbox-row">
@@ -330,7 +206,7 @@
                   v-model="launchArgs.watchAvatars"
                   type="checkbox"
                   data-testid="watch-avatars-checkbox"
-                />
+                >
                 アバター監視（--watch-avatars）
               </label>
               <label class="checkbox-row">
@@ -338,7 +214,7 @@
                   v-model="launchArgs.enforceWorldServerChecks"
                   type="checkbox"
                   data-testid="enforce-world-server-checks-checkbox"
-                />
+                >
                 ワールドサーバーチェック強制（--enforce-world-server-checks）
               </label>
               <label>
@@ -348,7 +224,7 @@
                   type="text"
                   placeholder="空=省略"
                   data-testid="midi-input"
-                />
+                >
               </label>
               <label>
                 無視トラッカー（--ignore-trackers=serial1,serial2）
@@ -357,7 +233,7 @@
                   type="text"
                   placeholder="空=省略"
                   data-testid="ignore-trackers-input"
-                />
+                >
               </label>
               <div class="render-backend-section">
                 <label class="block-label">動画デコーディング</label>
@@ -375,7 +251,7 @@
                       type="radio"
                       value=""
                       data-testid="video-decoding-default"
-                    />
+                    >
                     <span>既定</span>
                   </label>
                   <label
@@ -387,7 +263,7 @@
                       type="radio"
                       value="software"
                       data-testid="video-decoding-software"
-                    />
+                    >
                     <span>ソフトウェア</span>
                   </label>
                   <label
@@ -399,7 +275,7 @@
                       type="radio"
                       value="hardware"
                       data-testid="video-decoding-hardware"
-                    />
+                    >
                     <span>ハードウェア</span>
                   </label>
                 </div>
@@ -409,7 +285,7 @@
                   v-model="launchArgs.disableAMDStutterWorkaround"
                   type="checkbox"
                   data-testid="disable-amd-stutter-workaround-checkbox"
-                />
+                >
                 AMDスタッター回避無効（--disable-amd-stutter-workaround）
               </label>
               <label>
@@ -419,7 +295,7 @@
                   type="text"
                   placeholder="例: 9000:127.0.0.1:9001"
                   data-testid="osc-input"
-                />
+                >
               </label>
               <label>
                 スレッドアフィニティ（--affinity=FFFF）
@@ -428,7 +304,7 @@
                   type="text"
                   placeholder="16進ビットマスク、空=省略"
                   data-testid="affinity-input"
-                />
+                >
               </label>
             </div>
           </details>
@@ -438,15 +314,28 @@
             type="text"
             placeholder="-batchmode"
             data-testid="custom-args-input"
-          />
+          >
         </div>
         <label>
-          <input v-model="selected.isDefault" type="checkbox" />
+          <input
+            v-model="selected.isDefault"
+            type="checkbox"
+          >
           デフォルトに設定
         </label>
         <div class="editor-actions">
-          <button class="btn-save" @click="save">保存</button>
-          <button class="btn-launch" @click="launch">この設定で起動</button>
+          <button
+            class="btn-save"
+            @click="save"
+          >
+            保存
+          </button>
+          <button
+            class="btn-launch"
+            @click="launch"
+          >
+            この設定で起動
+          </button>
           <button
             v-if="selected.id"
             type="button"
@@ -472,22 +361,13 @@ import {
 } from "../wails/app";
 
 const defaultLaunchArgs = (): LaunchArgsParsedDTO => ({
-  vrMode: "",
-  clearCache: false,
   screenMode: "",
-  fpfc: false,
   screenWidth: 0,
   screenHeight: 0,
   fps: 0,
-  safe: false,
-  noSplash: false,
-  noAudio: false,
   skipRegistry: false,
-  renderBackend: "",
-  log: false,
   processPriority: PRIORITY_OMIT,
   mainThreadPriority: PRIORITY_OMIT,
-  adapter: -1,
   monitor: 0,
   profile: -1,
   enableDebugGui: false,
@@ -538,7 +418,6 @@ function addNew() {
 }
 
 function sanitizeLaunchArgs(a: LaunchArgsParsedDTO): LaunchArgsParsedDTO {
-  const adapter = Number(a.adapter);
   const pp = Number(a.processPriority);
   const mtp = Number(a.mainThreadPriority);
   const profile = Number(a.profile);
@@ -551,7 +430,6 @@ function sanitizeLaunchArgs(a: LaunchArgsParsedDTO): LaunchArgsParsedDTO {
       Number.isInteger(pp) && pp >= -2 && pp <= 2 ? pp : PRIORITY_OMIT,
     mainThreadPriority:
       Number.isInteger(mtp) && mtp >= -2 && mtp <= 2 ? mtp : PRIORITY_OMIT,
-    adapter: Number.isInteger(adapter) && adapter >= -1 ? adapter : -1,
     monitor: Math.max(0, Math.floor(Number(a.monitor) || 0)),
     profile: Number.isInteger(profile) && profile >= 0 ? profile : -1,
   };

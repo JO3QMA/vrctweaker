@@ -1,6 +1,8 @@
 <template>
   <div class="gallery-view">
-    <h1 class="page-title">ギャラリー</h1>
+    <h1 class="page-title">
+      ギャラリー
+    </h1>
 
     <!-- フィルタ（最小: worldId） -->
     <div class="filters">
@@ -9,16 +11,32 @@
         type="text"
         placeholder="World ID で検索"
         class="filter-input"
-      />
-      <button class="btn-refresh" @click="load">更新</button>
+      >
+      <button
+        class="btn-refresh"
+        @click="load"
+      >
+        更新
+      </button>
     </div>
 
     <!-- グリッド一覧 -->
-    <div v-if="loading" class="loading">読み込み中…</div>
-    <div v-else-if="list.length === 0" class="empty">
+    <div
+      v-if="loading"
+      class="loading"
+    >
+      読み込み中…
+    </div>
+    <div
+      v-else-if="list.length === 0"
+      class="empty"
+    >
       スクリーンショットがありません。設定からフォルダをスキャンしてください。
     </div>
-    <div v-else class="grid">
+    <div
+      v-else
+      class="grid"
+    >
       <div
         v-for="item in list"
         :key="item.id"
@@ -32,13 +50,16 @@
             :alt="item.filePath"
             class="thumbnail"
             @error="onThumbnailError"
-          />
+          >
         </div>
       </div>
     </div>
 
     <!-- 詳細プレビュー -->
-    <div v-if="selected" class="detail-panel">
+    <div
+      v-if="selected"
+      class="detail-panel"
+    >
       <h3>詳細</h3>
       <dl class="detail-list">
         <dt>撮影日時</dt>
@@ -52,7 +73,10 @@
           {{ selected.filePath }}
         </dd>
       </dl>
-      <p v-if="joinError" class="join-error">
+      <p
+        v-if="joinError"
+        class="join-error"
+      >
         {{ joinError }}
       </p>
       <button
