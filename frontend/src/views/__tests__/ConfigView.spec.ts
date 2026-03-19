@@ -148,6 +148,55 @@ describe("ConfigView", () => {
     );
   });
 
+  it("shows cache size and expiry default to 30", async () => {
+    await router.push("/config");
+    await router.isReady();
+    const wrapper = mount(ConfigView, {
+      global: { plugins: [router] },
+    });
+    await wrapper.find("[data-testid='create-config-btn']").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const cacheSizeInput = wrapper.find("[data-testid='cache-size-input']");
+    const cacheExpiryInput = wrapper.find("[data-testid='cache-expiry-input']");
+    expect((cacheSizeInput.element as HTMLInputElement).value).toBe("30");
+    expect((cacheExpiryInput.element as HTMLInputElement).value).toBe("30");
+  });
+
+  it("clamps cache size to 30 on blur when value is less than 30", async () => {
+    await router.push("/config");
+    await router.isReady();
+    const wrapper = mount(ConfigView, {
+      global: { plugins: [router] },
+    });
+    await wrapper.find("[data-testid='create-config-btn']").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const cacheSizeInput = wrapper.find("[data-testid='cache-size-input']");
+    await cacheSizeInput.setValue(20);
+    await cacheSizeInput.trigger("blur");
+    await wrapper.vm.$nextTick();
+
+    expect((cacheSizeInput.element as HTMLInputElement).value).toBe("30");
+  });
+
+  it("clamps cache expiry to 30 on blur when value is less than 30", async () => {
+    await router.push("/config");
+    await router.isReady();
+    const wrapper = mount(ConfigView, {
+      global: { plugins: [router] },
+    });
+    await wrapper.find("[data-testid='create-config-btn']").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const cacheExpiryInput = wrapper.find("[data-testid='cache-expiry-input']");
+    await cacheExpiryInput.setValue(10);
+    await cacheExpiryInput.trigger("blur");
+    await wrapper.vm.$nextTick();
+
+    expect((cacheExpiryInput.element as HTMLInputElement).value).toBe("30");
+  });
+
   it("has rich presence toggle", async () => {
     await router.push("/config");
     await router.isReady();

@@ -327,6 +327,9 @@
       <!-- Cache -->
       <section class="config-section">
         <h2>キャッシュ設定</h2>
+        <p class="hint">
+          キャッシュサイズと有効期限は30以上を指定してください。
+        </p>
         <div class="setting-row">
           <label for="cache-directory">キャッシュディレクトリ</label>
           <div class="path-input-group">
@@ -354,8 +357,10 @@
             v-model.number="config.cacheSize"
             type="number"
             :min="30"
+            step="1"
             placeholder="30"
             data-testid="cache-size-input"
+            @blur="clampCacheSize"
           >
         </div>
         <div class="setting-row">
@@ -365,8 +370,10 @@
             v-model.number="config.cacheExpiryDelay"
             type="number"
             :min="30"
+            step="1"
             placeholder="30"
             data-testid="cache-expiry-input"
+            @blur="clampCacheExpiry"
           >
         </div>
       </section>
@@ -439,6 +446,8 @@ const editing = ref(false);
 const saveError = ref("");
 const saveSuccess = ref(false);
 
+const CACHE_MIN = 30;
+
 const config = ref<VRChatConfigDTO>({
   cameraResWidth: 0,
   cameraResHeight: 0,
@@ -448,8 +457,8 @@ const config = ref<VRChatConfigDTO>({
   pictureOutputSplitByDate: null,
   fpvSteadycamFov: 0,
   cacheDirectory: "",
-  cacheSize: 0,
-  cacheExpiryDelay: 0,
+  cacheSize: CACHE_MIN,
+  cacheExpiryDelay: CACHE_MIN,
   disableRichPresence: null,
 });
 
@@ -472,7 +481,12 @@ function detectPreset(
 }
 
 function syncFromConfig(cfg: VRChatConfigDTO) {
-  config.value = { ...cfg };
+  config.value = {
+    ...cfg,
+    cacheSize: cfg.cacheSize < CACHE_MIN ? CACHE_MIN : cfg.cacheSize,
+    cacheExpiryDelay:
+      cfg.cacheExpiryDelay < CACHE_MIN ? CACHE_MIN : cfg.cacheExpiryDelay,
+  };
   cameraPreset.value = detectPreset(
     cfg.cameraResWidth,
     cfg.cameraResHeight,
@@ -505,6 +519,18 @@ function applyScreenshotPreset() {
   }
 }
 
+function clampCacheSize() {
+  if (config.value.cacheSize < CACHE_MIN) {
+    config.value.cacheSize = CACHE_MIN;
+  }
+}
+
+function clampCacheExpiry() {
+  if (config.value.cacheExpiryDelay < CACHE_MIN) {
+    config.value.cacheExpiryDelay = CACHE_MIN;
+  }
+}
+
 onMounted(async () => {
   configExists.value = await App.vrchatConfigExists();
   if (configExists.value) {
@@ -533,8 +559,12 @@ async function createConfig() {
 async function saveConfig() {
   saveError.value = "";
   saveSuccess.value = false;
+  const cacheSize = Math.max(CACHE_MIN, config.value.cacheSize);
+  const cacheExpiryDelay = Math.max(CACHE_MIN, config.value.cacheExpiryDelay);
   const dto: VRChatConfigDTO = {
     ...config.value,
+    cacheSize,
+    cacheExpiryDelay,
     pictureOutputSplitByDate: pictureOutputSplitByDate.value,
     disableRichPresence: disableRichPresence.value,
   };
@@ -588,8 +618,8 @@ async function deleteConfig() {
       pictureOutputSplitByDate: null,
       fpvSteadycamFov: 0,
       cacheDirectory: "",
-      cacheSize: 0,
-      cacheExpiryDelay: 0,
+      cacheSize: CACHE_MIN,
+      cacheExpiryDelay: CACHE_MIN,
       disableRichPresence: null,
     };
   } catch (e) {
