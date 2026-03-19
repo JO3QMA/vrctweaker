@@ -103,29 +103,105 @@
               </label>
               <div
                 v-if="valueOptionsEnabled.resolution"
-                class="option-value-row"
+                class="resolution-preset-section"
               >
-                <label class="resolution-field">
-                  <span class="resolution-field-label">幅</span>
-                  <input
-                    v-model.number="launchArgs.screenWidth"
-                    type="number"
-                    min="0"
-                    placeholder="1920"
-                    data-testid="screen-width-input"
+                <label class="block-label">プリセット</label>
+                <div
+                  class="toggle-group"
+                  role="group"
+                  aria-label="起動時解像度プリセット"
+                >
+                  <label
+                    class="toggle-option"
+                    :class="{ active: resolutionPreset === 'HD' }"
                   >
-                </label>
-                <span class="resolution-sep">×</span>
-                <label class="resolution-field">
-                  <span class="resolution-field-label">高さ</span>
-                  <input
-                    v-model.number="launchArgs.screenHeight"
-                    type="number"
-                    min="0"
-                    placeholder="1080"
-                    data-testid="screen-height-input"
+                    <input
+                      v-model="resolutionPreset"
+                      type="radio"
+                      value="HD"
+                      data-testid="resolution-preset-hd"
+                      @change="applyResolutionPreset"
+                    >
+                    <span>HD</span>
+                  </label>
+                  <label
+                    class="toggle-option"
+                    :class="{ active: resolutionPreset === 'FHD' }"
                   >
-                </label>
+                    <input
+                      v-model="resolutionPreset"
+                      type="radio"
+                      value="FHD"
+                      data-testid="resolution-preset-fhd"
+                      @change="applyResolutionPreset"
+                    >
+                    <span>FHD</span>
+                  </label>
+                  <label
+                    class="toggle-option"
+                    :class="{ active: resolutionPreset === 'WQHD' }"
+                  >
+                    <input
+                      v-model="resolutionPreset"
+                      type="radio"
+                      value="WQHD"
+                      data-testid="resolution-preset-wqhd"
+                      @change="applyResolutionPreset"
+                    >
+                    <span>WQHD</span>
+                  </label>
+                  <label
+                    class="toggle-option"
+                    :class="{ active: resolutionPreset === '4K' }"
+                  >
+                    <input
+                      v-model="resolutionPreset"
+                      type="radio"
+                      value="4K"
+                      data-testid="resolution-preset-4k"
+                      @change="applyResolutionPreset"
+                    >
+                    <span>4K</span>
+                  </label>
+                  <label
+                    class="toggle-option"
+                    :class="{ active: resolutionPreset === 'custom' }"
+                  >
+                    <input
+                      v-model="resolutionPreset"
+                      type="radio"
+                      value="custom"
+                      data-testid="resolution-preset-custom"
+                      @change="applyResolutionPreset"
+                    >
+                    <span>手動設定</span>
+                  </label>
+                </div>
+                <div class="resolution-fields">
+                  <label class="resolution-field">
+                    <span class="resolution-field-label">幅</span>
+                    <input
+                      v-model.number="launchArgs.screenWidth"
+                      type="number"
+                      :min="1280"
+                      :max="7680"
+                      :disabled="resolutionPreset !== 'custom'"
+                      data-testid="screen-width-input"
+                    >
+                  </label>
+                  <span class="resolution-sep">&times;</span>
+                  <label class="resolution-field">
+                    <span class="resolution-field-label">高さ</span>
+                    <input
+                      v-model.number="launchArgs.screenHeight"
+                      type="number"
+                      :min="720"
+                      :max="4320"
+                      :disabled="resolutionPreset !== 'custom'"
+                      data-testid="screen-height-input"
+                    >
+                  </label>
+                </div>
               </div>
               <label class="checkbox-row">
                 <input
@@ -482,6 +558,20 @@ import {
   PRIORITY_OMIT,
 } from "../wails/app";
 
+type ResolutionPreset = "HD" | "FHD" | "WQHD" | "4K" | "custom";
+
+interface PresetResolution {
+  width: number;
+  height: number;
+}
+
+const LAUNCHER_RESOLUTION_PRESETS: Record<string, PresetResolution> = {
+  HD: { width: 1280, height: 720 },
+  FHD: { width: 1920, height: 1080 },
+  WQHD: { width: 2560, height: 1440 },
+  "4K": { width: 3840, height: 2160 },
+};
+
 interface ValueOptionsEnabled {
   resolution: boolean;
   monitor: boolean;
@@ -539,9 +629,38 @@ const defaultLaunchArgs = (): LaunchArgsParsedDTO => ({
 const profiles = ref<LaunchProfileDTO[]>([]);
 const selected = ref<LaunchProfileDTO | null>(null);
 const launchArgs = ref<LaunchArgsParsedDTO>(defaultLaunchArgs());
+const resolutionPreset = ref<ResolutionPreset>("FHD");
 const valueOptionsEnabled = reactive<ValueOptionsEnabled>(
   defaultValueOptionsEnabled(),
 );
+
+function detectResolutionPreset(
+  width: number,
+  height: number,
+): ResolutionPreset {
+  for (const [key, val] of Object.entries(LAUNCHER_RESOLUTION_PRESETS)) {
+    if (val.width === width && val.height === height) {
+      return key as ResolutionPreset;
+    }
+  }
+  return "custom";
+}
+
+function syncResolutionPresetFromArgs() {
+  if (!valueOptionsEnabled.resolution) return;
+  resolutionPreset.value = detectResolutionPreset(
+    launchArgs.value.screenWidth,
+    launchArgs.value.screenHeight,
+  );
+}
+
+function applyResolutionPreset() {
+  const preset = LAUNCHER_RESOLUTION_PRESETS[resolutionPreset.value];
+  if (preset) {
+    launchArgs.value.screenWidth = preset.width;
+    launchArgs.value.screenHeight = preset.height;
+  }
+}
 
 function syncValueOptionsEnabled(a: LaunchArgsParsedDTO) {
   valueOptionsEnabled.resolution = a.screenWidth > 0 || a.screenHeight > 0;
@@ -564,10 +683,17 @@ function syncValueOptionsEnabled(a: LaunchArgsParsedDTO) {
 
 function onResolutionEnabledChange() {
   if (valueOptionsEnabled.resolution) {
-    if (launchArgs.value.screenWidth <= 0 && launchArgs.value.screenHeight <= 0)
+    if (
+      launchArgs.value.screenWidth <= 0 &&
+      launchArgs.value.screenHeight <= 0
+    ) {
       launchArgs.value.screenWidth = 1920;
-    if (launchArgs.value.screenHeight <= 0)
       launchArgs.value.screenHeight = 1080;
+    }
+    if (launchArgs.value.screenHeight <= 0) {
+      launchArgs.value.screenHeight = 1080;
+    }
+    syncResolutionPresetFromArgs();
   } else {
     launchArgs.value.screenWidth = 0;
     launchArgs.value.screenHeight = 0;
@@ -622,6 +748,7 @@ function onAffinityEnabledChange() {
 async function syncLaunchArgsFromProfile(p: LaunchProfileDTO) {
   launchArgs.value = await App.parseLaunchArgsForGUI(p.arguments);
   syncValueOptionsEnabled(launchArgs.value);
+  syncResolutionPresetFromArgs();
 }
 
 onMounted(async () => {
@@ -647,6 +774,7 @@ function addNew() {
   };
   launchArgs.value = defaultLaunchArgs();
   Object.assign(valueOptionsEnabled, defaultValueOptionsEnabled());
+  resolutionPreset.value = "FHD";
 }
 
 function sanitizeLaunchArgs(a: LaunchArgsParsedDTO): LaunchArgsParsedDTO {
@@ -788,6 +916,27 @@ async function confirmDelete() {
 .screen-mode-section,
 .render-backend-section {
   margin: 0.75rem 0;
+}
+.resolution-preset-section {
+  margin: 0.5rem 0 0.75rem 1.5rem;
+}
+.resolution-fields {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.resolution-fields .resolution-field input {
+  width: 7rem;
+  padding: 0.4rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+}
+.resolution-fields .resolution-field input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 .block-label {
   display: block;

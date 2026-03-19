@@ -11,7 +11,7 @@ alwaysApply: false
 ## ルール
 
 1. **プリセット + 手動設定**
-   - よく使う解像度（FHD, WQHD, 4K など）をラジオで選択できる
+   - よく使う解像度（HD, FHD, WQHD, 4K など）をラジオで選択できる
    - 「手動設定」を選んだときだけ幅・高さ入力欄を有効にする
 
 2. **UI 構成**
@@ -31,6 +31,9 @@ alwaysApply: false
 <div class="resolution-preset-section">
   <label class="block-label">プリセット</label>
   <div class="toggle-group" role="group" aria-label="解像度プリセット">
+    <label class="toggle-option" :class="{ active: preset === 'HD' }">
+      <input v-model="preset" type="radio" value="HD" @change="applyPreset"><span>HD</span>
+    </label>
     <label class="toggle-option" :class="{ active: preset === 'FHD' }">
       <input v-model="preset" type="radio" value="FHD" @change="applyPreset"><span>FHD</span>
     </label>
@@ -55,6 +58,7 @@ alwaysApply: false
 
 ```ts
 const PRESETS: Record<string, PresetResolution> = {
+  HD: { width: 1280, height: 720 },
   FHD: { width: 1920, height: 1080 },
   WQHD: { width: 2560, height: 1440 },
   "4K": { width: 3840, height: 2160 },

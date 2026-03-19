@@ -58,6 +58,19 @@
           >
             <label
               class="toggle-option"
+              :class="{ active: cameraPreset === 'HD' }"
+            >
+              <input
+                v-model="cameraPreset"
+                type="radio"
+                value="HD"
+                data-testid="camera-preset-hd"
+                @change="applyCameraPreset"
+              >
+              <span>HD</span>
+            </label>
+            <label
+              class="toggle-option"
               :class="{ active: cameraPreset === 'FHD' }"
             >
               <input
@@ -164,6 +177,19 @@
             role="group"
             aria-label="スクリーンショット解像度プリセット"
           >
+            <label
+              class="toggle-option"
+              :class="{ active: screenshotPreset === 'HD' }"
+            >
+              <input
+                v-model="screenshotPreset"
+                type="radio"
+                value="HD"
+                data-testid="screenshot-preset-hd"
+                @change="applyScreenshotPreset"
+              >
+              <span>HD</span>
+            </label>
             <label
               class="toggle-option"
               :class="{ active: screenshotPreset === 'FHD' }"
@@ -386,7 +412,7 @@ import { ref, onMounted } from "vue";
 import { App } from "../wails/app";
 import type { VRChatConfigDTO } from "../wails/app";
 
-type ResolutionPreset = "FHD" | "WQHD" | "4K" | "8K" | "custom";
+type ResolutionPreset = "HD" | "FHD" | "WQHD" | "4K" | "8K" | "custom";
 
 interface PresetResolution {
   width: number;
@@ -394,6 +420,7 @@ interface PresetResolution {
 }
 
 const CAMERA_PRESETS: Record<string, PresetResolution> = {
+  HD: { width: 1280, height: 720 },
   FHD: { width: 1920, height: 1080 },
   WQHD: { width: 2560, height: 1440 },
   "4K": { width: 3840, height: 2160 },
@@ -401,6 +428,7 @@ const CAMERA_PRESETS: Record<string, PresetResolution> = {
 };
 
 const SCREENSHOT_PRESETS: Record<string, PresetResolution> = {
+  HD: { width: 1280, height: 720 },
   FHD: { width: 1920, height: 1080 },
   WQHD: { width: 2560, height: 1440 },
   "4K": { width: 3840, height: 2160 },
