@@ -236,13 +236,23 @@
         <h2>写真出力</h2>
         <div class="setting-row">
           <label for="picture-output-folder">出力フォルダ</label>
-          <input
-            id="picture-output-folder"
-            v-model="config.pictureOutputFolder"
-            type="text"
-            placeholder="デフォルト（空欄で既定パス）"
-            data-testid="picture-output-folder-input"
-          >
+          <div class="path-input-group">
+            <input
+              id="picture-output-folder"
+              v-model="config.pictureOutputFolder"
+              type="text"
+              placeholder="デフォルト（空欄で既定パス）"
+              data-testid="picture-output-folder-input"
+            >
+            <button
+              type="button"
+              class="btn-browse"
+              data-testid="picture-output-folder-browse"
+              @click="browsePictureOutputFolder"
+            >
+              参照
+            </button>
+          </div>
         </div>
         <label class="checkbox-row">
           <input
@@ -279,13 +289,23 @@
         <h2>キャッシュ設定</h2>
         <div class="setting-row">
           <label for="cache-directory">キャッシュディレクトリ</label>
-          <input
-            id="cache-directory"
-            v-model="config.cacheDirectory"
-            type="text"
-            placeholder="デフォルト（空欄で既定パス）"
-            data-testid="cache-directory-input"
-          >
+          <div class="path-input-group">
+            <input
+              id="cache-directory"
+              v-model="config.cacheDirectory"
+              type="text"
+              placeholder="デフォルト（空欄で既定パス）"
+              data-testid="cache-directory-input"
+            >
+            <button
+              type="button"
+              class="btn-browse"
+              data-testid="cache-directory-browse"
+              @click="browseCacheDirectory"
+            >
+              参照
+            </button>
+          </div>
         </div>
         <div class="setting-row">
           <label for="cache-size">キャッシュサイズ上限（GB）</label>
@@ -486,6 +506,26 @@ async function saveConfig() {
   }
 }
 
+async function browsePictureOutputFolder() {
+  const dir = await App.openDirectoryDialog(
+    "写真の出力フォルダを選択",
+    config.value.pictureOutputFolder || "",
+  );
+  if (dir) {
+    config.value.pictureOutputFolder = dir;
+  }
+}
+
+async function browseCacheDirectory() {
+  const dir = await App.openDirectoryDialog(
+    "キャッシュディレクトリを選択",
+    config.value.cacheDirectory || "",
+  );
+  if (dir) {
+    config.value.cacheDirectory = dir;
+  }
+}
+
 async function deleteConfig() {
   if (!window.confirm("config.json を削除します。よろしいですか？")) {
     return;
@@ -657,6 +697,29 @@ async function deleteConfig() {
 }
 .setting-row label {
   font-size: 0.9rem;
+}
+.path-input-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  max-width: 480px;
+}
+.path-input-group input {
+  flex: 1;
+  min-width: 0;
+}
+.btn-browse {
+  flex-shrink: 0;
+  padding: 0.4rem 0.75rem;
+  background: var(--accent);
+  color: var(--bg-primary);
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.btn-browse:hover {
+  opacity: 0.9;
 }
 .setting-row input[type="text"] {
   width: 100%;

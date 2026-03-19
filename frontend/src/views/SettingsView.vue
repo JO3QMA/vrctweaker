@@ -92,6 +92,15 @@
             >
             <button
               type="button"
+              class="btn-browse"
+              data-testid="vrchat-path-browse"
+              title="ファイルを選択"
+              @click="browseVrchatPath"
+            >
+              参照
+            </button>
+            <button
+              type="button"
               class="btn-validate"
               :disabled="!pathSettings.vrchatPathWindows"
               @click="validatePathField('vrchatPathWindows')"
@@ -122,6 +131,15 @@
             >
             <button
               type="button"
+              class="btn-browse"
+              data-testid="steam-path-browse"
+              title="ファイルを選択"
+              @click="browseSteamPath"
+            >
+              参照
+            </button>
+            <button
+              type="button"
               class="btn-validate"
               :disabled="!pathSettings.steamPathLinux"
               @click="validatePathField('steamPathLinux')"
@@ -148,6 +166,15 @@
               placeholder="例: C:\Users\...\AppData\LocalLow\VRChat\VRChat\output_log.txt"
               @change="savePathSettings"
             >
+            <button
+              type="button"
+              class="btn-browse"
+              data-testid="output-log-path-browse"
+              title="ファイルを選択"
+              @click="browseOutputLogPath"
+            >
+              参照
+            </button>
             <button
               type="button"
               class="btn-validate"
@@ -344,6 +371,49 @@ async function savePathSettings() {
   await App.setPathSettings(pathSettings);
 }
 
+function dirOfPath(p: string): string {
+  if (!p) return "";
+  const sep = p.includes("\\") ? "\\" : "/";
+  const idx = p.lastIndexOf(sep);
+  return idx >= 0 ? p.slice(0, idx) : "";
+}
+
+async function browseVrchatPath() {
+  const path = await App.openFileDialog(
+    "VRChat実行ファイルを選択",
+    dirOfPath(pathSettings.vrchatPathWindows),
+    "*.exe",
+  );
+  if (path) {
+    pathSettings.vrchatPathWindows = path;
+    await savePathSettings();
+  }
+}
+
+async function browseSteamPath() {
+  const path = await App.openFileDialog(
+    "Steam実行ファイルを選択",
+    dirOfPath(pathSettings.steamPathLinux),
+    "",
+  );
+  if (path) {
+    pathSettings.steamPathLinux = path;
+    await savePathSettings();
+  }
+}
+
+async function browseOutputLogPath() {
+  const path = await App.openFileDialog(
+    "output_log.txt を選択",
+    dirOfPath(pathSettings.outputLogPath),
+    "*.txt",
+  );
+  if (path) {
+    pathSettings.outputLogPath = path;
+    await savePathSettings();
+  }
+}
+
 async function validatePathField(field: keyof PathSettingsDTO) {
   const path = pathSettings[field];
   if (path === "") {
@@ -466,6 +536,19 @@ function doClearFriendsCache() {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text-primary);
+}
+.btn-browse {
+  flex-shrink: 0;
+  padding: 0.4rem 0.75rem;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.btn-browse:hover {
+  opacity: 0.9;
 }
 .btn-validate {
   flex-shrink: 0;

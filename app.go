@@ -293,6 +293,31 @@ func (a *App) ValidatePath(path string) bool {
 	return a.settings.ValidatePath(path)
 }
 
+// OpenFileDialog opens a native file picker and returns the selected file path.
+// title: dialog title, defaultDir: initial directory (empty = default), filterPattern: e.g. "*.txt" or "*.exe" (empty = all files)
+func (a *App) OpenFileDialog(title, defaultDir, filterPattern string) (string, error) {
+	opts := runtime.OpenDialogOptions{
+		Title:            title,
+		DefaultDirectory: defaultDir,
+	}
+	if filterPattern != "" {
+		opts.Filters = []runtime.FileFilter{
+			{DisplayName: "Filtered", Pattern: filterPattern},
+			{DisplayName: "All Files", Pattern: "*"},
+		}
+	}
+	return runtime.OpenFileDialog(a.ctx, opts)
+}
+
+// OpenDirectoryDialog opens a native directory picker and returns the selected directory path.
+// title: dialog title, defaultDir: initial directory (empty = default)
+func (a *App) OpenDirectoryDialog(title, defaultDir string) (string, error) {
+	return runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
+		Title:            title,
+		DefaultDirectory: defaultDir,
+	})
+}
+
 // --- Media bindings ---
 
 // Screenshots returns screenshots (optional worldId filter).
