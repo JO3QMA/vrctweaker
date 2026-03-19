@@ -48,6 +48,9 @@ describe("ConfigView", () => {
     expect(wrapper.find("[data-testid='camera-preset-4k']").exists()).toBe(
       true,
     );
+    expect(wrapper.find("[data-testid='camera-preset-8k']").exists()).toBe(
+      true,
+    );
     expect(wrapper.find("[data-testid='camera-preset-custom']").exists()).toBe(
       true,
     );

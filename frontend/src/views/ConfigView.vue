@@ -46,8 +46,8 @@
       <section class="config-section">
         <h2>カメラ解像度</h2>
         <p class="hint">
-          VRカメラで撮影した画像の解像度を設定します（1280 px × 720 px ～ 7680 px × 4320 px）。
-          アプリ内で「Config File」を選択すると反映されます。
+          VRカメラで撮影した画像の解像度を設定します（1280 px × 720 px ～ 7680
+          px × 4320 px）。VRChat内でカスタム解像度を選択すると反映されます。
         </p>
         <div class="resolution-preset-section">
           <label class="block-label">プリセット</label>
@@ -97,6 +97,19 @@
             </label>
             <label
               class="toggle-option"
+              :class="{ active: cameraPreset === '8K' }"
+            >
+              <input
+                v-model="cameraPreset"
+                type="radio"
+                value="8K"
+                data-testid="camera-preset-8k"
+                @change="applyCameraPreset"
+              >
+              <span>8K</span>
+            </label>
+            <label
+              class="toggle-option"
               :class="{ active: cameraPreset === 'custom' }"
             >
               <input
@@ -141,7 +154,8 @@
       <section class="config-section">
         <h2>スクリーンショット解像度</h2>
         <p class="hint">
-          F12キーで撮影するスクリーンショットの解像度を設定します（1280 px × 720 px ～ 3840 px × 2160 px）。
+          F12キーで撮影するスクリーンショットの解像度を設定します（1280 px × 720
+          px ～ 3840 px × 2160 px）。
         </p>
         <div class="resolution-preset-section">
           <label class="block-label">プリセット</label>
@@ -372,7 +386,7 @@ import { ref, onMounted } from "vue";
 import { App } from "../wails/app";
 import type { VRChatConfigDTO } from "../wails/app";
 
-type ResolutionPreset = "FHD" | "WQHD" | "4K" | "custom";
+type ResolutionPreset = "FHD" | "WQHD" | "4K" | "8K" | "custom";
 
 interface PresetResolution {
   width: number;
@@ -383,6 +397,7 @@ const CAMERA_PRESETS: Record<string, PresetResolution> = {
   FHD: { width: 1920, height: 1080 },
   WQHD: { width: 2560, height: 1440 },
   "4K": { width: 3840, height: 2160 },
+  "8K": { width: 7680, height: 4320 },
 };
 
 const SCREENSHOT_PRESETS: Record<string, PresetResolution> = {
