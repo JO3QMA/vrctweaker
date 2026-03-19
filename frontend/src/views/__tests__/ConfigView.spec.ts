@@ -197,6 +197,78 @@ describe("ConfigView", () => {
     expect((cacheExpiryInput.element as HTMLInputElement).value).toBe("30");
   });
 
+  it("has Steadycam FOV slider and number input", async () => {
+    await router.push("/config");
+    await router.isReady();
+    const wrapper = mount(ConfigView, {
+      global: { plugins: [router] },
+    });
+    await wrapper.find("[data-testid='create-config-btn']").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find("[data-testid='steadycam-fov-slider']").exists()).toBe(
+      true,
+    );
+    expect(wrapper.find("[data-testid='steadycam-fov-input']").exists()).toBe(
+      true,
+    );
+  });
+
+  it("shows Steadycam FOV as empty by default with placeholder 50", async () => {
+    await router.push("/config");
+    await router.isReady();
+    const wrapper = mount(ConfigView, {
+      global: { plugins: [router] },
+    });
+    await wrapper.find("[data-testid='create-config-btn']").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const input = wrapper.find("[data-testid='steadycam-fov-input']");
+    const slider = wrapper.find("[data-testid='steadycam-fov-slider']");
+    expect((input.element as HTMLInputElement).value).toBe("");
+    expect((input.element as HTMLInputElement).placeholder).toBe("50");
+    expect((slider.element as HTMLInputElement).value).toBe("50");
+  });
+
+  it("syncs Steadycam FOV slider and number input", async () => {
+    await router.push("/config");
+    await router.isReady();
+    const wrapper = mount(ConfigView, {
+      global: { plugins: [router] },
+    });
+    await wrapper.find("[data-testid='create-config-btn']").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const slider = wrapper.find("[data-testid='steadycam-fov-slider']");
+    const input = wrapper.find("[data-testid='steadycam-fov-input']");
+
+    await slider.setValue(75);
+    await wrapper.vm.$nextTick();
+    expect((input.element as HTMLInputElement).value).toBe("75");
+
+    await input.setValue("60");
+    await input.trigger("input");
+    await wrapper.vm.$nextTick();
+    expect((slider.element as HTMLInputElement).value).toBe("60");
+  });
+
+  it("clamps Steadycam FOV to 30-100 on blur", async () => {
+    await router.push("/config");
+    await router.isReady();
+    const wrapper = mount(ConfigView, {
+      global: { plugins: [router] },
+    });
+    await wrapper.find("[data-testid='create-config-btn']").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const input = wrapper.find("[data-testid='steadycam-fov-input']");
+    await input.setValue(20);
+    await input.trigger("input");
+    await input.trigger("blur");
+    await wrapper.vm.$nextTick();
+    expect((input.element as HTMLInputElement).value).toBe("30");
+  });
+
   it("has rich presence toggle", async () => {
     await router.push("/config");
     await router.isReady();

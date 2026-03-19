@@ -308,19 +308,31 @@
       <section class="config-section">
         <h2>Steadycam FOV</h2>
         <p class="hint">
-          一人称視点 Steadycam の垂直 FOV を設定します（30〜110）。
+          一人称視点 Steadycam の垂直 FOV を設定します（30〜100）。
         </p>
         <div class="setting-row">
           <label for="steadycam-fov">FOV</label>
-          <input
-            id="steadycam-fov"
-            v-model.number="config.fpvSteadycamFov"
-            type="number"
-            :min="30"
-            :max="110"
-            placeholder="50"
-            data-testid="steadycam-fov-input"
-          >
+          <div class="steadycam-fov-group">
+            <input
+              type="range"
+              :min="STEADYCAM_FOV_MIN"
+              :max="STEADYCAM_FOV_MAX"
+              :value="steadycamFovSliderValue"
+              data-testid="steadycam-fov-slider"
+              @input="onSteadycamFovSliderInput"
+            >
+            <input
+              id="steadycam-fov"
+              type="number"
+              :min="STEADYCAM_FOV_MIN"
+              :max="STEADYCAM_FOV_MAX"
+              :value="steadycamFovInputValue"
+              :placeholder="String(STEADYCAM_FOV_PLACEHOLDER)"
+              data-testid="steadycam-fov-input"
+              @input="onSteadycamFovInput"
+              @blur="clampSteadycamFov"
+            >
+          </div>
         </div>
       </section>
 
@@ -415,7 +427,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { App } from "../wails/app";
 import type { VRChatConfigDTO } from "../wails/app";
 
@@ -447,6 +459,10 @@ const saveError = ref("");
 const saveSuccess = ref(false);
 
 const CACHE_MIN = 30;
+
+const STEADYCAM_FOV_MIN = 30;
+const STEADYCAM_FOV_MAX = 100;
+const STEADYCAM_FOV_PLACEHOLDER = 50;
 
 const config = ref<VRChatConfigDTO>({
   cameraResWidth: 0,
@@ -481,8 +497,13 @@ function detectPreset(
 }
 
 function syncFromConfig(cfg: VRChatConfigDTO) {
+  const fpvFov = cfg.fpvSteadycamFov;
+  const fpvFovNorm =
+    fpvFov >= STEADYCAM_FOV_MIN && fpvFov <= STEADYCAM_FOV_MAX ? fpvFov : 0;
+
   config.value = {
     ...cfg,
+    fpvSteadycamFov: fpvFovNorm,
     cacheSize: cfg.cacheSize < CACHE_MIN ? CACHE_MIN : cfg.cacheSize,
     cacheExpiryDelay:
       cfg.cacheExpiryDelay < CACHE_MIN ? CACHE_MIN : cfg.cacheExpiryDelay,
@@ -528,6 +549,47 @@ function clampCacheSize() {
 function clampCacheExpiry() {
   if (config.value.cacheExpiryDelay < CACHE_MIN) {
     config.value.cacheExpiryDelay = CACHE_MIN;
+  }
+}
+
+const steadycamFovSliderValue = computed(() => {
+  const v = config.value.fpvSteadycamFov;
+  if (v === 0) return STEADYCAM_FOV_PLACEHOLDER;
+  return Math.max(STEADYCAM_FOV_MIN, Math.min(STEADYCAM_FOV_MAX, v));
+});
+
+const steadycamFovInputValue = computed(() => {
+  const v = config.value.fpvSteadycamFov;
+  return v === 0 ? "" : String(v);
+});
+
+function onSteadycamFovSliderInput(e: Event) {
+  const raw = Number((e.target as HTMLInputElement).value);
+  const n = Math.round(raw);
+  config.value.fpvSteadycamFov = Math.max(
+    STEADYCAM_FOV_MIN,
+    Math.min(STEADYCAM_FOV_MAX, n),
+  );
+}
+
+function onSteadycamFovInput(e: Event) {
+  const s = (e.target as HTMLInputElement).value.trim();
+  if (s === "") {
+    config.value.fpvSteadycamFov = 0;
+    return;
+  }
+  const n = Number(s);
+  if (Number.isFinite(n)) {
+    config.value.fpvSteadycamFov = Math.round(n);
+  }
+}
+
+function clampSteadycamFov() {
+  const v = config.value.fpvSteadycamFov;
+  if (v > 0 && v < STEADYCAM_FOV_MIN) {
+    config.value.fpvSteadycamFov = STEADYCAM_FOV_MIN;
+  } else if (v > STEADYCAM_FOV_MAX) {
+    config.value.fpvSteadycamFov = STEADYCAM_FOV_MAX;
   }
 }
 
@@ -810,6 +872,24 @@ async function deleteConfig() {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--text-primary);
+}
+
+.steadycam-fov-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 320px;
+}
+.steadycam-fov-group input[type="range"] {
+  flex: 1;
+  min-width: 0;
+  height: 0.5rem;
+  accent-color: var(--accent);
+}
+.steadycam-fov-group input[type="number"] {
+  flex-shrink: 0;
+  width: 4rem;
+  text-align: center;
 }
 
 .checkbox-row {
