@@ -1,0 +1,68 @@
+---
+description: パス入力欄にはファイル/フォルダ選択ダイアログボタンを必ず追加する
+globs: "**/*.vue, **/wails/app.ts, **/app.go"
+alwaysApply: false
+---
+
+# パス入力の UI パターン
+
+ファイルまたはフォルダのパスを入力するフィールドには、**必ず**「参照」ボタン（ファイル/フォルダ選択ダイアログ）を併設する。
+
+## ルール
+
+1. **パス入力 = テキスト入力 + 参照ボタン**
+   - `type="text"` のパス入力欄には、横に「参照」ボタンを配置する
+   - ボタンクリックで `App.openFileDialog` または `App.openDirectoryDialog` を呼び出し、選択されたパスを入力欄に反映する
+
+2. **ファイル選択** vs **フォルダ選択**
+   - 単一ファイルのパス（実行ファイル、output_log.txt など）→ `App.openFileDialog(title, defaultDir, filterPattern)`
+   - フォルダのパス（出力先、キャッシュディレクトリなど）→ `App.openDirectoryDialog(title, defaultDir)`
+
+3. **レイアウト**
+   - `.path-input-group` で input と参照ボタンをラップ
+   - ボタンは `flex-shrink: 0` で固定幅
+   - 参照ボタンには `data-testid="*-browse"` を付与
+
+## 実装例
+
+```vue
+<!-- フォルダ選択 -->
+<div class="path-input-group">
+  <input v-model="config.cacheDirectory" type="text" ...>
+  <button type="button" class="btn-browse" @click="browseCacheDirectory">参照</button>
+</div>
+
+<!-- ファイル選択 -->
+<div class="path-input-group">
+  <input v-model="pathSettings.outputLogPath" type="text" ...>
+  <button type="button" class="btn-browse" @click="browseOutputLogPath">参照</button>
+</div>
+```
+
+```ts
+// フォルダ選択
+async function browseCacheDirectory() {
+  const dir = await App.openDirectoryDialog("タイトル", config.value.cacheDirectory || "");
+  if (dir) config.value.cacheDirectory = dir;
+}
+
+// ファイル選択（デフォルトディレクトリは親ディレクトリ）
+async function browseOutputLogPath() {
+  const path = await App.openFileDialog("output_log.txt を選択", dirOfPath(pathSettings.outputLogPath), "*.txt");
+  if (path) {
+    pathSettings.outputLogPath = path;
+    await savePathSettings();
+  }
+}
+
+function dirOfPath(p: string): string {
+  if (!p) return "";
+  const sep = p.includes("\\") ? "\\" : "/";
+  const idx = p.lastIndexOf(sep);
+  return idx >= 0 ? p.slice(0, idx) : "";
+}
+```
+
+## バックエンド（app.go）
+
+`OpenFileDialog` / `OpenDirectoryDialog` は既に app.go にバインディング済み。新規のダイアログ種別が必要な場合は app.go を拡張する。

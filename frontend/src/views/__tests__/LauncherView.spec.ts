@@ -253,6 +253,89 @@ describe("LauncherView", () => {
     );
   });
 
+  it("has resolution preset toggles when resolution is enabled", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+    const card = wrapper.findAll(".profile-card")[0];
+    await card?.trigger("click");
+    await flushPromises();
+
+    const details = wrapper.find(".details-advanced");
+    await details.find("summary").trigger("click");
+    await flushPromises();
+
+    const resolutionCheckbox = wrapper.find(
+      '[data-testid="resolution-enabled-checkbox"]',
+    );
+    await resolutionCheckbox.setValue(true);
+    await flushPromises();
+
+    expect(wrapper.find("[data-testid='resolution-preset-hd']").exists()).toBe(
+      true,
+    );
+    expect(wrapper.find("[data-testid='resolution-preset-fhd']").exists()).toBe(
+      true,
+    );
+    expect(wrapper.find("[data-testid='resolution-preset-4k']").exists()).toBe(
+      true,
+    );
+    expect(
+      wrapper.find("[data-testid='resolution-preset-custom']").exists(),
+    ).toBe(true);
+  });
+
+  it("disables resolution inputs when preset is not custom", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+    const card = wrapper.findAll(".profile-card")[0];
+    await card?.trigger("click");
+    await flushPromises();
+
+    const details = wrapper.find(".details-advanced");
+    await details.find("summary").trigger("click");
+    await flushPromises();
+
+    const resolutionCheckbox = wrapper.find(
+      '[data-testid="resolution-enabled-checkbox"]',
+    );
+    await resolutionCheckbox.setValue(true);
+    await flushPromises();
+
+    const widthInput = wrapper.find("[data-testid='screen-width-input']");
+    const heightInput = wrapper.find("[data-testid='screen-height-input']");
+    expect((widthInput.element as HTMLInputElement).disabled).toBe(true);
+    expect((heightInput.element as HTMLInputElement).disabled).toBe(true);
+  });
+
+  it("enables resolution inputs when preset is custom", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+    const card = wrapper.findAll(".profile-card")[0];
+    await card?.trigger("click");
+    await flushPromises();
+
+    const details = wrapper.find(".details-advanced");
+    await details.find("summary").trigger("click");
+    await flushPromises();
+
+    const resolutionCheckbox = wrapper.find(
+      '[data-testid="resolution-enabled-checkbox"]',
+    );
+    await resolutionCheckbox.setValue(true);
+    await flushPromises();
+
+    const customRadio = wrapper.find(
+      "[data-testid='resolution-preset-custom']",
+    );
+    await customRadio.setValue(true);
+    await flushPromises();
+
+    const widthInput = wrapper.find("[data-testid='screen-width-input']");
+    const heightInput = wrapper.find("[data-testid='screen-height-input']");
+    expect((widthInput.element as HTMLInputElement).disabled).toBe(false);
+    expect((heightInput.element as HTMLInputElement).disabled).toBe(false);
+  });
+
   it("launch uses current GUI state via merge and launchVRChatWithArgs", async () => {
     const wrapper = mount(LauncherView);
     await flushPromises();

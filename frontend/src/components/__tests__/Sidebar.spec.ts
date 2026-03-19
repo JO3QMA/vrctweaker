@@ -21,7 +21,7 @@ describe("Sidebar", () => {
       },
     });
     const links = wrapper.findAll(".sidebar-link");
-    expect(links.length).toBeGreaterThanOrEqual(6); // 6 main + settings
+    expect(links.length).toBeGreaterThanOrEqual(7); // 7 main + settings
   });
 
   it("has dashboard link", () => {

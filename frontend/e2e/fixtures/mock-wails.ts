@@ -53,6 +53,8 @@ export function getMockWailsInitScript(): string {
         GetPathSettings: () => Promise.resolve(pathSettings),
         SetPathSettings: () => Promise.resolve(),
         ValidatePath: () => Promise.resolve(true),
+        OpenFileDialog: () => Promise.resolve(''),
+        OpenDirectoryDialog: () => Promise.resolve(''),
         Screenshots: () => Promise.resolve([]),
         SearchScreenshots: () => Promise.resolve([]),
         GetScreenshot: () => Promise.resolve(null),

@@ -109,6 +109,20 @@ export interface AutomationRuleDTO {
   isEnabled: boolean;
 }
 
+export interface VRChatConfigDTO {
+  cameraResWidth: number;
+  cameraResHeight: number;
+  screenshotResWidth: number;
+  screenshotResHeight: number;
+  pictureOutputFolder: string;
+  pictureOutputSplitByDate: boolean | null;
+  fpvSteadycamFov: number;
+  cacheDirectory: string;
+  cacheSize: number;
+  cacheExpiryDelay: number;
+  disableRichPresence: boolean | null;
+}
+
 interface AppBindings {
   Greet(name: string): Promise<string>;
   LaunchProfiles(): Promise<LaunchProfileDTO[]>;
@@ -125,6 +139,12 @@ interface AppBindings {
   GetPathSettings(): Promise<PathSettingsDTO>;
   SetPathSettings(dto: PathSettingsDTO): Promise<void>;
   ValidatePath(path: string): Promise<boolean>;
+  OpenFileDialog(
+    title: string,
+    defaultDir: string,
+    filterPattern: string,
+  ): Promise<string>;
+  OpenDirectoryDialog(title: string, defaultDir: string): Promise<string>;
   Screenshots(worldId?: string): Promise<ScreenshotDTO[]>;
   SearchScreenshots(filter: ScreenshotSearchDTO): Promise<ScreenshotDTO[]>;
   GetScreenshot(id: string): Promise<ScreenshotDTO | null>;
@@ -152,6 +172,10 @@ interface AppBindings {
   SaveAutomationRule(rule: AutomationRuleDTO): Promise<void>;
   DeleteAutomationRule(id: string): Promise<void>;
   ToggleAutomationRule(id: string, enabled: boolean): Promise<void>;
+  VRChatConfigExists(): Promise<boolean>;
+  GetVRChatConfig(): Promise<VRChatConfigDTO>;
+  SaveVRChatConfig(dto: VRChatConfigDTO): Promise<void>;
+  DeleteVRChatConfig(): Promise<void>;
 }
 
 declare global {
@@ -253,6 +277,27 @@ export const App = {
   async validatePath(path: string): Promise<boolean> {
     return callApp((a) => a.ValidatePath(path), false);
   },
+  async openFileDialog(
+    title: string,
+    defaultDir: string,
+    filterPattern: string,
+  ): Promise<string | null> {
+    const result = await callApp(
+      (a) => a.OpenFileDialog(title, defaultDir, filterPattern),
+      "",
+    );
+    return result && result !== "" ? result : null;
+  },
+  async openDirectoryDialog(
+    title: string,
+    defaultDir: string,
+  ): Promise<string | null> {
+    const result = await callApp(
+      (a) => a.OpenDirectoryDialog(title, defaultDir),
+      "",
+    );
+    return result && result !== "" ? result : null;
+  },
   async screenshots(worldId?: string): Promise<ScreenshotDTO[]> {
     return callApp((a) => a.Screenshots(worldId || ""), []);
   },
@@ -333,5 +378,29 @@ export const App = {
   },
   async toggleAutomationRule(id: string, enabled: boolean): Promise<void> {
     return callApp((a) => a.ToggleAutomationRule(id, enabled), undefined);
+  },
+  async vrchatConfigExists(): Promise<boolean> {
+    return callApp((a) => a.VRChatConfigExists(), false);
+  },
+  async getVRChatConfig(): Promise<VRChatConfigDTO> {
+    return callApp((a) => a.GetVRChatConfig(), {
+      cameraResWidth: 0,
+      cameraResHeight: 0,
+      screenshotResWidth: 0,
+      screenshotResHeight: 0,
+      pictureOutputFolder: "",
+      pictureOutputSplitByDate: null,
+      fpvSteadycamFov: 0,
+      cacheDirectory: "",
+      cacheSize: 0,
+      cacheExpiryDelay: 0,
+      disableRichPresence: null,
+    });
+  },
+  async saveVRChatConfig(dto: VRChatConfigDTO): Promise<void> {
+    return callApp((a) => a.SaveVRChatConfig(dto), undefined);
+  },
+  async deleteVRChatConfig(): Promise<void> {
+    return callApp((a) => a.DeleteVRChatConfig(), undefined);
   },
 };

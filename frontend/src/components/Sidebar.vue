@@ -35,6 +35,7 @@ const menuItems = [
   { path: "/activity", icon: "📊", label: "アクティビティ" },
   { path: "/friends", icon: "👥", label: "フレンド" },
   { path: "/automation", icon: "🤖", label: "オートメーション" },
+  { path: "/config", icon: "📝", label: "その他の設定" },
 ];
 </script>
 

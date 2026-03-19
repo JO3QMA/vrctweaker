@@ -8,6 +8,7 @@ import (
 	"vrchat-tweaker/internal/domain/identity"
 	"vrchat-tweaker/internal/domain/launcher"
 	"vrchat-tweaker/internal/domain/media"
+	"vrchat-tweaker/internal/domain/vrchatconfig"
 	"vrchat-tweaker/internal/usecase"
 )
 
@@ -366,5 +367,55 @@ func toAutomationRule(d AutomationRuleDTO) *automation.AutomationRule {
 		ActionType:    d.ActionType,
 		ActionPayload: d.ActionPayload,
 		IsEnabled:     d.IsEnabled,
+	}
+}
+
+// VRChatConfigDTO is the frontend-facing VRChat config.json.
+type VRChatConfigDTO struct {
+	CameraResWidth           int    `json:"cameraResWidth"`
+	CameraResHeight          int    `json:"cameraResHeight"`
+	ScreenshotResWidth       int    `json:"screenshotResWidth"`
+	ScreenshotResHeight      int    `json:"screenshotResHeight"`
+	PictureOutputFolder      string `json:"pictureOutputFolder"`
+	PictureOutputSplitByDate *bool  `json:"pictureOutputSplitByDate"`
+	FPVSteadycamFOV          int    `json:"fpvSteadycamFov"`
+	CacheDirectory           string `json:"cacheDirectory"`
+	CacheSize                int    `json:"cacheSize"`
+	CacheExpiryDelay         int    `json:"cacheExpiryDelay"`
+	DisableRichPresence      *bool  `json:"disableRichPresence"`
+}
+
+func toVRChatConfigDTO(cfg *vrchatconfig.VRChatConfig) VRChatConfigDTO {
+	if cfg == nil {
+		return VRChatConfigDTO{}
+	}
+	return VRChatConfigDTO{
+		CameraResWidth:           cfg.CameraResWidth,
+		CameraResHeight:          cfg.CameraResHeight,
+		ScreenshotResWidth:       cfg.ScreenshotResWidth,
+		ScreenshotResHeight:      cfg.ScreenshotResHeight,
+		PictureOutputFolder:      cfg.PictureOutputFolder,
+		PictureOutputSplitByDate: cfg.PictureOutputSplitByDate,
+		FPVSteadycamFOV:          cfg.FPVSteadycamFOV,
+		CacheDirectory:           cfg.CacheDirectory,
+		CacheSize:                cfg.CacheSize,
+		CacheExpiryDelay:         cfg.CacheExpiryDelay,
+		DisableRichPresence:      cfg.DisableRichPresence,
+	}
+}
+
+func fromVRChatConfigDTO(d VRChatConfigDTO) *vrchatconfig.VRChatConfig {
+	return &vrchatconfig.VRChatConfig{
+		CameraResWidth:           d.CameraResWidth,
+		CameraResHeight:          d.CameraResHeight,
+		ScreenshotResWidth:       d.ScreenshotResWidth,
+		ScreenshotResHeight:      d.ScreenshotResHeight,
+		PictureOutputFolder:      d.PictureOutputFolder,
+		PictureOutputSplitByDate: d.PictureOutputSplitByDate,
+		FPVSteadycamFOV:          d.FPVSteadycamFOV,
+		CacheDirectory:           d.CacheDirectory,
+		CacheSize:                d.CacheSize,
+		CacheExpiryDelay:         d.CacheExpiryDelay,
+		DisableRichPresence:      d.DisableRichPresence,
 	}
 }
