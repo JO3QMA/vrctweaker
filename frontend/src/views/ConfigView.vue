@@ -46,7 +46,7 @@
       <section class="config-section">
         <h2>カメラ解像度</h2>
         <p class="hint">
-          VRカメラで撮影した画像の解像度を設定します（720〜4320px）。
+          VRカメラで撮影した画像の解像度を設定します（1280 px × 720 px ～ 7680 px × 4320 px）。
           アプリ内で「Config File」を選択すると反映されます。
         </p>
         <div class="resolution-preset-section">
@@ -141,7 +141,7 @@
       <section class="config-section">
         <h2>スクリーンショット解像度</h2>
         <p class="hint">
-          F12キーで撮影するスクリーンショットの解像度を設定します（720〜2160px）。
+          F12キーで撮影するスクリーンショットの解像度を設定します（1280 px × 720 px ～ 3840 px × 2160 px）。
         </p>
         <div class="resolution-preset-section">
           <label class="block-label">プリセット</label>
