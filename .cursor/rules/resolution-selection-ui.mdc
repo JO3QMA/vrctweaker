@@ -1,0 +1,85 @@
+---
+description: 解像度選択時はプリセット＋手動設定のUIパターンを用いる
+globs: "**/*.vue"
+alwaysApply: false
+---
+
+# 解像度選択の UI パターン
+
+ユーザーに解像度を選択させる場合は、**プリセット選択肢 + 手動設定** の UI を用いる。単純な幅×高さ入力のみにしない。
+
+## ルール
+
+1. **プリセット + 手動設定**
+   - よく使う解像度（FHD, WQHD, 4K など）をラジオで選択できる
+   - 「手動設定」を選んだときだけ幅・高さ入力欄を有効にする
+
+2. **UI 構成**
+   - `toggle-group` + `role="group"` + `aria-label` でプリセットをラジオ群として提示
+   - 各プリセットには `data-testid="*-preset-*"` を付与
+   - 幅・高さ入力は `:disabled="preset !== 'custom'"` でプリセット選択時は無効化
+
+3. **ロジック**
+   - `PresetResolution` 型で `{ width, height }` を定義
+   - `detectPreset(width, height, presets)` で現在値がどのプリセットに該当するか判定
+   - `applyPreset()` でプリセット変更時に width/height を config に反映
+   - 設定読み込み時は `syncFromConfig` で preset ref を現在値から同期する
+
+## 実装例（参照: ConfigView.vue）
+
+```vue
+<div class="resolution-preset-section">
+  <label class="block-label">プリセット</label>
+  <div class="toggle-group" role="group" aria-label="解像度プリセット">
+    <label class="toggle-option" :class="{ active: preset === 'FHD' }">
+      <input v-model="preset" type="radio" value="FHD" @change="applyPreset"><span>FHD</span>
+    </label>
+    <!-- WQHD, 4K など -->
+    <label class="toggle-option" :class="{ active: preset === 'custom' }">
+      <input v-model="preset" type="radio" value="custom" @change="applyPreset"><span>手動設定</span>
+    </label>
+  </div>
+  <div class="resolution-fields">
+    <label class="resolution-field">
+      <span class="resolution-field-label">幅</span>
+      <input v-model.number="config.width" type="number" :min="1280" :max="3840" :disabled="preset !== 'custom'">
+    </label>
+    <span class="resolution-sep">&times;</span>
+    <label class="resolution-field">
+      <span class="resolution-field-label">高さ</span>
+      <input v-model.number="config.height" type="number" :min="720" :max="2160" :disabled="preset !== 'custom'">
+    </label>
+  </div>
+</div>
+```
+
+```ts
+const PRESETS: Record<string, PresetResolution> = {
+  FHD: { width: 1920, height: 1080 },
+  WQHD: { width: 2560, height: 1440 },
+  "4K": { width: 3840, height: 2160 },
+};
+
+function detectPreset(w: number, h: number, presets: Record<string, PresetResolution>): string {
+  for (const [key, val] of Object.entries(presets)) {
+    if (val.width === w && val.height === h) return key;
+  }
+  return "custom";
+}
+
+function applyPreset() {
+  const p = PRESETS[preset.value];
+  if (p) { config.value.width = p.width; config.value.height = p.height; }
+}
+```
+
+## 禁止パターン
+
+```vue
+<!-- ❌ BAD: 幅・高さ入力だけ -->
+<input v-model="config.width" type="number">
+<input v-model="config.height" type="number">
+
+<!-- ❌ BAD: 単一の select/ドロップダウンのみ（手動設定なし） -->
+<select v-model="resolution">...</select>
+```
