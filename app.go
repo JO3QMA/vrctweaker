@@ -14,6 +14,7 @@ import (
 	"vrchat-tweaker/internal/domain/launcher"
 	"vrchat-tweaker/internal/domain/media"
 	"vrchat-tweaker/internal/infrastructure/desktop"
+	"vrchat-tweaker/internal/infrastructure/filesystem"
 	"vrchat-tweaker/internal/infrastructure/logwatcher"
 	"vrchat-tweaker/internal/infrastructure/sqlite"
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
@@ -30,6 +31,7 @@ type App struct {
 	automation    *usecase.AutomationUseCase
 	settings      *usecase.SettingsUseCase
 	dbMaintenance *usecase.DBMaintenanceUseCase
+	vrchatConfig  *usecase.VRChatConfigUseCase
 }
 
 // NewApp creates a new App application struct.
@@ -84,6 +86,10 @@ func (a *App) startup(ctx context.Context) {
 	a.automation = usecase.NewAutomationUseCase(automationRepo, eventBus, actionRunner)
 	a.settings = usecase.NewSettingsUseCase(settingsRepo)
 	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(encounterRepo, mediaRepo, identityRepo, maintenanceRepo)
+
+	configPath := getVRChatConfigPath()
+	configRepo := filesystem.NewVRChatConfigFileRepository(configPath)
+	a.vrchatConfig = usecase.NewVRChatConfigUseCase(configRepo)
 
 	a.subscribeAutomationEvents(ctx, eventBus)
 
@@ -447,4 +453,46 @@ func (a *App) ClearScreenshots() (int64, error) {
 // ClearFriendsCache deletes all cached friends. Returns affected row count.
 func (a *App) ClearFriendsCache() (int64, error) {
 	return a.dbMaintenance.ClearFriendsCache(a.ctx)
+}
+
+// --- VRChat Config bindings ---
+
+// VRChatConfigExists checks if config.json exists.
+func (a *App) VRChatConfigExists() (bool, error) {
+	return a.vrchatConfig.Exists()
+}
+
+// GetVRChatConfig reads the current config.json.
+func (a *App) GetVRChatConfig() (VRChatConfigDTO, error) {
+	cfg, err := a.vrchatConfig.Get()
+	if err != nil {
+		return VRChatConfigDTO{}, err
+	}
+	return toVRChatConfigDTO(cfg), nil
+}
+
+// SaveVRChatConfig writes config.json.
+func (a *App) SaveVRChatConfig(dto VRChatConfigDTO) error {
+	return a.vrchatConfig.Save(fromVRChatConfigDTO(dto))
+}
+
+// DeleteVRChatConfig removes config.json.
+func (a *App) DeleteVRChatConfig() error {
+	return a.vrchatConfig.Delete()
+}
+
+// getVRChatConfigPath returns the path to VRChat's config.json.
+// On Windows: %LocalAppData%Low\VRChat\VRChat\config.json
+// On other OS: falls back to ~/.local/share/VRChat/VRChat/config.json
+func getVRChatConfigPath() string {
+	if dir := os.Getenv("LOCALAPPDATA"); dir != "" {
+		// Windows: %LOCALAPPDATA% is typically C:\Users\<user>\AppData\Local
+		// config.json lives in LocalLow, which is ../LocalLow relative to Local
+		return filepath.Join(filepath.Dir(dir), "LocalLow", "VRChat", "VRChat", "config.json")
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return filepath.Join(".", "config.json")
+	}
+	return filepath.Join(home, ".local", "share", "VRChat", "VRChat", "config.json")
 }
