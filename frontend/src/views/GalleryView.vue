@@ -1,8 +1,6 @@
 <template>
   <div class="gallery-view">
-    <h1 class="page-title">
-      ギャラリー
-    </h1>
+    <h1 class="page-title">ギャラリー</h1>
 
     <!-- フィルタ（最小: worldId） -->
     <div class="filters">
@@ -13,7 +11,7 @@
         placeholder="World ID で検索（入力で自動検索 / Enter）"
         class="filter-input"
         @keyup.enter="onFilterEnter"
-      >
+      />
       <button
         type="button"
         class="btn-refresh"
@@ -33,47 +31,23 @@
       </button>
     </div>
 
-    <p
-      v-if="loadError"
-      class="banner-error"
-      role="alert"
-    >
+    <p v-if="loadError" class="banner-error" role="alert">
       {{ loadError }}
     </p>
-    <p
-      v-if="scanError"
-      class="banner-error banner-warn"
-      role="status"
-    >
+    <p v-if="scanError" class="banner-error banner-warn" role="status">
       {{ scanError }}
     </p>
 
     <div class="gallery-body">
       <!-- グリッド一覧 -->
       <div class="grid-section">
-        <div
-          v-if="scanning"
-          class="loading"
-        >
-          フォルダをスキャンしています…
-        </div>
-        <div
-          v-else-if="loading"
-          class="loading"
-        >
-          読み込み中…
-        </div>
-        <div
-          v-else-if="list.length === 0"
-          class="empty"
-        >
+        <div v-if="scanning" class="loading">フォルダをスキャンしています…</div>
+        <div v-else-if="loading" class="loading">読み込み中…</div>
+        <div v-else-if="list.length === 0" class="empty">
           スクリーンショットがありません。Scan Folder
           か設定の出力フォルダを確認してください。
         </div>
-        <div
-          v-else
-          class="grid"
-        >
+        <div v-else class="grid">
           <div
             v-for="item in list"
             :key="item.id"
@@ -87,17 +61,14 @@
                 :alt="fileNameFromPath(item.filePath)"
                 class="thumbnail"
                 @error="onThumbnailError"
-              >
+              />
             </div>
           </div>
         </div>
       </div>
 
       <!-- 詳細プレビュー -->
-      <aside
-        v-if="selected"
-        class="detail-panel"
-      >
+      <aside v-if="selected" class="detail-panel">
         <h3>詳細</h3>
         <dl class="detail-list">
           <dt>ファイル名</dt>
@@ -113,10 +84,7 @@
             {{ selected.filePath }}
           </dd>
         </dl>
-        <p
-          v-if="joinError"
-          class="join-error"
-        >
+        <p v-if="joinError" class="join-error">
           {{ joinError }}
         </p>
         <button
@@ -251,25 +219,35 @@ onBeforeUnmount(() => {
 async function scanFolder(): Promise<void> {
   scanError.value = null;
   loadError.value = null;
-  let cfg: Awaited<ReturnType<typeof App.getVRChatConfig>>;
-  try {
-    cfg = await App.getVRChatConfig();
-  } catch (err) {
-    scanError.value = err instanceof Error ? err.message : String(err);
-    return;
-  }
-  const path = (cfg.pictureOutputFolder ?? "").trim();
-  if (!path) {
-    scanError.value =
-      "設定の「出力フォルダ」が空です。コンフィグでフォルダを指定してください。";
-    return;
-  }
   scanning.value = true;
   try {
-    await App.scanScreenshotDir(path);
+    let cfg: Awaited<ReturnType<typeof App.getVRChatConfig>>;
+    try {
+      cfg = await App.getVRChatConfig();
+    } catch (err) {
+      scanError.value = err instanceof Error ? err.message : String(err);
+      return;
+    }
+    let path = (cfg.pictureOutputFolder ?? "").trim();
+    if (!path) {
+      try {
+        path = (await App.defaultVRChatPictureFolder()).trim();
+      } catch {
+        path = "";
+      }
+      if (!path) {
+        scanError.value =
+          "デフォルトの保存先（ユーザーフォルダー内の「ピクチャ」／「マイ ピクチャ」にある VRChat フォルダ）を解決できませんでした。";
+        return;
+      }
+    }
+    try {
+      await App.scanScreenshotDir(path);
+    } catch (err) {
+      scanError.value = err instanceof Error ? err.message : String(err);
+      return;
+    }
     await load();
-  } catch (err) {
-    loadError.value = err instanceof Error ? err.message : String(err);
   } finally {
     scanning.value = false;
   }

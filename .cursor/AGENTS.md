@@ -1,5 +1,20 @@
 # VRChat Tweaker - Agent 利用ガイド
 
+## Issue から PR まで（GitHub / ローカル Issue メモ）
+
+GitHub Issue の URL・番号、または `docs/ai_dlc/issues/` 等の Issue ドキュメントを渡して「実装して」「PR まで」と依頼する場合は、**issue-to-pr-workflow** Skill がオーケストレーターになる。
+
+流れは **ブランチ作成 → TDD 実装 → `make fmt/test/lint` → レビュー → PR**（各所でユーザー確認）。手順の本体は `.cursor/commands/` の Markdown（`/create-branch` 等で単体実行も可）。
+
+| 段階 | 参照 |
+|------|------|
+| ブランチ | `commands/create-branch.md` |
+| 検証 | `commands/run-verify.md`（`qa` エージェントと同等コマンド） |
+| レビュー | `commands/run-review.md` + `agents/reviewer.md` |
+| PR | `commands/make-pr.md` |
+
+詳細は `.cursor/skills/issue-to-pr-workflow/SKILL.md`。
+
 ## パイプライン自動実装
 
 `docs/features` の機能を実装する際は、**feature-implementation-pipeline** Skill を使用する。
@@ -50,4 +65,5 @@
 
 ## スキル
 
+- **issue-to-pr-workflow**: Issue 起点でブランチ〜実装〜検証〜レビュー〜PR までを順に制御（Commands を束ねるオーケストレーター）
 - **tdd-workflow**: テスト駆動開発と fmt→test→lint の検証ループ。コード変更時に適用。

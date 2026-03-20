@@ -8,12 +8,14 @@ const {
   mockSearchScreenshots,
   mockScanScreenshotDir,
   mockGetVRChatConfig,
+  mockDefaultVRChatPictureFolder,
   mockJoinWorldFromScreenshot,
 } = vi.hoisted(() => ({
   mockScreenshots: vi.fn(),
   mockSearchScreenshots: vi.fn(),
   mockScanScreenshotDir: vi.fn(),
   mockGetVRChatConfig: vi.fn(),
+  mockDefaultVRChatPictureFolder: vi.fn(),
   mockJoinWorldFromScreenshot: vi.fn(),
 }));
 
@@ -27,6 +29,7 @@ vi.mock("../../wails/app", async (importOriginal) => {
       searchScreenshots: mockSearchScreenshots,
       scanScreenshotDir: mockScanScreenshotDir,
       getVRChatConfig: mockGetVRChatConfig,
+      defaultVRChatPictureFolder: mockDefaultVRChatPictureFolder,
       joinWorldFromScreenshot: mockJoinWorldFromScreenshot,
     },
   };
@@ -61,6 +64,7 @@ describe("GalleryView", () => {
     mockSearchScreenshots.mockResolvedValue([sampleShot]);
     mockScanScreenshotDir.mockResolvedValue(3);
     mockGetVRChatConfig.mockResolvedValue({ ...defaultConfig });
+    mockDefaultVRChatPictureFolder.mockResolvedValue("C:/Temp/Pictures/VRChat");
     mockJoinWorldFromScreenshot.mockResolvedValue(undefined);
   });
 
@@ -110,6 +114,28 @@ describe("GalleryView", () => {
     });
   });
 
+  it("disables Scan Folder while getVRChatConfig is pending", async () => {
+    let resolveConfig!: (value: VRChatConfigDTO) => void;
+    mockGetVRChatConfig.mockImplementation(
+      () =>
+        new Promise<VRChatConfigDTO>((resolve) => {
+          resolveConfig = resolve;
+        }),
+    );
+    const wrapper = mount(GalleryView);
+    await flushPromises();
+
+    void wrapper.find("[data-testid='gallery-scan-folder']").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const btn = wrapper.find("[data-testid='gallery-scan-folder']");
+    expect(btn.attributes("disabled")).toBeDefined();
+
+    resolveConfig({ ...defaultConfig });
+    await flushPromises();
+    expect(mockScanScreenshotDir).toHaveBeenCalledWith("C:/Pictures/VRChat");
+  });
+
   it("Scan Folder loads config, scans directory, then refreshes list", async () => {
     const wrapper = mount(GalleryView);
     await flushPromises();
@@ -123,11 +149,43 @@ describe("GalleryView", () => {
     expect(mockScreenshots.mock.calls.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows scan error when picture output folder is empty", async () => {
+  it("uses default Pictures/VRChat when picture output folder is empty", async () => {
     mockGetVRChatConfig.mockResolvedValue({
       ...defaultConfig,
       pictureOutputFolder: "",
     });
+    const wrapper = mount(GalleryView);
+    await flushPromises();
+    mockScreenshots.mockClear();
+
+    await wrapper.find("[data-testid='gallery-scan-folder']").trigger("click");
+    await flushPromises();
+
+    expect(mockDefaultVRChatPictureFolder).toHaveBeenCalled();
+    expect(mockScanScreenshotDir).toHaveBeenCalledWith(
+      "C:/Temp/Pictures/VRChat",
+    );
+    expect(mockScreenshots.mock.calls.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows scan error when scanScreenshotDir rejects", async () => {
+    mockScanScreenshotDir.mockRejectedValue(new Error("directory scan failed"));
+    const wrapper = mount(GalleryView);
+    await flushPromises();
+    mockScreenshots.mockClear();
+
+    await wrapper.find("[data-testid='gallery-scan-folder']").trigger("click");
+    await flushPromises();
+
+    expect(mockScreenshots).not.toHaveBeenCalled();
+    expect(wrapper.find('[role="status"]').text()).toContain(
+      "directory scan failed",
+    );
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+  });
+
+  it("shows scan error when getVRChatConfig rejects", async () => {
+    mockGetVRChatConfig.mockRejectedValue(new Error("config read failed"));
     const wrapper = mount(GalleryView);
     await flushPromises();
 
@@ -135,7 +193,25 @@ describe("GalleryView", () => {
     await flushPromises();
 
     expect(mockScanScreenshotDir).not.toHaveBeenCalled();
-    expect(wrapper.text()).toMatch(/出力フォルダ/);
+    expect(wrapper.find('[role="status"]').text()).toContain(
+      "config read failed",
+    );
+  });
+
+  it("shows scan error when default folder path cannot be resolved", async () => {
+    mockGetVRChatConfig.mockResolvedValue({
+      ...defaultConfig,
+      pictureOutputFolder: "",
+    });
+    mockDefaultVRChatPictureFolder.mockResolvedValue("  ");
+    const wrapper = mount(GalleryView);
+    await flushPromises();
+
+    await wrapper.find("[data-testid='gallery-scan-folder']").trigger("click");
+    await flushPromises();
+
+    expect(mockScanScreenshotDir).not.toHaveBeenCalled();
+    expect(wrapper.text()).toMatch(/ピクチャ|マイ ピクチャ|解決できません/);
   });
 
   it("shows file basename in detail when an item is selected", async () => {

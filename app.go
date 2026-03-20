@@ -506,6 +506,17 @@ func (a *App) DeleteVRChatConfig() error {
 	return a.vrchatConfig.Delete()
 }
 
+// DefaultVRChatPictureFolder returns the folder VRChat uses when picture_output_folder
+// is unset: the "Pictures" / "My Pictures" folder under the user home, then VRChat
+// (e.g. %USERPROFILE%\Pictures\VRChat on Windows, ~/Pictures/VRChat on Unix).
+func (a *App) DefaultVRChatPictureFolder() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, "Pictures", "VRChat"), nil
+}
+
 // getVRChatConfigPath returns the path to VRChat's config.json.
 // On Windows: %LocalAppData%Low\VRChat\VRChat\config.json
 // On other OS: falls back to ~/.local/share/VRChat/VRChat/config.json

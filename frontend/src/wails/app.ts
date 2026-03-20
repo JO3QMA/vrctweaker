@@ -176,6 +176,7 @@ interface AppBindings {
   GetVRChatConfig(): Promise<VRChatConfigDTO>;
   SaveVRChatConfig(dto: VRChatConfigDTO): Promise<void>;
   DeleteVRChatConfig(): Promise<void>;
+  DefaultVRChatPictureFolder(): Promise<string>;
 }
 
 declare global {
@@ -402,5 +403,8 @@ export const App = {
   },
   async deleteVRChatConfig(): Promise<void> {
     return callApp((a) => a.DeleteVRChatConfig(), undefined);
+  },
+  async defaultVRChatPictureFolder(): Promise<string> {
+    return callApp((a) => a.DefaultVRChatPictureFolder(), "");
   },
 };

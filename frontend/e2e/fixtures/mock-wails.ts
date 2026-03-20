@@ -78,6 +78,24 @@ export function getMockWailsInitScript(): string {
         SaveAutomationRule: () => Promise.resolve(),
         DeleteAutomationRule: () => Promise.resolve(),
         ToggleAutomationRule: () => Promise.resolve(),
+        VRChatConfigExists: () => Promise.resolve(false),
+        GetVRChatConfig: () => Promise.resolve({
+          cameraResWidth: 1920,
+          cameraResHeight: 1080,
+          screenshotResWidth: 1920,
+          screenshotResHeight: 1080,
+          pictureOutputFolder: '',
+          pictureOutputSplitByDate: null,
+          fpvSteadycamFov: 0,
+          cacheDirectory: '',
+          cacheSize: 0,
+          cacheExpiryDelay: 0,
+          disableRichPresence: null,
+        }),
+        SaveVRChatConfig: () => Promise.resolve(),
+        DeleteVRChatConfig: () => Promise.resolve(),
+        DefaultVRChatPictureFolder: () =>
+          Promise.resolve('C:\\\\Temp\\\\VRChatTweakerE2E\\\\Pictures\\\\VRChat'),
       };
     })();
   `.trim()
