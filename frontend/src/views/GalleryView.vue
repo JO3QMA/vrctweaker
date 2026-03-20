@@ -251,7 +251,13 @@ onBeforeUnmount(() => {
 async function scanFolder(): Promise<void> {
   scanError.value = null;
   loadError.value = null;
-  const cfg = await App.getVRChatConfig();
+  let cfg: Awaited<ReturnType<typeof App.getVRChatConfig>>;
+  try {
+    cfg = await App.getVRChatConfig();
+  } catch (err) {
+    scanError.value = err instanceof Error ? err.message : String(err);
+    return;
+  }
   const path = (cfg.pictureOutputFolder ?? "").trim();
   if (!path) {
     scanError.value =
