@@ -8,101 +8,149 @@
     <div class="filters">
       <input
         v-model="filterWorldId"
-        type="text"
-        placeholder="World ID で検索"
+        data-testid="gallery-world-filter"
+        type="search"
+        placeholder="World ID で検索（入力で自動検索 / Enter）"
         class="filter-input"
+        @keyup.enter="onFilterEnter"
       >
       <button
+        type="button"
         class="btn-refresh"
+        :disabled="loading || scanning"
         @click="load"
       >
         更新
       </button>
+      <button
+        type="button"
+        data-testid="gallery-scan-folder"
+        class="btn-scan"
+        :disabled="loading || scanning"
+        @click="scanFolder"
+      >
+        {{ scanning ? "スキャン中…" : "Scan Folder" }}
+      </button>
     </div>
 
-    <!-- グリッド一覧 -->
-    <div
-      v-if="loading"
-      class="loading"
+    <p
+      v-if="loadError"
+      class="banner-error"
+      role="alert"
     >
-      読み込み中…
-    </div>
-    <div
-      v-else-if="list.length === 0"
-      class="empty"
+      {{ loadError }}
+    </p>
+    <p
+      v-if="scanError"
+      class="banner-error banner-warn"
+      role="status"
     >
-      スクリーンショットがありません。設定からフォルダをスキャンしてください。
-    </div>
-    <div
-      v-else
-      class="grid"
-    >
-      <div
-        v-for="item in list"
-        :key="item.id"
-        class="grid-item"
-        :class="{ selected: selected?.id === item.id }"
-        @click="select(item)"
-      >
-        <div class="thumbnail-wrap">
-          <img
-            :src="thumbnailSrc(item)"
-            :alt="item.filePath"
-            class="thumbnail"
-            @error="onThumbnailError"
+      {{ scanError }}
+    </p>
+
+    <div class="gallery-body">
+      <!-- グリッド一覧 -->
+      <div class="grid-section">
+        <div
+          v-if="scanning"
+          class="loading"
+        >
+          フォルダをスキャンしています…
+        </div>
+        <div
+          v-else-if="loading"
+          class="loading"
+        >
+          読み込み中…
+        </div>
+        <div
+          v-else-if="list.length === 0"
+          class="empty"
+        >
+          スクリーンショットがありません。Scan Folder
+          か設定の出力フォルダを確認してください。
+        </div>
+        <div
+          v-else
+          class="grid"
+        >
+          <div
+            v-for="item in list"
+            :key="item.id"
+            class="grid-item"
+            :class="{ selected: selected?.id === item.id }"
+            @click="select(item)"
           >
+            <div class="thumbnail-wrap">
+              <img
+                :src="thumbnailSrc(item)"
+                :alt="fileNameFromPath(item.filePath)"
+                class="thumbnail"
+                @error="onThumbnailError"
+              >
+            </div>
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- 詳細プレビュー -->
-    <div
-      v-if="selected"
-      class="detail-panel"
-    >
-      <h3>詳細</h3>
-      <dl class="detail-list">
-        <dt>撮影日時</dt>
-        <dd>{{ formatTakenAt(selected.takenAt) }}</dd>
-        <dt>ワールド名</dt>
-        <dd>{{ selected.worldName || "—" }}</dd>
-        <dt>World ID</dt>
-        <dd>{{ selected.worldId || "—" }}</dd>
-        <dt>ファイルパス</dt>
-        <dd class="file-path">
-          {{ selected.filePath }}
-        </dd>
-      </dl>
-      <p
-        v-if="joinError"
-        class="join-error"
+      <!-- 詳細プレビュー -->
+      <aside
+        v-if="selected"
+        class="detail-panel"
       >
-        {{ joinError }}
-      </p>
-      <button
-        class="btn-join"
-        :disabled="!selected.worldId || selected.worldId.trim() === ''"
-        :title="joinButtonTitle"
-        @click="onJoin"
-      >
-        このワールドへJoin
-      </button>
+        <h3>詳細</h3>
+        <dl class="detail-list">
+          <dt>ファイル名</dt>
+          <dd>{{ fileNameFromPath(selected.filePath) }}</dd>
+          <dt>撮影日時</dt>
+          <dd>{{ formatTakenAt(selected.takenAt) }}</dd>
+          <dt>ワールド名</dt>
+          <dd>{{ selected.worldName || "—" }}</dd>
+          <dt>World ID</dt>
+          <dd>{{ selected.worldId || "—" }}</dd>
+          <dt>ファイルパス</dt>
+          <dd class="file-path">
+            {{ selected.filePath }}
+          </dd>
+        </dl>
+        <p
+          v-if="joinError"
+          class="join-error"
+        >
+          {{ joinError }}
+        </p>
+        <button
+          class="btn-join"
+          :disabled="!selected.worldId || selected.worldId.trim() === ''"
+          :title="joinButtonTitle"
+          @click="onJoin"
+        >
+          このワールドへJoin
+        </button>
+      </aside>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onBeforeUnmount, computed, watch } from "vue";
 import {
   App,
   type ScreenshotDTO,
   type ScreenshotSearchDTO,
 } from "../wails/app";
 
+const FILTER_DEBOUNCE_MS = 400;
+
 const list = ref<ScreenshotDTO[]>([]);
 const selected = ref<ScreenshotDTO | null>(null);
 const loading = ref(false);
+const scanning = ref(false);
+const loadError = ref<string | null>(null);
+const scanError = ref<string | null>(null);
 const filterWorldId = ref("");
+
+let filterDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 
 const joinButtonTitle = computed(() => {
   if (!selected.value?.worldId || selected.value.worldId.trim() === "") {
@@ -145,7 +193,14 @@ function formatTakenAt(takenAt?: string): string {
   }
 }
 
+function fileNameFromPath(path: string): string {
+  const norm = path.replace(/\\/g, "/");
+  const i = norm.lastIndexOf("/");
+  return i >= 0 ? norm.slice(i + 1) : norm;
+}
+
 async function load(): Promise<void> {
+  loadError.value = null;
   loading.value = true;
   try {
     const wid = filterWorldId.value.trim();
@@ -161,8 +216,56 @@ async function load(): Promise<void> {
     ) {
       selected.value = null;
     }
+  } catch (err) {
+    loadError.value = err instanceof Error ? err.message : String(err);
+    list.value = [];
   } finally {
     loading.value = false;
+  }
+}
+
+function onFilterEnter(): void {
+  if (filterDebounceTimer !== null) {
+    clearTimeout(filterDebounceTimer);
+    filterDebounceTimer = null;
+  }
+  void load();
+}
+
+watch(filterWorldId, () => {
+  if (filterDebounceTimer !== null) {
+    clearTimeout(filterDebounceTimer);
+  }
+  filterDebounceTimer = setTimeout(() => {
+    filterDebounceTimer = null;
+    void load();
+  }, FILTER_DEBOUNCE_MS);
+});
+
+onBeforeUnmount(() => {
+  if (filterDebounceTimer !== null) {
+    clearTimeout(filterDebounceTimer);
+  }
+});
+
+async function scanFolder(): Promise<void> {
+  scanError.value = null;
+  loadError.value = null;
+  const cfg = await App.getVRChatConfig();
+  const path = (cfg.pictureOutputFolder ?? "").trim();
+  if (!path) {
+    scanError.value =
+      "設定の「出力フォルダ」が空です。コンフィグでフォルダを指定してください。";
+    return;
+  }
+  scanning.value = true;
+  try {
+    await App.scanScreenshotDir(path);
+    await load();
+  } catch (err) {
+    loadError.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    scanning.value = false;
   }
 }
 
@@ -200,12 +303,15 @@ onMounted(load);
 
 .filters {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
 }
 
 .filter-input {
-  width: 200px;
+  flex: 1;
+  min-width: 12rem;
+  max-width: 24rem;
   padding: 0.5rem;
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
@@ -222,10 +328,70 @@ onMounted(load);
   cursor: pointer;
 }
 
-.btn-refresh:hover {
+.btn-refresh:hover:not(:disabled) {
   background: var(--accent);
   color: white;
   border-color: var(--accent);
+}
+
+.btn-scan {
+  padding: 0.5rem 1rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.btn-scan:hover:not(:disabled) {
+  background: var(--accent);
+  color: white;
+  border-color: var(--accent);
+}
+
+.btn-refresh:disabled,
+.btn-scan:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.banner-error {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--text-primary);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.banner-warn {
+  background: color-mix(in srgb, var(--text-secondary) 12%, transparent);
+  border-color: var(--border);
+}
+
+.gallery-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: stretch;
+}
+
+@media (min-width: 960px) {
+  .gallery-body {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .grid-section {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .detail-panel {
+    width: min(320px, 100%);
+    flex-shrink: 0;
+  }
 }
 
 .loading,
