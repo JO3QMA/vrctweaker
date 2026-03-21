@@ -6,6 +6,8 @@ module.exports = {
     "eslint:recommended",
     "plugin:vue/vue3-recommended",
     "plugin:@typescript-eslint/recommended",
+    // Disable ESLint formatting rules that conflict with Prettier (must be last)
+    "prettier",
   ],
   parser: "vue-eslint-parser",
   parserOptions: {
