@@ -47,6 +47,13 @@
     "path": "/workspaces/vrctweaker/frontend/node_modules/@vue/test-utils",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@vue/test-utils/LICENSE"
   },
+  "eslint-config-prettier@10.1.8": {
+    "licenses": "MIT",
+    "repository": "https://github.com/prettier/eslint-config-prettier",
+    "publisher": "Simon Lydell",
+    "path": "/workspaces/vrctweaker/frontend/node_modules/eslint-config-prettier",
+    "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/eslint-config-prettier/LICENSE"
+  },
   "eslint-plugin-vue@9.33.0": {
     "licenses": "MIT",
     "repository": "https://github.com/vuejs/eslint-plugin-vue",
