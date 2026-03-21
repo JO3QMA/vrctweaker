@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -31,6 +32,55 @@ func (uc *MediaUseCase) GetScreenshot(ctx context.Context, id string) (*media.Sc
 	return uc.repo.GetByID(ctx, id)
 }
 
+// IngestScreenshotFile registers a single image file if it is new (by path).
+// Returns the screenshot row, whether it was newly created, and an error only for
+// persistence/stat failures. Thumbnail generation errors are ignored so the row stays saved.
+func (uc *MediaUseCase) IngestScreenshotFile(ctx context.Context, path string) (*media.Screenshot, bool, error) {
+	path = filepath.Clean(path)
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, false, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, false, nil
+	}
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".png", ".jpg", ".jpeg":
+	default:
+		return nil, false, nil
+	}
+
+	existing, _ := uc.repo.GetByFilePath(ctx, path)
+	if existing != nil {
+		return existing, false, nil
+	}
+
+	takenAt := timePtr(info.ModTime())
+	worldID, worldName := "", ""
+	if uc.extractor != nil {
+		wid, wn, ta, _ := uc.extractor.Extract(path)
+		worldID, worldName = wid, wn
+		if ta != nil {
+			takenAt = ta
+		}
+	}
+	sz := info.Size()
+	s := &media.Screenshot{
+		ID:            uuid.New().String(),
+		FilePath:      path,
+		WorldID:       worldID,
+		WorldName:     worldName,
+		TakenAt:       takenAt,
+		FileSizeBytes: &sz,
+	}
+	if err := uc.repo.Save(ctx, s); err != nil {
+		return nil, false, err
+	}
+	_ = uc.EnsureScreenshotThumbnail(ctx, s.ID)
+	return s, true, nil
+}
+
 // ScanDirectory scans a directory for screenshots and indexes them.
 func (uc *MediaUseCase) ScanDirectory(ctx context.Context, basePath string) (int, error) {
 	basePath = filepath.Clean(basePath)
@@ -50,35 +100,16 @@ func (uc *MediaUseCase) ScanDirectory(ctx context.Context, basePath string) (int
 		if info.IsDir() {
 			return nil
 		}
-		ext := filepath.Ext(path)
+		ext := strings.ToLower(filepath.Ext(path))
 		switch ext {
 		case ".png", ".jpg", ".jpeg":
-			existing, _ := uc.repo.GetByFilePath(ctx, path)
-			if existing != nil {
+			_, created, ingestErr := uc.IngestScreenshotFile(ctx, path)
+			if ingestErr != nil {
 				return nil
 			}
-			takenAt := timePtr(info.ModTime())
-			worldID, worldName := "", ""
-			if uc.extractor != nil {
-				wid, wn, ta, _ := uc.extractor.Extract(path)
-				worldID, worldName = wid, wn
-				if ta != nil {
-					takenAt = ta
-				}
+			if created {
+				count++
 			}
-			sz := info.Size()
-			s := &media.Screenshot{
-				ID:            uuid.New().String(),
-				FilePath:      path,
-				WorldID:       worldID,
-				WorldName:     worldName,
-				TakenAt:       takenAt,
-				FileSizeBytes: &sz,
-			}
-			if err := uc.repo.Save(ctx, s); err != nil {
-				return nil
-			}
-			count++
 		}
 		return nil
 	})
@@ -143,6 +174,7 @@ func (uc *MediaUseCase) ReindexScreenshots(ctx context.Context, basePath string)
 		if err := uc.repo.Save(ctx, s); err != nil {
 			continue
 		}
+		_ = uc.EnsureScreenshotThumbnail(ctx, s.ID)
 		updated++
 	}
 	return updated, nil

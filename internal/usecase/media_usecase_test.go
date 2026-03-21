@@ -173,6 +173,56 @@ func TestMediaUseCase_ScanDirectory_ExtractorErrorContinues(t *testing.T) {
 	}
 }
 
+func TestMediaUseCase_IngestScreenshotFile_NewThenSkip(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "ingest.png")
+	if err := writeTestPNG(path, 32, 24); err != nil {
+		t.Fatalf("writeTestPNG: %v", err)
+	}
+	repo := newMockScreenshotRepo()
+	uc := NewMediaUseCase(repo, nil)
+	ctx := context.Background()
+
+	s, created, err := uc.IngestScreenshotFile(ctx, path)
+	if err != nil {
+		t.Fatalf("IngestScreenshotFile: %v", err)
+	}
+	if !created || s == nil {
+		t.Fatalf("want new row, got created=%v s=%v", created, s)
+	}
+	if repo.thumbUpsertCnt != 1 {
+		t.Fatalf("thumbUpsertCnt = %d, want 1", repo.thumbUpsertCnt)
+	}
+
+	s2, created2, err2 := uc.IngestScreenshotFile(ctx, path)
+	if err2 != nil {
+		t.Fatalf("second IngestScreenshotFile: %v", err2)
+	}
+	if created2 || s2 == nil || s2.ID != s.ID {
+		t.Fatalf("second ingest: want skip same id, got created=%v id=%v", created2, s2)
+	}
+	if repo.thumbUpsertCnt != 1 {
+		t.Fatalf("after second ingest thumbUpsertCnt = %d, want 1", repo.thumbUpsertCnt)
+	}
+}
+
+func TestMediaUseCase_IngestScreenshotFile_SkipsNonImage(t *testing.T) {
+	dir := t.TempDir()
+	txt := filepath.Join(dir, "note.txt")
+	if err := os.WriteFile(txt, []byte("x"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	repo := newMockScreenshotRepo()
+	uc := NewMediaUseCase(repo, nil)
+	s, created, err := uc.IngestScreenshotFile(context.Background(), txt)
+	if err != nil {
+		t.Fatalf("IngestScreenshotFile: %v", err)
+	}
+	if created || s != nil {
+		t.Fatalf("want skip non-image, got s=%v created=%v", s, created)
+	}
+}
+
 func TestMediaUseCase_ReindexScreenshots(t *testing.T) {
 	dir := t.TempDir()
 	basePath := filepath.Join(dir, "screenshots")

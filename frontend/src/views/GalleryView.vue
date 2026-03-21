@@ -1,8 +1,6 @@
 <template>
   <div class="gallery-view">
-    <h1 class="page-title">
-      ギャラリー
-    </h1>
+    <h1 class="page-title">ギャラリー</h1>
 
     <!-- フィルタ（最小: worldId） -->
     <div class="filters">
@@ -13,7 +11,7 @@
         placeholder="World ID で検索（入力で自動検索 / Enter）"
         class="filter-input"
         @keyup.enter="onFilterEnter"
-      >
+      />
       <button
         type="button"
         class="btn-refresh"
@@ -33,40 +31,19 @@
       </button>
     </div>
 
-    <p
-      v-if="loadError"
-      class="banner-error"
-      role="alert"
-    >
+    <p v-if="loadError" class="banner-error" role="alert">
       {{ loadError }}
     </p>
-    <p
-      v-if="scanError"
-      class="banner-error banner-warn"
-      role="status"
-    >
+    <p v-if="scanError" class="banner-error banner-warn" role="status">
       {{ scanError }}
     </p>
 
     <div class="gallery-body">
       <!-- グリッド一覧（この領域のみ縦スクロール） -->
       <div class="grid-section">
-        <div
-          v-if="scanning"
-          class="loading"
-        >
-          フォルダをスキャンしています…
-        </div>
-        <div
-          v-else-if="loading"
-          class="loading"
-        >
-          読み込み中…
-        </div>
-        <div
-          v-else-if="list.length === 0"
-          class="empty"
-        >
+        <div v-if="scanning" class="loading">フォルダをスキャンしています…</div>
+        <div v-else-if="loading" class="loading">読み込み中…</div>
+        <div v-else-if="list.length === 0" class="empty">
           スクリーンショットがありません。Scan Folder
           か設定の出力フォルダを確認してください。
         </div>
@@ -77,10 +54,7 @@
           class="grid-scroll"
           @scroll.passive="onGridScroll"
         >
-          <div
-            class="grid-virtual-spacer"
-            :style="spacerStyle"
-          >
+          <div class="grid-virtual-spacer" :style="spacerStyle">
             <div
               v-for="vr in virtualRows"
               :key="virtualRowDomKey(vr.index)"
@@ -88,10 +62,7 @@
               :style="virtualRowStyle(vr)"
             >
               <template v-if="isGridRow(vr.index)">
-                <div
-                  class="grid-row-inner"
-                  :style="gridRowInnerStyle"
-                >
+                <div class="grid-row-inner" :style="gridRowInnerStyle">
                   <div
                     v-for="item in gridRowItems(vr.index)"
                     :key="item.id"
@@ -106,7 +77,7 @@
                         :alt="fileNameFromPath(item.filePath)"
                         class="thumbnail"
                         @error="onThumbnailError"
-                      >
+                      />
                     </div>
                   </div>
                 </div>
@@ -123,10 +94,7 @@
                   toggleGalleryCollapse(galleryHeaderAt(vr.index)!.collapseKey)
                 "
               >
-                <span
-                  class="gallery-group-chevron"
-                  aria-hidden="true"
-                >{{
+                <span class="gallery-group-chevron" aria-hidden="true">{{
                   galleryHeaderAt(vr.index)!.expanded ? "▼" : "▶"
                 }}</span>
                 <span class="gallery-group-label">{{
@@ -139,10 +107,7 @@
       </div>
 
       <!-- 詳細プレビュー（スクロールに追従しない） -->
-      <aside
-        v-if="selected"
-        class="detail-panel"
-      >
+      <aside v-if="selected" class="detail-panel">
         <h3>詳細</h3>
         <dl class="detail-list">
           <dt>ファイル名</dt>
@@ -160,10 +125,7 @@
             {{ selected.filePath }}
           </dd>
         </dl>
-        <p
-          v-if="joinError"
-          class="join-error"
-        >
+        <p v-if="joinError" class="join-error">
           {{ joinError }}
         </p>
         <button

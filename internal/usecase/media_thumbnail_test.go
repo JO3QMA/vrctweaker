@@ -33,6 +33,9 @@ func TestMediaUseCase_ScreenshotThumbnailDataURL_OK(t *testing.T) {
 	uc := NewMediaUseCase(repo, nil)
 	ctx := context.Background()
 
+	if err := uc.EnsureScreenshotThumbnail(ctx, "thumb-id-1"); err != nil {
+		t.Fatalf("EnsureScreenshotThumbnail: %v", err)
+	}
 	dataURL, err := uc.ScreenshotThumbnailDataURL(ctx, "thumb-id-1")
 	if err != nil {
 		t.Fatalf("ScreenshotThumbnailDataURL: %v", err)
@@ -61,17 +64,41 @@ func TestMediaUseCase_ScreenshotThumbnailDataURL_CacheSecondCallNoUpsert(t *test
 	uc := NewMediaUseCase(repo, nil)
 	ctx := context.Background()
 
-	if _, err := uc.ScreenshotThumbnailDataURL(ctx, "thumb-cache-1"); err != nil {
-		t.Fatalf("first ScreenshotThumbnailDataURL: %v", err)
+	if err := uc.EnsureScreenshotThumbnail(ctx, "thumb-cache-1"); err != nil {
+		t.Fatalf("EnsureScreenshotThumbnail: %v", err)
 	}
 	if repo.thumbUpsertCnt != 1 {
-		t.Fatalf("after first call thumbUpsertCnt = %d, want 1", repo.thumbUpsertCnt)
+		t.Fatalf("after ensure thumbUpsertCnt = %d, want 1", repo.thumbUpsertCnt)
+	}
+	if _, err := uc.ScreenshotThumbnailDataURL(ctx, "thumb-cache-1"); err != nil {
+		t.Fatalf("first ScreenshotThumbnailDataURL: %v", err)
 	}
 	if _, err := uc.ScreenshotThumbnailDataURL(ctx, "thumb-cache-1"); err != nil {
 		t.Fatalf("second ScreenshotThumbnailDataURL: %v", err)
 	}
 	if repo.thumbUpsertCnt != 1 {
-		t.Fatalf("after second call thumbUpsertCnt = %d, want 1 (cache hit)", repo.thumbUpsertCnt)
+		t.Fatalf("after two DataURL calls thumbUpsertCnt = %d, want 1 (read-only)", repo.thumbUpsertCnt)
+	}
+}
+
+func TestMediaUseCase_ScreenshotThumbnailDataURL_NotCachedWithoutEnsure(t *testing.T) {
+	dir := t.TempDir()
+	imgPath := filepath.Join(dir, "shot.png")
+	if err := writeTestPNG(imgPath, 40, 30); err != nil {
+		t.Fatalf("writeTestPNG: %v", err)
+	}
+	repo := newMockScreenshotRepo()
+	s := &media.Screenshot{ID: "no-ensure", FilePath: imgPath}
+	if err := repo.Save(context.Background(), s); err != nil {
+		t.Fatal(err)
+	}
+	uc := NewMediaUseCase(repo, nil)
+	_, err := uc.ScreenshotThumbnailDataURL(context.Background(), "no-ensure")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !errors.Is(err, ErrScreenshotThumbnailNotCached) {
+		t.Fatalf("want ErrScreenshotThumbnailNotCached, got %v", err)
 	}
 }
 
