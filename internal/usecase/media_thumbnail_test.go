@@ -77,28 +77,38 @@ func TestMediaUseCase_ScreenshotThumbnailDataURL_CacheSecondCallNoUpsert(t *test
 		t.Fatalf("second ScreenshotThumbnailDataURL: %v", err)
 	}
 	if repo.thumbUpsertCnt != 1 {
-		t.Fatalf("after two DataURL calls thumbUpsertCnt = %d, want 1 (read-only)", repo.thumbUpsertCnt)
+		t.Fatalf("after two DataURL calls thumbUpsertCnt = %d, want 1 (cache hit, no second upsert)", repo.thumbUpsertCnt)
 	}
 }
 
-func TestMediaUseCase_ScreenshotThumbnailDataURL_NotCachedWithoutEnsure(t *testing.T) {
+func TestMediaUseCase_ScreenshotThumbnailDataURL_EnsuresWhenNotCached(t *testing.T) {
 	dir := t.TempDir()
 	imgPath := filepath.Join(dir, "shot.png")
 	if err := writeTestPNG(imgPath, 40, 30); err != nil {
 		t.Fatalf("writeTestPNG: %v", err)
 	}
 	repo := newMockScreenshotRepo()
-	s := &media.Screenshot{ID: "no-ensure", FilePath: imgPath}
+	s := &media.Screenshot{ID: "lazy-thumb", FilePath: imgPath}
 	if err := repo.Save(context.Background(), s); err != nil {
 		t.Fatal(err)
 	}
 	uc := NewMediaUseCase(repo, nil)
-	_, err := uc.ScreenshotThumbnailDataURL(context.Background(), "no-ensure")
-	if err == nil {
-		t.Fatal("expected error")
+	ctx := context.Background()
+	dataURL, err := uc.ScreenshotThumbnailDataURL(ctx, "lazy-thumb")
+	if err != nil {
+		t.Fatalf("ScreenshotThumbnailDataURL: %v", err)
 	}
-	if !errors.Is(err, ErrScreenshotThumbnailNotCached) {
-		t.Fatalf("want ErrScreenshotThumbnailNotCached, got %v", err)
+	if !strings.HasPrefix(dataURL, "data:image/jpeg;base64,") {
+		t.Fatalf("want jpeg data URL, got prefix %q", dataURL[:min(40, len(dataURL))])
+	}
+	if repo.thumbUpsertCnt != 1 {
+		t.Fatalf("thumbUpsertCnt = %d, want 1 after lazy ensure", repo.thumbUpsertCnt)
+	}
+	if _, err := uc.ScreenshotThumbnailDataURL(ctx, "lazy-thumb"); err != nil {
+		t.Fatalf("second ScreenshotThumbnailDataURL: %v", err)
+	}
+	if repo.thumbUpsertCnt != 1 {
+		t.Fatalf("thumbUpsertCnt = %d, want 1 after second call (cached)", repo.thumbUpsertCnt)
 	}
 }
 

@@ -408,6 +408,7 @@ func (a *App) GetScreenshot(id string) (*ScreenshotDTO, error) {
 }
 
 // ScreenshotThumbnailDataURL returns a JPEG data URL for the screenshot thumbnail (for WebView; avoids file://).
+// Uses the DB cache when valid; otherwise builds and stores a thumbnail from the source file (lazy fill for legacy rows).
 func (a *App) ScreenshotThumbnailDataURL(id string) (string, error) {
 	return a.media.ScreenshotThumbnailDataURL(a.ctx, id)
 }

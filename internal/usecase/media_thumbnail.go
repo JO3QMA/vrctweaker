@@ -26,10 +26,6 @@ const (
 
 var (
 	errScreenshotNotFound = errors.New("screenshot not found")
-
-	// ErrScreenshotThumbnailNotCached is returned by ScreenshotThumbnailDataURL when
-	// no valid cached thumbnail exists (thumbnails are built at ingest time).
-	ErrScreenshotThumbnailNotCached = errors.New("screenshot thumbnail not cached")
 )
 
 func isJpegBlob(b []byte) bool {
@@ -112,8 +108,10 @@ func (uc *MediaUseCase) EnsureScreenshotThumbnail(ctx context.Context, id string
 	return nil
 }
 
-// ScreenshotThumbnailDataURL returns a data URL (JPEG) only when a valid cached
-// thumbnail exists for the current file size and mtime. It does not generate thumbnails.
+// ScreenshotThumbnailDataURL returns a JPEG data URL for WebView. It returns the
+// cache when valid for the current file size and mtime; otherwise it generates
+// and stores a thumbnail (same rules as EnsureScreenshotThumbnail), including
+// legacy rows ingested before thumbnail support.
 func (uc *MediaUseCase) ScreenshotThumbnailDataURL(ctx context.Context, id string) (string, error) {
 	if strings.TrimSpace(id) == "" {
 		return "", fmt.Errorf("screenshot id is empty")
@@ -156,7 +154,18 @@ func (uc *MediaUseCase) ScreenshotThumbnailDataURL(ctx context.Context, id strin
 		return "data:image/jpeg;base64," + enc, nil
 	}
 
-	return "", ErrScreenshotThumbnailNotCached
+	if err := uc.EnsureScreenshotThumbnail(ctx, id); err != nil {
+		return "", err
+	}
+	cached, err = uc.repo.GetThumbnail(ctx, id)
+	if err != nil {
+		return "", err
+	}
+	if cached != nil && cached.SourceSize == sourceSize && cached.SourceModUnix == sourceModUnix && isJpegBlob(cached.JpegBlob) {
+		enc := base64.StdEncoding.EncodeToString(cached.JpegBlob)
+		return "data:image/jpeg;base64," + enc, nil
+	}
+	return "", fmt.Errorf("thumbnail still unavailable after ensure")
 }
 
 func resizeScreenshotThumb(img image.Image) image.Image {
