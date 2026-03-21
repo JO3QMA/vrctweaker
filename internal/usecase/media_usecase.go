@@ -166,6 +166,53 @@ func (uc *MediaUseCase) ScanDirectory(ctx context.Context, basePath string, onPr
 	return count, nil
 }
 
+// IngestUnderPictureRootSince walks basePath for image files whose ModTime is strictly after since
+// and ingests new paths only (see IngestScreenshotFile). Skips files on ingest error, like ScanDirectory.
+func (uc *MediaUseCase) IngestUnderPictureRootSince(ctx context.Context, basePath string, since time.Time) (int, error) {
+	basePath = filepath.Clean(basePath)
+	info, err := os.Stat(basePath)
+	if err != nil {
+		return 0, err
+	}
+	if !info.IsDir() {
+		return 0, nil
+	}
+
+	createdCount := 0
+	err = filepath.Walk(basePath, func(path string, fi os.FileInfo, walkErr error) error {
+		if walkErr != nil {
+			return nil
+		}
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if fi.IsDir() {
+			return nil
+		}
+		ext := strings.ToLower(filepath.Ext(path))
+		switch ext {
+		case ".png", ".jpg", ".jpeg":
+		default:
+			return nil
+		}
+		if !fi.ModTime().After(since) {
+			return nil
+		}
+		_, created, ingestErr := uc.IngestScreenshotFile(ctx, path)
+		if ingestErr != nil {
+			return nil
+		}
+		if created {
+			createdCount++
+		}
+		return nil
+	})
+	if err != nil {
+		return createdCount, err
+	}
+	return createdCount, nil
+}
+
 // DeleteScreenshot removes a screenshot record.
 func (uc *MediaUseCase) DeleteScreenshot(ctx context.Context, id string) error {
 	return uc.repo.Delete(ctx, id)

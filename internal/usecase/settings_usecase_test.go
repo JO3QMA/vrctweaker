@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"testing"
+	"time"
 )
 
 // fakeAppSettingsRepo implements settings.AppSettingsRepository for tests.
@@ -79,5 +80,45 @@ func TestSettingsUseCase_ValidatePath_empty(t *testing.T) {
 
 	if uc.ValidatePath("") {
 		t.Error("ValidatePath(\"\") should return false")
+	}
+}
+
+func TestSettingsUseCase_GalleryLastExitAt_roundtrip(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	want := time.Date(2025, 3, 21, 12, 30, 45, 123456789, time.FixedZone("JST", 9*3600))
+	if err := uc.SetGalleryLastExitAt(ctx, want); err != nil {
+		t.Fatalf("SetGalleryLastExitAt: %v", err)
+	}
+	got, ok := uc.GetGalleryLastExitAt(ctx)
+	if !ok {
+		t.Fatal("GetGalleryLastExitAt: want ok true")
+	}
+	if !got.Equal(want.UTC()) {
+		t.Errorf("time: got %v, want %v", got, want.UTC())
+	}
+}
+
+func TestSettingsUseCase_GetGalleryLastExitAt_empty(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	_, ok := uc.GetGalleryLastExitAt(ctx)
+	if ok {
+		t.Error("GetGalleryLastExitAt: want ok false for empty")
+	}
+}
+
+func TestSettingsUseCase_GetGalleryLastExitAt_invalid(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: map[string]string{keyGalleryLastExitAt: "not-a-time"}}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	_, ok := uc.GetGalleryLastExitAt(ctx)
+	if ok {
+		t.Error("GetGalleryLastExitAt: want ok false for invalid string")
 	}
 }

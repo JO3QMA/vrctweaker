@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"vrchat-tweaker/internal/domain/settings"
 )
@@ -66,7 +67,27 @@ const (
 	keyVRChatPathWindows = "vrchat_path_windows"
 	keySteamPathLinux    = "steam_path_linux"
 	keyOutputLogPath     = "output_log_path"
+	keyGalleryLastExitAt = "gallery_last_exit_at"
 )
+
+// GetGalleryLastExitAt returns the last app shutdown time used for incremental gallery sync.
+// The second return is false when unset or not parseable.
+func (uc *SettingsUseCase) GetGalleryLastExitAt(ctx context.Context) (time.Time, bool) {
+	v, err := uc.repo.Get(ctx, keyGalleryLastExitAt)
+	if err != nil || v == "" {
+		return time.Time{}, false
+	}
+	t, err := time.Parse(time.RFC3339Nano, v)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t.UTC(), true
+}
+
+// SetGalleryLastExitAt persists the shutdown instant for the next startup incremental gallery sync.
+func (uc *SettingsUseCase) SetGalleryLastExitAt(ctx context.Context, t time.Time) error {
+	return uc.repo.Set(ctx, keyGalleryLastExitAt, t.UTC().Format(time.RFC3339Nano))
+}
 
 // PathSettings holds VRChat/Steam/output_log paths.
 type PathSettings struct {

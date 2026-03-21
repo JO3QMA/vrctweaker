@@ -106,6 +106,59 @@ func (a *App) startup(ctx context.Context) {
 	a.startOutputLogWatcher(ctx, eventBus)
 
 	a.startPictureFolderWatcher(ctx)
+	go a.startupGalleryIncremental()
+}
+
+// onShutdown persists state before the process exits (Wails lifecycle).
+func (a *App) onShutdown(ctx context.Context) {
+	if a.settings == nil {
+		return
+	}
+	if err := a.settings.SetGalleryLastExitAt(ctx, time.Now().UTC()); err != nil {
+		runtime.LogWarning(ctx, "gallery last exit at: "+err.Error())
+	}
+}
+
+func (a *App) startupGalleryIncremental() {
+	const waitTick = 50 * time.Millisecond
+	const waitMaxIters = 3600 // ~3 minutes while a manual folder scan is in progress
+
+	for i := 0; i < waitMaxIters && a.IsGalleryScanning(); i++ {
+		select {
+		case <-a.ctx.Done():
+			return
+		case <-time.After(waitTick):
+		}
+	}
+	if a.IsGalleryScanning() {
+		runtime.LogWarning(a.ctx, "startup gallery incremental: skipped (folder scan still running)")
+		return
+	}
+
+	root := a.resolveVRChatPictureWatchRoot()
+	if root == "" {
+		return
+	}
+	if _, err := os.Stat(root); err != nil {
+		return
+	}
+
+	since, ok := a.settings.GetGalleryLastExitAt(a.ctx)
+	if !ok {
+		return
+	}
+
+	count, err := a.media.IngestUnderPictureRootSince(a.ctx, root, since)
+	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return
+		}
+		runtime.LogWarning(a.ctx, "startup gallery incremental: "+err.Error())
+		return
+	}
+	if count > 0 {
+		runtime.EventsEmit(a.ctx, galleryScreenshotsChangedEvent, struct{}{})
+	}
 }
 
 func (a *App) subscribeAutomationEvents(ctx context.Context, eventBus event.EventBus) {
