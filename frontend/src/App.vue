@@ -6,7 +6,10 @@
       <main class="main-content">
         <div class="router-outlet-host">
           <router-view v-slot="{ Component }">
-            <transition name="fade" mode="out-in">
+            <transition
+              name="fade"
+              mode="out-in"
+            >
               <component :is="Component" />
             </transition>
           </router-view>

@@ -1,6 +1,8 @@
 <template>
   <div class="gallery-view">
-    <h1 class="page-title">ギャラリー</h1>
+    <h1 class="page-title">
+      ギャラリー
+    </h1>
 
     <!-- フィルタ（最小: worldId） -->
     <div class="filters">
@@ -11,7 +13,7 @@
         placeholder="World ID で検索（入力で自動検索 / Enter）"
         class="filter-input"
         @keyup.enter="onFilterEnter"
-      />
+      >
       <button
         type="button"
         class="btn-refresh"
@@ -31,19 +33,40 @@
       </button>
     </div>
 
-    <p v-if="loadError" class="banner-error" role="alert">
+    <p
+      v-if="loadError"
+      class="banner-error"
+      role="alert"
+    >
       {{ loadError }}
     </p>
-    <p v-if="scanError" class="banner-error banner-warn" role="status">
+    <p
+      v-if="scanError"
+      class="banner-error banner-warn"
+      role="status"
+    >
       {{ scanError }}
     </p>
 
     <div class="gallery-body">
       <!-- グリッド一覧（この領域のみ縦スクロール） -->
       <div class="grid-section">
-        <div v-if="scanning" class="loading">フォルダをスキャンしています…</div>
-        <div v-else-if="loading" class="loading">読み込み中…</div>
-        <div v-else-if="list.length === 0" class="empty">
+        <div
+          v-if="scanning"
+          class="loading"
+        >
+          フォルダをスキャンしています…
+        </div>
+        <div
+          v-else-if="loading"
+          class="loading"
+        >
+          読み込み中…
+        </div>
+        <div
+          v-else-if="list.length === 0"
+          class="empty"
+        >
           スクリーンショットがありません。Scan Folder
           か設定の出力フォルダを確認してください。
         </div>
@@ -54,39 +77,72 @@
           class="grid-scroll"
           @scroll.passive="onGridScroll"
         >
-          <div class="grid-virtual-spacer" :style="spacerStyle">
+          <div
+            class="grid-virtual-spacer"
+            :style="spacerStyle"
+          >
             <div
               v-for="vr in virtualRows"
-              :key="vr.index"
+              :key="virtualRowDomKey(vr.index)"
               class="grid-virtual-row"
               :style="virtualRowStyle(vr)"
             >
-              <div class="grid-row-inner" :style="gridRowInnerStyle">
+              <template v-if="isGridRow(vr.index)">
                 <div
-                  v-for="item in rowItems(vr.index)"
-                  :key="item.id"
-                  class="grid-item"
-                  :class="{ selected: selected?.id === item.id }"
-                  :style="gridItemStyle"
-                  @click="select(item)"
+                  class="grid-row-inner"
+                  :style="gridRowInnerStyle"
                 >
-                  <div class="thumbnail-wrap">
-                    <img
-                      :src="thumbnailSrc(item)"
-                      :alt="fileNameFromPath(item.filePath)"
-                      class="thumbnail"
-                      @error="onThumbnailError"
-                    />
+                  <div
+                    v-for="item in gridRowItems(vr.index)"
+                    :key="item.id"
+                    class="grid-item"
+                    :class="{ selected: selected?.id === item.id }"
+                    :style="gridItemStyle"
+                    @click="select(item)"
+                  >
+                    <div class="thumbnail-wrap">
+                      <img
+                        :src="thumbnailSrc(item)"
+                        :alt="fileNameFromPath(item.filePath)"
+                        class="thumbnail"
+                        @error="onThumbnailError"
+                      >
+                    </div>
                   </div>
                 </div>
-              </div>
+              </template>
+              <button
+                v-else-if="galleryHeaderAt(vr.index)"
+                type="button"
+                class="gallery-group-header"
+                :class="galleryHeaderIndentClass(galleryHeaderAt(vr.index)!)"
+                data-testid="gallery-group-header"
+                :data-collapse-key="galleryHeaderAt(vr.index)!.collapseKey"
+                :aria-expanded="galleryHeaderAt(vr.index)!.expanded"
+                @click="
+                  toggleGalleryCollapse(galleryHeaderAt(vr.index)!.collapseKey)
+                "
+              >
+                <span
+                  class="gallery-group-chevron"
+                  aria-hidden="true"
+                >{{
+                  galleryHeaderAt(vr.index)!.expanded ? "▼" : "▶"
+                }}</span>
+                <span class="gallery-group-label">{{
+                  galleryHeaderAt(vr.index)!.label
+                }}</span>
+              </button>
             </div>
           </div>
         </div>
       </div>
 
       <!-- 詳細プレビュー（スクロールに追従しない） -->
-      <aside v-if="selected" class="detail-panel">
+      <aside
+        v-if="selected"
+        class="detail-panel"
+      >
         <h3>詳細</h3>
         <dl class="detail-list">
           <dt>ファイル名</dt>
@@ -104,7 +160,10 @@
             {{ selected.filePath }}
           </dd>
         </dl>
-        <p v-if="joinError" class="join-error">
+        <p
+          v-if="joinError"
+          class="join-error"
+        >
           {{ joinError }}
         </p>
         <button
@@ -136,6 +195,11 @@ import {
   type ScreenshotDTO,
   type ScreenshotSearchDTO,
 } from "../wails/app";
+import {
+  buildGalleryVirtualRows,
+  galleryRowHeight,
+  type GalleryVirtualRow,
+} from "./galleryDateGroups";
 
 const FILTER_DEBOUNCE_MS = 400;
 const THUMBNAIL_FETCH_CONCURRENCY = 4;
@@ -160,6 +224,9 @@ const loadError = ref<string | null>(null);
 const scanError = ref<string | null>(null);
 const filterWorldId = ref("");
 const thumbnailUrls = ref<Record<string, string>>({});
+
+/** Collapsed section keys (`y:…`, `m:…`, `d:…`). */
+const collapsed = ref(new Set<string>());
 
 const gridScrollRef = ref<HTMLElement | null>(null);
 /** Content width inside .grid-scroll (from ResizeObserver). */
@@ -194,19 +261,21 @@ const cellHeightPx = computed(() => (cellWidthPx.value * 3) / 4);
 
 const rowHeightPx = computed(() => cellHeightPx.value + GRID_GAP_PX);
 
-const rowCount = computed(() => {
-  const cols = columnCount.value;
-  if (list.value.length === 0) {
-    return 0;
-  }
-  return Math.ceil(list.value.length / cols);
-});
+const flatGalleryRows = computed(() =>
+  buildGalleryVirtualRows(list.value, columnCount.value, collapsed.value),
+);
 
 const rowVirtualizer = useVirtualizer(
   computed(() => ({
-    count: rowCount.value,
+    count: flatGalleryRows.value.length,
     getScrollElement: () => gridScrollRef.value,
-    estimateSize: () => rowHeightPx.value,
+    estimateSize: (index: number) => {
+      const row = flatGalleryRows.value[index];
+      if (!row) {
+        return rowHeightPx.value;
+      }
+      return galleryRowHeight(row, rowHeightPx.value);
+    },
     overscan: 3,
   })),
 );
@@ -251,10 +320,67 @@ function virtualRowStyle(vr: VirtualItem) {
   };
 }
 
-function rowItems(rowIndex: number): ScreenshotDTO[] {
-  const cols = columnCount.value;
-  const start = rowIndex * cols;
-  return list.value.slice(start, start + cols);
+function virtualRowDomKey(index: number): string {
+  return flatGalleryRows.value[index]?.rowKey ?? `row-${index}`;
+}
+
+function galleryRowAt(index: number): GalleryVirtualRow | undefined {
+  return flatGalleryRows.value[index];
+}
+
+function isGridRow(index: number): boolean {
+  return galleryRowAt(index)?.type === "grid";
+}
+
+function gridRowItems(index: number): ScreenshotDTO[] {
+  const row = galleryRowAt(index);
+  return row?.type === "grid" ? row.items : [];
+}
+
+function galleryHeaderAt(
+  index: number,
+):
+  | Extract<
+      GalleryVirtualRow,
+      { type: "yearHeader" | "monthHeader" | "dayHeader" }
+    >
+  | undefined {
+  const row = galleryRowAt(index);
+  if (
+    row?.type === "yearHeader" ||
+    row?.type === "monthHeader" ||
+    row?.type === "dayHeader"
+  ) {
+    return row;
+  }
+  return undefined;
+}
+
+function galleryHeaderIndentClass(
+  row: NonNullable<ReturnType<typeof galleryHeaderAt>>,
+): string {
+  if (row.type === "yearHeader") {
+    return "gallery-group-h-year";
+  }
+  if (row.type === "monthHeader") {
+    return "gallery-group-h-month";
+  }
+  return "gallery-group-h-day";
+}
+
+function toggleGalleryCollapse(key: string): void {
+  const next = new Set(collapsed.value);
+  if (next.has(key)) {
+    next.delete(key);
+  } else {
+    next.add(key);
+  }
+  collapsed.value = next;
+  void nextTick(() => {
+    scrollSync.value++;
+    rowVirtualizer.value.measure();
+    void syncThumbnailsForVisible();
+  });
 }
 
 watchEffect((onCleanup) => {
@@ -280,7 +406,7 @@ watchEffect((onCleanup) => {
   onCleanup(() => ro.disconnect());
 });
 
-watch([rowHeightPx, rowCount], () => {
+watch([rowHeightPx, flatGalleryRows], () => {
   void nextTick(() => {
     rowVirtualizer.value.measure();
     scrollSync.value++;
@@ -319,18 +445,16 @@ function onGridScroll(): void {
 }
 
 function visibleScreenshotIds(): string[] {
-  const cols = columnCount.value;
-  if (cols < 1 || list.value.length === 0) {
+  if (list.value.length === 0) {
     return [];
   }
-  const items = rowVirtualizer.value.getVirtualItems();
+  const vItems = rowVirtualizer.value.getVirtualItems();
   const idSet = new Set<string>();
-  for (const row of items) {
-    const base = row.index * cols;
-    for (let j = 0; j < cols; j++) {
-      const li = base + j;
-      if (li < list.value.length) {
-        idSet.add(list.value[li]!.id);
+  for (const v of vItems) {
+    const row = flatGalleryRows.value[v.index];
+    if (row?.type === "grid") {
+      for (const it of row.items) {
+        idSet.add(it.id);
       }
     }
   }
@@ -794,5 +918,54 @@ onMounted(() => {
   margin: 0 0 0.5rem;
   font-size: 0.85rem;
   color: var(--accent);
+}
+
+.gallery-group-header {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 0.35rem;
+  margin: 0;
+  background: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.gallery-group-header:hover {
+  background: var(--bg-tertiary);
+}
+
+.gallery-group-h-year {
+  font-weight: 600;
+}
+
+.gallery-group-h-month {
+  padding-left: 1.1rem;
+  font-weight: 550;
+}
+
+.gallery-group-h-day {
+  padding-left: 2rem;
+  font-weight: 450;
+}
+
+.gallery-group-chevron {
+  flex-shrink: 0;
+  width: 0.85rem;
+  font-size: 0.6rem;
+  opacity: 0.85;
+  line-height: 1;
+}
+
+.gallery-group-label {
+  flex: 1;
+  min-width: 0;
 }
 </style>

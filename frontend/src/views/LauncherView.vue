@@ -1,9 +1,16 @@
 <template>
   <div class="launcher-view">
-    <h1 class="page-title">ランチャー</h1>
+    <h1 class="page-title">
+      ランチャー
+    </h1>
     <div class="profiles-section">
       <div class="profiles-list">
-        <button class="btn-add" @click="addNew">+ 新規プロファイル</button>
+        <button
+          class="btn-add"
+          @click="addNew"
+        >
+          + 新規プロファイル
+        </button>
         <div
           v-for="p in profiles"
           :key="p.id"
@@ -12,12 +19,21 @@
           @click="select(p)"
         >
           <span class="profile-name">{{ p.name }}</span>
-          <span v-if="p.isDefault" class="badge">既定</span>
+          <span
+            v-if="p.isDefault"
+            class="badge"
+          >既定</span>
         </div>
       </div>
-      <div v-if="selected" class="profile-editor">
+      <div
+        v-if="selected"
+        class="profile-editor"
+      >
         <label>プロファイル名</label>
-        <input v-model="selected.name" type="text" />
+        <input
+          v-model="selected.name"
+          type="text"
+        >
         <label>起動引数</label>
         <div class="launch-args-gui">
           <label class="checkbox-row">
@@ -25,12 +41,16 @@
               v-model="launchArgs.noVr"
               type="checkbox"
               data-testid="no-vr-checkbox"
-            />
+            >
             デスクトップモードで起動（-no-vr）
           </label>
           <div class="screen-mode-section">
             <label class="block-label">表示モード</label>
-            <div class="toggle-group" role="group" aria-label="表示モード">
+            <div
+              class="toggle-group"
+              role="group"
+              aria-label="表示モード"
+            >
               <label
                 class="toggle-option"
                 :class="{ active: launchArgs.screenMode === 'fullscreen' }"
@@ -40,7 +60,7 @@
                   type="radio"
                   value="fullscreen"
                   data-testid="screen-mode-fullscreen"
-                />
+                >
                 <span>フルスクリーン</span>
               </label>
               <label
@@ -52,7 +72,7 @@
                   type="radio"
                   value="windowed"
                   data-testid="screen-mode-windowed"
-                />
+                >
                 <span>ウィンドウ</span>
               </label>
               <label
@@ -64,7 +84,7 @@
                   type="radio"
                   value="popupwindow"
                   data-testid="screen-mode-popupwindow"
-                />
+                >
                 <span>仮想フルスクリーン</span>
               </label>
             </div>
@@ -78,7 +98,7 @@
                   type="checkbox"
                   data-testid="resolution-enabled-checkbox"
                   @change="onResolutionEnabledChange"
-                />
+                >
                 解像度を指定（-screen-width, -screen-height）
               </label>
               <div
@@ -101,7 +121,7 @@
                       value="HD"
                       data-testid="resolution-preset-hd"
                       @change="applyResolutionPreset"
-                    />
+                    >
                     <span>HD</span>
                   </label>
                   <label
@@ -114,7 +134,7 @@
                       value="FHD"
                       data-testid="resolution-preset-fhd"
                       @change="applyResolutionPreset"
-                    />
+                    >
                     <span>FHD</span>
                   </label>
                   <label
@@ -127,7 +147,7 @@
                       value="WQHD"
                       data-testid="resolution-preset-wqhd"
                       @change="applyResolutionPreset"
-                    />
+                    >
                     <span>WQHD</span>
                   </label>
                   <label
@@ -140,7 +160,7 @@
                       value="4K"
                       data-testid="resolution-preset-4k"
                       @change="applyResolutionPreset"
-                    />
+                    >
                     <span>4K</span>
                   </label>
                   <label
@@ -153,7 +173,7 @@
                       value="custom"
                       data-testid="resolution-preset-custom"
                       @change="applyResolutionPreset"
-                    />
+                    >
                     <span>手動設定</span>
                   </label>
                 </div>
@@ -167,7 +187,7 @@
                       :max="7680"
                       :disabled="resolutionPreset !== 'custom'"
                       data-testid="screen-width-input"
-                    />
+                    >
                   </label>
                   <span class="resolution-sep">&times;</span>
                   <label class="resolution-field">
@@ -179,7 +199,7 @@
                       :max="4320"
                       :disabled="resolutionPreset !== 'custom'"
                       data-testid="screen-height-input"
-                    />
+                    >
                   </label>
                 </div>
               </div>
@@ -189,17 +209,20 @@
                   type="checkbox"
                   data-testid="monitor-enabled-checkbox"
                   @change="onMonitorEnabledChange"
-                />
+                >
                 モニター指定（-monitor N）
               </label>
-              <div v-if="valueOptionsEnabled.monitor" class="option-value-row">
+              <div
+                v-if="valueOptionsEnabled.monitor"
+                class="option-value-row"
+              >
                 <input
                   v-model.number="launchArgs.monitor"
                   type="number"
                   min="1"
                   placeholder="1=1番目"
                   data-testid="monitor-input"
-                />
+                >
               </div>
               <label class="checkbox-row">
                 <input
@@ -207,24 +230,27 @@
                   type="checkbox"
                   data-testid="fps-enabled-checkbox"
                   @change="onFpsEnabledChange"
-                />
+                >
                 FPS制限（--fps=N）
               </label>
-              <div v-if="valueOptionsEnabled.fps" class="option-value-row">
+              <div
+                v-if="valueOptionsEnabled.fps"
+                class="option-value-row"
+              >
                 <input
                   v-model.number="launchArgs.fps"
                   type="number"
                   min="1"
                   placeholder="90"
                   data-testid="fps-input"
-                />
+                >
               </div>
               <label class="checkbox-row">
                 <input
                   v-model="launchArgs.skipRegistry"
                   type="checkbox"
                   data-testid="skip-registry-checkbox"
-                />
+                >
                 レジストリ登録スキップ（--skip-registry-install）
               </label>
               <label class="checkbox-row">
@@ -233,7 +259,7 @@
                   type="checkbox"
                   data-testid="process-priority-enabled-checkbox"
                   @change="onProcessPriorityEnabledChange"
-                />
+                >
                 プロセス優先度（--process-priority=N）
               </label>
               <div
@@ -247,7 +273,7 @@
                   max="2"
                   placeholder="-2～2"
                   data-testid="process-priority-input"
-                />
+                >
               </div>
               <label class="checkbox-row">
                 <input
@@ -255,7 +281,7 @@
                   type="checkbox"
                   data-testid="main-thread-priority-enabled-checkbox"
                   @change="onMainThreadPriorityEnabledChange"
-                />
+                >
                 メインスレッド優先度（--main-thread-priority=N）
               </label>
               <div
@@ -269,7 +295,7 @@
                   max="2"
                   placeholder="-2～2"
                   data-testid="main-thread-priority-input"
-                />
+                >
               </div>
               <label class="checkbox-row">
                 <input
@@ -277,17 +303,20 @@
                   type="checkbox"
                   data-testid="profile-enabled-checkbox"
                   @change="onProfileEnabledChange"
-                />
+                >
                 プロファイル（--profile=N）
               </label>
-              <div v-if="valueOptionsEnabled.profile" class="option-value-row">
+              <div
+                v-if="valueOptionsEnabled.profile"
+                class="option-value-row"
+              >
                 <input
                   v-model.number="launchArgs.profile"
                   type="number"
                   min="0"
                   placeholder="0=既定"
                   data-testid="profile-input"
-                />
+                >
               </div>
             </div>
           </details>
@@ -299,7 +328,7 @@
                   v-model="launchArgs.enableDebugGui"
                   type="checkbox"
                   data-testid="enable-debug-gui-checkbox"
-                />
+                >
                 デバッグGUI（--enable-debug-gui）
               </label>
               <label class="checkbox-row">
@@ -307,7 +336,7 @@
                   v-model="launchArgs.enableSDKLogLevels"
                   type="checkbox"
                   data-testid="enable-sdk-log-levels-checkbox"
-                />
+                >
                 SDKログ拡張（--enable-sdk-log-levels）
               </label>
               <label class="checkbox-row">
@@ -315,7 +344,7 @@
                   v-model="launchArgs.enableUdonDebugLogging"
                   type="checkbox"
                   data-testid="enable-udon-debug-logging-checkbox"
-                />
+                >
                 Udonデバッグログ（--enable-udon-debug-logging）
               </label>
               <label class="checkbox-row">
@@ -323,7 +352,7 @@
                   v-model="launchArgs.watchWorlds"
                   type="checkbox"
                   data-testid="watch-worlds-checkbox"
-                />
+                >
                 ワールド監視（--watch-worlds）
               </label>
               <label class="checkbox-row">
@@ -331,7 +360,7 @@
                   v-model="launchArgs.watchAvatars"
                   type="checkbox"
                   data-testid="watch-avatars-checkbox"
-                />
+                >
                 アバター監視（--watch-avatars）
               </label>
               <label class="checkbox-row">
@@ -339,7 +368,7 @@
                   v-model="launchArgs.enforceWorldServerChecks"
                   type="checkbox"
                   data-testid="enforce-world-server-checks-checkbox"
-                />
+                >
                 ワールドサーバーチェック強制（--enforce-world-server-checks）
               </label>
               <label class="checkbox-row">
@@ -348,16 +377,19 @@
                   type="checkbox"
                   data-testid="midi-enabled-checkbox"
                   @change="onMidiEnabledChange"
-                />
+                >
                 MIDIデバイス（--midi=deviceName）
               </label>
-              <div v-if="valueOptionsEnabled.midi" class="option-value-row">
+              <div
+                v-if="valueOptionsEnabled.midi"
+                class="option-value-row"
+              >
                 <input
                   v-model="launchArgs.midi"
                   type="text"
                   placeholder="デバイス名"
                   data-testid="midi-input"
-                />
+                >
               </div>
               <label class="checkbox-row">
                 <input
@@ -365,7 +397,7 @@
                   type="checkbox"
                   data-testid="ignore-trackers-enabled-checkbox"
                   @change="onIgnoreTrackersEnabledChange"
-                />
+                >
                 無視トラッカー（--ignore-trackers=serial1,serial2）
               </label>
               <div
@@ -377,7 +409,7 @@
                   type="text"
                   placeholder="serial1,serial2"
                   data-testid="ignore-trackers-input"
-                />
+                >
               </div>
               <div class="render-backend-section">
                 <label class="block-label">動画デコーディング</label>
@@ -395,7 +427,7 @@
                       type="radio"
                       value=""
                       data-testid="video-decoding-default"
-                    />
+                    >
                     <span>既定</span>
                   </label>
                   <label
@@ -407,7 +439,7 @@
                       type="radio"
                       value="software"
                       data-testid="video-decoding-software"
-                    />
+                    >
                     <span>ソフトウェア</span>
                   </label>
                   <label
@@ -419,7 +451,7 @@
                       type="radio"
                       value="hardware"
                       data-testid="video-decoding-hardware"
-                    />
+                    >
                     <span>ハードウェア</span>
                   </label>
                 </div>
@@ -429,7 +461,7 @@
                   v-model="launchArgs.disableAMDStutterWorkaround"
                   type="checkbox"
                   data-testid="disable-amd-stutter-workaround-checkbox"
-                />
+                >
                 AMDスタッター回避無効（--disable-amd-stutter-workaround）
               </label>
               <label class="checkbox-row">
@@ -438,16 +470,19 @@
                   type="checkbox"
                   data-testid="osc-enabled-checkbox"
                   @change="onOscEnabledChange"
-                />
+                >
                 OSC（--osc=inPort:outIP:outPort）
               </label>
-              <div v-if="valueOptionsEnabled.osc" class="option-value-row">
+              <div
+                v-if="valueOptionsEnabled.osc"
+                class="option-value-row"
+              >
                 <input
                   v-model="launchArgs.osc"
                   type="text"
                   placeholder="例: 9000:127.0.0.1:9001"
                   data-testid="osc-input"
-                />
+                >
               </div>
               <label class="checkbox-row">
                 <input
@@ -455,16 +490,19 @@
                   type="checkbox"
                   data-testid="affinity-enabled-checkbox"
                   @change="onAffinityEnabledChange"
-                />
+                >
                 スレッドアフィニティ（--affinity=FFFF）
               </label>
-              <div v-if="valueOptionsEnabled.affinity" class="option-value-row">
+              <div
+                v-if="valueOptionsEnabled.affinity"
+                class="option-value-row"
+              >
                 <input
                   v-model="launchArgs.affinity"
                   type="text"
                   placeholder="16進ビットマスク"
                   data-testid="affinity-input"
-                />
+                >
               </div>
             </div>
           </details>
@@ -474,15 +512,28 @@
             type="text"
             placeholder="-batchmode"
             data-testid="custom-args-input"
-          />
+          >
         </div>
         <label>
-          <input v-model="selected.isDefault" type="checkbox" />
+          <input
+            v-model="selected.isDefault"
+            type="checkbox"
+          >
           デフォルトに設定
         </label>
         <div class="editor-actions">
-          <button class="btn-save" @click="save">保存</button>
-          <button class="btn-launch" @click="launch">この設定で起動</button>
+          <button
+            class="btn-save"
+            @click="save"
+          >
+            保存
+          </button>
+          <button
+            class="btn-launch"
+            @click="launch"
+          >
+            この設定で起動
+          </button>
           <button
             v-if="selected.id"
             type="button"

@@ -1,12 +1,17 @@
 <template>
   <div class="config-view">
-    <h1 class="page-title">その他の設定</h1>
+    <h1 class="page-title">
+      その他の設定
+    </h1>
     <p class="config-description">
       VRChat の config.json を編集します。 パス:
       <code>%LocalAppData%Low\VRChat\VRChat\config.json</code>
     </p>
 
-    <div v-if="!configExists && !editing" class="config-not-found">
+    <div
+      v-if="!configExists && !editing"
+      class="config-not-found"
+    >
       <p>
         config.json が見つかりません。新規作成して設定を始めることができます。
       </p>
@@ -20,11 +25,22 @@
       </button>
     </div>
 
-    <div v-if="editing" class="config-editor">
-      <p v-if="saveError" class="error-message">
+    <div
+      v-if="editing"
+      class="config-editor"
+    >
+      <p
+        v-if="saveError"
+        class="error-message"
+      >
         {{ saveError }}
       </p>
-      <p v-if="saveSuccess" class="success-message">保存しました</p>
+      <p
+        v-if="saveSuccess"
+        class="success-message"
+      >
+        保存しました
+      </p>
 
       <!-- Camera Resolution -->
       <section class="config-section">
@@ -50,7 +66,7 @@
                 value="HD"
                 data-testid="camera-preset-hd"
                 @change="applyCameraPreset"
-              />
+              >
               <span>HD</span>
             </label>
             <label
@@ -63,7 +79,7 @@
                 value="FHD"
                 data-testid="camera-preset-fhd"
                 @change="applyCameraPreset"
-              />
+              >
               <span>FHD</span>
             </label>
             <label
@@ -76,7 +92,7 @@
                 value="WQHD"
                 data-testid="camera-preset-wqhd"
                 @change="applyCameraPreset"
-              />
+              >
               <span>WQHD</span>
             </label>
             <label
@@ -89,7 +105,7 @@
                 value="4K"
                 data-testid="camera-preset-4k"
                 @change="applyCameraPreset"
-              />
+              >
               <span>4K</span>
             </label>
             <label
@@ -102,7 +118,7 @@
                 value="8K"
                 data-testid="camera-preset-8k"
                 @change="applyCameraPreset"
-              />
+              >
               <span>8K</span>
             </label>
             <label
@@ -115,7 +131,7 @@
                 value="custom"
                 data-testid="camera-preset-custom"
                 @change="applyCameraPreset"
-              />
+              >
               <span>手動設定</span>
             </label>
           </div>
@@ -129,7 +145,7 @@
                 :max="7680"
                 :disabled="cameraPreset !== 'custom'"
                 data-testid="camera-width-input"
-              />
+              >
             </label>
             <span class="resolution-sep">&times;</span>
             <label class="resolution-field">
@@ -141,7 +157,7 @@
                 :max="4320"
                 :disabled="cameraPreset !== 'custom'"
                 data-testid="camera-height-input"
-              />
+              >
             </label>
           </div>
         </div>
@@ -171,7 +187,7 @@
                 value="HD"
                 data-testid="screenshot-preset-hd"
                 @change="applyScreenshotPreset"
-              />
+              >
               <span>HD</span>
             </label>
             <label
@@ -184,7 +200,7 @@
                 value="FHD"
                 data-testid="screenshot-preset-fhd"
                 @change="applyScreenshotPreset"
-              />
+              >
               <span>FHD</span>
             </label>
             <label
@@ -197,7 +213,7 @@
                 value="WQHD"
                 data-testid="screenshot-preset-wqhd"
                 @change="applyScreenshotPreset"
-              />
+              >
               <span>WQHD</span>
             </label>
             <label
@@ -210,7 +226,7 @@
                 value="4K"
                 data-testid="screenshot-preset-4k"
                 @change="applyScreenshotPreset"
-              />
+              >
               <span>4K</span>
             </label>
             <label
@@ -223,7 +239,7 @@
                 value="custom"
                 data-testid="screenshot-preset-custom"
                 @change="applyScreenshotPreset"
-              />
+              >
               <span>手動設定</span>
             </label>
           </div>
@@ -237,7 +253,7 @@
                 :max="3840"
                 :disabled="screenshotPreset !== 'custom'"
                 data-testid="screenshot-width-input"
-              />
+              >
             </label>
             <span class="resolution-sep">&times;</span>
             <label class="resolution-field">
@@ -249,7 +265,7 @@
                 :max="2160"
                 :disabled="screenshotPreset !== 'custom'"
                 data-testid="screenshot-height-input"
-              />
+              >
             </label>
           </div>
         </div>
@@ -267,7 +283,7 @@
               type="text"
               placeholder="デフォルト（空欄で既定パス）"
               data-testid="picture-output-folder-input"
-            />
+            >
             <button
               type="button"
               class="btn-browse"
@@ -283,7 +299,7 @@
             v-model="pictureOutputSplitByDate"
             type="checkbox"
             data-testid="picture-split-by-date-checkbox"
-          />
+          >
           日付別フォルダに分割（YYYY-MM）
         </label>
       </section>
@@ -304,7 +320,7 @@
               :value="steadycamFovSliderValue"
               data-testid="steadycam-fov-slider"
               @input="onSteadycamFovSliderInput"
-            />
+            >
             <input
               id="steadycam-fov"
               type="number"
@@ -315,7 +331,7 @@
               data-testid="steadycam-fov-input"
               @input="onSteadycamFovInput"
               @blur="clampSteadycamFov"
-            />
+            >
           </div>
         </div>
       </section>
@@ -335,7 +351,7 @@
               type="text"
               placeholder="デフォルト（空欄で既定パス）"
               data-testid="cache-directory-input"
-            />
+            >
             <button
               type="button"
               class="btn-browse"
@@ -357,7 +373,7 @@
             placeholder="30"
             data-testid="cache-size-input"
             @blur="clampCacheSize"
-          />
+          >
         </div>
         <div class="setting-row">
           <label for="cache-expiry">キャッシュ有効期限（日）</label>
@@ -370,7 +386,7 @@
             placeholder="30"
             data-testid="cache-expiry-input"
             @blur="clampCacheExpiry"
-          />
+          >
         </div>
       </section>
 
@@ -382,7 +398,7 @@
             v-model="disableRichPresence"
             type="checkbox"
             data-testid="disable-rich-presence-checkbox"
-          />
+          >
           Discord / Steam Rich Presence を無効にする
         </label>
       </section>

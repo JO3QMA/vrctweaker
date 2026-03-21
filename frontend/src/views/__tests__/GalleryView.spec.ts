@@ -4,16 +4,26 @@ import { ref } from "vue";
 import GalleryView from "../GalleryView.vue";
 import type { ScreenshotDTO, VRChatConfigDTO } from "../../wails/app";
 
+/** jsdom ではスクロール計測が安定しないため、十分な行を可視として返す。 */
+const MOCK_VIRTUAL_ROW_HEIGHT = 48;
+const MOCK_VIRTUAL_ROW_COUNT = 48;
+
 vi.mock("@tanstack/vue-virtual", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/vue-virtual")>();
   return {
     ...actual,
     useVirtualizer: () =>
       ref({
-        getVirtualItems: () => [
-          { key: 0, index: 0, start: 0, end: 120, size: 120, lane: 0 },
-        ],
-        getTotalSize: () => 120,
+        getVirtualItems: () =>
+          Array.from({ length: MOCK_VIRTUAL_ROW_COUNT }, (_, index) => ({
+            key: index,
+            index,
+            start: index * MOCK_VIRTUAL_ROW_HEIGHT,
+            end: (index + 1) * MOCK_VIRTUAL_ROW_HEIGHT,
+            size: MOCK_VIRTUAL_ROW_HEIGHT,
+            lane: 0,
+          })),
+        getTotalSize: () => MOCK_VIRTUAL_ROW_COUNT * MOCK_VIRTUAL_ROW_HEIGHT,
         measure: () => {},
       }),
   };
@@ -294,5 +304,66 @@ describe("GalleryView", () => {
     expect(wrapper.text()).toContain("shot.png");
     expect(wrapper.text()).toContain("ファイルサイズ");
     expect(wrapper.text()).toMatch(/12(\.0)? KB/);
+  });
+
+  it("renders date group headers for multiple screenshots", async () => {
+    const june15: ScreenshotDTO = {
+      ...sampleShot,
+      id: "s-a",
+      filePath: "C:/a.png",
+      takenAt: "2024-06-15T10:00:00Z",
+    };
+    const june1: ScreenshotDTO = {
+      ...sampleShot,
+      id: "s-b",
+      filePath: "C:/b.png",
+      takenAt: "2024-06-01T10:00:00Z",
+    };
+    mockScreenshots.mockResolvedValue([june15, june1]);
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    await flushPromises();
+
+    const txt = wrapper.text();
+    expect(txt).toContain("2024年");
+    expect(txt).toContain("6月");
+    expect(txt).toMatch(/15日/);
+    expect(txt).toMatch(/1日/);
+    expect(
+      wrapper.findAll("[data-testid='gallery-group-header']").length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("collapsing year hides thumbnails under that year", async () => {
+    const june15: ScreenshotDTO = {
+      ...sampleShot,
+      id: "s-a",
+      filePath: "C:/a.png",
+      takenAt: "2024-06-15T10:00:00Z",
+    };
+    const june1: ScreenshotDTO = {
+      ...sampleShot,
+      id: "s-b",
+      filePath: "C:/b.png",
+      takenAt: "2024-06-01T10:00:00Z",
+    };
+    mockScreenshots.mockResolvedValue([june15, june1]);
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    await flushPromises();
+
+    expect(wrapper.findAll(".grid-item").length).toBe(2);
+
+    const yearBtn = wrapper.find('[data-collapse-key="y:2024"]');
+    expect(yearBtn.exists()).toBe(true);
+    expect(yearBtn.attributes("aria-expanded")).toBe("true");
+
+    await yearBtn.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.findAll(".grid-item").length).toBe(0);
+    expect(
+      wrapper.find('[data-collapse-key="y:2024"]').attributes("aria-expanded"),
+    ).toBe("false");
   });
 });
