@@ -71,9 +71,12 @@ func revealWindowsExec(abs string) error {
 	cmd := exec.Command("explorer", arg)
 	cmd.Stdout = nil
 	cmd.Stderr = nil
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("reveal in file manager: %w", err)
 	}
+	// explorer.exe often exits with status 1 even when the window opened successfully;
+	// do not Run()/Wait() in the caller or the UI would show a spurious error.
+	go func() { _ = cmd.Wait() }()
 	return nil
 }
 
