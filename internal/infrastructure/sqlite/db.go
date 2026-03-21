@@ -14,7 +14,10 @@ const defaultLogRetentionDays = 30
 // Open opens or creates the SQLite database and runs migrations.
 func Open(dataDir string) (*sql.DB, error) {
 	dbPath := filepath.Join(dataDir, "vrchat-tweaker.db")
-	conn, err := sql.Open("sqlite", dbPath)
+	// Foreign keys are per-connection; database/sql pools connections, so a one-off
+	// PRAGMA after Open only affects one handle. _pragma runs on every new connection.
+	dsn := dbPath + "?_pragma=foreign_keys(1)"
+	conn, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
@@ -22,8 +25,6 @@ func Open(dataDir string) (*sql.DB, error) {
 	if err := conn.Ping(); err != nil {
 		return nil, fmt.Errorf("ping db: %w", err)
 	}
-
-	_, _ = conn.Exec("PRAGMA foreign_keys = ON")
 
 	if err := migrate(conn); err != nil {
 		_ = conn.Close()

@@ -216,6 +216,8 @@ func (uc *MediaUseCase) ReindexScreenshots(ctx context.Context, basePath string)
 			}
 		}
 		if !sizeChanged && !metaChanged && !thumbnailStale {
+			continue
+		}
 		fsz := size
 		s.FileSizeBytes = &fsz
 		if err := uc.repo.Save(ctx, s); err != nil {
