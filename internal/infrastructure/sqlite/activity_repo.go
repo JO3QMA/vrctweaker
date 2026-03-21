@@ -47,6 +47,13 @@ func (r *PlaySessionRepository) FindLatestWithoutEndTime(ctx context.Context) (*
 	return scanPlaySessionRow(row)
 }
 
+// Count returns the number of play sessions.
+func (r *PlaySessionRepository) Count(ctx context.Context) (int64, error) {
+	var n int64
+	err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM play_sessions`).Scan(&n)
+	return n, err
+}
+
 // GetByID returns a play session by ID.
 func (r *PlaySessionRepository) GetByID(ctx context.Context, id string) (*activity.PlaySession, error) {
 	row := r.db.QueryRowContext(ctx, `SELECT id, start_time, end_time, duration_sec FROM play_sessions WHERE id = ?`, id)
@@ -175,6 +182,13 @@ func (r *UserEncounterRepository) DeleteAll(ctx context.Context) (int64, error) 
 		return 0, err
 	}
 	return res.RowsAffected()
+}
+
+// Count returns the number of encounters.
+func (r *UserEncounterRepository) Count(ctx context.Context) (int64, error) {
+	var n int64
+	err := r.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM user_encounters`).Scan(&n)
+	return n, err
 }
 
 func scanUserEncounter(rows *sql.Rows) (*activity.UserEncounter, error) {

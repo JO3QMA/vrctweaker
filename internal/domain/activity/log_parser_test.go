@@ -34,6 +34,14 @@ func TestLogParser_ParseLine_Encounter(t *testing.T) {
 			wantID:   "usr_def456",
 		},
 		{
+			name:     "OnPlayerJoined VRChat Behaviour line",
+			line:     "2026.03.21 11:32:16 Debug      -  [Behaviour] OnPlayerJoined ぶっちゃん！ (usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)",
+			wantKind: EventKindEncounter,
+			wantAct:  EncounterActionJoin,
+			wantName: "ぶっちゃん！",
+			wantID:   "usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e",
+		},
+		{
 			name:     "OnPlayerLeft with user ID",
 			line:     "OnPlayerLeft Charlie (usr_ghi789)",
 			wantKind: EventKindEncounter,
@@ -90,6 +98,20 @@ func TestLogParser_ParseLine_Encounter(t *testing.T) {
 	}
 }
 
+func TestParseVRChatTimestamp(t *testing.T) {
+	t.Setenv("TZ", "UTC")
+	fallback := time.Date(1999, 1, 1, 0, 0, 0, 0, time.UTC)
+	line := "2026.03.17 23:59:58 Debug      -  [Behaviour] OnPlayerJoined x (usr_abc)"
+	got := ParseVRChatTimestamp(line, fallback)
+	want := time.Date(2026, 3, 17, 23, 59, 58, 0, time.UTC)
+	if !got.Equal(want) {
+		t.Errorf("ParseVRChatTimestamp() = %v, want %v", got, want)
+	}
+	if !ParseVRChatTimestamp("no timestamp here", fallback).Equal(fallback) {
+		t.Errorf("ParseVRChatTimestamp() should return fallback for bare line")
+	}
+}
+
 func TestLogParser_ParseLine_Session(t *testing.T) {
 	base := time.Date(2025, 3, 17, 12, 0, 0, 0, time.UTC)
 	p := NewLogParser()
@@ -97,6 +119,7 @@ func TestLogParser_ParseLine_Session(t *testing.T) {
 	tests := []struct {
 		name       string
 		line       string
+		wantCount  int
 		wantKind   EventKind
 		wantType   string
 		wantInstID string
@@ -104,20 +127,36 @@ func TestLogParser_ParseLine_Session(t *testing.T) {
 		{
 			name:       "Joining wrld",
 			line:       "Joining wrld_abc123:12345",
+			wantCount:  1,
 			wantKind:   EventKindSession,
 			wantType:   SessionEventStart,
 			wantInstID: "wrld_abc123:12345",
 		},
 		{
-			name:       "Joining room",
-			line:       "Joining or Creating Room",
+			name:      "Entering Room does not start session",
+			line:      "2026.03.17 23:59:58 Debug      -  [Behaviour] Entering Room: My World",
+			wantCount: 0,
+		},
+		{
+			name:       "Joining wrld with full log prefix",
+			line:       "2026.03.21 11:32:04 Debug      -  [Behaviour] Joining wrld_db637cfb-64f8-4109-977b-6b755482f133:88577~region(jp)",
+			wantCount:  1,
 			wantKind:   EventKindSession,
 			wantType:   SessionEventStart,
+			wantInstID: "wrld_db637cfb-64f8-4109-977b-6b755482f133:88577",
+		},
+		{
+			name:       "OnPlayerLeftRoom",
+			line:       "2026.03.18 00:04:09 Debug      -  [Behaviour] OnPlayerLeftRoom",
+			wantCount:  1,
+			wantKind:   EventKindSession,
+			wantType:   SessionEventEnd,
 			wantInstID: "",
 		},
 		{
 			name:       "OnLeftRoom",
 			line:       "OnLeftRoom",
+			wantCount:  1,
 			wantKind:   EventKindSession,
 			wantType:   SessionEventEnd,
 			wantInstID: "",
@@ -125,6 +164,7 @@ func TestLogParser_ParseLine_Session(t *testing.T) {
 		{
 			name:       "Leaving room",
 			line:       "Leaving room",
+			wantCount:  1,
 			wantKind:   EventKindSession,
 			wantType:   SessionEventEnd,
 			wantInstID: "",
@@ -136,8 +176,11 @@ func TestLogParser_ParseLine_Session(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ParseLine() err = %v", err)
 			}
-			if len(events) != 1 {
-				t.Fatalf("ParseLine() returned %d events, want 1", len(events))
+			if len(events) != tt.wantCount {
+				t.Fatalf("ParseLine() returned %d events, want %d", len(events), tt.wantCount)
+			}
+			if tt.wantCount == 0 {
+				return
 			}
 			e, ok := events[0].(*SessionEvent)
 			if !ok {

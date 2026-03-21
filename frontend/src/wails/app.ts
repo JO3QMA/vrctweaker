@@ -156,6 +156,7 @@ interface AppBindings {
   GetPathSettings(): Promise<PathSettingsDTO>;
   SetPathSettings(dto: PathSettingsDTO): Promise<void>;
   ValidatePath(path: string): Promise<boolean>;
+  ValidateOutputLogPath(path: string): Promise<boolean>;
   OpenFileDialog(
     title: string,
     defaultDir: string,
@@ -307,6 +308,9 @@ export const App = {
   },
   async validatePath(path: string): Promise<boolean> {
     return callApp((a) => a.ValidatePath(path), false);
+  },
+  async validateOutputLogPath(path: string): Promise<boolean> {
+    return callApp((a) => a.ValidateOutputLogPath(path), false);
   },
   async openFileDialog(
     title: string,

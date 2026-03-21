@@ -178,21 +178,53 @@ func (a *App) startOutputLogWatcher(ctx context.Context, eventBus event.EventBus
 		return
 	}
 	info, err := os.Stat(path)
-	if err != nil || info == nil || !info.Mode().IsRegular() {
+	if err != nil || info == nil {
 		runtime.LogWarning(ctx, "output_log_path not set or file not accessible, skipping log watcher")
 		return
 	}
+	if !info.Mode().IsRegular() && !info.IsDir() {
+		runtime.LogWarning(ctx, "output_log_path must be a file or directory, skipping log watcher")
+		return
+	}
+
+	bootstrapPath := path
+	if info.IsDir() {
+		resolved, rerr := logwatcher.ResolveLatestOutputLogFile(path)
+		if rerr != nil {
+			bootstrapPath = ""
+			runtime.LogWarning(ctx, "output_log directory: "+rerr.Error()+" (watcher will retry when files appear)")
+		} else {
+			bootstrapPath = resolved
+		}
+	}
+
 	parser := activity.NewLogParser()
 	logger := &logLogger{}
 	activityHandler := logwatcher.NewActivityEventHandler(a.activity, ctx, logger)
 	publishHandler := logwatcher.NewEventPublishingHandler(eventBus, ctx, logger)
 	handler := logwatcher.NewMultiHandler(activityHandler, publishHandler)
+
+	if empty, emptyErr := a.activity.IsActivityDatastoreEmpty(ctx); emptyErr == nil && empty && bootstrapPath != "" {
+		if ingestErr := logwatcher.ProcessOutputLogFile(ctx, bootstrapPath, parser, handler, logger); ingestErr != nil {
+			runtime.LogWarning(ctx, "activity log bootstrap: "+ingestErr.Error())
+		} else {
+			runtime.LogInfo(ctx, "activity: imported historical lines from output_log")
+		}
+	} else if emptyErr != nil {
+		runtime.LogWarning(ctx, "activity bootstrap check: "+emptyErr.Error())
+	}
+
 	watcher := logwatcher.NewOutputLogWatcher(path, parser, handler, logger)
 	if startErr := watcher.Start(ctx); startErr != nil {
 		runtime.LogError(ctx, "failed to start output_log watcher: "+startErr.Error())
 		return
 	}
 	runtime.LogInfo(ctx, "output_log watcher started for "+path)
+}
+
+// ValidateOutputLogPath checks if path is a readable log file or a directory containing output_log*.txt.
+func (a *App) ValidateOutputLogPath(path string) bool {
+	return logwatcher.OutputLogPathValid(path)
 }
 
 func (a *App) resolveVRChatPictureWatchRoot() string {

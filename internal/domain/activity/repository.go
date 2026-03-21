@@ -15,6 +15,8 @@ type PlaySessionRepository interface {
 	Save(ctx context.Context, s *PlaySession) error
 	// FindLatestWithoutEndTime returns the most recent play session that has no end time.
 	FindLatestWithoutEndTime(ctx context.Context) (*PlaySession, error)
+	// Count returns the number of stored play sessions.
+	Count(ctx context.Context) (int64, error)
 }
 
 // UserEncounterRepository defines persistence operations for user encounters.
@@ -27,6 +29,8 @@ type UserEncounterRepository interface {
 	DeleteOlderThan(ctx context.Context, before time.Time) (int64, error)
 	// DeleteAll removes all encounters. Returns affected row count.
 	DeleteAll(ctx context.Context) (int64, error)
+	// Count returns the number of stored encounters.
+	Count(ctx context.Context) (int64, error)
 }
 
 // EncounterFilter provides optional filtering for List.

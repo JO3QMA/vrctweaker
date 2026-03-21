@@ -81,13 +81,29 @@ var (
 	encounterLeaveRE     = regexp.MustCompile(`(?i)OnPlayerLeft\s+(\S.*?)\s*\((usr_[a-zA-Z0-9_-]+)\)`)
 	encounterLeaveNoIDRE = regexp.MustCompile(`(?i)OnPlayerLeft\s+(\S.+?)(?:\s+\(usr_|$)`)
 
-	// Session: Joining room / Joining or Creating Room / Entering room
-	sessionStartRE     = regexp.MustCompile(`(?i)(?:Joining|Entering)\s+(?:or\s+Creating\s+)?(?:room|Room)[\s:]*([a-zA-Z0-9_-]+(?::[a-zA-Z0-9_-]+)?)?`)
+	// Session start: only "Joining wrld_<uuid>:<instance>..." — do not match "Entering Room: <name>"
+	// (that would open empty instance IDs and duplicate sessions).
 	sessionStartWrldRE = regexp.MustCompile(`(?i)Joining\s+(wrld_[a-zA-Z0-9_-]+:[a-zA-Z0-9]+)`)
 
-	// Session end
-	sessionEndRE = regexp.MustCompile(`(?i)(?:OnLeftRoom|Left\s+room|Leaving\s+room)`)
+	// Session end (VRChat emits OnPlayerLeftRoom when the local user leaves the instance)
+	sessionEndRE = regexp.MustCompile(`(?i)(?:OnPlayerLeftRoom|OnLeftRoom|Left\s+room|Leaving\s+room)`)
 )
+
+// vrchatLineTimeRE matches the leading local timestamp in output_log.txt lines.
+var vrchatLineTimeRE = regexp.MustCompile(`^(\d{4}\.\d{2}\.\d{2}\s+\d{2}:\d{2}:\d{2})`)
+
+// ParseVRChatTimestamp extracts YYYY.MM.DD HH:MM:SS at the start of a line; returns fallback if absent or invalid.
+func ParseVRChatTimestamp(line string, fallback time.Time) time.Time {
+	m := vrchatLineTimeRE.FindStringSubmatch(line)
+	if len(m) < 2 {
+		return fallback
+	}
+	t, err := time.ParseInLocation("2006.01.02 15:04:05", m[1], time.Local)
+	if err != nil {
+		return fallback
+	}
+	return t
+}
 
 // NewLogParser returns a LogParser with default patterns.
 func NewLogParser() *LogParser {
@@ -100,7 +116,6 @@ func NewLogParser() *LogParser {
 		},
 		sessionPatterns: []sessionPattern{
 			{sessionStartWrldRE, SessionEventStart},
-			{sessionStartRE, SessionEventStart},
 			{sessionEndRE, SessionEventEnd},
 		},
 	}

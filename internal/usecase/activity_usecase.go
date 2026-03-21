@@ -122,6 +122,19 @@ func (uc *ActivityUseCase) GetActivityStats(ctx context.Context, fromISO, toISO 
 	}, nil
 }
 
+// IsActivityDatastoreEmpty reports whether both play sessions and encounters are absent (for one-time log bootstrap).
+func (uc *ActivityUseCase) IsActivityDatastoreEmpty(ctx context.Context) (bool, error) {
+	pc, err := uc.playRepo.Count(ctx)
+	if err != nil {
+		return false, err
+	}
+	ec, err := uc.encounterRepo.Count(ctx)
+	if err != nil {
+		return false, err
+	}
+	return pc == 0 && ec == 0, nil
+}
+
 // RotateEncounters deletes encounters older than retention days.
 func (uc *ActivityUseCase) RotateEncounters(ctx context.Context) (int64, error) {
 	daysStr, err := uc.settingsRepo.Get(ctx, "log_retention_days")
