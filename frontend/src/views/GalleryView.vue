@@ -16,7 +16,7 @@
         type="button"
         class="btn-refresh"
         :disabled="loading || scanning"
-        @click="load"
+        @click="onRefreshClick"
       >
         更新
       </button>
@@ -625,27 +625,23 @@ async function syncThumbnailsForVisible(): Promise<void> {
   );
 }
 
-watch(
-  list,
-  () => {
-    thumbnailFetchGeneration++;
-    const listIds = new Set(list.value.map((i) => i.id));
-    thumbnailUrls.value = pruneThumbnailUrlMap(
-      thumbnailUrls.value,
-      listIds,
-      listIds,
-    );
+watch(list, () => {
+  thumbnailFetchGeneration++;
+  const listIds = new Set(list.value.map((i) => i.id));
+  thumbnailUrls.value = pruneThumbnailUrlMap(
+    thumbnailUrls.value,
+    listIds,
+    listIds,
+  );
+  void nextTick(() => {
+    scrollSync.value++;
+    rowVirtualizer.value.measure();
     void nextTick(() => {
-      scrollSync.value++;
-      rowVirtualizer.value.measure();
-      void nextTick(() => {
-        pruneThumbnailsToRetained();
-        void syncThumbnailsForVisible();
-      });
+      pruneThumbnailsToRetained();
+      void syncThumbnailsForVisible();
     });
-  },
-  { deep: true },
-);
+  });
+});
 
 function formatTakenAt(takenAt?: string): string {
   if (!takenAt) return "—";
@@ -679,6 +675,14 @@ function fileNameFromPath(path: string): string {
   const norm = path.replace(/\\/g, "/");
   const i = norm.lastIndexOf("/");
   return i >= 0 ? norm.slice(i + 1) : norm;
+}
+
+function onRefreshClick(): void {
+  if (filterDebounceTimer !== null) {
+    clearTimeout(filterDebounceTimer);
+    filterDebounceTimer = null;
+  }
+  void load();
 }
 
 async function load(): Promise<void> {
@@ -737,12 +741,6 @@ onBeforeUnmount(() => {
   }
 });
 
-/** True when Go returns missing config.json (VRChatConfigFileRepository.Read). */
-function isMissingVRChatConfigError(err: unknown): boolean {
-  const msg = err instanceof Error ? err.message : String(err);
-  return msg.includes("config.json does not exist");
-}
-
 async function scanFolder(): Promise<void> {
   scanError.value = null;
   loadError.value = null;
@@ -753,11 +751,9 @@ async function scanFolder(): Promise<void> {
     try {
       const cfg = await App.getVRChatConfig();
       path = (cfg.pictureOutputFolder ?? "").trim();
-    } catch (err) {
-      if (!isMissingVRChatConfigError(err)) {
-        scanError.value = err instanceof Error ? err.message : String(err);
-        return;
-      }
+    } catch {
+      // Unreadable config — same as empty pictureOutputFolder: try OS default folder.
+      path = "";
     }
     if (!path) {
       try {

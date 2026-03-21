@@ -1,0 +1,8 @@
+dist/
+node_modules/
+wailsjs/
+coverage/
+playwright-report/
+test-results/
+src/data/licenses.json
+pnpm-lock.yaml

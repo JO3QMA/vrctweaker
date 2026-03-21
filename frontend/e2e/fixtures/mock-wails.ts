@@ -14,24 +14,24 @@
 export function getMockWailsInitScript(): string {
   const seedProfiles = [
     {
-      id: 'profile-1',
-      name: 'デフォルトプロファイル',
-      arguments: '',
+      id: "profile-1",
+      name: "デフォルトプロファイル",
+      arguments: "",
       isDefault: true,
-      createdAt: '2025-01-01T00:00:00Z',
-      updatedAt: '2025-01-01T00:00:00Z',
+      createdAt: "2025-01-01T00:00:00Z",
+      updatedAt: "2025-01-01T00:00:00Z",
     },
-  ]
+  ];
 
   const seedPathSettings = {
-    vrchatPathWindows: '',
-    steamPathLinux: '',
-    outputLogPath: '',
-  }
+    vrchatPathWindows: "",
+    steamPathLinux: "",
+    outputLogPath: "",
+  };
 
   // JSON として埋め込み、ブラウザ側でパースして使用
-  const profilesJson = JSON.stringify(seedProfiles)
-  const pathSettingsJson = JSON.stringify(seedPathSettings)
+  const profilesJson = JSON.stringify(seedProfiles);
+  const pathSettingsJson = JSON.stringify(seedPathSettings);
 
   return `
     (function() {
@@ -104,5 +104,5 @@ export function getMockWailsInitScript(): string {
           Promise.resolve('C:\\\\Temp\\\\VRChatTweakerE2E\\\\Pictures\\\\VRChat'),
       };
     })();
-  `.trim()
+  `.trim();
 }

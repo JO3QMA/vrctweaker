@@ -14,8 +14,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"golang.org/x/image/draw"
 	"vrchat-tweaker/internal/domain/media"
+
+	"golang.org/x/image/draw"
 )
 
 const (
@@ -32,18 +33,19 @@ func isJpegBlob(b []byte) bool {
 	return len(b) >= 3 && b[0] == 0xff && b[1] == 0xd8 && b[2] == 0xff
 }
 
-// EnsureScreenshotThumbnail decodes the screenshot file, builds a JPEG thumbnail,
-// and upserts it into the repository when missing or stale (by source size+mtime).
-func (uc *MediaUseCase) EnsureScreenshotThumbnail(ctx context.Context, id string) (err error) {
+// prepareScreenshotThumbnailJPEG loads or generates the JPEG thumbnail bytes for id.
+// One code path avoids duplicate GetByID/Stat/GetThumbnail and the TOCTOU from comparing
+// an outer stat against a thumbnail written from a later stat.
+func (uc *MediaUseCase) prepareScreenshotThumbnailJPEG(ctx context.Context, id string) (outBytes []byte, err error) {
 	if strings.TrimSpace(id) == "" {
-		return fmt.Errorf("screenshot id is empty")
+		return nil, fmt.Errorf("screenshot id is empty")
 	}
 	s, err := uc.repo.GetByID(ctx, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if s == nil {
-		return errScreenshotNotFound
+		return nil, errScreenshotNotFound
 	}
 
 	path := filepath.Clean(s.FilePath)
@@ -51,33 +53,33 @@ func (uc *MediaUseCase) EnsureScreenshotThumbnail(ctx context.Context, id string
 	switch ext {
 	case ".png", ".jpg", ".jpeg":
 	default:
-		return fmt.Errorf("unsupported image extension: %s", ext)
+		return nil, fmt.Errorf("unsupported image extension: %s", ext)
 	}
 
 	info, err := os.Stat(path)
 	if err != nil {
-		return fmt.Errorf("stat screenshot file: %w", err)
+		return nil, fmt.Errorf("stat screenshot file: %w", err)
 	}
 	if !info.Mode().IsRegular() {
-		return fmt.Errorf("screenshot path is not a regular file")
+		return nil, fmt.Errorf("screenshot path is not a regular file")
 	}
 	sourceSize := info.Size()
 	if sourceSize > screenshotMaxSourceBytes {
-		return fmt.Errorf("screenshot file too large")
+		return nil, fmt.Errorf("screenshot file too large")
 	}
 	sourceModUnix := info.ModTime().Unix()
 
 	cached, err := uc.repo.GetThumbnail(ctx, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if cached != nil && cached.SourceSize == sourceSize && cached.SourceModUnix == sourceModUnix && isJpegBlob(cached.JpegBlob) {
-		return nil
+		return cached.JpegBlob, nil
 	}
 
 	f, err := os.Open(path)
 	if err != nil {
-		return fmt.Errorf("open screenshot: %w", err)
+		return nil, fmt.Errorf("open screenshot: %w", err)
 	}
 	defer func() {
 		if cerr := f.Close(); cerr != nil {
@@ -88,16 +90,16 @@ func (uc *MediaUseCase) EnsureScreenshotThumbnail(ctx context.Context, id string
 	limited := io.LimitReader(f, screenshotMaxSourceBytes+1)
 	img, format, err := image.Decode(limited)
 	if err != nil {
-		return fmt.Errorf("decode image: %w", err)
+		return nil, fmt.Errorf("decode image: %w", err)
 	}
 	if format != "png" && format != "jpeg" {
-		return fmt.Errorf("unsupported decoded format: %s", format)
+		return nil, fmt.Errorf("unsupported decoded format: %s", format)
 	}
 
 	out := resizeScreenshotThumb(img)
 	var buf bytes.Buffer
 	if err := jpeg.Encode(&buf, out, &jpeg.Options{Quality: screenshotThumbJPEGQuality}); err != nil {
-		return fmt.Errorf("encode jpeg: %w", err)
+		return nil, fmt.Errorf("encode jpeg: %w", err)
 	}
 	jpegBytes := buf.Bytes()
 
@@ -107,9 +109,16 @@ func (uc *MediaUseCase) EnsureScreenshotThumbnail(ctx context.Context, id string
 		SourceModUnix: sourceModUnix,
 	}
 	if err := uc.repo.UpsertThumbnail(ctx, id, thumb); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	return jpegBytes, nil
+}
+
+// EnsureScreenshotThumbnail decodes the screenshot file, builds a JPEG thumbnail,
+// and upserts it into the repository when missing or stale (by source size+mtime).
+func (uc *MediaUseCase) EnsureScreenshotThumbnail(ctx context.Context, id string) error {
+	_, err := uc.prepareScreenshotThumbnailJPEG(ctx, id)
+	return err
 }
 
 // ScreenshotThumbnailDataURL returns a JPEG data URL for WebView. It returns the
@@ -117,59 +126,12 @@ func (uc *MediaUseCase) EnsureScreenshotThumbnail(ctx context.Context, id string
 // and stores a thumbnail (same rules as EnsureScreenshotThumbnail), including
 // legacy rows ingested before thumbnail support.
 func (uc *MediaUseCase) ScreenshotThumbnailDataURL(ctx context.Context, id string) (string, error) {
-	if strings.TrimSpace(id) == "" {
-		return "", fmt.Errorf("screenshot id is empty")
-	}
-	s, err := uc.repo.GetByID(ctx, id)
+	jpegBytes, err := uc.prepareScreenshotThumbnailJPEG(ctx, id)
 	if err != nil {
 		return "", err
 	}
-	if s == nil {
-		return "", errScreenshotNotFound
-	}
-
-	path := filepath.Clean(s.FilePath)
-	ext := strings.ToLower(filepath.Ext(path))
-	switch ext {
-	case ".png", ".jpg", ".jpeg":
-	default:
-		return "", fmt.Errorf("unsupported image extension: %s", ext)
-	}
-
-	info, err := os.Stat(path)
-	if err != nil {
-		return "", fmt.Errorf("stat screenshot file: %w", err)
-	}
-	if !info.Mode().IsRegular() {
-		return "", fmt.Errorf("screenshot path is not a regular file")
-	}
-	sourceSize := info.Size()
-	if sourceSize > screenshotMaxSourceBytes {
-		return "", fmt.Errorf("screenshot file too large")
-	}
-	sourceModUnix := info.ModTime().Unix()
-
-	cached, err := uc.repo.GetThumbnail(ctx, id)
-	if err != nil {
-		return "", err
-	}
-	if cached != nil && cached.SourceSize == sourceSize && cached.SourceModUnix == sourceModUnix && isJpegBlob(cached.JpegBlob) {
-		enc := base64.StdEncoding.EncodeToString(cached.JpegBlob)
-		return "data:image/jpeg;base64," + enc, nil
-	}
-
-	if ensureErr := uc.EnsureScreenshotThumbnail(ctx, id); ensureErr != nil {
-		return "", ensureErr
-	}
-	cached, err = uc.repo.GetThumbnail(ctx, id)
-	if err != nil {
-		return "", err
-	}
-	if cached != nil && isJpegBlob(cached.JpegBlob) {
-		enc := base64.StdEncoding.EncodeToString(cached.JpegBlob)
-		return "data:image/jpeg;base64," + enc, nil
-	}
-	return "", fmt.Errorf("thumbnail still unavailable after ensure")
+	enc := base64.StdEncoding.EncodeToString(jpegBytes)
+	return "data:image/jpeg;base64," + enc, nil
 }
 
 func resizeScreenshotThumb(img image.Image) image.Image {

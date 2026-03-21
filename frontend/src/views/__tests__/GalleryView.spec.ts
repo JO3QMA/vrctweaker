@@ -310,18 +310,20 @@ describe("GalleryView", () => {
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);
   });
 
-  it("shows scan error when getVRChatConfig rejects", async () => {
+  it("falls back to default folder when getVRChatConfig rejects", async () => {
     mockGetVRChatConfig.mockRejectedValue(new Error("config read failed"));
     const wrapper = mount(GalleryView, { attachTo: host });
     await flushPromises();
+    mockScreenshots.mockClear();
 
     await wrapper.find("[data-testid='gallery-scan-folder']").trigger("click");
     await flushPromises();
 
-    expect(mockScanScreenshotDir).not.toHaveBeenCalled();
-    expect(wrapper.find('[role="status"]').text()).toContain(
-      "config read failed",
+    expect(mockDefaultVRChatPictureFolder).toHaveBeenCalled();
+    expect(mockScanScreenshotDir).toHaveBeenCalledWith(
+      "C:/Temp/Pictures/VRChat",
     );
+    expect(mockScreenshots.mock.calls.length).toBeGreaterThanOrEqual(1);
   });
 
   it("falls back to default folder when config.json is missing (Go error shape)", async () => {

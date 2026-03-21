@@ -12,7 +12,7 @@ make fmt
 ```
 
 - `fmt-back`: `go fmt ./...`
-- `fmt-front`: `frontend` で `pnpm run format`（Prettier）
+- `fmt-front`: `frontend` で `pnpm run format`（Prettier、`frontend/.prettierignore` 以外を整形）
 
 ## エージェント向け
 
