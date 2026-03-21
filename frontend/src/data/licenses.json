@@ -7,6 +7,13 @@
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@playwright/test/LICENSE",
     "noticeFile": "/workspaces/vrctweaker/frontend/node_modules/@playwright/test/NOTICE"
   },
+  "@tanstack/vue-virtual@3.13.23": {
+    "licenses": "MIT",
+    "repository": "https://github.com/TanStack/virtual",
+    "publisher": "Tanner Linsley",
+    "path": "/workspaces/vrctweaker/frontend/node_modules/@tanstack/vue-virtual",
+    "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@tanstack/vue-virtual/LICENSE"
+  },
   "@types/node@20.19.37": {
     "licenses": "MIT",
     "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",

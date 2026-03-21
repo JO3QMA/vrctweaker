@@ -21,7 +21,7 @@ func NewScreenshotRepository(db *sql.DB) *ScreenshotRepository {
 
 // List returns screenshots with optional filters.
 func (r *ScreenshotRepository) List(ctx context.Context, filter *media.ScreenshotFilter) ([]*media.Screenshot, error) {
-	query := `SELECT id, file_path, world_id, world_name, taken_at FROM screenshots WHERE 1=1`
+	query := `SELECT id, file_path, world_id, world_name, taken_at, file_size_bytes FROM screenshots WHERE 1=1`
 	args := []interface{}{}
 	if filter != nil {
 		if filter.WorldID != "" {
@@ -67,23 +67,23 @@ func (r *ScreenshotRepository) List(ctx context.Context, filter *media.Screensho
 
 // GetByID returns a screenshot by ID.
 func (r *ScreenshotRepository) GetByID(ctx context.Context, id string) (*media.Screenshot, error) {
-	row := r.db.QueryRowContext(ctx, `SELECT id, file_path, world_id, world_name, taken_at FROM screenshots WHERE id = ?`, id)
+	row := r.db.QueryRowContext(ctx, `SELECT id, file_path, world_id, world_name, taken_at, file_size_bytes FROM screenshots WHERE id = ?`, id)
 	return scanScreenshotRow(row)
 }
 
 // GetByFilePath returns a screenshot by file path.
 func (r *ScreenshotRepository) GetByFilePath(ctx context.Context, filePath string) (*media.Screenshot, error) {
-	row := r.db.QueryRowContext(ctx, `SELECT id, file_path, world_id, world_name, taken_at FROM screenshots WHERE file_path = ?`, filePath)
+	row := r.db.QueryRowContext(ctx, `SELECT id, file_path, world_id, world_name, taken_at, file_size_bytes FROM screenshots WHERE file_path = ?`, filePath)
 	return scanScreenshotRow(row)
 }
 
 // Save persists a screenshot.
 func (r *ScreenshotRepository) Save(ctx context.Context, s *media.Screenshot) error {
 	takenAt := nullableTime(s.TakenAt)
-	_, err := r.db.ExecContext(ctx, `INSERT INTO screenshots (id, file_path, world_id, world_name, taken_at)
-		VALUES (?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET
-		file_path = excluded.file_path, world_id = excluded.world_id, world_name = excluded.world_name, taken_at = excluded.taken_at`,
-		s.ID, s.FilePath, s.WorldID, s.WorldName, takenAt)
+	_, err := r.db.ExecContext(ctx, `INSERT INTO screenshots (id, file_path, world_id, world_name, taken_at, file_size_bytes)
+		VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET
+		file_path = excluded.file_path, world_id = excluded.world_id, world_name = excluded.world_name, taken_at = excluded.taken_at, file_size_bytes = excluded.file_size_bytes`,
+		s.ID, s.FilePath, s.WorldID, s.WorldName, takenAt, nullableInt64(s.FileSizeBytes))
 	return err
 }
 
@@ -102,25 +102,65 @@ func (r *ScreenshotRepository) DeleteAll(ctx context.Context) (int64, error) {
 	return res.RowsAffected()
 }
 
+// GetThumbnail returns cached thumbnail bytes (JPEG) or nil if none.
+func (r *ScreenshotRepository) GetThumbnail(ctx context.Context, screenshotID string) (*media.ScreenshotThumbnail, error) {
+	row := r.db.QueryRowContext(ctx, `SELECT webp_blob, source_size, source_mod_unix FROM screenshot_thumbnails WHERE screenshot_id = ?`, screenshotID)
+	var blob []byte
+	var size, modUnix int64
+	err := row.Scan(&blob, &size, &modUnix)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &media.ScreenshotThumbnail{
+		WebpBlob:      blob,
+		SourceSize:    size,
+		SourceModUnix: modUnix,
+	}, nil
+}
+
+// UpsertThumbnail stores or replaces the thumbnail for a screenshot.
+func (r *ScreenshotRepository) UpsertThumbnail(ctx context.Context, screenshotID string, thumb *media.ScreenshotThumbnail) error {
+	if thumb == nil {
+		return nil
+	}
+	_, err := r.db.ExecContext(ctx, `INSERT INTO screenshot_thumbnails (screenshot_id, webp_blob, source_size, source_mod_unix)
+		VALUES (?, ?, ?, ?) ON CONFLICT(screenshot_id) DO UPDATE SET
+		webp_blob = excluded.webp_blob, source_size = excluded.source_size, source_mod_unix = excluded.source_mod_unix`,
+		screenshotID, thumb.WebpBlob, thumb.SourceSize, thumb.SourceModUnix)
+	return err
+}
+
+// DeleteThumbnail removes the cached thumbnail for a screenshot.
+func (r *ScreenshotRepository) DeleteThumbnail(ctx context.Context, screenshotID string) error {
+	_, err := r.db.ExecContext(ctx, `DELETE FROM screenshot_thumbnails WHERE screenshot_id = ?`, screenshotID)
+	return err
+}
+
 func scanScreenshot(rows *sql.Rows) (*media.Screenshot, error) {
 	var id, filePath, worldID, worldName string
 	var takenAt sql.NullString
-	if err := rows.Scan(&id, &filePath, &worldID, &worldName, &takenAt); err != nil {
+	var fileSize sql.NullInt64
+	if err := rows.Scan(&id, &filePath, &worldID, &worldName, &takenAt, &fileSize); err != nil {
 		return nil, err
 	}
 	return &media.Screenshot{
-		ID:        id,
-		FilePath:  filePath,
-		WorldID:   worldID,
-		WorldName: worldName,
-		TakenAt:   parseTime(takenAt),
+		ID:            id,
+		FilePath:      filePath,
+		WorldID:       worldID,
+		WorldName:     worldName,
+		TakenAt:       parseTime(takenAt),
+		FileSizeBytes: parseInt64Ptr(fileSize),
 	}, nil
 }
 
 func scanScreenshotRow(row *sql.Row) (*media.Screenshot, error) {
 	var id, filePath, worldID, worldName string
 	var takenAt sql.NullString
-	err := row.Scan(&id, &filePath, &worldID, &worldName, &takenAt)
+	var fileSize sql.NullInt64
+	err := row.Scan(&id, &filePath, &worldID, &worldName, &takenAt, &fileSize)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -128,10 +168,11 @@ func scanScreenshotRow(row *sql.Row) (*media.Screenshot, error) {
 		return nil, err
 	}
 	return &media.Screenshot{
-		ID:        id,
-		FilePath:  filePath,
-		WorldID:   worldID,
-		WorldName: worldName,
-		TakenAt:   parseTime(takenAt),
+		ID:            id,
+		FilePath:      filePath,
+		WorldID:       worldID,
+		WorldName:     worldName,
+		TakenAt:       parseTime(takenAt),
+		FileSizeBytes: parseInt64Ptr(fileSize),
 	}, nil
 }

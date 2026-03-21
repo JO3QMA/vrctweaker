@@ -13,16 +13,45 @@ import (
 
 // mockScreenshotRepo implements media.ScreenshotRepository for tests.
 type mockScreenshotRepo struct {
-	screenshots map[string]*media.Screenshot
-	byPath      map[string]*media.Screenshot
-	listFilter  *media.ScreenshotFilter
+	screenshots    map[string]*media.Screenshot
+	byPath         map[string]*media.Screenshot
+	thumbs         map[string]*media.ScreenshotThumbnail
+	listFilter     *media.ScreenshotFilter
+	thumbUpsertCnt int
 }
 
 func newMockScreenshotRepo() *mockScreenshotRepo {
 	return &mockScreenshotRepo{
 		screenshots: make(map[string]*media.Screenshot),
 		byPath:      make(map[string]*media.Screenshot),
+		thumbs:      make(map[string]*media.ScreenshotThumbnail),
 	}
+}
+
+func (m *mockScreenshotRepo) GetThumbnail(_ context.Context, screenshotID string) (*media.ScreenshotThumbnail, error) {
+	t := m.thumbs[screenshotID]
+	if t == nil {
+		return nil, nil
+	}
+	cp := *t
+	cp.WebpBlob = append([]byte(nil), t.WebpBlob...)
+	return &cp, nil
+}
+
+func (m *mockScreenshotRepo) UpsertThumbnail(_ context.Context, screenshotID string, thumb *media.ScreenshotThumbnail) error {
+	if thumb == nil {
+		return nil
+	}
+	m.thumbUpsertCnt++
+	cp := *thumb
+	cp.WebpBlob = append([]byte(nil), thumb.WebpBlob...)
+	m.thumbs[screenshotID] = &cp
+	return nil
+}
+
+func (m *mockScreenshotRepo) DeleteThumbnail(_ context.Context, screenshotID string) error {
+	delete(m.thumbs, screenshotID)
+	return nil
 }
 
 func (m *mockScreenshotRepo) List(ctx context.Context, filter *media.ScreenshotFilter) ([]*media.Screenshot, error) {
@@ -64,6 +93,7 @@ func (m *mockScreenshotRepo) Delete(ctx context.Context, id string) error {
 		delete(m.byPath, s.FilePath)
 		delete(m.screenshots, id)
 	}
+	delete(m.thumbs, id)
 	return nil
 }
 
@@ -71,6 +101,7 @@ func (m *mockScreenshotRepo) DeleteAll(ctx context.Context) (int64, error) {
 	n := int64(len(m.screenshots))
 	m.screenshots = make(map[string]*media.Screenshot)
 	m.byPath = make(map[string]*media.Screenshot)
+	m.thumbs = make(map[string]*media.ScreenshotThumbnail)
 	return n, nil
 }
 
@@ -110,6 +141,9 @@ func TestMediaUseCase_ScanDirectory_WithExtractor(t *testing.T) {
 	}
 	if got.WorldName != "Test World" {
 		t.Errorf("WorldName = %q, want Test World", got.WorldName)
+	}
+	if got.FileSizeBytes == nil || *got.FileSizeBytes != 4 {
+		t.Errorf("FileSizeBytes = %v, want 4", got.FileSizeBytes)
 	}
 }
 

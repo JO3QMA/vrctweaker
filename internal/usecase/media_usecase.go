@@ -66,12 +66,14 @@ func (uc *MediaUseCase) ScanDirectory(ctx context.Context, basePath string) (int
 					takenAt = ta
 				}
 			}
+			sz := info.Size()
 			s := &media.Screenshot{
-				ID:        uuid.New().String(),
-				FilePath:  path,
-				WorldID:   worldID,
-				WorldName: worldName,
-				TakenAt:   takenAt,
+				ID:            uuid.New().String(),
+				FilePath:      path,
+				WorldID:       worldID,
+				WorldName:     worldName,
+				TakenAt:       takenAt,
+				FileSizeBytes: &sz,
 			}
 			if err := uc.repo.Save(ctx, s); err != nil {
 				return nil
@@ -98,24 +100,46 @@ func (uc *MediaUseCase) ReindexScreenshots(ctx context.Context, basePath string)
 	if err != nil {
 		return 0, err
 	}
-	if uc.extractor == nil {
-		return 0, nil
-	}
 	updated := 0
 	for _, s := range list {
-		worldID, worldName, takenAt, _ := uc.extractor.Extract(s.FilePath)
-		changed := worldID != s.WorldID || worldName != s.WorldName
-		if takenAt != nil && (s.TakenAt == nil || !takenAt.Equal(*s.TakenAt)) {
-			changed = true
-		}
-		if !changed {
+		info, err := os.Stat(s.FilePath)
+		if err != nil {
 			continue
 		}
-		s.WorldID = worldID
-		s.WorldName = worldName
-		if takenAt != nil {
-			s.TakenAt = takenAt
+		size := info.Size()
+		modUnix := info.ModTime().Unix()
+
+		thumb, errThumb := uc.repo.GetThumbnail(ctx, s.ID)
+		if errThumb != nil {
+			return 0, errThumb
 		}
+		if thumb != nil && (thumb.SourceSize != size || thumb.SourceModUnix != modUnix) {
+			if err := uc.repo.DeleteThumbnail(ctx, s.ID); err != nil {
+				return 0, err
+			}
+		}
+
+		sizeChanged := s.FileSizeBytes == nil || *s.FileSizeBytes != size
+		metaChanged := false
+		if uc.extractor != nil {
+			worldID, worldName, takenAt, _ := uc.extractor.Extract(s.FilePath)
+			metaChanged = worldID != s.WorldID || worldName != s.WorldName
+			if takenAt != nil && (s.TakenAt == nil || !takenAt.Equal(*s.TakenAt)) {
+				metaChanged = true
+			}
+			if metaChanged {
+				s.WorldID = worldID
+				s.WorldName = worldName
+				if takenAt != nil {
+					s.TakenAt = takenAt
+				}
+			}
+		}
+		if !sizeChanged && !metaChanged {
+			continue
+		}
+		fsz := size
+		s.FileSizeBytes = &fsz
 		if err := uc.repo.Save(ctx, s); err != nil {
 			continue
 		}

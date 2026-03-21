@@ -22,3 +22,18 @@ func parseTime(n sql.NullString) *time.Time {
 	}
 	return &t
 }
+
+func nullableInt64(p *int64) interface{} {
+	if p == nil {
+		return nil
+	}
+	return *p
+}
+
+func parseInt64Ptr(n sql.NullInt64) *int64 {
+	if !n.Valid {
+		return nil
+	}
+	v := n.Int64
+	return &v
+}

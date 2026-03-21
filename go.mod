@@ -8,6 +8,7 @@ require (
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	github.com/wailsapp/wails/v2 v2.11.0
 	github.com/zalando/go-keyring v0.2.6
+	golang.org/x/image v0.24.0
 	modernc.org/sqlite v1.29.6
 )
 

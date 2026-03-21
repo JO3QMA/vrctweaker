@@ -45,6 +45,8 @@ export interface ScreenshotDTO {
   worldId: string;
   worldName: string;
   takenAt?: string;
+  /** Original image file size in bytes when known */
+  fileSizeBytes?: number;
 }
 
 export interface ScreenshotSearchDTO {
@@ -148,6 +150,7 @@ interface AppBindings {
   Screenshots(worldId?: string): Promise<ScreenshotDTO[]>;
   SearchScreenshots(filter: ScreenshotSearchDTO): Promise<ScreenshotDTO[]>;
   GetScreenshot(id: string): Promise<ScreenshotDTO | null>;
+  ScreenshotThumbnailDataURL(id: string): Promise<string>;
   ScanScreenshotDir(path: string): Promise<number>;
   ReindexScreenshotDir(path: string): Promise<number>;
   Encounters(): Promise<UserEncounterDTO[]>;
@@ -309,6 +312,9 @@ export const App = {
   },
   async getScreenshot(id: string): Promise<ScreenshotDTO | null> {
     return callApp((a) => a.GetScreenshot(id), null);
+  },
+  async screenshotThumbnailDataURL(id: string): Promise<string> {
+    return callApp((a) => a.ScreenshotThumbnailDataURL(id), "");
   },
   async scanScreenshotDir(path: string): Promise<number> {
     return callApp((a) => a.ScanScreenshotDir(path), 0);

@@ -352,6 +352,11 @@ func (a *App) GetScreenshot(id string) (*ScreenshotDTO, error) {
 	return toScreenshotDTO(s), nil
 }
 
+// ScreenshotThumbnailDataURL returns a JPEG data URL for the screenshot thumbnail (for WebView; avoids file://).
+func (a *App) ScreenshotThumbnailDataURL(id string) (string, error) {
+	return a.media.ScreenshotThumbnailDataURL(a.ctx, id)
+}
+
 // ScanScreenshotDir scans a directory for screenshots.
 func (a *App) ScanScreenshotDir(path string) (int, error) {
 	return a.media.ScanDirectory(a.ctx, path)

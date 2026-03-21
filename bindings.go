@@ -149,11 +149,12 @@ func toLaunchProfile(d LaunchProfileDTO) *launcher.LaunchProfile {
 
 // ScreenshotDTO is the frontend-facing screenshot.
 type ScreenshotDTO struct {
-	ID        string  `json:"id"`
-	FilePath  string  `json:"filePath"`
-	WorldID   string  `json:"worldId"`
-	WorldName string  `json:"worldName"`
-	TakenAt   *string `json:"takenAt,omitempty"`
+	ID            string  `json:"id"`
+	FilePath      string  `json:"filePath"`
+	WorldID       string  `json:"worldId"`
+	WorldName     string  `json:"worldName"`
+	TakenAt       *string `json:"takenAt,omitempty"`
+	FileSizeBytes *int64  `json:"fileSizeBytes,omitempty"`
 }
 
 // ScreenshotSearchDTO is the filter for SearchScreenshots.
@@ -185,6 +186,9 @@ func toScreenshotDTO(s *media.Screenshot) *ScreenshotDTO {
 	if s.TakenAt != nil {
 		ts := s.TakenAt.Format(time.RFC3339)
 		dto.TakenAt = &ts
+	}
+	if s.FileSizeBytes != nil {
+		dto.FileSizeBytes = s.FileSizeBytes
 	}
 	return dto
 }

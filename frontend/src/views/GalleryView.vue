@@ -39,7 +39,7 @@
     </p>
 
     <div class="gallery-body">
-      <!-- グリッド一覧 -->
+      <!-- グリッド一覧（この領域のみ縦スクロール） -->
       <div class="grid-section">
         <div v-if="scanning" class="loading">フォルダをスキャンしています…</div>
         <div v-else-if="loading" class="loading">読み込み中…</div>
@@ -47,32 +47,52 @@
           スクリーンショットがありません。Scan Folder
           か設定の出力フォルダを確認してください。
         </div>
-        <div v-else class="grid">
-          <div
-            v-for="item in list"
-            :key="item.id"
-            class="grid-item"
-            :class="{ selected: selected?.id === item.id }"
-            @click="select(item)"
-          >
-            <div class="thumbnail-wrap">
-              <img
-                :src="thumbnailSrc(item)"
-                :alt="fileNameFromPath(item.filePath)"
-                class="thumbnail"
-                @error="onThumbnailError"
-              />
+        <div
+          v-else
+          ref="gridScrollRef"
+          data-testid="gallery-grid-scroll"
+          class="grid-scroll"
+          @scroll.passive="onGridScroll"
+        >
+          <div class="grid-virtual-spacer" :style="spacerStyle">
+            <div
+              v-for="vr in virtualRows"
+              :key="vr.index"
+              class="grid-virtual-row"
+              :style="virtualRowStyle(vr)"
+            >
+              <div class="grid-row-inner" :style="gridRowInnerStyle">
+                <div
+                  v-for="item in rowItems(vr.index)"
+                  :key="item.id"
+                  class="grid-item"
+                  :class="{ selected: selected?.id === item.id }"
+                  :style="gridItemStyle"
+                  @click="select(item)"
+                >
+                  <div class="thumbnail-wrap">
+                    <img
+                      :src="thumbnailSrc(item)"
+                      :alt="fileNameFromPath(item.filePath)"
+                      class="thumbnail"
+                      @error="onThumbnailError"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 詳細プレビュー -->
+      <!-- 詳細プレビュー（スクロールに追従しない） -->
       <aside v-if="selected" class="detail-panel">
         <h3>詳細</h3>
         <dl class="detail-list">
           <dt>ファイル名</dt>
           <dd>{{ fileNameFromPath(selected.filePath) }}</dd>
+          <dt>ファイルサイズ</dt>
+          <dd>{{ formatFileSize(selected.fileSizeBytes) }}</dd>
           <dt>撮影日時</dt>
           <dd>{{ formatTakenAt(selected.takenAt) }}</dd>
           <dt>ワールド名</dt>
@@ -101,7 +121,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount, computed, watch } from "vue";
+import { useVirtualizer, type VirtualItem } from "@tanstack/vue-virtual";
+import {
+  ref,
+  onMounted,
+  onBeforeUnmount,
+  computed,
+  watch,
+  watchEffect,
+  nextTick,
+} from "vue";
 import {
   App,
   type ScreenshotDTO,
@@ -109,6 +138,19 @@ import {
 } from "../wails/app";
 
 const FILTER_DEBOUNCE_MS = 400;
+const THUMBNAIL_FETCH_CONCURRENCY = 4;
+const GRID_GAP_PX = 12;
+const MIN_CELL_WIDTH = 140;
+
+const missingThumbDataUrl =
+  "data:image/svg+xml," +
+  encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90" viewBox="0 0 120 90"><rect fill="#333" width="120" height="90"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12">画像なし</text></svg>',
+  );
+
+/** Placeholder while backend thumbnail is loading (avoids file:// in WebView). */
+const transparentPixelDataUrl =
+  "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
 const list = ref<ScreenshotDTO[]>([]);
 const selected = ref<ScreenshotDTO | null>(null);
@@ -117,8 +159,141 @@ const scanning = ref(false);
 const loadError = ref<string | null>(null);
 const scanError = ref<string | null>(null);
 const filterWorldId = ref("");
+const thumbnailUrls = ref<Record<string, string>>({});
+
+const gridScrollRef = ref<HTMLElement | null>(null);
+/** Content width inside .grid-scroll (from ResizeObserver). */
+const gridInnerWidth = ref(0);
+/** Bumps when the grid scrolls so virtual rows / thumb prefetch stay in sync. */
+const scrollSync = ref(0);
 
 let filterDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let thumbnailFetchGeneration = 0;
+
+const columnCount = computed(() => {
+  const w = gridInnerWidth.value;
+  if (w <= 0) {
+    return 1;
+  }
+  return Math.max(
+    1,
+    Math.floor((w + GRID_GAP_PX) / (MIN_CELL_WIDTH + GRID_GAP_PX)),
+  );
+});
+
+const cellWidthPx = computed(() => {
+  const cols = columnCount.value;
+  const w = gridInnerWidth.value;
+  if (cols <= 0 || w <= 0) {
+    return MIN_CELL_WIDTH;
+  }
+  return (w - GRID_GAP_PX * (cols - 1)) / cols;
+});
+
+const cellHeightPx = computed(() => (cellWidthPx.value * 3) / 4);
+
+const rowHeightPx = computed(() => cellHeightPx.value + GRID_GAP_PX);
+
+const rowCount = computed(() => {
+  const cols = columnCount.value;
+  if (list.value.length === 0) {
+    return 0;
+  }
+  return Math.ceil(list.value.length / cols);
+});
+
+const rowVirtualizer = useVirtualizer(
+  computed(() => ({
+    count: rowCount.value,
+    getScrollElement: () => gridScrollRef.value,
+    estimateSize: () => rowHeightPx.value,
+    overscan: 3,
+  })),
+);
+
+const virtualRows = computed(() => {
+  scrollSync.value;
+  return rowVirtualizer.value.getVirtualItems();
+});
+
+const totalVirtualHeight = computed(() => {
+  scrollSync.value;
+  return rowVirtualizer.value.getTotalSize();
+});
+
+const spacerStyle = computed(() => ({
+  height: `${totalVirtualHeight.value}px`,
+  position: "relative" as const,
+  width: "100%",
+}));
+
+const gridRowInnerStyle = computed(() => ({
+  display: "flex" as const,
+  flexDirection: "row" as const,
+  gap: `${GRID_GAP_PX}px`,
+  width: "100%",
+}));
+
+const gridItemStyle = computed(() => ({
+  width: `${cellWidthPx.value}px`,
+  height: `${cellHeightPx.value}px`,
+  flexShrink: 0,
+}));
+
+function virtualRowStyle(vr: VirtualItem) {
+  return {
+    position: "absolute" as const,
+    top: 0,
+    left: 0,
+    width: "100%",
+    height: `${vr.size}px`,
+    transform: `translateY(${vr.start}px)`,
+  };
+}
+
+function rowItems(rowIndex: number): ScreenshotDTO[] {
+  const cols = columnCount.value;
+  const start = rowIndex * cols;
+  return list.value.slice(start, start + cols);
+}
+
+watchEffect((onCleanup) => {
+  const el = gridScrollRef.value;
+  if (!el || list.value.length === 0) {
+    return;
+  }
+  const ro = new ResizeObserver((entries) => {
+    const w = entries[0]?.contentRect.width ?? 0;
+    gridInnerWidth.value = Math.floor(w);
+    scrollSync.value++;
+    void nextTick(() => {
+      rowVirtualizer.value.measure();
+      void syncThumbnailsForVisible();
+    });
+  });
+  ro.observe(el);
+  gridInnerWidth.value = Math.floor(el.getBoundingClientRect().width);
+  void nextTick(() => {
+    rowVirtualizer.value.measure();
+    void syncThumbnailsForVisible();
+  });
+  onCleanup(() => ro.disconnect());
+});
+
+watch([rowHeightPx, rowCount], () => {
+  void nextTick(() => {
+    rowVirtualizer.value.measure();
+    scrollSync.value++;
+    void syncThumbnailsForVisible();
+  });
+});
+
+watch(
+  () => selected.value?.id,
+  () => {
+    void syncThumbnailsForVisible();
+  },
+);
 
 const joinButtonTitle = computed(() => {
   if (!selected.value?.worldId || selected.value.worldId.trim() === "") {
@@ -127,29 +302,113 @@ const joinButtonTitle = computed(() => {
   return "このワールドへJoin";
 });
 
-function pathToFileUrl(path: string): string {
-  const normalized = path.replace(/\\/g, "/");
-  if (normalized.match(/^[a-zA-Z]:/)) {
-    return "file:///" + normalized;
-  }
-  if (normalized.startsWith("/")) {
-    return "file://" + normalized;
-  }
-  return "file:///" + normalized;
-}
-
 function thumbnailSrc(item: ScreenshotDTO): string {
-  return pathToFileUrl(item.filePath);
+  const u = thumbnailUrls.value[item.id];
+  if (u) return u;
+  return transparentPixelDataUrl;
 }
 
 function onThumbnailError(e: Event): void {
   const img = e.target as HTMLImageElement;
-  img.src =
-    "data:image/svg+xml," +
-    encodeURIComponent(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90" viewBox="0 0 120 90"><rect fill="#333" width="120" height="90"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12">画像なし</text></svg>',
-    );
+  img.src = missingThumbDataUrl;
 }
+
+function onGridScroll(): void {
+  scrollSync.value++;
+  void syncThumbnailsForVisible();
+}
+
+function visibleScreenshotIds(): string[] {
+  const cols = columnCount.value;
+  if (cols < 1 || list.value.length === 0) {
+    return [];
+  }
+  const items = rowVirtualizer.value.getVirtualItems();
+  const idSet = new Set<string>();
+  for (const row of items) {
+    const base = row.index * cols;
+    for (let j = 0; j < cols; j++) {
+      const li = base + j;
+      if (li < list.value.length) {
+        idSet.add(list.value[li]!.id);
+      }
+    }
+  }
+  const sel = selected.value?.id;
+  if (sel) {
+    idSet.add(sel);
+  }
+  return [...idSet];
+}
+
+function pruneThumbnailsToList(): void {
+  const idSet = new Set(list.value.map((i) => i.id));
+  const pruned: Record<string, string> = { ...thumbnailUrls.value };
+  for (const k of Object.keys(pruned)) {
+    if (!idSet.has(k)) {
+      delete pruned[k];
+    }
+  }
+  thumbnailUrls.value = pruned;
+}
+
+async function syncThumbnailsForVisible(): Promise<void> {
+  const gen = thumbnailFetchGeneration;
+  const ids = visibleScreenshotIds();
+  const toFetch = ids.filter((id) => thumbnailUrls.value[id] === undefined);
+  if (toFetch.length === 0) {
+    return;
+  }
+
+  let cursor = 0;
+  async function worker(): Promise<void> {
+    while (gen === thumbnailFetchGeneration) {
+      const i = cursor++;
+      if (i >= toFetch.length) {
+        return;
+      }
+      const id = toFetch[i]!;
+      try {
+        const url = await App.screenshotThumbnailDataURL(id);
+        if (gen !== thumbnailFetchGeneration) {
+          return;
+        }
+        thumbnailUrls.value = {
+          ...thumbnailUrls.value,
+          [id]: url && url.length > 0 ? url : missingThumbDataUrl,
+        };
+      } catch {
+        if (gen !== thumbnailFetchGeneration) {
+          return;
+        }
+        thumbnailUrls.value = {
+          ...thumbnailUrls.value,
+          [id]: missingThumbDataUrl,
+        };
+      }
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: THUMBNAIL_FETCH_CONCURRENCY }, () => worker()),
+  );
+}
+
+watch(
+  list,
+  () => {
+    thumbnailFetchGeneration++;
+    pruneThumbnailsToList();
+    void nextTick(() => {
+      scrollSync.value++;
+      rowVirtualizer.value.measure();
+      void nextTick(() => {
+        void syncThumbnailsForVisible();
+      });
+    });
+  },
+  { deep: true },
+);
 
 function formatTakenAt(takenAt?: string): string {
   if (!takenAt) return "—";
@@ -159,6 +418,24 @@ function formatTakenAt(takenAt?: string): string {
   } catch {
     return takenAt;
   }
+}
+
+function formatFileSize(bytes?: number): string {
+  if (bytes == null || bytes < 0 || !Number.isFinite(bytes)) {
+    return "—";
+  }
+  if (bytes === 0) {
+    return "0 B";
+  }
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let v = bytes;
+  let u = 0;
+  while (v >= 1024 && u < units.length - 1) {
+    v /= 1024;
+    u++;
+  }
+  const rounded = u === 0 || v >= 10 ? Math.round(v).toString() : v.toFixed(1);
+  return `${rounded} ${units[u]}`;
 }
 
 function fileNameFromPath(path: string): string {
@@ -211,6 +488,7 @@ watch(filterWorldId, () => {
 });
 
 onBeforeUnmount(() => {
+  thumbnailFetchGeneration++;
   if (filterDebounceTimer !== null) {
     clearTimeout(filterDebounceTimer);
   }
@@ -269,19 +547,31 @@ async function onJoin(): Promise<void> {
   }
 }
 
-onMounted(load);
+onMounted(() => {
+  void load().then(() => {
+    void nextTick(() => {
+      scrollSync.value++;
+      void syncThumbnailsForVisible();
+    });
+  });
+});
 </script>
 
 <style scoped>
 .gallery-view {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  overflow: hidden;
 }
 
 .page-title {
   margin: 0;
   font-size: 1.5rem;
+  flex-shrink: 0;
 }
 
 .filters {
@@ -289,6 +579,7 @@ onMounted(load);
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .filter-input {
@@ -346,6 +637,7 @@ onMounted(load);
   background: color-mix(in srgb, var(--accent) 15%, transparent);
   color: var(--text-primary);
   border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  flex-shrink: 0;
 }
 
 .banner-warn {
@@ -355,25 +647,31 @@ onMounted(load);
 
 .gallery-body {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 1rem;
   align-items: stretch;
+  min-height: 0;
+  min-width: 0;
 }
 
 @media (min-width: 960px) {
   .gallery-body {
     flex-direction: row;
-    align-items: flex-start;
+    align-items: stretch;
   }
 
   .grid-section {
     flex: 1;
     min-width: 0;
+    min-height: 0;
   }
 
   .detail-panel {
     width: min(320px, 100%);
     flex-shrink: 0;
+    align-self: stretch;
+    overflow-y: auto;
   }
 }
 
@@ -384,14 +682,22 @@ onMounted(load);
   color: var(--text-secondary);
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 0.75rem;
+.grid-section {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .grid-item {
-  aspect-ratio: 4/3;
   border-radius: var(--radius);
   overflow: hidden;
   cursor: pointer;
@@ -399,6 +705,7 @@ onMounted(load);
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
+  box-sizing: border-box;
 }
 
 .grid-item:hover,
@@ -425,6 +732,7 @@ onMounted(load);
   background: var(--bg-secondary);
   border-radius: var(--radius);
   border: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .detail-panel h3 {

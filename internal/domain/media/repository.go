@@ -19,6 +19,12 @@ type ScreenshotRepository interface {
 	Delete(ctx context.Context, id string) error
 	// DeleteAll removes all screenshots. Returns affected row count.
 	DeleteAll(ctx context.Context) (int64, error)
+	// GetThumbnail returns cached thumbnail image bytes (JPEG) or nil if none.
+	GetThumbnail(ctx context.Context, screenshotID string) (*ScreenshotThumbnail, error)
+	// UpsertThumbnail stores or replaces the thumbnail for a screenshot.
+	UpsertThumbnail(ctx context.Context, screenshotID string, thumb *ScreenshotThumbnail) error
+	// DeleteThumbnail removes the cached thumbnail for a screenshot.
+	DeleteThumbnail(ctx context.Context, screenshotID string) error
 }
 
 // ScreenshotFilter provides optional filtering for List.

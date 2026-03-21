@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -93,6 +94,19 @@ func migrate(db *sql.DB) error {
 		}
 	}
 
+	if err := ensureScreenshotsFileSizeColumn(db); err != nil {
+		return err
+	}
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS screenshot_thumbnails (
+			screenshot_id TEXT PRIMARY KEY,
+			webp_blob BLOB NOT NULL,
+			source_size INTEGER NOT NULL,
+			source_mod_unix INTEGER NOT NULL,
+			FOREIGN KEY (screenshot_id) REFERENCES screenshots(id) ON DELETE CASCADE
+		)`); err != nil {
+		return fmt.Errorf("migration screenshot_thumbnails: %w", err)
+	}
+
 	// Insert default log_retention_days if not present
 	if _, err := db.Exec(`INSERT OR IGNORE INTO app_settings (key, value, updated_at) VALUES ('log_retention_days', ?, datetime('now'))`, fmt.Sprintf("%d", defaultLogRetentionDays)); err != nil {
 		return err
@@ -112,4 +126,16 @@ func migrate(db *sql.DB) error {
 	}
 
 	return nil
+}
+
+func ensureScreenshotsFileSizeColumn(db *sql.DB) error {
+	_, err := db.Exec(`ALTER TABLE screenshots ADD COLUMN file_size_bytes INTEGER`)
+	if err == nil {
+		return nil
+	}
+	msg := strings.ToLower(err.Error())
+	if strings.Contains(msg, "duplicate column") {
+		return nil
+	}
+	return fmt.Errorf("add file_size_bytes: %w", err)
 }
