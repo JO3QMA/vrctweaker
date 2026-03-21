@@ -221,14 +221,13 @@ async function scanFolder(): Promise<void> {
   loadError.value = null;
   scanning.value = true;
   try {
-    let cfg: Awaited<ReturnType<typeof App.getVRChatConfig>>;
+    let path = "";
     try {
-      cfg = await App.getVRChatConfig();
-    } catch (err) {
-      scanError.value = err instanceof Error ? err.message : String(err);
-      return;
+      const cfg = await App.getVRChatConfig();
+      path = (cfg.pictureOutputFolder ?? "").trim();
+    } catch {
+      // config.json may not exist — fall through to default path
     }
-    let path = (cfg.pictureOutputFolder ?? "").trim();
     if (!path) {
       try {
         path = (await App.defaultVRChatPictureFolder()).trim();
