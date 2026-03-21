@@ -56,8 +56,11 @@ describe("buildGalleryVirtualRows", () => {
       "grid",
     ]);
     expect(rows[0]).toMatchObject({ type: "yearHeader", label: "2024年" });
-    expect(rows[1]).toMatchObject({ type: "monthHeader", label: "2024/03" });
-    expect(rows[2]).toMatchObject({ type: "dayHeader", label: "2024/03/15" });
+    expect(rows[1]).toMatchObject({ type: "monthHeader", label: "2024年03月" });
+    expect(rows[2]).toMatchObject({
+      type: "dayHeader",
+      label: "2024年03月15日",
+    });
     const g = rows[3];
     expect(g?.type).toBe("grid");
     if (g?.type === "grid") {
@@ -95,7 +98,7 @@ describe("buildGalleryVirtualRows", () => {
     const dayLabels = rows
       .filter((r) => r.type === "dayHeader")
       .map((r) => (r.type === "dayHeader" ? r.label : ""));
-    expect(dayLabels).toEqual(["2024/05/20", "2024/05/05"]);
+    expect(dayLabels).toEqual(["2024年05月20日", "2024年05月05日"]);
   });
 
   it("places unknown-dated section at end after dated groups", () => {

@@ -65,11 +65,11 @@ function pad2(n: number): string {
 }
 
 function galleryMonthLabel(year: number, month: number): string {
-  return `${year}/${pad2(month)}`;
+  return `${year}年${pad2(month)}月`;
 }
 
 function galleryDayLabel(year: number, month: number, day: number): string {
-  return `${year}/${pad2(month)}/${pad2(day)}`;
+  return `${year}年${pad2(month)}月${pad2(day)}日`;
 }
 
 function compareDayKeysDesc(a: string, b: string): number {

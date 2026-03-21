@@ -382,9 +382,9 @@ describe("GalleryView", () => {
 
     const txt = wrapper.text();
     expect(txt).toContain("2024年");
-    expect(txt).toContain("2024/06");
-    expect(txt).toContain("2024/06/15");
-    expect(txt).toContain("2024/06/01");
+    expect(txt).toContain("2024年06月");
+    expect(txt).toContain("2024年06月15日");
+    expect(txt).toContain("2024年06月01日");
     expect(
       wrapper.findAll("[data-testid='gallery-group-header']").length,
     ).toBeGreaterThan(0);
