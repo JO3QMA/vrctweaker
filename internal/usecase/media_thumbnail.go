@@ -21,7 +21,7 @@ import (
 const (
 	screenshotThumbMaxEdge     = 400
 	screenshotThumbJPEGQuality = 80
-	screenshotMaxSourceBytes   = 25 << 20 // 25 MiB
+	screenshotMaxSourceBytes   = 40 << 20 // 40 MiB
 )
 
 var (
