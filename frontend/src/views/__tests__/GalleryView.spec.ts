@@ -250,6 +250,24 @@ describe("GalleryView", () => {
     );
   });
 
+  it("falls back to default folder when config.json is missing (Go error shape)", async () => {
+    mockGetVRChatConfig.mockRejectedValue(
+      new Error("config.json does not exist: no such file"),
+    );
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    mockScreenshots.mockClear();
+
+    await wrapper.find("[data-testid='gallery-scan-folder']").trigger("click");
+    await flushPromises();
+
+    expect(mockDefaultVRChatPictureFolder).toHaveBeenCalled();
+    expect(mockScanScreenshotDir).toHaveBeenCalledWith(
+      "C:/Temp/Pictures/VRChat",
+    );
+    expect(mockScreenshots.mock.calls.length).toBeGreaterThanOrEqual(1);
+  });
+
   it("shows scan error when default folder path cannot be resolved", async () => {
     mockGetVRChatConfig.mockResolvedValue({
       ...defaultConfig,

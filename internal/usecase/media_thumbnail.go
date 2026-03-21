@@ -70,8 +70,8 @@ func (uc *MediaUseCase) ScreenshotThumbnailDataURL(ctx context.Context, id strin
 	if err != nil {
 		return "", err
 	}
-	if cached != nil && cached.SourceSize == sourceSize && cached.SourceModUnix == sourceModUnix && isJpegBlob(cached.WebpBlob) {
-		enc := base64.StdEncoding.EncodeToString(cached.WebpBlob)
+	if cached != nil && cached.SourceSize == sourceSize && cached.SourceModUnix == sourceModUnix && isJpegBlob(cached.JpegBlob) {
+		enc := base64.StdEncoding.EncodeToString(cached.JpegBlob)
 		return "data:image/jpeg;base64," + enc, nil
 	}
 
@@ -98,7 +98,7 @@ func (uc *MediaUseCase) ScreenshotThumbnailDataURL(ctx context.Context, id strin
 	jpegBytes := buf.Bytes()
 
 	thumb := &media.ScreenshotThumbnail{
-		WebpBlob:      jpegBytes,
+		JpegBlob:      jpegBytes,
 		SourceSize:    sourceSize,
 		SourceModUnix: sourceModUnix,
 	}

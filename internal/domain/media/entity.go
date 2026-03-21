@@ -14,7 +14,7 @@ type Screenshot struct {
 
 // ScreenshotThumbnail is persisted JPEG thumbnail bytes and source file stat for cache invalidation.
 type ScreenshotThumbnail struct {
-	WebpBlob      []byte
+	JpegBlob      []byte
 	SourceSize    int64
 	SourceModUnix int64
 }

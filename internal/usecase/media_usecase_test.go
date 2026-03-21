@@ -34,7 +34,7 @@ func (m *mockScreenshotRepo) GetThumbnail(_ context.Context, screenshotID string
 		return nil, nil
 	}
 	cp := *t
-	cp.WebpBlob = append([]byte(nil), t.WebpBlob...)
+	cp.JpegBlob = append([]byte(nil), t.JpegBlob...)
 	return &cp, nil
 }
 
@@ -44,7 +44,7 @@ func (m *mockScreenshotRepo) UpsertThumbnail(_ context.Context, screenshotID str
 	}
 	m.thumbUpsertCnt++
 	cp := *thumb
-	cp.WebpBlob = append([]byte(nil), thumb.WebpBlob...)
+	cp.JpegBlob = append([]byte(nil), thumb.JpegBlob...)
 	m.thumbs[screenshotID] = &cp
 	return nil
 }

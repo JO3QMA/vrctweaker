@@ -104,7 +104,7 @@ func (r *ScreenshotRepository) DeleteAll(ctx context.Context) (int64, error) {
 
 // GetThumbnail returns cached thumbnail bytes (JPEG) or nil if none.
 func (r *ScreenshotRepository) GetThumbnail(ctx context.Context, screenshotID string) (*media.ScreenshotThumbnail, error) {
-	row := r.db.QueryRowContext(ctx, `SELECT webp_blob, source_size, source_mod_unix FROM screenshot_thumbnails WHERE screenshot_id = ?`, screenshotID)
+	row := r.db.QueryRowContext(ctx, `SELECT jpeg_blob, source_size, source_mod_unix FROM screenshot_thumbnails WHERE screenshot_id = ?`, screenshotID)
 	var blob []byte
 	var size, modUnix int64
 	err := row.Scan(&blob, &size, &modUnix)
@@ -115,7 +115,7 @@ func (r *ScreenshotRepository) GetThumbnail(ctx context.Context, screenshotID st
 		return nil, err
 	}
 	return &media.ScreenshotThumbnail{
-		WebpBlob:      blob,
+		JpegBlob:      blob,
 		SourceSize:    size,
 		SourceModUnix: modUnix,
 	}, nil
@@ -126,10 +126,10 @@ func (r *ScreenshotRepository) UpsertThumbnail(ctx context.Context, screenshotID
 	if thumb == nil {
 		return nil
 	}
-	_, err := r.db.ExecContext(ctx, `INSERT INTO screenshot_thumbnails (screenshot_id, webp_blob, source_size, source_mod_unix)
+	_, err := r.db.ExecContext(ctx, `INSERT INTO screenshot_thumbnails (screenshot_id, jpeg_blob, source_size, source_mod_unix)
 		VALUES (?, ?, ?, ?) ON CONFLICT(screenshot_id) DO UPDATE SET
-		webp_blob = excluded.webp_blob, source_size = excluded.source_size, source_mod_unix = excluded.source_mod_unix`,
-		screenshotID, thumb.WebpBlob, thumb.SourceSize, thumb.SourceModUnix)
+		jpeg_blob = excluded.jpeg_blob, source_size = excluded.source_size, source_mod_unix = excluded.source_mod_unix`,
+		screenshotID, thumb.JpegBlob, thumb.SourceSize, thumb.SourceModUnix)
 	return err
 }
 

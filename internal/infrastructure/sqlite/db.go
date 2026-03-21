@@ -99,12 +99,15 @@ func migrate(db *sql.DB) error {
 	}
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS screenshot_thumbnails (
 			screenshot_id TEXT PRIMARY KEY,
-			webp_blob BLOB NOT NULL,
+			jpeg_blob BLOB NOT NULL,
 			source_size INTEGER NOT NULL,
 			source_mod_unix INTEGER NOT NULL,
 			FOREIGN KEY (screenshot_id) REFERENCES screenshots(id) ON DELETE CASCADE
 		)`); err != nil {
 		return fmt.Errorf("migration screenshot_thumbnails: %w", err)
+	}
+	if err := ensureScreenshotThumbnailJpegBlobColumn(db); err != nil {
+		return err
 	}
 
 	// Insert default log_retention_days if not present
@@ -138,4 +141,36 @@ func ensureScreenshotsFileSizeColumn(db *sql.DB) error {
 		return nil
 	}
 	return fmt.Errorf("add file_size_bytes: %w", err)
+}
+
+// ensureScreenshotThumbnailJpegBlobColumn renames legacy webp_blob → jpeg_blob (data was always JPEG).
+func ensureScreenshotThumbnailJpegBlobColumn(db *sql.DB) error {
+	rows, err := db.Query(`SELECT name FROM pragma_table_info('screenshot_thumbnails')`)
+	if err != nil {
+		return fmt.Errorf("pragma screenshot_thumbnails columns: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var hasWebp, hasJpeg bool
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return err
+		}
+		switch name {
+		case "webp_blob":
+			hasWebp = true
+		case "jpeg_blob":
+			hasJpeg = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if hasWebp && !hasJpeg {
+		if _, err := db.Exec(`ALTER TABLE screenshot_thumbnails RENAME COLUMN webp_blob TO jpeg_blob`); err != nil {
+			return fmt.Errorf("rename webp_blob to jpeg_blob: %w", err)
+		}
+	}
+	return nil
 }

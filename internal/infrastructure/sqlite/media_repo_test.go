@@ -42,7 +42,7 @@ func TestScreenshotRepository_ThumbnailRoundTrip(t *testing.T) {
 
 	jpegHdr := []byte{0xff, 0xd8, 0xff, 0xe0} // minimal JPEG SOI + marker
 	th := &media.ScreenshotThumbnail{
-		WebpBlob:      jpegHdr,
+		JpegBlob:      jpegHdr,
 		SourceSize:    100,
 		SourceModUnix: 1700000000,
 	}
@@ -57,7 +57,7 @@ func TestScreenshotRepository_ThumbnailRoundTrip(t *testing.T) {
 	if got == nil {
 		t.Fatal("expected thumbnail")
 	}
-	if string(got.WebpBlob) != string(jpegHdr) {
+	if string(got.JpegBlob) != string(jpegHdr) {
 		t.Fatalf("thumbnail blob mismatch")
 	}
 	if got.SourceSize != 100 || got.SourceModUnix != 1700000000 {
