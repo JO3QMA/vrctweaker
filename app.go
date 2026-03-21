@@ -412,6 +412,38 @@ func (a *App) ScreenshotThumbnailDataURL(id string) (string, error) {
 	return a.media.ScreenshotThumbnailDataURL(a.ctx, id)
 }
 
+// OpenScreenshotExternally opens the screenshot file with the OS default application.
+func (a *App) OpenScreenshotExternally(id string) error {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return fmt.Errorf("screenshot id is empty")
+	}
+	s, err := a.media.GetScreenshot(a.ctx, id)
+	if err != nil {
+		return err
+	}
+	if s == nil {
+		return fmt.Errorf("screenshot not found")
+	}
+	return desktop.OpenFileWithDefaultApp(s.FilePath)
+}
+
+// RevealScreenshotInFileManager opens the file manager and shows the screenshot file where supported.
+func (a *App) RevealScreenshotInFileManager(id string) error {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return fmt.Errorf("screenshot id is empty")
+	}
+	s, err := a.media.GetScreenshot(a.ctx, id)
+	if err != nil {
+		return err
+	}
+	if s == nil {
+		return fmt.Errorf("screenshot not found")
+	}
+	return desktop.RevealInFileManager(s.FilePath)
+}
+
 const galleryScanProgressEvent = "gallery:scan-progress"
 
 const galleryScanProgressEmitMinInterval = 90 * time.Millisecond

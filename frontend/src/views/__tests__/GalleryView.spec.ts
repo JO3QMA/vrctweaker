@@ -38,6 +38,8 @@ const {
   mockDefaultVRChatPictureFolder,
   mockJoinWorldFromScreenshot,
   mockScreenshotThumbnailDataURL,
+  mockOpenScreenshotExternally,
+  mockRevealScreenshotInFileManager,
 } = vi.hoisted(() => ({
   mockScreenshots: vi.fn(),
   mockSearchScreenshots: vi.fn(),
@@ -46,6 +48,8 @@ const {
   mockDefaultVRChatPictureFolder: vi.fn(),
   mockJoinWorldFromScreenshot: vi.fn(),
   mockScreenshotThumbnailDataURL: vi.fn(),
+  mockOpenScreenshotExternally: vi.fn(),
+  mockRevealScreenshotInFileManager: vi.fn(),
 }));
 
 vi.mock("../../wails/app", async (importOriginal) => {
@@ -61,6 +65,8 @@ vi.mock("../../wails/app", async (importOriginal) => {
       defaultVRChatPictureFolder: mockDefaultVRChatPictureFolder,
       joinWorldFromScreenshot: mockJoinWorldFromScreenshot,
       screenshotThumbnailDataURL: mockScreenshotThumbnailDataURL,
+      openScreenshotExternally: mockOpenScreenshotExternally,
+      revealScreenshotInFileManager: mockRevealScreenshotInFileManager,
     },
   };
 });
@@ -126,6 +132,8 @@ describe("GalleryView", () => {
     mockScreenshotThumbnailDataURL.mockResolvedValue(
       "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAARCAABAAEDAREAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAr/xAAUEAEAAAAAAAAAAAAAAAAAAAAA/8QAFQEBAQAAAAAAAAAAAAAAAAAAAAX/xAAUEQEAAAAAAAAAAAAAAAAAAAAA/9oADAMBAAIRAxEAPwCwAA8A/9k=",
     );
+    mockOpenScreenshotExternally.mockResolvedValue(undefined);
+    mockRevealScreenshotInFileManager.mockResolvedValue(undefined);
   });
 
   afterEach(() => {
@@ -360,6 +368,53 @@ describe("GalleryView", () => {
     expect(wrapper.text()).toContain("shot.png");
     expect(wrapper.text()).toContain("ファイルサイズ");
     expect(wrapper.text()).toMatch(/12(\.0)? KB/);
+  });
+
+  it("shows detail preview image data URL when an item is selected", async () => {
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    await flushPromises();
+
+    await wrapper.find(".grid-item").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const img = wrapper.find('[data-testid="gallery-detail-preview"]');
+    expect(img.exists()).toBe(true);
+    expect(img.attributes("src") ?? "").toContain("data:image/jpeg;base64,");
+  });
+
+  it("opens screenshot file via App when path button is clicked", async () => {
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    await flushPromises();
+
+    await wrapper.find(".grid-item").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    await wrapper
+      .find('[data-testid="gallery-detail-open-file"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(mockOpenScreenshotExternally).toHaveBeenCalledWith(sampleShot.id);
+  });
+
+  it("reveals folder via App when folder button is clicked", async () => {
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    await flushPromises();
+
+    await wrapper.find(".grid-item").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    await wrapper
+      .find('[data-testid="gallery-detail-open-folder"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(mockRevealScreenshotInFileManager).toHaveBeenCalledWith(
+      sampleShot.id,
+    );
   });
 
   it("renders date group headers for multiple screenshots", async () => {

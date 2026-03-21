@@ -159,6 +159,8 @@ interface AppBindings {
   SearchScreenshots(filter: ScreenshotSearchDTO): Promise<ScreenshotDTO[]>;
   GetScreenshot(id: string): Promise<ScreenshotDTO | null>;
   ScreenshotThumbnailDataURL(id: string): Promise<string>;
+  OpenScreenshotExternally(id: string): Promise<void>;
+  RevealScreenshotInFileManager(id: string): Promise<void>;
   ScanScreenshotDir(path: string): Promise<number>;
   ReindexScreenshotDir(path: string): Promise<number>;
   Encounters(): Promise<UserEncounterDTO[]>;
@@ -332,6 +334,12 @@ export const App = {
   },
   async screenshotThumbnailDataURL(id: string): Promise<string> {
     return callApp((a) => a.ScreenshotThumbnailDataURL(id), "");
+  },
+  async openScreenshotExternally(id: string): Promise<void> {
+    return callApp((a) => a.OpenScreenshotExternally(id), undefined);
+  },
+  async revealScreenshotInFileManager(id: string): Promise<void> {
+    return callApp((a) => a.RevealScreenshotInFileManager(id), undefined);
   },
   async scanScreenshotDir(path: string): Promise<number> {
     return callApp((a) => a.ScanScreenshotDir(path), 0);

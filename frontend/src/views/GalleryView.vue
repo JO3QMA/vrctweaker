@@ -124,6 +124,15 @@
       <!-- 詳細プレビュー（スクロールに追従しない） -->
       <aside v-if="selected" class="detail-panel">
         <h3>詳細</h3>
+        <div class="detail-preview">
+          <img
+            data-testid="gallery-detail-preview"
+            :src="thumbnailSrc(selected)"
+            :alt="fileNameFromPath(selected.filePath)"
+            class="detail-preview-img"
+            @error="onThumbnailError"
+          />
+        </div>
         <dl class="detail-list">
           <dt>ファイル名</dt>
           <dd>{{ fileNameFromPath(selected.filePath) }}</dd>
@@ -136,10 +145,30 @@
           <dt>World ID</dt>
           <dd>{{ selected.worldId || "—" }}</dd>
           <dt>ファイルパス</dt>
-          <dd class="file-path">
-            {{ selected.filePath }}
+          <dd>
+            <button
+              type="button"
+              class="file-path-btn"
+              data-testid="gallery-detail-open-file"
+              :title="'既定のアプリで画像を開く'"
+              @click="openSelectedFileExternally"
+            >
+              {{ selected.filePath }}
+            </button>
           </dd>
         </dl>
+        <p v-if="detailActionError" class="detail-action-error">
+          {{ detailActionError }}
+        </p>
+        <button
+          type="button"
+          class="btn-open-folder"
+          data-testid="gallery-detail-open-folder"
+          :title="openFolderButtonTitle"
+          @click="revealSelectedInFolder"
+        >
+          フォルダを開く
+        </button>
         <p v-if="joinError" class="join-error">
           {{ joinError }}
         </p>
@@ -472,6 +501,31 @@ const joinButtonTitle = computed(() => {
   return "このワールドへJoin";
 });
 
+const openFolderButtonTitle =
+  "画像があるフォルダをファイルマネージャで開きます（環境によってはフォルダのみの場合があります）";
+
+const detailActionError = ref<string | null>(null);
+
+async function openSelectedFileExternally(): Promise<void> {
+  if (!selected.value) return;
+  detailActionError.value = null;
+  try {
+    await App.openScreenshotExternally(selected.value.id);
+  } catch (err) {
+    detailActionError.value = err instanceof Error ? err.message : String(err);
+  }
+}
+
+async function revealSelectedInFolder(): Promise<void> {
+  if (!selected.value) return;
+  detailActionError.value = null;
+  try {
+    await App.revealScreenshotInFileManager(selected.value.id);
+  } catch (err) {
+    detailActionError.value = err instanceof Error ? err.message : String(err);
+  }
+}
+
 function thumbnailSrc(item: ScreenshotDTO): string {
   const u = thumbnailUrls.value[item.id];
   if (u) return u;
@@ -733,6 +787,7 @@ async function scanFolder(): Promise<void> {
 function select(item: ScreenshotDTO): void {
   selected.value = item;
   joinError.value = null;
+  detailActionError.value = null;
 }
 
 const joinError = ref<string | null>(null);
@@ -974,6 +1029,25 @@ onMounted(() => {
   font-size: 1rem;
 }
 
+.detail-preview {
+  margin: 0 0 1rem;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 4rem;
+}
+
+.detail-preview-img {
+  display: block;
+  width: 100%;
+  max-height: 260px;
+  object-fit: contain;
+}
+
 .detail-list {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -990,10 +1064,53 @@ onMounted(() => {
   margin: 0;
 }
 
-.detail-list .file-path {
-  word-break: break-all;
+.file-path-btn {
+  display: inline;
+  max-width: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: none;
+  font: inherit;
   font-size: 0.8rem;
-  color: var(--text-secondary);
+  color: var(--accent);
+  text-decoration: underline;
+  text-align: left;
+  cursor: pointer;
+  word-break: break-all;
+}
+
+.file-path-btn:hover {
+  color: var(--accent-hover);
+}
+
+.file-path-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.btn-open-folder {
+  display: block;
+  width: 100%;
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 1rem;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.btn-open-folder:hover {
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-tertiary));
+  border-color: var(--accent);
+}
+
+.detail-action-error {
+  margin: 0 0 0.5rem;
+  font-size: 0.85rem;
+  color: var(--accent);
 }
 
 .btn-join {

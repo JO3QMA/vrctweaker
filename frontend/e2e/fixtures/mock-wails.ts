@@ -62,6 +62,8 @@ export function getMockWailsInitScript(): string {
           Promise.resolve(
             'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
           ),
+        OpenScreenshotExternally: () => Promise.resolve(),
+        RevealScreenshotInFileManager: () => Promise.resolve(),
         ScanScreenshotDir: () => Promise.resolve(0),
         ReindexScreenshotDir: () => Promise.resolve(0),
         Encounters: () => Promise.resolve([]),
