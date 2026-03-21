@@ -181,8 +181,12 @@ func (w *run) flush() {
 	w.mu.Unlock()
 
 	for _, p := range paths {
+		if w.ctx.Err() != nil {
+			return
+		}
 		if err := w.ingest(w.ctx, p); err != nil {
 			w.log.Printf("picturewatcher: ingest %s: %v", p, err)
 		}
+	}
 	}
 }
