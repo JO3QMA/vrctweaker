@@ -60,6 +60,18 @@ function dayKeyFromParts(y: number, m: number, d: number): string {
   return `${y}-${m}-${d}`;
 }
 
+function pad2(n: number): string {
+  return String(n).padStart(2, "0");
+}
+
+function galleryMonthLabel(year: number, month: number): string {
+  return `${year}/${pad2(month)}`;
+}
+
+function galleryDayLabel(year: number, month: number, day: number): string {
+  return `${year}/${pad2(month)}/${pad2(day)}`;
+}
+
 function compareDayKeysDesc(a: string, b: string): number {
   const pa = a.split("-").map(Number);
   const pb = b.split("-").map(Number);
@@ -216,7 +228,7 @@ export function buildGalleryVirtualRows(
       rows.push({
         type: "monthHeader",
         collapseKey: mKey,
-        label: `${m}月`,
+        label: galleryMonthLabel(y, m),
         rowKey: `hdr-m-${y}-${m}`,
         expanded: !mCollapsed,
       });
@@ -235,7 +247,7 @@ export function buildGalleryVirtualRows(
         rows.push({
           type: "dayHeader",
           collapseKey: dKey,
-          label: `${day}日`,
+          label: galleryDayLabel(y, m, day),
           rowKey: `hdr-d-${dayKey}`,
           expanded: !dCollapsed,
         });

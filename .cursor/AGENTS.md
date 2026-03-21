@@ -59,6 +59,7 @@ GitHub Issue の URL・番号、または `docs/ai_dlc/issues/` 等の Issue ド
 
 ## プロジェクトルール
 
+- `.cursor/rules/post-change-fmt.mdc`: コード変更後は `make fmt`（常時適用）
 - `.cursor/rules/tdd-workflow.mdc`: TDD と検証ループ（常時適用）
 - `.cursor/rules/go-conventions.mdc`: Go の規約
 - `.cursor/rules/vue-conventions.mdc`: Vue/TypeScript の規約
