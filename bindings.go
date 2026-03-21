@@ -166,6 +166,7 @@ type ScreenshotSearchDTO struct {
 }
 
 // ScanProgressDTO is emitted on Wails event gallery:scan-progress during ScanScreenshotDir.
+// The backend also emits gallery:screenshots-changed (no DTO) when the picture folder watcher ingests a new screenshot.
 type ScanProgressDTO struct {
 	Phase   string `json:"phase"`
 	Current int    `json:"current"`
@@ -180,6 +181,13 @@ func toScanProgressDTO(p usecase.ScanProgress) ScanProgressDTO {
 		Total:   p.Total,
 		Item:    p.Item,
 	}
+}
+
+// GalleryScanDoneDTO is emitted on Wails event gallery:scan-done when ScanScreenshotDir finishes.
+type GalleryScanDoneDTO struct {
+	Count     int    `json:"count"`
+	Error     string `json:"error,omitempty"`
+	Cancelled bool   `json:"cancelled"`
 }
 
 func toScreenshotDTOs(list []*media.Screenshot) []ScreenshotDTO {

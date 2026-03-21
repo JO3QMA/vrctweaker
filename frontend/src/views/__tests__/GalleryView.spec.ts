@@ -34,6 +34,7 @@ const {
   mockScreenshots,
   mockSearchScreenshots,
   mockScanScreenshotDir,
+  mockIsGalleryScanning,
   mockGetVRChatConfig,
   mockDefaultVRChatPictureFolder,
   mockJoinWorldFromScreenshot,
@@ -44,6 +45,7 @@ const {
   mockScreenshots: vi.fn(),
   mockSearchScreenshots: vi.fn(),
   mockScanScreenshotDir: vi.fn(),
+  mockIsGalleryScanning: vi.fn(),
   mockGetVRChatConfig: vi.fn(),
   mockDefaultVRChatPictureFolder: vi.fn(),
   mockJoinWorldFromScreenshot: vi.fn(),
@@ -61,6 +63,7 @@ vi.mock("../../wails/app", async (importOriginal) => {
       screenshots: mockScreenshots,
       searchScreenshots: mockSearchScreenshots,
       scanScreenshotDir: mockScanScreenshotDir,
+      isGalleryScanning: mockIsGalleryScanning,
       getVRChatConfig: mockGetVRChatConfig,
       defaultVRChatPictureFolder: mockDefaultVRChatPictureFolder,
       joinWorldFromScreenshot: mockJoinWorldFromScreenshot,
@@ -96,20 +99,18 @@ const defaultConfig: VRChatConfigDTO = {
 
 describe("GalleryView", () => {
   let host: HTMLDivElement;
-  let galleryScanProgressListener: ((data?: unknown) => void) | undefined;
+  let wailsEventListeners: Record<string, (data?: unknown) => void>;
 
   beforeEach(() => {
-    galleryScanProgressListener = undefined;
+    wailsEventListeners = {};
     Object.defineProperty(window, "runtime", {
       configurable: true,
       enumerable: true,
       value: {
         EventsOn: (eventName: string, cb: (data?: unknown) => void) => {
-          if (eventName === "gallery:scan-progress") {
-            galleryScanProgressListener = cb;
-          }
+          wailsEventListeners[eventName] = cb;
           return () => {
-            galleryScanProgressListener = undefined;
+            delete wailsEventListeners[eventName];
           };
         },
       },
@@ -125,7 +126,15 @@ describe("GalleryView", () => {
     vi.clearAllMocks();
     mockScreenshots.mockResolvedValue([sampleShot]);
     mockSearchScreenshots.mockResolvedValue([sampleShot]);
-    mockScanScreenshotDir.mockResolvedValue(3);
+    mockIsGalleryScanning.mockResolvedValue(false);
+    mockScanScreenshotDir.mockImplementation((_path: string) =>
+      Promise.resolve(3).then((count) => {
+        queueMicrotask(() => {
+          wailsEventListeners["gallery:scan-done"]?.({ count });
+        });
+        return count;
+      }),
+    );
     mockGetVRChatConfig.mockResolvedValue({ ...defaultConfig });
     mockDefaultVRChatPictureFolder.mockResolvedValue("C:/Temp/Pictures/VRChat");
     mockJoinWorldFromScreenshot.mockResolvedValue(undefined);
@@ -145,8 +154,86 @@ describe("GalleryView", () => {
   it("loads all screenshots on mount via App.screenshots", async () => {
     mount(GalleryView, { attachTo: host });
     await flushPromises();
+    expect(mockIsGalleryScanning).toHaveBeenCalled();
     expect(mockScreenshots).toHaveBeenCalledWith("");
     expect(mockSearchScreenshots).not.toHaveBeenCalled();
+  });
+
+  it("shows scan progress on mount when IsGalleryScanning is true", async () => {
+    mockIsGalleryScanning.mockResolvedValue(true);
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    expect(wrapper.find('[data-testid="gallery-scan-progress"]').exists()).toBe(
+      true,
+    );
+  });
+
+  it("gallery:scan-done triggers list reload", async () => {
+    mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    mockScreenshots.mockClear();
+    wailsEventListeners["gallery:scan-done"]?.({ count: 2 });
+    await flushPromises();
+    expect(mockScreenshots).toHaveBeenCalledWith("");
+  });
+
+  it("debounces reload when gallery:screenshots-changed fires", async () => {
+    vi.useFakeTimers();
+    const debounceMs = 400;
+    mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    mockScreenshots.mockClear();
+
+    wailsEventListeners["gallery:screenshots-changed"]?.();
+    expect(mockScreenshots).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(debounceMs);
+    await flushPromises();
+    expect(mockScreenshots).toHaveBeenCalledWith("");
+
+    mockScreenshots.mockClear();
+    wailsEventListeners["gallery:screenshots-changed"]?.();
+    wailsEventListeners["gallery:screenshots-changed"]?.();
+    await vi.advanceTimersByTimeAsync(debounceMs);
+    await flushPromises();
+    expect(mockScreenshots).toHaveBeenCalledTimes(1);
+  });
+
+  it("debounced reload from gallery:screenshots-changed respects active world filter", async () => {
+    vi.useFakeTimers();
+    const debounceMs = 400;
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    const input = wrapper.find("[data-testid='gallery-world-filter']");
+    await input.setValue("wrld_filtered");
+    await input.trigger("keyup.enter");
+    await flushPromises();
+    mockScreenshots.mockClear();
+    mockSearchScreenshots.mockClear();
+
+    wailsEventListeners["gallery:screenshots-changed"]?.();
+    await vi.advanceTimersByTimeAsync(debounceMs);
+    await flushPromises();
+
+    expect(mockSearchScreenshots).toHaveBeenCalledWith({
+      worldId: "wrld_filtered",
+    });
+    expect(mockScreenshots).not.toHaveBeenCalled();
+  });
+
+  it("clears pending gallery:screenshots-changed debounce on unmount", async () => {
+    vi.useFakeTimers();
+    const debounceMs = 400;
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    mockScreenshots.mockClear();
+
+    wailsEventListeners["gallery:screenshots-changed"]?.();
+    wrapper.unmount();
+    await vi.advanceTimersByTimeAsync(debounceMs);
+    await flushPromises();
+
+    expect(mockScreenshots).not.toHaveBeenCalled();
   });
 
   it("fetches thumbnail data URLs via App.screenshotThumbnailDataURL", async () => {
@@ -243,13 +330,18 @@ describe("GalleryView", () => {
     mockScanScreenshotDir.mockImplementation(
       () =>
         new Promise<number>((resolve) => {
-          resolveScan = resolve;
+          resolveScan = (n: number) => {
+            queueMicrotask(() => {
+              wailsEventListeners["gallery:scan-done"]?.({ count: n });
+            });
+            resolve(n);
+          };
         }),
     );
 
     const wrapper = mount(GalleryView, { attachTo: host });
     await flushPromises();
-    expect(galleryScanProgressListener).toBeDefined();
+    expect(wailsEventListeners["gallery:scan-progress"]).toBeDefined();
 
     void wrapper.find("[data-testid='gallery-scan-folder']").trigger("click");
     await flushPromises();
@@ -257,7 +349,7 @@ describe("GalleryView", () => {
     const panel = wrapper.find('[data-testid="gallery-scan-progress"]');
     expect(panel.exists()).toBe(true);
 
-    galleryScanProgressListener?.({
+    wailsEventListeners["gallery:scan-progress"]?.({
       phase: "importing",
       current: 1,
       total: 2,

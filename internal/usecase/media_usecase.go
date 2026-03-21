@@ -116,6 +116,9 @@ func (uc *MediaUseCase) ScanDirectory(ctx context.Context, basePath string, onPr
 		if walkErr != nil {
 			return nil
 		}
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
 		if fi.IsDir() {
 			return nil
 		}

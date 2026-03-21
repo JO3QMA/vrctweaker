@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -36,6 +37,10 @@ type App struct {
 	settings      *usecase.SettingsUseCase
 	dbMaintenance *usecase.DBMaintenanceUseCase
 	vrchatConfig  *usecase.VRChatConfigUseCase
+
+	galleryScanMu     sync.Mutex
+	galleryScanCancel context.CancelFunc
+	galleryScanWG     sync.WaitGroup
 }
 
 // NewApp creates a new App application struct.
@@ -167,8 +172,14 @@ func (a *App) startPictureFolderWatcher(ctx context.Context) {
 		return
 	}
 	ingest := func(c context.Context, path string) error {
-		_, _, ingestErr := a.media.IngestScreenshotFile(c, path)
-		return ingestErr
+		_, created, ingestErr := a.media.IngestScreenshotFile(c, path)
+		if ingestErr != nil {
+			return ingestErr
+		}
+		if created {
+			runtime.EventsEmit(a.ctx, galleryScreenshotsChangedEvent, struct{}{})
+		}
+		return nil
 	}
 	log := pictureWatchLogger{ctx: ctx}
 	if err := picturewatcher.Start(ctx, root, ingest, log); err != nil {
@@ -447,6 +458,12 @@ func (a *App) RevealScreenshotInFileManager(id string) error {
 
 const galleryScanProgressEvent = "gallery:scan-progress"
 
+// galleryScanDoneEvent is emitted when ScanScreenshotDir finishes (success, error, or cancel).
+const galleryScanDoneEvent = "gallery:scan-done"
+
+// galleryScreenshotsChangedEvent is emitted when the picture folder watcher ingests a new screenshot row.
+const galleryScreenshotsChangedEvent = "gallery:screenshots-changed"
+
 const galleryScanProgressEmitMinInterval = 90 * time.Millisecond
 
 // scanProgressEmitter throttles gallery:scan-progress EventsEmit; flush sends the latest pending payload.
@@ -483,9 +500,54 @@ func (e *scanProgressEmitter) flush() {
 
 // ScanScreenshotDir scans a directory for screenshots.
 func (a *App) ScanScreenshotDir(path string) (int, error) {
+	a.galleryScanWG.Add(1)
+	defer a.galleryScanWG.Done()
+
+	scanCtx, cancel := context.WithCancel(a.ctx)
+	a.galleryScanMu.Lock()
+	a.galleryScanCancel = cancel
+	a.galleryScanMu.Unlock()
+	defer func() {
+		cancel()
+		a.galleryScanMu.Lock()
+		a.galleryScanCancel = nil
+		a.galleryScanMu.Unlock()
+	}()
+
 	em := &scanProgressEmitter{ctx: a.ctx}
-	defer em.flush()
-	return a.media.ScanDirectory(a.ctx, path, em.emit)
+	var count int
+	var err error
+	defer func() {
+		em.flush()
+		dto := GalleryScanDoneDTO{Count: count}
+		if err != nil {
+			dto.Error = err.Error()
+			if errors.Is(err, context.Canceled) {
+				dto.Cancelled = true
+			}
+		}
+		runtime.EventsEmit(a.ctx, galleryScanDoneEvent, dto)
+	}()
+
+	count, err = a.media.ScanDirectory(scanCtx, path, em.emit)
+	return count, err
+}
+
+// IsGalleryScanning reports whether a gallery folder scan is in progress.
+func (a *App) IsGalleryScanning() bool {
+	a.galleryScanMu.Lock()
+	defer a.galleryScanMu.Unlock()
+	return a.galleryScanCancel != nil
+}
+
+func (a *App) stopGalleryScanAndWait() {
+	a.galleryScanMu.Lock()
+	cancelFn := a.galleryScanCancel
+	a.galleryScanMu.Unlock()
+	if cancelFn != nil {
+		cancelFn()
+	}
+	a.galleryScanWG.Wait()
 }
 
 // ReindexScreenshotDir re-extracts metadata for existing screenshots under path.
@@ -603,6 +665,7 @@ func (a *App) ClearEncounters() (int64, error) {
 
 // ClearScreenshots deletes all screenshots. Returns affected row count.
 func (a *App) ClearScreenshots() (int64, error) {
+	a.stopGalleryScanAndWait()
 	return a.dbMaintenance.ClearScreenshots(a.ctx)
 }
 

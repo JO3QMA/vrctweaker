@@ -65,6 +65,7 @@ export function getMockWailsInitScript(): string {
         OpenScreenshotExternally: () => Promise.resolve(),
         RevealScreenshotInFileManager: () => Promise.resolve(),
         ScanScreenshotDir: () => Promise.resolve(0),
+        IsGalleryScanning: () => Promise.resolve(false),
         ReindexScreenshotDir: () => Promise.resolve(0),
         Encounters: () => Promise.resolve([]),
         RotateEncounters: () => Promise.resolve(0),

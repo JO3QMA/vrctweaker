@@ -64,6 +64,13 @@ export interface ScanProgressPayload {
   item?: string;
 }
 
+/** Payload for Wails event gallery:scan-done (matches GalleryScanDoneDTO in Go). */
+export interface GalleryScanDonePayload {
+  count: number;
+  error?: string;
+  cancelled?: boolean;
+}
+
 export interface UserEncounterDTO {
   id: string;
   vrcUserId: string;
@@ -162,6 +169,7 @@ interface AppBindings {
   OpenScreenshotExternally(id: string): Promise<void>;
   RevealScreenshotInFileManager(id: string): Promise<void>;
   ScanScreenshotDir(path: string): Promise<number>;
+  IsGalleryScanning(): Promise<boolean>;
   ReindexScreenshotDir(path: string): Promise<number>;
   Encounters(): Promise<UserEncounterDTO[]>;
   RotateEncounters(): Promise<number>;
@@ -343,6 +351,9 @@ export const App = {
   },
   async scanScreenshotDir(path: string): Promise<number> {
     return callApp((a) => a.ScanScreenshotDir(path), 0);
+  },
+  async isGalleryScanning(): Promise<boolean> {
+    return callApp((a) => a.IsGalleryScanning(), false);
   },
   async reindexScreenshotDir(path: string): Promise<number> {
     return callApp((a) => a.ReindexScreenshotDir(path), 0);

@@ -2,6 +2,8 @@ package usecase
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"slices"
@@ -309,5 +311,42 @@ func TestMediaUseCase_ScanDirectory_ProgressCallbacks(t *testing.T) {
 	slices.Sort(importItems)
 	if !slices.Equal(importItems, []string{"a.png", "b.png"}) {
 		t.Errorf("import basenames = %v, want [a.png b.png]", importItems)
+	}
+}
+
+func TestMediaUseCase_ScanDirectory_ContextCancelDuringWalk(t *testing.T) {
+	dir := t.TempDir()
+	p1 := filepath.Join(dir, "a.png")
+	_ = os.WriteFile(p1, []byte("fake1"), 0o644)
+
+	repo := newMockScreenshotRepo()
+	uc := NewMediaUseCase(repo, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := uc.ScanDirectory(ctx, dir, nil)
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("ScanDirectory: err = %v, want context.Canceled", err)
+	}
+}
+
+func TestMediaUseCase_ScanDirectory_ContextCancelDuringImport(t *testing.T) {
+	dir := t.TempDir()
+	for i := range 5 {
+		p := filepath.Join(dir, fmt.Sprintf("f%d.png", i))
+		_ = os.WriteFile(p, []byte("x"), 0o644)
+	}
+
+	repo := newMockScreenshotRepo()
+	uc := NewMediaUseCase(repo, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+
+	_, err := uc.ScanDirectory(ctx, dir, func(p ScanProgress) {
+		if p.Phase == ScanPhaseImporting && p.Current >= 2 {
+			cancel()
+		}
+	})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("ScanDirectory: err = %v, want context.Canceled", err)
 	}
 }

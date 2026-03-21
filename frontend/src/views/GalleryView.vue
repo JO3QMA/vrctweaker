@@ -201,6 +201,7 @@ import {
   type ScreenshotDTO,
   type ScreenshotSearchDTO,
   type ScanProgressPayload,
+  type GalleryScanDonePayload,
 } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
 import {
@@ -211,6 +212,8 @@ import {
 import { pruneThumbnailUrlMap } from "./galleryThumbnailCache";
 
 const FILTER_DEBOUNCE_MS = 400;
+/** Debounce reload when picture folder watcher emits gallery:screenshots-changed. */
+const GALLERY_SCREENSHOTS_CHANGED_DEBOUNCE_MS = 400;
 /** Debounced prune after scroll so off-screen Data URLs are released without thrashing. */
 const THUMBNAIL_PRUNE_SCROLL_DEBOUNCE_MS = 150;
 const THUMBNAIL_FETCH_CONCURRENCY = 4;
@@ -251,6 +254,10 @@ let filterDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let thumbnailPruneScrollTimer: ReturnType<typeof setTimeout> | null = null;
 let thumbnailFetchGeneration = 0;
 let unsubscribeScanProgress: (() => void) | undefined;
+let unsubscribeScanDone: (() => void) | undefined;
+let unsubscribeScreenshotsChanged: (() => void) | undefined;
+let screenshotsChangedDebounceTimer: ReturnType<typeof setTimeout> | null =
+  null;
 
 const scanProgressDeterminate = computed(() => {
   const p = scanProgress.value;
@@ -298,6 +305,35 @@ function applyScanProgressPayload(data: unknown): void {
     total: o.total,
     item: typeof item === "string" ? item : "",
   };
+}
+
+function applyGalleryScanDonePayload(data: unknown): void {
+  let payload: GalleryScanDonePayload = { count: 0 };
+  if (typeof data === "object" && data !== null) {
+    const o = data as Record<string, unknown>;
+    if (typeof o.count === "number") {
+      payload = {
+        count: o.count,
+        error: typeof o.error === "string" ? o.error : undefined,
+        cancelled: o.cancelled === true,
+      };
+    }
+  }
+  scanning.value = false;
+  scanProgress.value = null;
+  if (payload.cancelled) {
+    scanError.value = null;
+  } else if (payload.error) {
+    scanError.value = payload.error;
+  } else {
+    scanError.value = null;
+  }
+  void load().then(() => {
+    void nextTick(() => {
+      scrollSync.value++;
+      void syncThumbnailsForVisible();
+    });
+  });
 }
 
 const columnCount = computed(() => {
@@ -710,6 +746,16 @@ async function load(): Promise<void> {
   }
 }
 
+function scheduleLoadFromPictureWatcher(): void {
+  if (screenshotsChangedDebounceTimer !== null) {
+    clearTimeout(screenshotsChangedDebounceTimer);
+  }
+  screenshotsChangedDebounceTimer = setTimeout(() => {
+    screenshotsChangedDebounceTimer = null;
+    void load();
+  }, GALLERY_SCREENSHOTS_CHANGED_DEBOUNCE_MS);
+}
+
 function onFilterEnter(): void {
   if (filterDebounceTimer !== null) {
     clearTimeout(filterDebounceTimer);
@@ -732,6 +778,14 @@ onBeforeUnmount(() => {
   thumbnailFetchGeneration++;
   unsubscribeScanProgress?.();
   unsubscribeScanProgress = undefined;
+  unsubscribeScanDone?.();
+  unsubscribeScanDone = undefined;
+  unsubscribeScreenshotsChanged?.();
+  unsubscribeScreenshotsChanged = undefined;
+  if (screenshotsChangedDebounceTimer !== null) {
+    clearTimeout(screenshotsChangedDebounceTimer);
+    screenshotsChangedDebounceTimer = null;
+  }
   if (filterDebounceTimer !== null) {
     clearTimeout(filterDebounceTimer);
   }
@@ -746,6 +800,7 @@ async function scanFolder(): Promise<void> {
   loadError.value = null;
   scanProgress.value = null;
   scanning.value = true;
+  let goScanStarted = false;
   try {
     let path = "";
     try {
@@ -767,16 +822,19 @@ async function scanFolder(): Promise<void> {
         return;
       }
     }
-    try {
-      await App.scanScreenshotDir(path);
-    } catch (err) {
+    goScanStarted = true;
+    await App.scanScreenshotDir(path);
+  } catch (err) {
+    if (scanning.value) {
+      scanning.value = false;
+      scanProgress.value = null;
       scanError.value = err instanceof Error ? err.message : String(err);
-      return;
     }
-    await load();
   } finally {
-    scanning.value = false;
-    scanProgress.value = null;
+    if (!goScanStarted) {
+      scanning.value = false;
+      scanProgress.value = null;
+    }
   }
 }
 
@@ -800,19 +858,41 @@ async function onJoin(): Promise<void> {
 
 onMounted(() => {
   const rt = getRuntime();
-  const off = rt?.EventsOn?.("gallery:scan-progress", (data?: unknown) => {
-    applyScanProgressPayload(data);
+  const offProgress = rt?.EventsOn?.(
+    "gallery:scan-progress",
+    (data?: unknown) => {
+      applyScanProgressPayload(data);
+    },
+  );
+  if (typeof offProgress === "function") {
+    unsubscribeScanProgress = offProgress;
+  }
+  const offDone = rt?.EventsOn?.("gallery:scan-done", (data?: unknown) => {
+    applyGalleryScanDonePayload(data);
   });
-  if (typeof off === "function") {
-    unsubscribeScanProgress = off;
+  if (typeof offDone === "function") {
+    unsubscribeScanDone = offDone;
+  }
+  const offChanged = rt?.EventsOn?.("gallery:screenshots-changed", () => {
+    scheduleLoadFromPictureWatcher();
+  });
+  if (typeof offChanged === "function") {
+    unsubscribeScreenshotsChanged = offChanged;
   }
 
-  void load().then(() => {
-    void nextTick(() => {
-      scrollSync.value++;
-      void syncThumbnailsForVisible();
-    });
-  });
+  void (async () => {
+    try {
+      if (await App.isGalleryScanning()) {
+        scanning.value = true;
+      }
+    } catch {
+      /* ignore */
+    }
+    await load();
+    await nextTick();
+    scrollSync.value++;
+    void syncThumbnailsForVisible();
+  })();
 });
 </script>
 
