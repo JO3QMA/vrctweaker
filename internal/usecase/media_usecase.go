@@ -11,6 +11,24 @@ import (
 	"vrchat-tweaker/internal/domain/media"
 )
 
+const (
+	// ScanPhaseListing is reported while collecting image paths under the tree.
+	ScanPhaseListing = "listing"
+	// ScanPhaseImporting is reported while ingesting collected paths.
+	ScanPhaseImporting = "importing"
+)
+
+// How often to emit listing progress (every N images found) during filepath.Walk.
+const scanListingProgressEvery = 50
+
+// ScanProgress is a snapshot for UI progress (optional callback from ScanDirectory).
+type ScanProgress struct {
+	Phase   string
+	Current int
+	Total   int
+	Item    string
+}
+
 // MediaUseCase handles screenshot scanning and management.
 type MediaUseCase struct {
 	repo      media.ScreenshotRepository
@@ -82,7 +100,8 @@ func (uc *MediaUseCase) IngestScreenshotFile(ctx context.Context, path string) (
 }
 
 // ScanDirectory scans a directory for screenshots and indexes them.
-func (uc *MediaUseCase) ScanDirectory(ctx context.Context, basePath string) (int, error) {
+// onProgress is optional; when non-nil it receives listing/importing snapshots.
+func (uc *MediaUseCase) ScanDirectory(ctx context.Context, basePath string, onProgress func(ScanProgress)) (int, error) {
 	basePath = filepath.Clean(basePath)
 	info, err := os.Stat(basePath)
 	if err != nil {
@@ -92,28 +111,56 @@ func (uc *MediaUseCase) ScanDirectory(ctx context.Context, basePath string) (int
 		return 0, nil
 	}
 
-	count := 0
-	err = filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
+	var paths []string
+	err = filepath.Walk(basePath, func(path string, fi os.FileInfo, walkErr error) error {
+		if walkErr != nil {
 			return nil
 		}
-		if info.IsDir() {
+		if fi.IsDir() {
 			return nil
 		}
 		ext := strings.ToLower(filepath.Ext(path))
 		switch ext {
 		case ".png", ".jpg", ".jpeg":
-			_, created, ingestErr := uc.IngestScreenshotFile(ctx, path)
-			if ingestErr != nil {
-				return nil
-			}
-			if created {
-				count++
-			}
+		default:
+			return nil
+		}
+		paths = append(paths, path)
+		if onProgress != nil && len(paths)%scanListingProgressEvery == 0 {
+			onProgress(ScanProgress{Phase: ScanPhaseListing, Current: len(paths), Total: 0})
 		}
 		return nil
 	})
-	return count, err
+	if err != nil {
+		return 0, err
+	}
+
+	if onProgress != nil {
+		onProgress(ScanProgress{Phase: ScanPhaseListing, Current: len(paths), Total: 0})
+		onProgress(ScanProgress{Phase: ScanPhaseImporting, Current: 0, Total: len(paths), Item: ""})
+	}
+
+	count := 0
+	for i, path := range paths {
+		if ctx.Err() != nil {
+			return count, ctx.Err()
+		}
+		_, created, ingestErr := uc.IngestScreenshotFile(ctx, path)
+		if ingestErr != nil {
+			// Same as previous Walk behavior: skip file on ingest error.
+		} else if created {
+			count++
+		}
+		if onProgress != nil {
+			onProgress(ScanProgress{
+				Phase:   ScanPhaseImporting,
+				Current: i + 1,
+				Total:   len(paths),
+				Item:    filepath.Base(path),
+			})
+		}
+	}
+	return count, nil
 }
 
 // DeleteScreenshot removes a screenshot record.

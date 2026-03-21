@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"vrchat-tweaker/internal/domain/activity"
@@ -410,9 +412,47 @@ func (a *App) ScreenshotThumbnailDataURL(id string) (string, error) {
 	return a.media.ScreenshotThumbnailDataURL(a.ctx, id)
 }
 
+const galleryScanProgressEvent = "gallery:scan-progress"
+
+const galleryScanProgressEmitMinInterval = 90 * time.Millisecond
+
+// scanProgressEmitter throttles gallery:scan-progress EventsEmit; flush sends the latest pending payload.
+type scanProgressEmitter struct {
+	ctx        context.Context
+	mu         sync.Mutex
+	lastEmit   time.Time
+	pending    usecase.ScanProgress
+	hasPending bool
+}
+
+func (e *scanProgressEmitter) emit(p usecase.ScanProgress) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.pending = p
+	e.hasPending = true
+	if time.Since(e.lastEmit) >= galleryScanProgressEmitMinInterval {
+		runtime.EventsEmit(e.ctx, galleryScanProgressEvent, toScanProgressDTO(e.pending))
+		e.lastEmit = time.Now()
+		e.hasPending = false
+	}
+}
+
+func (e *scanProgressEmitter) flush() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if !e.hasPending {
+		return
+	}
+	runtime.EventsEmit(e.ctx, galleryScanProgressEvent, toScanProgressDTO(e.pending))
+	e.lastEmit = time.Now()
+	e.hasPending = false
+}
+
 // ScanScreenshotDir scans a directory for screenshots.
 func (a *App) ScanScreenshotDir(path string) (int, error) {
-	return a.media.ScanDirectory(a.ctx, path)
+	em := &scanProgressEmitter{ctx: a.ctx}
+	defer em.flush()
+	return a.media.ScanDirectory(a.ctx, path, em.emit)
 }
 
 // ReindexScreenshotDir re-extracts metadata for existing screenshots under path.

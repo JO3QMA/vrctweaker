@@ -41,7 +41,22 @@
     <div class="gallery-body">
       <!-- グリッド一覧（この領域のみ縦スクロール） -->
       <div class="grid-section">
-        <div v-if="scanning" class="loading">フォルダをスキャンしています…</div>
+        <div
+          v-if="scanning"
+          class="loading gallery-scan-progress"
+          data-testid="gallery-scan-progress"
+        >
+          <p class="gallery-scan-status">
+            {{ scanStatusText }}
+          </p>
+          <progress
+            v-if="scanProgressDeterminate"
+            class="gallery-scan-progress-bar"
+            :value="scanProgress?.current ?? 0"
+            :max="Math.max(1, scanProgress?.total ?? 1)"
+          />
+          <progress v-else class="gallery-scan-progress-bar" />
+        </div>
         <div v-else-if="loading" class="loading">読み込み中…</div>
         <div v-else-if="list.length === 0" class="empty">
           スクリーンショットがありません。Scan Folder
@@ -156,7 +171,9 @@ import {
   App,
   type ScreenshotDTO,
   type ScreenshotSearchDTO,
+  type ScanProgressPayload,
 } from "../wails/app";
+import { getRuntime } from "../wails/runtime";
 import {
   buildGalleryVirtualRows,
   galleryRowHeight,
@@ -185,6 +202,8 @@ const list = ref<ScreenshotDTO[]>([]);
 const selected = ref<ScreenshotDTO | null>(null);
 const loading = ref(false);
 const scanning = ref(false);
+/** Latest scan progress from Wails event gallery:scan-progress (cleared when scan ends). */
+const scanProgress = ref<ScanProgressPayload | null>(null);
 const loadError = ref<string | null>(null);
 const scanError = ref<string | null>(null);
 const filterWorldId = ref("");
@@ -202,6 +221,55 @@ const scrollSync = ref(0);
 let filterDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let thumbnailPruneScrollTimer: ReturnType<typeof setTimeout> | null = null;
 let thumbnailFetchGeneration = 0;
+let unsubscribeScanProgress: (() => void) | undefined;
+
+const scanProgressDeterminate = computed(() => {
+  const p = scanProgress.value;
+  return p?.phase === "importing" && p.total > 0;
+});
+
+const scanStatusText = computed(() => {
+  const p = scanProgress.value;
+  if (!p) {
+    return "フォルダをスキャンしています…";
+  }
+  if (p.phase === "listing") {
+    return `画像ファイルを検索しています…（${p.current} 件）`;
+  }
+  if (p.phase === "importing") {
+    if (p.total === 0) {
+      return "画像ファイルは見つかりませんでした";
+    }
+    if (p.current === 0) {
+      return `画像 ${p.total} 件を取り込みます…`;
+    }
+    if (p.item) {
+      return `取り込み中: ${p.item}（${p.current} / ${p.total}）`;
+    }
+    return `取り込み中（${p.current} / ${p.total}）`;
+  }
+  return "フォルダをスキャンしています…";
+});
+
+function applyScanProgressPayload(data: unknown): void {
+  if (typeof data !== "object" || data === null) {
+    return;
+  }
+  const o = data as Record<string, unknown>;
+  if (typeof o.phase !== "string") {
+    return;
+  }
+  if (typeof o.current !== "number" || typeof o.total !== "number") {
+    return;
+  }
+  const item = o.item;
+  scanProgress.value = {
+    phase: o.phase,
+    current: o.current,
+    total: o.total,
+    item: typeof item === "string" ? item : "",
+  };
+}
 
 const columnCount = computed(() => {
   const w = gridInnerWidth.value;
@@ -604,6 +672,8 @@ watch(filterWorldId, () => {
 
 onBeforeUnmount(() => {
   thumbnailFetchGeneration++;
+  unsubscribeScanProgress?.();
+  unsubscribeScanProgress = undefined;
   if (filterDebounceTimer !== null) {
     clearTimeout(filterDebounceTimer);
   }
@@ -622,6 +692,7 @@ function isMissingVRChatConfigError(err: unknown): boolean {
 async function scanFolder(): Promise<void> {
   scanError.value = null;
   loadError.value = null;
+  scanProgress.value = null;
   scanning.value = true;
   try {
     let path = "";
@@ -655,6 +726,7 @@ async function scanFolder(): Promise<void> {
     await load();
   } finally {
     scanning.value = false;
+    scanProgress.value = null;
   }
 }
 
@@ -676,6 +748,14 @@ async function onJoin(): Promise<void> {
 }
 
 onMounted(() => {
+  const rt = getRuntime();
+  const off = rt?.EventsOn?.("gallery:scan-progress", (data?: unknown) => {
+    applyScanProgressPayload(data);
+  });
+  if (typeof off === "function") {
+    unsubscribeScanProgress = off;
+  }
+
   void load().then(() => {
     void nextTick(() => {
       scrollSync.value++;
@@ -808,6 +888,32 @@ onMounted(() => {
   padding: 2rem;
   text-align: center;
   color: var(--text-secondary);
+}
+
+.gallery-scan-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.gallery-scan-status {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  max-width: 28rem;
+  word-break: break-all;
+}
+
+.gallery-scan-progress-bar {
+  width: 100%;
+  max-width: 28rem;
+  height: 0.55rem;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg-tertiary);
+  accent-color: var(--accent);
 }
 
 .grid-section {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -125,7 +126,7 @@ func TestMediaUseCase_ScanDirectory_WithExtractor(t *testing.T) {
 	uc := NewMediaUseCase(repo, extractor)
 	ctx := context.Background()
 
-	count, err := uc.ScanDirectory(ctx, dir)
+	count, err := uc.ScanDirectory(ctx, dir, nil)
 	if err != nil {
 		t.Fatalf("ScanDirectory: %v", err)
 	}
@@ -157,7 +158,7 @@ func TestMediaUseCase_ScanDirectory_ExtractorErrorContinues(t *testing.T) {
 	uc := NewMediaUseCase(repo, extractor)
 	ctx := context.Background()
 
-	count, err := uc.ScanDirectory(ctx, dir)
+	count, err := uc.ScanDirectory(ctx, dir, nil)
 	if err != nil {
 		t.Fatalf("ScanDirectory: %v", err)
 	}
@@ -258,5 +259,55 @@ func TestMediaUseCase_ReindexScreenshots(t *testing.T) {
 	}
 	if got.WorldName != "Reindexed World" {
 		t.Errorf("WorldName = %q, want Reindexed World", got.WorldName)
+	}
+}
+
+func TestMediaUseCase_ScanDirectory_ProgressCallbacks(t *testing.T) {
+	dir := t.TempDir()
+	p1 := filepath.Join(dir, "a.png")
+	p2 := filepath.Join(dir, "b.png")
+	_ = os.WriteFile(p1, []byte("fake1"), 0644)
+	_ = os.WriteFile(p2, []byte("fake2"), 0644)
+
+	repo := newMockScreenshotRepo()
+	uc := NewMediaUseCase(repo, nil)
+	ctx := context.Background()
+
+	var got []ScanProgress
+	count, err := uc.ScanDirectory(ctx, dir, func(p ScanProgress) {
+		got = append(got, p)
+	})
+	if err != nil {
+		t.Fatalf("ScanDirectory: %v", err)
+	}
+	if count != 2 {
+		t.Errorf("count = %d, want 2", count)
+	}
+
+	// listing (final 2/0) + importing 0/2 + two per-file steps
+	if len(got) != 4 {
+		t.Fatalf("len(progress) = %d, want 4: %#v", len(got), got)
+	}
+	if got[0].Phase != "listing" || got[0].Current != 2 || got[0].Total != 0 {
+		t.Errorf("got[0] = %#v, want listing 2/0", got[0])
+	}
+	if got[1].Phase != "importing" || got[1].Current != 0 || got[1].Total != 2 || got[1].Item != "" {
+		t.Errorf("got[1] = %#v, want importing 0/2", got[1])
+	}
+	var importItems []string
+	for i := 2; i < 4; i++ {
+		if got[i].Phase != "importing" || got[i].Total != 2 {
+			t.Errorf("got[%d] = %#v, want importing n/2", i, got[i])
+		}
+		if got[i].Item != "" {
+			importItems = append(importItems, got[i].Item)
+		}
+	}
+	if got[2].Current != 1 || got[3].Current != 2 {
+		t.Errorf("want Current 1 then 2, got %#v and %#v", got[2], got[3])
+	}
+	slices.Sort(importItems)
+	if !slices.Equal(importItems, []string{"a.png", "b.png"}) {
+		t.Errorf("import basenames = %v, want [a.png b.png]", importItems)
 	}
 }

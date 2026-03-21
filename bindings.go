@@ -165,6 +165,23 @@ type ScreenshotSearchDTO struct {
 	DateTo    string `json:"dateTo,omitempty"`   // ISO date or datetime
 }
 
+// ScanProgressDTO is emitted on Wails event gallery:scan-progress during ScanScreenshotDir.
+type ScanProgressDTO struct {
+	Phase   string `json:"phase"`
+	Current int    `json:"current"`
+	Total   int    `json:"total"`
+	Item    string `json:"item,omitempty"`
+}
+
+func toScanProgressDTO(p usecase.ScanProgress) ScanProgressDTO {
+	return ScanProgressDTO{
+		Phase:   p.Phase,
+		Current: p.Current,
+		Total:   p.Total,
+		Item:    p.Item,
+	}
+}
+
 func toScreenshotDTOs(list []*media.Screenshot) []ScreenshotDTO {
 	out := make([]ScreenshotDTO, len(list))
 	for i, s := range list {

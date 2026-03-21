@@ -90,8 +90,25 @@ const defaultConfig: VRChatConfigDTO = {
 
 describe("GalleryView", () => {
   let host: HTMLDivElement;
+  let galleryScanProgressListener: ((data?: unknown) => void) | undefined;
 
   beforeEach(() => {
+    galleryScanProgressListener = undefined;
+    Object.defineProperty(window, "runtime", {
+      configurable: true,
+      enumerable: true,
+      value: {
+        EventsOn: (eventName: string, cb: (data?: unknown) => void) => {
+          if (eventName === "gallery:scan-progress") {
+            galleryScanProgressListener = cb;
+          }
+          return () => {
+            galleryScanProgressListener = undefined;
+          };
+        },
+      },
+    });
+
     host = document.createElement("div");
     host.style.width = "960px";
     host.style.height = "800px";
@@ -113,6 +130,7 @@ describe("GalleryView", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    Reflect.deleteProperty(window, "runtime");
     host.remove();
   });
 
@@ -210,6 +228,43 @@ describe("GalleryView", () => {
     expect(mockGetVRChatConfig).toHaveBeenCalled();
     expect(mockScanScreenshotDir).toHaveBeenCalledWith("C:/Pictures/VRChat");
     expect(mockScreenshots.mock.calls.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows determinate progress and current file when gallery:scan-progress fires during scan", async () => {
+    let resolveScan!: (n: number) => void;
+    mockScanScreenshotDir.mockImplementation(
+      () =>
+        new Promise<number>((resolve) => {
+          resolveScan = resolve;
+        }),
+    );
+
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    expect(galleryScanProgressListener).toBeDefined();
+
+    void wrapper.find("[data-testid='gallery-scan-folder']").trigger("click");
+    await flushPromises();
+
+    const panel = wrapper.find('[data-testid="gallery-scan-progress"]');
+    expect(panel.exists()).toBe(true);
+
+    galleryScanProgressListener?.({
+      phase: "importing",
+      current: 1,
+      total: 2,
+      item: "VRChat_foo.png",
+    });
+    await wrapper.vm.$nextTick();
+
+    expect(panel.text()).toContain("VRChat_foo.png");
+    expect(panel.text()).toContain("1 / 2");
+    const prog = panel.find("progress");
+    expect(prog.attributes("value")).toBe("1");
+    expect(prog.attributes("max")).toBe("2");
+
+    resolveScan(1);
+    await flushPromises();
   });
 
   it("uses default Pictures/VRChat when picture output folder is empty", async () => {

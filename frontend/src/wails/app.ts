@@ -56,6 +56,14 @@ export interface ScreenshotSearchDTO {
   dateTo?: string;
 }
 
+/** Payload for Wails event gallery:scan-progress (matches ScanProgressDTO in Go). */
+export interface ScanProgressPayload {
+  phase: string;
+  current: number;
+  total: number;
+  item?: string;
+}
+
 export interface UserEncounterDTO {
   id: string;
   vrcUserId: string;
