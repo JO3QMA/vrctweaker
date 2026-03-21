@@ -34,7 +34,7 @@ func isJpegBlob(b []byte) bool {
 
 // EnsureScreenshotThumbnail decodes the screenshot file, builds a JPEG thumbnail,
 // and upserts it into the repository when missing or stale (by source size+mtime).
-func (uc *MediaUseCase) EnsureScreenshotThumbnail(ctx context.Context, id string) error {
+func (uc *MediaUseCase) EnsureScreenshotThumbnail(ctx context.Context, id string) (err error) {
 	if strings.TrimSpace(id) == "" {
 		return fmt.Errorf("screenshot id is empty")
 	}
@@ -79,7 +79,11 @@ func (uc *MediaUseCase) EnsureScreenshotThumbnail(ctx context.Context, id string
 	if err != nil {
 		return fmt.Errorf("open screenshot: %w", err)
 	}
-	defer f.Close()
+	defer func() {
+		if cerr := f.Close(); cerr != nil {
+			err = errors.Join(err, fmt.Errorf("close screenshot: %w", cerr))
+		}
+	}()
 
 	limited := io.LimitReader(f, screenshotMaxSourceBytes+1)
 	img, format, err := image.Decode(limited)
@@ -154,8 +158,8 @@ func (uc *MediaUseCase) ScreenshotThumbnailDataURL(ctx context.Context, id strin
 		return "data:image/jpeg;base64," + enc, nil
 	}
 
-	if err := uc.EnsureScreenshotThumbnail(ctx, id); err != nil {
-		return "", err
+	if ensureErr := uc.EnsureScreenshotThumbnail(ctx, id); ensureErr != nil {
+		return "", ensureErr
 	}
 	cached, err = uc.repo.GetThumbnail(ctx, id)
 	if err != nil {

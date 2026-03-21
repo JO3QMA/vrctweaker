@@ -14,14 +14,14 @@ import (
 func TestScreenshotRepository_ThumbnailRoundTrip(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
-	db, err := sql.Open("sqlite", dbPath)
-	if err != nil {
-		t.Fatal(err)
+	db, openErr := sql.Open("sqlite", dbPath)
+	if openErr != nil {
+		t.Fatal(openErr)
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
-	if err := migrate(db); err != nil {
-		t.Fatal(err)
+	if migErr := migrate(db); migErr != nil {
+		t.Fatal(migErr)
 	}
 
 	repo := NewScreenshotRepository(db)
@@ -64,8 +64,8 @@ func TestScreenshotRepository_ThumbnailRoundTrip(t *testing.T) {
 		t.Fatalf("meta mismatch: %+v", got)
 	}
 
-	if err := repo.DeleteThumbnail(ctx, "s1"); err != nil {
-		t.Fatal(err)
+	if delErr := repo.DeleteThumbnail(ctx, "s1"); delErr != nil {
+		t.Fatal(delErr)
 	}
 	got2, err := repo.GetThumbnail(ctx, "s1")
 	if err != nil {

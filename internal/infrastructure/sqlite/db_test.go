@@ -22,8 +22,8 @@ func TestEnsureScreenshotThumbnailJpegBlobColumn_LegacyWebpBlob(t *testing.T) {
 
 	exec := func(q string, args ...any) {
 		t.Helper()
-		if _, err := db.Exec(q, args...); err != nil {
-			t.Fatal(err)
+		if _, execErr := db.Exec(q, args...); execErr != nil {
+			t.Fatal(execErr)
 		}
 	}
 
@@ -46,8 +46,8 @@ func TestEnsureScreenshotThumbnailJpegBlobColumn_LegacyWebpBlob(t *testing.T) {
 	exec(`INSERT INTO screenshot_thumbnails (screenshot_id, webp_blob, source_size, source_mod_unix) VALUES (?, ?, ?, ?)`,
 		"s1", hdr, int64(10), int64(20))
 
-	if err := ensureScreenshotThumbnailJpegBlobColumn(db); err != nil {
-		t.Fatal(err)
+	if colErr := ensureScreenshotThumbnailJpegBlobColumn(db); colErr != nil {
+		t.Fatal(colErr)
 	}
 
 	repo := NewScreenshotRepository(db)
