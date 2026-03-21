@@ -500,13 +500,20 @@ func (e *scanProgressEmitter) flush() {
 
 // ScanScreenshotDir scans a directory for screenshots.
 func (a *App) ScanScreenshotDir(path string) (int, error) {
-	a.galleryScanWG.Add(1)
-	defer a.galleryScanWG.Done()
-
-	scanCtx, cancel := context.WithCancel(a.ctx)
 	a.galleryScanMu.Lock()
+	for a.galleryScanCancel != nil {
+		cancelFn := a.galleryScanCancel
+		a.galleryScanMu.Unlock()
+		cancelFn()
+		a.galleryScanWG.Wait()
+		a.galleryScanMu.Lock()
+	}
+	a.galleryScanWG.Add(1)
+	scanCtx, cancel := context.WithCancel(a.ctx)
 	a.galleryScanCancel = cancel
 	a.galleryScanMu.Unlock()
+
+	defer a.galleryScanWG.Done()
 	defer func() {
 		cancel()
 		a.galleryScanMu.Lock()

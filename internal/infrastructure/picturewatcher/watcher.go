@@ -188,5 +188,4 @@ func (w *run) flush() {
 			w.log.Printf("picturewatcher: ingest %s: %v", p, err)
 		}
 	}
-	}
 }
