@@ -226,6 +226,75 @@ func TestMediaUseCase_IngestScreenshotFile_SkipsNonImage(t *testing.T) {
 	}
 }
 
+func TestMediaUseCase_IngestUnderPictureRootSince_onlyNewerMtime(t *testing.T) {
+	dir := t.TempDir()
+	oldPath := filepath.Join(dir, "old.png")
+	newPath := filepath.Join(dir, "new.png")
+	_ = os.WriteFile(oldPath, []byte("a"), 0o644)
+	_ = os.WriteFile(newPath, []byte("b"), 0o644)
+	oldM := time.Date(2020, 1, 2, 3, 4, 5, 0, time.UTC)
+	newM := time.Date(2030, 6, 7, 8, 9, 10, 0, time.UTC)
+	if err := os.Chtimes(oldPath, oldM, oldM); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(newPath, newM, newM); err != nil {
+		t.Fatal(err)
+	}
+
+	since := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
+	repo := newMockScreenshotRepo()
+	uc := NewMediaUseCase(repo, nil)
+	ctx := context.Background()
+
+	count, err := uc.IngestUnderPictureRootSince(ctx, dir, since)
+	if err != nil {
+		t.Fatalf("IngestUnderPictureRootSince: %v", err)
+	}
+	if count != 1 {
+		t.Fatalf("count = %d, want 1", count)
+	}
+	if repo.byPath[oldPath] != nil {
+		t.Error("old.png should not be ingested")
+	}
+	if repo.byPath[newPath] == nil {
+		t.Fatal("new.png should be ingested")
+	}
+}
+
+func TestMediaUseCase_IngestUnderPictureRootSince_notADir(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "file.png")
+	if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	uc := NewMediaUseCase(newMockScreenshotRepo(), nil)
+	count, err := uc.IngestUnderPictureRootSince(context.Background(), f, time.Time{})
+	if err != nil {
+		t.Fatalf("IngestUnderPictureRootSince: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("count = %d, want 0", count)
+	}
+}
+
+func TestMediaUseCase_IngestUnderPictureRootSince_contextCancelDuringWalk(t *testing.T) {
+	dir := t.TempDir()
+	p := filepath.Join(dir, "n.png")
+	_ = os.WriteFile(p, []byte("x"), 0o644)
+	future := time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)
+	_ = os.Chtimes(p, future, future)
+
+	repo := newMockScreenshotRepo()
+	uc := NewMediaUseCase(repo, nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	_, err := uc.IngestUnderPictureRootSince(ctx, dir, time.Time{})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("err = %v, want context.Canceled", err)
+	}
+}
+
 func TestMediaUseCase_ReindexScreenshots(t *testing.T) {
 	dir := t.TempDir()
 	basePath := filepath.Join(dir, "screenshots")
