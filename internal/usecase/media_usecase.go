@@ -191,10 +191,12 @@ func (uc *MediaUseCase) ReindexScreenshots(ctx context.Context, basePath string)
 		if errThumb != nil {
 			return 0, errThumb
 		}
+		thumbnailStale := false
 		if thumb != nil && (thumb.SourceSize != size || thumb.SourceModUnix != modUnix) {
 			if err := uc.repo.DeleteThumbnail(ctx, s.ID); err != nil {
 				return 0, err
 			}
+			thumbnailStale = true
 		}
 
 		sizeChanged := s.FileSizeBytes == nil || *s.FileSizeBytes != size
@@ -213,9 +215,7 @@ func (uc *MediaUseCase) ReindexScreenshots(ctx context.Context, basePath string)
 				}
 			}
 		}
-		if !sizeChanged && !metaChanged {
-			continue
-		}
+		if !sizeChanged && !metaChanged && !thumbnailStale {
 		fsz := size
 		s.FileSizeBytes = &fsz
 		if err := uc.repo.Save(ctx, s); err != nil {
