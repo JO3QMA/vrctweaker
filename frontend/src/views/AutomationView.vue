@@ -1,19 +1,12 @@
 <template>
   <div class="automation-view">
-    <h1 class="page-title">
-      オートメーション
-    </h1>
+    <h1 class="page-title">オートメーション</h1>
     <p class="page-desc">
       IF-THEN 形式のルールで、トリガー発生時にアクションを実行します。
     </p>
     <div class="rules-section">
       <div class="rules-list">
-        <button
-          class="btn-add"
-          @click="addNew"
-        >
-          + 新規ルール
-        </button>
+        <button class="btn-add" @click="addNew">+ 新規ルール</button>
         <div
           v-for="r in rules"
           :key="r.id"
@@ -23,16 +16,12 @@
         >
           <div class="rule-header">
             <span class="rule-name">{{ r.name }}</span>
-            <label
-              class="toggle-wrap"
-              title="有効/無効"
-              @click.stop
-            >
+            <label class="toggle-wrap" title="有効/無効" @click.stop>
               <input
                 v-model="r.isEnabled"
                 type="checkbox"
                 @change="toggleRule(r)"
-              >
+              />
               <span class="toggle-label">{{ r.isEnabled ? "ON" : "OFF" }}</span>
             </label>
           </div>
@@ -44,31 +33,22 @@
           </div>
         </div>
       </div>
-      <div
-        v-if="selected"
-        class="rule-editor"
-      >
+      <div v-if="selected" class="rule-editor">
         <h3 class="editor-title">
           {{ selected.id ? "ルールを編集" : "新規ルール" }}
         </h3>
-        <form
-          class="editor-form"
-          @submit.prevent="save"
-        >
+        <form class="editor-form" @submit.prevent="save">
           <label>ルール名</label>
           <input
             v-model="selected.name"
             type="text"
             placeholder="例: AFK時にステータスをbusyに"
             required
-          >
+          />
           <div class="if-then-block">
             <h4>IF（トリガー）</h4>
             <label>条件</label>
-            <select
-              v-model="selected.triggerType"
-              required
-            >
+            <select v-model="selected.triggerType" required>
               <option
                 v-for="opt in triggerOptions"
                 :key="opt.value"
@@ -81,10 +61,7 @@
           <div class="if-then-block">
             <h4>THEN（アクション）</h4>
             <label>アクション</label>
-            <select
-              v-model="selected.actionType"
-              required
-            >
+            <select v-model="selected.actionType" required>
               <option
                 v-for="opt in actionOptions"
                 :key="opt.value"
@@ -107,12 +84,7 @@
             </template>
           </div>
           <div class="editor-actions">
-            <button
-              type="submit"
-              class="btn-save"
-            >
-              保存
-            </button>
+            <button type="submit" class="btn-save">保存</button>
             <button
               v-if="selected.id"
               type="button"
@@ -121,11 +93,7 @@
             >
               削除
             </button>
-            <button
-              type="button"
-              class="btn-cancel"
-              @click="cancelEdit"
-            >
+            <button type="button" class="btn-cancel" @click="cancelEdit">
               キャンセル
             </button>
           </div>

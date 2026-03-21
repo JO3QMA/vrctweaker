@@ -512,8 +512,13 @@ func (a *App) DeleteVRChatConfig() error {
 }
 
 // DefaultVRChatPictureFolder returns the folder VRChat uses when picture_output_folder
-// is unset: the "Pictures" / "My Pictures" folder under the user home, then VRChat
-// (e.g. %USERPROFILE%\Pictures\VRChat on Windows, ~/Pictures/VRChat on Unix).
+// is unset: filepath.Join(home, "Pictures", "VRChat") (e.g. ~/Pictures/VRChat on Unix,
+// %USERPROFILE%\Pictures\VRChat on Windows).
+//
+// Limitation: this does not resolve the shell “My Pictures” location (e.g. Windows folder
+// redirection to another drive). VRChat may follow the OS special folder; Go’s stdlib has
+// no direct equivalent, so this path is a conventional default and may differ from the
+// actual save location when Pictures is redirected.
 func (a *App) DefaultVRChatPictureFolder() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
