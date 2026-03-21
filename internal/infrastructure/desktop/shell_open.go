@@ -5,7 +5,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"strings"
 )
 
 // OpenFileWithDefaultApp opens an existing regular file with the OS default application.
