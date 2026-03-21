@@ -162,8 +162,11 @@ import {
   galleryRowHeight,
   type GalleryVirtualRow,
 } from "./galleryDateGroups";
+import { pruneThumbnailUrlMap } from "./galleryThumbnailCache";
 
 const FILTER_DEBOUNCE_MS = 400;
+/** Debounced prune after scroll so off-screen Data URLs are released without thrashing. */
+const THUMBNAIL_PRUNE_SCROLL_DEBOUNCE_MS = 150;
 const THUMBNAIL_FETCH_CONCURRENCY = 4;
 const GRID_GAP_PX = 12;
 const MIN_CELL_WIDTH = 140;
@@ -197,6 +200,7 @@ const gridInnerWidth = ref(0);
 const scrollSync = ref(0);
 
 let filterDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let thumbnailPruneScrollTimer: ReturnType<typeof setTimeout> | null = null;
 let thumbnailFetchGeneration = 0;
 
 const columnCount = computed(() => {
@@ -341,6 +345,8 @@ function toggleGalleryCollapse(key: string): void {
   void nextTick(() => {
     scrollSync.value++;
     rowVirtualizer.value.measure();
+    thumbnailFetchGeneration++;
+    pruneThumbnailsToRetained();
     void syncThumbnailsForVisible();
   });
 }
@@ -356,6 +362,8 @@ watchEffect((onCleanup) => {
     scrollSync.value++;
     void nextTick(() => {
       rowVirtualizer.value.measure();
+      thumbnailFetchGeneration++;
+      pruneThumbnailsToRetained();
       void syncThumbnailsForVisible();
     });
   });
@@ -363,6 +371,8 @@ watchEffect((onCleanup) => {
   gridInnerWidth.value = Math.floor(el.getBoundingClientRect().width);
   void nextTick(() => {
     rowVirtualizer.value.measure();
+    thumbnailFetchGeneration++;
+    pruneThumbnailsToRetained();
     void syncThumbnailsForVisible();
   });
   onCleanup(() => ro.disconnect());
@@ -372,6 +382,8 @@ watch([rowHeightPx, flatGalleryRows], () => {
   void nextTick(() => {
     rowVirtualizer.value.measure();
     scrollSync.value++;
+    thumbnailFetchGeneration++;
+    pruneThumbnailsToRetained();
     void syncThumbnailsForVisible();
   });
 });
@@ -379,6 +391,8 @@ watch([rowHeightPx, flatGalleryRows], () => {
 watch(
   () => selected.value?.id,
   () => {
+    thumbnailFetchGeneration++;
+    pruneThumbnailsToRetained();
     void syncThumbnailsForVisible();
   },
 );
@@ -404,8 +418,18 @@ function onThumbnailError(e: Event): void {
 function onGridScroll(): void {
   scrollSync.value++;
   void syncThumbnailsForVisible();
+  if (thumbnailPruneScrollTimer !== null) {
+    clearTimeout(thumbnailPruneScrollTimer);
+  }
+  thumbnailPruneScrollTimer = setTimeout(() => {
+    thumbnailPruneScrollTimer = null;
+    thumbnailFetchGeneration++;
+    pruneThumbnailsToRetained();
+    void syncThumbnailsForVisible();
+  }, THUMBNAIL_PRUNE_SCROLL_DEBOUNCE_MS);
 }
 
+/** IDs in virtualizer-rendered rows (includes overscan) plus the selected screenshot. */
 function visibleScreenshotIds(): string[] {
   if (list.value.length === 0) {
     return [];
@@ -427,15 +451,14 @@ function visibleScreenshotIds(): string[] {
   return [...idSet];
 }
 
-function pruneThumbnailsToList(): void {
-  const idSet = new Set(list.value.map((i) => i.id));
-  const pruned: Record<string, string> = { ...thumbnailUrls.value };
-  for (const k of Object.keys(pruned)) {
-    if (!idSet.has(k)) {
-      delete pruned[k];
-    }
-  }
-  thumbnailUrls.value = pruned;
+function pruneThumbnailsToRetained(): void {
+  const listIds = new Set(list.value.map((i) => i.id));
+  const retained = new Set(visibleScreenshotIds());
+  thumbnailUrls.value = pruneThumbnailUrlMap(
+    thumbnailUrls.value,
+    listIds,
+    retained,
+  );
 }
 
 async function syncThumbnailsForVisible(): Promise<void> {
@@ -484,11 +507,17 @@ watch(
   list,
   () => {
     thumbnailFetchGeneration++;
-    pruneThumbnailsToList();
+    const listIds = new Set(list.value.map((i) => i.id));
+    thumbnailUrls.value = pruneThumbnailUrlMap(
+      thumbnailUrls.value,
+      listIds,
+      listIds,
+    );
     void nextTick(() => {
       scrollSync.value++;
       rowVirtualizer.value.measure();
       void nextTick(() => {
+        pruneThumbnailsToRetained();
         void syncThumbnailsForVisible();
       });
     });
@@ -577,6 +606,10 @@ onBeforeUnmount(() => {
   thumbnailFetchGeneration++;
   if (filterDebounceTimer !== null) {
     clearTimeout(filterDebounceTimer);
+  }
+  if (thumbnailPruneScrollTimer !== null) {
+    clearTimeout(thumbnailPruneScrollTimer);
+    thumbnailPruneScrollTimer = null;
   }
 });
 

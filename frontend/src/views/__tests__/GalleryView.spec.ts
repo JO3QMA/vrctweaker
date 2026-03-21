@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { ref } from "vue";
 import GalleryView from "../GalleryView.vue";
+import * as galleryThumbnailCache from "../galleryThumbnailCache";
 import type { ScreenshotDTO, VRChatConfigDTO } from "../../wails/app";
 
 /** jsdom ではスクロール計測が安定しないため、十分な行を可視として返す。 */
@@ -365,5 +366,52 @@ describe("GalleryView", () => {
     expect(
       wrapper.find('[data-collapse-key="y:2024"]').attributes("aria-expanded"),
     ).toBe("false");
+  });
+
+  it("calls pruneThumbnailUrlMap when collapsing a year group", async () => {
+    const june15: ScreenshotDTO = {
+      ...sampleShot,
+      id: "s-a",
+      filePath: "C:/a.png",
+      takenAt: "2024-06-15T10:00:00Z",
+    };
+    const june1: ScreenshotDTO = {
+      ...sampleShot,
+      id: "s-b",
+      filePath: "C:/b.png",
+      takenAt: "2024-06-01T10:00:00Z",
+    };
+    mockScreenshots.mockResolvedValue([june15, june1]);
+    const pruneSpy = vi.spyOn(galleryThumbnailCache, "pruneThumbnailUrlMap");
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    await flushPromises();
+    pruneSpy.mockClear();
+
+    await wrapper.find('[data-collapse-key="y:2024"]').trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(pruneSpy).toHaveBeenCalled();
+    pruneSpy.mockRestore();
+  });
+
+  it("debounced scroll schedules thumbnail cache prune", async () => {
+    vi.useFakeTimers();
+    const pruneSpy = vi.spyOn(galleryThumbnailCache, "pruneThumbnailUrlMap");
+    try {
+      const wrapper = mount(GalleryView, { attachTo: host });
+      await flushPromises();
+      await flushPromises();
+
+      await wrapper
+        .find("[data-testid='gallery-grid-scroll']")
+        .trigger("scroll");
+      const callsAfterScroll = pruneSpy.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(150);
+      expect(pruneSpy.mock.calls.length).toBeGreaterThan(callsAfterScroll);
+    } finally {
+      pruneSpy.mockRestore();
+      vi.useRealTimers();
+    }
   });
 });
