@@ -58,12 +58,9 @@ func openFileWindows(abs string) error {
 }
 
 func revealWindows(abs string) string {
-	// explorer /select,<path> — quote when path contains spaces
-	arg := "/select," + abs
-	if strings.ContainsAny(abs, " \t") {
-		arg = `/select,"` + abs + `"`
-	}
-	return arg
+	// explorer /select,<path> — Go's exec.Command handles argument quoting;
+	// adding internal quotes would be double-escaped and break explorer.
+	return "/select," + abs
 }
 
 func revealWindowsExec(abs string) error {
