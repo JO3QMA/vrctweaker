@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -13,7 +14,10 @@ const defaultLogRetentionDays = 30
 // Open opens or creates the SQLite database and runs migrations.
 func Open(dataDir string) (*sql.DB, error) {
 	dbPath := filepath.Join(dataDir, "vrchat-tweaker.db")
-	conn, err := sql.Open("sqlite", dbPath)
+	// Foreign keys are per-connection; database/sql pools connections, so a one-off
+	// PRAGMA after Open only affects one handle. _pragma runs on every new connection.
+	dsn := dbPath + "?_pragma=foreign_keys(1)"
+	conn, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
@@ -21,8 +25,6 @@ func Open(dataDir string) (*sql.DB, error) {
 	if err := conn.Ping(); err != nil {
 		return nil, fmt.Errorf("ping db: %w", err)
 	}
-
-	_, _ = conn.Exec("PRAGMA foreign_keys = ON")
 
 	if err := migrate(conn); err != nil {
 		_ = conn.Close()
@@ -93,6 +95,22 @@ func migrate(db *sql.DB) error {
 		}
 	}
 
+	if err := ensureScreenshotsFileSizeColumn(db); err != nil {
+		return err
+	}
+	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS screenshot_thumbnails (
+			screenshot_id TEXT PRIMARY KEY,
+			jpeg_blob BLOB NOT NULL,
+			source_size INTEGER NOT NULL,
+			source_mod_unix INTEGER NOT NULL,
+			FOREIGN KEY (screenshot_id) REFERENCES screenshots(id) ON DELETE CASCADE
+		)`); err != nil {
+		return fmt.Errorf("migration screenshot_thumbnails: %w", err)
+	}
+	if err := ensureScreenshotThumbnailJpegBlobColumn(db); err != nil {
+		return err
+	}
+
 	// Insert default log_retention_days if not present
 	if _, err := db.Exec(`INSERT OR IGNORE INTO app_settings (key, value, updated_at) VALUES ('log_retention_days', ?, datetime('now'))`, fmt.Sprintf("%d", defaultLogRetentionDays)); err != nil {
 		return err
@@ -111,5 +129,49 @@ func migrate(db *sql.DB) error {
 		}
 	}
 
+	return nil
+}
+
+func ensureScreenshotsFileSizeColumn(db *sql.DB) error {
+	_, err := db.Exec(`ALTER TABLE screenshots ADD COLUMN file_size_bytes INTEGER`)
+	if err == nil {
+		return nil
+	}
+	msg := strings.ToLower(err.Error())
+	if strings.Contains(msg, "duplicate column") {
+		return nil
+	}
+	return fmt.Errorf("add file_size_bytes: %w", err)
+}
+
+// ensureScreenshotThumbnailJpegBlobColumn renames legacy webp_blob → jpeg_blob (data was always JPEG).
+func ensureScreenshotThumbnailJpegBlobColumn(db *sql.DB) error {
+	rows, err := db.Query(`SELECT name FROM pragma_table_info('screenshot_thumbnails')`)
+	if err != nil {
+		return fmt.Errorf("pragma screenshot_thumbnails columns: %w", err)
+	}
+	defer func() { _ = rows.Close() }()
+
+	var hasWebp, hasJpeg bool
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return err
+		}
+		switch name {
+		case "webp_blob":
+			hasWebp = true
+		case "jpeg_blob":
+			hasJpeg = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if hasWebp && !hasJpeg {
+		if _, err := db.Exec(`ALTER TABLE screenshot_thumbnails RENAME COLUMN webp_blob TO jpeg_blob`); err != nil {
+			return fmt.Errorf("rename webp_blob to jpeg_blob: %w", err)
+		}
+	}
 	return nil
 }

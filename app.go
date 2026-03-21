@@ -2,10 +2,14 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"vrchat-tweaker/internal/domain/activity"
@@ -16,6 +20,7 @@ import (
 	"vrchat-tweaker/internal/infrastructure/desktop"
 	"vrchat-tweaker/internal/infrastructure/filesystem"
 	"vrchat-tweaker/internal/infrastructure/logwatcher"
+	"vrchat-tweaker/internal/infrastructure/picturewatcher"
 	"vrchat-tweaker/internal/infrastructure/sqlite"
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
 	"vrchat-tweaker/internal/usecase"
@@ -32,6 +37,10 @@ type App struct {
 	settings      *usecase.SettingsUseCase
 	dbMaintenance *usecase.DBMaintenanceUseCase
 	vrchatConfig  *usecase.VRChatConfigUseCase
+
+	galleryScanMu     sync.Mutex
+	galleryScanCancel context.CancelFunc
+	galleryScanWG     sync.WaitGroup
 }
 
 // NewApp creates a new App application struct.
@@ -95,6 +104,8 @@ func (a *App) startup(ctx context.Context) {
 
 	// Start output_log watcher if path is configured
 	a.startOutputLogWatcher(ctx, eventBus)
+
+	a.startPictureFolderWatcher(ctx)
 }
 
 func (a *App) subscribeAutomationEvents(ctx context.Context, eventBus event.EventBus) {
@@ -129,6 +140,61 @@ func (a *App) startOutputLogWatcher(ctx context.Context, eventBus event.EventBus
 		return
 	}
 	runtime.LogInfo(ctx, "output_log watcher started for "+path)
+}
+
+func (a *App) resolveVRChatPictureWatchRoot() string {
+	cfg, err := a.vrchatConfig.Get()
+	if err == nil {
+		if p := strings.TrimSpace(cfg.PictureOutputFolder); p != "" {
+			return filepath.Clean(p)
+		}
+	}
+	p, err := a.DefaultVRChatPictureFolder()
+	if err != nil {
+		return ""
+	}
+	return filepath.Clean(p)
+}
+
+func (a *App) startPictureFolderWatcher(ctx context.Context) {
+	root := a.resolveVRChatPictureWatchRoot()
+	if root == "" {
+		runtime.LogWarning(ctx, "picture folder watcher: could not resolve VRChat picture directory")
+		return
+	}
+	info, err := os.Stat(root)
+	if err != nil {
+		runtime.LogWarning(ctx, fmt.Sprintf("picture folder watcher: stat %s: %v", root, err))
+		return
+	}
+	if !info.IsDir() {
+		runtime.LogWarning(ctx, "picture folder watcher: not a directory: "+root)
+		return
+	}
+	ingest := func(c context.Context, path string) error {
+		_, created, ingestErr := a.media.IngestScreenshotFile(c, path)
+		if ingestErr != nil {
+			return ingestErr
+		}
+		if created {
+			runtime.EventsEmit(a.ctx, galleryScreenshotsChangedEvent, struct{}{})
+		}
+		return nil
+	}
+	log := pictureWatchLogger{ctx: ctx}
+	if err := picturewatcher.Start(ctx, root, ingest, log); err != nil {
+		runtime.LogError(ctx, "failed to start picture folder watcher: "+err.Error())
+		return
+	}
+	runtime.LogInfo(ctx, "picture folder watcher started for "+root)
+}
+
+type pictureWatchLogger struct {
+	ctx context.Context
+}
+
+func (l pictureWatchLogger) Printf(format string, v ...any) {
+	runtime.LogWarning(l.ctx, fmt.Sprintf(format, v...))
 }
 
 type logLogger struct{}
@@ -352,9 +418,143 @@ func (a *App) GetScreenshot(id string) (*ScreenshotDTO, error) {
 	return toScreenshotDTO(s), nil
 }
 
+// ScreenshotThumbnailDataURL returns a JPEG data URL for the screenshot thumbnail (for WebView; avoids file://).
+// Uses the DB cache when valid; otherwise builds and stores a thumbnail from the source file (lazy fill for legacy rows).
+func (a *App) ScreenshotThumbnailDataURL(id string) (string, error) {
+	return a.media.ScreenshotThumbnailDataURL(a.ctx, id)
+}
+
+// OpenScreenshotExternally opens the screenshot file with the OS default application.
+func (a *App) OpenScreenshotExternally(id string) error {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return fmt.Errorf("screenshot id is empty")
+	}
+	s, err := a.media.GetScreenshot(a.ctx, id)
+	if err != nil {
+		return err
+	}
+	if s == nil {
+		return fmt.Errorf("screenshot not found")
+	}
+	return desktop.OpenFileWithDefaultApp(s.FilePath)
+}
+
+// RevealScreenshotInFileManager opens the file manager and shows the screenshot file where supported.
+func (a *App) RevealScreenshotInFileManager(id string) error {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return fmt.Errorf("screenshot id is empty")
+	}
+	s, err := a.media.GetScreenshot(a.ctx, id)
+	if err != nil {
+		return err
+	}
+	if s == nil {
+		return fmt.Errorf("screenshot not found")
+	}
+	return desktop.RevealInFileManager(s.FilePath)
+}
+
+const galleryScanProgressEvent = "gallery:scan-progress"
+
+// galleryScanDoneEvent is emitted when ScanScreenshotDir finishes (success, error, or cancel).
+const galleryScanDoneEvent = "gallery:scan-done"
+
+// galleryScreenshotsChangedEvent is emitted when the picture folder watcher ingests a new screenshot row.
+const galleryScreenshotsChangedEvent = "gallery:screenshots-changed"
+
+const galleryScanProgressEmitMinInterval = 90 * time.Millisecond
+
+// scanProgressEmitter throttles gallery:scan-progress EventsEmit; flush sends the latest pending payload.
+type scanProgressEmitter struct {
+	ctx        context.Context
+	mu         sync.Mutex
+	lastEmit   time.Time
+	pending    usecase.ScanProgress
+	hasPending bool
+}
+
+func (e *scanProgressEmitter) emit(p usecase.ScanProgress) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	e.pending = p
+	e.hasPending = true
+	if time.Since(e.lastEmit) >= galleryScanProgressEmitMinInterval {
+		runtime.EventsEmit(e.ctx, galleryScanProgressEvent, toScanProgressDTO(e.pending))
+		e.lastEmit = time.Now()
+		e.hasPending = false
+	}
+}
+
+func (e *scanProgressEmitter) flush() {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	if !e.hasPending {
+		return
+	}
+	runtime.EventsEmit(e.ctx, galleryScanProgressEvent, toScanProgressDTO(e.pending))
+	e.lastEmit = time.Now()
+	e.hasPending = false
+}
+
 // ScanScreenshotDir scans a directory for screenshots.
 func (a *App) ScanScreenshotDir(path string) (int, error) {
-	return a.media.ScanDirectory(a.ctx, path)
+	a.galleryScanMu.Lock()
+	for a.galleryScanCancel != nil {
+		cancelFn := a.galleryScanCancel
+		a.galleryScanMu.Unlock()
+		cancelFn()
+		a.galleryScanWG.Wait()
+		a.galleryScanMu.Lock()
+	}
+	a.galleryScanWG.Add(1)
+	scanCtx, cancel := context.WithCancel(a.ctx)
+	a.galleryScanCancel = cancel
+	a.galleryScanMu.Unlock()
+
+	defer a.galleryScanWG.Done()
+	defer func() {
+		cancel()
+		a.galleryScanMu.Lock()
+		a.galleryScanCancel = nil
+		a.galleryScanMu.Unlock()
+	}()
+
+	em := &scanProgressEmitter{ctx: a.ctx}
+	var count int
+	var err error
+	defer func() {
+		em.flush()
+		dto := GalleryScanDoneDTO{Count: count}
+		if err != nil {
+			dto.Error = err.Error()
+			if errors.Is(err, context.Canceled) {
+				dto.Cancelled = true
+			}
+		}
+		runtime.EventsEmit(a.ctx, galleryScanDoneEvent, dto)
+	}()
+
+	count, err = a.media.ScanDirectory(scanCtx, path, em.emit)
+	return count, err
+}
+
+// IsGalleryScanning reports whether a gallery folder scan is in progress.
+func (a *App) IsGalleryScanning() bool {
+	a.galleryScanMu.Lock()
+	defer a.galleryScanMu.Unlock()
+	return a.galleryScanCancel != nil
+}
+
+func (a *App) stopGalleryScanAndWait() {
+	a.galleryScanMu.Lock()
+	cancelFn := a.galleryScanCancel
+	a.galleryScanMu.Unlock()
+	if cancelFn != nil {
+		cancelFn()
+	}
+	a.galleryScanWG.Wait()
 }
 
 // ReindexScreenshotDir re-extracts metadata for existing screenshots under path.
@@ -472,6 +672,7 @@ func (a *App) ClearEncounters() (int64, error) {
 
 // ClearScreenshots deletes all screenshots. Returns affected row count.
 func (a *App) ClearScreenshots() (int64, error) {
+	a.stopGalleryScanAndWait()
 	return a.dbMaintenance.ClearScreenshots(a.ctx)
 }
 
@@ -504,6 +705,22 @@ func (a *App) SaveVRChatConfig(dto VRChatConfigDTO) error {
 // DeleteVRChatConfig removes config.json.
 func (a *App) DeleteVRChatConfig() error {
 	return a.vrchatConfig.Delete()
+}
+
+// DefaultVRChatPictureFolder returns the folder VRChat uses when picture_output_folder
+// is unset: filepath.Join(home, "Pictures", "VRChat") (e.g. ~/Pictures/VRChat on Unix,
+// %USERPROFILE%\Pictures\VRChat on Windows).
+//
+// Limitation: this does not resolve the shell “My Pictures” location (e.g. Windows folder
+// redirection to another drive). VRChat may follow the OS special folder; Go’s stdlib has
+// no direct equivalent, so this path is a conventional default and may differ from the
+// actual save location when Pictures is redirected.
+func (a *App) DefaultVRChatPictureFolder() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, "Pictures", "VRChat"), nil
 }
 
 // getVRChatConfigPath returns the path to VRChat's config.json.

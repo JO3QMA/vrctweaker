@@ -4,11 +4,30 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"vrchat-tweaker/internal/domain/media"
 )
+
+const (
+	// ScanPhaseListing is reported while collecting image paths under the tree.
+	ScanPhaseListing = "listing"
+	// ScanPhaseImporting is reported while ingesting collected paths.
+	ScanPhaseImporting = "importing"
+)
+
+// How often to emit listing progress (every N images found) during filepath.Walk.
+const scanListingProgressEvery = 50
+
+// ScanProgress is a snapshot for UI progress (optional callback from ScanDirectory).
+type ScanProgress struct {
+	Phase   string
+	Current int
+	Total   int
+	Item    string
+}
 
 // MediaUseCase handles screenshot scanning and management.
 type MediaUseCase struct {
@@ -31,8 +50,58 @@ func (uc *MediaUseCase) GetScreenshot(ctx context.Context, id string) (*media.Sc
 	return uc.repo.GetByID(ctx, id)
 }
 
+// IngestScreenshotFile registers a single image file if it is new (by path).
+// Returns the screenshot row, whether it was newly created, and an error only for
+// persistence/stat failures. Thumbnail generation errors are ignored so the row stays saved.
+func (uc *MediaUseCase) IngestScreenshotFile(ctx context.Context, path string) (*media.Screenshot, bool, error) {
+	path = filepath.Clean(path)
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, false, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, false, nil
+	}
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".png", ".jpg", ".jpeg":
+	default:
+		return nil, false, nil
+	}
+
+	existing, _ := uc.repo.GetByFilePath(ctx, path)
+	if existing != nil {
+		return existing, false, nil
+	}
+
+	takenAt := timePtr(info.ModTime())
+	worldID, worldName := "", ""
+	if uc.extractor != nil {
+		wid, wn, ta, _ := uc.extractor.Extract(path)
+		worldID, worldName = wid, wn
+		if ta != nil {
+			takenAt = ta
+		}
+	}
+	sz := info.Size()
+	s := &media.Screenshot{
+		ID:            uuid.New().String(),
+		FilePath:      path,
+		WorldID:       worldID,
+		WorldName:     worldName,
+		TakenAt:       takenAt,
+		FileSizeBytes: &sz,
+	}
+	if err := uc.repo.Save(ctx, s); err != nil {
+		return nil, false, err
+	}
+	_ = uc.EnsureScreenshotThumbnail(ctx, s.ID)
+	return s, true, nil
+}
+
 // ScanDirectory scans a directory for screenshots and indexes them.
-func (uc *MediaUseCase) ScanDirectory(ctx context.Context, basePath string) (int, error) {
+// onProgress is optional; when non-nil it receives listing/importing snapshots.
+func (uc *MediaUseCase) ScanDirectory(ctx context.Context, basePath string, onProgress func(ScanProgress)) (int, error) {
 	basePath = filepath.Clean(basePath)
 	info, err := os.Stat(basePath)
 	if err != nil {
@@ -42,45 +111,59 @@ func (uc *MediaUseCase) ScanDirectory(ctx context.Context, basePath string) (int
 		return 0, nil
 	}
 
-	count := 0
-	err = filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
+	var paths []string
+	err = filepath.Walk(basePath, func(path string, fi os.FileInfo, walkErr error) error {
+		if walkErr != nil {
 			return nil
 		}
-		if info.IsDir() {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		if fi.IsDir() {
 			return nil
 		}
-		ext := filepath.Ext(path)
+		ext := strings.ToLower(filepath.Ext(path))
 		switch ext {
 		case ".png", ".jpg", ".jpeg":
-			existing, _ := uc.repo.GetByFilePath(ctx, path)
-			if existing != nil {
-				return nil
-			}
-			takenAt := timePtr(info.ModTime())
-			worldID, worldName := "", ""
-			if uc.extractor != nil {
-				wid, wn, ta, _ := uc.extractor.Extract(path)
-				worldID, worldName = wid, wn
-				if ta != nil {
-					takenAt = ta
-				}
-			}
-			s := &media.Screenshot{
-				ID:        uuid.New().String(),
-				FilePath:  path,
-				WorldID:   worldID,
-				WorldName: worldName,
-				TakenAt:   takenAt,
-			}
-			if err := uc.repo.Save(ctx, s); err != nil {
-				return nil
-			}
-			count++
+		default:
+			return nil
+		}
+		paths = append(paths, path)
+		if onProgress != nil && len(paths)%scanListingProgressEvery == 0 {
+			onProgress(ScanProgress{Phase: ScanPhaseListing, Current: len(paths), Total: 0})
 		}
 		return nil
 	})
-	return count, err
+	if err != nil {
+		return 0, err
+	}
+
+	if onProgress != nil {
+		onProgress(ScanProgress{Phase: ScanPhaseListing, Current: len(paths), Total: 0})
+		onProgress(ScanProgress{Phase: ScanPhaseImporting, Current: 0, Total: len(paths), Item: ""})
+	}
+
+	count := 0
+	for i, path := range paths {
+		if ctx.Err() != nil {
+			return count, ctx.Err()
+		}
+		_, created, ingestErr := uc.IngestScreenshotFile(ctx, path)
+		if ingestErr != nil {
+			// Same as previous Walk behavior: skip file on ingest error.
+		} else if created {
+			count++
+		}
+		if onProgress != nil {
+			onProgress(ScanProgress{
+				Phase:   ScanPhaseImporting,
+				Current: i + 1,
+				Total:   len(paths),
+				Item:    filepath.Base(path),
+			})
+		}
+	}
+	return count, nil
 }
 
 // DeleteScreenshot removes a screenshot record.
@@ -98,27 +181,52 @@ func (uc *MediaUseCase) ReindexScreenshots(ctx context.Context, basePath string)
 	if err != nil {
 		return 0, err
 	}
-	if uc.extractor == nil {
-		return 0, nil
-	}
 	updated := 0
 	for _, s := range list {
-		worldID, worldName, takenAt, _ := uc.extractor.Extract(s.FilePath)
-		changed := worldID != s.WorldID || worldName != s.WorldName
-		if takenAt != nil && (s.TakenAt == nil || !takenAt.Equal(*s.TakenAt)) {
-			changed = true
-		}
-		if !changed {
+		info, err := os.Stat(s.FilePath)
+		if err != nil {
 			continue
 		}
-		s.WorldID = worldID
-		s.WorldName = worldName
-		if takenAt != nil {
-			s.TakenAt = takenAt
+		size := info.Size()
+		modUnix := info.ModTime().Unix()
+
+		thumb, errThumb := uc.repo.GetThumbnail(ctx, s.ID)
+		if errThumb != nil {
+			return 0, errThumb
 		}
+		thumbnailStale := thumb == nil
+		if thumb != nil && (thumb.SourceSize != size || thumb.SourceModUnix != modUnix) {
+			if err := uc.repo.DeleteThumbnail(ctx, s.ID); err != nil {
+				return 0, err
+			}
+			thumbnailStale = true
+		}
+
+		sizeChanged := s.FileSizeBytes == nil || *s.FileSizeBytes != size
+		metaChanged := false
+		if uc.extractor != nil {
+			worldID, worldName, takenAt, _ := uc.extractor.Extract(s.FilePath)
+			metaChanged = worldID != s.WorldID || worldName != s.WorldName
+			if takenAt != nil && (s.TakenAt == nil || !takenAt.Equal(*s.TakenAt)) {
+				metaChanged = true
+			}
+			if metaChanged {
+				s.WorldID = worldID
+				s.WorldName = worldName
+				if takenAt != nil {
+					s.TakenAt = takenAt
+				}
+			}
+		}
+		if !sizeChanged && !metaChanged && !thumbnailStale {
+			continue
+		}
+		fsz := size
+		s.FileSizeBytes = &fsz
 		if err := uc.repo.Save(ctx, s); err != nil {
 			continue
 		}
+		_ = uc.EnsureScreenshotThumbnail(ctx, s.ID)
 		updated++
 	}
 	return updated, nil

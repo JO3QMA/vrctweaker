@@ -1,0 +1,24 @@
+---
+description: コード変更後はリポジトリルートで make fmt を実行する（Go + フロント Prettier）
+alwaysApply: true
+---
+
+# 変更後フォーマット（make fmt）
+
+このリポジトリで**ソースコードを編集したあと**は、必ずリポジトリルートで次を実行する。
+
+```bash
+make fmt
+```
+
+- `fmt-back`: `go fmt ./...`
+- `fmt-front`: `frontend` で `pnpm run format`（Prettier、`frontend/.prettierignore` 以外を整形）
+
+## エージェント向け
+
+- 変更を入れたセッションでは、**可能なら自ら** `make fmt` を実行し、エラーがあれば修正してから次の作業に進む。
+- ドキュメントのみ・設定のみの変更でコードを触っていない場合は不要。
+
+## 関連
+
+- 実装完了時の全体検証（テスト・Lint）は `.cursor/rules/tdd-workflow.mdc` に従う。

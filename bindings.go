@@ -149,11 +149,12 @@ func toLaunchProfile(d LaunchProfileDTO) *launcher.LaunchProfile {
 
 // ScreenshotDTO is the frontend-facing screenshot.
 type ScreenshotDTO struct {
-	ID        string  `json:"id"`
-	FilePath  string  `json:"filePath"`
-	WorldID   string  `json:"worldId"`
-	WorldName string  `json:"worldName"`
-	TakenAt   *string `json:"takenAt,omitempty"`
+	ID            string  `json:"id"`
+	FilePath      string  `json:"filePath"`
+	WorldID       string  `json:"worldId"`
+	WorldName     string  `json:"worldName"`
+	TakenAt       *string `json:"takenAt,omitempty"`
+	FileSizeBytes *int64  `json:"fileSizeBytes,omitempty"`
 }
 
 // ScreenshotSearchDTO is the filter for SearchScreenshots.
@@ -162,6 +163,31 @@ type ScreenshotSearchDTO struct {
 	WorldName string `json:"worldName,omitempty"`
 	DateFrom  string `json:"dateFrom,omitempty"` // ISO date or datetime
 	DateTo    string `json:"dateTo,omitempty"`   // ISO date or datetime
+}
+
+// ScanProgressDTO is emitted on Wails event gallery:scan-progress during ScanScreenshotDir.
+// The backend also emits gallery:screenshots-changed (no DTO) when the picture folder watcher ingests a new screenshot.
+type ScanProgressDTO struct {
+	Phase   string `json:"phase"`
+	Current int    `json:"current"`
+	Total   int    `json:"total"`
+	Item    string `json:"item,omitempty"`
+}
+
+func toScanProgressDTO(p usecase.ScanProgress) ScanProgressDTO {
+	return ScanProgressDTO{
+		Phase:   p.Phase,
+		Current: p.Current,
+		Total:   p.Total,
+		Item:    p.Item,
+	}
+}
+
+// GalleryScanDoneDTO is emitted on Wails event gallery:scan-done when ScanScreenshotDir finishes.
+type GalleryScanDoneDTO struct {
+	Count     int    `json:"count"`
+	Error     string `json:"error,omitempty"`
+	Cancelled bool   `json:"cancelled"`
 }
 
 func toScreenshotDTOs(list []*media.Screenshot) []ScreenshotDTO {
@@ -185,6 +211,9 @@ func toScreenshotDTO(s *media.Screenshot) *ScreenshotDTO {
 	if s.TakenAt != nil {
 		ts := s.TakenAt.Format(time.RFC3339)
 		dto.TakenAt = &ts
+	}
+	if s.FileSizeBytes != nil {
+		dto.FileSizeBytes = s.FileSizeBytes
 	}
 	return dto
 }

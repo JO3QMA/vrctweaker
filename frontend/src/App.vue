@@ -4,14 +4,13 @@
     <div class="app-body">
       <Sidebar />
       <main class="main-content">
-        <router-view v-slot="{ Component }">
-          <transition
-            name="fade"
-            mode="out-in"
-          >
-            <component :is="Component" />
-          </transition>
-        </router-view>
+        <div class="router-outlet-host">
+          <router-view v-slot="{ Component }">
+            <transition name="fade" mode="out-in">
+              <component :is="Component" />
+            </transition>
+          </router-view>
+        </div>
       </main>
     </div>
   </div>
@@ -38,8 +37,34 @@ import Sidebar from "./components/Sidebar.vue";
 
 .main-content {
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   padding: 1.5rem;
+}
+
+.router-outlet-host {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.router-outlet-host > * {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* `> *` matches the routed SFC root: Vue 3 applies this parent’s scope attribute to child
+   component roots, so the combinator resolves to one element. `<Transition>` adds no wrapper
+   DOM node. Gallery manages its own scroll, so its root `.gallery-view` is excluded here. */
+.router-outlet-host > *:not(.gallery-view) {
+  overflow-y: auto;
 }
 
 .fade-enter-active,

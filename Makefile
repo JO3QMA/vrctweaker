@@ -34,8 +34,9 @@ build-back:
 lint: lint-back lint-front
 
 ## バックエンド Lint（golangci-lint）
+## キャッシュをリポジトリ配下に置き、~/.cache が書けない環境での警告スパムを避ける
 lint-back:
-	golangci-lint run ./...
+	GOLANGCI_LINT_CACHE=$(CURDIR)/.cache/golangci-lint golangci-lint run ./...
 
 ## フロントエンド Lint（ESLint + vue-tsc）
 lint-front:

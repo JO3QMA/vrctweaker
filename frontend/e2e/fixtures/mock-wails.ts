@@ -14,24 +14,24 @@
 export function getMockWailsInitScript(): string {
   const seedProfiles = [
     {
-      id: 'profile-1',
-      name: 'デフォルトプロファイル',
-      arguments: '',
+      id: "profile-1",
+      name: "デフォルトプロファイル",
+      arguments: "",
       isDefault: true,
-      createdAt: '2025-01-01T00:00:00Z',
-      updatedAt: '2025-01-01T00:00:00Z',
+      createdAt: "2025-01-01T00:00:00Z",
+      updatedAt: "2025-01-01T00:00:00Z",
     },
-  ]
+  ];
 
   const seedPathSettings = {
-    vrchatPathWindows: '',
-    steamPathLinux: '',
-    outputLogPath: '',
-  }
+    vrchatPathWindows: "",
+    steamPathLinux: "",
+    outputLogPath: "",
+  };
 
   // JSON として埋め込み、ブラウザ側でパースして使用
-  const profilesJson = JSON.stringify(seedProfiles)
-  const pathSettingsJson = JSON.stringify(seedPathSettings)
+  const profilesJson = JSON.stringify(seedProfiles);
+  const pathSettingsJson = JSON.stringify(seedPathSettings);
 
   return `
     (function() {
@@ -58,7 +58,14 @@ export function getMockWailsInitScript(): string {
         Screenshots: () => Promise.resolve([]),
         SearchScreenshots: () => Promise.resolve([]),
         GetScreenshot: () => Promise.resolve(null),
+        ScreenshotThumbnailDataURL: () =>
+          Promise.resolve(
+            'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+          ),
+        OpenScreenshotExternally: () => Promise.resolve(),
+        RevealScreenshotInFileManager: () => Promise.resolve(),
         ScanScreenshotDir: () => Promise.resolve(0),
+        IsGalleryScanning: () => Promise.resolve(false),
         ReindexScreenshotDir: () => Promise.resolve(0),
         Encounters: () => Promise.resolve([]),
         RotateEncounters: () => Promise.resolve(0),
@@ -78,7 +85,25 @@ export function getMockWailsInitScript(): string {
         SaveAutomationRule: () => Promise.resolve(),
         DeleteAutomationRule: () => Promise.resolve(),
         ToggleAutomationRule: () => Promise.resolve(),
+        VRChatConfigExists: () => Promise.resolve(false),
+        GetVRChatConfig: () => Promise.resolve({
+          cameraResWidth: 1920,
+          cameraResHeight: 1080,
+          screenshotResWidth: 1920,
+          screenshotResHeight: 1080,
+          pictureOutputFolder: '',
+          pictureOutputSplitByDate: null,
+          fpvSteadycamFov: 0,
+          cacheDirectory: '',
+          cacheSize: 0,
+          cacheExpiryDelay: 0,
+          disableRichPresence: null,
+        }),
+        SaveVRChatConfig: () => Promise.resolve(),
+        DeleteVRChatConfig: () => Promise.resolve(),
+        DefaultVRChatPictureFolder: () =>
+          Promise.resolve('C:\\\\Temp\\\\VRChatTweakerE2E\\\\Pictures\\\\VRChat'),
       };
     })();
-  `.trim()
+  `.trim();
 }

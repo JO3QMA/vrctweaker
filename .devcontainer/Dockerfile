@@ -23,6 +23,6 @@ RUN arch=$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || echo "x86_64-li
 # Wails CLI (global install)
 RUN go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-# golangci-lint (used in CI)
-RUN go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+# golangci-lint v2 (must match .golangci.yml version: "2" and CI action)
+RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 

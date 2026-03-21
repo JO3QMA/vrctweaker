@@ -3,22 +3,24 @@ module.exports = {
   root: true,
   env: { browser: true, es2022: true },
   extends: [
-    'eslint:recommended',
-    'plugin:vue/vue3-recommended',
-    'plugin:@typescript-eslint/recommended',
+    "eslint:recommended",
+    "plugin:vue/vue3-recommended",
+    "plugin:@typescript-eslint/recommended",
+    // Disable ESLint formatting rules that conflict with Prettier (must be last)
+    "prettier",
   ],
-  parser: 'vue-eslint-parser',
+  parser: "vue-eslint-parser",
   parserOptions: {
-    parser: '@typescript-eslint/parser',
-    extraFileExtensions: ['.vue'],
-    ecmaVersion: 'latest',
-    sourceType: 'module',
+    parser: "@typescript-eslint/parser",
+    extraFileExtensions: [".vue"],
+    ecmaVersion: "latest",
+    sourceType: "module",
   },
-  plugins: ['vue', '@typescript-eslint'],
+  plugins: ["vue", "@typescript-eslint"],
   rules: {
-    'vue/multi-word-component-names': 'off',
-    '@typescript-eslint/no-explicit-any': 'warn',
-    '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    "vue/multi-word-component-names": "off",
+    "@typescript-eslint/no-explicit-any": "warn",
+    "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_" }],
   },
-  ignorePatterns: ['dist', 'node_modules', 'wailsjs'],
-}
+  ignorePatterns: ["dist", "node_modules", "wailsjs"],
+};

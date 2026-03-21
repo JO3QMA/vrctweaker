@@ -5,6 +5,11 @@ export interface WailsRuntime {
   WindowMinimise?: () => void;
   WindowToggleMaximise?: () => void;
   Quit?: () => void;
+  /** Subscribe to backend events; returns unsubscribe when supported. */
+  EventsOn?: (
+    eventName: string,
+    callback: (data?: unknown) => void,
+  ) => () => void;
 }
 
 declare global {

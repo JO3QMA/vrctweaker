@@ -45,6 +45,8 @@ export interface ScreenshotDTO {
   worldId: string;
   worldName: string;
   takenAt?: string;
+  /** Original image file size in bytes when known */
+  fileSizeBytes?: number;
 }
 
 export interface ScreenshotSearchDTO {
@@ -52,6 +54,21 @@ export interface ScreenshotSearchDTO {
   worldName?: string;
   dateFrom?: string;
   dateTo?: string;
+}
+
+/** Payload for Wails event gallery:scan-progress (matches ScanProgressDTO in Go). */
+export interface ScanProgressPayload {
+  phase: string;
+  current: number;
+  total: number;
+  item?: string;
+}
+
+/** Payload for Wails event gallery:scan-done (matches GalleryScanDoneDTO in Go). */
+export interface GalleryScanDonePayload {
+  count: number;
+  error?: string;
+  cancelled?: boolean;
 }
 
 export interface UserEncounterDTO {
@@ -148,7 +165,11 @@ interface AppBindings {
   Screenshots(worldId?: string): Promise<ScreenshotDTO[]>;
   SearchScreenshots(filter: ScreenshotSearchDTO): Promise<ScreenshotDTO[]>;
   GetScreenshot(id: string): Promise<ScreenshotDTO | null>;
+  ScreenshotThumbnailDataURL(id: string): Promise<string>;
+  OpenScreenshotExternally(id: string): Promise<void>;
+  RevealScreenshotInFileManager(id: string): Promise<void>;
   ScanScreenshotDir(path: string): Promise<number>;
+  IsGalleryScanning(): Promise<boolean>;
   ReindexScreenshotDir(path: string): Promise<number>;
   Encounters(): Promise<UserEncounterDTO[]>;
   RotateEncounters(): Promise<number>;
@@ -176,6 +197,7 @@ interface AppBindings {
   GetVRChatConfig(): Promise<VRChatConfigDTO>;
   SaveVRChatConfig(dto: VRChatConfigDTO): Promise<void>;
   DeleteVRChatConfig(): Promise<void>;
+  DefaultVRChatPictureFolder(): Promise<string>;
 }
 
 declare global {
@@ -192,6 +214,15 @@ function getApp(): AppBindings | undefined {
   return typeof window !== "undefined" ? window.go?.main?.App : undefined;
 }
 
+/**
+ * Invokes a Wails `App` binding when `window.go.main.App` exists.
+ *
+ * `fallback` is returned **only** when that binding is missing (e.g. plain browser
+ * or tests without Wails). It is **not** used when Go returns an error: in that
+ * case the promise from `fn(app)` rejects and the error propagates. Callers must
+ * use try/catch or `.catch()` for backend failures — do not assume errors are
+ * swallowed or replaced by `fallback`.
+ */
 export async function callApp<T>(
   fn: (app: AppBindings) => Promise<T>,
   fallback: T,
@@ -309,8 +340,20 @@ export const App = {
   async getScreenshot(id: string): Promise<ScreenshotDTO | null> {
     return callApp((a) => a.GetScreenshot(id), null);
   },
+  async screenshotThumbnailDataURL(id: string): Promise<string> {
+    return callApp((a) => a.ScreenshotThumbnailDataURL(id), "");
+  },
+  async openScreenshotExternally(id: string): Promise<void> {
+    return callApp((a) => a.OpenScreenshotExternally(id), undefined);
+  },
+  async revealScreenshotInFileManager(id: string): Promise<void> {
+    return callApp((a) => a.RevealScreenshotInFileManager(id), undefined);
+  },
   async scanScreenshotDir(path: string): Promise<number> {
     return callApp((a) => a.ScanScreenshotDir(path), 0);
+  },
+  async isGalleryScanning(): Promise<boolean> {
+    return callApp((a) => a.IsGalleryScanning(), false);
   },
   async reindexScreenshotDir(path: string): Promise<number> {
     return callApp((a) => a.ReindexScreenshotDir(path), 0);
@@ -382,6 +425,12 @@ export const App = {
   async vrchatConfigExists(): Promise<boolean> {
     return callApp((a) => a.VRChatConfigExists(), false);
   },
+  /**
+   * Reads VRChat `config.json` via the backend. Rejects if the Go method errors
+   * (e.g. read/parse failure) when Wails is present. The empty DTO below is only
+   * the `callApp` fallback when `App` bindings are unavailable — not a substitute
+   * for successful resolution on error paths.
+   */
   async getVRChatConfig(): Promise<VRChatConfigDTO> {
     return callApp((a) => a.GetVRChatConfig(), {
       cameraResWidth: 0,
@@ -402,5 +451,8 @@ export const App = {
   },
   async deleteVRChatConfig(): Promise<void> {
     return callApp((a) => a.DeleteVRChatConfig(), undefined);
+  },
+  async defaultVRChatPictureFolder(): Promise<string> {
+    return callApp((a) => a.DefaultVRChatPictureFolder(), "");
   },
 };

@@ -34,3 +34,6 @@ test-results/
 #
 .pnpm-store/
 /docs/ai_dlc/
+
+# Tool caches (golangci-lint 等)
+.cache/
