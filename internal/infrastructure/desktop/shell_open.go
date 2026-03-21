@@ -53,6 +53,9 @@ func openFileWindows(abs string) error {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("open file: %w", err)
 	}
+	return nil
+}
+
 func revealWindows(abs string) string {
 	// explorer /select,<path> — Go's exec.Command handles argument quoting;
 	// adding internal quotes would be double-escaped and break explorer.
