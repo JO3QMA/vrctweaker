@@ -45,17 +45,6 @@ func RevealInFileManager(path string) error {
 	}
 }
 
-func openFileWindows(abs string) error {
-	// cmd /c start "" <path> — empty title for paths with spaces
-	cmd := exec.Command("cmd", "/c", "start", "", abs)
-	cmd.Stdout = nil
-	cmd.Stderr = nil
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("open file: %w", err)
-	}
-	return nil
-}
-
 func revealWindows(abs string) string {
 	// explorer /select,<path> — Go's exec.Command handles argument quoting;
 	// adding internal quotes would be double-escaped and break explorer.
