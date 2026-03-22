@@ -35,7 +35,9 @@ func Open(dataDir string) (*sql.DB, error) {
 }
 
 func migrate(db *sql.DB) error {
-	migrations := []string{
+	// friends_cache → users_cache must run before CREATE TABLE users_cache, or existing
+	// installs would get an empty users_cache and skip the rename (orphaning friends_cache).
+	migrationsBeforeUsersCache := []string{
 		`CREATE TABLE IF NOT EXISTS launch_profiles (
 			id TEXT PRIMARY KEY,
 			name TEXT NOT NULL,
@@ -66,6 +68,19 @@ func migrate(db *sql.DB) error {
 			encountered_at TEXT NOT NULL
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_user_encounters_encountered_at ON user_encounters(encountered_at)`,
+	}
+
+	for _, m := range migrationsBeforeUsersCache {
+		if _, err := db.Exec(m); err != nil {
+			return fmt.Errorf("migration failed: %w", err)
+		}
+	}
+
+	if err := ensureFriendsCacheRenamedToUsersCache(db); err != nil {
+		return err
+	}
+
+	migrationsAfterUsersCacheRename := []string{
 		`CREATE TABLE IF NOT EXISTS users_cache (
 			vrc_user_id TEXT PRIMARY KEY,
 			display_name TEXT NOT NULL,
@@ -96,7 +111,7 @@ func migrate(db *sql.DB) error {
 		)`,
 	}
 
-	for _, m := range migrations {
+	for _, m := range migrationsAfterUsersCacheRename {
 		if _, err := db.Exec(m); err != nil {
 			return fmt.Errorf("migration failed: %w", err)
 		}
@@ -115,9 +130,6 @@ func migrate(db *sql.DB) error {
 		return fmt.Errorf("migration screenshot_thumbnails: %w", err)
 	}
 	if err := ensureScreenshotThumbnailJpegBlobColumn(db); err != nil {
-		return err
-	}
-	if err := ensureFriendsCacheRenamedToUsersCache(db); err != nil {
 		return err
 	}
 	if err := ensureUsersCacheLogColumns(db); err != nil {

@@ -12,6 +12,51 @@ import (
 	"vrchat-tweaker/internal/domain/media"
 )
 
+func TestMigrate_renamesFriendsCacheBeforeCreatingUsersCache(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "vrchat-tweaker.db")
+	db, err := sql.Open("sqlite", dbPath+"?_pragma=foreign_keys(1)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	exec := func(q string, args ...any) {
+		t.Helper()
+		if _, execErr := db.Exec(q, args...); execErr != nil {
+			t.Fatal(execErr)
+		}
+	}
+
+	exec(`CREATE TABLE friends_cache (
+		vrc_user_id TEXT PRIMARY KEY,
+		display_name TEXT NOT NULL,
+		status TEXT,
+		is_favorite INTEGER DEFAULT 0,
+		last_updated TEXT NOT NULL
+	)`)
+	exec(`INSERT INTO friends_cache (vrc_user_id, display_name, status, is_favorite, last_updated)
+		VALUES ('usr_legacy', 'Legacy Friend', 'join me', 1, '2020-01-01T00:00:00Z')`)
+
+	if migErr := migrate(db); migErr != nil {
+		t.Fatal(migErr)
+	}
+
+	var gotName string
+	if err := db.QueryRow(`SELECT display_name FROM users_cache WHERE vrc_user_id = ?`, "usr_legacy").Scan(&gotName); err != nil {
+		t.Fatalf("expected row in users_cache after rename: %v", err)
+	}
+	if gotName != "Legacy Friend" {
+		t.Fatalf("display_name = %q, want Legacy Friend", gotName)
+	}
+
+	var friendsN int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='friends_cache'`).Scan(&friendsN)
+	if friendsN != 0 {
+		t.Fatalf("friends_cache should be gone after rename, sqlite_master count=%d", friendsN)
+	}
+}
+
 func TestEnsureScreenshotThumbnailJpegBlobColumn_LegacyWebpBlob(t *testing.T) {
 	dir := t.TempDir()
 	db, err := sql.Open("sqlite", filepath.Join(dir, "legacy.db"))
