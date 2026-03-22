@@ -189,11 +189,12 @@ func (uc *ActivityUseCase) EndPlaySession(ctx context.Context, endedAt time.Time
 	return uc.playRepo.Save(ctx, open)
 }
 
-// CloseOpenPlaySessionAtLastLogLineIfSameLocalDay closes the latest open play session using the
-// timestamp of the last processed log line when the session start and that line share the same
-// local calendar day (same convention as VRChat output_log). If the days differ (e.g. overnight
-// session), it does nothing so aggregation can treat the session as open until a real end event.
-func (uc *ActivityUseCase) CloseOpenPlaySessionAtLastLogLineIfSameLocalDay(ctx context.Context, lastLine time.Time) error {
+// CloseOpenPlaySessionAtLastLogLine closes the latest open play session using the timestamp of the
+// last processed log line. Same local calendar day: single segment [start, lastLine]. If the session
+// spans local midnights, it is split into multiple closed rows at each local 23:59:59.999999999 with
+// continuation rows starting at the next local midnight (VRChat may keep writing to the previous
+// day's output_log file after date change).
+func (uc *ActivityUseCase) CloseOpenPlaySessionAtLastLogLine(ctx context.Context, lastLine time.Time) error {
 	if lastLine.IsZero() {
 		return nil
 	}
@@ -201,19 +202,39 @@ func (uc *ActivityUseCase) CloseOpenPlaySessionAtLastLogLineIfSameLocalDay(ctx c
 	if err != nil || open == nil {
 		return err
 	}
-	if !sameLocalCalendarDay(open.StartTime, lastLine) {
-		return nil
-	}
 	if lastLine.Before(open.StartTime) {
 		return nil
 	}
-	return uc.EndPlaySession(ctx, lastLine)
-}
-
-func sameLocalCalendarDay(a, b time.Time) bool {
-	ay, am, ad := a.In(time.Local).Date()
-	by, bm, bd := b.In(time.Local).Date()
-	return ay == by && am == bm && ad == bd
+	if activity.SameLocalCalendarDay(open.StartTime, lastLine) {
+		return uc.EndPlaySession(ctx, lastLine)
+	}
+	cur := open.StartTime
+	id := open.ID
+	for {
+		if activity.SameLocalCalendarDay(cur, lastLine) {
+			dur := int(lastLine.Sub(cur).Seconds())
+			s := &activity.PlaySession{
+				ID:          id,
+				StartTime:   cur,
+				EndTime:     &lastLine,
+				DurationSec: &dur,
+			}
+			return uc.playRepo.Save(ctx, s)
+		}
+		segEnd := activity.EndOfLocalCalendarDay(cur)
+		dur := int(segEnd.Sub(cur).Seconds())
+		s := &activity.PlaySession{
+			ID:          id,
+			StartTime:   cur,
+			EndTime:     &segEnd,
+			DurationSec: &dur,
+		}
+		if err := uc.playRepo.Save(ctx, s); err != nil {
+			return err
+		}
+		cur = activity.StartOfNextLocalCalendarDay(cur)
+		id = uuid.New().String()
+	}
 }
 
 // GetActivityStats returns aggregated play stats for the date range [fromISO, toISO].
