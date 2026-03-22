@@ -136,6 +136,11 @@ var (
 	// Destination set: wrld_uuid:64190~private(usr_...)~region(jp)
 	destinationSetRE = regexp.MustCompile(`(?i)Destination\s+set:\s*(wrld_[a-f0-9-]+):([a-zA-Z0-9]+)~([a-z]+)\(([^)]*)\)~region\(([^)]*)\)`)
 
+	// Fallback: group instances use e.g. ~group(grp...)~groupAccessType(public)~region(use) (extra segments before ~region).
+	destinationSetLooseRE = regexp.MustCompile(`(?i)Destination\s+set:\s*(wrld_[a-f0-9-]+:[^\s]+)`)
+
+	destinationRegionFromKeyRE = regexp.MustCompile(`(?i)~region\(([^)]*)\)`)
+
 	roomNameRE = regexp.MustCompile(`(?i)Entering\s+Room:\s*(.+)$`)
 
 	avatarSwitchRE = regexp.MustCompile(`(?i)Switching\s+(.+?)\s+to\s+avatar\s+(.+)$`)
@@ -216,6 +221,13 @@ func (p *LogParser) ParseLine(line string, baseTime time.Time) ([]ParsedEvent, e
 		}}, nil
 	}
 
+	if m := destinationSetLooseRE.FindStringSubmatch(line); len(m) >= 2 {
+		full := strings.TrimSpace(m[1])
+		if e := destinationSetEventFromFullInstanceKey(full, baseTime); e != nil {
+			return []ParsedEvent{e}, nil
+		}
+	}
+
 	if m := p.roomNameRE.FindStringSubmatch(line); len(m) >= 2 {
 		name := trimDisplayName(m[1])
 		if name != "" {
@@ -241,6 +253,39 @@ func (p *LogParser) ParseLine(line string, baseTime time.Time) ([]ParsedEvent, e
 	}
 
 	return nil, nil
+}
+
+func destinationSetEventFromFullInstanceKey(full string, at time.Time) *DestinationSetEvent {
+	wid := WorldIDFromInstanceKey(full)
+	if wid == "" {
+		return nil
+	}
+	region := ""
+	if m := destinationRegionFromKeyRE.FindStringSubmatch(full); len(m) >= 2 {
+		region = strings.TrimSpace(m[1])
+	}
+	return &DestinationSetEvent{
+		WorldID:      wid,
+		InstanceID:   instanceIDSegmentFromFullInstanceKey(full),
+		InstanceType: "",
+		OwnerUserID:  "",
+		Region:       region,
+		OccurredAt:   at,
+		FullInstance: full,
+	}
+}
+
+func instanceIDSegmentFromFullInstanceKey(full string) string {
+	i := strings.Index(full, ":")
+	if i < 0 {
+		return ""
+	}
+	rest := full[i+1:]
+	j := strings.Index(rest, "~")
+	if j < 0 {
+		return rest
+	}
+	return rest[:j]
 }
 
 var trimLeadingBracketPrefix = regexp.MustCompile(`^\[.*?\]\s*`)

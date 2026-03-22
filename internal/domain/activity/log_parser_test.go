@@ -240,6 +240,32 @@ func TestLogParser_ParseLine_DestinationRoomAvatarVideo(t *testing.T) {
 		}
 	})
 
+	t.Run("Destination set group instance with groupAccessType before region", func(t *testing.T) {
+		line := "2026.03.22 00:49:03 Debug      -  [Behaviour] Destination set: wrld_b2d24c29-1ded-4990-a90d-dd6dcc440300:mosco1~group(grp_55a159da-da85-4bf3-893d-65fc50abe6c1)~groupAccessType(public)~region(use)"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("got %d events", len(events))
+		}
+		d, ok := events[0].(*DestinationSetEvent)
+		if !ok {
+			t.Fatalf("type %T", events[0])
+		}
+		wantWid := "wrld_b2d24c29-1ded-4990-a90d-dd6dcc440300"
+		if d.WorldID != wantWid || d.InstanceID != "mosco1" {
+			t.Errorf("destination fields %+v", d)
+		}
+		if d.Region != "use" {
+			t.Errorf("Region = %q, want use", d.Region)
+		}
+		wantFull := wantWid + ":mosco1~group(grp_55a159da-da85-4bf3-893d-65fc50abe6c1)~groupAccessType(public)~region(use)"
+		if d.FullInstance != wantFull {
+			t.Errorf("FullInstance = %q", d.FullInstance)
+		}
+	})
+
 	t.Run("Entering Room", func(t *testing.T) {
 		line := "2026.03.17 23:59:58 Debug      -  [Behaviour] Entering Room: ホームチェックv6․0"
 		events, err := p.ParseLine(line, base)

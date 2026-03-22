@@ -16,9 +16,10 @@ type ActivityEventHandler struct {
 	logger           Logger
 	onAfterEncounter func()
 
-	mu                sync.Mutex
-	currentInstanceID string
-	currentWorldID    string
+	mu                        sync.Mutex
+	currentInstanceID         string
+	currentWorldID            string
+	pendingDestinationWorldID string // survives SessionEventEnd (OnLeftRoom) until Joining; used when Entering Room runs before currentWorldID is restored
 }
 
 // NewActivityEventHandler creates a handler that persists events via ActivityUseCase.
@@ -55,6 +56,7 @@ func (h *ActivityEventHandler) Handle(event activity.ParsedEvent) {
 		}
 		h.mu.Lock()
 		h.currentWorldID = e.WorldID
+		h.pendingDestinationWorldID = e.WorldID
 		if e.FullInstance != "" {
 			h.currentInstanceID = e.FullInstance
 		}
@@ -62,6 +64,9 @@ func (h *ActivityEventHandler) Handle(event activity.ParsedEvent) {
 	case *activity.RoomNameEvent:
 		h.mu.Lock()
 		wid := h.currentWorldID
+		if wid == "" {
+			wid = h.pendingDestinationWorldID
+		}
 		h.mu.Unlock()
 		if err := h.uc.UpsertWorldRoomName(h.ctx, wid, e.RoomName, e.OccurredAt); err != nil {
 			h.logger.Printf("[activity_handler] UpsertWorldRoomName: %v", err)
@@ -73,6 +78,9 @@ func (h *ActivityEventHandler) Handle(event activity.ParsedEvent) {
 			inst = h.currentInstanceID
 		}
 		wid := h.currentWorldID
+		if wid == "" {
+			wid = h.pendingDestinationWorldID
+		}
 		h.mu.Unlock()
 		if err := h.uc.RecordEncounterAt(h.ctx, e.VRCUserID, e.DisplayName, e.Action, inst, wid, e.EncounteredAt); err != nil {
 			h.logger.Printf("[activity_handler] RecordEncounter: %v", err)
@@ -94,6 +102,7 @@ func (h *ActivityEventHandler) Handle(event activity.ParsedEvent) {
 			if w := activity.WorldIDFromInstanceKey(e.InstanceID); w != "" {
 				h.currentWorldID = w
 			}
+			h.pendingDestinationWorldID = ""
 			h.mu.Unlock()
 			if err := h.uc.StartPlaySession(h.ctx, e.InstanceID, e.OccurredAt); err != nil {
 				h.logger.Printf("[activity_handler] StartPlaySession: %v", err)
@@ -102,6 +111,8 @@ func (h *ActivityEventHandler) Handle(event activity.ParsedEvent) {
 			h.mu.Lock()
 			h.currentInstanceID = ""
 			h.currentWorldID = ""
+			// Keep pendingDestinationWorldID: RemainInNetworkRoom transitions emit OnLeftRoom
+			// before Entering Room; room name must still map to the last Destination set world.
 			h.mu.Unlock()
 			if err := h.uc.EndPlaySession(h.ctx, e.OccurredAt); err != nil {
 				h.logger.Printf("[activity_handler] EndPlaySession: %v", err)
