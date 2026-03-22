@@ -205,7 +205,7 @@ func (a *App) startOutputLogWatcher(ctx context.Context, eventBus event.EventBus
 	handler := logwatcher.NewMultiHandler(activityHandler, publishHandler)
 
 	if empty, emptyErr := a.activity.IsActivityDatastoreEmpty(ctx); emptyErr == nil && empty && bootstrapPath != "" {
-		if ingestErr := logwatcher.ProcessOutputLogFile(ctx, bootstrapPath, parser, handler, logger); ingestErr != nil {
+		if ingestErr := logwatcher.ProcessOutputLogFile(ctx, bootstrapPath, parser, activityHandler, logger); ingestErr != nil {
 			runtime.LogWarning(ctx, "activity log bootstrap: "+ingestErr.Error())
 		} else {
 			runtime.LogInfo(ctx, "activity: imported historical lines from output_log")
