@@ -122,11 +122,10 @@ type sessionPattern struct {
 
 // Default log patterns. Extensible via table-driven config.
 var (
-	encounterJoinRE     = regexp.MustCompile(`(?i)OnPlayerJoined\s+(\S.*?)\s*\((usr_[a-zA-Z0-9_-]+)\)`)
-	encounterJoinNoIDRE = regexp.MustCompile(`(?i)OnPlayerJoined\s+(\S.+?)(?:\s+\(usr_|$)`)
+	// Encounter join/leave only from the Behaviour logger line (excludes VisitorsInformationBoard, etc.).
+	encounterJoinRE = regexp.MustCompile(`(?i)\[Behaviour\]\s+OnPlayerJoined\s+(\S.*?)\s*\((usr_[a-zA-Z0-9_-]+)\)`)
 
-	encounterLeaveRE     = regexp.MustCompile(`(?i)OnPlayerLeft\s+(\S.*?)\s*\((usr_[a-zA-Z0-9_-]+)\)`)
-	encounterLeaveNoIDRE = regexp.MustCompile(`(?i)OnPlayerLeft\s+(\S.+?)(?:\s+\(usr_|$)`)
+	encounterLeaveRE = regexp.MustCompile(`(?i)\[Behaviour\]\s+OnPlayerLeft\s+(\S.*?)\s*\((usr_[a-zA-Z0-9_-]+)\)`)
 
 	// Capture full instance token (may include ~private(usr_)~region(jp) etc.).
 	sessionStartWrldRE = regexp.MustCompile(`(?i)Joining\s+(wrld_[^\s]+)`)
@@ -170,8 +169,6 @@ func NewLogParser() *LogParser {
 		encounterPatterns: []encounterPattern{
 			{encounterJoinRE, EncounterActionJoin},
 			{encounterLeaveRE, EncounterActionLeave},
-			{encounterJoinNoIDRE, EncounterActionJoin},
-			{encounterLeaveNoIDRE, EncounterActionLeave},
 		},
 		sessionPatterns: []sessionPattern{
 			{sessionStartWrldRE, SessionEventStart},

@@ -19,15 +19,15 @@ func TestLogParser_ParseLine_Encounter(t *testing.T) {
 	}{
 		{
 			name:     "OnPlayerJoined with user ID",
-			line:     "OnPlayerJoined Alice (usr_abc123)",
+			line:     "2026.03.18 00:17:57 Debug      -  [Behaviour] OnPlayerJoined Alice (usr_abc123)",
 			wantKind: EventKindEncounter,
 			wantAct:  EncounterActionJoin,
 			wantName: "Alice",
 			wantID:   "usr_abc123",
 		},
 		{
-			name:     "OnPlayerJoined with prefix",
-			line:     "[Time: 42.5] OnPlayerJoined Bob (usr_def456)",
+			name:     "OnPlayerJoined with leading bracket prefix stripped",
+			line:     "[Time: 42.5] [Behaviour] OnPlayerJoined Bob (usr_def456)",
 			wantKind: EventKindEncounter,
 			wantAct:  EncounterActionJoin,
 			wantName: "Bob",
@@ -43,27 +43,11 @@ func TestLogParser_ParseLine_Encounter(t *testing.T) {
 		},
 		{
 			name:     "OnPlayerLeft with user ID",
-			line:     "OnPlayerLeft Charlie (usr_ghi789)",
+			line:     "2026.03.18 00:17:58 Debug      -  [Behaviour] OnPlayerLeft Charlie (usr_ghi789)",
 			wantKind: EventKindEncounter,
 			wantAct:  EncounterActionLeave,
 			wantName: "Charlie",
 			wantID:   "usr_ghi789",
-		},
-		{
-			name:     "OnPlayerJoined display name only",
-			line:     "OnPlayerJoined Some User Name",
-			wantKind: EventKindEncounter,
-			wantAct:  EncounterActionJoin,
-			wantName: "Some User Name",
-			wantID:   "",
-		},
-		{
-			name:     "OnPlayerLeft display name only",
-			line:     "OnPlayerLeft Another User",
-			wantKind: EventKindEncounter,
-			wantAct:  EncounterActionLeave,
-			wantName: "Another User",
-			wantID:   "",
 		},
 	}
 	for _, tt := range tests {
@@ -203,6 +187,8 @@ func TestLogParser_ParseLine_Unparseable(t *testing.T) {
 		"some random log line",
 		"Loading level",
 		"[Time: 1.0] Unrelated message",
+		"OnPlayerJoined Alice (usr_abc123)",
+		"2026.03.21 11:32:16 Debug      -  [VisitorsInformationBoard] 18.88 / OnPlayerJoined / player=ぶっちゃん！(local)",
 	}
 	for _, line := range unparseable {
 		events, err := p.ParseLine(line, base)

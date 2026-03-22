@@ -39,7 +39,7 @@ func TestOutputLogWatcher_EmitsEvents(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Append join/leave lines
-	lines := []byte("OnPlayerJoined TestUser (usr_abc123)\nOnPlayerLeft TestUser (usr_abc123)\n")
+	lines := []byte("2026.03.18 00:17:57 Debug      -  [Behaviour] OnPlayerJoined TestUser (usr_abc123)\n2026.03.18 00:17:58 Debug      -  [Behaviour] OnPlayerLeft TestUser (usr_abc123)\n")
 	f, err := os.OpenFile(path, os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
 		t.Fatal(err)
@@ -109,7 +109,7 @@ func TestOutputLogWatcher_DirectoryMode_SwitchesToNewerFile(t *testing.T) {
 
 	time.Sleep(700 * time.Millisecond)
 
-	lines := []byte("OnPlayerJoined SwitchUser (usr_switch01)\n")
+	lines := []byte("2026.03.22 00:47:45 Debug      -  [Behaviour] OnPlayerJoined SwitchUser (usr_switch01)\n")
 	f, err := os.OpenFile(newPath, os.O_APPEND|os.O_WRONLY, 0600)
 	if err != nil {
 		t.Fatal(err)
