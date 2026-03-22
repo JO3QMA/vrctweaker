@@ -138,23 +138,34 @@
           </span>
         </div>
         <div class="path-row">
-          <label for="output-log-path">output_log.txt</label>
+          <label for="output-log-path"
+            >output_log（ファイルまたはフォルダ）</label
+          >
           <div class="path-input-group">
             <input
               id="output-log-path"
               v-model="pathSettings.outputLogPath"
               type="text"
-              placeholder="例: C:\Users\...\AppData\LocalLow\VRChat\VRChat\output_log.txt"
+              placeholder="例: ...\VRChat\VRChat\output_log_....txt または ...\VRChat\VRChat フォルダ"
               @change="savePathSettings"
             />
             <button
               type="button"
               class="btn-browse"
               data-testid="output-log-path-browse"
-              title="ファイルを選択"
+              title="ログファイルを選択"
               @click="browseOutputLogPath"
             >
-              参照
+              ファイル
+            </button>
+            <button
+              type="button"
+              class="btn-browse"
+              data-testid="output-log-dir-browse"
+              title="VRChat ログフォルダを選択（最新 output_log*.txt に追従）"
+              @click="browseOutputLogDirectory"
+            >
+              フォルダ
             </button>
             <button
               type="button"
@@ -163,6 +174,14 @@
               @click="validatePathField('outputLogPath')"
             >
               存在確認
+            </button>
+            <button
+              type="button"
+              class="btn-browse"
+              title="VRChat のログフォルダをファイルマネージャで開く"
+              @click="openVRChatLogFolder"
+            >
+              ログフォルダを開く
             </button>
           </div>
           <span
@@ -177,6 +196,12 @@
       </div>
       <p class="hint">
         VRChatの起動とログ監視で使用します。launch.exeを指定してください（VRChat.exe直接起動はオフラインモードになります）。空の場合はデフォルトパスを使用します。
+        output_log は<strong>1ファイル</strong>を指定するか、<code
+          >...\VRChat\VRChat</code
+        >
+        の<strong>フォルダ</strong>を指定してください。フォルダのときは更新日時が最新の
+        <code>output_log*.txt</code> を自動で選び、VRChat
+        再起動で新しいログファイルができても追従します。
       </p>
     </section>
     <section class="settings-section">
@@ -384,10 +409,33 @@ async function browseOutputLogPath() {
   }
 }
 
+async function browseOutputLogDirectory() {
+  const dir = await App.openDirectoryDialog(
+    "VRChat ログフォルダを選択（output_log*.txt があるフォルダ）",
+    dirOfPath(pathSettings.outputLogPath),
+  );
+  if (dir) {
+    pathSettings.outputLogPath = dir;
+    await savePathSettings();
+  }
+}
+
+async function openVRChatLogFolder(): Promise<void> {
+  try {
+    await App.openVRChatLogFolder();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 async function validatePathField(field: keyof PathSettingsDTO) {
   const path = pathSettings[field];
   if (path === "") {
     validateResult[field] = false;
+    return;
+  }
+  if (field === "outputLogPath") {
+    validateResult[field] = await App.validateOutputLogPath(path);
     return;
   }
   validateResult[field] = await App.validatePath(path);
@@ -450,7 +498,7 @@ function doClearScreenshots() {
 
 function doClearFriendsCache() {
   runWithConfirm(
-    "フレンドキャッシュ（friends_cache）をすべて削除します。よろしいですか？",
+    "ユーザーキャッシュ（users_cache）をすべて削除します。よろしいですか？",
     async () => App.clearFriendsCache(),
     (n) => `${n}件のフレンドキャッシュを削除しました`,
   );

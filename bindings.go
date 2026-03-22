@@ -242,48 +242,73 @@ func toScreenshotFilter(d ScreenshotSearchDTO) *media.ScreenshotFilter {
 
 // UserEncounterDTO is the frontend-facing encounter.
 type UserEncounterDTO struct {
-	ID            string `json:"id"`
-	VRCUserID     string `json:"vrcUserId"`
-	DisplayName   string `json:"displayName"`
-	Action        string `json:"action"`
-	InstanceID    string `json:"instanceId"`
-	EncounteredAt string `json:"encounteredAt"`
+	ID                string `json:"id"`
+	VRCUserID         string `json:"vrcUserId"`
+	DisplayName       string `json:"displayName"`
+	Action            string `json:"action"`
+	InstanceID        string `json:"instanceId"`
+	WorldID           string `json:"worldId,omitempty"`
+	WorldDisplayName  string `json:"worldDisplayName,omitempty"`
+	UserFirstSeenAt   string `json:"userFirstSeenAt,omitempty"`
+	UserLastContactAt string `json:"userLastContactAt,omitempty"`
+	IsFirstEncounter  bool   `json:"isFirstEncounter"`
+	EncounteredAt     string `json:"encounteredAt"`
 }
 
-func toEncounterDTOs(list []*activity.UserEncounter) []UserEncounterDTO {
+func toEncounterDTOsFromContext(list []*activity.EncounterWithContext) []UserEncounterDTO {
 	out := make([]UserEncounterDTO, len(list))
-	for i, e := range list {
-		out[i] = UserEncounterDTO{
-			ID:            e.ID,
-			VRCUserID:     e.VRCUserID,
-			DisplayName:   e.DisplayName,
-			Action:        e.Action,
-			InstanceID:    e.InstanceID,
-			EncounteredAt: e.EncounteredAt.Format(time.RFC3339),
+	for i, row := range list {
+		e := row.Encounter
+		dto := UserEncounterDTO{
+			ID:               e.ID,
+			VRCUserID:        e.VRCUserID,
+			DisplayName:      e.DisplayName,
+			Action:           e.Action,
+			InstanceID:       e.InstanceID,
+			WorldID:          e.WorldID,
+			WorldDisplayName: row.WorldDisplayName,
+			IsFirstEncounter: row.IsFirstEncounter,
+			EncounteredAt:    e.EncounteredAt.Format(time.RFC3339),
 		}
+		if row.UserFirstSeenAt != nil {
+			dto.UserFirstSeenAt = row.UserFirstSeenAt.Format(time.RFC3339)
+		}
+		if row.UserLastContactAt != nil {
+			dto.UserLastContactAt = row.UserLastContactAt.Format(time.RFC3339)
+		}
+		out[i] = dto
 	}
 	return out
 }
 
-// FriendCacheDTO is the frontend-facing friend cache.
-type FriendCacheDTO struct {
-	VRCUserID   string `json:"vrcUserId"`
-	DisplayName string `json:"displayName"`
-	Status      string `json:"status"`
-	IsFavorite  bool   `json:"isFavorite"`
-	LastUpdated string `json:"lastUpdated"`
+// UserCacheDTO is the frontend-facing users_cache row (VRChat friends from API).
+type UserCacheDTO struct {
+	VRCUserID     string `json:"vrcUserId"`
+	DisplayName   string `json:"displayName"`
+	Status        string `json:"status"`
+	IsFavorite    bool   `json:"isFavorite"`
+	LastUpdated   string `json:"lastUpdated"`
+	FirstSeenAt   string `json:"firstSeenAt,omitempty"`
+	LastContactAt string `json:"lastContactAt,omitempty"`
 }
 
-func toFriendCacheDTOs(list []*identity.FriendCache) []FriendCacheDTO {
-	out := make([]FriendCacheDTO, len(list))
+func toUserCacheDTOs(list []*identity.UserCache) []UserCacheDTO {
+	out := make([]UserCacheDTO, len(list))
 	for i, f := range list {
-		out[i] = FriendCacheDTO{
+		dto := UserCacheDTO{
 			VRCUserID:   f.VRCUserID,
 			DisplayName: f.DisplayName,
 			Status:      f.Status,
 			IsFavorite:  f.IsFavorite,
 			LastUpdated: f.LastUpdated.Format(time.RFC3339),
 		}
+		if f.FirstSeenAt != nil {
+			dto.FirstSeenAt = f.FirstSeenAt.Format(time.RFC3339)
+		}
+		if f.LastContactAt != nil {
+			dto.LastContactAt = f.LastContactAt.Format(time.RFC3339)
+		}
+		out[i] = dto
 	}
 	return out
 }

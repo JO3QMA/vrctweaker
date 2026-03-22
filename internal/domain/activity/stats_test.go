@@ -119,6 +119,46 @@ func TestAggregatePlaySessions(t *testing.T) {
 				{WorldID: "_total", WorldName: "全セッション", Seconds: 1800, Sessions: 1},
 			},
 		},
+		{
+			name: "open session without end is excluded from daily and totals",
+			sessions: []*PlaySession{
+				{
+					ID:          "open1",
+					StartTime:   mustParse(time.RFC3339, "2024-01-02T10:00:00Z"),
+					EndTime:     nil,
+					DurationSec: nil,
+				},
+			},
+			from:      from,
+			to:        to,
+			wantDaily: []DailyPlaySeconds{},
+			wantTop:   nil,
+		},
+		{
+			name: "closed session counted when mixed with open session",
+			sessions: []*PlaySession{
+				{
+					ID:          "open1",
+					StartTime:   mustParse(time.RFC3339, "2024-01-02T08:00:00Z"),
+					EndTime:     nil,
+					DurationSec: nil,
+				},
+				{
+					ID:          "closed1",
+					StartTime:   mustParse(time.RFC3339, "2024-01-02T12:00:00Z"),
+					EndTime:     ptrTime(mustParse(time.RFC3339, "2024-01-02T13:00:00Z")),
+					DurationSec: ptrInt(3600),
+				},
+			},
+			from: from,
+			to:   to,
+			wantDaily: []DailyPlaySeconds{
+				{Date: "2024-01-02", Seconds: 3600},
+			},
+			wantTop: []TopWorldSummary{
+				{WorldID: "_total", WorldName: "全セッション", Seconds: 3600, Sessions: 1},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

@@ -77,15 +77,22 @@ export interface UserEncounterDTO {
   displayName: string;
   action: string;
   instanceId: string;
+  worldId?: string;
+  worldDisplayName?: string;
+  userFirstSeenAt?: string;
+  userLastContactAt?: string;
+  isFirstEncounter?: boolean;
   encounteredAt: string;
 }
 
-export interface FriendCacheDTO {
+export interface UserCacheDTO {
   vrcUserId: string;
   displayName: string;
   status: string;
   isFavorite: boolean;
   lastUpdated: string;
+  firstSeenAt?: string;
+  lastContactAt?: string;
 }
 
 export interface PathSettingsDTO {
@@ -156,6 +163,8 @@ interface AppBindings {
   GetPathSettings(): Promise<PathSettingsDTO>;
   SetPathSettings(dto: PathSettingsDTO): Promise<void>;
   ValidatePath(path: string): Promise<boolean>;
+  ValidateOutputLogPath(path: string): Promise<boolean>;
+  OpenVRChatLogFolder(): Promise<void>;
   OpenFileDialog(
     title: string,
     defaultDir: string,
@@ -172,9 +181,11 @@ interface AppBindings {
   IsGalleryScanning(): Promise<boolean>;
   ReindexScreenshotDir(path: string): Promise<number>;
   Encounters(): Promise<UserEncounterDTO[]>;
+  EncountersByVRCUserID(vrcUserID: string): Promise<UserEncounterDTO[]>;
+  EncountersByWorldID(worldID: string): Promise<UserEncounterDTO[]>;
   RotateEncounters(): Promise<number>;
   GetActivityStats(fromISO: string, toISO: string): Promise<ActivityStatsDTO>;
-  Friends(): Promise<FriendCacheDTO[]>;
+  Friends(): Promise<UserCacheDTO[]>;
   SetFavorite(vrcUserId: string, favorite: boolean): Promise<void>;
   SetStatus(status: string): Promise<void>;
   Login(
@@ -212,6 +223,11 @@ declare global {
 
 function getApp(): AppBindings | undefined {
   return typeof window !== "undefined" ? window.go?.main?.App : undefined;
+}
+
+/** True when running inside Wails (second windows from window.open cannot load wails.localhost). */
+export function isWailsRuntime(): boolean {
+  return getApp() !== undefined;
 }
 
 /**
@@ -308,6 +324,12 @@ export const App = {
   async validatePath(path: string): Promise<boolean> {
     return callApp((a) => a.ValidatePath(path), false);
   },
+  async validateOutputLogPath(path: string): Promise<boolean> {
+    return callApp((a) => a.ValidateOutputLogPath(path), false);
+  },
+  async openVRChatLogFolder(): Promise<void> {
+    return callApp((a) => a.OpenVRChatLogFolder(), undefined);
+  },
   async openFileDialog(
     title: string,
     defaultDir: string,
@@ -358,7 +380,7 @@ export const App = {
   async reindexScreenshotDir(path: string): Promise<number> {
     return callApp((a) => a.ReindexScreenshotDir(path), 0);
   },
-  async friends(): Promise<FriendCacheDTO[]> {
+  async friends(): Promise<UserCacheDTO[]> {
     return callApp((a) => a.Friends(), []);
   },
   async setFavorite(vrcUserId: string, favorite: boolean): Promise<void> {
@@ -391,6 +413,12 @@ export const App = {
   },
   async encounters(): Promise<UserEncounterDTO[]> {
     return callApp((a) => a.Encounters(), []);
+  },
+  async encountersByVRCUserID(vrcUserID: string): Promise<UserEncounterDTO[]> {
+    return callApp((a) => a.EncountersByVRCUserID(vrcUserID), []);
+  },
+  async encountersByWorldID(worldID: string): Promise<UserEncounterDTO[]> {
+    return callApp((a) => a.EncountersByWorldID(worldID), []);
   },
   async clearEncounters(): Promise<number> {
     return callApp((a) => a.ClearEncounters(), 0);

@@ -35,11 +35,15 @@ type LogParser interface {
 }
 
 // OutputLogWatcher tails output_log.txt and emits parsed events.
+// configuredPath may be a regular file or a directory; if it is a directory, the newest
+// output_log*.txt under it is tailed and the watcher switches when a newer file appears.
 type OutputLogWatcher struct {
-	path    string
-	parser  LogParser
-	handler EventHandler
-	logger  Logger
+	configuredPath string
+	watchDir       string // non-empty => resolve latest output_log*.txt under this dir
+	fixedFile      string // non-empty => tail this file only
+	parser         LogParser
+	handler        EventHandler
+	logger         Logger
 
 	mu        sync.Mutex
 	status    string // "idle", "running", "stopped"
@@ -47,18 +51,34 @@ type OutputLogWatcher struct {
 	lastErrAt time.Time
 }
 
-// NewOutputLogWatcher creates a watcher for the given path.
-func NewOutputLogWatcher(path string, parser LogParser, handler EventHandler, logger Logger) *OutputLogWatcher {
+// NewOutputLogWatcher creates a watcher for the given path (file or directory).
+func NewOutputLogWatcher(configuredPath string, parser LogParser, handler EventHandler, logger Logger) *OutputLogWatcher {
 	if logger == nil {
 		logger = nopLogger{}
 	}
-	return &OutputLogWatcher{
-		path:    path,
-		parser:  parser,
-		handler: handler,
-		logger:  logger,
-		status:  "idle",
+	w := &OutputLogWatcher{
+		configuredPath: configuredPath,
+		parser:         parser,
+		handler:        handler,
+		logger:         logger,
+		status:         "idle",
 	}
+	if info, err := os.Stat(configuredPath); err == nil && info.IsDir() {
+		w.watchDir = configuredPath
+	} else {
+		w.fixedFile = configuredPath
+	}
+	return w
+}
+
+func (w *OutputLogWatcher) resolveActivePath() (string, error) {
+	if w.watchDir != "" {
+		return ResolveLatestOutputLogFile(w.watchDir)
+	}
+	if w.fixedFile != "" {
+		return w.fixedFile, nil
+	}
+	return "", os.ErrInvalid
 }
 
 type nopLogger struct{}
@@ -116,10 +136,22 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 		default:
 		}
 
-		f, err := os.Open(w.path)
+		activePath, resolveErr := w.resolveActivePath()
+		if resolveErr != nil {
+			w.setErr(resolveErr)
+			w.logger.Printf("[logwatcher] resolve active log: %v", resolveErr)
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(reopenBackoff):
+				continue
+			}
+		}
+
+		f, err := os.Open(activePath)
 		if err != nil {
 			w.setErr(err)
-			w.logger.Printf("[logwatcher] open %s: %v", w.path, err)
+			w.logger.Printf("[logwatcher] open %s: %v", activePath, err)
 			select {
 			case <-ctx.Done():
 				return
@@ -164,8 +196,8 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 					w.logger.Printf("[logwatcher] read error: %v", err)
 					break readLoop
 				}
-				// EOF: check for file rotation (truncate or replace)
-				curInfo, statErr := os.Stat(w.path)
+				// EOF: check for file rotation (truncate or replace) or newer log file in dir mode
+				curInfo, statErr := os.Stat(activePath)
 				if statErr != nil {
 					_ = f.Close()
 					break readLoop
@@ -173,6 +205,14 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 				if curInfo.ModTime() != info.ModTime() || curInfo.Size() < initialSize {
 					_ = f.Close()
 					break readLoop
+				}
+				if w.watchDir != "" {
+					latest, latErr := ResolveLatestOutputLogFile(w.watchDir)
+					if latErr == nil && latest != activePath {
+						_ = f.Close()
+						w.logger.Printf("[logwatcher] switching to newer output log: %s", latest)
+						break readLoop
+					}
 				}
 				select {
 				case <-ctx.Done():
@@ -187,7 +227,8 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 				continue
 			}
 
-			events, parseErr := w.parser.ParseLine(lineTrimmed, time.Now().UTC())
+			baseTime := activity.ParseVRChatTimestamp(lineTrimmed, time.Now().In(time.Local))
+			events, parseErr := w.parser.ParseLine(lineTrimmed, baseTime)
 			if parseErr != nil {
 				w.logger.Printf("[logwatcher] parse error: %v", parseErr)
 				continue

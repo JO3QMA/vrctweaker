@@ -7,6 +7,32 @@ import (
 	"runtime"
 )
 
+// OpenFolderInFileManager opens an existing directory in the OS file manager.
+func OpenFolderInFileManager(dir string) error {
+	abs, err := ValidateDirectory(dir)
+	if err != nil {
+		return err
+	}
+	switch runtime.GOOS {
+	case "windows":
+		cmd := exec.Command("explorer", abs)
+		cmd.Stdout = nil
+		cmd.Stderr = nil
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("open folder: %w", err)
+		}
+		go func() { _ = cmd.Wait() }()
+		return nil
+	case "darwin":
+		if err := exec.Command("open", abs).Run(); err != nil {
+			return fmt.Errorf("open folder: %w", err)
+		}
+		return nil
+	default:
+		return openFileXDG(abs)
+	}
+}
+
 // OpenFileWithDefaultApp opens an existing regular file with the OS default application.
 func OpenFileWithDefaultApp(path string) error {
 	abs, err := ValidateRegularFile(path)

@@ -2,29 +2,14 @@
   <div class="activity-view">
     <h1 class="page-title">アクティビティ</h1>
 
-    <!-- 統計セクション（直近7日） -->
+    <!-- 統計セクション（直近14日） -->
     <section class="stats-section">
-      <h2 class="section-title">プレイ時間（直近7日）</h2>
+      <h2 class="section-title">プレイ時間（直近14日）</h2>
       <div v-if="statsLoading" class="loading">読み込み中…</div>
-      <div v-else-if="stats.dailyPlaySeconds.length === 0" class="empty-stats">
+      <div v-else-if="!statsRangeFrom" class="empty-stats">
         データがありません
       </div>
-      <div v-else class="bar-chart">
-        <div
-          v-for="day in stats.dailyPlaySeconds"
-          :key="day.date"
-          class="bar-row"
-        >
-          <span class="bar-label">{{ formatDateShort(day.date) }}</span>
-          <div class="bar-track">
-            <div
-              class="bar-fill"
-              :style="{ width: barWidthPercent(day) + '%' }"
-            />
-          </div>
-          <span class="bar-value">{{ formatSeconds(day.seconds) }}</span>
-        </div>
-      </div>
+      <PlayTimeChart v-else :series="dailyPlayChartSeries" />
     </section>
 
     <!-- タイムラインセクション -->
@@ -47,6 +32,12 @@
         遭遇ログがありません。
       </div>
       <ul v-else class="timeline">
+        <li class="timeline-header-row" aria-hidden="true">
+          <span class="timeline-h">時刻</span>
+          <span class="timeline-h">アクション</span>
+          <span class="timeline-h">表示名</span>
+          <span class="timeline-h">ワールド名</span>
+        </li>
         <li
           v-for="enc in filteredEncounters"
           :key="enc.id"
@@ -55,11 +46,32 @@
           <span class="timeline-time">{{
             formatEncounteredAt(enc.encounteredAt)
           }}</span>
-          <span class="timeline-name">{{ enc.displayName }}</span>
           <span class="timeline-action" :class="enc.action">{{
             actionLabel(enc.action)
           }}</span>
-          <span class="timeline-instance">{{ enc.instanceId || "—" }}</span>
+          <button
+            v-if="enc.vrcUserId"
+            type="button"
+            class="timeline-link timeline-name"
+            @click="openUserHistory(enc.vrcUserId)"
+          >
+            {{ enc.displayName }}
+          </button>
+          <span v-else class="timeline-name timeline-name--muted">{{
+            enc.displayName
+          }}</span>
+          <button
+            v-if="enc.worldId"
+            type="button"
+            class="timeline-link timeline-world"
+            :title="enc.worldId"
+            @click="openWorldHistory(enc.worldId)"
+          >
+            {{ enc.worldDisplayName || enc.worldId }}
+          </button>
+          <span v-else class="timeline-world timeline-world--muted" title="">
+            —
+          </span>
         </li>
       </ul>
     </section>
@@ -67,12 +79,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import {
   App,
   type UserEncounterDTO,
   type ActivityStatsDTO,
 } from "../wails/app";
+import { getRuntime } from "../wails/runtime";
+import PlayTimeChart, {
+  type PlayTimeDayPoint,
+} from "../components/PlayTimeChart.vue";
+import { openEncounterHistoryWindow } from "../utils/openEncounterHistoryWindow";
+
+/** プレイ時間グラフに表示する暦日数（最大14日、今日を含む） */
+const PLAYTIME_CHART_MAX_DAYS = 14;
+
+const ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS = 400;
+
+const router = useRouter();
 
 const encounters = ref<UserEncounterDTO[]>([]);
 const encountersLoading = ref(false);
@@ -80,11 +105,32 @@ const displayNameFilter = ref("");
 
 const stats = ref<ActivityStatsDTO>({ dailyPlaySeconds: [], topWorlds: [] });
 const statsLoading = ref(false);
+const statsRangeFrom = ref("");
+const statsRangeTo = ref("");
 
-const maxBarSeconds = computed(() => {
-  const daily = stats.value.dailyPlaySeconds;
-  if (daily.length === 0) return 1;
-  return Math.max(...daily.map((d) => d.seconds), 1);
+const dailyPlayChartSeries = computed((): PlayTimeDayPoint[] => {
+  const from = statsRangeFrom.value;
+  const to = statsRangeTo.value;
+  if (!from || !to) return [];
+  const byDate = new Map(
+    stats.value.dailyPlaySeconds.map((d) => [d.date, d.seconds]),
+  );
+  const out: PlayTimeDayPoint[] = [];
+  const start = new Date(from + "T00:00:00.000Z");
+  const end = new Date(to + "T00:00:00.000Z");
+  for (
+    let cur = new Date(start);
+    cur <= end;
+    cur.setUTCDate(cur.getUTCDate() + 1)
+  ) {
+    const iso = cur.toISOString().slice(0, 10);
+    out.push({
+      date: iso,
+      label: formatDateShort(iso),
+      seconds: byDate.get(iso) ?? 0,
+    });
+  }
+  return out;
 });
 
 const filteredEncounters = computed(() => {
@@ -105,19 +151,6 @@ function formatDateShort(dateStr: string): string {
   }
 }
 
-function formatSeconds(seconds: number): string {
-  if (seconds < 60) return `${seconds}秒`;
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  if (s === 0) return `${m}分`;
-  return `${m}分${s}秒`;
-}
-
-function barWidthPercent(day: { date: string; seconds: number }): number {
-  const max = maxBarSeconds.value;
-  return Math.min(100, (day.seconds / max) * 100);
-}
-
 function formatEncounteredAt(iso: string): string {
   try {
     const d = new Date(iso);
@@ -131,6 +164,27 @@ function actionLabel(action: string): string {
   if (action === "join") return "参加";
   if (action === "leave") return "退出";
   return action;
+}
+
+function openUserHistory(vrcUserId: string): void {
+  openEncounterHistoryWindow(router, "user", vrcUserId);
+}
+
+function openWorldHistory(worldId: string): void {
+  openEncounterHistoryWindow(router, "world", worldId);
+}
+
+let encountersChangedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let unsubscribeEncountersChanged: (() => void) | undefined;
+
+function scheduleLoadEncounters(): void {
+  if (encountersChangedDebounceTimer !== null) {
+    clearTimeout(encountersChangedDebounceTimer);
+  }
+  encountersChangedDebounceTimer = setTimeout(() => {
+    encountersChangedDebounceTimer = null;
+    void loadEncounters();
+  }, ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS);
 }
 
 async function loadEncounters(): Promise<void> {
@@ -147,9 +201,11 @@ async function loadStats(): Promise<void> {
   try {
     const to = new Date();
     const from = new Date();
-    from.setDate(from.getDate() - 6);
+    from.setDate(from.getDate() - (PLAYTIME_CHART_MAX_DAYS - 1));
     const fromStr = from.toISOString().slice(0, 10);
     const toStr = to.toISOString().slice(0, 10);
+    statsRangeFrom.value = fromStr;
+    statsRangeTo.value = toStr;
     stats.value = await App.getActivityStats(fromStr, toStr);
   } finally {
     statsLoading.value = false;
@@ -157,8 +213,23 @@ async function loadStats(): Promise<void> {
 }
 
 onMounted(() => {
-  loadEncounters();
-  loadStats();
+  const rt = getRuntime();
+  const off = rt?.EventsOn?.("activity:encounters-changed", () => {
+    scheduleLoadEncounters();
+  });
+  if (typeof off === "function") {
+    unsubscribeEncountersChanged = off;
+  }
+  void loadEncounters();
+  void loadStats();
+});
+
+onUnmounted(() => {
+  if (encountersChangedDebounceTimer !== null) {
+    clearTimeout(encountersChangedDebounceTimer);
+    encountersChangedDebounceTimer = null;
+  }
+  unsubscribeEncountersChanged?.();
 });
 </script>
 
@@ -186,44 +257,6 @@ onMounted(() => {
   background: var(--bg-secondary);
   border-radius: var(--radius);
   border: 1px solid var(--border);
-}
-
-.bar-chart {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.bar-row {
-  display: grid;
-  grid-template-columns: 4rem 1fr 5rem;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.bar-label {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-}
-
-.bar-track {
-  height: 1.25rem;
-  background: var(--bg-tertiary);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.bar-fill {
-  height: 100%;
-  background: var(--accent);
-  border-radius: 4px;
-  min-width: 2px;
-  transition: width 0.2s ease;
-}
-
-.bar-value {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
 }
 
 .filters {
@@ -271,18 +304,30 @@ onMounted(() => {
   padding: 0;
 }
 
+.timeline-header-row,
 .timeline-item {
   display: grid;
-  grid-template-columns: 12rem 10rem 5rem 1fr;
-  gap: 1rem;
+  grid-template-columns: 10rem 5rem minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.75rem;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--border);
   font-size: 0.9rem;
   align-items: center;
 }
 
+.timeline-header-row {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding-top: 0;
+}
+
 .timeline-item:last-child {
   border-bottom: none;
+}
+
+.timeline-h {
+  min-width: 0;
 }
 
 .timeline-time {
@@ -292,6 +337,12 @@ onMounted(() => {
 
 .timeline-name {
   font-weight: 500;
+  min-width: 0;
+  text-align: left;
+}
+
+.timeline-name--muted {
+  color: var(--text-secondary);
 }
 
 .timeline-action.join {
@@ -302,11 +353,42 @@ onMounted(() => {
   color: var(--text-secondary);
 }
 
-.timeline-instance {
-  font-family: monospace;
+.timeline-world {
   font-size: 0.8rem;
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  text-align: left;
+}
+
+.timeline-world--muted {
+  color: var(--text-secondary);
+}
+
+.timeline-link {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-link:hover {
+  color: var(--text-primary);
+}
+
+.timeline-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 </style>

@@ -17,5 +17,15 @@ type UserEncounter struct {
 	DisplayName   string
 	Action        string // "join" or "leave"
 	InstanceID    string
+	WorldID       string // wrld_* from current instance when known
 	EncounteredAt time.Time
+}
+
+// EncounterWithContext is a user encounter plus joined user/world cache fields for the UI.
+type EncounterWithContext struct {
+	Encounter         *UserEncounter
+	WorldDisplayName  string
+	UserFirstSeenAt   *time.Time
+	UserLastContactAt *time.Time
+	IsFirstEncounter  bool
 }

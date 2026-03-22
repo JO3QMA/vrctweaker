@@ -89,11 +89,11 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
 import { App } from "../wails/app";
-import type { FriendCacheDTO } from "../wails/app";
+import type { UserCacheDTO } from "../wails/app";
 
 const activeTab = ref<"online" | "offline">("online");
-const friends = ref<FriendCacheDTO[]>([]);
-const selected = ref<FriendCacheDTO | null>(null);
+const friends = ref<UserCacheDTO[]>([]);
+const selected = ref<UserCacheDTO | null>(null);
 const isLoggedIn = ref(false);
 const loading = ref(true);
 const refreshLoading = ref(false);
@@ -135,7 +135,7 @@ async function doRefresh() {
   }
 }
 
-async function toggleFavorite(f: FriendCacheDTO) {
+async function toggleFavorite(f: UserCacheDTO) {
   const next = !f.isFavorite;
   try {
     await App.setFavorite(f.vrcUserId, next);
@@ -145,7 +145,7 @@ async function toggleFavorite(f: FriendCacheDTO) {
   }
 }
 
-async function applyFavorite(f: FriendCacheDTO) {
+async function applyFavorite(f: UserCacheDTO) {
   try {
     await App.setFavorite(f.vrcUserId, f.isFavorite);
   } catch {

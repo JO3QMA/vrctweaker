@@ -30,38 +30,38 @@ func TestIsOffline(t *testing.T) {
 
 func TestDetectFavoriteOnlineTransitions(t *testing.T) {
 	now := time.Now()
-	mk := func(id, name, status string, fav bool) *FriendCache {
-		return &FriendCache{VRCUserID: id, DisplayName: name, Status: status, IsFavorite: fav, LastUpdated: now}
+	mk := func(id, name, status string, fav bool) *UserCache {
+		return &UserCache{VRCUserID: id, DisplayName: name, Status: status, IsFavorite: fav, LastUpdated: now}
 	}
 
 	tests := []struct {
 		name   string
 		before map[string]string
-		after  map[string]*FriendCache
+		after  map[string]*UserCache
 		want   []string // want VRCUserIDs (order may vary)
 	}{
 		{
 			name:   "offline_to_online",
 			before: map[string]string{"u1": "offline"},
-			after:  map[string]*FriendCache{"u1": mk("u1", "Alice", "active", true)},
+			after:  map[string]*UserCache{"u1": mk("u1", "Alice", "active", true)},
 			want:   []string{"u1"},
 		},
 		{
 			name:   "offline_to_offline_no_notify",
 			before: map[string]string{"u1": "offline"},
-			after:  map[string]*FriendCache{"u1": mk("u1", "Alice", "offline", true)},
+			after:  map[string]*UserCache{"u1": mk("u1", "Alice", "offline", true)},
 			want:   nil,
 		},
 		{
 			name:   "online_to_online_no_notify",
 			before: map[string]string{"u1": "active"},
-			after:  map[string]*FriendCache{"u1": mk("u1", "Alice", "join me", true)},
+			after:  map[string]*UserCache{"u1": mk("u1", "Alice", "join me", true)},
 			want:   nil,
 		},
 		{
 			name:   "multiple_transitions",
 			before: map[string]string{"u1": "offline", "u2": "offline", "u3": "active"},
-			after: map[string]*FriendCache{
+			after: map[string]*UserCache{
 				"u1": mk("u1", "Alice", "active", true),
 				"u2": mk("u2", "Bob", "join me", true),
 				"u3": mk("u3", "Charlie", "busy", true),
@@ -71,7 +71,7 @@ func TestDetectFavoriteOnlineTransitions(t *testing.T) {
 		{
 			name:   "new_favorite_no_prev_state",
 			before: map[string]string{},
-			after:  map[string]*FriendCache{"u1": mk("u1", "Alice", "active", true)},
+			after:  map[string]*UserCache{"u1": mk("u1", "Alice", "active", true)},
 			want:   nil, // no previous status = cannot detect offline→online
 		},
 	}

@@ -4,53 +4,58 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"vrchat-tweaker/internal/domain/identity"
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
 )
 
-// mockFriendRepo implements identity.FriendCacheRepository for tests.
-type mockFriendRepo struct {
-	list          []*identity.FriendCache
-	getByID       map[string]*identity.FriendCache
-	listFavorites []*identity.FriendCache
+// mockUserCacheRepo implements identity.UserCacheRepository for tests.
+type mockUserCacheRepo struct {
+	list          []*identity.UserCache
+	getByID       map[string]*identity.UserCache
+	listFavorites []*identity.UserCache
 	saveErr       error
 	saveBatchErr  error
 }
 
-func (m *mockFriendRepo) List(_ context.Context) ([]*identity.FriendCache, error) {
+func (m *mockUserCacheRepo) List(_ context.Context) ([]*identity.UserCache, error) {
 	return m.list, nil
 }
 
-func (m *mockFriendRepo) GetByVRCUserID(_ context.Context, id string) (*identity.FriendCache, error) {
+func (m *mockUserCacheRepo) GetByVRCUserID(_ context.Context, id string) (*identity.UserCache, error) {
 	if m.getByID != nil {
 		return m.getByID[id], nil
 	}
 	return nil, nil
 }
 
-func (m *mockFriendRepo) ListFavorites(_ context.Context) ([]*identity.FriendCache, error) {
+func (m *mockUserCacheRepo) ListFavorites(_ context.Context) ([]*identity.UserCache, error) {
 	return m.listFavorites, nil
 }
 
-func (m *mockFriendRepo) Save(_ context.Context, f *identity.FriendCache) error {
+func (m *mockUserCacheRepo) Save(_ context.Context, f *identity.UserCache) error {
 	return m.saveErr
 }
 
-func (m *mockFriendRepo) SaveBatch(_ context.Context, _ []*identity.FriendCache) error {
+func (m *mockUserCacheRepo) SaveBatch(_ context.Context, _ []*identity.UserCache) error {
 	return m.saveBatchErr
 }
 
-func (m *mockFriendRepo) Delete(_ context.Context, _ string) error {
+func (m *mockUserCacheRepo) UpsertFromLog(_ context.Context, _, _ string, _ time.Time) error {
 	return nil
 }
 
-func (m *mockFriendRepo) DeleteAll(_ context.Context) (int64, error) {
+func (m *mockUserCacheRepo) Delete(_ context.Context, _ string) error {
+	return nil
+}
+
+func (m *mockUserCacheRepo) DeleteAll(_ context.Context) (int64, error) {
 	n := int64(len(m.list))
 	m.list = nil
 	m.listFavorites = nil
 	if m.getByID != nil {
-		m.getByID = make(map[string]*identity.FriendCache)
+		m.getByID = make(map[string]*identity.UserCache)
 	}
 	return n, nil
 }
@@ -85,8 +90,8 @@ func TestIdentityUseCase_IsLoggedIn(t *testing.T) {
 	ctx := context.Background()
 	credStore := vrchatapi.NewStubCredentialStore()
 	apiClient := &mockAPIClient{}
-	friendRepo := &mockFriendRepo{}
-	uc := NewIdentityUseCase(friendRepo, apiClient, credStore)
+	userRepo := &mockUserCacheRepo{}
+	uc := NewIdentityUseCase(userRepo, apiClient, credStore)
 
 	// Empty cred store -> not logged in
 	ok, err := uc.IsLoggedIn(ctx)
@@ -114,8 +119,8 @@ func TestIdentityUseCase_Logout(t *testing.T) {
 	ctx := context.Background()
 	credStore := vrchatapi.NewStubCredentialStore()
 	apiClient := &mockAPIClient{token: "old-token"}
-	friendRepo := &mockFriendRepo{}
-	uc := NewIdentityUseCase(friendRepo, apiClient, credStore)
+	userRepo := &mockUserCacheRepo{}
+	uc := NewIdentityUseCase(userRepo, apiClient, credStore)
 
 	if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, "token"); err != nil {
 		t.Fatalf("credStore.Set: %v", err)
@@ -140,11 +145,11 @@ func TestIdentityUseCase_Logout(t *testing.T) {
 func TestIdentityUseCase_Login(t *testing.T) {
 	ctx := context.Background()
 	credStore := vrchatapi.NewStubCredentialStore()
-	friendRepo := &mockFriendRepo{}
+	userRepo := &mockUserCacheRepo{}
 
 	t.Run("empty_credentials_returns_error", func(t *testing.T) {
 		apiClient := &mockAPIClient{}
-		uc := NewIdentityUseCase(friendRepo, apiClient, credStore)
+		uc := NewIdentityUseCase(userRepo, apiClient, credStore)
 		err := uc.Login(ctx, "", "password", "")
 		if err != vrchatapi.ErrInvalidCredentials {
 			t.Errorf("Login(empty user): want ErrInvalidCredentials, got %v", err)
@@ -157,7 +162,7 @@ func TestIdentityUseCase_Login(t *testing.T) {
 
 	t.Run("api_login_error_propagates", func(t *testing.T) {
 		apiClient := &mockAPIClient{loginErr: vrchatapi.ErrInvalidCredentials}
-		uc := NewIdentityUseCase(friendRepo, apiClient, credStore)
+		uc := NewIdentityUseCase(userRepo, apiClient, credStore)
 		err := uc.Login(ctx, "user", "pass", "")
 		if err != vrchatapi.ErrInvalidCredentials {
 			t.Errorf("Login: want ErrInvalidCredentials, got %v", err)
@@ -167,7 +172,7 @@ func TestIdentityUseCase_Login(t *testing.T) {
 	t.Run("cred_store_set_error_propagates", func(t *testing.T) {
 		apiClient := &mockAPIClient{loginToken: "new-token"}
 		failingCred := &failingCredStore{setErr: errors.New("keyring unavailable")}
-		uc := NewIdentityUseCase(friendRepo, apiClient, failingCred)
+		uc := NewIdentityUseCase(userRepo, apiClient, failingCred)
 		err := uc.Login(ctx, "user", "pass", "")
 		if err == nil {
 			t.Fatal("Login: want error when cred store fails, got nil")
@@ -180,7 +185,7 @@ func TestIdentityUseCase_Login(t *testing.T) {
 	t.Run("success_saves_token_and_sets_client", func(t *testing.T) {
 		credStore := vrchatapi.NewStubCredentialStore()
 		apiClient := &mockAPIClient{loginToken: "auth-token-123"}
-		uc := NewIdentityUseCase(friendRepo, apiClient, credStore)
+		uc := NewIdentityUseCase(userRepo, apiClient, credStore)
 		err := uc.Login(ctx, "user", "pass", "")
 		if err != nil {
 			t.Fatalf("Login: %v", err)

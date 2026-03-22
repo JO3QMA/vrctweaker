@@ -19,43 +19,35 @@ func TestLogParser_ParseLine_Encounter(t *testing.T) {
 	}{
 		{
 			name:     "OnPlayerJoined with user ID",
-			line:     "OnPlayerJoined Alice (usr_abc123)",
+			line:     "2026.03.18 00:17:57 Debug      -  [Behaviour] OnPlayerJoined Alice (usr_abc123)",
 			wantKind: EventKindEncounter,
 			wantAct:  EncounterActionJoin,
 			wantName: "Alice",
 			wantID:   "usr_abc123",
 		},
 		{
-			name:     "OnPlayerJoined with prefix",
-			line:     "[Time: 42.5] OnPlayerJoined Bob (usr_def456)",
+			name:     "OnPlayerJoined with leading bracket prefix stripped",
+			line:     "[Time: 42.5] [Behaviour] OnPlayerJoined Bob (usr_def456)",
 			wantKind: EventKindEncounter,
 			wantAct:  EncounterActionJoin,
 			wantName: "Bob",
 			wantID:   "usr_def456",
 		},
 		{
+			name:     "OnPlayerJoined VRChat Behaviour line",
+			line:     "2026.03.21 11:32:16 Debug      -  [Behaviour] OnPlayerJoined ぶっちゃん！ (usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)",
+			wantKind: EventKindEncounter,
+			wantAct:  EncounterActionJoin,
+			wantName: "ぶっちゃん！",
+			wantID:   "usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e",
+		},
+		{
 			name:     "OnPlayerLeft with user ID",
-			line:     "OnPlayerLeft Charlie (usr_ghi789)",
+			line:     "2026.03.18 00:17:58 Debug      -  [Behaviour] OnPlayerLeft Charlie (usr_ghi789)",
 			wantKind: EventKindEncounter,
 			wantAct:  EncounterActionLeave,
 			wantName: "Charlie",
 			wantID:   "usr_ghi789",
-		},
-		{
-			name:     "OnPlayerJoined display name only",
-			line:     "OnPlayerJoined Some User Name",
-			wantKind: EventKindEncounter,
-			wantAct:  EncounterActionJoin,
-			wantName: "Some User Name",
-			wantID:   "",
-		},
-		{
-			name:     "OnPlayerLeft display name only",
-			line:     "OnPlayerLeft Another User",
-			wantKind: EventKindEncounter,
-			wantAct:  EncounterActionLeave,
-			wantName: "Another User",
-			wantID:   "",
 		},
 	}
 	for _, tt := range tests {
@@ -90,6 +82,20 @@ func TestLogParser_ParseLine_Encounter(t *testing.T) {
 	}
 }
 
+func TestParseVRChatTimestamp(t *testing.T) {
+	t.Setenv("TZ", "UTC")
+	fallback := time.Date(1999, 1, 1, 0, 0, 0, 0, time.UTC)
+	line := "2026.03.17 23:59:58 Debug      -  [Behaviour] OnPlayerJoined x (usr_abc)"
+	got := ParseVRChatTimestamp(line, fallback)
+	want := time.Date(2026, 3, 17, 23, 59, 58, 0, time.UTC)
+	if !got.Equal(want) {
+		t.Errorf("ParseVRChatTimestamp() = %v, want %v", got, want)
+	}
+	if !ParseVRChatTimestamp("no timestamp here", fallback).Equal(fallback) {
+		t.Errorf("ParseVRChatTimestamp() should return fallback for bare line")
+	}
+}
+
 func TestLogParser_ParseLine_Session(t *testing.T) {
 	base := time.Date(2025, 3, 17, 12, 0, 0, 0, time.UTC)
 	p := NewLogParser()
@@ -97,37 +103,57 @@ func TestLogParser_ParseLine_Session(t *testing.T) {
 	tests := []struct {
 		name       string
 		line       string
+		wantCount  int
 		wantKind   EventKind
 		wantType   string
 		wantInstID string
 	}{
 		{
-			name:       "Joining wrld",
-			line:       "Joining wrld_abc123:12345",
+			name:       "Joining wrld Behaviour line",
+			line:       "2026.01.01 12:00:00 Debug      -  [Behaviour] Joining wrld_abc123:12345~public",
+			wantCount:  1,
 			wantKind:   EventKindSession,
 			wantType:   SessionEventStart,
-			wantInstID: "wrld_abc123:12345",
+			wantInstID: "wrld_abc123:12345~public",
 		},
 		{
-			name:       "Joining room",
-			line:       "Joining or Creating Room",
+			name:       "Joining wrld with full log prefix",
+			line:       "2026.03.21 11:32:04 Debug      -  [Behaviour] Joining wrld_db637cfb-64f8-4109-977b-6b755482f133:88577~region(jp)",
+			wantCount:  1,
 			wantKind:   EventKindSession,
 			wantType:   SessionEventStart,
-			wantInstID: "",
+			wantInstID: "wrld_db637cfb-64f8-4109-977b-6b755482f133:88577~region(jp)",
 		},
 		{
-			name:       "OnLeftRoom",
-			line:       "OnLeftRoom",
+			name:      "OnPlayerLeftRoom not session end",
+			line:      "2026.03.18 00:04:09 Debug      -  [Behaviour] OnPlayerLeftRoom",
+			wantCount: 0, // not SessionEventEnd; precedes another user's OnPlayerLeft while still in instance
+		},
+		{
+			name:       "OnLeftRoom Behaviour line",
+			line:       "2026.03.22 22:38:29 Debug      -  [Behaviour] OnLeftRoom",
+			wantCount:  1,
 			wantKind:   EventKindSession,
 			wantType:   SessionEventEnd,
 			wantInstID: "",
 		},
 		{
-			name:       "Leaving room",
-			line:       "Leaving room",
+			name:       "Leaving room Behaviour line",
+			line:       "2026.03.22 12:00:00 Debug      -  [Behaviour] Leaving room",
+			wantCount:  1,
 			wantKind:   EventKindSession,
 			wantType:   SessionEventEnd,
 			wantInstID: "",
+		},
+		{
+			name:      "stack trace OnLeftRoom is not session end",
+			line:      "  at SomeObfuscatedClass.OnLeftRoom () [0x00000] in <00000000000000000000000000000000>:0 ",
+			wantCount: 0,
+		},
+		{
+			name:      "bare Joining wrld without Behaviour",
+			line:      "Joining wrld_abc123:12345~public",
+			wantCount: 0,
 		},
 	}
 	for _, tt := range tests {
@@ -136,8 +162,11 @@ func TestLogParser_ParseLine_Session(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ParseLine() err = %v", err)
 			}
-			if len(events) != 1 {
-				t.Fatalf("ParseLine() returned %d events, want 1", len(events))
+			if len(events) != tt.wantCount {
+				t.Fatalf("ParseLine() returned %d events, want %d", len(events), tt.wantCount)
+			}
+			if tt.wantCount == 0 {
+				return
 			}
 			e, ok := events[0].(*SessionEvent)
 			if !ok {
@@ -165,6 +194,10 @@ func TestLogParser_ParseLine_Unparseable(t *testing.T) {
 		"some random log line",
 		"Loading level",
 		"[Time: 1.0] Unrelated message",
+		"OnPlayerJoined Alice (usr_abc123)",
+		"2026.03.21 11:32:16 Debug      -  [VisitorsInformationBoard] 18.88 / OnPlayerJoined / player=ぶっちゃん！(local)",
+		"Destination set: wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b:64190~private(usr_x)~region(jp)",
+		"Entering Room: SomeWorld",
 	}
 	for _, line := range unparseable {
 		events, err := p.ParseLine(line, base)
@@ -175,4 +208,121 @@ func TestLogParser_ParseLine_Unparseable(t *testing.T) {
 			t.Errorf("ParseLine(%q) returned %d events, want 0", line, len(events))
 		}
 	}
+}
+
+func TestLogParser_ParseLine_DestinationRoomAvatarVideo(t *testing.T) {
+	base := time.Date(2026, 3, 17, 23, 59, 56, 0, time.UTC)
+	p := NewLogParser()
+
+	t.Run("Destination set", func(t *testing.T) {
+		line := "2026.03.17 23:59:56 Debug      -  [Behaviour] Destination set: wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b:64190~private(usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)~region(jp)"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("got %d events", len(events))
+		}
+		d, ok := events[0].(*DestinationSetEvent)
+		if !ok {
+			t.Fatalf("type %T", events[0])
+		}
+		if d.WorldID != "wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b" || d.InstanceID != "64190" || d.InstanceType != "private" {
+			t.Errorf("destination fields %+v", d)
+		}
+		if d.OwnerUserID != "usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e" || d.Region != "jp" {
+			t.Errorf("owner/region %+v", d)
+		}
+	})
+
+	t.Run("Destination set group instance with groupAccessType before region", func(t *testing.T) {
+		line := "2026.03.22 00:49:03 Debug      -  [Behaviour] Destination set: wrld_b2d24c29-1ded-4990-a90d-dd6dcc440300:mosco1~group(grp_55a159da-da85-4bf3-893d-65fc50abe6c1)~groupAccessType(public)~region(use)"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("got %d events", len(events))
+		}
+		d, ok := events[0].(*DestinationSetEvent)
+		if !ok {
+			t.Fatalf("type %T", events[0])
+		}
+		wantWid := "wrld_b2d24c29-1ded-4990-a90d-dd6dcc440300"
+		if d.WorldID != wantWid || d.InstanceID != "mosco1" {
+			t.Errorf("destination fields %+v", d)
+		}
+		if d.Region != "use" {
+			t.Errorf("Region = %q, want use", d.Region)
+		}
+		wantFull := wantWid + ":mosco1~group(grp_55a159da-da85-4bf3-893d-65fc50abe6c1)~groupAccessType(public)~region(use)"
+		if d.FullInstance != wantFull {
+			t.Errorf("FullInstance = %q", d.FullInstance)
+		}
+	})
+
+	t.Run("Entering Room", func(t *testing.T) {
+		line := "2026.03.17 23:59:58 Debug      -  [Behaviour] Entering Room: ホームチェックv6․0"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("got %d events", len(events))
+		}
+		r, ok := events[0].(*RoomNameEvent)
+		if !ok {
+			t.Fatalf("type %T", events[0])
+		}
+		if r.RoomName != "ホームチェックv6․0" {
+			t.Errorf("RoomName = %q", r.RoomName)
+		}
+	})
+
+	t.Run("Avatar switch", func(t *testing.T) {
+		line := "2026.03.18 00:00:08 Debug      -  [Behaviour] Switching ぶっちゃん！ to avatar RearAlice （SailorMaid）"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("got %d events", len(events))
+		}
+		a, ok := events[0].(*AvatarSwitchEvent)
+		if !ok {
+			t.Fatalf("type %T", events[0])
+		}
+		if a.DisplayName != "ぶっちゃん！" || a.AvatarName != "RearAlice （SailorMaid）" {
+			t.Errorf("avatar %+v", a)
+		}
+	})
+
+	t.Run("Video playback", func(t *testing.T) {
+		line := "2026.03.18 00:01:12 Debug      -  [Video Playback] Attempting to resolve URL 'https://youtu.be/-I1aPyp-_uE?si=x'"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("got %d events", len(events))
+		}
+		v, ok := events[0].(*VideoPlaybackEvent)
+		if !ok {
+			t.Fatalf("type %T", events[0])
+		}
+		if v.URL != "https://youtu.be/-I1aPyp-_uE?si=x" {
+			t.Errorf("URL = %q", v.URL)
+		}
+	})
+
+	t.Run("Switching to network region ignored", func(t *testing.T) {
+		line := "2026.03.17 23:59:57 Debug      -  [Behaviour] Switching to network region jp (current state: ConnectedToNameServer)"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 0 {
+			t.Fatalf("want 0 events, got %v", events)
+		}
+	})
 }
