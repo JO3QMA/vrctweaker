@@ -253,6 +253,77 @@ func (r *UserEncounterRepository) Count(ctx context.Context) (int64, error) {
 	return n, err
 }
 
+// BackfillMissingWorldContext implements activity.UserEncounterRepository.
+func (r *UserEncounterRepository) BackfillMissingWorldContext(ctx context.Context) (int64, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT id, IFNULL(world_id, ''), IFNULL(instance_id, '') FROM user_encounters ORDER BY encountered_at ASC, id ASC`)
+	if err != nil {
+		return 0, err
+	}
+	type row struct {
+		id, wid, inst string
+	}
+	var list []row
+	for rows.Next() {
+		var rec row
+		if scanErr := rows.Scan(&rec.id, &rec.wid, &rec.inst); scanErr != nil {
+			_ = rows.Close()
+			return 0, scanErr
+		}
+		list = append(list, rec)
+	}
+	if closeErr := rows.Close(); closeErr != nil {
+		return 0, closeErr
+	}
+	if err2 := rows.Err(); err2 != nil {
+		return 0, err2
+	}
+
+	var lastWid, lastInst string
+	var updates [][3]string
+	for _, rec := range list {
+		if rec.wid != "" {
+			lastWid = rec.wid
+			if rec.inst != "" {
+				lastInst = rec.inst
+			}
+			continue
+		}
+		if lastWid == "" {
+			continue
+		}
+		fillInst := rec.inst
+		if fillInst == "" {
+			fillInst = lastInst
+		}
+		updates = append(updates, [3]string{rec.id, lastWid, fillInst})
+		if fillInst != "" {
+			lastInst = fillInst
+		}
+	}
+	if len(updates) == 0 {
+		return 0, nil
+	}
+
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	defer func() { _ = tx.Rollback() }()
+	var n int64
+	for _, u := range updates {
+		res, execErr := tx.ExecContext(ctx, `UPDATE user_encounters SET world_id = ?, instance_id = ? WHERE id = ?`, u[1], u[2], u[0])
+		if execErr != nil {
+			return 0, execErr
+		}
+		k, _ := res.RowsAffected()
+		n += k
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, err
+	}
+	return n, nil
+}
+
 func scanUserEncounter(rows *sql.Rows) (*activity.UserEncounter, error) {
 	var id, vrcUserID, displayName, action, instanceID string
 	var worldID sql.NullString

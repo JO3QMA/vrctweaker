@@ -64,6 +64,8 @@ func (stubEncounterRepo) DeleteAll(context.Context) (int64, error) { return 0, n
 
 func (stubEncounterRepo) Count(context.Context) (int64, error) { return 0, nil }
 
+func (stubEncounterRepo) BackfillMissingWorldContext(context.Context) (int64, error) { return 0, nil }
+
 func TestActivityUseCase_CloseOpenPlaySessionAtLastLogLine_sameDay(t *testing.T) {
 	ctx := context.Background()
 	repo := &fakePlaySessionRepo{}

@@ -125,12 +125,9 @@ func TestLogParser_ParseLine_Session(t *testing.T) {
 			wantInstID: "wrld_db637cfb-64f8-4109-977b-6b755482f133:88577~region(jp)",
 		},
 		{
-			name:       "OnPlayerLeftRoom",
-			line:       "2026.03.18 00:04:09 Debug      -  [Behaviour] OnPlayerLeftRoom",
-			wantCount:  1,
-			wantKind:   EventKindSession,
-			wantType:   SessionEventEnd,
-			wantInstID: "",
+			name:      "OnPlayerLeftRoom not session end",
+			line:      "2026.03.18 00:04:09 Debug      -  [Behaviour] OnPlayerLeftRoom",
+			wantCount: 0, // not SessionEventEnd; precedes another user's OnPlayerLeft while still in instance
 		},
 		{
 			name:       "OnLeftRoom",

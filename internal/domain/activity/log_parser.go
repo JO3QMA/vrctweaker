@@ -130,7 +130,10 @@ var (
 	// Capture full instance token (may include ~private(usr_)~region(jp) etc.).
 	sessionStartWrldRE = regexp.MustCompile(`(?i)Joining\s+(wrld_[^\s]+)`)
 
-	sessionEndRE = regexp.MustCompile(`(?i)(?:OnPlayerLeftRoom|OnLeftRoom|Left\s+room|Leaving\s+room)`)
+	// Local session end: OnLeftRoom / Left room / Leaving room.
+	// Do not match OnPlayerLeftRoom — it appears before another user's OnPlayerLeft while still in the
+	// instance; treating it as SessionEventEnd cleared world context and dropped world_id on encounters.
+	sessionEndRE = regexp.MustCompile(`(?i)(?:OnLeftRoom|Left\s+room|Leaving\s+room)`)
 
 	// Destination set: wrld_uuid:64190~private(usr_...)~region(jp)
 	destinationSetRE = regexp.MustCompile(`(?i)Destination\s+set:\s*(wrld_[a-f0-9-]+):([a-zA-Z0-9]+)~([a-z]+)\(([^)]*)\)~region\(([^)]*)\)`)

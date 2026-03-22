@@ -71,6 +71,20 @@ func (stubEncounterRepo) DeleteAll(context.Context) (int64, error) { return 0, n
 
 func (stubEncounterRepo) Count(context.Context) (int64, error) { return 0, nil }
 
+func (stubEncounterRepo) BackfillMissingWorldContext(context.Context) (int64, error) { return 0, nil }
+
+// spyEncounterRepo records Save calls for assertions; other methods delegate to stubEncounterRepo.
+type spyEncounterRepo struct {
+	stubEncounterRepo
+	saves []*activity.UserEncounter
+}
+
+func (s *spyEncounterRepo) Save(_ context.Context, e *activity.UserEncounter) error {
+	c := *e
+	s.saves = append(s.saves, &c)
+	return nil
+}
+
 type fakeAppSettingsRepo struct {
 	m map[string]string
 }
@@ -143,5 +157,38 @@ func TestActivityEventHandler_RoomNameWithoutOnLeftRoom_unchanged(t *testing.T) 
 	}
 	if spy.displayNameCalls[0].worldID != homeWorld || spy.displayNameCalls[0].displayName != "ホームチェックv6․0" {
 		t.Errorf("UpsertDisplayName = %+v", spy.displayNameCalls[0])
+	}
+}
+
+func TestActivityEventHandler_OtherPlayerLeave_afterJoining_keepsWorldContext(t *testing.T) {
+	ctx := context.Background()
+	base := time.Date(2026, 3, 18, 0, 1, 0, 0, time.UTC)
+	const minasocoWorld = "wrld_c03f8195-3c64-46d8-b5ae-242f214c9404"
+	minasocoInst := minasocoWorld + ":98225~hidden(usr_83ba5dc2-2912-4a21-a514-8b954e60a79b)~region(jp)"
+
+	spy := &spyEncounterRepo{}
+	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, spy, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
+	h := NewActivityEventHandler(uc, ctx, nil, nil)
+
+	h.Handle(&activity.DestinationSetEvent{
+		WorldID:      minasocoWorld,
+		FullInstance: minasocoInst,
+		OccurredAt:   base,
+	})
+	h.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: minasocoInst, OccurredAt: base})
+	h.Handle(&activity.EncounterEvent{
+		VRCUserID:     "usr_1564b5c1-888a-4d08-b7f4-dcedcf702a90",
+		DisplayName:   "Nau_UoxoU",
+		Action:        activity.EncounterActionLeave,
+		EncounteredAt: base.Add(time.Second),
+	})
+
+	if len(spy.saves) != 1 {
+		t.Fatalf("Save calls = %d, want 1", len(spy.saves))
+	}
+	e := spy.saves[0]
+	if e.WorldID != minasocoWorld || e.InstanceID != minasocoInst {
+		t.Errorf("Save world_id=%q instance_id=%q, want world %q instance %q",
+			e.WorldID, e.InstanceID, minasocoWorld, minasocoInst)
 	}
 }

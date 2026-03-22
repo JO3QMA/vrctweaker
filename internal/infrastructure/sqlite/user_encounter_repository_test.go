@@ -128,3 +128,57 @@ func TestUserEncounterRepository_ListWithContext_FilterWorldID(t *testing.T) {
 		t.Fatalf("got encounter id %q, want e1", list[0].Encounter.ID)
 	}
 }
+
+func TestUserEncounterRepository_BackfillMissingWorldContext(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "test.db")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	if migrateErr := migrate(db); migrateErr != nil {
+		t.Fatal(migrateErr)
+	}
+
+	repo := NewUserEncounterRepository(db)
+	ctx := context.Background()
+	t0 := time.Date(2025, 1, 10, 12, 0, 0, 0, time.UTC)
+
+	rows := []activity.UserEncounter{
+		{ID: "e1", VRCUserID: "usr_a", DisplayName: "A", Action: "join", InstanceID: "inst_full", WorldID: "wrld_fill", EncounteredAt: t0},
+		{ID: "e2", VRCUserID: "usr_b", DisplayName: "B", Action: "leave", InstanceID: "", WorldID: "", EncounteredAt: t0.Add(time.Minute)},
+		{ID: "e3", VRCUserID: "usr_c", DisplayName: "C", Action: "leave", InstanceID: "", WorldID: "", EncounteredAt: t0.Add(2 * time.Minute)},
+	}
+	for i := range rows {
+		if saveErr := repo.Save(ctx, &rows[i]); saveErr != nil {
+			t.Fatal(saveErr)
+		}
+	}
+
+	n, err := repo.BackfillMissingWorldContext(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n != 2 {
+		t.Fatalf("BackfillMissingWorldContext updated %d rows, want 2", n)
+	}
+
+	list, err := repo.List(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	byID := make(map[string]*activity.UserEncounter, len(list))
+	for _, e := range list {
+		byID[e.ID] = e
+	}
+	for _, id := range []string{"e2", "e3"} {
+		e := byID[id]
+		if e == nil {
+			t.Fatalf("missing encounter %s", id)
+		}
+		if e.WorldID != "wrld_fill" || e.InstanceID != "inst_full" {
+			t.Errorf("%s: world_id=%q instance_id=%q, want wrld_fill / inst_full", id, e.WorldID, e.InstanceID)
+		}
+	}
+}

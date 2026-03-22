@@ -33,6 +33,9 @@ type UserEncounterRepository interface {
 	DeleteAll(ctx context.Context) (int64, error)
 	// Count returns the number of stored encounters.
 	Count(ctx context.Context) (int64, error)
+	// BackfillMissingWorldContext sets world_id (and instance_id when empty) on rows with missing
+	// world_id by propagating the previous row's non-empty context in encountered_at ascending order.
+	BackfillMissingWorldContext(ctx context.Context) (updated int64, err error)
 }
 
 // EncounterFilter provides optional filtering for List.

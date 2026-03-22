@@ -285,6 +285,12 @@ func (uc *ActivityUseCase) UpsertWorldRoomName(ctx context.Context, worldID, roo
 	return uc.worldRepo.UpsertDisplayName(ctx, worldID, roomName, at)
 }
 
+// BackfillEncounterWorldContext fills missing world_id (and instance_id when empty) on stored
+// encounters by propagating the previous row's context in time order.
+func (uc *ActivityUseCase) BackfillEncounterWorldContext(ctx context.Context) (int64, error) {
+	return uc.encounterRepo.BackfillMissingWorldContext(ctx)
+}
+
 // RotateEncounters deletes encounters older than retention days.
 func (uc *ActivityUseCase) RotateEncounters(ctx context.Context) (int64, error) {
 	daysStr, err := uc.settingsRepo.Get(ctx, "log_retention_days")
