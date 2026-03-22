@@ -839,6 +839,30 @@ func (a *App) Encounters() ([]UserEncounterDTO, error) {
 	return toEncounterDTOsFromContext(list), nil
 }
 
+// EncountersByVRCUserID returns encounters for the given VRChat user id. Empty id yields an empty slice.
+func (a *App) EncountersByVRCUserID(vrcUserID string) ([]UserEncounterDTO, error) {
+	if strings.TrimSpace(vrcUserID) == "" {
+		return []UserEncounterDTO{}, nil
+	}
+	list, err := a.activity.ListEncountersWithContext(a.ctx, &activity.EncounterFilter{VRCUserID: vrcUserID})
+	if err != nil {
+		return nil, err
+	}
+	return toEncounterDTOsFromContext(list), nil
+}
+
+// EncountersByWorldID returns encounters in the given world. Empty id yields an empty slice.
+func (a *App) EncountersByWorldID(worldID string) ([]UserEncounterDTO, error) {
+	if strings.TrimSpace(worldID) == "" {
+		return []UserEncounterDTO{}, nil
+	}
+	list, err := a.activity.ListEncountersWithContext(a.ctx, &activity.EncounterFilter{WorldID: worldID})
+	if err != nil {
+		return nil, err
+	}
+	return toEncounterDTOsFromContext(list), nil
+}
+
 // OpenVRChatLogFolder opens the configured output_log directory (or default VRChat log dir) in the file manager.
 func (a *App) OpenVRChatLogFolder() error {
 	p, err := a.settings.GetOutputLogPath(a.ctx)

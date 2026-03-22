@@ -2,8 +2,8 @@
   <div class="app-layout">
     <TitleBar />
     <div class="app-body">
-      <Sidebar />
-      <main class="main-content">
+      <Sidebar v-if="!bareLayout" />
+      <main class="main-content" :class="{ 'main-content--bare': bareLayout }">
         <div class="router-outlet-host">
           <router-view v-slot="{ Component }">
             <transition name="fade" mode="out-in">
@@ -17,8 +17,13 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
+import { useRoute } from "vue-router";
 import TitleBar from "./components/TitleBar.vue";
 import Sidebar from "./components/Sidebar.vue";
+
+const route = useRoute();
+const bareLayout = computed(() => route.meta.bare === true);
 </script>
 
 <style scoped>
@@ -43,6 +48,10 @@ import Sidebar from "./components/Sidebar.vue";
   flex-direction: column;
   overflow: hidden;
   padding: 1.5rem;
+}
+
+.main-content--bare {
+  padding: 1rem 1.25rem;
 }
 
 .router-outlet-host {

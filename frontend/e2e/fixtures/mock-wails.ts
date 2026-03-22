@@ -70,6 +70,8 @@ export function getMockWailsInitScript(): string {
         IsGalleryScanning: () => Promise.resolve(false),
         ReindexScreenshotDir: () => Promise.resolve(0),
         Encounters: () => Promise.resolve([]),
+        EncountersByVRCUserID: () => Promise.resolve([]),
+        EncountersByWorldID: () => Promise.resolve([]),
         RotateEncounters: () => Promise.resolve(0),
         GetActivityStats: () => Promise.resolve({ dailyPlaySeconds: [], topWorlds: [] }),
         Friends: () => Promise.resolve([]),

@@ -181,6 +181,8 @@ interface AppBindings {
   IsGalleryScanning(): Promise<boolean>;
   ReindexScreenshotDir(path: string): Promise<number>;
   Encounters(): Promise<UserEncounterDTO[]>;
+  EncountersByVRCUserID(vrcUserID: string): Promise<UserEncounterDTO[]>;
+  EncountersByWorldID(worldID: string): Promise<UserEncounterDTO[]>;
   RotateEncounters(): Promise<number>;
   GetActivityStats(fromISO: string, toISO: string): Promise<ActivityStatsDTO>;
   Friends(): Promise<UserCacheDTO[]>;
@@ -221,6 +223,11 @@ declare global {
 
 function getApp(): AppBindings | undefined {
   return typeof window !== "undefined" ? window.go?.main?.App : undefined;
+}
+
+/** True when running inside Wails (second windows from window.open cannot load wails.localhost). */
+export function isWailsRuntime(): boolean {
+  return getApp() !== undefined;
 }
 
 /**
@@ -406,6 +413,12 @@ export const App = {
   },
   async encounters(): Promise<UserEncounterDTO[]> {
     return callApp((a) => a.Encounters(), []);
+  },
+  async encountersByVRCUserID(vrcUserID: string): Promise<UserEncounterDTO[]> {
+    return callApp((a) => a.EncountersByVRCUserID(vrcUserID), []);
+  },
+  async encountersByWorldID(worldID: string): Promise<UserEncounterDTO[]> {
+    return callApp((a) => a.EncountersByWorldID(worldID), []);
   },
   async clearEncounters(): Promise<number> {
     return callApp((a) => a.ClearEncounters(), 0);

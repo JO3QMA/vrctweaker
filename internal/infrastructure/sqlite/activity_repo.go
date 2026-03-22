@@ -130,6 +130,10 @@ func (r *UserEncounterRepository) List(ctx context.Context, filter *activity.Enc
 			query += ` AND instance_id = ?`
 			args = append(args, filter.InstanceID)
 		}
+		if filter.WorldID != "" {
+			query += ` AND world_id = ?`
+			args = append(args, filter.WorldID)
+		}
 		if filter.From != nil {
 			query += ` AND encountered_at >= ?`
 			args = append(args, filter.From.Format(time.RFC3339))
@@ -179,6 +183,10 @@ func (r *UserEncounterRepository) ListWithContext(ctx context.Context, filter *a
 		if filter.InstanceID != "" {
 			query += ` AND e.instance_id = ?`
 			args = append(args, filter.InstanceID)
+		}
+		if filter.WorldID != "" {
+			query += ` AND e.world_id = ?`
+			args = append(args, filter.WorldID)
 		}
 		if filter.From != nil {
 			query += ` AND e.encountered_at >= ?`

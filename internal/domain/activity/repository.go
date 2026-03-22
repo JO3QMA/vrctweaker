@@ -40,6 +40,7 @@ type EncounterFilter struct {
 	VRCUserID   string
 	DisplayName string
 	InstanceID  string
+	WorldID     string
 	From        *time.Time
 	To          *time.Time
 }

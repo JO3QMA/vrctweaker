@@ -30,6 +30,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "アクティビティ" },
   },
   {
+    path: "/activity/encounter-history",
+    name: "encounter-history",
+    component: () => import("./views/EncounterHistoryDetailView.vue"),
+    meta: { title: "遭遇履歴", bare: true },
+  },
+  {
     path: "/friends",
     name: "friends",
     component: () => import("./views/FriendsView.vue"),

@@ -32,6 +32,12 @@
         遭遇ログがありません。
       </div>
       <ul v-else class="timeline">
+        <li class="timeline-header-row" aria-hidden="true">
+          <span class="timeline-h">時刻</span>
+          <span class="timeline-h">アクション</span>
+          <span class="timeline-h">表示名</span>
+          <span class="timeline-h">ワールド名</span>
+        </li>
         <li
           v-for="enc in filteredEncounters"
           :key="enc.id"
@@ -40,15 +46,32 @@
           <span class="timeline-time">{{
             formatEncounteredAt(enc.encounteredAt)
           }}</span>
-          <span class="timeline-name">{{ enc.displayName }}</span>
           <span class="timeline-action" :class="enc.action">{{
             actionLabel(enc.action)
           }}</span>
-          <span class="timeline-world" :title="enc.worldId || ''">{{
-            enc.worldDisplayName || enc.worldId || "—"
+          <button
+            v-if="enc.vrcUserId"
+            type="button"
+            class="timeline-link timeline-name"
+            @click="openUserHistory(enc.vrcUserId)"
+          >
+            {{ enc.displayName }}
+          </button>
+          <span v-else class="timeline-name timeline-name--muted">{{
+            enc.displayName
           }}</span>
-          <span class="timeline-user-meta">{{ encounterUserMeta(enc) }}</span>
-          <span class="timeline-instance">{{ enc.instanceId || "—" }}</span>
+          <button
+            v-if="enc.worldId"
+            type="button"
+            class="timeline-link timeline-world"
+            :title="enc.worldId"
+            @click="openWorldHistory(enc.worldId)"
+          >
+            {{ enc.worldDisplayName || enc.worldId }}
+          </button>
+          <span v-else class="timeline-world timeline-world--muted" title="">
+            —
+          </span>
         </li>
       </ul>
     </section>
@@ -57,6 +80,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
+import { useRouter } from "vue-router";
 import {
   App,
   type UserEncounterDTO,
@@ -66,11 +90,14 @@ import { getRuntime } from "../wails/runtime";
 import PlayTimeChart, {
   type PlayTimeDayPoint,
 } from "../components/PlayTimeChart.vue";
+import { openEncounterHistoryWindow } from "../utils/openEncounterHistoryWindow";
 
 /** プレイ時間グラフに表示する暦日数（最大14日、今日を含む） */
 const PLAYTIME_CHART_MAX_DAYS = 14;
 
 const ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS = 400;
+
+const router = useRouter();
 
 const encounters = ref<UserEncounterDTO[]>([]);
 const encountersLoading = ref(false);
@@ -139,19 +166,12 @@ function actionLabel(action: string): string {
   return action;
 }
 
-function encounterUserMeta(enc: UserEncounterDTO): string {
-  if (enc.isFirstEncounter) {
-    return "初めての遭遇";
-  }
-  if (enc.userFirstSeenAt) {
-    return `初見: ${formatEncounteredAt(enc.userFirstSeenAt)} / 最終: ${
-      enc.userLastContactAt ? formatEncounteredAt(enc.userLastContactAt) : "—"
-    }`;
-  }
-  if (enc.userLastContactAt) {
-    return `最終接触: ${formatEncounteredAt(enc.userLastContactAt)}`;
-  }
-  return "—";
+function openUserHistory(vrcUserId: string): void {
+  openEncounterHistoryWindow(router, "user", vrcUserId);
+}
+
+function openWorldHistory(worldId: string): void {
+  openEncounterHistoryWindow(router, "world", worldId);
 }
 
 let encountersChangedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -284,11 +304,10 @@ onUnmounted(() => {
   padding: 0;
 }
 
+.timeline-header-row,
 .timeline-item {
   display: grid;
-  grid-template-columns:
-    10rem 8rem 4rem minmax(0, 11rem) minmax(0, 16rem)
-    minmax(0, 1fr);
+  grid-template-columns: 10rem 5rem minmax(0, 1fr) minmax(0, 1fr);
   gap: 0.75rem;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--border);
@@ -296,8 +315,19 @@ onUnmounted(() => {
   align-items: center;
 }
 
+.timeline-header-row {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding-top: 0;
+}
+
 .timeline-item:last-child {
   border-bottom: none;
+}
+
+.timeline-h {
+  min-width: 0;
 }
 
 .timeline-time {
@@ -307,6 +337,12 @@ onUnmounted(() => {
 
 .timeline-name {
   font-weight: 500;
+  min-width: 0;
+  text-align: left;
+}
+
+.timeline-name--muted {
+  color: var(--text-secondary);
 }
 
 .timeline-action.join {
@@ -323,20 +359,36 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  min-width: 0;
+  text-align: left;
 }
 
-.timeline-user-meta {
-  font-size: 0.75rem;
+.timeline-world--muted {
   color: var(--text-secondary);
-  line-height: 1.3;
-  overflow: hidden;
 }
 
-.timeline-instance {
-  font-family: monospace;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
+.timeline-link {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-link:hover {
+  color: var(--text-primary);
+}
+
+.timeline-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 </style>
