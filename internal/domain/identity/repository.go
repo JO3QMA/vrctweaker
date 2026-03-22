@@ -1,21 +1,19 @@
 package identity
 
-import "context"
+import (
+	"context"
+	"time"
+)
 
-// FriendCacheRepository defines persistence operations for friend cache.
-type FriendCacheRepository interface {
-	// List returns all cached friends.
-	List(ctx context.Context) ([]*FriendCache, error)
-	// GetByVRCUserID returns a cached friend by VRChat user ID.
-	GetByVRCUserID(ctx context.Context, vrcUserID string) (*FriendCache, error)
-	// ListFavorites returns cached friends marked as favorite.
-	ListFavorites(ctx context.Context) ([]*FriendCache, error)
-	// Save persists friend cache (upsert by VRCUserID).
-	Save(ctx context.Context, f *FriendCache) error
-	// SaveBatch persists multiple friends efficiently.
-	SaveBatch(ctx context.Context, friends []*FriendCache) error
-	// Delete removes a friend cache by VRChat user ID.
+// UserCacheRepository defines persistence for users_cache.
+type UserCacheRepository interface {
+	// List returns rows that represent VRChat friends (status set by API sync), not log-only stubs.
+	List(ctx context.Context) ([]*UserCache, error)
+	GetByVRCUserID(ctx context.Context, vrcUserID string) (*UserCache, error)
+	ListFavorites(ctx context.Context) ([]*UserCache, error)
+	Save(ctx context.Context, u *UserCache) error
+	SaveBatch(ctx context.Context, users []*UserCache) error
+	UpsertFromLog(ctx context.Context, vrcUserID, displayName string, at time.Time) error
 	Delete(ctx context.Context, vrcUserID string) error
-	// DeleteAll removes all cached friends. Returns affected row count.
 	DeleteAll(ctx context.Context) (int64, error)
 }

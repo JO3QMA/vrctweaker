@@ -175,6 +175,14 @@
             >
               存在確認
             </button>
+            <button
+              type="button"
+              class="btn-browse"
+              title="VRChat のログフォルダをファイルマネージャで開く"
+              @click="openVRChatLogFolder"
+            >
+              ログフォルダを開く
+            </button>
           </div>
           <span
             v-if="validateResult.outputLogPath !== null"
@@ -412,6 +420,14 @@ async function browseOutputLogDirectory() {
   }
 }
 
+async function openVRChatLogFolder(): Promise<void> {
+  try {
+    await App.openVRChatLogFolder();
+  } catch (err) {
+    console.error(err);
+  }
+}
+
 async function validatePathField(field: keyof PathSettingsDTO) {
   const path = pathSettings[field];
   if (path === "") {
@@ -482,7 +498,7 @@ function doClearScreenshots() {
 
 function doClearFriendsCache() {
   runWithConfirm(
-    "フレンドキャッシュ（friends_cache）をすべて削除します。よろしいですか？",
+    "ユーザーキャッシュ（users_cache）をすべて削除します。よろしいですか？",
     async () => App.clearFriendsCache(),
     (n) => `${n}件のフレンドキャッシュを削除しました`,
   );

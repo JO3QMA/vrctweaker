@@ -13,13 +13,13 @@ func IsOffline(status string) bool {
 
 // DetectFavoriteOnlineTransitions finds favorites that transitioned from offline to online.
 // before: map of vrcUserID -> status before refresh (from ListFavorites)
-// after:  map of vrcUserID -> FriendCache after refresh (only favorites)
+// after:  map of vrcUserID -> UserCache after refresh (only favorites)
 // Returns list of friends who were offline and are now online.
 func DetectFavoriteOnlineTransitions(
 	before map[string]string,
-	after map[string]*FriendCache,
-) []*FriendCache {
-	var result []*FriendCache
+	after map[string]*UserCache,
+) []*UserCache {
+	var result []*UserCache
 	for id, fc := range after {
 		prevStatus := before[id]
 		if IsOffline(prevStatus) && !IsOffline(fc.Status) {

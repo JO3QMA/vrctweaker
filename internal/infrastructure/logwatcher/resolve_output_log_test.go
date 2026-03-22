@@ -3,9 +3,26 @@ package logwatcher
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
+
+func TestListOutputLogFiles_Sorted(t *testing.T) {
+	dir := t.TempDir()
+	_ = os.WriteFile(filepath.Join(dir, "output_log_2026-01-01_00-00-00.txt"), []byte("a"), 0600)
+	_ = os.WriteFile(filepath.Join(dir, "output_log_2026-03-22_00-00-00.txt"), []byte("b"), 0600)
+	got, err := ListOutputLogFiles(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("len = %d", len(got))
+	}
+	if !strings.Contains(filepath.Base(got[0]), "2026-01-01") {
+		t.Errorf("first = %s", got[0])
+	}
+}
 
 func TestResolveLatestOutputLogFile_EmptyDir(t *testing.T) {
 	dir := t.TempDir()

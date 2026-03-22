@@ -11,23 +11,27 @@ import (
 
 // ActivityEventHandler bridges parsed log events to ActivityUseCase.
 type ActivityEventHandler struct {
-	uc     *usecase.ActivityUseCase
-	ctx    context.Context
-	logger Logger
+	uc               *usecase.ActivityUseCase
+	ctx              context.Context
+	logger           Logger
+	onAfterEncounter func()
 
 	mu                sync.Mutex
 	currentInstanceID string
+	currentWorldID    string
 }
 
 // NewActivityEventHandler creates a handler that persists events via ActivityUseCase.
-func NewActivityEventHandler(uc *usecase.ActivityUseCase, ctx context.Context, logger Logger) *ActivityEventHandler {
+// onAfterEncounter is optional (e.g. Wails EventsEmit after each encounter row).
+func NewActivityEventHandler(uc *usecase.ActivityUseCase, ctx context.Context, logger Logger, onAfterEncounter func()) *ActivityEventHandler {
 	if logger == nil {
 		logger = logWriterLogger{log.Default()}
 	}
 	return &ActivityEventHandler{
-		uc:     uc,
-		ctx:    ctx,
-		logger: logger,
+		uc:               uc,
+		ctx:              ctx,
+		logger:           logger,
+		onAfterEncounter: onAfterEncounter,
 	}
 }
 
@@ -45,15 +49,36 @@ func (h *ActivityEventHandler) Handle(event activity.ParsedEvent) {
 		return
 	}
 	switch e := event.(type) {
+	case *activity.DestinationSetEvent:
+		if err := h.uc.UpsertWorldVisit(h.ctx, e.WorldID, e.OccurredAt); err != nil {
+			h.logger.Printf("[activity_handler] UpsertWorldVisit: %v", err)
+		}
+		h.mu.Lock()
+		h.currentWorldID = e.WorldID
+		if e.FullInstance != "" {
+			h.currentInstanceID = e.FullInstance
+		}
+		h.mu.Unlock()
+	case *activity.RoomNameEvent:
+		h.mu.Lock()
+		wid := h.currentWorldID
+		h.mu.Unlock()
+		if err := h.uc.UpsertWorldRoomName(h.ctx, wid, e.RoomName, e.OccurredAt); err != nil {
+			h.logger.Printf("[activity_handler] UpsertWorldRoomName: %v", err)
+		}
 	case *activity.EncounterEvent:
 		inst := e.InstanceID
+		h.mu.Lock()
 		if inst == "" {
-			h.mu.Lock()
 			inst = h.currentInstanceID
-			h.mu.Unlock()
 		}
-		if err := h.uc.RecordEncounterAt(h.ctx, e.VRCUserID, e.DisplayName, e.Action, inst, e.EncounteredAt); err != nil {
+		wid := h.currentWorldID
+		h.mu.Unlock()
+		if err := h.uc.RecordEncounterAt(h.ctx, e.VRCUserID, e.DisplayName, e.Action, inst, wid, e.EncounteredAt); err != nil {
 			h.logger.Printf("[activity_handler] RecordEncounter: %v", err)
+		}
+		if h.onAfterEncounter != nil {
+			h.onAfterEncounter()
 		}
 	case *activity.SessionEvent:
 		switch e.Type {
@@ -66,6 +91,9 @@ func (h *ActivityEventHandler) Handle(event activity.ParsedEvent) {
 			}
 			h.mu.Lock()
 			h.currentInstanceID = e.InstanceID
+			if w := activity.WorldIDFromInstanceKey(e.InstanceID); w != "" {
+				h.currentWorldID = w
+			}
 			h.mu.Unlock()
 			if err := h.uc.StartPlaySession(h.ctx, e.InstanceID, e.OccurredAt); err != nil {
 				h.logger.Printf("[activity_handler] StartPlaySession: %v", err)
@@ -73,6 +101,7 @@ func (h *ActivityEventHandler) Handle(event activity.ParsedEvent) {
 		case activity.SessionEventEnd:
 			h.mu.Lock()
 			h.currentInstanceID = ""
+			h.currentWorldID = ""
 			h.mu.Unlock()
 			if err := h.uc.EndPlaySession(h.ctx, e.OccurredAt); err != nil {
 				h.logger.Printf("[activity_handler] EndPlaySession: %v", err)

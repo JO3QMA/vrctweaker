@@ -128,21 +128,21 @@ func TestMaintenance_ClearFriendsCache_Integration(t *testing.T) {
 		t.Fatal(migrateErr)
 	}
 
-	friendRepo := NewFriendCacheRepository(db)
+	userRepo := NewUserCacheRepository(db)
 	ctx := context.Background()
 
-	f := &identity.FriendCache{
+	f := &identity.UserCache{
 		VRCUserID:   "usr_xxx",
 		DisplayName: "FriendUser",
 		Status:      "active",
 		IsFavorite:  false,
 		LastUpdated: time.Now().UTC(),
 	}
-	if saveErr := friendRepo.Save(ctx, f); saveErr != nil {
+	if saveErr := userRepo.Save(ctx, f); saveErr != nil {
 		t.Fatal(saveErr)
 	}
 
-	list, err := friendRepo.List(ctx)
+	list, err := userRepo.List(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -150,7 +150,7 @@ func TestMaintenance_ClearFriendsCache_Integration(t *testing.T) {
 		t.Fatalf("expected 1 friend before clear, got %d", len(list))
 	}
 
-	n, err := friendRepo.DeleteAll(ctx)
+	n, err := userRepo.DeleteAll(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -158,7 +158,7 @@ func TestMaintenance_ClearFriendsCache_Integration(t *testing.T) {
 		t.Errorf("expected RowsAffected=1, got %d", n)
 	}
 
-	list, err = friendRepo.List(ctx)
+	list, err = userRepo.List(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -126,16 +126,11 @@ func TestLogParser_ParseLine_Session(t *testing.T) {
 	}{
 		{
 			name:       "Joining wrld",
-			line:       "Joining wrld_abc123:12345",
+			line:       "Joining wrld_abc123:12345~public",
 			wantCount:  1,
 			wantKind:   EventKindSession,
 			wantType:   SessionEventStart,
-			wantInstID: "wrld_abc123:12345",
-		},
-		{
-			name:      "Entering Room does not start session",
-			line:      "2026.03.17 23:59:58 Debug      -  [Behaviour] Entering Room: My World",
-			wantCount: 0,
+			wantInstID: "wrld_abc123:12345~public",
 		},
 		{
 			name:       "Joining wrld with full log prefix",
@@ -143,7 +138,7 @@ func TestLogParser_ParseLine_Session(t *testing.T) {
 			wantCount:  1,
 			wantKind:   EventKindSession,
 			wantType:   SessionEventStart,
-			wantInstID: "wrld_db637cfb-64f8-4109-977b-6b755482f133:88577",
+			wantInstID: "wrld_db637cfb-64f8-4109-977b-6b755482f133:88577~region(jp)",
 		},
 		{
 			name:       "OnPlayerLeftRoom",
@@ -218,4 +213,95 @@ func TestLogParser_ParseLine_Unparseable(t *testing.T) {
 			t.Errorf("ParseLine(%q) returned %d events, want 0", line, len(events))
 		}
 	}
+}
+
+func TestLogParser_ParseLine_DestinationRoomAvatarVideo(t *testing.T) {
+	base := time.Date(2026, 3, 17, 23, 59, 56, 0, time.UTC)
+	p := NewLogParser()
+
+	t.Run("Destination set", func(t *testing.T) {
+		line := "2026.03.17 23:59:56 Debug      -  [Behaviour] Destination set: wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b:64190~private(usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)~region(jp)"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("got %d events", len(events))
+		}
+		d, ok := events[0].(*DestinationSetEvent)
+		if !ok {
+			t.Fatalf("type %T", events[0])
+		}
+		if d.WorldID != "wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b" || d.InstanceID != "64190" || d.InstanceType != "private" {
+			t.Errorf("destination fields %+v", d)
+		}
+		if d.OwnerUserID != "usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e" || d.Region != "jp" {
+			t.Errorf("owner/region %+v", d)
+		}
+	})
+
+	t.Run("Entering Room", func(t *testing.T) {
+		line := "2026.03.17 23:59:58 Debug      -  [Behaviour] Entering Room: ホームチェックv6․0"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("got %d events", len(events))
+		}
+		r, ok := events[0].(*RoomNameEvent)
+		if !ok {
+			t.Fatalf("type %T", events[0])
+		}
+		if r.RoomName != "ホームチェックv6․0" {
+			t.Errorf("RoomName = %q", r.RoomName)
+		}
+	})
+
+	t.Run("Avatar switch", func(t *testing.T) {
+		line := "2026.03.18 00:00:08 Debug      -  [Behaviour] Switching ぶっちゃん！ to avatar RearAlice （SailorMaid）"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("got %d events", len(events))
+		}
+		a, ok := events[0].(*AvatarSwitchEvent)
+		if !ok {
+			t.Fatalf("type %T", events[0])
+		}
+		if a.DisplayName != "ぶっちゃん！" || a.AvatarName != "RearAlice （SailorMaid）" {
+			t.Errorf("avatar %+v", a)
+		}
+	})
+
+	t.Run("Video playback", func(t *testing.T) {
+		line := "2026.03.18 00:01:12 Debug      -  [Video Playback] Attempting to resolve URL 'https://youtu.be/-I1aPyp-_uE?si=x'"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("got %d events", len(events))
+		}
+		v, ok := events[0].(*VideoPlaybackEvent)
+		if !ok {
+			t.Fatalf("type %T", events[0])
+		}
+		if v.URL != "https://youtu.be/-I1aPyp-_uE?si=x" {
+			t.Errorf("URL = %q", v.URL)
+		}
+	})
+
+	t.Run("Switching to network region ignored", func(t *testing.T) {
+		line := "2026.03.17 23:59:57 Debug      -  [Behaviour] Switching to network region jp (current state: ConnectedToNameServer)"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 0 {
+			t.Fatalf("want 0 events, got %v", events)
+		}
+	})
 }

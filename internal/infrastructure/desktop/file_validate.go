@@ -27,3 +27,24 @@ func ValidateRegularFile(path string) (string, error) {
 	}
 	return abs, nil
 }
+
+// ValidateDirectory returns the absolute path for an existing directory.
+func ValidateDirectory(path string) (string, error) {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return "", fmt.Errorf("path is empty")
+	}
+	path = filepath.Clean(path)
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return "", fmt.Errorf("resolve path: %w", err)
+	}
+	info, err := os.Stat(abs)
+	if err != nil {
+		return "", fmt.Errorf("stat: %w", err)
+	}
+	if !info.IsDir() {
+		return "", fmt.Errorf("not a directory")
+	}
+	return abs, nil
+}

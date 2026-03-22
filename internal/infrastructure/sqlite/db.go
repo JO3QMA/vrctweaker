@@ -66,12 +66,19 @@ func migrate(db *sql.DB) error {
 			encountered_at TEXT NOT NULL
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_user_encounters_encountered_at ON user_encounters(encountered_at)`,
-		`CREATE TABLE IF NOT EXISTS friends_cache (
+		`CREATE TABLE IF NOT EXISTS users_cache (
 			vrc_user_id TEXT PRIMARY KEY,
 			display_name TEXT NOT NULL,
 			status TEXT,
 			is_favorite INTEGER DEFAULT 0,
-			last_updated TEXT NOT NULL
+			last_updated TEXT NOT NULL,
+			first_seen_at TEXT,
+			last_contact_at TEXT
+		)`,
+		`CREATE TABLE IF NOT EXISTS world_info (
+			world_id TEXT PRIMARY KEY,
+			display_name TEXT,
+			last_visited_at TEXT NOT NULL
 		)`,
 		`CREATE TABLE IF NOT EXISTS automation_rules (
 			id TEXT PRIMARY KEY,
@@ -110,6 +117,15 @@ func migrate(db *sql.DB) error {
 	if err := ensureScreenshotThumbnailJpegBlobColumn(db); err != nil {
 		return err
 	}
+	if err := ensureFriendsCacheRenamedToUsersCache(db); err != nil {
+		return err
+	}
+	if err := ensureUsersCacheLogColumns(db); err != nil {
+		return err
+	}
+	if err := ensureUserEncountersWorldIDColumn(db); err != nil {
+		return err
+	}
 
 	// Insert default log_retention_days if not present
 	if _, err := db.Exec(`INSERT OR IGNORE INTO app_settings (key, value, updated_at) VALUES ('log_retention_days', ?, datetime('now'))`, fmt.Sprintf("%d", defaultLogRetentionDays)); err != nil {
@@ -129,6 +145,66 @@ func migrate(db *sql.DB) error {
 		}
 	}
 
+	return nil
+}
+
+// ensureFriendsCacheRenamedToUsersCache migrates legacy friends_cache → users_cache.
+func ensureFriendsCacheRenamedToUsersCache(db *sql.DB) error {
+	var friendsCount, usersCount int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='friends_cache'`).Scan(&friendsCount)
+	_ = db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='users_cache'`).Scan(&usersCount)
+	if friendsCount > 0 && usersCount == 0 {
+		if _, err := db.Exec(`ALTER TABLE friends_cache RENAME TO users_cache`); err != nil {
+			return fmt.Errorf("rename friends_cache to users_cache: %w", err)
+		}
+	}
+	return nil
+}
+
+func ensureUsersCacheLogColumns(db *sql.DB) error {
+	for _, col := range []struct {
+		name string
+		sql  string
+	}{
+		{"first_seen_at", `ALTER TABLE users_cache ADD COLUMN first_seen_at TEXT`},
+		{"last_contact_at", `ALTER TABLE users_cache ADD COLUMN last_contact_at TEXT`},
+	} {
+		if err := addColumnIfMissing(db, "users_cache", col.name, col.sql); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func ensureUserEncountersWorldIDColumn(db *sql.DB) error {
+	return addColumnIfMissing(db, "user_encounters", "world_id", `ALTER TABLE user_encounters ADD COLUMN world_id TEXT`)
+}
+
+func addColumnIfMissing(db *sql.DB, table, column, alterSQL string) error {
+	rows, err := db.Query(fmt.Sprintf(`SELECT name FROM pragma_table_info('%s')`, table))
+	if err != nil {
+		return fmt.Errorf("pragma_table_info %s: %w", table, err)
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return err
+		}
+		if name == column {
+			return nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	if _, err := db.Exec(alterSQL); err != nil {
+		msg := strings.ToLower(err.Error())
+		if strings.Contains(msg, "duplicate column") {
+			return nil
+		}
+		return fmt.Errorf("%s: %w", alterSQL, err)
+	}
 	return nil
 }
 

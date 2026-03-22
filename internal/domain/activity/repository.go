@@ -23,6 +23,8 @@ type PlaySessionRepository interface {
 type UserEncounterRepository interface {
 	// List returns encounters with optional filters.
 	List(ctx context.Context, filter *EncounterFilter) ([]*UserEncounter, error)
+	// ListWithContext returns encounters with world and user cache fields.
+	ListWithContext(ctx context.Context, filter *EncounterFilter) ([]*EncounterWithContext, error)
 	// Save persists a user encounter.
 	Save(ctx context.Context, e *UserEncounter) error
 	// DeleteOlderThan removes encounters older than the given time (for rotation).

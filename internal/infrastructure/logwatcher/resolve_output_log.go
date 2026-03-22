@@ -10,6 +10,27 @@ import (
 // ErrNoOutputLogFiles is returned when a directory has no matching output_log*.txt files.
 var ErrNoOutputLogFiles = fmt.Errorf("no output_log*.txt files in directory")
 
+// ListOutputLogFiles returns all output_log*.txt paths under dir sorted by name (ascending).
+func ListOutputLogFiles(dir string) ([]string, error) {
+	matches, err := filepath.Glob(filepath.Join(dir, "output_log*.txt"))
+	if err != nil {
+		return nil, err
+	}
+	sort.Strings(matches)
+	var out []string
+	for _, p := range matches {
+		info, statErr := os.Stat(p)
+		if statErr != nil || !info.Mode().IsRegular() {
+			continue
+		}
+		out = append(out, p)
+	}
+	if len(out) == 0 {
+		return nil, ErrNoOutputLogFiles
+	}
+	return out, nil
+}
+
 type outputLogCandidate struct {
 	path    string
 	modUnix int64

@@ -11,33 +11,33 @@ import (
 
 // IdentityUseCase handles VRChat auth, friends, and status.
 type IdentityUseCase struct {
-	friendRepo identity.FriendCacheRepository
-	apiClient  vrchatapi.VRChatAPIClient
-	credStore  vrchatapi.CredentialStore
-	notifier   identity.Notifier // optional; nil skips online notifications
+	userCacheRepo identity.UserCacheRepository
+	apiClient     vrchatapi.VRChatAPIClient
+	credStore     vrchatapi.CredentialStore
+	notifier      identity.Notifier // optional; nil skips online notifications
 }
 
 // NewIdentityUseCase creates a new IdentityUseCase.
 func NewIdentityUseCase(
-	friendRepo identity.FriendCacheRepository,
+	userCacheRepo identity.UserCacheRepository,
 	apiClient vrchatapi.VRChatAPIClient,
 	credStore vrchatapi.CredentialStore,
 ) *IdentityUseCase {
-	return NewIdentityUseCaseWithNotifier(friendRepo, apiClient, credStore, nil)
+	return NewIdentityUseCaseWithNotifier(userCacheRepo, apiClient, credStore, nil)
 }
 
 // NewIdentityUseCaseWithNotifier creates a new IdentityUseCase with optional Notifier for favorite-online notifications.
 func NewIdentityUseCaseWithNotifier(
-	friendRepo identity.FriendCacheRepository,
+	userCacheRepo identity.UserCacheRepository,
 	apiClient vrchatapi.VRChatAPIClient,
 	credStore vrchatapi.CredentialStore,
 	notifier identity.Notifier,
 ) *IdentityUseCase {
 	return &IdentityUseCase{
-		friendRepo: friendRepo,
-		apiClient:  apiClient,
-		credStore:  credStore,
-		notifier:   notifier,
+		userCacheRepo: userCacheRepo,
+		apiClient:     apiClient,
+		credStore:     credStore,
+		notifier:      notifier,
 	}
 }
 
@@ -70,33 +70,33 @@ func (uc *IdentityUseCase) Logout(ctx context.Context) error {
 }
 
 // ListFriends returns cached friends.
-func (uc *IdentityUseCase) ListFriends(ctx context.Context) ([]*identity.FriendCache, error) {
-	return uc.friendRepo.List(ctx)
+func (uc *IdentityUseCase) ListFriends(ctx context.Context) ([]*identity.UserCache, error) {
+	return uc.userCacheRepo.List(ctx)
 }
 
 // ListFavorites returns cached favorite friends.
-func (uc *IdentityUseCase) ListFavorites(ctx context.Context) ([]*identity.FriendCache, error) {
-	return uc.friendRepo.ListFavorites(ctx)
+func (uc *IdentityUseCase) ListFavorites(ctx context.Context) ([]*identity.UserCache, error) {
+	return uc.userCacheRepo.ListFavorites(ctx)
 }
 
 // SetFavorite updates a friend's favorite flag.
 func (uc *IdentityUseCase) SetFavorite(ctx context.Context, vrcUserID string, favorite bool) error {
-	f, err := uc.friendRepo.GetByVRCUserID(ctx, vrcUserID)
+	f, err := uc.userCacheRepo.GetByVRCUserID(ctx, vrcUserID)
 	if err != nil {
 		return err
 	}
 	if f == nil {
-		f = &identity.FriendCache{VRCUserID: vrcUserID, DisplayName: vrcUserID, LastUpdated: time.Now()}
+		f = &identity.UserCache{VRCUserID: vrcUserID, DisplayName: vrcUserID, LastUpdated: time.Now()}
 	}
 	f.IsFavorite = favorite
 	f.LastUpdated = time.Now()
-	return uc.friendRepo.Save(ctx, f)
+	return uc.userCacheRepo.Save(ctx, f)
 }
 
 // RefreshFriends fetches from API, updates cache, and notifies when favorites come online.
 func (uc *IdentityUseCase) RefreshFriends(ctx context.Context) error {
 	// Capture state before refresh for offline→online diff detection
-	beforeFavorites, _ := uc.friendRepo.ListFavorites(ctx)
+	beforeFavorites, _ := uc.userCacheRepo.ListFavorites(ctx)
 	beforeMap := make(map[string]string)
 	for _, f := range beforeFavorites {
 		beforeMap[f.VRCUserID] = f.Status
@@ -106,14 +106,14 @@ func (uc *IdentityUseCase) RefreshFriends(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	cached := make([]*identity.FriendCache, len(friends))
+	cached := make([]*identity.UserCache, len(friends))
 	for i, f := range friends {
-		existing, _ := uc.friendRepo.GetByVRCUserID(ctx, f.ID)
+		existing, _ := uc.userCacheRepo.GetByVRCUserID(ctx, f.ID)
 		isFav := false
 		if existing != nil {
 			isFav = existing.IsFavorite
 		}
-		cached[i] = &identity.FriendCache{
+		cached[i] = &identity.UserCache{
 			VRCUserID:   f.ID,
 			DisplayName: f.DisplayName,
 			Status:      f.Status,
@@ -121,12 +121,12 @@ func (uc *IdentityUseCase) RefreshFriends(ctx context.Context) error {
 			LastUpdated: time.Now(),
 		}
 	}
-	if err := uc.friendRepo.SaveBatch(ctx, cached); err != nil {
+	if err := uc.userCacheRepo.SaveBatch(ctx, cached); err != nil {
 		return err
 	}
 
 	// Detect favorite offline→online transitions and notify
-	afterMap := make(map[string]*identity.FriendCache)
+	afterMap := make(map[string]*identity.UserCache)
 	for _, f := range cached {
 		if f.IsFavorite {
 			afterMap[f.VRCUserID] = f

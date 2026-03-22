@@ -13,7 +13,7 @@ import (
 type DBMaintenanceUseCase struct {
 	encounterRepo   activity.UserEncounterRepository
 	screenshotRepo  media.ScreenshotRepository
-	friendCacheRepo identity.FriendCacheRepository
+	userCacheRepo   identity.UserCacheRepository
 	maintenanceRepo maintenance.Repository
 }
 
@@ -21,13 +21,13 @@ type DBMaintenanceUseCase struct {
 func NewDBMaintenanceUseCase(
 	encounterRepo activity.UserEncounterRepository,
 	screenshotRepo media.ScreenshotRepository,
-	friendCacheRepo identity.FriendCacheRepository,
+	userCacheRepo identity.UserCacheRepository,
 	maintenanceRepo maintenance.Repository,
 ) *DBMaintenanceUseCase {
 	return &DBMaintenanceUseCase{
 		encounterRepo:   encounterRepo,
 		screenshotRepo:  screenshotRepo,
-		friendCacheRepo: friendCacheRepo,
+		userCacheRepo:   userCacheRepo,
 		maintenanceRepo: maintenanceRepo,
 	}
 }
@@ -49,5 +49,5 @@ func (uc *DBMaintenanceUseCase) ClearScreenshots(ctx context.Context) (int64, er
 
 // ClearFriendsCache deletes all cached friends. Returns affected row count.
 func (uc *DBMaintenanceUseCase) ClearFriendsCache(ctx context.Context) (int64, error) {
-	return uc.friendCacheRepo.DeleteAll(ctx)
+	return uc.userCacheRepo.DeleteAll(ctx)
 }

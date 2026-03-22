@@ -74,7 +74,8 @@ func (a *App) startup(ctx context.Context) {
 	mediaRepo := sqlite.NewScreenshotRepository(db)
 	playRepo := sqlite.NewPlaySessionRepository(db)
 	encounterRepo := sqlite.NewUserEncounterRepository(db)
-	identityRepo := sqlite.NewFriendCacheRepository(db)
+	userCacheRepo := sqlite.NewUserCacheRepository(db)
+	worldRepo := sqlite.NewWorldInfoRepository(db)
 	automationRepo := sqlite.NewAutomationRuleRepository(db)
 	settingsRepo := sqlite.NewAppSettingsRepository(db)
 
@@ -89,12 +90,12 @@ func (a *App) startup(ctx context.Context) {
 	notifier := desktop.NewBeeepNotifier("VRChat Tweaker")
 	a.launcher = usecase.NewLauncherUseCase(launcherRepo)
 	a.media = usecase.NewMediaUseCase(mediaRepo, extractor)
-	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo)
-	a.identity = usecase.NewIdentityUseCaseWithNotifier(identityRepo, apiClient, credStore, notifier)
+	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo)
+	a.identity = usecase.NewIdentityUseCaseWithNotifier(userCacheRepo, apiClient, credStore, notifier)
 	actionRunner := usecase.NewDefaultActionRunner(a.identity)
 	a.automation = usecase.NewAutomationUseCase(automationRepo, eventBus, actionRunner)
 	a.settings = usecase.NewSettingsUseCase(settingsRepo)
-	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(encounterRepo, mediaRepo, identityRepo, maintenanceRepo)
+	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(encounterRepo, mediaRepo, userCacheRepo, maintenanceRepo)
 
 	configPath := getVRChatConfigPath()
 	configRepo := filesystem.NewVRChatConfigFileRepository(configPath)
@@ -172,54 +173,209 @@ func (a *App) subscribeAutomationEvents(ctx context.Context, eventBus event.Even
 	eventBus.Subscribe(automation.TriggerFriendJoined, handler(automation.TriggerFriendJoined))
 }
 
-func (a *App) startOutputLogWatcher(ctx context.Context, eventBus event.EventBus) {
-	path, err := a.settings.GetOutputLogPath(ctx)
-	if err != nil || path == "" {
+func defaultVRChatOutputLogDir() string {
+	return filepath.Dir(getVRChatConfigPath())
+}
+
+func matchAbsPaths(a, b string) bool {
+	aa, e1 := filepath.Abs(filepath.Clean(a))
+	bb, e2 := filepath.Abs(filepath.Clean(b))
+	if e1 != nil || e2 != nil {
+		return filepath.Clean(a) == filepath.Clean(b)
+	}
+	return filepath.Clean(aa) == filepath.Clean(bb)
+}
+
+func (a *App) resolveEffectiveOutputLogWatchPath(ctx context.Context) (string, error) {
+	p, err := a.settings.GetOutputLogPath(ctx)
+	if err != nil {
+		return "", err
+	}
+	p = strings.TrimSpace(p)
+	if p != "" {
+		absPath, absErr := filepath.Abs(filepath.Clean(p))
+		if absErr != nil {
+			return "", absErr
+		}
+		if _, statErr := os.Stat(absPath); statErr != nil {
+			return "", statErr
+		}
+		return absPath, nil
+	}
+	dir := defaultVRChatOutputLogDir()
+	if dir == "" {
+		return "", os.ErrNotExist
+	}
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return "", err
+	}
+	if _, err := os.Stat(absDir); err != nil {
+		return "", err
+	}
+	return absDir, nil
+}
+
+func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, parser *activity.LogParser, handler logwatcher.EventHandler, logger logwatcher.Logger) {
+	info, err := os.Stat(absWatch)
+	if err != nil {
 		return
 	}
-	info, err := os.Stat(path)
-	if err != nil || info == nil {
-		runtime.LogWarning(ctx, "output_log_path not set or file not accessible, skipping log watcher")
-		return
-	}
-	if !info.Mode().IsRegular() && !info.IsDir() {
-		runtime.LogWarning(ctx, "output_log_path must be a file or directory, skipping log watcher")
+	cp, _ := a.activity.GetActivityLogCheckpoint(ctx)
+
+	if info.IsDir() {
+		files, listErr := logwatcher.ListOutputLogFiles(absWatch)
+		if listErr != nil {
+			return
+		}
+		startIdx := 0
+		var startOff int64
+		if cp != nil && matchAbsPaths(cp.WatchPath, absWatch) {
+			found := false
+			for i, f := range files {
+				if matchAbsPaths(f, cp.File) {
+					found = true
+					startIdx = i
+					st, statErr := os.Stat(f)
+					sz := int64(0)
+					if statErr == nil && st != nil {
+						sz = st.Size()
+					}
+					if sz > 0 && cp.ByteOffset >= sz {
+						startIdx = i + 1
+						startOff = 0
+					} else {
+						startOff = cp.ByteOffset
+					}
+					break
+				}
+			}
+			if !found {
+				startIdx = len(files) - 1
+				startOff = 0
+			}
+		}
+		if startIdx >= len(files) {
+			return
+		}
+		for i := startIdx; i < len(files); i++ {
+			fp := files[i]
+			off := int64(0)
+			if i == startIdx {
+				off = startOff
+			}
+			pathCopy := fp
+			checkpointLines := 0
+			_, procErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, handler, logger, func(pos int64, line string) {
+				checkpointLines++
+				if checkpointLines != 1 && checkpointLines%32 != 0 {
+					return
+				}
+				vrTime := ""
+				if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
+					vrTime = ts.Format(time.RFC3339)
+				}
+				_ = a.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
+					WatchPath:      absWatch,
+					File:           pathCopy,
+					ByteOffset:     pos,
+					VRChatLineTime: vrTime,
+				})
+			})
+			if procErr != nil {
+				if errors.Is(procErr, context.Canceled) {
+					return
+				}
+				runtime.LogWarning(ctx, "activity log ingest: "+procErr.Error())
+				return
+			}
+			st, statErr := os.Stat(pathCopy)
+			endOff := int64(0)
+			if statErr == nil && st != nil {
+				endOff = st.Size()
+			}
+			_ = a.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
+				WatchPath:  absWatch,
+				File:       pathCopy,
+				ByteOffset: endOff,
+			})
+		}
 		return
 	}
 
-	bootstrapPath := path
-	if info.IsDir() {
-		resolved, rerr := logwatcher.ResolveLatestOutputLogFile(path)
-		if rerr != nil {
-			bootstrapPath = ""
-			runtime.LogWarning(ctx, "output_log directory: "+rerr.Error()+" (watcher will retry when files appear)")
-		} else {
-			bootstrapPath = resolved
+	off := int64(0)
+	if cp != nil && matchAbsPaths(cp.WatchPath, absWatch) && matchAbsPaths(cp.File, absWatch) {
+		off = cp.ByteOffset
+	}
+	pathCopy := absWatch
+	checkpointLines := 0
+	_, fileProcErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, handler, logger, func(pos int64, line string) {
+		checkpointLines++
+		if checkpointLines != 1 && checkpointLines%32 != 0 {
+			return
 		}
+		vrTime := ""
+		if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
+			vrTime = ts.Format(time.RFC3339)
+		}
+		_ = a.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
+			WatchPath:      absWatch,
+			File:           pathCopy,
+			ByteOffset:     pos,
+			VRChatLineTime: vrTime,
+		})
+	})
+	if fileProcErr != nil && !errors.Is(fileProcErr, context.Canceled) {
+		runtime.LogWarning(ctx, "activity log ingest: "+fileProcErr.Error())
+		return
+	}
+	st, statErr := os.Stat(pathCopy)
+	endOff := int64(0)
+	if statErr == nil && st != nil {
+		endOff = st.Size()
+	}
+	_ = a.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
+		WatchPath:  absWatch,
+		File:       pathCopy,
+		ByteOffset: endOff,
+	})
+}
+
+func (a *App) startOutputLogWatcher(ctx context.Context, eventBus event.EventBus) {
+	watchPath, err := a.resolveEffectiveOutputLogWatchPath(ctx)
+	if err != nil || watchPath == "" {
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			runtime.LogWarning(ctx, "output_log watch path: "+err.Error())
+		}
+		return
+	}
+	info, err := os.Stat(watchPath)
+	if err != nil || info == nil {
+		runtime.LogWarning(ctx, "output_log path not accessible, skipping log watcher")
+		return
+	}
+	if !info.Mode().IsRegular() && !info.IsDir() {
+		runtime.LogWarning(ctx, "output_log path must be a file or directory, skipping log watcher")
+		return
 	}
 
 	parser := activity.NewLogParser()
 	logger := &logLogger{}
-	activityHandler := logwatcher.NewActivityEventHandler(a.activity, ctx, logger)
+	emitEncounters := func() {
+		runtime.EventsEmit(a.ctx, activityEncountersChangedEvent, struct{}{})
+	}
+	activityHandler := logwatcher.NewActivityEventHandler(a.activity, ctx, logger, emitEncounters)
 	publishHandler := logwatcher.NewEventPublishingHandler(eventBus, ctx, logger)
 	handler := logwatcher.NewMultiHandler(activityHandler, publishHandler)
 
-	if empty, emptyErr := a.activity.IsActivityDatastoreEmpty(ctx); emptyErr == nil && empty && bootstrapPath != "" {
-		if ingestErr := logwatcher.ProcessOutputLogFile(ctx, bootstrapPath, parser, activityHandler, logger); ingestErr != nil {
-			runtime.LogWarning(ctx, "activity log bootstrap: "+ingestErr.Error())
-		} else {
-			runtime.LogInfo(ctx, "activity: imported historical lines from output_log")
-		}
-	} else if emptyErr != nil {
-		runtime.LogWarning(ctx, "activity bootstrap check: "+emptyErr.Error())
-	}
+	a.ingestActivityLogsBootstrap(ctx, watchPath, parser, activityHandler, logger)
 
-	watcher := logwatcher.NewOutputLogWatcher(path, parser, handler, logger)
+	watcher := logwatcher.NewOutputLogWatcher(watchPath, parser, handler, logger)
 	if startErr := watcher.Start(ctx); startErr != nil {
 		runtime.LogError(ctx, "failed to start output_log watcher: "+startErr.Error())
 		return
 	}
-	runtime.LogInfo(ctx, "output_log watcher started for "+path)
+	runtime.LogInfo(ctx, "output_log watcher started for "+watchPath)
 }
 
 // ValidateOutputLogPath checks if path is a readable log file or a directory containing output_log*.txt.
@@ -549,6 +705,9 @@ const galleryScanDoneEvent = "gallery:scan-done"
 // galleryScreenshotsChangedEvent is emitted when the picture folder watcher ingests a new screenshot row.
 const galleryScreenshotsChangedEvent = "gallery:screenshots-changed"
 
+// activityEncountersChangedEvent is emitted when a new encounter row is written from the log watcher.
+const activityEncountersChangedEvent = "activity:encounters-changed"
+
 const galleryScanProgressEmitMinInterval = 90 * time.Millisecond
 
 // scanProgressEmitter throttles gallery:scan-progress EventsEmit; flush sends the latest pending payload.
@@ -661,11 +820,38 @@ func (a *App) GetActivityStats(fromISO, toISO string) (ActivityStatsDTO, error) 
 
 // Encounters returns user encounters.
 func (a *App) Encounters() ([]UserEncounterDTO, error) {
-	list, err := a.activity.ListEncounters(a.ctx, nil)
+	list, err := a.activity.ListEncountersWithContext(a.ctx, nil)
 	if err != nil {
 		return nil, err
 	}
-	return toEncounterDTOs(list), nil
+	return toEncounterDTOsFromContext(list), nil
+}
+
+// OpenVRChatLogFolder opens the configured output_log directory (or default VRChat log dir) in the file manager.
+func (a *App) OpenVRChatLogFolder() error {
+	p, err := a.settings.GetOutputLogPath(a.ctx)
+	if err != nil {
+		return err
+	}
+	var dir string
+	if strings.TrimSpace(p) != "" {
+		abs, err := filepath.Abs(filepath.Clean(p))
+		if err != nil {
+			return err
+		}
+		info, err := os.Stat(abs)
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			dir = abs
+		} else {
+			dir = filepath.Dir(abs)
+		}
+	} else {
+		dir = defaultVRChatOutputLogDir()
+	}
+	return desktop.OpenFolderInFileManager(dir)
 }
 
 // RotateEncounters runs the retention cleanup.
@@ -699,12 +885,12 @@ func (a *App) RefreshFriends() error {
 }
 
 // Friends returns cached friends.
-func (a *App) Friends() ([]FriendCacheDTO, error) {
+func (a *App) Friends() ([]UserCacheDTO, error) {
 	list, err := a.identity.ListFriends(a.ctx)
 	if err != nil {
 		return nil, err
 	}
-	return toFriendCacheDTOs(list), nil
+	return toUserCacheDTOs(list), nil
 }
 
 // SetFavorite updates a friend's favorite flag.

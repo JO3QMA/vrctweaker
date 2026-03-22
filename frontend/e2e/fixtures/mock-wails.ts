@@ -54,6 +54,7 @@ export function getMockWailsInitScript(): string {
         SetPathSettings: () => Promise.resolve(),
         ValidatePath: () => Promise.resolve(true),
         ValidateOutputLogPath: () => Promise.resolve(true),
+        OpenVRChatLogFolder: () => Promise.resolve(),
         OpenFileDialog: () => Promise.resolve(''),
         OpenDirectoryDialog: () => Promise.resolve(''),
         Screenshots: () => Promise.resolve([]),

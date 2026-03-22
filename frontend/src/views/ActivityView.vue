@@ -59,6 +59,10 @@
           <span class="timeline-action" :class="enc.action">{{
             actionLabel(enc.action)
           }}</span>
+          <span class="timeline-world" :title="enc.worldId || ''">{{
+            enc.worldDisplayName || enc.worldId || "—"
+          }}</span>
+          <span class="timeline-user-meta">{{ encounterUserMeta(enc) }}</span>
           <span class="timeline-instance">{{ enc.instanceId || "—" }}</span>
         </li>
       </ul>
@@ -67,12 +71,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onUnmounted } from "vue";
 import {
   App,
   type UserEncounterDTO,
   type ActivityStatsDTO,
 } from "../wails/app";
+import { getRuntime } from "../wails/runtime";
+
+const ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS = 400;
 
 const encounters = ref<UserEncounterDTO[]>([]);
 const encountersLoading = ref(false);
@@ -133,6 +140,34 @@ function actionLabel(action: string): string {
   return action;
 }
 
+function encounterUserMeta(enc: UserEncounterDTO): string {
+  if (enc.isFirstEncounter) {
+    return "初めての遭遇";
+  }
+  if (enc.userFirstSeenAt) {
+    return `初見: ${formatEncounteredAt(enc.userFirstSeenAt)} / 最終: ${
+      enc.userLastContactAt ? formatEncounteredAt(enc.userLastContactAt) : "—"
+    }`;
+  }
+  if (enc.userLastContactAt) {
+    return `最終接触: ${formatEncounteredAt(enc.userLastContactAt)}`;
+  }
+  return "—";
+}
+
+let encountersChangedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let unsubscribeEncountersChanged: (() => void) | undefined;
+
+function scheduleLoadEncounters(): void {
+  if (encountersChangedDebounceTimer !== null) {
+    clearTimeout(encountersChangedDebounceTimer);
+  }
+  encountersChangedDebounceTimer = setTimeout(() => {
+    encountersChangedDebounceTimer = null;
+    void loadEncounters();
+  }, ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS);
+}
+
 async function loadEncounters(): Promise<void> {
   encountersLoading.value = true;
   try {
@@ -157,8 +192,23 @@ async function loadStats(): Promise<void> {
 }
 
 onMounted(() => {
-  loadEncounters();
-  loadStats();
+  const rt = getRuntime();
+  const off = rt?.EventsOn?.("activity:encounters-changed", () => {
+    scheduleLoadEncounters();
+  });
+  if (typeof off === "function") {
+    unsubscribeEncountersChanged = off;
+  }
+  void loadEncounters();
+  void loadStats();
+});
+
+onUnmounted(() => {
+  if (encountersChangedDebounceTimer !== null) {
+    clearTimeout(encountersChangedDebounceTimer);
+    encountersChangedDebounceTimer = null;
+  }
+  unsubscribeEncountersChanged?.();
 });
 </script>
 
@@ -273,8 +323,11 @@ onMounted(() => {
 
 .timeline-item {
   display: grid;
-  grid-template-columns: 12rem 10rem 5rem 1fr;
-  gap: 1rem;
+  grid-template-columns: 10rem 8rem 4rem minmax(0, 11rem) minmax(
+      0,
+      16rem
+    ) minmax(0, 1fr);
+  gap: 0.75rem;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--border);
   font-size: 0.9rem;
@@ -300,6 +353,21 @@ onMounted(() => {
 
 .timeline-action.leave {
   color: var(--text-secondary);
+}
+
+.timeline-world {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-user-meta {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  line-height: 1.3;
+  overflow: hidden;
 }
 
 .timeline-instance {

@@ -77,15 +77,22 @@ export interface UserEncounterDTO {
   displayName: string;
   action: string;
   instanceId: string;
+  worldId?: string;
+  worldDisplayName?: string;
+  userFirstSeenAt?: string;
+  userLastContactAt?: string;
+  isFirstEncounter?: boolean;
   encounteredAt: string;
 }
 
-export interface FriendCacheDTO {
+export interface UserCacheDTO {
   vrcUserId: string;
   displayName: string;
   status: string;
   isFavorite: boolean;
   lastUpdated: string;
+  firstSeenAt?: string;
+  lastContactAt?: string;
 }
 
 export interface PathSettingsDTO {
@@ -157,6 +164,7 @@ interface AppBindings {
   SetPathSettings(dto: PathSettingsDTO): Promise<void>;
   ValidatePath(path: string): Promise<boolean>;
   ValidateOutputLogPath(path: string): Promise<boolean>;
+  OpenVRChatLogFolder(): Promise<void>;
   OpenFileDialog(
     title: string,
     defaultDir: string,
@@ -175,7 +183,7 @@ interface AppBindings {
   Encounters(): Promise<UserEncounterDTO[]>;
   RotateEncounters(): Promise<number>;
   GetActivityStats(fromISO: string, toISO: string): Promise<ActivityStatsDTO>;
-  Friends(): Promise<FriendCacheDTO[]>;
+  Friends(): Promise<UserCacheDTO[]>;
   SetFavorite(vrcUserId: string, favorite: boolean): Promise<void>;
   SetStatus(status: string): Promise<void>;
   Login(
@@ -312,6 +320,9 @@ export const App = {
   async validateOutputLogPath(path: string): Promise<boolean> {
     return callApp((a) => a.ValidateOutputLogPath(path), false);
   },
+  async openVRChatLogFolder(): Promise<void> {
+    return callApp((a) => a.OpenVRChatLogFolder(), undefined);
+  },
   async openFileDialog(
     title: string,
     defaultDir: string,
@@ -362,7 +373,7 @@ export const App = {
   async reindexScreenshotDir(path: string): Promise<number> {
     return callApp((a) => a.ReindexScreenshotDir(path), 0);
   },
-  async friends(): Promise<FriendCacheDTO[]> {
+  async friends(): Promise<UserCacheDTO[]> {
     return callApp((a) => a.Friends(), []);
   },
   async setFavorite(vrcUserId: string, favorite: boolean): Promise<void> {

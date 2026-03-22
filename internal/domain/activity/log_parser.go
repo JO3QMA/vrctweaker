@@ -2,6 +2,7 @@ package activity
 
 import (
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -12,6 +13,10 @@ const (
 	EventKindUnknown EventKind = iota
 	EventKindEncounter
 	EventKindSession
+	EventKindDestination
+	EventKindRoomName
+	EventKindAvatarSwitch
+	EventKindVideoPlayback
 )
 
 // EncounterAction represents join or leave.
@@ -53,12 +58,56 @@ type SessionEvent struct {
 // Kind implements ParsedEvent.
 func (SessionEvent) Kind() EventKind { return EventKindSession }
 
+// DestinationSetEvent is emitted for [Behaviour] Destination set: wrld_...:instance~...
+type DestinationSetEvent struct {
+	WorldID      string
+	InstanceID   string // numeric / alphanumeric segment after first colon (before ~)
+	InstanceType string // private, hidden, public, etc.
+	OwnerUserID  string // often usr_...
+	Region       string
+	OccurredAt   time.Time
+	FullInstance string // wrld_xxx:instance~... for session alignment
+}
+
+// Kind implements ParsedEvent.
+func (DestinationSetEvent) Kind() EventKind { return EventKindDestination }
+
+// RoomNameEvent is emitted for Entering Room: <name>.
+type RoomNameEvent struct {
+	RoomName   string
+	OccurredAt time.Time
+}
+
+// Kind implements ParsedEvent.
+func (RoomNameEvent) Kind() EventKind { return EventKindRoomName }
+
+// AvatarSwitchEvent is emitted for Switching <user> to avatar <name>.
+type AvatarSwitchEvent struct {
+	DisplayName string
+	AvatarName  string
+	OccurredAt  time.Time
+}
+
+// Kind implements ParsedEvent.
+func (AvatarSwitchEvent) Kind() EventKind { return EventKindAvatarSwitch }
+
+// VideoPlaybackEvent is emitted when a video URL is resolved.
+type VideoPlaybackEvent struct {
+	URL        string
+	OccurredAt time.Time
+}
+
+// Kind implements ParsedEvent.
+func (VideoPlaybackEvent) Kind() EventKind { return EventKindVideoPlayback }
+
 // LogParser parses VRChat output_log.txt lines into events.
 type LogParser struct {
-	// encounterPatterns are applied in order; first match wins.
 	encounterPatterns []encounterPattern
-	// sessionPatterns for session start/end.
-	sessionPatterns []sessionPattern
+	sessionPatterns   []sessionPattern
+	destinationRE     *regexp.Regexp
+	roomNameRE        *regexp.Regexp
+	avatarRE          *regexp.Regexp
+	videoRE           *regexp.Regexp
 }
 
 type encounterPattern struct {
@@ -73,20 +122,25 @@ type sessionPattern struct {
 
 // Default log patterns. Extensible via table-driven config.
 var (
-	// OnPlayerJoined DisplayName (usr_xxxx) or OnPlayerJoined DisplayName
 	encounterJoinRE     = regexp.MustCompile(`(?i)OnPlayerJoined\s+(\S.*?)\s*\((usr_[a-zA-Z0-9_-]+)\)`)
 	encounterJoinNoIDRE = regexp.MustCompile(`(?i)OnPlayerJoined\s+(\S.+?)(?:\s+\(usr_|$)`)
 
-	// OnPlayerLeft DisplayName (usr_xxxx) or OnPlayerLeft DisplayName
 	encounterLeaveRE     = regexp.MustCompile(`(?i)OnPlayerLeft\s+(\S.*?)\s*\((usr_[a-zA-Z0-9_-]+)\)`)
 	encounterLeaveNoIDRE = regexp.MustCompile(`(?i)OnPlayerLeft\s+(\S.+?)(?:\s+\(usr_|$)`)
 
-	// Session start: only "Joining wrld_<uuid>:<instance>..." — do not match "Entering Room: <name>"
-	// (that would open empty instance IDs and duplicate sessions).
-	sessionStartWrldRE = regexp.MustCompile(`(?i)Joining\s+(wrld_[a-zA-Z0-9_-]+:[a-zA-Z0-9]+)`)
+	// Capture full instance token (may include ~private(usr_)~region(jp) etc.).
+	sessionStartWrldRE = regexp.MustCompile(`(?i)Joining\s+(wrld_[^\s]+)`)
 
-	// Session end (VRChat emits OnPlayerLeftRoom when the local user leaves the instance)
 	sessionEndRE = regexp.MustCompile(`(?i)(?:OnPlayerLeftRoom|OnLeftRoom|Left\s+room|Leaving\s+room)`)
+
+	// Destination set: wrld_uuid:64190~private(usr_...)~region(jp)
+	destinationSetRE = regexp.MustCompile(`(?i)Destination\s+set:\s*(wrld_[a-f0-9-]+):([a-zA-Z0-9]+)~([a-z]+)\(([^)]*)\)~region\(([^)]*)\)`)
+
+	roomNameRE = regexp.MustCompile(`(?i)Entering\s+Room:\s*(.+)$`)
+
+	avatarSwitchRE = regexp.MustCompile(`(?i)Switching\s+(.+?)\s+to\s+avatar\s+(.+)$`)
+
+	videoPlaybackRE = regexp.MustCompile(`(?i)\[Video Playback\]\s+(?:Attempting to resolve URL|Resolving URL)\s+'([^']+)'`)
 )
 
 // vrchatLineTimeRE matches the leading local timestamp in output_log.txt lines.
@@ -118,6 +172,10 @@ func NewLogParser() *LogParser {
 			{sessionStartWrldRE, SessionEventStart},
 			{sessionEndRE, SessionEventEnd},
 		},
+		destinationRE: destinationSetRE,
+		roomNameRE:    roomNameRE,
+		avatarRE:      avatarSwitchRE,
+		videoRE:       videoPlaybackRE,
 	}
 }
 
@@ -126,7 +184,6 @@ func NewLogParser() *LogParser {
 func (p *LogParser) ParseLine(line string, baseTime time.Time) ([]ParsedEvent, error) {
 	line = trimLogPrefix(line)
 
-	// Try encounter patterns first
 	for _, pat := range p.encounterPatterns {
 		if m := pat.re.FindStringSubmatch(line); len(m) >= 2 {
 			e := p.buildEncounterEvent(m, pat.action, baseTime)
@@ -136,7 +193,6 @@ func (p *LogParser) ParseLine(line string, baseTime time.Time) ([]ParsedEvent, e
 		}
 	}
 
-	// Try session patterns
 	for _, pat := range p.sessionPatterns {
 		if m := pat.re.FindStringSubmatch(line); len(m) >= 1 {
 			e := p.buildSessionEvent(m, pat.kind, baseTime)
@@ -146,13 +202,52 @@ func (p *LogParser) ParseLine(line string, baseTime time.Time) ([]ParsedEvent, e
 		}
 	}
 
+	if m := p.destinationRE.FindStringSubmatch(line); len(m) >= 6 {
+		owner := strings.TrimSpace(m[4])
+		fullInst := m[1] + ":" + m[2] + "~" + m[3] + "(" + m[4] + ")~region(" + m[5] + ")"
+		return []ParsedEvent{&DestinationSetEvent{
+			WorldID:      m[1],
+			InstanceID:   m[2],
+			InstanceType: strings.ToLower(m[3]),
+			OwnerUserID:  owner,
+			Region:       m[5],
+			OccurredAt:   baseTime,
+			FullInstance: fullInst,
+		}}, nil
+	}
+
+	if m := p.roomNameRE.FindStringSubmatch(line); len(m) >= 2 {
+		name := trimDisplayName(m[1])
+		if name != "" {
+			return []ParsedEvent{&RoomNameEvent{RoomName: name, OccurredAt: baseTime}}, nil
+		}
+	}
+
+	if m := p.avatarRE.FindStringSubmatch(line); len(m) >= 3 {
+		if !strings.Contains(strings.ToLower(m[1]), "to network region") {
+			dn := trimDisplayName(m[1])
+			av := trimDisplayName(m[2])
+			if dn != "" && av != "" {
+				return []ParsedEvent{&AvatarSwitchEvent{DisplayName: dn, AvatarName: av, OccurredAt: baseTime}}, nil
+			}
+		}
+	}
+
+	if m := p.videoRE.FindStringSubmatch(line); len(m) >= 2 {
+		u := strings.TrimSpace(m[1])
+		if u != "" {
+			return []ParsedEvent{&VideoPlaybackEvent{URL: u, OccurredAt: baseTime}}, nil
+		}
+	}
+
 	return nil, nil
 }
 
+var trimLeadingBracketPrefix = regexp.MustCompile(`^\[.*?\]\s*`)
+
 func trimLogPrefix(line string) string {
-	// Common VRChat prefix: [Time: 123.45] or similar
-	if re := regexp.MustCompile(`^\[.*?\]\s*`); re.MatchString(line) {
-		return re.ReplaceAllString(line, "")
+	if trimLeadingBracketPrefix.MatchString(line) {
+		return trimLeadingBracketPrefix.ReplaceAllString(line, "")
 	}
 	return line
 }
@@ -160,7 +255,6 @@ func trimLogPrefix(line string) string {
 func (p *LogParser) buildEncounterEvent(m []string, action string, baseTime time.Time) *EncounterEvent {
 	displayName := ""
 	vrcUserID := ""
-	// m[0] = full match, m[1] = display name, m[2] = user id (optional)
 	if len(m) >= 2 {
 		displayName = trimDisplayName(m[1])
 	}
