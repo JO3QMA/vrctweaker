@@ -338,9 +338,11 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 		runtime.LogWarning(ctx, "activity log ingest: "+fileProcErr.Error())
 		return
 	}
-	if fileProcErr == nil {
-		_ = a.activity.CloseOpenPlaySessionAtLastLogLine(ctx, lastVRLineTime)
+	if fileProcErr != nil {
+		// context.Canceled: preserve last progress-callback checkpoint (same as directory mode)
+		return
 	}
+	_ = a.activity.CloseOpenPlaySessionAtLastLogLine(ctx, lastVRLineTime)
 	st, statErr := os.Stat(pathCopy)
 	endOff := int64(0)
 	if statErr == nil && st != nil {
