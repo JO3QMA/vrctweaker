@@ -380,7 +380,9 @@ func (a *App) startOutputLogWatcher(ctx context.Context, eventBus event.EventBus
 	publishHandler := logwatcher.NewEventPublishingHandler(eventBus, ctx, logger)
 	handler := logwatcher.NewMultiHandler(activityHandler, publishHandler)
 
+	activityHandler.SetSuppressEncounterNotify(true)
 	a.ingestActivityLogsBootstrap(ctx, watchPath, parser, activityHandler, logger)
+	activityHandler.SetSuppressEncounterNotify(false)
 
 	watcher := logwatcher.NewOutputLogWatcher(watchPath, parser, handler, logger)
 	if startErr := watcher.Start(ctx); startErr != nil {

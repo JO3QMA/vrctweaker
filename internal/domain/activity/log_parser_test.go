@@ -109,8 +109,8 @@ func TestLogParser_ParseLine_Session(t *testing.T) {
 		wantInstID string
 	}{
 		{
-			name:       "Joining wrld",
-			line:       "Joining wrld_abc123:12345~public",
+			name:       "Joining wrld Behaviour line",
+			line:       "2026.01.01 12:00:00 Debug      -  [Behaviour] Joining wrld_abc123:12345~public",
 			wantCount:  1,
 			wantKind:   EventKindSession,
 			wantType:   SessionEventStart,
@@ -130,20 +130,30 @@ func TestLogParser_ParseLine_Session(t *testing.T) {
 			wantCount: 0, // not SessionEventEnd; precedes another user's OnPlayerLeft while still in instance
 		},
 		{
-			name:       "OnLeftRoom",
-			line:       "OnLeftRoom",
+			name:       "OnLeftRoom Behaviour line",
+			line:       "2026.03.22 22:38:29 Debug      -  [Behaviour] OnLeftRoom",
 			wantCount:  1,
 			wantKind:   EventKindSession,
 			wantType:   SessionEventEnd,
 			wantInstID: "",
 		},
 		{
-			name:       "Leaving room",
-			line:       "Leaving room",
+			name:       "Leaving room Behaviour line",
+			line:       "2026.03.22 12:00:00 Debug      -  [Behaviour] Leaving room",
 			wantCount:  1,
 			wantKind:   EventKindSession,
 			wantType:   SessionEventEnd,
 			wantInstID: "",
+		},
+		{
+			name:      "stack trace OnLeftRoom is not session end",
+			line:      "  at SomeObfuscatedClass.OnLeftRoom () [0x00000] in <00000000000000000000000000000000>:0 ",
+			wantCount: 0,
+		},
+		{
+			name:      "bare Joining wrld without Behaviour",
+			line:      "Joining wrld_abc123:12345~public",
+			wantCount: 0,
 		},
 	}
 	for _, tt := range tests {
@@ -186,6 +196,8 @@ func TestLogParser_ParseLine_Unparseable(t *testing.T) {
 		"[Time: 1.0] Unrelated message",
 		"OnPlayerJoined Alice (usr_abc123)",
 		"2026.03.21 11:32:16 Debug      -  [VisitorsInformationBoard] 18.88 / OnPlayerJoined / player=ぶっちゃん！(local)",
+		"Destination set: wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b:64190~private(usr_x)~region(jp)",
+		"Entering Room: SomeWorld",
 	}
 	for _, line := range unparseable {
 		events, err := p.ParseLine(line, base)

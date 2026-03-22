@@ -121,6 +121,10 @@ type sessionPattern struct {
 }
 
 // Default log patterns. Extensible via table-driven config.
+//
+// Activity-related lines use the [Behaviour] logger prefix only, so stack traces and other sources
+// do not false-trigger session/destination/room parsing. The exception is [Video Playback], which
+// remains its own tag.
 var (
 	// Encounter join/leave only from the Behaviour logger line (excludes VisitorsInformationBoard, etc.).
 	encounterJoinRE = regexp.MustCompile(`(?i)\[Behaviour\]\s+OnPlayerJoined\s+(\S.*?)\s*\((usr_[a-zA-Z0-9_-]+)\)`)
@@ -128,24 +132,25 @@ var (
 	encounterLeaveRE = regexp.MustCompile(`(?i)\[Behaviour\]\s+OnPlayerLeft\s+(\S.*?)\s*\((usr_[a-zA-Z0-9_-]+)\)`)
 
 	// Capture full instance token (may include ~private(usr_)~region(jp) etc.).
-	sessionStartWrldRE = regexp.MustCompile(`(?i)Joining\s+(wrld_[^\s]+)`)
+	sessionStartWrldRE = regexp.MustCompile(`(?i)\[Behaviour\]\s+Joining\s+(wrld_[^\s]+)`)
 
-	// Local session end: OnLeftRoom / Left room / Leaving room.
+	// Local session end: OnLeftRoom / Left room / Leaving room (Behaviour line only).
 	// Do not match OnPlayerLeftRoom — it appears before another user's OnPlayerLeft while still in the
 	// instance; treating it as SessionEventEnd cleared world context and dropped world_id on encounters.
-	sessionEndRE = regexp.MustCompile(`(?i)(?:OnLeftRoom|Left\s+room|Leaving\s+room)`)
+	// Do not match stack traces containing ".OnLeftRoom" without [Behaviour].
+	sessionEndRE = regexp.MustCompile(`(?i)\[Behaviour\]\s+(?:OnLeftRoom|Left\s+room|Leaving\s+room)`)
 
 	// Destination set: wrld_uuid:64190~private(usr_...)~region(jp)
-	destinationSetRE = regexp.MustCompile(`(?i)Destination\s+set:\s*(wrld_[a-f0-9-]+):([a-zA-Z0-9]+)~([a-z]+)\(([^)]*)\)~region\(([^)]*)\)`)
+	destinationSetRE = regexp.MustCompile(`(?i)\[Behaviour\]\s+Destination\s+set:\s*(wrld_[a-f0-9-]+):([a-zA-Z0-9]+)~([a-z]+)\(([^)]*)\)~region\(([^)]*)\)`)
 
 	// Fallback: group instances use e.g. ~group(grp...)~groupAccessType(public)~region(use) (extra segments before ~region).
-	destinationSetLooseRE = regexp.MustCompile(`(?i)Destination\s+set:\s*(wrld_[a-f0-9-]+:[^\s]+)`)
+	destinationSetLooseRE = regexp.MustCompile(`(?i)\[Behaviour\]\s+Destination\s+set:\s*(wrld_[a-f0-9-]+:[^\s]+)`)
 
 	destinationRegionFromKeyRE = regexp.MustCompile(`(?i)~region\(([^)]*)\)`)
 
-	roomNameRE = regexp.MustCompile(`(?i)Entering\s+Room:\s*(.+)$`)
+	roomNameRE = regexp.MustCompile(`(?i)\[Behaviour\]\s+Entering\s+Room:\s*(.+)$`)
 
-	avatarSwitchRE = regexp.MustCompile(`(?i)Switching\s+(.+?)\s+to\s+avatar\s+(.+)$`)
+	avatarSwitchRE = regexp.MustCompile(`(?i)\[Behaviour\]\s+Switching\s+(.+?)\s+to\s+avatar\s+(.+)$`)
 
 	videoPlaybackRE = regexp.MustCompile(`(?i)\[Video Playback\]\s+(?:Attempting to resolve URL|Resolving URL)\s+'([^']+)'`)
 )

@@ -113,7 +113,10 @@ func (r *UserCacheRepository) UpsertFromLog(ctx context.Context, vrcUserID, disp
 	_, err := r.db.ExecContext(ctx, `INSERT INTO users_cache (vrc_user_id, display_name, status, is_favorite, last_updated, first_seen_at, last_contact_at)
 		VALUES (?, ?, NULL, 0, ?, ?, ?) ON CONFLICT(vrc_user_id) DO UPDATE SET
 		display_name = excluded.display_name,
-		last_contact_at = excluded.last_contact_at,
+		last_contact_at = CASE
+			WHEN users_cache.last_contact_at IS NULL THEN excluded.last_contact_at
+			WHEN excluded.last_contact_at > users_cache.last_contact_at THEN excluded.last_contact_at
+			ELSE users_cache.last_contact_at END,
 		first_seen_at = COALESCE(users_cache.first_seen_at, excluded.first_seen_at),
 		last_updated = CASE WHEN users_cache.status IS NOT NULL AND TRIM(users_cache.status) != '' THEN users_cache.last_updated ELSE excluded.last_updated END`,
 		vrcUserID, displayName, ts, ts, ts)
@@ -150,17 +153,22 @@ func scanUserCacheRows(rows *sql.Rows) ([]*identity.UserCache, error) {
 func scanUserCacheScanner(sc interface {
 	Scan(dest ...interface{}) error
 }) (*identity.UserCache, error) {
-	var vrcUserID, displayName, status, lastUpdated string
+	var vrcUserID, displayName, lastUpdated string
+	var status sql.NullString
 	var isFav int
 	var firstSeen, lastContact sql.NullString
 	if err := sc.Scan(&vrcUserID, &displayName, &status, &isFav, &lastUpdated, &firstSeen, &lastContact); err != nil {
 		return nil, err
 	}
 	t, _ := time.Parse(time.RFC3339, lastUpdated)
+	st := ""
+	if status.Valid {
+		st = status.String
+	}
 	u := &identity.UserCache{
 		VRCUserID:   vrcUserID,
 		DisplayName: displayName,
-		Status:      status,
+		Status:      st,
 		IsFavorite:  isFav == 1,
 		LastUpdated: t,
 	}

@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"sync"
+	"sync/atomic"
 
 	"vrchat-tweaker/internal/domain/activity"
 	"vrchat-tweaker/internal/usecase"
@@ -15,6 +16,8 @@ type ActivityEventHandler struct {
 	ctx              context.Context
 	logger           Logger
 	onAfterEncounter func()
+	// suppressEncounterNotify skips onAfterEncounter (e.g. during historical log bootstrap).
+	suppressEncounterNotify atomic.Bool
 
 	mu sync.Mutex
 	// session* are the active Joining instance (SessionEventStart only). Destination does not update these.
@@ -39,6 +42,11 @@ func NewActivityEventHandler(uc *usecase.ActivityUseCase, ctx context.Context, l
 		logger:           logger,
 		onAfterEncounter: onAfterEncounter,
 	}
+}
+
+// SetSuppressEncounterNotify when true skips onAfterEncounter for EncounterEvent (e.g. bulk bootstrap).
+func (h *ActivityEventHandler) SetSuppressEncounterNotify(suppress bool) {
+	h.suppressEncounterNotify.Store(suppress)
 }
 
 type logWriterLogger struct {
@@ -92,7 +100,7 @@ func (h *ActivityEventHandler) Handle(event activity.ParsedEvent) {
 		if err := h.uc.RecordEncounterAt(h.ctx, e.VRCUserID, e.DisplayName, e.Action, inst, wid, e.EncounteredAt); err != nil {
 			h.logger.Printf("[activity_handler] RecordEncounter: %v", err)
 		}
-		if h.onAfterEncounter != nil {
+		if !h.suppressEncounterNotify.Load() && h.onAfterEncounter != nil {
 			h.onAfterEncounter()
 		}
 	case *activity.SessionEvent:

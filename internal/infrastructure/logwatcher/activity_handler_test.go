@@ -229,3 +229,35 @@ func TestActivityEventHandler_Leave_afterDestinationBeforeJoin_usesLastSessionNo
 			e.WorldID, e.InstanceID, homeWorld, oldInst)
 	}
 }
+
+func TestActivityEventHandler_SuppressEncounterNotify_skipsOnAfterEncounter(t *testing.T) {
+	ctx := context.Background()
+	base := time.Date(2026, 3, 22, 12, 0, 0, 0, time.UTC)
+	var calls int
+	cb := func() { calls++ }
+	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, stubEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
+	h := NewActivityEventHandler(uc, ctx, nil, cb)
+	h.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: testFullInstance, OccurredAt: base})
+
+	h.SetSuppressEncounterNotify(true)
+	h.Handle(&activity.EncounterEvent{
+		VRCUserID:     "usr_suppress_test",
+		DisplayName:   "A",
+		Action:        activity.EncounterActionJoin,
+		EncounteredAt: base.Add(time.Second),
+	})
+	if calls != 0 {
+		t.Errorf("onAfterEncounter calls = %d, want 0 while suppressed", calls)
+	}
+
+	h.SetSuppressEncounterNotify(false)
+	h.Handle(&activity.EncounterEvent{
+		VRCUserID:     "usr_suppress_test2",
+		DisplayName:   "B",
+		Action:        activity.EncounterActionJoin,
+		EncounteredAt: base.Add(2 * time.Second),
+	})
+	if calls != 1 {
+		t.Errorf("onAfterEncounter calls = %d, want 1 after unsuppress", calls)
+	}
+}
