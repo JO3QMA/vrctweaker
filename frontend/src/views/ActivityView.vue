@@ -323,10 +323,9 @@ onUnmounted(() => {
 
 .timeline-item {
   display: grid;
-  grid-template-columns: 10rem 8rem 4rem minmax(0, 11rem) minmax(
-      0,
-      16rem
-    ) minmax(0, 1fr);
+  grid-template-columns:
+    10rem 8rem 4rem minmax(0, 11rem) minmax(0, 16rem)
+    minmax(0, 1fr);
   gap: 0.75rem;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--border);
