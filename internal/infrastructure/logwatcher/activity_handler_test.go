@@ -192,3 +192,40 @@ func TestActivityEventHandler_OtherPlayerLeave_afterJoining_keepsWorldContext(t 
 			e.WorldID, e.InstanceID, minasocoWorld, minasocoInst)
 	}
 }
+
+// Log order: Destination set (next instance) → OnLeftRoom → OnPlayerLeft (others).
+// Leave must attribute to the session we were in, not pending destination.
+func TestActivityEventHandler_Leave_afterDestinationBeforeJoin_usesLastSessionNotPending(t *testing.T) {
+	ctx := context.Background()
+	base := time.Date(2026, 3, 22, 14, 20, 45, 0, time.UTC)
+	const homeWorld = "wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b"
+	oldInst := homeWorld + ":85625~private(usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)~region(jp)"
+	nextInst := homeWorld + ":62566~private(usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)~region(jp)"
+
+	spy := &spyEncounterRepo{}
+	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, spy, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
+	h := NewActivityEventHandler(uc, ctx, nil, nil)
+
+	h.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: oldInst, OccurredAt: base})
+	h.Handle(&activity.DestinationSetEvent{
+		WorldID:      homeWorld,
+		FullInstance: nextInst,
+		OccurredAt:   base,
+	})
+	h.Handle(&activity.SessionEvent{Type: activity.SessionEventEnd, OccurredAt: base})
+	h.Handle(&activity.EncounterEvent{
+		VRCUserID:     "usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e",
+		DisplayName:   "ぶっちゃん！",
+		Action:        activity.EncounterActionLeave,
+		EncounteredAt: base.Add(time.Millisecond),
+	})
+
+	if len(spy.saves) != 1 {
+		t.Fatalf("Save calls = %d, want 1", len(spy.saves))
+	}
+	e := spy.saves[0]
+	if e.WorldID != homeWorld || e.InstanceID != oldInst {
+		t.Errorf("Save world_id=%q instance_id=%q, want world %q instance %q",
+			e.WorldID, e.InstanceID, homeWorld, oldInst)
+	}
+}
