@@ -31,7 +31,7 @@ type ActivityStats struct {
 func AggregatePlaySessions(sessions []*PlaySession, from, to time.Time) ([]DailyPlaySeconds, []TopWorldSummary) {
 	dailyMap := make(map[string]int)
 	var totalSeconds int
-	sessionCount := len(sessions)
+	var includedSessions int
 
 	fromDate := truncateToDate(from)
 	toDate := truncateToDate(to)
@@ -58,6 +58,7 @@ func AggregatePlaySessions(sessions []*PlaySession, from, to time.Time) ([]Daily
 			continue
 		}
 		totalSeconds += int(end.Sub(start).Seconds())
+		includedSessions++
 
 		cur := truncateToDate(start)
 		curTime := start
@@ -93,9 +94,9 @@ func AggregatePlaySessions(sessions []*PlaySession, from, to time.Time) ([]Daily
 
 	// topWorlds: single aggregate (world_id不足のため)
 	var topWorlds []TopWorldSummary
-	if sessionCount > 0 || totalSeconds > 0 {
+	if includedSessions > 0 || totalSeconds > 0 {
 		topWorlds = []TopWorldSummary{
-			{WorldID: "_total", WorldName: "全セッション", Seconds: totalSeconds, Sessions: sessionCount},
+			{WorldID: "_total", WorldName: "全セッション", Seconds: totalSeconds, Sessions: includedSessions},
 		}
 	}
 
@@ -111,18 +112,16 @@ func nextDate(t time.Time) time.Time {
 	return t.AddDate(0, 0, 1)
 }
 
-// effectiveTimeRange returns start and end for a session. Returns nil end if session has no duration.
+// effectiveTimeRange returns start and end for aggregation. Returns nil end if the session is still
+// open (no end time and no positive duration) so callers exclude it from historical totals.
 func effectiveTimeRange(s *PlaySession) (time.Time, *time.Time) {
 	start := s.StartTime
-	var end *time.Time
 	if s.EndTime != nil {
-		end = s.EndTime
-	} else if s.DurationSec != nil && *s.DurationSec > 0 {
-		e := start.Add(time.Duration(*s.DurationSec) * time.Second)
-		end = &e
-	} else {
-		now := time.Now().UTC()
-		end = &now
+		return start, s.EndTime
 	}
-	return start, end
+	if s.DurationSec != nil && *s.DurationSec > 0 {
+		e := start.Add(time.Duration(*s.DurationSec) * time.Second)
+		return start, &e
+	}
+	return start, nil
 }

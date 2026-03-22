@@ -266,7 +266,11 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 			}
 			pathCopy := fp
 			checkpointLines := 0
+			var lastVRLineTime time.Time
 			_, procErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, handler, logger, func(pos int64, line string) {
+				if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
+					lastVRLineTime = ts
+				}
 				checkpointLines++
 				if checkpointLines != 1 && checkpointLines%32 != 0 {
 					return
@@ -289,6 +293,7 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 				runtime.LogWarning(ctx, "activity log ingest: "+procErr.Error())
 				return
 			}
+			_ = a.activity.CloseOpenPlaySessionAtLastLogLineIfSameLocalDay(ctx, lastVRLineTime)
 			st, statErr := os.Stat(pathCopy)
 			endOff := int64(0)
 			if statErr == nil && st != nil {
@@ -309,7 +314,11 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 	}
 	pathCopy := absWatch
 	checkpointLines := 0
+	var lastVRLineTime time.Time
 	_, fileProcErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, handler, logger, func(pos int64, line string) {
+		if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
+			lastVRLineTime = ts
+		}
 		checkpointLines++
 		if checkpointLines != 1 && checkpointLines%32 != 0 {
 			return
@@ -328,6 +337,9 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 	if fileProcErr != nil && !errors.Is(fileProcErr, context.Canceled) {
 		runtime.LogWarning(ctx, "activity log ingest: "+fileProcErr.Error())
 		return
+	}
+	if fileProcErr == nil {
+		_ = a.activity.CloseOpenPlaySessionAtLastLogLineIfSameLocalDay(ctx, lastVRLineTime)
 	}
 	st, statErr := os.Stat(pathCopy)
 	endOff := int64(0)

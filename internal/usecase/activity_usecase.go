@@ -189,6 +189,33 @@ func (uc *ActivityUseCase) EndPlaySession(ctx context.Context, endedAt time.Time
 	return uc.playRepo.Save(ctx, open)
 }
 
+// CloseOpenPlaySessionAtLastLogLineIfSameLocalDay closes the latest open play session using the
+// timestamp of the last processed log line when the session start and that line share the same
+// local calendar day (same convention as VRChat output_log). If the days differ (e.g. overnight
+// session), it does nothing so aggregation can treat the session as open until a real end event.
+func (uc *ActivityUseCase) CloseOpenPlaySessionAtLastLogLineIfSameLocalDay(ctx context.Context, lastLine time.Time) error {
+	if lastLine.IsZero() {
+		return nil
+	}
+	open, err := uc.playRepo.FindLatestWithoutEndTime(ctx)
+	if err != nil || open == nil {
+		return err
+	}
+	if !sameLocalCalendarDay(open.StartTime, lastLine) {
+		return nil
+	}
+	if lastLine.Before(open.StartTime) {
+		return nil
+	}
+	return uc.EndPlaySession(ctx, lastLine)
+}
+
+func sameLocalCalendarDay(a, b time.Time) bool {
+	ay, am, ad := a.In(time.Local).Date()
+	by, bm, bd := b.In(time.Local).Date()
+	return ay == by && am == bm && ad == bd
+}
+
 // GetActivityStats returns aggregated play stats for the date range [fromISO, toISO].
 // fromISO, toISO are date strings in YYYY-MM-DD format.
 func (uc *ActivityUseCase) GetActivityStats(ctx context.Context, fromISO, toISO string) (*activity.ActivityStats, error) {
