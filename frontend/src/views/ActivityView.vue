@@ -2,14 +2,14 @@
   <div class="activity-view">
     <h1 class="page-title">アクティビティ</h1>
 
-    <!-- 統計セクション（直近7日） -->
+    <!-- 統計セクション（直近14日） -->
     <section class="stats-section">
-      <h2 class="section-title">プレイ時間（直近7日）</h2>
+      <h2 class="section-title">プレイ時間（直近14日）</h2>
       <div v-if="statsLoading" class="loading">読み込み中…</div>
       <div v-else-if="!statsRangeFrom" class="empty-stats">
         データがありません
       </div>
-      <PlayTimeLast7DaysChart v-else :series="dailyPlaySevenDays" />
+      <PlayTimeChart v-else :series="dailyPlayChartSeries" />
     </section>
 
     <!-- タイムラインセクション -->
@@ -63,9 +63,12 @@ import {
   type ActivityStatsDTO,
 } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
-import PlayTimeLast7DaysChart, {
+import PlayTimeChart, {
   type PlayTimeDayPoint,
-} from "../components/PlayTimeLast7DaysChart.vue";
+} from "../components/PlayTimeChart.vue";
+
+/** プレイ時間グラフに表示する暦日数（最大14日、今日を含む） */
+const PLAYTIME_CHART_MAX_DAYS = 14;
 
 const ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS = 400;
 
@@ -78,7 +81,7 @@ const statsLoading = ref(false);
 const statsRangeFrom = ref("");
 const statsRangeTo = ref("");
 
-const dailyPlaySevenDays = computed((): PlayTimeDayPoint[] => {
+const dailyPlayChartSeries = computed((): PlayTimeDayPoint[] => {
   const from = statsRangeFrom.value;
   const to = statsRangeTo.value;
   if (!from || !to) return [];
@@ -178,7 +181,7 @@ async function loadStats(): Promise<void> {
   try {
     const to = new Date();
     const from = new Date();
-    from.setDate(from.getDate() - 6);
+    from.setDate(from.getDate() - (PLAYTIME_CHART_MAX_DAYS - 1));
     const fromStr = from.toISOString().slice(0, 10);
     const toStr = to.toISOString().slice(0, 10);
     statsRangeFrom.value = fromStr;

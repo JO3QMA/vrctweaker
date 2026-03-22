@@ -63,7 +63,11 @@ function buildChartOptions() {
         grid: { color: border },
       },
       x: {
-        ticks: { color: textMuted },
+        ticks: {
+          color: textMuted,
+          maxRotation: 45,
+          minRotation: 0,
+        },
         grid: { color: border },
       },
     },
