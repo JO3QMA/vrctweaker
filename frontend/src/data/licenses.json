@@ -47,6 +47,12 @@
     "path": "/workspaces/vrctweaker/frontend/node_modules/@vue/test-utils",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@vue/test-utils/LICENSE"
   },
+  "chart.js@4.5.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/chartjs/Chart.js",
+    "path": "/workspaces/vrctweaker/frontend/node_modules/chart.js",
+    "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/chart.js/LICENSE.md"
+  },
   "eslint-config-prettier@10.1.8": {
     "licenses": "MIT",
     "repository": "https://github.com/prettier/eslint-config-prettier",

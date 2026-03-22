@@ -6,25 +6,10 @@
     <section class="stats-section">
       <h2 class="section-title">プレイ時間（直近7日）</h2>
       <div v-if="statsLoading" class="loading">読み込み中…</div>
-      <div v-else-if="stats.dailyPlaySeconds.length === 0" class="empty-stats">
+      <div v-else-if="!statsRangeFrom" class="empty-stats">
         データがありません
       </div>
-      <div v-else class="bar-chart">
-        <div
-          v-for="day in stats.dailyPlaySeconds"
-          :key="day.date"
-          class="bar-row"
-        >
-          <span class="bar-label">{{ formatDateShort(day.date) }}</span>
-          <div class="bar-track">
-            <div
-              class="bar-fill"
-              :style="{ width: barWidthPercent(day) + '%' }"
-            />
-          </div>
-          <span class="bar-value">{{ formatSeconds(day.seconds) }}</span>
-        </div>
-      </div>
+      <PlayTimeLast7DaysChart v-else :series="dailyPlaySevenDays" />
     </section>
 
     <!-- タイムラインセクション -->
@@ -78,6 +63,9 @@ import {
   type ActivityStatsDTO,
 } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
+import PlayTimeLast7DaysChart, {
+  type PlayTimeDayPoint,
+} from "../components/PlayTimeLast7DaysChart.vue";
 
 const ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS = 400;
 
@@ -87,11 +75,32 @@ const displayNameFilter = ref("");
 
 const stats = ref<ActivityStatsDTO>({ dailyPlaySeconds: [], topWorlds: [] });
 const statsLoading = ref(false);
+const statsRangeFrom = ref("");
+const statsRangeTo = ref("");
 
-const maxBarSeconds = computed(() => {
-  const daily = stats.value.dailyPlaySeconds;
-  if (daily.length === 0) return 1;
-  return Math.max(...daily.map((d) => d.seconds), 1);
+const dailyPlaySevenDays = computed((): PlayTimeDayPoint[] => {
+  const from = statsRangeFrom.value;
+  const to = statsRangeTo.value;
+  if (!from || !to) return [];
+  const byDate = new Map(
+    stats.value.dailyPlaySeconds.map((d) => [d.date, d.seconds]),
+  );
+  const out: PlayTimeDayPoint[] = [];
+  const start = new Date(from + "T00:00:00.000Z");
+  const end = new Date(to + "T00:00:00.000Z");
+  for (
+    let cur = new Date(start);
+    cur <= end;
+    cur.setUTCDate(cur.getUTCDate() + 1)
+  ) {
+    const iso = cur.toISOString().slice(0, 10);
+    out.push({
+      date: iso,
+      label: formatDateShort(iso),
+      seconds: byDate.get(iso) ?? 0,
+    });
+  }
+  return out;
 });
 
 const filteredEncounters = computed(() => {
@@ -110,19 +119,6 @@ function formatDateShort(dateStr: string): string {
   } catch {
     return dateStr;
   }
-}
-
-function formatSeconds(seconds: number): string {
-  if (seconds < 60) return `${seconds}秒`;
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  if (s === 0) return `${m}分`;
-  return `${m}分${s}秒`;
-}
-
-function barWidthPercent(day: { date: string; seconds: number }): number {
-  const max = maxBarSeconds.value;
-  return Math.min(100, (day.seconds / max) * 100);
 }
 
 function formatEncounteredAt(iso: string): string {
@@ -185,6 +181,8 @@ async function loadStats(): Promise<void> {
     from.setDate(from.getDate() - 6);
     const fromStr = from.toISOString().slice(0, 10);
     const toStr = to.toISOString().slice(0, 10);
+    statsRangeFrom.value = fromStr;
+    statsRangeTo.value = toStr;
     stats.value = await App.getActivityStats(fromStr, toStr);
   } finally {
     statsLoading.value = false;
@@ -236,44 +234,6 @@ onUnmounted(() => {
   background: var(--bg-secondary);
   border-radius: var(--radius);
   border: 1px solid var(--border);
-}
-
-.bar-chart {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.bar-row {
-  display: grid;
-  grid-template-columns: 4rem 1fr 5rem;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.bar-label {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-}
-
-.bar-track {
-  height: 1.25rem;
-  background: var(--bg-tertiary);
-  border-radius: 4px;
-  overflow: hidden;
-}
-
-.bar-fill {
-  height: 100%;
-  background: var(--accent);
-  border-radius: 4px;
-  min-width: 2px;
-  transition: width 0.2s ease;
-}
-
-.bar-value {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
 }
 
 .filters {
