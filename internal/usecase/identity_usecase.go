@@ -154,6 +154,9 @@ func (uc *IdentityUseCase) Logout(ctx context.Context) error {
 	if err := uc.userCacheRepo.DeleteSelfRows(ctx); err != nil {
 		selfErr = fmt.Errorf("clear self profile cache: %w", err)
 	}
+	if uc.settingsRepo != nil {
+		_ = uc.settingsRepo.Set(ctx, identity.SettingVRChatFriendsSyncedAt, "")
+	}
 	if err := uc.credStore.Delete(vrchatapi.CredentialService, vrchatapi.CredentialUser); err != nil {
 		return err
 	}
