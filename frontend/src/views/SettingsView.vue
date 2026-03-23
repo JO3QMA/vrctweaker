@@ -589,7 +589,11 @@ function doClearFriendsCache() {
   runWithConfirm(
     "ユーザーキャッシュ（users_cache）の全行（自分・フレンド・遭遇ログ由来のユーザー）を削除します。よろしいですか？",
     async () => App.clearFriendsCache(),
-    (n) => `${n}件のフレンドキャッシュを削除しました`,
+    (n) => {
+      currentUser.value = null;
+      profileError.value = "";
+      return `${n}件のフレンドキャッシュを削除しました`;
+    },
   );
 }
 </script>
