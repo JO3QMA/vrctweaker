@@ -58,7 +58,9 @@ func (uc *DBMaintenanceUseCase) ClearFriendsCache(ctx context.Context) (int64, e
 		return 0, err
 	}
 	if uc.appSettings != nil {
-		_ = uc.appSettings.Set(ctx, identity.SettingVRChatFriendsSyncedAt, "")
+		if setErr := uc.appSettings.Set(ctx, identity.SettingVRChatFriendsSyncedAt, ""); setErr != nil {
+			return n, fmt.Errorf("clear friends sync timestamp: %w", setErr)
+		}
 	}
 	return n, nil
 }
