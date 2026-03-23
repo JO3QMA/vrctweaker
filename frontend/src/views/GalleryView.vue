@@ -142,8 +142,8 @@
           <dd>{{ formatTakenAt(selected.takenAt) }}</dd>
           <dt>ワールド名</dt>
           <dd>{{ selected.worldName || "—" }}</dd>
-          <dt>World ID</dt>
-          <dd>{{ selected.worldId || "—" }}</dd>
+          <dt>作者表示名</dt>
+          <dd>{{ selected.authorDisplayName || "—" }}</dd>
           <dt>ファイルパス</dt>
           <dd>
             <button

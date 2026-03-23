@@ -44,6 +44,8 @@ export interface ScreenshotDTO {
   filePath: string;
   worldId: string;
   worldName: string;
+  authorVrcUserId?: string;
+  authorDisplayName?: string;
   takenAt?: string;
   /** Original image file size in bytes when known */
   fileSizeBytes?: number;

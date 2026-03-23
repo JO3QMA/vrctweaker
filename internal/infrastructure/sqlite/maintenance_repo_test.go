@@ -82,10 +82,9 @@ func TestMaintenance_ClearScreenshots_Integration(t *testing.T) {
 	ctx := context.Background()
 
 	s := &media.Screenshot{
-		ID:        "scr-1",
-		FilePath:  "/path/to/screenshot.png",
-		WorldID:   "wrld_xxx",
-		WorldName: "Test World",
+		ID:       "scr-1",
+		FilePath: "/path/to/screenshot.png",
+		WorldID:  "wrld_xxx",
 	}
 	if saveErr := screenshotRepo.Save(ctx, s); saveErr != nil {
 		t.Fatal(saveErr)

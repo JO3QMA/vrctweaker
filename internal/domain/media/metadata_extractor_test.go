@@ -36,15 +36,15 @@ func TestDefaultMetadataExtractor_Extract_FromFilename(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotID, gotName, _, err := extractor.Extract(tt.path)
+			got, err := extractor.Extract(tt.path)
 			if err != nil {
 				t.Fatalf("Extract() err = %v", err)
 			}
-			if gotID != tt.wantID {
-				t.Errorf("Extract() worldID = %q, want %q", gotID, tt.wantID)
+			if got.WorldID != tt.wantID {
+				t.Errorf("Extract() worldID = %q, want %q", got.WorldID, tt.wantID)
 			}
-			if gotName != tt.wantName {
-				t.Errorf("Extract() worldName = %q, want %q", gotName, tt.wantName)
+			if got.WorldDisplayName != tt.wantName {
+				t.Errorf("Extract() worldDisplayName = %q, want %q", got.WorldDisplayName, tt.wantName)
 			}
 		})
 	}
@@ -59,26 +59,26 @@ func TestDefaultMetadataExtractor_Extract_FromAdjacentFile(t *testing.T) {
 	extractor := NewDefaultMetadataExtractor()
 
 	// No adjacent file -> empty
-	gotID, gotName, _, err := extractor.Extract(path)
+	got, err := extractor.Extract(path)
 	if err != nil {
 		t.Fatalf("Extract() err = %v", err)
 	}
-	if gotID != "" || gotName != "" {
-		t.Errorf("Extract() without adjacent file: got worldID=%q worldName=%q, want empty", gotID, gotName)
+	if got.WorldID != "" || got.WorldDisplayName != "" {
+		t.Errorf("Extract() without adjacent file: got %+v, want empty", got)
 	}
 
 	// Adjacent .txt with wrld_
 	txtPath := filepath.Join(dir, base+".txt")
 	_ = os.WriteFile(txtPath, []byte("World: wrld_adjacent123\nName: Test World"), 0644)
-	gotID, gotName, _, err = extractor.Extract(path)
+	got, err = extractor.Extract(path)
 	if err != nil {
 		t.Fatalf("Extract() err = %v", err)
 	}
-	if gotID != "wrld_adjacent123" {
-		t.Errorf("Extract() worldID = %q, want wrld_adjacent123", gotID)
+	if got.WorldID != "wrld_adjacent123" {
+		t.Errorf("Extract() worldID = %q, want wrld_adjacent123", got.WorldID)
 	}
-	if gotName != "" {
-		t.Logf("worldName extracted: %q (optional)", gotName)
+	if got.WorldDisplayName != "" {
+		t.Logf("worldDisplayName extracted: %q (optional)", got.WorldDisplayName)
 	}
 }
 
@@ -88,15 +88,15 @@ func TestDefaultMetadataExtractor_Extract_NoMatchReturnsEmpty(t *testing.T) {
 	_ = os.WriteFile(path, []byte("fake png"), 0644)
 
 	extractor := NewDefaultMetadataExtractor()
-	gotID, gotName, takenAt, err := extractor.Extract(path)
+	got, err := extractor.Extract(path)
 	if err != nil {
 		t.Fatalf("Extract() err = %v", err)
 	}
-	if gotID != "" || gotName != "" {
-		t.Errorf("Extract() got worldID=%q worldName=%q, want empty", gotID, gotName)
+	if got.WorldID != "" || got.WorldDisplayName != "" {
+		t.Errorf("Extract() got %+v, want empty world fields", got)
 	}
-	if takenAt != nil {
-		t.Errorf("Extract() takenAt = %v, want nil", takenAt)
+	if got.TakenAt != nil {
+		t.Errorf("Extract() takenAt = %v, want nil", got.TakenAt)
 	}
 }
 

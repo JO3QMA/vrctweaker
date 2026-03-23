@@ -9,6 +9,15 @@ import (
 
 var _ media.ScreenshotRepository = (*ScreenshotRepository)(nil)
 
+const screenshotSelectBase = `SELECT s.id, s.file_path, COALESCE(s.world_id, ''),
+	COALESCE(w.display_name, '') AS world_name_resolved,
+	COALESCE(s.author_vrc_user_id, ''),
+	COALESCE(u.display_name, '') AS author_display_name,
+	s.taken_at, s.file_size_bytes
+	FROM screenshots s
+	LEFT JOIN world_info w ON w.world_id = s.world_id
+	LEFT JOIN users_cache u ON u.vrc_user_id = s.author_vrc_user_id`
+
 // ScreenshotRepository implements media.ScreenshotRepository.
 type ScreenshotRepository struct {
 	db *sql.DB
@@ -21,32 +30,33 @@ func NewScreenshotRepository(db *sql.DB) *ScreenshotRepository {
 
 // List returns screenshots with optional filters.
 func (r *ScreenshotRepository) List(ctx context.Context, filter *media.ScreenshotFilter) ([]*media.Screenshot, error) {
-	query := `SELECT id, file_path, world_id, world_name, taken_at, file_size_bytes FROM screenshots WHERE 1=1`
+	query := screenshotSelectBase + ` WHERE 1=1`
 	args := []interface{}{}
 	if filter != nil {
 		if filter.WorldID != "" {
-			query += ` AND world_id = ?`
+			query += ` AND s.world_id = ?`
 			args = append(args, filter.WorldID)
 		}
 		if filter.FromDate != nil {
-			query += ` AND taken_at >= ?`
+			query += ` AND s.taken_at >= ?`
 			args = append(args, filter.FromDate.Format("2006-01-02T15:04:05Z07:00"))
 		}
 		if filter.ToDate != nil {
-			query += ` AND taken_at <= ?`
+			query += ` AND s.taken_at <= ?`
 			args = append(args, filter.ToDate.Format("2006-01-02T15:04:05Z07:00"))
 		}
 		if filter.WorldName != "" {
-			query += ` AND world_name LIKE ?`
-			args = append(args, "%"+filter.WorldName+"%")
+			pat := "%" + filter.WorldName + "%"
+			query += ` AND COALESCE(w.display_name, '') LIKE ?`
+			args = append(args, pat)
 		}
 		if filter.FilePathPrefix != "" {
-			query += ` AND (file_path LIKE ? OR file_path = ?)`
+			query += ` AND (s.file_path LIKE ? OR s.file_path = ?)`
 			prefix := filter.FilePathPrefix + "%"
 			args = append(args, prefix, filter.FilePathPrefix)
 		}
 	}
-	query += ` ORDER BY taken_at DESC`
+	query += ` ORDER BY s.taken_at DESC`
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -67,23 +77,24 @@ func (r *ScreenshotRepository) List(ctx context.Context, filter *media.Screensho
 
 // GetByID returns a screenshot by ID.
 func (r *ScreenshotRepository) GetByID(ctx context.Context, id string) (*media.Screenshot, error) {
-	row := r.db.QueryRowContext(ctx, `SELECT id, file_path, world_id, world_name, taken_at, file_size_bytes FROM screenshots WHERE id = ?`, id)
+	row := r.db.QueryRowContext(ctx, screenshotSelectBase+` WHERE s.id = ?`, id)
 	return scanScreenshotRow(row)
 }
 
 // GetByFilePath returns a screenshot by file path.
 func (r *ScreenshotRepository) GetByFilePath(ctx context.Context, filePath string) (*media.Screenshot, error) {
-	row := r.db.QueryRowContext(ctx, `SELECT id, file_path, world_id, world_name, taken_at, file_size_bytes FROM screenshots WHERE file_path = ?`, filePath)
+	row := r.db.QueryRowContext(ctx, screenshotSelectBase+` WHERE s.file_path = ?`, filePath)
 	return scanScreenshotRow(row)
 }
 
 // Save persists a screenshot.
 func (r *ScreenshotRepository) Save(ctx context.Context, s *media.Screenshot) error {
 	takenAt := nullableTime(s.TakenAt)
-	_, err := r.db.ExecContext(ctx, `INSERT INTO screenshots (id, file_path, world_id, world_name, taken_at, file_size_bytes)
+	_, err := r.db.ExecContext(ctx, `INSERT INTO screenshots (id, file_path, world_id, author_vrc_user_id, taken_at, file_size_bytes)
 		VALUES (?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET
-		file_path = excluded.file_path, world_id = excluded.world_id, world_name = excluded.world_name, taken_at = excluded.taken_at, file_size_bytes = excluded.file_size_bytes`,
-		s.ID, s.FilePath, s.WorldID, s.WorldName, takenAt, nullableInt64(s.FileSizeBytes))
+		file_path = excluded.file_path, world_id = excluded.world_id,
+		author_vrc_user_id = excluded.author_vrc_user_id, taken_at = excluded.taken_at, file_size_bytes = excluded.file_size_bytes`,
+		s.ID, s.FilePath, s.WorldID, nullString(s.AuthorVRCUserID), takenAt, nullableInt64(s.FileSizeBytes))
 	return err
 }
 
@@ -140,27 +151,29 @@ func (r *ScreenshotRepository) DeleteThumbnail(ctx context.Context, screenshotID
 }
 
 func scanScreenshot(rows *sql.Rows) (*media.Screenshot, error) {
-	var id, filePath, worldID, worldName string
+	var id, filePath, worldID, worldNameResolved, authorID, authorName string
 	var takenAt sql.NullString
 	var fileSize sql.NullInt64
-	if err := rows.Scan(&id, &filePath, &worldID, &worldName, &takenAt, &fileSize); err != nil {
+	if err := rows.Scan(&id, &filePath, &worldID, &worldNameResolved, &authorID, &authorName, &takenAt, &fileSize); err != nil {
 		return nil, err
 	}
 	return &media.Screenshot{
-		ID:            id,
-		FilePath:      filePath,
-		WorldID:       worldID,
-		WorldName:     worldName,
-		TakenAt:       parseTime(takenAt),
-		FileSizeBytes: parseInt64Ptr(fileSize),
+		ID:                id,
+		FilePath:          filePath,
+		WorldID:           worldID,
+		WorldName:         worldNameResolved,
+		AuthorVRCUserID:   authorID,
+		AuthorDisplayName: authorName,
+		TakenAt:           parseTime(takenAt),
+		FileSizeBytes:     parseInt64Ptr(fileSize),
 	}, nil
 }
 
 func scanScreenshotRow(row *sql.Row) (*media.Screenshot, error) {
-	var id, filePath, worldID, worldName string
+	var id, filePath, worldID, worldNameResolved, authorID, authorName string
 	var takenAt sql.NullString
 	var fileSize sql.NullInt64
-	err := row.Scan(&id, &filePath, &worldID, &worldName, &takenAt, &fileSize)
+	err := row.Scan(&id, &filePath, &worldID, &worldNameResolved, &authorID, &authorName, &takenAt, &fileSize)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -168,11 +181,13 @@ func scanScreenshotRow(row *sql.Row) (*media.Screenshot, error) {
 		return nil, err
 	}
 	return &media.Screenshot{
-		ID:            id,
-		FilePath:      filePath,
-		WorldID:       worldID,
-		WorldName:     worldName,
-		TakenAt:       parseTime(takenAt),
-		FileSizeBytes: parseInt64Ptr(fileSize),
+		ID:                id,
+		FilePath:          filePath,
+		WorldID:           worldID,
+		WorldName:         worldNameResolved,
+		AuthorVRCUserID:   authorID,
+		AuthorDisplayName: authorName,
+		TakenAt:           parseTime(takenAt),
+		FileSizeBytes:     parseInt64Ptr(fileSize),
 	}, nil
 }

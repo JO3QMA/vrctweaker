@@ -13,10 +13,11 @@ import (
 	"github.com/rwcarlsen/goexif/exif"
 )
 
-// MetadataExtractor extracts WorldID, WorldName, and TakenAt from screenshot files.
-// Extraction priority: 1) filename/adjacent metafile 2) image metadata (EXIF/PNG tEXt) 3) empty on failure.
+// MetadataExtractor extracts structured metadata from screenshot files.
+// Extraction priority: 1) filename/adjacent metafile 2) XMP (JPEG APP1 / PNG iTXt) 3) legacy EXIF/PNG tEXt.
+// Non-fatal failures return empty metadata and nil error.
 type MetadataExtractor interface {
-	Extract(path string) (worldID, worldName string, takenAt *time.Time, err error)
+	Extract(path string) (ScreenshotMetadata, error)
 }
 
 // wrldIDRE matches VRChat world IDs (e.g. wrld_abc123, wrld_xyz-456).
@@ -31,24 +32,45 @@ func NewDefaultMetadataExtractor() *DefaultMetadataExtractor {
 }
 
 // Extract extracts metadata from the given file path.
-// Returns (worldID, worldName, takenAt, nil) on success; empty values on non-fatal cases.
-// Errors are returned only for unexpected failures; extraction failures return empty strings and nil error.
-func (e *DefaultMetadataExtractor) Extract(path string) (worldID, worldName string, takenAt *time.Time, err error) {
+func (e *DefaultMetadataExtractor) Extract(path string) (ScreenshotMetadata, error) {
 	// Priority 1: filename and adjacent metafile
 	if id := extractFromFilename(path); id != "" {
-		return id, "", nil, nil
+		return ScreenshotMetadata{WorldID: id}, nil
 	}
 	if id, name := extractFromAdjacentFile(path); id != "" || name != "" {
-		return id, name, nil, nil
+		return ScreenshotMetadata{WorldID: id, WorldDisplayName: name}, nil
 	}
 
-	// Priority 2: image metadata (EXIF / PNG tEXt)
-	if id, name := extractFromImageMetadata(path); id != "" || name != "" {
-		return id, name, nil, nil
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return ScreenshotMetadata{}, nil
+	}
+	ext := strings.ToLower(filepath.Ext(path))
+
+	var m ScreenshotMetadata
+	switch ext {
+	case ".jpg", ".jpeg":
+		if x := extractXMPFromJPEG(data); x != "" {
+			m = parseVRChatXMP(x)
+		}
+	case ".png":
+		if x := extractXMPFromPNG(data); x != "" {
+			m = parseVRChatXMP(x)
+		}
 	}
 
-	// Priority 3: empty
-	return "", "", nil, nil
+	if m.WorldID == "" {
+		wid, wname := extractFromImageMetadataBytes(data, ext)
+		m.WorldID = wid
+		if m.WorldDisplayName == "" {
+			m.WorldDisplayName = wname
+		}
+	}
+	if m.TakenAt == nil && (ext == ".jpg" || ext == ".jpeg") {
+		m.TakenAt = extractTakenAtFromEXIFData(data)
+	}
+
+	return m, nil
 }
 
 func extractFromFilename(path string) string {
@@ -77,24 +99,18 @@ func extractFromAdjacentFile(path string) (worldID, worldName string) {
 	return "", ""
 }
 
-func extractFromImageMetadata(path string) (worldID, worldName string) {
-	ext := strings.ToLower(filepath.Ext(path))
+func extractFromImageMetadataBytes(data []byte, ext string) (worldID, worldName string) {
 	switch ext {
 	case ".jpg", ".jpeg":
-		return extractFromJPEG(path)
+		return extractFromJPEGData(data)
 	case ".png":
-		return extractFromPNG(path)
+		return extractFromPNGData(data)
 	}
 	return "", ""
 }
 
-func extractFromJPEG(path string) (worldID, worldName string) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", ""
-	}
-	defer func() { _ = f.Close() }()
-	x, err := exif.Decode(f)
+func extractFromJPEGData(data []byte) (worldID, worldName string) {
+	x, err := exif.Decode(bytes.NewReader(data))
 	if err != nil {
 		return "", ""
 	}
@@ -113,11 +129,7 @@ func extractFromJPEG(path string) (worldID, worldName string) {
 	return id, extractWorldNameFromContent(s, id)
 }
 
-func extractFromPNG(path string) (worldID, worldName string) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", ""
-	}
+func extractFromPNGData(data []byte) (worldID, worldName string) {
 	texts := readPNGTextChunks(data)
 	for _, s := range texts {
 		id := firstMatch(wrldIDRE, s)
@@ -126,6 +138,34 @@ func extractFromPNG(path string) (worldID, worldName string) {
 		}
 	}
 	return "", ""
+}
+
+func extractTakenAtFromEXIFData(data []byte) *time.Time {
+	x, err := exif.Decode(bytes.NewReader(data))
+	if err != nil {
+		return nil
+	}
+	tag, err := x.Get(exif.DateTimeOriginal)
+	if err != nil {
+		tag, err = x.Get(exif.DateTime)
+		if err != nil {
+			return nil
+		}
+	}
+	s, err := tag.StringVal()
+	if err != nil {
+		return nil
+	}
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return nil
+	}
+	// EXIF datetime: "2006:01:02 15:04:05"
+	t, err := time.ParseInLocation("2006:01:02 15:04:05", s, time.Local)
+	if err != nil {
+		return nil
+	}
+	return &t
 }
 
 // readPNGTextChunks reads tEXt and iTXt chunk contents from PNG data.

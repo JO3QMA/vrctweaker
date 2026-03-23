@@ -50,7 +50,6 @@ func migrate(db *sql.DB) error {
 			id TEXT PRIMARY KEY,
 			file_path TEXT UNIQUE NOT NULL,
 			world_id TEXT,
-			world_name TEXT,
 			taken_at TEXT
 		)`,
 		`CREATE TABLE IF NOT EXISTS play_sessions (
@@ -118,6 +117,12 @@ func migrate(db *sql.DB) error {
 	}
 
 	if err := ensureScreenshotsFileSizeColumn(db); err != nil {
+		return err
+	}
+	if err := ensureScreenshotsAuthorVRCUserIDColumn(db); err != nil {
+		return err
+	}
+	if err := ensureScreenshotsWorldNameDropped(db); err != nil {
 		return err
 	}
 	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS screenshot_thumbnails (
@@ -258,6 +263,43 @@ func ensureScreenshotsFileSizeColumn(db *sql.DB) error {
 		return nil
 	}
 	return fmt.Errorf("add file_size_bytes: %w", err)
+}
+
+func ensureScreenshotsAuthorVRCUserIDColumn(db *sql.DB) error {
+	return addColumnIfMissing(db, "screenshots", "author_vrc_user_id", `ALTER TABLE screenshots ADD COLUMN author_vrc_user_id TEXT`)
+}
+
+// ensureScreenshotsWorldNameDropped removes legacy screenshots.world_name; display names live in world_info only.
+func ensureScreenshotsWorldNameDropped(db *sql.DB) error {
+	rows, err := db.Query(`SELECT name FROM pragma_table_info('screenshots')`)
+	if err != nil {
+		return fmt.Errorf("pragma_table_info screenshots: %w", err)
+	}
+	var hasWorldName bool
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			_ = rows.Close()
+			return err
+		}
+		if name == "world_name" {
+			hasWorldName = true
+		}
+	}
+	if err := rows.Err(); err != nil {
+		_ = rows.Close()
+		return err
+	}
+	if err := rows.Close(); err != nil {
+		return err
+	}
+	if !hasWorldName {
+		return nil
+	}
+	if _, err := db.Exec(`ALTER TABLE screenshots DROP COLUMN world_name`); err != nil {
+		return fmt.Errorf("drop screenshots.world_name: %w", err)
+	}
+	return nil
 }
 
 // ensureScreenshotThumbnailJpegBlobColumn renames legacy webp_blob → jpeg_blob (data was always JPEG).

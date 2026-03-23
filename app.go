@@ -89,7 +89,7 @@ func (a *App) startup(ctx context.Context) {
 	maintenanceRepo := sqlite.NewMaintenanceRepository(db)
 	notifier := desktop.NewBeeepNotifier("VRChat Tweaker")
 	a.launcher = usecase.NewLauncherUseCase(launcherRepo)
-	a.media = usecase.NewMediaUseCase(mediaRepo, extractor)
+	a.media = usecase.NewMediaUseCase(mediaRepo, extractor, worldRepo, userCacheRepo)
 	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo)
 	a.identity = usecase.NewIdentityUseCaseWithNotifier(userCacheRepo, apiClient, credStore, settingsRepo, notifier)
 	actionRunner := usecase.NewDefaultActionRunner(a.identity)

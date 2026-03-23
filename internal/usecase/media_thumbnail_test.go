@@ -30,7 +30,7 @@ func TestMediaUseCase_ScreenshotThumbnailDataURL_OK(t *testing.T) {
 		t.Fatalf("Save: %v", err)
 	}
 
-	uc := NewMediaUseCase(repo, nil)
+	uc := NewMediaUseCase(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	if err := uc.EnsureScreenshotThumbnail(ctx, "thumb-id-1"); err != nil {
@@ -61,7 +61,7 @@ func TestMediaUseCase_ScreenshotThumbnailDataURL_CacheSecondCallNoUpsert(t *test
 		t.Fatalf("Save: %v", err)
 	}
 
-	uc := NewMediaUseCase(repo, nil)
+	uc := NewMediaUseCase(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	if err := uc.EnsureScreenshotThumbnail(ctx, "thumb-cache-1"); err != nil {
@@ -92,7 +92,7 @@ func TestMediaUseCase_ScreenshotThumbnailDataURL_EnsuresWhenNotCached(t *testing
 	if err := repo.Save(context.Background(), s); err != nil {
 		t.Fatal(err)
 	}
-	uc := NewMediaUseCase(repo, nil)
+	uc := NewMediaUseCase(repo, nil, nil, nil)
 	ctx := context.Background()
 	dataURL, err := uc.ScreenshotThumbnailDataURL(ctx, "lazy-thumb")
 	if err != nil {
@@ -114,7 +114,7 @@ func TestMediaUseCase_ScreenshotThumbnailDataURL_EnsuresWhenNotCached(t *testing
 
 func TestMediaUseCase_ScreenshotThumbnailDataURL_NotFound(t *testing.T) {
 	repo := newMockScreenshotRepo()
-	uc := NewMediaUseCase(repo, nil)
+	uc := NewMediaUseCase(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	_, err := uc.ScreenshotThumbnailDataURL(ctx, "missing")
@@ -127,7 +127,7 @@ func TestMediaUseCase_ScreenshotThumbnailDataURL_NotFound(t *testing.T) {
 }
 
 func TestMediaUseCase_ScreenshotThumbnailDataURL_EmptyID(t *testing.T) {
-	uc := NewMediaUseCase(newMockScreenshotRepo(), nil)
+	uc := NewMediaUseCase(newMockScreenshotRepo(), nil, nil, nil)
 	_, err := uc.ScreenshotThumbnailDataURL(context.Background(), "  ")
 	if err == nil {
 		t.Fatal("expected error")
@@ -143,7 +143,7 @@ func TestMediaUseCase_ScreenshotThumbnailDataURL_UnsupportedExt(t *testing.T) {
 	repo := newMockScreenshotRepo()
 	s := &media.Screenshot{ID: "g1", FilePath: badPath}
 	_ = repo.Save(context.Background(), s)
-	uc := NewMediaUseCase(repo, nil)
+	uc := NewMediaUseCase(repo, nil, nil, nil)
 	_, err := uc.ScreenshotThumbnailDataURL(context.Background(), "g1")
 	if err == nil || !strings.Contains(err.Error(), "unsupported") {
 		t.Fatalf("want unsupported extension error, got %v", err)

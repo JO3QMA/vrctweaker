@@ -65,6 +65,68 @@ func TestMigrate_renamesFriendsCacheBeforeCreatingUsersCache(t *testing.T) {
 	}
 }
 
+func TestMigrate_dropsLegacyScreenshotsWorldName(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "legacy-worldname.db")
+	db, err := sql.Open("sqlite", dbPath+"?_pragma=foreign_keys(1)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	exec := func(q string, args ...any) {
+		t.Helper()
+		if _, e := db.Exec(q, args...); e != nil {
+			t.Fatal(e)
+		}
+	}
+	// Pre-create screenshots as in older installs so CREATE IF NOT EXISTS in migrate is skipped.
+	exec(`CREATE TABLE screenshots (
+		id TEXT PRIMARY KEY,
+		file_path TEXT UNIQUE NOT NULL,
+		world_id TEXT,
+		world_name TEXT,
+		taken_at TEXT
+	)`)
+	exec(`INSERT INTO screenshots (id, file_path, world_name) VALUES ('x', '/tmp/x.png', 'Legacy Name')`)
+
+	if migErr := migrate(db); migErr != nil {
+		t.Fatalf("migrate: %v", migErr)
+	}
+
+	colRows, qErr := db.Query(`SELECT name FROM pragma_table_info('screenshots')`)
+	if qErr != nil {
+		t.Fatal(qErr)
+	}
+	for colRows.Next() {
+		var n string
+		if scanErr := colRows.Scan(&n); scanErr != nil {
+			_ = colRows.Close()
+			t.Fatal(scanErr)
+		}
+		if n == "world_name" {
+			_ = colRows.Close()
+			t.Fatal("world_name column should be dropped after migrate")
+		}
+	}
+	if closeErr := colRows.Close(); closeErr != nil {
+		t.Fatal(closeErr)
+	}
+
+	repo := NewScreenshotRepository(db)
+	ctx := context.Background()
+	got, getErr := repo.GetByFilePath(ctx, "/tmp/x.png")
+	if getErr != nil {
+		t.Fatal(getErr)
+	}
+	if got == nil || got.ID != "x" {
+		t.Fatalf("row missing after migrate: %+v", got)
+	}
+	if got.WorldName != "" {
+		t.Fatalf("WorldName comes from world_info only; want empty, got %q", got.WorldName)
+	}
+}
+
 func TestEnsureScreenshotThumbnailJpegBlobColumn_LegacyWebpBlob(t *testing.T) {
 	dir := t.TempDir()
 	db, err := sql.Open("sqlite", filepath.Join(dir, "legacy.db"))
@@ -84,7 +146,6 @@ func TestEnsureScreenshotThumbnailJpegBlobColumn_LegacyWebpBlob(t *testing.T) {
 		id TEXT PRIMARY KEY,
 		file_path TEXT UNIQUE NOT NULL,
 		world_id TEXT,
-		world_name TEXT,
 		taken_at TEXT
 	)`)
 	exec(`INSERT INTO screenshots (id, file_path) VALUES ('s1', '/x')`)
