@@ -47,6 +47,7 @@ type mockUserCacheRepo struct {
 	listFavorites   []*identity.UserCache
 	saveErr         error
 	saveBatchErr    error
+	lastSaveBatch   []*identity.UserCache
 	getSelfRow      *identity.UserCache
 	upsertSelfErr   error
 	deleteSelfCount int
@@ -86,11 +87,8 @@ func (m *mockUserCacheRepo) SaveBatch(_ context.Context, users []*identity.UserC
 	if m.saveBatchErr != nil {
 		return m.saveBatchErr
 	}
+	m.lastSaveBatch = append([]*identity.UserCache(nil), users...)
 	m.list = append([]*identity.UserCache(nil), users...)
-	return nil
-}
-
-func (m *mockUserCacheRepo) UpsertFromLog(_ context.Context, _, _ string, _ time.Time) error {
 	return nil
 }
 
@@ -489,6 +487,46 @@ func TestIdentityUseCase_RefreshFriends_sets_sync_timestamp(t *testing.T) {
 	}
 	if settingsRepo.m[identity.SettingVRChatFriendsSyncedAt] == "" {
 		t.Error("sync timestamp not set")
+	}
+}
+
+func TestIdentityUseCase_RefreshFriends_preservesSelfRow(t *testing.T) {
+	ctx := context.Background()
+	credStore := vrchatapi.NewStubCredentialStore()
+	if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, "t"); err != nil {
+		t.Fatal(err)
+	}
+	settingsRepo := newMockSettingsRepo()
+	at := time.Date(2026, 3, 20, 10, 0, 0, 0, time.UTC)
+	selfRow := &identity.UserCache{
+		VRCUserID:          "usr_me",
+		DisplayName:        "OriginalMe",
+		Status:             "busy",
+		UserKind:           identity.UserKindSelf,
+		LastUpdated:        at,
+		SessionFingerprint: "fp1",
+		Username:           "meuser",
+	}
+	userRepo := &mockUserCacheRepo{
+		getByID: map[string]*identity.UserCache{"usr_me": selfRow},
+	}
+	apiClient := &mockAPIClient{
+		getFriends: []vrchatapi.Friend{{
+			ID:          "usr_me",
+			DisplayName: "FromFriendsAPI",
+			Status:      "join me",
+		}},
+	}
+	uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo)
+	if err := uc.RefreshFriends(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if len(userRepo.lastSaveBatch) != 1 {
+		t.Fatalf("SaveBatch want 1 user, got %d", len(userRepo.lastSaveBatch))
+	}
+	saved := userRepo.lastSaveBatch[0]
+	if saved.UserKind != identity.UserKindSelf || saved.DisplayName != "OriginalMe" || saved.Status != "busy" {
+		t.Fatalf("self row overwritten by friends sync: %+v", saved)
 	}
 }
 

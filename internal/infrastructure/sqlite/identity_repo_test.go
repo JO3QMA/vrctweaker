@@ -12,7 +12,20 @@ import (
 	"vrchat-tweaker/internal/domain/identity"
 )
 
-func TestUserCacheRepository_UpsertFromLog_LastContactNoRegression(t *testing.T) {
+// mergeFromLogSave mirrors ActivityUseCase log cache updates: load, merge in domain, save.
+func mergeFromLogSave(ctx context.Context, repo *UserCacheRepository, vrcID, displayName string, at time.Time) error {
+	u, err := repo.GetByVRCUserID(ctx, vrcID)
+	if err != nil {
+		return err
+	}
+	if u == nil {
+		u = &identity.UserCache{VRCUserID: vrcID, UserKind: identity.UserKindContact}
+	}
+	u.MergeFromLog(displayName, at)
+	return repo.Save(ctx, u)
+}
+
+func TestUserCacheRepository_logMerge_lastContactNoRegression(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
 	db, dbErr := sql.Open("sqlite", dbPath)
@@ -32,7 +45,7 @@ func TestUserCacheRepository_UpsertFromLog_LastContactNoRegression(t *testing.T)
 	t2 := time.Date(2026, 3, 21, 10, 0, 0, 0, time.UTC)
 	t3 := time.Date(2026, 3, 22, 10, 0, 0, 0, time.UTC)
 
-	err := repo.UpsertFromLog(ctx, vrcID, "UserA", t1)
+	err := mergeFromLogSave(ctx, repo, vrcID, "UserA", t1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -41,10 +54,10 @@ func TestUserCacheRepository_UpsertFromLog_LastContactNoRegression(t *testing.T)
 		t.Fatal(err)
 	}
 	if u.LastContactAt == nil || !u.LastContactAt.Equal(t1) {
-		t.Fatalf("after first upsert LastContactAt = %v, want %v", u.LastContactAt, t1)
+		t.Fatalf("after first save LastContactAt = %v, want %v", u.LastContactAt, t1)
 	}
 
-	err = repo.UpsertFromLog(ctx, vrcID, "UserA", t3)
+	err = mergeFromLogSave(ctx, repo, vrcID, "UserA", t3)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,10 +66,10 @@ func TestUserCacheRepository_UpsertFromLog_LastContactNoRegression(t *testing.T)
 		t.Fatal(err)
 	}
 	if u.LastContactAt == nil || !u.LastContactAt.Equal(t3) {
-		t.Fatalf("after newer upsert LastContactAt = %v, want %v", u.LastContactAt, t3)
+		t.Fatalf("after newer save LastContactAt = %v, want %v", u.LastContactAt, t3)
 	}
 
-	err = repo.UpsertFromLog(ctx, vrcID, "UserA", t2)
+	err = mergeFromLogSave(ctx, repo, vrcID, "UserA", t2)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,14 +78,14 @@ func TestUserCacheRepository_UpsertFromLog_LastContactNoRegression(t *testing.T)
 		t.Fatal(err)
 	}
 	if u.LastContactAt == nil || !u.LastContactAt.Equal(t3) {
-		t.Fatalf("after older upsert LastContactAt = %v, want %v (no regression)", u.LastContactAt, t3)
+		t.Fatalf("after older save LastContactAt = %v, want %v (no regression)", u.LastContactAt, t3)
 	}
 	if u.UserKind != identity.UserKindContact {
 		t.Fatalf("user_kind = %q, want contact", u.UserKind)
 	}
 }
 
-func TestUserCacheRepository_UpsertFromLog_preservesFriendKind(t *testing.T) {
+func TestUserCacheRepository_logMerge_preservesFriendKind(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := filepath.Join(dir, "test.db")
 	db, dbErr := sql.Open("sqlite", dbPath)
@@ -98,7 +111,7 @@ func TestUserCacheRepository_UpsertFromLog_preservesFriendKind(t *testing.T) {
 	if err := repo.Save(ctx, f); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.UpsertFromLog(ctx, vrcID, "FriendFromLog", now.Add(time.Hour)); err != nil {
+	if err := mergeFromLogSave(ctx, repo, vrcID, "FriendFromLog", now.Add(time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 	u, err := repo.GetByVRCUserID(ctx, vrcID)
@@ -106,7 +119,7 @@ func TestUserCacheRepository_UpsertFromLog_preservesFriendKind(t *testing.T) {
 		t.Fatal(err)
 	}
 	if u.UserKind != identity.UserKindFriend {
-		t.Fatalf("user_kind = %q, want friend after log upsert", u.UserKind)
+		t.Fatalf("user_kind = %q, want friend after log merge+save", u.UserKind)
 	}
 }
 
@@ -124,7 +137,7 @@ func TestUserCacheRepository_UpsertSelf_promotesExistingContactRow(t *testing.T)
 	ctx := context.Background()
 	at := time.Date(2026, 3, 22, 12, 0, 0, 0, time.UTC)
 	const vrcID = "usr_local_player"
-	if err := repo.UpsertFromLog(ctx, vrcID, "LocalUser", at); err != nil {
+	if err := mergeFromLogSave(ctx, repo, vrcID, "LocalUser", at); err != nil {
 		t.Fatal(err)
 	}
 	before, err := repo.GetByVRCUserID(ctx, vrcID)
@@ -180,7 +193,17 @@ func TestUserCacheRepository_List_onlyFriendsWithStatus(t *testing.T) {
 	ctx := context.Background()
 	at := time.Now().UTC()
 
-	_ = repo.UpsertFromLog(ctx, "usr_c", "ContactOnly", at)
+	contact := &identity.UserCache{
+		VRCUserID:     "usr_c",
+		DisplayName:   "ContactOnly",
+		UserKind:      identity.UserKindContact,
+		LastUpdated:   at,
+		FirstSeenAt:   &at,
+		LastContactAt: &at,
+	}
+	if saveErr := repo.Save(ctx, contact); saveErr != nil {
+		t.Fatal(saveErr)
+	}
 	_ = repo.UpsertSelf(ctx, &identity.UserCache{
 		VRCUserID:                   "usr_self",
 		DisplayName:                 "Self",
@@ -215,7 +238,7 @@ func TestUserCacheRepository_List_onlyFriendsWithStatus(t *testing.T) {
 	}
 }
 
-func TestUserCacheRepository_SaveBatch_doesNotOverwriteSelf(t *testing.T) {
+func TestUserCacheRepository_SaveBatch_afterMergeFromAPIFriend_keepsSelf(t *testing.T) {
 	dir := t.TempDir()
 	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
 	if err != nil {
@@ -245,14 +268,19 @@ func TestUserCacheRepository_SaveBatch_doesNotOverwriteSelf(t *testing.T) {
 	if upErr := repo.UpsertSelf(ctx, self); upErr != nil {
 		t.Fatal(upErr)
 	}
-	batch := []*identity.UserCache{{
+	existing, err := repo.GetByVRCUserID(ctx, "usr_me")
+	if err != nil {
+		t.Fatal(err)
+	}
+	apiSnap := &identity.UserCache{
 		VRCUserID:   "usr_me",
 		DisplayName: "FromFriendsAPI",
 		Status:      "join me",
 		UserKind:    identity.UserKindFriend,
 		LastUpdated: at.Add(time.Hour),
-	}}
-	if batchErr := repo.SaveBatch(ctx, batch); batchErr != nil {
+	}
+	existing.MergeFromAPIFriend(apiSnap)
+	if batchErr := repo.SaveBatch(ctx, []*identity.UserCache{existing}); batchErr != nil {
 		t.Fatal(batchErr)
 	}
 	u, err := repo.GetByVRCUserID(ctx, "usr_me")

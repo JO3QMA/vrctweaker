@@ -211,21 +211,27 @@ func (uc *IdentityUseCase) RefreshFriends(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	now := time.Now()
 	cached := make([]*identity.UserCache, len(friends))
 	for i, f := range friends {
-		existing, _ := uc.userCacheRepo.GetByVRCUserID(ctx, f.ID)
-		isFav := false
-		if existing != nil {
-			isFav = existing.IsFavorite
+		existing, err := uc.userCacheRepo.GetByVRCUserID(ctx, f.ID)
+		if err != nil {
+			return err
 		}
-		cached[i] = &identity.UserCache{
+		if existing == nil {
+			existing = &identity.UserCache{VRCUserID: f.ID}
+		}
+		isFav := existing.IsFavorite
+		apiSnap := &identity.UserCache{
 			VRCUserID:   f.ID,
 			DisplayName: f.DisplayName,
 			Status:      f.Status,
 			IsFavorite:  isFav,
 			UserKind:    identity.UserKindFriend,
-			LastUpdated: time.Now(),
+			LastUpdated: now,
 		}
+		existing.MergeFromAPIFriend(apiSnap)
+		cached[i] = existing
 	}
 	if err := uc.userCacheRepo.SaveBatch(ctx, cached); err != nil {
 		return err

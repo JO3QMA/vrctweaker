@@ -74,6 +74,8 @@ func (r *UserCacheRepository) Save(ctx context.Context, u *identity.UserCache) e
 		status = excluded.status,
 		is_favorite = excluded.is_favorite,
 		last_updated = excluded.last_updated,
+		first_seen_at = excluded.first_seen_at,
+		last_contact_at = excluded.last_contact_at,
 		user_kind = excluded.user_kind,
 		session_fingerprint = excluded.session_fingerprint,
 		username = excluded.username,
@@ -104,12 +106,21 @@ func (r *UserCacheRepository) SaveBatch(ctx context.Context, users []*identity.U
 	defer func() { _ = tx.Rollback() }()
 
 	stmt, err := tx.PrepareContext(ctx, `INSERT INTO users_cache (vrc_user_id, display_name, status, is_favorite, last_updated, first_seen_at, last_contact_at, user_kind, session_fingerprint, username, status_description, user_state, avatar_thumbnail_url, user_icon_url, profile_pic_override_thumbnail)
-		VALUES (?, ?, ?, ?, ?, ?, ?, 'friend', NULL, NULL, NULL, NULL, NULL, NULL, NULL) ON CONFLICT(vrc_user_id) DO UPDATE SET
-		display_name = CASE WHEN users_cache.user_kind = 'self' THEN users_cache.display_name ELSE excluded.display_name END,
-		status = CASE WHEN users_cache.user_kind = 'self' THEN users_cache.status ELSE excluded.status END,
-		is_favorite = CASE WHEN users_cache.user_kind = 'self' THEN users_cache.is_favorite ELSE excluded.is_favorite END,
-		last_updated = CASE WHEN users_cache.user_kind = 'self' THEN users_cache.last_updated ELSE excluded.last_updated END,
-		user_kind = CASE WHEN users_cache.user_kind = 'self' THEN users_cache.user_kind ELSE 'friend' END`)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(vrc_user_id) DO UPDATE SET
+		display_name = excluded.display_name,
+		status = excluded.status,
+		is_favorite = excluded.is_favorite,
+		last_updated = excluded.last_updated,
+		first_seen_at = excluded.first_seen_at,
+		last_contact_at = excluded.last_contact_at,
+		user_kind = excluded.user_kind,
+		session_fingerprint = excluded.session_fingerprint,
+		username = excluded.username,
+		status_description = excluded.status_description,
+		user_state = excluded.user_state,
+		avatar_thumbnail_url = excluded.avatar_thumbnail_url,
+		user_icon_url = excluded.user_icon_url,
+		profile_pic_override_thumbnail = excluded.profile_pic_override_thumbnail`)
 	if err != nil {
 		return err
 	}
@@ -127,32 +138,18 @@ func (r *UserCacheRepository) SaveBatch(ctx context.Context, users []*identity.U
 		if u.LastContactAt != nil {
 			lc = u.LastContactAt.Format(time.RFC3339)
 		}
-		_, err = stmt.ExecContext(ctx, u.VRCUserID, u.DisplayName, nullString(u.Status), isFav, u.LastUpdated.Format(time.RFC3339), fs, lc)
+		uk := u.UserKind
+		if uk == "" {
+			uk = identity.UserKindContact
+		}
+		_, err = stmt.ExecContext(ctx, u.VRCUserID, u.DisplayName, nullString(u.Status), isFav, u.LastUpdated.Format(time.RFC3339), fs, lc, string(uk), nullString(u.SessionFingerprint),
+			nullString(u.Username), nullString(u.StatusDescription), nullString(u.UserState),
+			nullString(u.AvatarThumbnailURL), nullString(u.UserIconURL), nullString(u.ProfilePicOverrideThumbnail))
 		if err != nil {
 			return err
 		}
 	}
 	return tx.Commit()
-}
-
-// UpsertFromLog updates or inserts log-derived contact times without downgrading friend/self.
-func (r *UserCacheRepository) UpsertFromLog(ctx context.Context, vrcUserID, displayName string, at time.Time) error {
-	if vrcUserID == "" {
-		return nil
-	}
-	ts := at.Format(time.RFC3339)
-	_, err := r.db.ExecContext(ctx, `INSERT INTO users_cache (vrc_user_id, display_name, status, is_favorite, last_updated, first_seen_at, last_contact_at, user_kind, session_fingerprint, username, status_description, user_state, avatar_thumbnail_url, user_icon_url, profile_pic_override_thumbnail)
-		VALUES (?, ?, NULL, 0, ?, ?, ?, 'contact', NULL, NULL, NULL, NULL, NULL, NULL, NULL) ON CONFLICT(vrc_user_id) DO UPDATE SET
-		display_name = excluded.display_name,
-		user_kind = CASE WHEN users_cache.user_kind IN ('self', 'friend') THEN users_cache.user_kind ELSE 'contact' END,
-		last_contact_at = CASE
-			WHEN users_cache.last_contact_at IS NULL THEN excluded.last_contact_at
-			WHEN excluded.last_contact_at > users_cache.last_contact_at THEN excluded.last_contact_at
-			ELSE users_cache.last_contact_at END,
-		first_seen_at = COALESCE(users_cache.first_seen_at, excluded.first_seen_at),
-		last_updated = CASE WHEN users_cache.user_kind IN ('self', 'friend') THEN users_cache.last_updated ELSE excluded.last_updated END`,
-		vrcUserID, displayName, ts, ts, ts)
-	return err
 }
 
 // Delete removes a row by VRChat user ID.
