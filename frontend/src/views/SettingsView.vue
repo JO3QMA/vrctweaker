@@ -45,7 +45,7 @@
             type="button"
             class="btn-refresh"
             :disabled="profileLoading"
-            @click="loadCurrentUser"
+            @click="loadCurrentUser(true)"
           >
             プロフィール再取得
           </button>
@@ -335,7 +335,6 @@ const avatarDisplayUrl = computed(() => {
     u.userIcon ||
     ""
   );
-  );
 });
 
 function formatBackendError(e: unknown, fallback: string): string {
@@ -386,11 +385,11 @@ onMounted(async () => {
   pathSettings.outputLogPath = ps.outputLogPath;
 });
 
-async function loadCurrentUser() {
+async function loadCurrentUser(forceRefresh = false) {
   profileError.value = "";
   profileLoading.value = true;
   try {
-    currentUser.value = await App.getVRChatCurrentUser();
+    currentUser.value = await App.getVRChatCurrentUser(forceRefresh);
   } catch (e) {
     currentUser.value = null;
     profileError.value = formatBackendError(

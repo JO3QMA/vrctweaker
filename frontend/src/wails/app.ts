@@ -208,7 +208,7 @@ interface AppBindings {
   ): Promise<LoginResultDTO>;
   Logout(): Promise<void>;
   IsLoggedIn(): Promise<boolean>;
-  GetVRChatCurrentUser(): Promise<VRChatCurrentUserDTO>;
+  GetVRChatCurrentUser(forceRefresh?: boolean): Promise<VRChatCurrentUserDTO>;
   RefreshFriends(): Promise<void>;
   VacuumDb(): Promise<void>;
   ClearEncounters(): Promise<number>;
@@ -419,8 +419,10 @@ export const App = {
   async isLoggedIn(): Promise<boolean> {
     return callApp((a) => a.IsLoggedIn(), false);
   },
-  async getVRChatCurrentUser(): Promise<VRChatCurrentUserDTO> {
-    return callApp((a) => a.GetVRChatCurrentUser(), {
+  async getVRChatCurrentUser(
+    forceRefresh?: boolean,
+  ): Promise<VRChatCurrentUserDTO> {
+    return callApp((a) => a.GetVRChatCurrentUser(forceRefresh ?? false), {
       id: "",
       displayName: "",
       username: "",

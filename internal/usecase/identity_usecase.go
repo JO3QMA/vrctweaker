@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"vrchat-tweaker/internal/domain/identity"
@@ -102,14 +103,15 @@ func currentUserProfileToSelfCache(p *vrchatapi.CurrentUserProfile, fingerprint 
 }
 
 // GetCurrentUser returns the logged-in VRChat user profile (cached up to UserCacheTTL).
-func (uc *IdentityUseCase) GetCurrentUser(ctx context.Context) (*vrchatapi.CurrentUserProfile, error) {
+// When forceRefresh is true, the API is always called and the cache is updated (e.g. user-triggered re-fetch).
+func (uc *IdentityUseCase) GetCurrentUser(ctx context.Context, forceRefresh bool) (*vrchatapi.CurrentUserProfile, error) {
 	token, err := uc.credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
 	if err != nil || token == "" {
 		return nil, vrchatapi.ErrNotAuthenticated
 	}
 	uc.apiClient.SetAuthToken(token)
 	fp := identity.AuthTokenFingerprint(token)
-	if fp != "" {
+	if !forceRefresh && fp != "" {
 		row, gerr := uc.userCacheRepo.GetSelfBySessionFingerprint(ctx, fp)
 		if gerr != nil {
 			return nil, gerr
@@ -164,7 +166,9 @@ func (uc *IdentityUseCase) ListFriends(ctx context.Context) ([]*identity.UserCac
 	if loggedIn && uc.settingsRepo != nil {
 		stale, err := uc.friendsSyncStale(ctx)
 		if err == nil && stale {
-			_ = uc.RefreshFriends(ctx)
+			if rerr := uc.RefreshFriends(ctx); rerr != nil {
+				log.Printf("identity: ListFriends: background RefreshFriends failed: %v", rerr)
+			}
 		}
 	}
 	return uc.userCacheRepo.List(ctx)

@@ -297,7 +297,7 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 		credStore := vrchatapi.NewStubCredentialStore()
 		apiClient := &mockAPIClient{}
 		uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo)
-		_, err := uc.GetCurrentUser(ctx)
+		_, err := uc.GetCurrentUser(ctx, false)
 		if err != vrchatapi.ErrNotAuthenticated {
 			t.Fatalf("err = %v, want ErrNotAuthenticated", err)
 		}
@@ -312,7 +312,7 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 		apiClient := &mockAPIClient{getCurrentUser: prof}
 		repo := &mockUserCacheRepo{}
 		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
-		got, err := uc.GetCurrentUser(ctx)
+		got, err := uc.GetCurrentUser(ctx, false)
 		if err != nil {
 			t.Fatalf("GetCurrentUser: %v", err)
 		}
@@ -361,7 +361,7 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 		}
 		apiClient := &mockAPIClient{getCurrentUser: &vrchatapi.CurrentUserProfile{ID: "wrong"}}
 		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
-		got, err := uc.GetCurrentUser(ctx)
+		got, err := uc.GetCurrentUser(ctx, false)
 		if err != nil {
 			t.Fatalf("GetCurrentUser: %v", err)
 		}
@@ -381,9 +381,42 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 		repo := &mockUserCacheRepo{upsertSelfErr: errors.New("disk full")}
 		apiClient := &mockAPIClient{getCurrentUser: &vrchatapi.CurrentUserProfile{ID: "u1"}}
 		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
-		_, err := uc.GetCurrentUser(ctx)
+		_, err := uc.GetCurrentUser(ctx, false)
 		if err == nil {
 			t.Fatal("want error from UpsertSelf")
+		}
+	})
+
+	t.Run("forceRefresh_bypasses_cache", func(t *testing.T) {
+		credStore := vrchatapi.NewStubCredentialStore()
+		if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, "tok"); err != nil {
+			t.Fatal(err)
+		}
+		fp := identity.AuthTokenFingerprint("tok")
+		fresh := &vrchatapi.CurrentUserProfile{ID: "usr_fresh", DisplayName: "Fresh"}
+		repo := &mockUserCacheRepo{
+			getSelfRow: &identity.UserCache{
+				VRCUserID:          "usr_cached",
+				DisplayName:        "Cached",
+				UserKind:           identity.UserKindSelf,
+				LastUpdated:        time.Now(),
+				SessionFingerprint: fp,
+			},
+		}
+		apiClient := &mockAPIClient{getCurrentUser: fresh}
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		got, err := uc.GetCurrentUser(ctx, true)
+		if err != nil {
+			t.Fatalf("GetCurrentUser: %v", err)
+		}
+		if got.ID != "usr_fresh" || got.DisplayName != "Fresh" {
+			t.Fatalf("got %+v, want fresh profile from API", got)
+		}
+		if apiClient.getCurrentUserCalls != 1 {
+			t.Errorf("API calls want 1, got %d", apiClient.getCurrentUserCalls)
+		}
+		if repo.lastUpsertSelf == nil || repo.lastUpsertSelf.VRCUserID != "usr_fresh" {
+			t.Fatalf("UpsertSelf want usr_fresh, got %+v", repo.lastUpsertSelf)
 		}
 	})
 }

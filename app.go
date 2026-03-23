@@ -920,8 +920,9 @@ func (a *App) IsLoggedIn() (bool, error) {
 }
 
 // GetVRChatCurrentUser returns the logged-in user's profile from the VRChat API.
-func (a *App) GetVRChatCurrentUser() (VRChatCurrentUserDTO, error) {
-	u, err := a.identity.GetCurrentUser(a.ctx)
+// When forceRefresh is true, bypasses the local self-profile cache and refetches from the API.
+func (a *App) GetVRChatCurrentUser(forceRefresh bool) (VRChatCurrentUserDTO, error) {
+	u, err := a.identity.GetCurrentUser(a.ctx, forceRefresh)
 	if err != nil {
 		return VRChatCurrentUserDTO{}, err
 	}
