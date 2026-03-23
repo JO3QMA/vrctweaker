@@ -80,6 +80,8 @@ export function getMockWailsInitScript(): string {
         Login: () => Promise.resolve({ ok: false, error: 'E2E mock' }),
         Logout: () => Promise.resolve(),
         IsLoggedIn: () => Promise.resolve(false),
+        GetVRChatCurrentUser: () =>
+          Promise.reject(new Error('E2E mock: not logged in')),
         RefreshFriends: () => Promise.resolve(),
         VacuumDb: () => Promise.resolve(),
         ClearEncounters: () => Promise.resolve(0),

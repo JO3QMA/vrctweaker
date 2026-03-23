@@ -48,7 +48,7 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}) 
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "VRChat Tweaker/1.0")
+	req.Header.Set("User-Agent", userAgent)
 	if c.authToken != "" {
 		req.Header.Set("Authorization", "Basic "+c.authToken)
 	}

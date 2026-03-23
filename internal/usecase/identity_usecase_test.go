@@ -62,12 +62,14 @@ func (m *mockUserCacheRepo) DeleteAll(_ context.Context) (int64, error) {
 
 // mockAPIClient implements vrchatapi.VRChatAPIClient for tests.
 type mockAPIClient struct {
-	loginToken    string
-	loginErr      error
-	token         string
-	getFriends    []vrchatapi.Friend
-	getFriendsErr error
-	setStatusErr  error
+	loginToken        string
+	loginErr          error
+	token             string
+	getCurrentUser    *vrchatapi.CurrentUserProfile
+	getCurrentUserErr error
+	getFriends        []vrchatapi.Friend
+	getFriendsErr     error
+	setStatusErr      error
 }
 
 func (m *mockAPIClient) Login(_ context.Context, _, _, _ string) (string, error) {
@@ -76,6 +78,13 @@ func (m *mockAPIClient) Login(_ context.Context, _, _, _ string) (string, error)
 
 func (m *mockAPIClient) SetAuthToken(token string) {
 	m.token = token
+}
+
+func (m *mockAPIClient) GetCurrentUser(_ context.Context) (*vrchatapi.CurrentUserProfile, error) {
+	if m.getCurrentUserErr != nil {
+		return nil, m.getCurrentUserErr
+	}
+	return m.getCurrentUser, nil
 }
 
 func (m *mockAPIClient) GetFriends(_ context.Context) ([]vrchatapi.Friend, error) {
@@ -199,6 +208,41 @@ func TestIdentityUseCase_Login(t *testing.T) {
 		}
 		if apiClient.token != "auth-token-123" {
 			t.Errorf("apiClient token: want auth-token-123, got %q", apiClient.token)
+		}
+	})
+}
+
+func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
+	ctx := context.Background()
+	userRepo := &mockUserCacheRepo{}
+
+	t.Run("not_logged_in", func(t *testing.T) {
+		credStore := vrchatapi.NewStubCredentialStore()
+		apiClient := &mockAPIClient{}
+		uc := NewIdentityUseCase(userRepo, apiClient, credStore)
+		_, err := uc.GetCurrentUser(ctx)
+		if err != vrchatapi.ErrNotAuthenticated {
+			t.Fatalf("err = %v, want ErrNotAuthenticated", err)
+		}
+	})
+
+	t.Run("success", func(t *testing.T) {
+		credStore := vrchatapi.NewStubCredentialStore()
+		if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, "tok"); err != nil {
+			t.Fatal(err)
+		}
+		prof := &vrchatapi.CurrentUserProfile{ID: "usr_x", DisplayName: "Test"}
+		apiClient := &mockAPIClient{getCurrentUser: prof}
+		uc := NewIdentityUseCase(userRepo, apiClient, credStore)
+		got, err := uc.GetCurrentUser(ctx)
+		if err != nil {
+			t.Fatalf("GetCurrentUser: %v", err)
+		}
+		if got != prof {
+			t.Fatal("profile pointer mismatch")
+		}
+		if apiClient.token != "tok" {
+			t.Errorf("apiClient token: want tok, got %q", apiClient.token)
 		}
 	})
 }

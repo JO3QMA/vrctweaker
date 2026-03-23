@@ -83,7 +83,7 @@ func (c *Client) loginWithBasicAuth(ctx context.Context, client *http.Client, us
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", "VRChat Tweaker/1.0")
+	req.Header.Set("User-Agent", userAgent)
 	req.SetBasicAuth(url.QueryEscape(username), url.QueryEscape(password))
 
 	resp, err := client.Do(req)
@@ -137,7 +137,7 @@ func (c *Client) verifyTwoFactor(ctx context.Context, client *http.Client, authC
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "VRChat Tweaker/1.0")
+	req.Header.Set("User-Agent", userAgent)
 	req.AddCookie(&http.Cookie{Name: "auth", Value: authCookie})
 
 	resp, err := client.Do(req)
@@ -161,7 +161,7 @@ func (c *Client) getAuthUserWithCookie(ctx context.Context, client *http.Client,
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", "VRChat Tweaker/1.0")
+	req.Header.Set("User-Agent", userAgent)
 	req.AddCookie(&http.Cookie{Name: "auth", Value: authCookie})
 
 	resp, err := client.Do(req)

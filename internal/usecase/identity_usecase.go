@@ -47,6 +47,16 @@ func (uc *IdentityUseCase) IsLoggedIn(ctx context.Context) (bool, error) {
 	return err == nil, nil
 }
 
+// GetCurrentUser returns the logged-in VRChat user profile from GET /auth/user.
+func (uc *IdentityUseCase) GetCurrentUser(ctx context.Context) (*vrchatapi.CurrentUserProfile, error) {
+	token, err := uc.credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
+	if err != nil || token == "" {
+		return nil, vrchatapi.ErrNotAuthenticated
+	}
+	uc.apiClient.SetAuthToken(token)
+	return uc.apiClient.GetCurrentUser(ctx)
+}
+
 // Login authenticates with VRChat and persists the auth token to CredentialStore.
 func (uc *IdentityUseCase) Login(ctx context.Context, username, password, twoFactorCode string) error {
 	if username == "" || password == "" {

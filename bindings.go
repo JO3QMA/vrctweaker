@@ -319,6 +319,19 @@ type LoginResultDTO struct {
 	Error string `json:"error,omitempty"`
 }
 
+// VRChatCurrentUserDTO is non-sensitive profile fields from GET /auth/user for the settings UI.
+type VRChatCurrentUserDTO struct {
+	ID                             string `json:"id"`
+	DisplayName                    string `json:"displayName"`
+	Username                       string `json:"username"`
+	Status                         string `json:"status"`
+	StatusDescription              string `json:"statusDescription"`
+	State                          string `json:"state"`
+	CurrentAvatarThumbnailImageURL string `json:"currentAvatarThumbnailImageUrl"`
+	UserIcon                       string `json:"userIcon"`
+	ProfilePicOverrideThumbnail    string `json:"profilePicOverrideThumbnail"`
+}
+
 // PathSettingsDTO is the frontend-facing path settings.
 type PathSettingsDTO struct {
 	VRChatPathWindows string `json:"vrchatPathWindows"`

@@ -919,6 +919,28 @@ func (a *App) IsLoggedIn() (bool, error) {
 	return a.identity.IsLoggedIn(a.ctx)
 }
 
+// GetVRChatCurrentUser returns the logged-in user's profile from the VRChat API.
+func (a *App) GetVRChatCurrentUser() (VRChatCurrentUserDTO, error) {
+	u, err := a.identity.GetCurrentUser(a.ctx)
+	if err != nil {
+		return VRChatCurrentUserDTO{}, err
+	}
+	if u == nil {
+		return VRChatCurrentUserDTO{}, errors.New("empty current user")
+	}
+	return VRChatCurrentUserDTO{
+		ID:                             u.ID,
+		DisplayName:                    u.DisplayName,
+		Username:                       u.Username,
+		Status:                         u.Status,
+		StatusDescription:              u.StatusDescription,
+		State:                          u.State,
+		CurrentAvatarThumbnailImageURL: u.CurrentAvatarThumbnailImageURL,
+		UserIcon:                       u.UserIcon,
+		ProfilePicOverrideThumbnail:    u.ProfilePicOverrideThumbnail,
+	}, nil
+}
+
 // RefreshFriends fetches friends from API and updates cache.
 func (a *App) RefreshFriends() error {
 	return a.identity.RefreshFriends(a.ctx)
