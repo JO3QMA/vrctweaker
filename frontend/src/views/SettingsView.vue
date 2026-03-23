@@ -330,10 +330,11 @@ const avatarDisplayUrl = computed(() => {
   const u = currentUser.value;
   if (!u) return "";
   return (
-    u.currentAvatarThumbnailImageUrl ||
     u.profilePicOverrideThumbnail ||
+    u.currentAvatarThumbnailImageUrl ||
     u.userIcon ||
     ""
+  );
   );
 });
 
