@@ -91,11 +91,11 @@ func (a *App) startup(ctx context.Context) {
 	a.launcher = usecase.NewLauncherUseCase(launcherRepo)
 	a.media = usecase.NewMediaUseCase(mediaRepo, extractor)
 	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo)
-	a.identity = usecase.NewIdentityUseCaseWithNotifier(userCacheRepo, apiClient, credStore, notifier)
+	a.identity = usecase.NewIdentityUseCaseWithNotifier(userCacheRepo, apiClient, credStore, settingsRepo, notifier)
 	actionRunner := usecase.NewDefaultActionRunner(a.identity)
 	a.automation = usecase.NewAutomationUseCase(automationRepo, eventBus, actionRunner)
 	a.settings = usecase.NewSettingsUseCase(settingsRepo)
-	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(encounterRepo, mediaRepo, userCacheRepo, maintenanceRepo)
+	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(encounterRepo, mediaRepo, userCacheRepo, maintenanceRepo, settingsRepo)
 
 	configPath := getVRChatConfigPath()
 	configRepo := filesystem.NewVRChatConfigFileRepository(configPath)

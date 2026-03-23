@@ -281,7 +281,7 @@ func toEncounterDTOsFromContext(list []*activity.EncounterWithContext) []UserEnc
 	return out
 }
 
-// UserCacheDTO is the frontend-facing users_cache row (VRChat friends from API).
+// UserCacheDTO is the frontend-facing users_cache row for the friends list (user_kind=friend).
 type UserCacheDTO struct {
 	VRCUserID     string `json:"vrcUserId"`
 	DisplayName   string `json:"displayName"`
