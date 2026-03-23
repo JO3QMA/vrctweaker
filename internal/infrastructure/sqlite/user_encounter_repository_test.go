@@ -19,7 +19,7 @@ func TestUserEncounterRepository_List_FilterVRCUserID(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := migrate(db); migrateErr != nil {
+	if migrateErr := applySchema(db); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 
@@ -58,7 +58,7 @@ func TestUserEncounterRepository_List_FilterWorldID(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := migrate(db); migrateErr != nil {
+	if migrateErr := applySchema(db); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 
@@ -99,7 +99,7 @@ func TestUserEncounterRepository_ListWithContext_FilterWorldID(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := migrate(db); migrateErr != nil {
+	if migrateErr := applySchema(db); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 
@@ -137,7 +137,7 @@ func TestUserEncounterRepository_BackfillMissingWorldContext(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := migrate(db); migrateErr != nil {
+	if migrateErr := applySchema(db); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 

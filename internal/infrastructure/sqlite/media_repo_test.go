@@ -20,7 +20,7 @@ func TestScreenshotRepository_ThumbnailRoundTrip(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
-	if migErr := migrate(db); migErr != nil {
+	if migErr := applySchema(db); migErr != nil {
 		t.Fatal(migErr)
 	}
 
@@ -83,7 +83,7 @@ func TestScreenshotRepository_ListJoinsWorldAndAuthorDisplayNames(t *testing.T) 
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if mErr := migrate(db); mErr != nil {
+	if mErr := applySchema(db); mErr != nil {
 		t.Fatal(mErr)
 	}
 	ctx := context.Background()

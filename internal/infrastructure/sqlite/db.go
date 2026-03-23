@@ -4,14 +4,13 @@ import (
 	"database/sql"
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	_ "modernc.org/sqlite"
 )
 
 const defaultLogRetentionDays = 30
 
-// Open opens or creates the SQLite database and runs migrations.
+// Open opens or creates the SQLite database and applies the canonical schema.
 func Open(dataDir string) (*sql.DB, error) {
 	dbPath := filepath.Join(dataDir, "vrchat-tweaker.db")
 	// Foreign keys are per-connection; database/sql pools connections, so a one-off
@@ -26,125 +25,19 @@ func Open(dataDir string) (*sql.DB, error) {
 		return nil, fmt.Errorf("ping db: %w", err)
 	}
 
-	if err := migrate(conn); err != nil {
+	if err := applySchema(conn); err != nil {
 		_ = conn.Close()
-		return nil, fmt.Errorf("migrate: %w", err)
+		return nil, fmt.Errorf("apply schema: %w", err)
 	}
 
 	return conn, nil
 }
 
-func migrate(db *sql.DB) error {
-	// friends_cache → users_cache must run before CREATE TABLE users_cache, or existing
-	// installs would get an empty users_cache and skip the rename (orphaning friends_cache).
-	migrationsBeforeUsersCache := []string{
-		`CREATE TABLE IF NOT EXISTS launch_profiles (
-			id TEXT PRIMARY KEY,
-			name TEXT NOT NULL,
-			arguments TEXT,
-			is_default INTEGER DEFAULT 0,
-			created_at TEXT,
-			updated_at TEXT
-		)`,
-		`CREATE TABLE IF NOT EXISTS screenshots (
-			id TEXT PRIMARY KEY,
-			file_path TEXT UNIQUE NOT NULL,
-			world_id TEXT,
-			taken_at TEXT
-		)`,
-		`CREATE TABLE IF NOT EXISTS play_sessions (
-			id TEXT PRIMARY KEY,
-			start_time TEXT NOT NULL,
-			end_time TEXT,
-			duration_sec INTEGER
-		)`,
-		`CREATE TABLE IF NOT EXISTS user_encounters (
-			id TEXT PRIMARY KEY,
-			vrc_user_id TEXT NOT NULL,
-			display_name TEXT NOT NULL,
-			action TEXT NOT NULL,
-			instance_id TEXT,
-			encountered_at TEXT NOT NULL
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_user_encounters_encountered_at ON user_encounters(encountered_at)`,
-	}
-
-	for _, m := range migrationsBeforeUsersCache {
-		if _, err := db.Exec(m); err != nil {
-			return fmt.Errorf("migration failed: %w", err)
+func applySchema(db *sql.DB) error {
+	for _, stmt := range schemaStatements() {
+		if _, err := db.Exec(stmt); err != nil {
+			return fmt.Errorf("schema: %w", err)
 		}
-	}
-
-	if err := ensureFriendsCacheRenamedToUsersCache(db); err != nil {
-		return err
-	}
-
-	migrationsAfterUsersCacheRename := []string{
-		`CREATE TABLE IF NOT EXISTS users_cache (
-			vrc_user_id TEXT PRIMARY KEY,
-			display_name TEXT NOT NULL,
-			status TEXT,
-			is_favorite INTEGER DEFAULT 0,
-			last_updated TEXT NOT NULL,
-			first_seen_at TEXT,
-			last_contact_at TEXT
-		)`,
-		`CREATE TABLE IF NOT EXISTS world_info (
-			world_id TEXT PRIMARY KEY,
-			display_name TEXT,
-			last_visited_at TEXT NOT NULL
-		)`,
-		`CREATE TABLE IF NOT EXISTS automation_rules (
-			id TEXT PRIMARY KEY,
-			name TEXT NOT NULL,
-			trigger_type TEXT NOT NULL,
-			condition_json TEXT,
-			action_type TEXT NOT NULL,
-			action_payload TEXT,
-			is_enabled INTEGER DEFAULT 1
-		)`,
-		`CREATE TABLE IF NOT EXISTS app_settings (
-			key TEXT PRIMARY KEY,
-			value TEXT NOT NULL,
-			updated_at TEXT
-		)`,
-	}
-
-	for _, m := range migrationsAfterUsersCacheRename {
-		if _, err := db.Exec(m); err != nil {
-			return fmt.Errorf("migration failed: %w", err)
-		}
-	}
-
-	if err := ensureScreenshotsFileSizeColumn(db); err != nil {
-		return err
-	}
-	if err := ensureScreenshotsAuthorVRCUserIDColumn(db); err != nil {
-		return err
-	}
-	if err := ensureScreenshotsWorldNameDropped(db); err != nil {
-		return err
-	}
-	if _, err := db.Exec(`CREATE TABLE IF NOT EXISTS screenshot_thumbnails (
-			screenshot_id TEXT PRIMARY KEY,
-			jpeg_blob BLOB NOT NULL,
-			source_size INTEGER NOT NULL,
-			source_mod_unix INTEGER NOT NULL,
-			FOREIGN KEY (screenshot_id) REFERENCES screenshots(id) ON DELETE CASCADE
-		)`); err != nil {
-		return fmt.Errorf("migration screenshot_thumbnails: %w", err)
-	}
-	if err := ensureScreenshotThumbnailJpegBlobColumn(db); err != nil {
-		return err
-	}
-	if err := ensureUsersCacheLogColumns(db); err != nil {
-		return err
-	}
-	if err := ensureUsersCacheUserKindAndProfileColumns(db); err != nil {
-		return err
-	}
-	if err := ensureUserEncountersWorldIDColumn(db); err != nil {
-		return err
 	}
 
 	// Insert default log_retention_days if not present
@@ -168,168 +61,82 @@ func migrate(db *sql.DB) error {
 	return nil
 }
 
-// ensureFriendsCacheRenamedToUsersCache migrates legacy friends_cache → users_cache.
-func ensureFriendsCacheRenamedToUsersCache(db *sql.DB) error {
-	var friendsCount, usersCount int
-	_ = db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='friends_cache'`).Scan(&friendsCount)
-	_ = db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='users_cache'`).Scan(&usersCount)
-	if friendsCount > 0 && usersCount == 0 {
-		if _, err := db.Exec(`ALTER TABLE friends_cache RENAME TO users_cache`); err != nil {
-			return fmt.Errorf("rename friends_cache to users_cache: %w", err)
-		}
+func schemaStatements() []string {
+	return []string{
+		`CREATE TABLE IF NOT EXISTS launch_profiles (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			arguments TEXT,
+			is_default INTEGER DEFAULT 0,
+			created_at TEXT,
+			updated_at TEXT
+		)`,
+		`CREATE TABLE IF NOT EXISTS screenshots (
+			id TEXT PRIMARY KEY,
+			file_path TEXT UNIQUE NOT NULL,
+			world_id TEXT,
+			taken_at TEXT,
+			file_size_bytes INTEGER,
+			author_vrc_user_id TEXT
+		)`,
+		`CREATE TABLE IF NOT EXISTS play_sessions (
+			id TEXT PRIMARY KEY,
+			start_time TEXT NOT NULL,
+			end_time TEXT,
+			duration_sec INTEGER
+		)`,
+		`CREATE TABLE IF NOT EXISTS user_encounters (
+			id TEXT PRIMARY KEY,
+			vrc_user_id TEXT NOT NULL,
+			display_name TEXT NOT NULL,
+			action TEXT NOT NULL,
+			instance_id TEXT,
+			world_id TEXT,
+			encountered_at TEXT NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_user_encounters_encountered_at ON user_encounters(encountered_at)`,
+		`CREATE TABLE IF NOT EXISTS users_cache (
+			vrc_user_id TEXT PRIMARY KEY,
+			display_name TEXT NOT NULL,
+			status TEXT,
+			is_favorite INTEGER DEFAULT 0,
+			last_updated TEXT NOT NULL,
+			first_seen_at TEXT,
+			last_contact_at TEXT,
+			user_kind TEXT NOT NULL DEFAULT 'contact',
+			session_fingerprint TEXT,
+			username TEXT,
+			status_description TEXT,
+			user_state TEXT,
+			avatar_thumbnail_url TEXT,
+			user_icon_url TEXT,
+			profile_pic_override_thumbnail TEXT
+		)`,
+		`CREATE TABLE IF NOT EXISTS world_info (
+			world_id TEXT PRIMARY KEY,
+			display_name TEXT,
+			last_visited_at TEXT NOT NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS automation_rules (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			trigger_type TEXT NOT NULL,
+			condition_json TEXT,
+			action_type TEXT NOT NULL,
+			action_payload TEXT,
+			is_enabled INTEGER DEFAULT 1
+		)`,
+		`CREATE TABLE IF NOT EXISTS app_settings (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL,
+			updated_at TEXT
+		)`,
+		`CREATE TABLE IF NOT EXISTS screenshot_thumbnails (
+			screenshot_id TEXT PRIMARY KEY,
+			jpeg_blob BLOB NOT NULL,
+			source_size INTEGER NOT NULL,
+			source_mod_unix INTEGER NOT NULL,
+			FOREIGN KEY (screenshot_id) REFERENCES screenshots(id) ON DELETE CASCADE
+		)`,
 	}
-	return nil
-}
-
-func ensureUsersCacheLogColumns(db *sql.DB) error {
-	for _, col := range []struct {
-		name string
-		sql  string
-	}{
-		{"first_seen_at", `ALTER TABLE users_cache ADD COLUMN first_seen_at TEXT`},
-		{"last_contact_at", `ALTER TABLE users_cache ADD COLUMN last_contact_at TEXT`},
-	} {
-		if err := addColumnIfMissing(db, "users_cache", col.name, col.sql); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func ensureUsersCacheUserKindAndProfileColumns(db *sql.DB) error {
-	for _, col := range []struct {
-		name string
-		sql  string
-	}{
-		{"user_kind", `ALTER TABLE users_cache ADD COLUMN user_kind TEXT NOT NULL DEFAULT 'contact'`},
-		{"session_fingerprint", `ALTER TABLE users_cache ADD COLUMN session_fingerprint TEXT`},
-		{"username", `ALTER TABLE users_cache ADD COLUMN username TEXT`},
-		{"status_description", `ALTER TABLE users_cache ADD COLUMN status_description TEXT`},
-		{"user_state", `ALTER TABLE users_cache ADD COLUMN user_state TEXT`},
-		{"avatar_thumbnail_url", `ALTER TABLE users_cache ADD COLUMN avatar_thumbnail_url TEXT`},
-		{"user_icon_url", `ALTER TABLE users_cache ADD COLUMN user_icon_url TEXT`},
-		{"profile_pic_override_thumbnail", `ALTER TABLE users_cache ADD COLUMN profile_pic_override_thumbnail TEXT`},
-	} {
-		if err := addColumnIfMissing(db, "users_cache", col.name, col.sql); err != nil {
-			return err
-		}
-	}
-	// Heuristic backfill: rows with VRChat API-style status came from friend sync.
-	if _, err := db.Exec(`UPDATE users_cache SET user_kind = 'friend' WHERE status IS NOT NULL AND TRIM(status) != '' AND user_kind = 'contact'`); err != nil {
-		return fmt.Errorf("backfill users_cache user_kind: %w", err)
-	}
-	return nil
-}
-
-func ensureUserEncountersWorldIDColumn(db *sql.DB) error {
-	return addColumnIfMissing(db, "user_encounters", "world_id", `ALTER TABLE user_encounters ADD COLUMN world_id TEXT`)
-}
-
-func addColumnIfMissing(db *sql.DB, table, column, alterSQL string) error {
-	rows, err := db.Query(fmt.Sprintf(`SELECT name FROM pragma_table_info('%s')`, table))
-	if err != nil {
-		return fmt.Errorf("pragma_table_info %s: %w", table, err)
-	}
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return err
-		}
-		if name == column {
-			return nil
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return err
-	}
-	if _, err := db.Exec(alterSQL); err != nil {
-		msg := strings.ToLower(err.Error())
-		if strings.Contains(msg, "duplicate column") {
-			return nil
-		}
-		return fmt.Errorf("%s: %w", alterSQL, err)
-	}
-	return nil
-}
-
-func ensureScreenshotsFileSizeColumn(db *sql.DB) error {
-	_, err := db.Exec(`ALTER TABLE screenshots ADD COLUMN file_size_bytes INTEGER`)
-	if err == nil {
-		return nil
-	}
-	msg := strings.ToLower(err.Error())
-	if strings.Contains(msg, "duplicate column") {
-		return nil
-	}
-	return fmt.Errorf("add file_size_bytes: %w", err)
-}
-
-func ensureScreenshotsAuthorVRCUserIDColumn(db *sql.DB) error {
-	return addColumnIfMissing(db, "screenshots", "author_vrc_user_id", `ALTER TABLE screenshots ADD COLUMN author_vrc_user_id TEXT`)
-}
-
-// ensureScreenshotsWorldNameDropped removes legacy screenshots.world_name; display names live in world_info only.
-func ensureScreenshotsWorldNameDropped(db *sql.DB) error {
-	rows, err := db.Query(`SELECT name FROM pragma_table_info('screenshots')`)
-	if err != nil {
-		return fmt.Errorf("pragma_table_info screenshots: %w", err)
-	}
-	var hasWorldName bool
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			_ = rows.Close()
-			return err
-		}
-		if name == "world_name" {
-			hasWorldName = true
-		}
-	}
-	if err := rows.Err(); err != nil {
-		_ = rows.Close()
-		return err
-	}
-	if err := rows.Close(); err != nil {
-		return err
-	}
-	if !hasWorldName {
-		return nil
-	}
-	if _, err := db.Exec(`ALTER TABLE screenshots DROP COLUMN world_name`); err != nil {
-		return fmt.Errorf("drop screenshots.world_name: %w", err)
-	}
-	return nil
-}
-
-// ensureScreenshotThumbnailJpegBlobColumn renames legacy webp_blob → jpeg_blob (data was always JPEG).
-func ensureScreenshotThumbnailJpegBlobColumn(db *sql.DB) error {
-	rows, err := db.Query(`SELECT name FROM pragma_table_info('screenshot_thumbnails')`)
-	if err != nil {
-		return fmt.Errorf("pragma screenshot_thumbnails columns: %w", err)
-	}
-	defer func() { _ = rows.Close() }()
-
-	var hasWebp, hasJpeg bool
-	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
-			return err
-		}
-		switch name {
-		case "webp_blob":
-			hasWebp = true
-		case "jpeg_blob":
-			hasJpeg = true
-		}
-	}
-	if err := rows.Err(); err != nil {
-		return err
-	}
-	if hasWebp && !hasJpeg {
-		if _, err := db.Exec(`ALTER TABLE screenshot_thumbnails RENAME COLUMN webp_blob TO jpeg_blob`); err != nil {
-			return fmt.Errorf("rename webp_blob to jpeg_blob: %w", err)
-		}
-	}
-	return nil
 }

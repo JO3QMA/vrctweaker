@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"path/filepath"
 	"testing"
 	"time"
@@ -12,168 +13,71 @@ import (
 	"vrchat-tweaker/internal/domain/media"
 )
 
-func TestMigrate_renamesFriendsCacheBeforeCreatingUsersCache(t *testing.T) {
-	dir := t.TempDir()
-	dbPath := filepath.Join(dir, "vrchat-tweaker.db")
-	db, err := sql.Open("sqlite", dbPath+"?_pragma=foreign_keys(1)")
+func columnNames(t *testing.T, db *sql.DB, table string) map[string]bool {
+	t.Helper()
+	rows, err := db.Query(fmt.Sprintf(`SELECT name FROM pragma_table_info('%s')`, table))
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = db.Close() })
-
-	exec := func(q string, args ...any) {
-		t.Helper()
-		if _, execErr := db.Exec(q, args...); execErr != nil {
-			t.Fatal(execErr)
+	defer func() { _ = rows.Close() }()
+	out := make(map[string]bool)
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			t.Fatal(err)
 		}
+		out[name] = true
 	}
-
-	exec(`CREATE TABLE friends_cache (
-		vrc_user_id TEXT PRIMARY KEY,
-		display_name TEXT NOT NULL,
-		status TEXT,
-		is_favorite INTEGER DEFAULT 0,
-		last_updated TEXT NOT NULL
-	)`)
-	exec(`INSERT INTO friends_cache (vrc_user_id, display_name, status, is_favorite, last_updated)
-		VALUES ('usr_legacy', 'Legacy Friend', 'join me', 1, '2020-01-01T00:00:00Z')`)
-
-	if migErr := migrate(db); migErr != nil {
-		t.Fatal(migErr)
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
 	}
-
-	var gotName string
-	if err := db.QueryRow(`SELECT display_name FROM users_cache WHERE vrc_user_id = ?`, "usr_legacy").Scan(&gotName); err != nil {
-		t.Fatalf("expected row in users_cache after rename: %v", err)
-	}
-	if gotName != "Legacy Friend" {
-		t.Fatalf("display_name = %q, want Legacy Friend", gotName)
-	}
-
-	var userKind string
-	if err := db.QueryRow(`SELECT user_kind FROM users_cache WHERE vrc_user_id = ?`, "usr_legacy").Scan(&userKind); err != nil {
-		t.Fatalf("user_kind: %v", err)
-	}
-	if userKind != "friend" {
-		t.Fatalf("user_kind = %q, want friend (API-style status backfill)", userKind)
-	}
-
-	var friendsN int
-	_ = db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='friends_cache'`).Scan(&friendsN)
-	if friendsN != 0 {
-		t.Fatalf("friends_cache should be gone after rename, sqlite_master count=%d", friendsN)
-	}
+	return out
 }
 
-func TestMigrate_dropsLegacyScreenshotsWorldName(t *testing.T) {
+func TestApplySchema_canonicalColumns(t *testing.T) {
 	dir := t.TempDir()
-	dbPath := filepath.Join(dir, "legacy-worldname.db")
-	db, err := sql.Open("sqlite", dbPath+"?_pragma=foreign_keys(1)")
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db")+"?_pragma=foreign_keys(1)")
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
-	exec := func(q string, args ...any) {
-		t.Helper()
-		if _, e := db.Exec(q, args...); e != nil {
-			t.Fatal(e)
-		}
-	}
-	// Pre-create screenshots as in older installs so CREATE IF NOT EXISTS in migrate is skipped.
-	exec(`CREATE TABLE screenshots (
-		id TEXT PRIMARY KEY,
-		file_path TEXT UNIQUE NOT NULL,
-		world_id TEXT,
-		world_name TEXT,
-		taken_at TEXT
-	)`)
-	exec(`INSERT INTO screenshots (id, file_path, world_name) VALUES ('x', '/tmp/x.png', 'Legacy Name')`)
-
-	if migErr := migrate(db); migErr != nil {
-		t.Fatalf("migrate: %v", migErr)
-	}
-
-	colRows, qErr := db.Query(`SELECT name FROM pragma_table_info('screenshots')`)
-	if qErr != nil {
-		t.Fatal(qErr)
-	}
-	for colRows.Next() {
-		var n string
-		if scanErr := colRows.Scan(&n); scanErr != nil {
-			_ = colRows.Close()
-			t.Fatal(scanErr)
-		}
-		if n == "world_name" {
-			_ = colRows.Close()
-			t.Fatal("world_name column should be dropped after migrate")
-		}
-	}
-	if closeErr := colRows.Close(); closeErr != nil {
-		t.Fatal(closeErr)
-	}
-
-	repo := NewScreenshotRepository(db)
-	ctx := context.Background()
-	got, getErr := repo.GetByFilePath(ctx, "/tmp/x.png")
-	if getErr != nil {
-		t.Fatal(getErr)
-	}
-	if got == nil || got.ID != "x" {
-		t.Fatalf("row missing after migrate: %+v", got)
-	}
-	if got.WorldName != "" {
-		t.Fatalf("WorldName comes from world_info only; want empty, got %q", got.WorldName)
-	}
-}
-
-func TestEnsureScreenshotThumbnailJpegBlobColumn_LegacyWebpBlob(t *testing.T) {
-	dir := t.TempDir()
-	db, err := sql.Open("sqlite", filepath.Join(dir, "legacy.db"))
-	if err != nil {
+	if err := applySchema(db); err != nil {
 		t.Fatal(err)
 	}
-	t.Cleanup(func() { _ = db.Close() })
 
-	exec := func(q string, args ...any) {
-		t.Helper()
-		if _, execErr := db.Exec(q, args...); execErr != nil {
-			t.Fatal(execErr)
+	screenshots := columnNames(t, db, "screenshots")
+	for _, col := range []string{
+		"id", "file_path", "world_id", "taken_at", "file_size_bytes", "author_vrc_user_id",
+	} {
+		if !screenshots[col] {
+			t.Fatalf("screenshots missing column %q", col)
+		}
+	}
+	if screenshots["world_name"] {
+		t.Fatal("screenshots must not define legacy world_name column")
+	}
+
+	usersCache := columnNames(t, db, "users_cache")
+	for _, col := range []string{
+		"vrc_user_id", "display_name", "status", "is_favorite", "last_updated",
+		"first_seen_at", "last_contact_at", "user_kind", "session_fingerprint", "username",
+		"status_description", "user_state", "avatar_thumbnail_url", "user_icon_url",
+		"profile_pic_override_thumbnail",
+	} {
+		if !usersCache[col] {
+			t.Fatalf("users_cache missing column %q", col)
 		}
 	}
 
-	exec(`CREATE TABLE screenshots (
-		id TEXT PRIMARY KEY,
-		file_path TEXT UNIQUE NOT NULL,
-		world_id TEXT,
-		taken_at TEXT
-	)`)
-	exec(`INSERT INTO screenshots (id, file_path) VALUES ('s1', '/x')`)
-	exec(`CREATE TABLE screenshot_thumbnails (
-		screenshot_id TEXT PRIMARY KEY,
-		webp_blob BLOB NOT NULL,
-		source_size INTEGER NOT NULL,
-		source_mod_unix INTEGER NOT NULL,
-		FOREIGN KEY (screenshot_id) REFERENCES screenshots(id) ON DELETE CASCADE
-	)`)
-	hdr := []byte{0xff, 0xd8, 0xff}
-	exec(`INSERT INTO screenshot_thumbnails (screenshot_id, webp_blob, source_size, source_mod_unix) VALUES (?, ?, ?, ?)`,
-		"s1", hdr, int64(10), int64(20))
-
-	if colErr := ensureScreenshotThumbnailJpegBlobColumn(db); colErr != nil {
-		t.Fatal(colErr)
+	encounters := columnNames(t, db, "user_encounters")
+	if !encounters["world_id"] {
+		t.Fatal("user_encounters missing world_id")
 	}
 
-	repo := NewScreenshotRepository(db)
-	got, err := repo.GetThumbnail(context.Background(), "s1")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got == nil {
-		t.Fatal("expected thumbnail after column rename")
-	}
-	if string(got.JpegBlob) != string(hdr) {
-		t.Fatalf("blob mismatch after migrate")
+	thumbs := columnNames(t, db, "screenshot_thumbnails")
+	if !thumbs["jpeg_blob"] || thumbs["webp_blob"] {
+		t.Fatalf("screenshot_thumbnails: want jpeg_blob only, got %#v", thumbs)
 	}
 }
 
@@ -185,7 +89,7 @@ func TestOpen_foreignKeysCascadeDeletesThumbnails(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
-	// Exercise the pool so DELETE may run on a connection other than Ping/migrate.
+	// Exercise the pool so DELETE may run on a connection other than Ping/applySchema.
 	db.SetMaxOpenConns(4)
 
 	repo := NewScreenshotRepository(db)

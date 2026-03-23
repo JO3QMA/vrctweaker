@@ -33,7 +33,7 @@ func TestUserCacheRepository_logMerge_lastContactNoRegression(t *testing.T) {
 		t.Fatal(dbErr)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := migrate(db); migrateErr != nil {
+	if migrateErr := applySchema(db); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 
@@ -93,7 +93,7 @@ func TestUserCacheRepository_logMerge_preservesFriendKind(t *testing.T) {
 		t.Fatal(dbErr)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := migrate(db); migrateErr != nil {
+	if migrateErr := applySchema(db); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 
@@ -130,7 +130,7 @@ func TestUserCacheRepository_UpsertSelf_promotesExistingContactRow(t *testing.T)
 		t.Fatal(dbErr)
 	}
 	defer func() { _ = db.Close() }()
-	if migErr := migrate(db); migErr != nil {
+	if migErr := applySchema(db); migErr != nil {
 		t.Fatal(migErr)
 	}
 	repo := NewUserCacheRepository(db)
@@ -186,7 +186,7 @@ func TestUserCacheRepository_List_onlyFriendsWithStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migErr := migrate(db); migErr != nil {
+	if migErr := applySchema(db); migErr != nil {
 		t.Fatal(migErr)
 	}
 	repo := NewUserCacheRepository(db)
@@ -245,7 +245,7 @@ func TestUserCacheRepository_SaveBatch_afterMergeFromAPIFriend_keepsSelf(t *test
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migErr := migrate(db); migErr != nil {
+	if migErr := applySchema(db); migErr != nil {
 		t.Fatal(migErr)
 	}
 	repo := NewUserCacheRepository(db)
@@ -305,7 +305,7 @@ func TestUserCacheRepository_GetSelfBySessionFingerprint(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migErr := migrate(db); migErr != nil {
+	if migErr := applySchema(db); migErr != nil {
 		t.Fatal(migErr)
 	}
 	repo := NewUserCacheRepository(db)
