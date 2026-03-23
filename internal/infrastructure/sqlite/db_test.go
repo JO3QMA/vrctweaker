@@ -50,6 +50,14 @@ func TestMigrate_renamesFriendsCacheBeforeCreatingUsersCache(t *testing.T) {
 		t.Fatalf("display_name = %q, want Legacy Friend", gotName)
 	}
 
+	var userKind string
+	if err := db.QueryRow(`SELECT user_kind FROM users_cache WHERE vrc_user_id = ?`, "usr_legacy").Scan(&userKind); err != nil {
+		t.Fatalf("user_kind: %v", err)
+	}
+	if userKind != "friend" {
+		t.Fatalf("user_kind = %q, want friend (API-style status backfill)", userKind)
+	}
+
 	var friendsN int
 	_ = db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='friends_cache'`).Scan(&friendsN)
 	if friendsN != 0 {

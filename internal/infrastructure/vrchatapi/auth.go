@@ -6,6 +6,7 @@ import "context"
 type VRChatAPIClient interface {
 	Login(ctx context.Context, username, password, twoFactorCode string) (string, error)
 	SetAuthToken(token string)
+	GetCurrentUser(ctx context.Context) (*CurrentUserProfile, error)
 	GetFriends(ctx context.Context) ([]Friend, error)
 	SetUserStatus(ctx context.Context, status UserStatus) error
 }

@@ -4,8 +4,51 @@
     <section class="settings-section">
       <h2>VRChat ログイン</h2>
       <div v-if="isLoggedIn" class="login-status">
+        <div v-if="profileLoading && !currentUser" class="profile-loading">
+          プロフィールを読み込み中…
+        </div>
+        <div v-else-if="currentUser" class="current-user-card">
+          <img
+            v-if="avatarDisplayUrl"
+            :src="avatarDisplayUrl"
+            alt=""
+            class="current-user-avatar"
+            width="96"
+            height="96"
+          />
+          <div class="current-user-details">
+            <p class="current-user-display-name">
+              {{ currentUser.displayName || "（表示名なし）" }}
+            </p>
+            <p v-if="currentUser.username" class="current-user-line">
+              @{{ currentUser.username }}
+            </p>
+            <p v-if="currentUser.id" class="current-user-line muted">
+              {{ currentUser.id }}
+            </p>
+            <p class="current-user-line">
+              ステータス: {{ currentUser.status || "—" }} /
+              {{ currentUser.state || "—" }}
+            </p>
+            <p
+              v-if="currentUser.statusDescription"
+              class="current-user-line muted"
+            >
+              {{ currentUser.statusDescription }}
+            </p>
+          </div>
+        </div>
+        <p v-if="profileError" class="profile-error">{{ profileError }}</p>
         <span class="logged-in-label">ログイン済み</span>
         <div class="login-actions">
+          <button
+            type="button"
+            class="btn-refresh"
+            :disabled="profileLoading"
+            @click="loadCurrentUser(true)"
+          >
+            プロフィール再取得
+          </button>
           <button type="button" class="btn-refresh" @click="refreshFriends">
             フレンド一覧を更新
           </button>
@@ -274,11 +317,35 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from "vue";
+import { ref, reactive, computed, onMounted } from "vue";
 import { App } from "../wails/app";
-import type { PathSettingsDTO } from "../wails/app";
+import type { PathSettingsDTO, VRChatCurrentUserDTO } from "../wails/app";
 
 const isLoggedIn = ref(false);
+const currentUser = ref<VRChatCurrentUserDTO | null>(null);
+const profileLoading = ref(false);
+const profileError = ref("");
+
+const avatarDisplayUrl = computed(() => {
+  const u = currentUser.value;
+  if (!u) return "";
+  return (
+    u.profilePicOverrideThumbnail ||
+    u.currentAvatarThumbnailImageUrl ||
+    u.userIcon ||
+    ""
+  );
+});
+
+function formatBackendError(e: unknown, fallback: string): string {
+  if (e instanceof Error && e.message) return e.message;
+  if (typeof e === "string" && e) return e;
+  if (e && typeof e === "object" && "message" in e) {
+    const m = (e as { message: unknown }).message;
+    if (typeof m === "string" && m) return m;
+  }
+  return fallback;
+}
 const loginForm = reactive({
   username: "",
   password: "",
@@ -308,12 +375,31 @@ onMounted(async () => {
   } catch {
     isLoggedIn.value = false;
   }
+  if (isLoggedIn.value) {
+    await loadCurrentUser();
+  }
   logRetentionDays.value = await App.getLogRetentionDays();
   const ps = await App.getPathSettings();
   pathSettings.vrchatPathWindows = ps.vrchatPathWindows;
   pathSettings.steamPathLinux = ps.steamPathLinux;
   pathSettings.outputLogPath = ps.outputLogPath;
 });
+
+async function loadCurrentUser(forceRefresh = false) {
+  profileError.value = "";
+  profileLoading.value = true;
+  try {
+    currentUser.value = await App.getVRChatCurrentUser(forceRefresh);
+  } catch (e) {
+    currentUser.value = null;
+    profileError.value = formatBackendError(
+      e,
+      "プロフィールの取得に失敗しました",
+    );
+  } finally {
+    profileLoading.value = false;
+  }
+}
 
 async function login() {
   loginError.value = "";
@@ -329,6 +415,7 @@ async function login() {
       loginForm.username = "";
       loginForm.password = "";
       loginForm.twoFactorCode = "";
+      await loadCurrentUser();
     } else {
       loginError.value = result.error || "ログインに失敗しました";
     }
@@ -339,6 +426,8 @@ async function login() {
 
 async function logout() {
   loginError.value = "";
+  profileError.value = "";
+  currentUser.value = null;
   try {
     await App.logout();
     isLoggedIn.value = false;
@@ -498,9 +587,13 @@ function doClearScreenshots() {
 
 function doClearFriendsCache() {
   runWithConfirm(
-    "ユーザーキャッシュ（users_cache）をすべて削除します。よろしいですか？",
+    "ユーザーキャッシュ（users_cache）の全行（自分・フレンド・遭遇ログ由来のユーザー）を削除します。よろしいですか？",
     async () => App.clearFriendsCache(),
-    (n) => `${n}件のフレンドキャッシュを削除しました`,
+    (n) => {
+      currentUser.value = null;
+      profileError.value = "";
+      return `${n}件のフレンドキャッシュを削除しました`;
+    },
   );
 }
 </script>
@@ -604,6 +697,53 @@ function doClearFriendsCache() {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+.profile-loading {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+.current-user-card {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 0.75rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  max-width: 480px;
+}
+.current-user-avatar {
+  flex-shrink: 0;
+  border-radius: var(--radius);
+  object-fit: cover;
+  background: var(--bg-primary);
+}
+.current-user-details {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.current-user-display-name {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.current-user-line {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+.current-user-line.muted {
+  color: var(--text-secondary);
+}
+.profile-error {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--error, #ef4444);
+  max-width: 480px;
 }
 .logged-in-label {
   font-size: 0.95rem;

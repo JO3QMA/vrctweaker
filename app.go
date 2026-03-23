@@ -91,11 +91,11 @@ func (a *App) startup(ctx context.Context) {
 	a.launcher = usecase.NewLauncherUseCase(launcherRepo)
 	a.media = usecase.NewMediaUseCase(mediaRepo, extractor)
 	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo)
-	a.identity = usecase.NewIdentityUseCaseWithNotifier(userCacheRepo, apiClient, credStore, notifier)
+	a.identity = usecase.NewIdentityUseCaseWithNotifier(userCacheRepo, apiClient, credStore, settingsRepo, notifier)
 	actionRunner := usecase.NewDefaultActionRunner(a.identity)
 	a.automation = usecase.NewAutomationUseCase(automationRepo, eventBus, actionRunner)
 	a.settings = usecase.NewSettingsUseCase(settingsRepo)
-	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(encounterRepo, mediaRepo, userCacheRepo, maintenanceRepo)
+	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(encounterRepo, mediaRepo, userCacheRepo, maintenanceRepo, settingsRepo)
 
 	configPath := getVRChatConfigPath()
 	configRepo := filesystem.NewVRChatConfigFileRepository(configPath)
@@ -917,6 +917,29 @@ func (a *App) Logout() error {
 // IsLoggedIn returns true if we have stored credentials.
 func (a *App) IsLoggedIn() (bool, error) {
 	return a.identity.IsLoggedIn(a.ctx)
+}
+
+// GetVRChatCurrentUser returns the logged-in user's profile from the VRChat API.
+// When forceRefresh is true, bypasses the local self-profile cache and refetches from the API.
+func (a *App) GetVRChatCurrentUser(forceRefresh bool) (VRChatCurrentUserDTO, error) {
+	u, err := a.identity.GetCurrentUser(a.ctx, forceRefresh)
+	if err != nil {
+		return VRChatCurrentUserDTO{}, err
+	}
+	if u == nil {
+		return VRChatCurrentUserDTO{}, errors.New("empty current user")
+	}
+	return VRChatCurrentUserDTO{
+		ID:                             u.ID,
+		DisplayName:                    u.DisplayName,
+		Username:                       u.Username,
+		Status:                         u.Status,
+		StatusDescription:              u.StatusDescription,
+		State:                          u.State,
+		CurrentAvatarThumbnailImageURL: u.CurrentAvatarThumbnailImageURL,
+		UserIcon:                       u.UserIcon,
+		ProfilePicOverrideThumbnail:    u.ProfilePicOverrideThumbnail,
+	}, nil
 }
 
 // RefreshFriends fetches friends from API and updates cache.

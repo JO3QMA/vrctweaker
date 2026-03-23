@@ -135,6 +135,7 @@ func TestMaintenance_ClearFriendsCache_Integration(t *testing.T) {
 		VRCUserID:   "usr_xxx",
 		DisplayName: "FriendUser",
 		Status:      "active",
+		UserKind:    identity.UserKindFriend,
 		IsFavorite:  false,
 		LastUpdated: time.Now().UTC(),
 	}

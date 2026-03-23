@@ -121,7 +121,15 @@ func (uc *ActivityUseCase) RecordEncounterAt(ctx context.Context, vrcUserID, dis
 		return err
 	}
 	if uc.userCacheRepo != nil && vrcUserID != "" {
-		if err := uc.userCacheRepo.UpsertFromLog(ctx, vrcUserID, displayName, at); err != nil {
+		existing, err := uc.userCacheRepo.GetByVRCUserID(ctx, vrcUserID)
+		if err != nil {
+			return err
+		}
+		if existing == nil {
+			existing = &identity.UserCache{VRCUserID: vrcUserID, UserKind: identity.UserKindContact}
+		}
+		existing.MergeFromLog(displayName, at)
+		if err := uc.userCacheRepo.Save(ctx, existing); err != nil {
 			return err
 		}
 	}

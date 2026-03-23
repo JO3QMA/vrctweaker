@@ -106,6 +106,19 @@ export interface LoginResultDTO {
   error?: string;
 }
 
+/** GET /auth/user subset for settings UI (no authToken). */
+export interface VRChatCurrentUserDTO {
+  id: string;
+  displayName: string;
+  username: string;
+  status: string;
+  statusDescription: string;
+  state: string;
+  currentAvatarThumbnailImageUrl: string;
+  userIcon: string;
+  profilePicOverrideThumbnail: string;
+}
+
 export interface DailyPlaySecondsDTO {
   date: string;
   seconds: number;
@@ -195,6 +208,7 @@ interface AppBindings {
   ): Promise<LoginResultDTO>;
   Logout(): Promise<void>;
   IsLoggedIn(): Promise<boolean>;
+  GetVRChatCurrentUser(forceRefresh?: boolean): Promise<VRChatCurrentUserDTO>;
   RefreshFriends(): Promise<void>;
   VacuumDb(): Promise<void>;
   ClearEncounters(): Promise<number>;
@@ -404,6 +418,21 @@ export const App = {
   },
   async isLoggedIn(): Promise<boolean> {
     return callApp((a) => a.IsLoggedIn(), false);
+  },
+  async getVRChatCurrentUser(
+    forceRefresh?: boolean,
+  ): Promise<VRChatCurrentUserDTO> {
+    return callApp((a) => a.GetVRChatCurrentUser(forceRefresh ?? false), {
+      id: "",
+      displayName: "",
+      username: "",
+      status: "",
+      statusDescription: "",
+      state: "",
+      currentAvatarThumbnailImageUrl: "",
+      userIcon: "",
+      profilePicOverrideThumbnail: "",
+    });
   },
   async refreshFriends(): Promise<void> {
     return callApp((a) => a.RefreshFriends(), undefined);

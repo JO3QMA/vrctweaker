@@ -135,6 +135,9 @@ func migrate(db *sql.DB) error {
 	if err := ensureUsersCacheLogColumns(db); err != nil {
 		return err
 	}
+	if err := ensureUsersCacheUserKindAndProfileColumns(db); err != nil {
+		return err
+	}
 	if err := ensureUserEncountersWorldIDColumn(db); err != nil {
 		return err
 	}
@@ -184,6 +187,31 @@ func ensureUsersCacheLogColumns(db *sql.DB) error {
 		if err := addColumnIfMissing(db, "users_cache", col.name, col.sql); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+func ensureUsersCacheUserKindAndProfileColumns(db *sql.DB) error {
+	for _, col := range []struct {
+		name string
+		sql  string
+	}{
+		{"user_kind", `ALTER TABLE users_cache ADD COLUMN user_kind TEXT NOT NULL DEFAULT 'contact'`},
+		{"session_fingerprint", `ALTER TABLE users_cache ADD COLUMN session_fingerprint TEXT`},
+		{"username", `ALTER TABLE users_cache ADD COLUMN username TEXT`},
+		{"status_description", `ALTER TABLE users_cache ADD COLUMN status_description TEXT`},
+		{"user_state", `ALTER TABLE users_cache ADD COLUMN user_state TEXT`},
+		{"avatar_thumbnail_url", `ALTER TABLE users_cache ADD COLUMN avatar_thumbnail_url TEXT`},
+		{"user_icon_url", `ALTER TABLE users_cache ADD COLUMN user_icon_url TEXT`},
+		{"profile_pic_override_thumbnail", `ALTER TABLE users_cache ADD COLUMN profile_pic_override_thumbnail TEXT`},
+	} {
+		if err := addColumnIfMissing(db, "users_cache", col.name, col.sql); err != nil {
+			return err
+		}
+	}
+	// Heuristic backfill: rows with VRChat API-style status came from friend sync.
+	if _, err := db.Exec(`UPDATE users_cache SET user_kind = 'friend' WHERE status IS NOT NULL AND TRIM(status) != '' AND user_kind = 'contact'`); err != nil {
+		return fmt.Errorf("backfill users_cache user_kind: %w", err)
 	}
 	return nil
 }

@@ -281,7 +281,7 @@ func toEncounterDTOsFromContext(list []*activity.EncounterWithContext) []UserEnc
 	return out
 }
 
-// UserCacheDTO is the frontend-facing users_cache row (VRChat friends from API).
+// UserCacheDTO is the frontend-facing users_cache row for the friends list (user_kind=friend).
 type UserCacheDTO struct {
 	VRCUserID     string `json:"vrcUserId"`
 	DisplayName   string `json:"displayName"`
@@ -317,6 +317,19 @@ func toUserCacheDTOs(list []*identity.UserCache) []UserCacheDTO {
 type LoginResultDTO struct {
 	OK    bool   `json:"ok"`
 	Error string `json:"error,omitempty"`
+}
+
+// VRChatCurrentUserDTO is non-sensitive profile fields from GET /auth/user for the settings UI.
+type VRChatCurrentUserDTO struct {
+	ID                             string `json:"id"`
+	DisplayName                    string `json:"displayName"`
+	Username                       string `json:"username"`
+	Status                         string `json:"status"`
+	StatusDescription              string `json:"statusDescription"`
+	State                          string `json:"state"`
+	CurrentAvatarThumbnailImageURL string `json:"currentAvatarThumbnailImageUrl"`
+	UserIcon                       string `json:"userIcon"`
+	ProfilePicOverrideThumbnail    string `json:"profilePicOverrideThumbnail"`
 }
 
 // PathSettingsDTO is the frontend-facing path settings.
