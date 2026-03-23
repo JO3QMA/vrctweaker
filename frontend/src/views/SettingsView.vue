@@ -336,6 +336,16 @@ const avatarDisplayUrl = computed(() => {
     ""
   );
 });
+
+function formatBackendError(e: unknown, fallback: string): string {
+  if (e instanceof Error && e.message) return e.message;
+  if (typeof e === "string" && e) return e;
+  if (e && typeof e === "object" && "message" in e) {
+    const m = (e as { message: unknown }).message;
+    if (typeof m === "string" && m) return m;
+  }
+  return fallback;
+}
 const loginForm = reactive({
   username: "",
   password: "",
@@ -382,8 +392,10 @@ async function loadCurrentUser() {
     currentUser.value = await App.getVRChatCurrentUser();
   } catch (e) {
     currentUser.value = null;
-    profileError.value =
-      e instanceof Error ? e.message : "プロフィールの取得に失敗しました";
+    profileError.value = formatBackendError(
+      e,
+      "プロフィールの取得に失敗しました",
+    );
   } finally {
     profileLoading.value = false;
   }

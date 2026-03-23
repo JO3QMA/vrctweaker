@@ -25,7 +25,7 @@ type CurrentUserProfile struct {
 	ProfilePicOverrideThumbnail    string `json:"profilePicOverrideThumbnail"`
 }
 
-// GetCurrentUser fetches the logged-in user via GET /auth/user (Authorization: Basic authToken).
+// GetCurrentUser fetches the logged-in user via GET /auth/user (session `auth` cookie).
 func (c *Client) GetCurrentUser(ctx context.Context) (*CurrentUserProfile, error) {
 	if c.authToken == "" {
 		return nil, ErrNotAuthenticated
