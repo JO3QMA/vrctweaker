@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -178,48 +179,59 @@ func (r *UserCacheRepository) GetSelfBySessionFingerprint(ctx context.Context, s
 	return scanUserCacheRow(row)
 }
 
-// UpsertSelf removes self rows for other VRChat accounts, then inserts or updates this user's row
-// to user_kind=self (ON CONFLICT: same vrc_user_id may already exist as friend/contact from logs or API).
+// UpsertSelf removes self rows for other VRChat accounts, then replaces this user's row with user_kind=self.
+// It uses DELETE-by-primary-key + INSERT inside a transaction so we never rely on INSERT...ON CONFLICT
+// (avoids UNIQUE failures if upsert is unsupported or mis-resolved) and handles existing friend/contact rows.
 func (r *UserCacheRepository) UpsertSelf(ctx context.Context, u *identity.UserCache) error {
 	if u.VRCUserID == "" {
 		return fmt.Errorf("upsert self: empty vrc_user_id")
 	}
-	if _, err := r.db.ExecContext(ctx, `DELETE FROM users_cache WHERE user_kind = 'self' AND vrc_user_id != ?`, u.VRCUserID); err != nil {
+	tx, err := r.db.BeginTx(ctx, nil)
+	if err != nil {
 		return err
 	}
+	defer func() { _ = tx.Rollback() }()
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM users_cache WHERE user_kind = 'self' AND vrc_user_id != ?`, u.VRCUserID); err != nil {
+		return err
+	}
+
+	var existingFS, existingLC sql.NullString
+	if scanErr := tx.QueryRowContext(ctx,
+		`SELECT first_seen_at, last_contact_at FROM users_cache WHERE vrc_user_id = ?`, u.VRCUserID,
+	).Scan(&existingFS, &existingLC); scanErr != nil && !errors.Is(scanErr, sql.ErrNoRows) {
+		return scanErr
+	}
+
+	var fs, lc interface{}
+	if u.FirstSeenAt != nil {
+		fs = u.FirstSeenAt.Format(time.RFC3339)
+	} else if existingFS.Valid {
+		fs = existingFS.String
+	}
+	if u.LastContactAt != nil {
+		lc = u.LastContactAt.Format(time.RFC3339)
+	} else if existingLC.Valid {
+		lc = existingLC.String
+	}
+
+	if _, err := tx.ExecContext(ctx, `DELETE FROM users_cache WHERE vrc_user_id = ?`, u.VRCUserID); err != nil {
+		return err
+	}
+
 	isFav := 0
 	if u.IsFavorite {
 		isFav = 1
 	}
-	var fs, lc interface{}
-	if u.FirstSeenAt != nil {
-		fs = u.FirstSeenAt.Format(time.RFC3339)
-	}
-	if u.LastContactAt != nil {
-		lc = u.LastContactAt.Format(time.RFC3339)
-	}
-	_, err := r.db.ExecContext(ctx, `INSERT INTO users_cache (vrc_user_id, display_name, status, is_favorite, last_updated, first_seen_at, last_contact_at, user_kind, session_fingerprint, username, status_description, user_state, avatar_thumbnail_url, user_icon_url, profile_pic_override_thumbnail)
-		VALUES (?, ?, ?, ?, ?, ?, ?, 'self', ?, ?, ?, ?, ?, ?, ?)
-		ON CONFLICT(vrc_user_id) DO UPDATE SET
-		display_name = excluded.display_name,
-		status = excluded.status,
-		is_favorite = excluded.is_favorite,
-		last_updated = excluded.last_updated,
-		first_seen_at = COALESCE(users_cache.first_seen_at, excluded.first_seen_at),
-		last_contact_at = users_cache.last_contact_at,
-		user_kind = 'self',
-		session_fingerprint = excluded.session_fingerprint,
-		username = excluded.username,
-		status_description = excluded.status_description,
-		user_state = excluded.user_state,
-		avatar_thumbnail_url = excluded.avatar_thumbnail_url,
-		user_icon_url = excluded.user_icon_url,
-		profile_pic_override_thumbnail = excluded.profile_pic_override_thumbnail`,
+	if _, err := tx.ExecContext(ctx, `INSERT INTO users_cache (vrc_user_id, display_name, status, is_favorite, last_updated, first_seen_at, last_contact_at, user_kind, session_fingerprint, username, status_description, user_state, avatar_thumbnail_url, user_icon_url, profile_pic_override_thumbnail)
+		VALUES (?, ?, ?, ?, ?, ?, ?, 'self', ?, ?, ?, ?, ?, ?, ?)`,
 		u.VRCUserID, u.DisplayName, nullString(u.Status), isFav, u.LastUpdated.Format(time.RFC3339), fs, lc,
 		nullString(u.SessionFingerprint),
 		nullString(u.Username), nullString(u.StatusDescription), nullString(u.UserState),
-		nullString(u.AvatarThumbnailURL), nullString(u.UserIconURL), nullString(u.ProfilePicOverrideThumbnail))
-	return err
+		nullString(u.AvatarThumbnailURL), nullString(u.UserIconURL), nullString(u.ProfilePicOverrideThumbnail)); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // DeleteSelfRows removes all self profile rows.
