@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"time"
 
 	"vrchat-tweaker/internal/domain/identity"
@@ -177,9 +178,13 @@ func (r *UserCacheRepository) GetSelfBySessionFingerprint(ctx context.Context, s
 	return scanUserCacheRow(row)
 }
 
-// UpsertSelf removes any existing self rows and inserts the new profile.
+// UpsertSelf removes self rows for other VRChat accounts, then inserts or updates this user's row
+// to user_kind=self (ON CONFLICT: same vrc_user_id may already exist as friend/contact from logs or API).
 func (r *UserCacheRepository) UpsertSelf(ctx context.Context, u *identity.UserCache) error {
-	if _, err := r.db.ExecContext(ctx, `DELETE FROM users_cache WHERE user_kind = 'self'`); err != nil {
+	if u.VRCUserID == "" {
+		return fmt.Errorf("upsert self: empty vrc_user_id")
+	}
+	if _, err := r.db.ExecContext(ctx, `DELETE FROM users_cache WHERE user_kind = 'self' AND vrc_user_id != ?`, u.VRCUserID); err != nil {
 		return err
 	}
 	isFav := 0
@@ -194,7 +199,22 @@ func (r *UserCacheRepository) UpsertSelf(ctx context.Context, u *identity.UserCa
 		lc = u.LastContactAt.Format(time.RFC3339)
 	}
 	_, err := r.db.ExecContext(ctx, `INSERT INTO users_cache (vrc_user_id, display_name, status, is_favorite, last_updated, first_seen_at, last_contact_at, user_kind, session_fingerprint, username, status_description, user_state, avatar_thumbnail_url, user_icon_url, profile_pic_override_thumbnail)
-		VALUES (?, ?, ?, ?, ?, ?, ?, 'self', ?, ?, ?, ?, ?, ?, ?)`,
+		VALUES (?, ?, ?, ?, ?, ?, ?, 'self', ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(vrc_user_id) DO UPDATE SET
+		display_name = excluded.display_name,
+		status = excluded.status,
+		is_favorite = excluded.is_favorite,
+		last_updated = excluded.last_updated,
+		first_seen_at = COALESCE(users_cache.first_seen_at, excluded.first_seen_at),
+		last_contact_at = users_cache.last_contact_at,
+		user_kind = 'self',
+		session_fingerprint = excluded.session_fingerprint,
+		username = excluded.username,
+		status_description = excluded.status_description,
+		user_state = excluded.user_state,
+		avatar_thumbnail_url = excluded.avatar_thumbnail_url,
+		user_icon_url = excluded.user_icon_url,
+		profile_pic_override_thumbnail = excluded.profile_pic_override_thumbnail`,
 		u.VRCUserID, u.DisplayName, nullString(u.Status), isFav, u.LastUpdated.Format(time.RFC3339), fs, lc,
 		nullString(u.SessionFingerprint),
 		nullString(u.Username), nullString(u.StatusDescription), nullString(u.UserState),

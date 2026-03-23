@@ -110,6 +110,62 @@ func TestUserCacheRepository_UpsertFromLog_preservesFriendKind(t *testing.T) {
 	}
 }
 
+func TestUserCacheRepository_UpsertSelf_promotesExistingContactRow(t *testing.T) {
+	dir := t.TempDir()
+	db, dbErr := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if dbErr != nil {
+		t.Fatal(dbErr)
+	}
+	defer func() { _ = db.Close() }()
+	if migErr := migrate(db); migErr != nil {
+		t.Fatal(migErr)
+	}
+	repo := NewUserCacheRepository(db)
+	ctx := context.Background()
+	at := time.Date(2026, 3, 22, 12, 0, 0, 0, time.UTC)
+	const vrcID = "usr_local_player"
+	if err := repo.UpsertFromLog(ctx, vrcID, "LocalUser", at); err != nil {
+		t.Fatal(err)
+	}
+	before, err := repo.GetByVRCUserID(ctx, vrcID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if before.UserKind != identity.UserKindContact {
+		t.Fatalf("want contact before UpsertSelf, got %q", before.UserKind)
+	}
+	self := &identity.UserCache{
+		VRCUserID:                   vrcID,
+		DisplayName:                 "DisplayFromAPI",
+		Status:                      "active",
+		UserKind:                    identity.UserKindSelf,
+		LastUpdated:                 at.Add(time.Hour),
+		SessionFingerprint:          "fp-local",
+		Username:                    "localuser",
+		StatusDescription:           "bio",
+		UserState:                   "online",
+		AvatarThumbnailURL:          "http://thumb",
+		UserIconURL:                 "http://icon",
+		ProfilePicOverrideThumbnail: "http://pic",
+	}
+	if upErr := repo.UpsertSelf(ctx, self); upErr != nil {
+		t.Fatalf("UpsertSelf after contact row: %v", upErr)
+	}
+	after, err := repo.GetByVRCUserID(ctx, vrcID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.UserKind != identity.UserKindSelf {
+		t.Fatalf("user_kind = %q, want self", after.UserKind)
+	}
+	if after.DisplayName != "DisplayFromAPI" || after.Username != "localuser" {
+		t.Fatalf("profile not applied: %+v", after)
+	}
+	if after.LastContactAt == nil || !after.LastContactAt.Equal(at) {
+		t.Fatalf("last_contact_at should be preserved from log, got %v want %v", after.LastContactAt, at)
+	}
+}
+
 func TestUserCacheRepository_List_onlyFriendsWithStatus(t *testing.T) {
 	dir := t.TempDir()
 	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
