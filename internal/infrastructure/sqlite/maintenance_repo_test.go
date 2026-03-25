@@ -30,12 +30,13 @@ func TestMaintenance_ClearEncounters_Integration(t *testing.T) {
 
 	// Insert encounters
 	e := &activity.UserEncounter{
-		ID:            "enc-1",
-		VRCUserID:     "usr_xxx",
-		DisplayName:   "TestUser",
-		Action:        "join",
-		InstanceID:    "inst_yyy",
-		EncounteredAt: time.Now().UTC(),
+		ID:          "enc-1",
+		VRCUserID:   "usr_xxx",
+		DisplayName: "TestUser",
+		InstanceID:  "inst_yyy",
+		WorldID:     "wrld_z",
+		JoinedAt:    time.Now().UTC(),
+		LeftAt:      nil,
 	}
 	if saveErr := encounterRepo.Save(ctx, e); saveErr != nil {
 		t.Fatal(saveErr)

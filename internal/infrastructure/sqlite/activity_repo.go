@@ -115,7 +115,7 @@ func NewUserEncounterRepository(db *sql.DB) *UserEncounterRepository {
 
 // List returns user encounters with optional filters.
 func (r *UserEncounterRepository) List(ctx context.Context, filter *activity.EncounterFilter) ([]*activity.UserEncounter, error) {
-	query := `SELECT id, vrc_user_id, display_name, action, instance_id, world_id, encountered_at FROM user_encounters WHERE 1=1`
+	query := `SELECT id, vrc_user_id, display_name, instance_id, world_id, joined_at, left_at FROM user_encounters WHERE 1=1`
 	args := []interface{}{}
 	if filter != nil {
 		if filter.VRCUserID != "" {
@@ -135,15 +135,15 @@ func (r *UserEncounterRepository) List(ctx context.Context, filter *activity.Enc
 			args = append(args, filter.WorldID)
 		}
 		if filter.From != nil {
-			query += ` AND encountered_at >= ?`
+			query += ` AND joined_at >= ?`
 			args = append(args, filter.From.Format(time.RFC3339))
 		}
 		if filter.To != nil {
-			query += ` AND encountered_at <= ?`
+			query += ` AND joined_at <= ?`
 			args = append(args, filter.To.Format(time.RFC3339))
 		}
 	}
-	query += ` ORDER BY encountered_at DESC`
+	query += ` ORDER BY joined_at DESC`
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -164,7 +164,7 @@ func (r *UserEncounterRepository) List(ctx context.Context, filter *activity.Enc
 
 // ListWithContext returns encounters with world display name and user cache timestamps.
 func (r *UserEncounterRepository) ListWithContext(ctx context.Context, filter *activity.EncounterFilter) ([]*activity.EncounterWithContext, error) {
-	query := `SELECT e.id, e.vrc_user_id, e.display_name, e.action, e.instance_id, e.world_id, e.encountered_at,
+	query := `SELECT e.id, e.vrc_user_id, e.display_name, e.instance_id, e.world_id, e.joined_at, e.left_at,
 		w.display_name, u.first_seen_at, u.last_contact_at
 		FROM user_encounters e
 		LEFT JOIN world_info w ON w.world_id = e.world_id
@@ -189,15 +189,15 @@ func (r *UserEncounterRepository) ListWithContext(ctx context.Context, filter *a
 			args = append(args, filter.WorldID)
 		}
 		if filter.From != nil {
-			query += ` AND e.encountered_at >= ?`
+			query += ` AND e.joined_at >= ?`
 			args = append(args, filter.From.Format(time.RFC3339))
 		}
 		if filter.To != nil {
-			query += ` AND e.encountered_at <= ?`
+			query += ` AND e.joined_at <= ?`
 			args = append(args, filter.To.Format(time.RFC3339))
 		}
 	}
-	query += ` ORDER BY e.encountered_at DESC`
+	query += ` ORDER BY e.joined_at DESC`
 
 	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
@@ -216,21 +216,45 @@ func (r *UserEncounterRepository) ListWithContext(ctx context.Context, filter *a
 	return list, rows.Err()
 }
 
-// Save persists a user encounter.
+// Save persists a user encounter (insert only).
 func (r *UserEncounterRepository) Save(ctx context.Context, e *activity.UserEncounter) error {
 	var wid interface{}
 	if e.WorldID != "" {
 		wid = e.WorldID
 	}
-	_, err := r.db.ExecContext(ctx, `INSERT INTO user_encounters (id, vrc_user_id, display_name, action, instance_id, world_id, encountered_at)
+	leftAt := interface{}(nil)
+	if e.LeftAt != nil {
+		leftAt = e.LeftAt.Format(time.RFC3339)
+	}
+	_, err := r.db.ExecContext(ctx, `INSERT INTO user_encounters (id, vrc_user_id, display_name, instance_id, world_id, joined_at, left_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?)`,
-		e.ID, e.VRCUserID, e.DisplayName, e.Action, e.InstanceID, wid, e.EncounteredAt.Format(time.RFC3339))
+		e.ID, e.VRCUserID, e.DisplayName, e.InstanceID, wid, e.JoinedAt.Format(time.RFC3339), leftAt)
 	return err
+}
+
+// CloseEncounterLeave sets left_at for open rows for the user.
+func (r *UserEncounterRepository) CloseEncounterLeave(ctx context.Context, vrcUserID string, leftAt time.Time) (int64, error) {
+	res, err := r.db.ExecContext(ctx, `UPDATE user_encounters SET left_at = ? WHERE vrc_user_id = ? AND (left_at IS NULL OR left_at = '')`,
+		leftAt.Format(time.RFC3339), vrcUserID)
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
+// CloseOpenEncountersAt sets left_at on every row still open.
+func (r *UserEncounterRepository) CloseOpenEncountersAt(ctx context.Context, at time.Time) (int64, error) {
+	res, err := r.db.ExecContext(ctx, `UPDATE user_encounters SET left_at = ? WHERE left_at IS NULL OR left_at = ''`,
+		at.Format(time.RFC3339))
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
 }
 
 // DeleteOlderThan removes encounters older than before.
 func (r *UserEncounterRepository) DeleteOlderThan(ctx context.Context, before time.Time) (int64, error) {
-	res, err := r.db.ExecContext(ctx, `DELETE FROM user_encounters WHERE encountered_at < ?`, before.Format(time.RFC3339))
+	res, err := r.db.ExecContext(ctx, `DELETE FROM user_encounters WHERE joined_at < ?`, before.Format(time.RFC3339))
 	if err != nil {
 		return 0, err
 	}
@@ -255,7 +279,7 @@ func (r *UserEncounterRepository) Count(ctx context.Context) (int64, error) {
 
 // BackfillMissingWorldContext implements activity.UserEncounterRepository.
 func (r *UserEncounterRepository) BackfillMissingWorldContext(ctx context.Context) (int64, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT id, IFNULL(world_id, ''), IFNULL(instance_id, '') FROM user_encounters ORDER BY encountered_at ASC, id ASC`)
+	rows, err := r.db.QueryContext(ctx, `SELECT id, IFNULL(world_id, ''), IFNULL(instance_id, '') FROM user_encounters ORDER BY joined_at ASC, id ASC`)
 	if err != nil {
 		return 0, err
 	}
@@ -325,50 +349,66 @@ func (r *UserEncounterRepository) BackfillMissingWorldContext(ctx context.Contex
 }
 
 func scanUserEncounter(rows *sql.Rows) (*activity.UserEncounter, error) {
-	var id, vrcUserID, displayName, action, instanceID string
-	var worldID sql.NullString
-	var encounteredAt string
-	if err := rows.Scan(&id, &vrcUserID, &displayName, &action, &instanceID, &worldID, &encounteredAt); err != nil {
+	var id, vrcUserID, displayName, joinedAtStr string
+	var instanceID, worldID, leftAt sql.NullString
+	if err := rows.Scan(&id, &vrcUserID, &displayName, &instanceID, &worldID, &joinedAtStr, &leftAt); err != nil {
 		return nil, err
 	}
-	t, _ := time.Parse(time.RFC3339, encounteredAt)
+	jt, _ := time.Parse(time.RFC3339, joinedAtStr)
+	inst := ""
+	if instanceID.Valid {
+		inst = instanceID.String
+	}
 	wid := ""
 	if worldID.Valid {
 		wid = worldID.String
 	}
+	var lt *time.Time
+	if leftAt.Valid && leftAt.String != "" {
+		t, _ := time.Parse(time.RFC3339, leftAt.String)
+		lt = &t
+	}
 	return &activity.UserEncounter{
-		ID:            id,
-		VRCUserID:     vrcUserID,
-		DisplayName:   displayName,
-		Action:        action,
-		InstanceID:    instanceID,
-		WorldID:       wid,
-		EncounteredAt: t,
+		ID:          id,
+		VRCUserID:   vrcUserID,
+		DisplayName: displayName,
+		InstanceID:  inst,
+		WorldID:     wid,
+		JoinedAt:    jt,
+		LeftAt:      lt,
 	}, nil
 }
 
 func scanEncounterWithContextRow(rows *sql.Rows) (*activity.EncounterWithContext, error) {
-	var id, vrcUserID, displayName, action, instanceID string
-	var worldID sql.NullString
-	var encounteredAt string
+	var id, vrcUserID, displayName, joinedAtStr string
+	var instanceID, worldID, leftAt sql.NullString
 	var worldDN, firstSeen, lastContact sql.NullString
-	if err := rows.Scan(&id, &vrcUserID, &displayName, &action, &instanceID, &worldID, &encounteredAt,
+	if err := rows.Scan(&id, &vrcUserID, &displayName, &instanceID, &worldID, &joinedAtStr, &leftAt,
 		&worldDN, &firstSeen, &lastContact); err != nil {
 		return nil, err
 	}
-	t, _ := time.Parse(time.RFC3339, encounteredAt)
+	jt, _ := time.Parse(time.RFC3339, joinedAtStr)
+	inst := ""
+	if instanceID.Valid {
+		inst = instanceID.String
+	}
 	wid := ""
 	if worldID.Valid {
 		wid = worldID.String
 	}
+	var lt *time.Time
+	if leftAt.Valid && leftAt.String != "" {
+		t, _ := time.Parse(time.RFC3339, leftAt.String)
+		lt = &t
+	}
 	enc := &activity.UserEncounter{
-		ID:            id,
-		VRCUserID:     vrcUserID,
-		DisplayName:   displayName,
-		Action:        action,
-		InstanceID:    instanceID,
-		WorldID:       wid,
-		EncounteredAt: t,
+		ID:          id,
+		VRCUserID:   vrcUserID,
+		DisplayName: displayName,
+		InstanceID:  inst,
+		WorldID:     wid,
+		JoinedAt:    jt,
+		LeftAt:      lt,
 	}
 	out := &activity.EncounterWithContext{Encounter: enc}
 	if worldDN.Valid {
@@ -380,14 +420,14 @@ func scanEncounterWithContextRow(rows *sql.Rows) (*activity.EncounterWithContext
 		}
 	}
 	if lastContact.Valid {
-		if lt, err := time.Parse(time.RFC3339, lastContact.String); err == nil {
-			out.UserLastContactAt = &lt
+		if lt2, err := time.Parse(time.RFC3339, lastContact.String); err == nil {
+			out.UserLastContactAt = &lt2
 		}
 	}
-	if out.UserFirstSeenAt != nil && enc.EncounteredAt.Equal(*out.UserFirstSeenAt) {
+	if out.UserFirstSeenAt != nil && enc.JoinedAt.Equal(*out.UserFirstSeenAt) {
 		out.IsFirstEncounter = true
 	} else if out.UserFirstSeenAt != nil {
-		d := enc.EncounteredAt.Sub(*out.UserFirstSeenAt)
+		d := enc.JoinedAt.Sub(*out.UserFirstSeenAt)
 		if d >= 0 && d < time.Second {
 			out.IsFirstEncounter = true
 		}

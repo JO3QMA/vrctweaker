@@ -16,11 +16,11 @@ const sampleEncounter: UserEncounterDTO = {
   id: "e1",
   vrcUserId: "usr_a",
   displayName: "UserA",
-  action: "join",
   instanceId: "inst_1",
   worldId: "wrld_w",
   worldDisplayName: "World W",
-  encounteredAt: "2025-01-01T12:00:00Z",
+  joinedAt: "2025-01-01T12:00:00Z",
+  leftAt: "2025-01-01T13:00:00Z",
 };
 
 describe("EncounterHistoryDetailView", () => {

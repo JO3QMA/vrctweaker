@@ -112,6 +112,9 @@ func (h *ActivityEventHandler) Handle(event activity.ParsedEvent) {
 			if err := h.uc.EndPlaySession(h.ctx, e.OccurredAt); err != nil {
 				h.logger.Printf("[activity_handler] EndPlaySession (before new instance): %v", err)
 			}
+			if err := h.uc.CloseOpenEncountersAt(h.ctx, e.OccurredAt); err != nil {
+				h.logger.Printf("[activity_handler] CloseOpenEncountersAt (before new instance): %v", err)
+			}
 			h.mu.Lock()
 			h.lastLeftInstanceID = ""
 			h.lastLeftWorldID = ""

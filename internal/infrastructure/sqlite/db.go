@@ -89,12 +89,14 @@ func schemaStatements() []string {
 			id TEXT PRIMARY KEY,
 			vrc_user_id TEXT NOT NULL,
 			display_name TEXT NOT NULL,
-			action TEXT NOT NULL,
 			instance_id TEXT,
 			world_id TEXT,
-			encountered_at TEXT NOT NULL
+			joined_at TEXT NOT NULL,
+			left_at TEXT
 		)`,
-		`CREATE INDEX IF NOT EXISTS idx_user_encounters_encountered_at ON user_encounters(encountered_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_user_encounters_vrc_user_id ON user_encounters(vrc_user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_user_encounters_left_at ON user_encounters(left_at)`,
+		`CREATE INDEX IF NOT EXISTS idx_user_encounters_joined_at ON user_encounters(joined_at)`,
 		`CREATE TABLE IF NOT EXISTS users_cache (
 			vrc_user_id TEXT PRIMARY KEY,
 			display_name TEXT NOT NULL,

@@ -77,14 +77,14 @@ export interface UserEncounterDTO {
   id: string;
   vrcUserId: string;
   displayName: string;
-  action: string;
   instanceId: string;
   worldId?: string;
   worldDisplayName?: string;
   userFirstSeenAt?: string;
   userLastContactAt?: string;
   isFirstEncounter?: boolean;
-  encounteredAt: string;
+  joinedAt: string;
+  leftAt?: string;
 }
 
 export interface UserCacheDTO {

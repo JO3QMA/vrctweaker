@@ -71,8 +71,13 @@ func TestApplySchema_canonicalColumns(t *testing.T) {
 	}
 
 	encounters := columnNames(t, db, "user_encounters")
-	if !encounters["world_id"] {
-		t.Fatal("user_encounters missing world_id")
+	for _, col := range []string{"world_id", "joined_at", "left_at"} {
+		if !encounters[col] {
+			t.Fatalf("user_encounters missing column %q", col)
+		}
+	}
+	if encounters["action"] || encounters["encountered_at"] {
+		t.Fatal("user_encounters should not use legacy action/encountered_at columns")
 	}
 
 	thumbs := columnNames(t, db, "screenshot_thumbnails")

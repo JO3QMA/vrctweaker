@@ -244,19 +244,19 @@ func toScreenshotFilter(d ScreenshotSearchDTO) *media.ScreenshotFilter {
 	return f
 }
 
-// UserEncounterDTO is the frontend-facing encounter.
+// UserEncounterDTO is the frontend-facing encounter (one row = one stay in an instance).
 type UserEncounterDTO struct {
 	ID                string `json:"id"`
 	VRCUserID         string `json:"vrcUserId"`
 	DisplayName       string `json:"displayName"`
-	Action            string `json:"action"`
 	InstanceID        string `json:"instanceId"`
 	WorldID           string `json:"worldId,omitempty"`
 	WorldDisplayName  string `json:"worldDisplayName,omitempty"`
 	UserFirstSeenAt   string `json:"userFirstSeenAt,omitempty"`
 	UserLastContactAt string `json:"userLastContactAt,omitempty"`
 	IsFirstEncounter  bool   `json:"isFirstEncounter"`
-	EncounteredAt     string `json:"encounteredAt"`
+	JoinedAt          string `json:"joinedAt"`
+	LeftAt            string `json:"leftAt,omitempty"`
 }
 
 func toEncounterDTOsFromContext(list []*activity.EncounterWithContext) []UserEncounterDTO {
@@ -267,12 +267,14 @@ func toEncounterDTOsFromContext(list []*activity.EncounterWithContext) []UserEnc
 			ID:               e.ID,
 			VRCUserID:        e.VRCUserID,
 			DisplayName:      e.DisplayName,
-			Action:           e.Action,
 			InstanceID:       e.InstanceID,
 			WorldID:          e.WorldID,
 			WorldDisplayName: row.WorldDisplayName,
 			IsFirstEncounter: row.IsFirstEncounter,
-			EncounteredAt:    e.EncounteredAt.Format(time.RFC3339),
+			JoinedAt:         e.JoinedAt.Format(time.RFC3339),
+		}
+		if e.LeftAt != nil {
+			dto.LeftAt = e.LeftAt.Format(time.RFC3339)
 		}
 		if row.UserFirstSeenAt != nil {
 			dto.UserFirstSeenAt = row.UserFirstSeenAt.Format(time.RFC3339)

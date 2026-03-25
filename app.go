@@ -294,6 +294,7 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 				return
 			}
 			_ = a.activity.CloseOpenPlaySessionAtLastLogLine(ctx, lastVRLineTime)
+			_ = a.activity.CloseOpenEncountersAtLastLogLine(ctx, lastVRLineTime)
 			st, statErr := os.Stat(pathCopy)
 			endOff := int64(0)
 			if statErr == nil && st != nil {
@@ -343,6 +344,7 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 		return
 	}
 	_ = a.activity.CloseOpenPlaySessionAtLastLogLine(ctx, lastVRLineTime)
+	_ = a.activity.CloseOpenEncountersAtLastLogLine(ctx, lastVRLineTime)
 	st, statErr := os.Stat(pathCopy)
 	endOff := int64(0)
 	if statErr == nil && st != nil {

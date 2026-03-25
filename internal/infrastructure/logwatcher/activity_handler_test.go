@@ -65,6 +65,14 @@ func (stubEncounterRepo) ListWithContext(context.Context, *activity.EncounterFil
 
 func (stubEncounterRepo) Save(context.Context, *activity.UserEncounter) error { return nil }
 
+func (stubEncounterRepo) CloseEncounterLeave(context.Context, string, time.Time) (int64, error) {
+	return 0, nil
+}
+
+func (stubEncounterRepo) CloseOpenEncountersAt(context.Context, time.Time) (int64, error) {
+	return 0, nil
+}
+
 func (stubEncounterRepo) DeleteOlderThan(context.Context, time.Time) (int64, error) { return 0, nil }
 
 func (stubEncounterRepo) DeleteAll(context.Context) (int64, error) { return 0, nil }
@@ -73,16 +81,28 @@ func (stubEncounterRepo) Count(context.Context) (int64, error) { return 0, nil }
 
 func (stubEncounterRepo) BackfillMissingWorldContext(context.Context) (int64, error) { return 0, nil }
 
-// spyEncounterRepo records Save calls for assertions; other methods delegate to stubEncounterRepo.
+// spyEncounterRepo records Save and leave-close calls for assertions; other methods delegate to stubEncounterRepo.
 type spyEncounterRepo struct {
 	stubEncounterRepo
-	saves []*activity.UserEncounter
+	saves       []*activity.UserEncounter
+	closeLeaves []struct {
+		VRCUserID string
+		At        time.Time
+	}
 }
 
 func (s *spyEncounterRepo) Save(_ context.Context, e *activity.UserEncounter) error {
 	c := *e
 	s.saves = append(s.saves, &c)
 	return nil
+}
+
+func (s *spyEncounterRepo) CloseEncounterLeave(_ context.Context, vrcUserID string, leftAt time.Time) (int64, error) {
+	s.closeLeaves = append(s.closeLeaves, struct {
+		VRCUserID string
+		At        time.Time
+	}{vrcUserID, leftAt})
+	return 1, nil
 }
 
 type fakeAppSettingsRepo struct {
@@ -176,8 +196,15 @@ func TestActivityEventHandler_OtherPlayerLeave_afterJoining_keepsWorldContext(t 
 		OccurredAt:   base,
 	})
 	h.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: minasocoInst, OccurredAt: base})
+	const otherUser = "usr_1564b5c1-888a-4d08-b7f4-dcedcf702a90"
 	h.Handle(&activity.EncounterEvent{
-		VRCUserID:     "usr_1564b5c1-888a-4d08-b7f4-dcedcf702a90",
+		VRCUserID:     otherUser,
+		DisplayName:   "Nau_UoxoU",
+		Action:        activity.EncounterActionJoin,
+		EncounteredAt: base,
+	})
+	h.Handle(&activity.EncounterEvent{
+		VRCUserID:     otherUser,
 		DisplayName:   "Nau_UoxoU",
 		Action:        activity.EncounterActionLeave,
 		EncounteredAt: base.Add(time.Second),
@@ -190,6 +217,9 @@ func TestActivityEventHandler_OtherPlayerLeave_afterJoining_keepsWorldContext(t 
 	if e.WorldID != minasocoWorld || e.InstanceID != minasocoInst {
 		t.Errorf("Save world_id=%q instance_id=%q, want world %q instance %q",
 			e.WorldID, e.InstanceID, minasocoWorld, minasocoInst)
+	}
+	if len(spy.closeLeaves) != 1 || spy.closeLeaves[0].VRCUserID != otherUser {
+		t.Fatalf("closeLeaves = %+v, want one leave for %s", spy.closeLeaves, otherUser)
 	}
 }
 
@@ -207,6 +237,13 @@ func TestActivityEventHandler_Leave_afterDestinationBeforeJoin_usesLastSessionNo
 	h := NewActivityEventHandler(uc, ctx, nil, nil)
 
 	h.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: oldInst, OccurredAt: base})
+	const buddy = "usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e"
+	h.Handle(&activity.EncounterEvent{
+		VRCUserID:     buddy,
+		DisplayName:   "ぶっちゃん！",
+		Action:        activity.EncounterActionJoin,
+		EncounteredAt: base,
+	})
 	h.Handle(&activity.DestinationSetEvent{
 		WorldID:      homeWorld,
 		FullInstance: nextInst,
@@ -214,7 +251,7 @@ func TestActivityEventHandler_Leave_afterDestinationBeforeJoin_usesLastSessionNo
 	})
 	h.Handle(&activity.SessionEvent{Type: activity.SessionEventEnd, OccurredAt: base})
 	h.Handle(&activity.EncounterEvent{
-		VRCUserID:     "usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e",
+		VRCUserID:     buddy,
 		DisplayName:   "ぶっちゃん！",
 		Action:        activity.EncounterActionLeave,
 		EncounteredAt: base.Add(time.Millisecond),
@@ -227,6 +264,9 @@ func TestActivityEventHandler_Leave_afterDestinationBeforeJoin_usesLastSessionNo
 	if e.WorldID != homeWorld || e.InstanceID != oldInst {
 		t.Errorf("Save world_id=%q instance_id=%q, want world %q instance %q",
 			e.WorldID, e.InstanceID, homeWorld, oldInst)
+	}
+	if len(spy.closeLeaves) != 1 || spy.closeLeaves[0].VRCUserID != buddy {
+		t.Fatalf("closeLeaves = %+v", spy.closeLeaves)
 	}
 }
 
