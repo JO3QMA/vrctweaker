@@ -49,6 +49,19 @@ func (h *ActivityEventHandler) SetSuppressEncounterNotify(suppress bool) {
 	h.suppressEncounterNotify.Store(suppress)
 }
 
+// ResetSessionContextForNewLogFile clears instance/world correlation state before reading a new
+// output_log file. Each VRChat log file is an independent session; without this, RoomName and
+// encounters after a file boundary can inherit the previous file's sessionWorldID.
+func (h *ActivityEventHandler) ResetSessionContextForNewLogFile() {
+	h.mu.Lock()
+	h.sessionInstanceID = ""
+	h.sessionWorldID = ""
+	h.pendingDestinationWorldID = ""
+	h.lastLeftInstanceID = ""
+	h.lastLeftWorldID = ""
+	h.mu.Unlock()
+}
+
 type logWriterLogger struct {
 	*log.Logger
 }

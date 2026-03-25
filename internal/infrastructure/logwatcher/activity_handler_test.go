@@ -155,6 +155,36 @@ func TestActivityEventHandler_RoomNameAfterOnLeftRoom_usesPendingDestinationWorl
 	}
 }
 
+func TestActivityEventHandler_ResetBetweenLogFiles_RoomNameUsesPendingDestination(t *testing.T) {
+	ctx := context.Background()
+	base := time.Date(2026, 3, 18, 0, 30, 0, 0, time.UTC)
+	const prevWorld = "wrld_c03f8195-3c64-46d8-b5ae-242f214c9404"
+	prevInst := prevWorld + ":98225~hidden(usr_83ba5dc2-2912-4a21-a514-8b954e60a79b)~region(jp)"
+	const nextWorld = "wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b"
+	nextInst := nextWorld + ":77788~private(usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)~region(jp)"
+
+	spy := &spyWorldInfoRepo{}
+	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, stubEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, spy)
+	h := NewActivityEventHandler(uc, ctx, nil, nil)
+
+	h.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: prevInst, OccurredAt: base})
+	h.ResetSessionContextForNewLogFile()
+	h.Handle(&activity.DestinationSetEvent{
+		WorldID:      nextWorld,
+		FullInstance: nextInst,
+		OccurredAt:   base,
+	})
+	h.Handle(&activity.RoomNameEvent{RoomName: "ホームチェックv6․0", OccurredAt: base})
+
+	if len(spy.displayNameCalls) != 1 {
+		t.Fatalf("UpsertDisplayName calls = %d, want 1: %+v", len(spy.displayNameCalls), spy.displayNameCalls)
+	}
+	if spy.displayNameCalls[0].worldID != nextWorld {
+		t.Errorf("UpsertDisplayName world_id = %q, want %q (must not use previous log file session)",
+			spy.displayNameCalls[0].worldID, nextWorld)
+	}
+}
+
 func TestActivityEventHandler_RoomNameWithoutOnLeftRoom_unchanged(t *testing.T) {
 	ctx := context.Background()
 	base := time.Date(2026, 3, 22, 11, 22, 51, 0, time.UTC)
