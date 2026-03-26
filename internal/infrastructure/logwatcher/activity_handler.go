@@ -125,6 +125,9 @@ func (h *ActivityEventHandler) Handle(event activity.ParsedEvent) {
 			if err := h.uc.EndPlaySession(h.ctx, e.OccurredAt); err != nil {
 				h.logger.Printf("[activity_handler] EndPlaySession (before new instance): %v", err)
 			}
+			// Joining a new instance: close every still-open encounter row (all users). Correct
+			// because the local user left the previous instance; co-location with prior joins ends.
+			// Assumes events are processed in order (single handler goroutine).
 			if err := h.uc.CloseOpenEncountersAt(h.ctx, e.OccurredAt); err != nil {
 				h.logger.Printf("[activity_handler] CloseOpenEncountersAt (before new instance): %v", err)
 			}
@@ -143,6 +146,9 @@ func (h *ActivityEventHandler) Handle(event activity.ParsedEvent) {
 				h.logger.Printf("[activity_handler] StartPlaySession: %v", err)
 			}
 		case activity.SessionEventEnd:
+			// Do not CloseOpenEncountersAt here: per-user leaves use EncounterActionLeave /
+			// CloseEncounterLeave. Stragglers (crash, missing lines) are closed on the next
+			// SessionEventStart above or ingestActivityLogsBootstrap's CloseOpenEncountersAtLastLogLine.
 			h.mu.Lock()
 			h.lastLeftInstanceID = h.sessionInstanceID
 			h.lastLeftWorldID = h.sessionWorldID

@@ -44,11 +44,19 @@ type OutputLogWatcher struct {
 	parser         LogParser
 	handler        EventHandler
 	logger         Logger
+	// onActiveLogPathChange is optional; in directory mode, called after a successful open+seek
+	// when the tailed file path differs from the previous one (not called on the first file).
+	// Used to clear ActivityEventHandler session state so lines before Joining in the new file
+	// do not inherit the previous log file's world/instance context.
+	onActiveLogPathChange func()
 
 	mu        sync.Mutex
 	status    string // "idle", "running", "stopped"
 	lastErr   error
 	lastErrAt time.Time
+
+	// lastTailedPath is written only from run(); tracks the path last opened for tailing.
+	lastTailedPath string
 }
 
 // NewOutputLogWatcher creates a watcher for the given path (file or directory).
@@ -69,6 +77,14 @@ func NewOutputLogWatcher(configuredPath string, parser LogParser, handler EventH
 		w.fixedFile = configuredPath
 	}
 	return w
+}
+
+// SetOnActiveLogPathChange registers a callback invoked in directory mode when the watcher
+// begins tailing a different output_log*.txt path than before. Call before Start.
+func (w *OutputLogWatcher) SetOnActiveLogPathChange(fn func()) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.onActiveLogPathChange = fn
 }
 
 func (w *OutputLogWatcher) resolveActivePath() (string, error) {
@@ -176,6 +192,16 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 			time.Sleep(reopenBackoff)
 			continue
 		}
+
+		if w.watchDir != "" && activePath != w.lastTailedPath && w.lastTailedPath != "" {
+			w.mu.Lock()
+			cb := w.onActiveLogPathChange
+			w.mu.Unlock()
+			if cb != nil {
+				cb()
+			}
+		}
+		w.lastTailedPath = activePath
 
 		w.setErr(nil)
 		br := bufio.NewReaderSize(f, readBufferSize)
