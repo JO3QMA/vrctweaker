@@ -1069,7 +1069,7 @@ func (a *App) DefaultVRChatPictureFolder() (string, error) {
 // GetYTDLPBasics returns the yt-dlp install path and local version without calling GitHub.
 func (a *App) GetYTDLPBasics() YTDLPUpdateStatusDTO {
 	u := usecase.NewYTDLPUpdater()
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(a.ctx, 15*time.Second)
 	defer cancel()
 	st := u.GetBasics(ctx, getVRChatConfigPath())
 	return toYTDLPUpdateStatusDTO(st)
@@ -1079,7 +1079,7 @@ func (a *App) GetYTDLPBasics() YTDLPUpdateStatusDTO {
 // Call from the UI on user action only; GitHub API is rate-limited when unauthenticated.
 func (a *App) GetYTDLPUpdateStatus() YTDLPUpdateStatusDTO {
 	u := usecase.NewYTDLPUpdater()
-	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	ctx, cancel := context.WithTimeout(a.ctx, 45*time.Second)
 	defer cancel()
 	st := u.GetUpdateStatus(ctx, getVRChatConfigPath())
 	return toYTDLPUpdateStatusDTO(st)
@@ -1097,7 +1097,7 @@ func (a *App) ApplyYTDLP(downloadURL, latestTag string) YTDLPApplyResultDTO {
 		}
 	}
 	u := usecase.NewYTDLPUpdater()
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	ctx, cancel := context.WithTimeout(a.ctx, 10*time.Minute)
 	defer cancel()
 	r := u.ApplyLatest(ctx, getVRChatConfigPath(), downloadURL, latestTag)
 	return toYTDLPApplyResultDTO(r)

@@ -160,22 +160,21 @@ func TestFinishYTDLPInstall_freshInstall(t *testing.T) {
 	}
 }
 
-func TestLocalYTDLPVersion_script(t *testing.T) {
+func TestLocalYTDLPVersion_nonWindowsNoExec(t *testing.T) {
 	t.Parallel()
 	if runtime.GOOS == "windows" {
-		t.Skip("shell script not used on windows")
+		t.Skip("Windows reads VERSIONINFO in ytdlp_version_windows.go")
 	}
 	dir := t.TempDir()
-	exe := filepath.Join(dir, "yt-dlp-exe-mock")
-	script := "#!/bin/sh\necho 2099.01.01\n"
-	if err := os.WriteFile(exe, []byte(script), 0o755); err != nil {
+	exe := filepath.Join(dir, "yt-dlp.exe")
+	if err := os.WriteFile(exe, []byte("not a real exe"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	v := LocalYTDLPVersion(ctx, exe)
-	if v != "2099.01.01" {
-		t.Fatalf("got %q", v)
+	if v != "" {
+		t.Fatalf("expected empty on non-Windows, got %q", v)
 	}
 }
 

@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -130,8 +129,11 @@ func (u *YTDLPUpdater) FetchLatestRelease(ctx context.Context) (tagName, downloa
 	return ytdlpExeAssetFromReleaseJSON(body)
 }
 
-// LocalYTDLPVersion runs yt-dlp.exe --version when the file exists.
+// LocalYTDLPVersion returns a display version for yt-dlp.exe at exePath.
+// On Windows it reads VERSIONINFO strings (FileVersion / ProductVersion) without executing
+// the binary — the same values shown in Explorer’s file properties. On other OS it returns "".
 func LocalYTDLPVersion(ctx context.Context, exePath string) string {
+	_ = ctx
 	if exePath == "" {
 		return ""
 	}
@@ -139,15 +141,7 @@ func LocalYTDLPVersion(ctx context.Context, exePath string) string {
 	if err != nil || st.IsDir() {
 		return ""
 	}
-	cctx, cancel := context.WithTimeout(ctx, 8*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(cctx, exePath, "--version")
-	out, err := cmd.Output()
-	if err != nil {
-		return ""
-	}
-	line := strings.TrimSpace(strings.SplitN(string(out), "\n", 2)[0])
-	return strings.TrimSpace(line)
+	return localYTDLPFileVersionString(exePath)
 }
 
 // GetBasics returns the install path and local yt-dlp version without calling GitHub.
