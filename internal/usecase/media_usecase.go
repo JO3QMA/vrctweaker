@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"vrchat-tweaker/internal/domain/activity"
+	"vrchat-tweaker/internal/domain/identity"
 	"vrchat-tweaker/internal/domain/media"
 )
 
@@ -31,13 +33,42 @@ type ScanProgress struct {
 
 // MediaUseCase handles screenshot scanning and management.
 type MediaUseCase struct {
-	repo      media.ScreenshotRepository
-	extractor media.MetadataExtractor
+	repo          media.ScreenshotRepository
+	extractor     media.MetadataExtractor
+	worldRepo     activity.WorldInfoRepository
+	userCacheRepo identity.UserCacheRepository
 }
 
 // NewMediaUseCase creates a new MediaUseCase.
-func NewMediaUseCase(repo media.ScreenshotRepository, extractor media.MetadataExtractor) *MediaUseCase {
-	return &MediaUseCase{repo: repo, extractor: extractor}
+// worldRepo and userCacheRepo may be nil; when set, extracted metadata is upserted into world_info and users_cache.
+func NewMediaUseCase(repo media.ScreenshotRepository, extractor media.MetadataExtractor, worldRepo activity.WorldInfoRepository, userCacheRepo identity.UserCacheRepository) *MediaUseCase {
+	return &MediaUseCase{repo: repo, extractor: extractor, worldRepo: worldRepo, userCacheRepo: userCacheRepo}
+}
+
+func (uc *MediaUseCase) upsertWorldInfo(ctx context.Context, worldID, worldName string, at time.Time) {
+	if uc.worldRepo == nil || worldID == "" {
+		return
+	}
+	if worldName != "" {
+		_ = uc.worldRepo.UpsertDisplayName(ctx, worldID, worldName, at)
+		return
+	}
+	_ = uc.worldRepo.UpsertVisit(ctx, worldID, at)
+}
+
+func (uc *MediaUseCase) upsertAuthorFromScreenshot(ctx context.Context, vrcUserID, displayName string, at time.Time) {
+	if uc.userCacheRepo == nil || vrcUserID == "" || displayName == "" {
+		return
+	}
+	existing, err := uc.userCacheRepo.GetByVRCUserID(ctx, vrcUserID)
+	if err != nil {
+		return
+	}
+	if existing == nil {
+		existing = &identity.UserCache{VRCUserID: vrcUserID, UserKind: identity.UserKindContact}
+	}
+	existing.MergeFromLog(displayName, at)
+	_ = uc.userCacheRepo.Save(ctx, existing)
 }
 
 // ListScreenshots returns screenshots with optional filters.
@@ -75,26 +106,36 @@ func (uc *MediaUseCase) IngestScreenshotFile(ctx context.Context, path string) (
 	}
 
 	takenAt := timePtr(info.ModTime())
-	worldID, worldName := "", ""
+	meta := media.ScreenshotMetadata{}
 	if uc.extractor != nil {
-		wid, wn, ta, _ := uc.extractor.Extract(path)
-		worldID, worldName = wid, wn
-		if ta != nil {
-			takenAt = ta
+		var exErr error
+		meta, exErr = uc.extractor.Extract(path)
+		if exErr != nil {
+			meta = media.ScreenshotMetadata{}
+		}
+		if meta.TakenAt != nil {
+			takenAt = meta.TakenAt
 		}
 	}
 	sz := info.Size()
 	s := &media.Screenshot{
-		ID:            uuid.New().String(),
-		FilePath:      path,
-		WorldID:       worldID,
-		WorldName:     worldName,
-		TakenAt:       takenAt,
-		FileSizeBytes: &sz,
+		ID:              uuid.New().String(),
+		FilePath:        path,
+		WorldID:         meta.WorldID,
+		AuthorVRCUserID: meta.AuthorVRCUserID,
+		WorldName:       meta.WorldDisplayName,
+		TakenAt:         takenAt,
+		FileSizeBytes:   &sz,
 	}
 	if err := uc.repo.Save(ctx, s); err != nil {
 		return nil, false, err
 	}
+	at := info.ModTime()
+	if s.TakenAt != nil {
+		at = *s.TakenAt
+	}
+	uc.upsertWorldInfo(ctx, meta.WorldID, meta.WorldDisplayName, at)
+	uc.upsertAuthorFromScreenshot(ctx, meta.AuthorVRCUserID, meta.AuthorDisplayName, at)
 	_ = uc.EnsureScreenshotThumbnail(ctx, s.ID)
 	return s, true, nil
 }
@@ -251,18 +292,24 @@ func (uc *MediaUseCase) ReindexScreenshots(ctx context.Context, basePath string)
 
 		sizeChanged := s.FileSizeBytes == nil || *s.FileSizeBytes != size
 		metaChanged := false
+		var meta media.ScreenshotMetadata
 		if uc.extractor != nil {
-			worldID, worldName, takenAt, _ := uc.extractor.Extract(s.FilePath)
-			metaChanged = worldID != s.WorldID || worldName != s.WorldName
-			if takenAt != nil && (s.TakenAt == nil || !takenAt.Equal(*s.TakenAt)) {
+			var exErr error
+			meta, exErr = uc.extractor.Extract(s.FilePath)
+			if exErr != nil {
+				meta = media.ScreenshotMetadata{}
+			}
+			metaChanged = meta.WorldID != s.WorldID || meta.AuthorVRCUserID != s.AuthorVRCUserID
+			if meta.TakenAt != nil && (s.TakenAt == nil || !meta.TakenAt.Equal(*s.TakenAt)) {
 				metaChanged = true
 			}
 			if metaChanged {
-				s.WorldID = worldID
-				s.WorldName = worldName
-				if takenAt != nil {
-					s.TakenAt = takenAt
+				s.WorldID = meta.WorldID
+				s.AuthorVRCUserID = meta.AuthorVRCUserID
+				if meta.TakenAt != nil {
+					s.TakenAt = meta.TakenAt
 				}
+				s.WorldName = meta.WorldDisplayName
 			}
 		}
 		if !sizeChanged && !metaChanged && !thumbnailStale {
@@ -272,6 +319,14 @@ func (uc *MediaUseCase) ReindexScreenshots(ctx context.Context, basePath string)
 		s.FileSizeBytes = &fsz
 		if err := uc.repo.Save(ctx, s); err != nil {
 			continue
+		}
+		if metaChanged {
+			at := info.ModTime()
+			if s.TakenAt != nil {
+				at = *s.TakenAt
+			}
+			uc.upsertWorldInfo(ctx, meta.WorldID, meta.WorldDisplayName, at)
+			uc.upsertAuthorFromScreenshot(ctx, meta.AuthorVRCUserID, meta.AuthorDisplayName, at)
 		}
 		_ = uc.EnsureScreenshotThumbnail(ctx, s.ID)
 		updated++

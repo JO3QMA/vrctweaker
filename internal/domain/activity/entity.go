@@ -10,15 +10,16 @@ type PlaySession struct {
 	DurationSec *int
 }
 
-// UserEncounter represents a join/leave event of a user in an instance.
+// UserEncounter represents one stay (join → leave) of a user in an instance.
+// LeftAt nil means the stay is still open (no leave observed yet).
 type UserEncounter struct {
-	ID            string
-	VRCUserID     string
-	DisplayName   string
-	Action        string // "join" or "leave"
-	InstanceID    string
-	WorldID       string // wrld_* from current instance when known
-	EncounteredAt time.Time
+	ID          string
+	VRCUserID   string
+	DisplayName string
+	InstanceID  string
+	WorldID     string // wrld_* from current instance when known
+	JoinedAt    time.Time
+	LeftAt      *time.Time
 }
 
 // EncounterWithContext is a user encounter plus joined user/world cache fields for the UI.

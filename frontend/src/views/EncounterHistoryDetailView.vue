@@ -15,8 +15,8 @@
       <table class="history-table">
         <thead>
           <tr>
-            <th>時刻</th>
-            <th>アクション</th>
+            <th>入室</th>
+            <th>退室</th>
             <th>表示名</th>
             <th>ワールド名</th>
             <th class="col-instance">インスタンス</th>
@@ -24,12 +24,8 @@
         </thead>
         <tbody>
           <tr v-for="row in rows" :key="row.id">
-            <td>{{ formatEncounteredAt(row.encounteredAt) }}</td>
-            <td>
-              <span :class="['action', row.action]">{{
-                actionLabel(row.action)
-              }}</span>
-            </td>
+            <td>{{ formatEncounteredAt(row.joinedAt) }}</td>
+            <td>{{ row.leftAt ? formatEncounteredAt(row.leftAt) : "—" }}</td>
             <td>{{ row.displayName }}</td>
             <td :title="row.worldId || ''">
               {{ row.worldDisplayName || row.worldId || "—" }}
@@ -102,12 +98,6 @@ function formatEncounteredAt(iso: string): string {
   } catch {
     return iso;
   }
-}
-
-function actionLabel(action: string): string {
-  if (action === "join") return "参加";
-  if (action === "leave") return "退出";
-  return action;
 }
 
 async function load(): Promise<void> {
@@ -206,14 +196,6 @@ onMounted(() => {
 
 .history-table tbody tr:last-child td {
   border-bottom: none;
-}
-
-.action.join {
-  color: var(--success);
-}
-
-.action.leave {
-  color: var(--text-secondary);
 }
 
 .col-instance {

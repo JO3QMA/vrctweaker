@@ -102,23 +102,32 @@ func (uc *ActivityUseCase) RecordEncounter(ctx context.Context, vrcUserID, displ
 	return uc.RecordEncounterAt(ctx, vrcUserID, displayName, action, instanceID, "", time.Now().UTC())
 }
 
-// RecordEncounterAt saves a join/leave event with explicit timestamp and optional world id.
+// RecordEncounterAt records a join as a new open stay or a leave as closing the user's open stay.
 func (uc *ActivityUseCase) RecordEncounterAt(ctx context.Context, vrcUserID, displayName, action, instanceID, worldID string, at time.Time) error {
 	wid := worldID
 	if wid == "" && instanceID != "" {
 		wid = activity.WorldIDFromInstanceKey(instanceID)
 	}
-	e := &activity.UserEncounter{
-		ID:            uuid.New().String(),
-		VRCUserID:     vrcUserID,
-		DisplayName:   displayName,
-		Action:        action,
-		InstanceID:    instanceID,
-		WorldID:       wid,
-		EncounteredAt: at,
-	}
-	if err := uc.encounterRepo.Save(ctx, e); err != nil {
-		return err
+	switch action {
+	case activity.EncounterActionJoin:
+		e := &activity.UserEncounter{
+			ID:          uuid.New().String(),
+			VRCUserID:   vrcUserID,
+			DisplayName: displayName,
+			InstanceID:  instanceID,
+			WorldID:     wid,
+			JoinedAt:    at,
+			LeftAt:      nil,
+		}
+		if err := uc.encounterRepo.Save(ctx, e); err != nil {
+			return err
+		}
+	case activity.EncounterActionLeave:
+		if _, err := uc.encounterRepo.CloseEncounterLeave(ctx, vrcUserID, at); err != nil {
+			return err
+		}
+	default:
+		return nil
 	}
 	if uc.userCacheRepo != nil && vrcUserID != "" {
 		existing, err := uc.userCacheRepo.GetByVRCUserID(ctx, vrcUserID)
@@ -195,6 +204,26 @@ func (uc *ActivityUseCase) EndPlaySession(ctx context.Context, endedAt time.Time
 	open.EndTime = &endedAt
 	open.DurationSec = &dur
 	return uc.playRepo.Save(ctx, open)
+}
+
+// CloseOpenEncountersAtLastLogLine sets left_at on any encounter row still open, using the last
+// processed log line time (e.g. after output_log ingest catches up).
+func (uc *ActivityUseCase) CloseOpenEncountersAtLastLogLine(ctx context.Context, lastLine time.Time) error {
+	if lastLine.IsZero() {
+		return nil
+	}
+	_, err := uc.encounterRepo.CloseOpenEncountersAt(ctx, lastLine)
+	return err
+}
+
+// CloseOpenEncountersAt sets left_at on all open encounter rows at the given time (e.g. when the
+// local user starts joining a new instance).
+func (uc *ActivityUseCase) CloseOpenEncountersAt(ctx context.Context, at time.Time) error {
+	if at.IsZero() {
+		return nil
+	}
+	_, err := uc.encounterRepo.CloseOpenEncountersAt(ctx, at)
+	return err
 }
 
 // CloseOpenPlaySessionAtLastLogLine closes the latest open play session using the timestamp of the

@@ -14,7 +14,7 @@
 
     <!-- タイムラインセクション -->
     <section class="timeline-section">
-      <h2 class="section-title">遭遇ログ（Join/Leave）</h2>
+      <h2 class="section-title">遭遇ログ（滞在区間）</h2>
 
       <!-- フィルタ -->
       <div class="filters">
@@ -33,8 +33,8 @@
       </div>
       <ul v-else class="timeline">
         <li class="timeline-header-row" aria-hidden="true">
-          <span class="timeline-h">時刻</span>
-          <span class="timeline-h">アクション</span>
+          <span class="timeline-h">入室</span>
+          <span class="timeline-h">退室</span>
           <span class="timeline-h">表示名</span>
           <span class="timeline-h">ワールド名</span>
         </li>
@@ -44,10 +44,10 @@
           class="timeline-item"
         >
           <span class="timeline-time">{{
-            formatEncounteredAt(enc.encounteredAt)
+            formatEncounteredAt(enc.joinedAt)
           }}</span>
-          <span class="timeline-action" :class="enc.action">{{
-            actionLabel(enc.action)
+          <span class="timeline-time timeline-time--secondary">{{
+            enc.leftAt ? formatEncounteredAt(enc.leftAt) : "—"
           }}</span>
           <button
             v-if="enc.vrcUserId"
@@ -158,12 +158,6 @@ function formatEncounteredAt(iso: string): string {
   } catch {
     return iso;
   }
-}
-
-function actionLabel(action: string): string {
-  if (action === "join") return "参加";
-  if (action === "leave") return "退出";
-  return action;
 }
 
 function openUserHistory(vrcUserId: string): void {
@@ -307,7 +301,7 @@ onUnmounted(() => {
 .timeline-header-row,
 .timeline-item {
   display: grid;
-  grid-template-columns: 10rem 5rem minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: 9rem 9rem minmax(0, 1fr) minmax(0, 1fr);
   gap: 0.75rem;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--border);
@@ -335,6 +329,10 @@ onUnmounted(() => {
   font-size: 0.85rem;
 }
 
+.timeline-time--secondary {
+  font-size: 0.8rem;
+}
+
 .timeline-name {
   font-weight: 500;
   min-width: 0;
@@ -342,14 +340,6 @@ onUnmounted(() => {
 }
 
 .timeline-name--muted {
-  color: var(--text-secondary);
-}
-
-.timeline-action.join {
-  color: var(--success);
-}
-
-.timeline-action.leave {
   color: var(--text-secondary);
 }
 

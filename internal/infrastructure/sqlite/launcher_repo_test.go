@@ -19,7 +19,7 @@ func TestLauncherProfileRepository_CRUD(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := migrate(db); migrateErr != nil {
+	if migrateErr := applySchema(db); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 	repo := NewLauncherProfileRepository(db)

@@ -21,7 +21,7 @@ func TestMaintenance_ClearEncounters_Integration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := migrate(db); migrateErr != nil {
+	if migrateErr := applySchema(db); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 
@@ -30,12 +30,13 @@ func TestMaintenance_ClearEncounters_Integration(t *testing.T) {
 
 	// Insert encounters
 	e := &activity.UserEncounter{
-		ID:            "enc-1",
-		VRCUserID:     "usr_xxx",
-		DisplayName:   "TestUser",
-		Action:        "join",
-		InstanceID:    "inst_yyy",
-		EncounteredAt: time.Now().UTC(),
+		ID:          "enc-1",
+		VRCUserID:   "usr_xxx",
+		DisplayName: "TestUser",
+		InstanceID:  "inst_yyy",
+		WorldID:     "wrld_z",
+		JoinedAt:    time.Now().UTC(),
+		LeftAt:      nil,
 	}
 	if saveErr := encounterRepo.Save(ctx, e); saveErr != nil {
 		t.Fatal(saveErr)
@@ -74,7 +75,7 @@ func TestMaintenance_ClearScreenshots_Integration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := migrate(db); migrateErr != nil {
+	if migrateErr := applySchema(db); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 
@@ -82,10 +83,9 @@ func TestMaintenance_ClearScreenshots_Integration(t *testing.T) {
 	ctx := context.Background()
 
 	s := &media.Screenshot{
-		ID:        "scr-1",
-		FilePath:  "/path/to/screenshot.png",
-		WorldID:   "wrld_xxx",
-		WorldName: "Test World",
+		ID:       "scr-1",
+		FilePath: "/path/to/screenshot.png",
+		WorldID:  "wrld_xxx",
 	}
 	if saveErr := screenshotRepo.Save(ctx, s); saveErr != nil {
 		t.Fatal(saveErr)
@@ -124,7 +124,7 @@ func TestMaintenance_ClearFriendsCache_Integration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := migrate(db); migrateErr != nil {
+	if migrateErr := applySchema(db); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 
@@ -176,7 +176,7 @@ func TestMaintenance_Vacuum_Integration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if err := migrate(db); err != nil {
+	if err := applySchema(db); err != nil {
 		t.Fatal(err)
 	}
 

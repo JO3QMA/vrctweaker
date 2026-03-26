@@ -11,6 +11,8 @@ import (
 	"testing"
 	"time"
 
+	"vrchat-tweaker/internal/domain/activity"
+	"vrchat-tweaker/internal/domain/identity"
 	"vrchat-tweaker/internal/domain/media"
 )
 
@@ -110,12 +112,129 @@ func (m *mockScreenshotRepo) DeleteAll(ctx context.Context) (int64, error) {
 
 // mockMetadataExtractor returns fixed values for testing.
 type mockMetadataExtractor struct {
-	worldID   string
-	worldName string
+	worldID           string
+	worldName         string
+	authorVRCUserID   string
+	authorDisplayName string
 }
 
-func (m *mockMetadataExtractor) Extract(path string) (worldID, worldName string, takenAt *time.Time, err error) {
-	return m.worldID, m.worldName, nil, nil
+func (m *mockMetadataExtractor) Extract(path string) (media.ScreenshotMetadata, error) {
+	return media.ScreenshotMetadata{
+		WorldID:           m.worldID,
+		WorldDisplayName:  m.worldName,
+		AuthorVRCUserID:   m.authorVRCUserID,
+		AuthorDisplayName: m.authorDisplayName,
+	}, nil
+}
+
+// mockWorldInfoRepo records WorldInfoRepository calls for tests.
+type mockWorldInfoRepo struct {
+	upsertDisplayCalls []struct {
+		worldID, displayName string
+		at                   time.Time
+	}
+	upsertVisitCalls []struct {
+		worldID string
+		at      time.Time
+	}
+}
+
+func (m *mockWorldInfoRepo) UpsertVisit(_ context.Context, worldID string, at time.Time) error {
+	m.upsertVisitCalls = append(m.upsertVisitCalls, struct {
+		worldID string
+		at      time.Time
+	}{worldID, at})
+	return nil
+}
+
+func (m *mockWorldInfoRepo) UpsertDisplayName(_ context.Context, worldID, displayName string, at time.Time) error {
+	m.upsertDisplayCalls = append(m.upsertDisplayCalls, struct {
+		worldID, displayName string
+		at                   time.Time
+	}{worldID, displayName, at})
+	return nil
+}
+
+func (m *mockWorldInfoRepo) GetByWorldID(_ context.Context, _ string) (*activity.WorldInfo, error) {
+	return nil, nil
+}
+
+type screenshotAuthorUserCacheMock struct {
+	saved []*identity.UserCache
+}
+
+func (m *screenshotAuthorUserCacheMock) List(_ context.Context) ([]*identity.UserCache, error) {
+	return nil, nil
+}
+
+func (m *screenshotAuthorUserCacheMock) GetByVRCUserID(_ context.Context, vrcUserID string) (*identity.UserCache, error) {
+	for _, u := range m.saved {
+		if u.VRCUserID == vrcUserID {
+			cp := *u
+			return &cp, nil
+		}
+	}
+	return nil, nil
+}
+
+func (m *screenshotAuthorUserCacheMock) ListFavorites(_ context.Context) ([]*identity.UserCache, error) {
+	return nil, nil
+}
+
+func (m *screenshotAuthorUserCacheMock) Save(_ context.Context, u *identity.UserCache) error {
+	if u == nil {
+		return nil
+	}
+	cp := *u
+	m.saved = append(m.saved, &cp)
+	return nil
+}
+
+func (m *screenshotAuthorUserCacheMock) SaveBatch(_ context.Context, _ []*identity.UserCache) error {
+	return nil
+}
+func (m *screenshotAuthorUserCacheMock) Delete(_ context.Context, _ string) error { return nil }
+func (m *screenshotAuthorUserCacheMock) DeleteAll(_ context.Context) (int64, error) {
+	return 0, nil
+}
+func (m *screenshotAuthorUserCacheMock) GetSelfBySessionFingerprint(_ context.Context, _ string) (*identity.UserCache, error) {
+	return nil, nil
+}
+func (m *screenshotAuthorUserCacheMock) UpsertSelf(_ context.Context, _ *identity.UserCache) error {
+	return nil
+}
+func (m *screenshotAuthorUserCacheMock) DeleteSelfRows(_ context.Context) error { return nil }
+
+func TestMediaUseCase_IngestScreenshotFile_UpsertsAuthorInUserCache(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "ingest_author.png")
+	if err := writeTestPNG(path, 16, 16); err != nil {
+		t.Fatalf("writeTestPNG: %v", err)
+	}
+	repo := newMockScreenshotRepo()
+	userRepo := &screenshotAuthorUserCacheMock{}
+	ext := &mockMetadataExtractor{
+		worldID:           "wrld_a",
+		worldName:         "W",
+		authorVRCUserID:   "usr_testauthor",
+		authorDisplayName: "Test Author",
+	}
+	uc := NewMediaUseCase(repo, ext, nil, userRepo)
+	ctx := context.Background()
+	_, _, err := uc.IngestScreenshotFile(ctx, path)
+	if err != nil {
+		t.Fatalf("IngestScreenshotFile: %v", err)
+	}
+	if len(userRepo.saved) != 1 {
+		t.Fatalf("saved users = %d, want 1", len(userRepo.saved))
+	}
+	u := userRepo.saved[0]
+	if u.VRCUserID != "usr_testauthor" || u.DisplayName != "Test Author" {
+		t.Errorf("user = %+v", u)
+	}
+	if u.UserKind != identity.UserKindContact {
+		t.Errorf("UserKind = %q", u.UserKind)
+	}
 }
 
 func TestMediaUseCase_ScanDirectory_WithExtractor(t *testing.T) {
@@ -125,7 +244,7 @@ func TestMediaUseCase_ScanDirectory_WithExtractor(t *testing.T) {
 
 	repo := newMockScreenshotRepo()
 	extractor := &mockMetadataExtractor{worldID: "wrld_test123", worldName: "Test World"}
-	uc := NewMediaUseCase(repo, extractor)
+	uc := NewMediaUseCase(repo, extractor, nil, nil)
 	ctx := context.Background()
 
 	count, err := uc.ScanDirectory(ctx, dir, nil)
@@ -157,7 +276,7 @@ func TestMediaUseCase_ScanDirectory_ExtractorErrorContinues(t *testing.T) {
 
 	repo := newMockScreenshotRepo()
 	extractor := media.NewDefaultMetadataExtractor()
-	uc := NewMediaUseCase(repo, extractor)
+	uc := NewMediaUseCase(repo, extractor, nil, nil)
 	ctx := context.Background()
 
 	count, err := uc.ScanDirectory(ctx, dir, nil)
@@ -183,7 +302,7 @@ func TestMediaUseCase_IngestScreenshotFile_NewThenSkip(t *testing.T) {
 		t.Fatalf("writeTestPNG: %v", err)
 	}
 	repo := newMockScreenshotRepo()
-	uc := NewMediaUseCase(repo, nil)
+	uc := NewMediaUseCase(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	s, created, err := uc.IngestScreenshotFile(ctx, path)
@@ -216,7 +335,7 @@ func TestMediaUseCase_IngestScreenshotFile_SkipsNonImage(t *testing.T) {
 		t.Fatal(err)
 	}
 	repo := newMockScreenshotRepo()
-	uc := NewMediaUseCase(repo, nil)
+	uc := NewMediaUseCase(repo, nil, nil, nil)
 	s, created, err := uc.IngestScreenshotFile(context.Background(), txt)
 	if err != nil {
 		t.Fatalf("IngestScreenshotFile: %v", err)
@@ -243,7 +362,7 @@ func TestMediaUseCase_IngestUnderPictureRootSince_onlyNewerMtime(t *testing.T) {
 
 	since := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 	repo := newMockScreenshotRepo()
-	uc := NewMediaUseCase(repo, nil)
+	uc := NewMediaUseCase(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	count, err := uc.IngestUnderPictureRootSince(ctx, dir, since)
@@ -267,7 +386,7 @@ func TestMediaUseCase_IngestUnderPictureRootSince_notADir(t *testing.T) {
 	if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	uc := NewMediaUseCase(newMockScreenshotRepo(), nil)
+	uc := NewMediaUseCase(newMockScreenshotRepo(), nil, nil, nil)
 	count, err := uc.IngestUnderPictureRootSince(context.Background(), f, time.Time{})
 	if err != nil {
 		t.Fatalf("IngestUnderPictureRootSince: %v", err)
@@ -285,7 +404,7 @@ func TestMediaUseCase_IngestUnderPictureRootSince_contextCancelDuringWalk(t *tes
 	_ = os.Chtimes(p, future, future)
 
 	repo := newMockScreenshotRepo()
-	uc := NewMediaUseCase(repo, nil)
+	uc := NewMediaUseCase(repo, nil, nil, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
@@ -313,7 +432,7 @@ func TestMediaUseCase_ReindexScreenshots(t *testing.T) {
 	_ = repo.Save(context.Background(), s)
 
 	extractor := &mockMetadataExtractor{worldID: "wrld_reindexed", worldName: "Reindexed World"}
-	uc := NewMediaUseCase(repo, extractor)
+	uc := NewMediaUseCase(repo, extractor, nil, nil)
 	ctx := context.Background()
 
 	updated, err := uc.ReindexScreenshots(ctx, basePath)
@@ -333,6 +452,108 @@ func TestMediaUseCase_ReindexScreenshots(t *testing.T) {
 	}
 }
 
+func TestMediaUseCase_IngestScreenshotFile_UpsertsWorldInfo(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "ingest_world.png")
+	if err := writeTestPNG(path, 32, 24); err != nil {
+		t.Fatalf("writeTestPNG: %v", err)
+	}
+	repo := newMockScreenshotRepo()
+	worldRepo := &mockWorldInfoRepo{}
+	extractor := &mockMetadataExtractor{worldID: "wrld_ingest", worldName: "Ingest World"}
+	uc := NewMediaUseCase(repo, extractor, worldRepo, nil)
+	ctx := context.Background()
+
+	s, created, err := uc.IngestScreenshotFile(ctx, path)
+	if err != nil {
+		t.Fatalf("IngestScreenshotFile: %v", err)
+	}
+	if !created || s == nil {
+		t.Fatalf("want new row")
+	}
+	if len(worldRepo.upsertDisplayCalls) != 1 {
+		t.Fatalf("UpsertDisplayName calls = %d, want 1", len(worldRepo.upsertDisplayCalls))
+	}
+	if len(worldRepo.upsertVisitCalls) != 0 {
+		t.Fatalf("UpsertVisit calls = %d, want 0", len(worldRepo.upsertVisitCalls))
+	}
+	c := worldRepo.upsertDisplayCalls[0]
+	if c.worldID != "wrld_ingest" || c.displayName != "Ingest World" {
+		t.Errorf("UpsertDisplayName args = (%q, %q), want (wrld_ingest, Ingest World)", c.worldID, c.displayName)
+	}
+	if s.TakenAt != nil && !c.at.Equal(*s.TakenAt) {
+		t.Errorf("UpsertDisplayName at = %v, want screenshot TakenAt %v", c.at, *s.TakenAt)
+	}
+}
+
+func TestMediaUseCase_IngestScreenshotFile_UpsertsWorldVisitWhenNameEmpty(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "ingest_visit.png")
+	if err := writeTestPNG(path, 16, 16); err != nil {
+		t.Fatalf("writeTestPNG: %v", err)
+	}
+	repo := newMockScreenshotRepo()
+	worldRepo := &mockWorldInfoRepo{}
+	extractor := &mockMetadataExtractor{worldID: "wrld_noidname", worldName: ""}
+	uc := NewMediaUseCase(repo, extractor, worldRepo, nil)
+	ctx := context.Background()
+
+	_, created, err := uc.IngestScreenshotFile(ctx, path)
+	if err != nil {
+		t.Fatalf("IngestScreenshotFile: %v", err)
+	}
+	if !created {
+		t.Fatal("want new row")
+	}
+	if len(worldRepo.upsertVisitCalls) != 1 {
+		t.Fatalf("UpsertVisit calls = %d, want 1", len(worldRepo.upsertVisitCalls))
+	}
+	if len(worldRepo.upsertDisplayCalls) != 0 {
+		t.Fatalf("UpsertDisplayName calls = %d, want 0", len(worldRepo.upsertDisplayCalls))
+	}
+	if worldRepo.upsertVisitCalls[0].worldID != "wrld_noidname" {
+		t.Errorf("worldID = %q", worldRepo.upsertVisitCalls[0].worldID)
+	}
+}
+
+func TestMediaUseCase_ReindexScreenshots_UpsertsWorldInfo(t *testing.T) {
+	dir := t.TempDir()
+	basePath := filepath.Join(dir, "screenshots")
+	_ = os.MkdirAll(basePath, 0755)
+	path := filepath.Join(basePath, "reindex_world.png")
+	_ = os.WriteFile(path, []byte("fake"), 0644)
+
+	repo := newMockScreenshotRepo()
+	s := &media.Screenshot{
+		ID:        "id-rw",
+		FilePath:  path,
+		WorldID:   "",
+		WorldName: "",
+		TakenAt:   nil,
+	}
+	_ = repo.Save(context.Background(), s)
+
+	worldRepo := &mockWorldInfoRepo{}
+	extractor := &mockMetadataExtractor{worldID: "wrld_reidx", worldName: "Reidx World"}
+	uc := NewMediaUseCase(repo, extractor, worldRepo, nil)
+	ctx := context.Background()
+
+	updated, err := uc.ReindexScreenshots(ctx, basePath)
+	if err != nil {
+		t.Fatalf("ReindexScreenshots: %v", err)
+	}
+	if updated != 1 {
+		t.Fatalf("updated = %d, want 1", updated)
+	}
+	if len(worldRepo.upsertDisplayCalls) != 1 {
+		t.Fatalf("UpsertDisplayName calls = %d, want 1", len(worldRepo.upsertDisplayCalls))
+	}
+	c := worldRepo.upsertDisplayCalls[0]
+	if c.worldID != "wrld_reidx" || c.displayName != "Reidx World" {
+		t.Errorf("UpsertDisplayName = (%q, %q)", c.worldID, c.displayName)
+	}
+}
+
 func TestMediaUseCase_ScanDirectory_ProgressCallbacks(t *testing.T) {
 	dir := t.TempDir()
 	p1 := filepath.Join(dir, "a.png")
@@ -341,7 +562,7 @@ func TestMediaUseCase_ScanDirectory_ProgressCallbacks(t *testing.T) {
 	_ = os.WriteFile(p2, []byte("fake2"), 0644)
 
 	repo := newMockScreenshotRepo()
-	uc := NewMediaUseCase(repo, nil)
+	uc := NewMediaUseCase(repo, nil, nil, nil)
 	ctx := context.Background()
 
 	var got []ScanProgress
@@ -389,7 +610,7 @@ func TestMediaUseCase_ScanDirectory_ContextCancelDuringWalk(t *testing.T) {
 	_ = os.WriteFile(p1, []byte("fake1"), 0o644)
 
 	repo := newMockScreenshotRepo()
-	uc := NewMediaUseCase(repo, nil)
+	uc := NewMediaUseCase(repo, nil, nil, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
@@ -407,7 +628,7 @@ func TestMediaUseCase_ScanDirectory_ContextCancelDuringImport(t *testing.T) {
 	}
 
 	repo := newMockScreenshotRepo()
-	uc := NewMediaUseCase(repo, nil)
+	uc := NewMediaUseCase(repo, nil, nil, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	_, err := uc.ScanDirectory(ctx, dir, func(p ScanProgress) {

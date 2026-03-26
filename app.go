@@ -89,7 +89,7 @@ func (a *App) startup(ctx context.Context) {
 	maintenanceRepo := sqlite.NewMaintenanceRepository(db)
 	notifier := desktop.NewBeeepNotifier("VRChat Tweaker")
 	a.launcher = usecase.NewLauncherUseCase(launcherRepo)
-	a.media = usecase.NewMediaUseCase(mediaRepo, extractor)
+	a.media = usecase.NewMediaUseCase(mediaRepo, extractor, worldRepo, userCacheRepo)
 	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo)
 	a.identity = usecase.NewIdentityUseCaseWithNotifier(userCacheRepo, apiClient, credStore, settingsRepo, notifier)
 	actionRunner := usecase.NewDefaultActionRunner(a.identity)
@@ -216,7 +216,7 @@ func (a *App) resolveEffectiveOutputLogWatchPath(ctx context.Context) (string, e
 	return absDir, nil
 }
 
-func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, parser *activity.LogParser, handler logwatcher.EventHandler, logger logwatcher.Logger) {
+func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, parser *activity.LogParser, activityHandler *logwatcher.ActivityEventHandler, logger logwatcher.Logger) {
 	info, err := os.Stat(absWatch)
 	if err != nil {
 		return
@@ -267,7 +267,10 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 			pathCopy := fp
 			checkpointLines := 0
 			var lastVRLineTime time.Time
-			_, procErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, handler, logger, func(pos int64, line string) {
+			if off == 0 {
+				activityHandler.ResetSessionContextForNewLogFile()
+			}
+			_, procErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, activityHandler, logger, func(pos int64, line string) {
 				if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
 					lastVRLineTime = ts
 				}
@@ -294,6 +297,7 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 				return
 			}
 			_ = a.activity.CloseOpenPlaySessionAtLastLogLine(ctx, lastVRLineTime)
+			_ = a.activity.CloseOpenEncountersAtLastLogLine(ctx, lastVRLineTime)
 			st, statErr := os.Stat(pathCopy)
 			endOff := int64(0)
 			if statErr == nil && st != nil {
@@ -315,7 +319,10 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 	pathCopy := absWatch
 	checkpointLines := 0
 	var lastVRLineTime time.Time
-	_, fileProcErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, handler, logger, func(pos int64, line string) {
+	if off == 0 {
+		activityHandler.ResetSessionContextForNewLogFile()
+	}
+	_, fileProcErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, activityHandler, logger, func(pos int64, line string) {
 		if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
 			lastVRLineTime = ts
 		}
@@ -343,6 +350,7 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 		return
 	}
 	_ = a.activity.CloseOpenPlaySessionAtLastLogLine(ctx, lastVRLineTime)
+	_ = a.activity.CloseOpenEncountersAtLastLogLine(ctx, lastVRLineTime)
 	st, statErr := os.Stat(pathCopy)
 	endOff := int64(0)
 	if statErr == nil && st != nil {

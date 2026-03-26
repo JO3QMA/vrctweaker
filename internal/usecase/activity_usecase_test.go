@@ -58,6 +58,14 @@ func (stubEncounterRepo) ListWithContext(context.Context, *activity.EncounterFil
 
 func (stubEncounterRepo) Save(context.Context, *activity.UserEncounter) error { return nil }
 
+func (stubEncounterRepo) CloseEncounterLeave(context.Context, string, time.Time) (int64, error) {
+	return 0, nil
+}
+
+func (stubEncounterRepo) CloseOpenEncountersAt(context.Context, time.Time) (int64, error) {
+	return 0, nil
+}
+
 func (stubEncounterRepo) DeleteOlderThan(context.Context, time.Time) (int64, error) { return 0, nil }
 
 func (stubEncounterRepo) DeleteAll(context.Context) (int64, error) { return 0, nil }
@@ -65,6 +73,37 @@ func (stubEncounterRepo) DeleteAll(context.Context) (int64, error) { return 0, n
 func (stubEncounterRepo) Count(context.Context) (int64, error) { return 0, nil }
 
 func (stubEncounterRepo) BackfillMissingWorldContext(context.Context) (int64, error) { return 0, nil }
+
+type recordingEncounterRepo struct {
+	stubEncounterRepo
+	closeOpenAts []time.Time
+}
+
+func (r *recordingEncounterRepo) CloseOpenEncountersAt(_ context.Context, at time.Time) (int64, error) {
+	r.closeOpenAts = append(r.closeOpenAts, at)
+	return 0, nil
+}
+
+func TestActivityUseCase_CloseOpenEncountersAtLastLogLine(t *testing.T) {
+	ctx := context.Background()
+	rec := &recordingEncounterRepo{}
+	uc := NewActivityUseCase(&fakePlaySessionRepo{}, rec, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
+
+	if err := uc.CloseOpenEncountersAtLastLogLine(ctx, time.Time{}); err != nil {
+		t.Fatal(err)
+	}
+	if len(rec.closeOpenAts) != 0 {
+		t.Fatalf("zero last line: expected no CloseOpenEncountersAt, got %v", rec.closeOpenAts)
+	}
+
+	last := time.Date(2025, 1, 2, 15, 4, 5, 0, time.UTC)
+	if err := uc.CloseOpenEncountersAtLastLogLine(ctx, last); err != nil {
+		t.Fatal(err)
+	}
+	if len(rec.closeOpenAts) != 1 || !rec.closeOpenAts[0].Equal(last) {
+		t.Fatalf("CloseOpenEncountersAt calls = %v, want [%v]", rec.closeOpenAts, last)
+	}
+}
 
 func TestActivityUseCase_CloseOpenPlaySessionAtLastLogLine_sameDay(t *testing.T) {
 	ctx := context.Background()

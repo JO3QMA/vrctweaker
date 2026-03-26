@@ -24,6 +24,52 @@ func TestListOutputLogFiles_Sorted(t *testing.T) {
 	}
 }
 
+func TestListOutputLogFiles_ExcludesParsedLinesAuxiliary(t *testing.T) {
+	dir := t.TempDir()
+	realPath := filepath.Join(dir, "output_log_2026-03-18_12-52-26.txt")
+	auxPath := filepath.Join(dir, "output_log_2026-03-18_12-52-26.parsed_lines.txt")
+	if err := os.WriteFile(realPath, []byte("full"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(auxPath, []byte("subset"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ListOutputLogFiles(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0] != realPath {
+		t.Fatalf("got %v, want single %q", got, realPath)
+	}
+}
+
+func TestResolveLatestOutputLogFile_IgnoresParsedLinesAuxiliary(t *testing.T) {
+	dir := t.TempDir()
+	realPath := filepath.Join(dir, "output_log_2026-03-18_12-52-26.txt")
+	auxPath := filepath.Join(dir, "output_log_2026-03-18_12-52-26.parsed_lines.txt")
+	if err := os.WriteFile(realPath, []byte("full"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(auxPath, []byte("subset"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	auxT := time.Date(2099, 1, 1, 0, 0, 0, 0, time.UTC)
+	realT := time.Date(2026, 3, 18, 12, 0, 0, 0, time.UTC)
+	if err := os.Chtimes(auxPath, auxT, auxT); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(realPath, realT, realT); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ResolveLatestOutputLogFile(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != realPath {
+		t.Fatalf("got %q, want %q (must not pick newer .parsed_lines)", got, realPath)
+	}
+}
+
 func TestResolveLatestOutputLogFile_EmptyDir(t *testing.T) {
 	dir := t.TempDir()
 	_, err := ResolveLatestOutputLogFile(dir)

@@ -5,10 +5,18 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 )
 
 // ErrNoOutputLogFiles is returned when a directory has no matching output_log*.txt files.
 var ErrNoOutputLogFiles = fmt.Errorf("no output_log*.txt files in directory")
+
+// isVRChatPrimaryOutputLogFile is false for auxiliary names such as
+// output_log_YYYY-MM-DD_HH-MM-SS.parsed_lines.txt (extract-parsed-lines output), which
+// still match glob output_log*.txt.
+func isVRChatPrimaryOutputLogFile(path string) bool {
+	return !strings.HasSuffix(strings.ToLower(filepath.Base(path)), ".parsed_lines.txt")
+}
 
 // ListOutputLogFiles returns all output_log*.txt paths under dir sorted by name (ascending).
 func ListOutputLogFiles(dir string) ([]string, error) {
@@ -19,6 +27,9 @@ func ListOutputLogFiles(dir string) ([]string, error) {
 	sort.Strings(matches)
 	var out []string
 	for _, p := range matches {
+		if !isVRChatPrimaryOutputLogFile(p) {
+			continue
+		}
 		info, statErr := os.Stat(p)
 		if statErr != nil || !info.Mode().IsRegular() {
 			continue
@@ -47,6 +58,9 @@ func ResolveLatestOutputLogFile(dir string) (string, error) {
 	}
 	var cands []outputLogCandidate
 	for _, p := range matches {
+		if !isVRChatPrimaryOutputLogFile(p) {
+			continue
+		}
 		info, statErr := os.Stat(p)
 		if statErr != nil || !info.Mode().IsRegular() {
 			continue
