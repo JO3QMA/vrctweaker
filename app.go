@@ -395,6 +395,7 @@ func (a *App) startOutputLogWatcher(ctx context.Context, eventBus event.EventBus
 	activityHandler.SetSuppressEncounterNotify(false)
 
 	watcher := logwatcher.NewOutputLogWatcher(watchPath, parser, handler, logger)
+	watcher.SetOnActiveLogPathChange(activityHandler.ResetSessionContextForNewLogFile)
 	if startErr := watcher.Start(ctx); startErr != nil {
 		runtime.LogError(ctx, "failed to start output_log watcher: "+startErr.Error())
 		return

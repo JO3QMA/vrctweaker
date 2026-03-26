@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -139,6 +140,54 @@ func TestOutputLogWatcher_DirectoryMode_SwitchesToNewerFile(t *testing.T) {
 	enc, ok := received[len(received)-1].(*activity.EncounterEvent)
 	if !ok || enc.DisplayName != "SwitchUser" {
 		t.Fatalf("last event = %T %+v, want Encounter SwitchUser", received[len(received)-1], received[len(received)-1])
+	}
+}
+
+func TestOutputLogWatcher_DirectoryMode_OnActiveLogPathChangeOnSwitch(t *testing.T) {
+	dir := t.TempDir()
+	oldPath := filepath.Join(dir, "output_log_2026-01-01_00-00-00.txt")
+	newPath := filepath.Join(dir, "output_log_2026-03-22_00-47-45.txt")
+	if err := os.WriteFile(oldPath, []byte(""), 0600); err != nil {
+		t.Fatal(err)
+	}
+	oldT := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	if err := os.Chtimes(oldPath, oldT, oldT); err != nil {
+		t.Fatal(err)
+	}
+
+	parser := activity.NewLogParser()
+	handler := EventHandlerFunc(func(activity.ParsedEvent) {})
+
+	var pathChangeCalls atomic.Int32
+	watcher := NewOutputLogWatcher(dir, parser, handler, nil)
+	watcher.SetOnActiveLogPathChange(func() {
+		pathChangeCalls.Add(1)
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := watcher.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(200 * time.Millisecond)
+	if pathChangeCalls.Load() != 0 {
+		t.Fatalf("path change callback on initial tail: %d, want 0", pathChangeCalls.Load())
+	}
+
+	if err := os.WriteFile(newPath, []byte(""), 0600); err != nil {
+		t.Fatal(err)
+	}
+	newT := time.Date(2026, 3, 22, 0, 47, 45, 0, time.UTC)
+	if err := os.Chtimes(newPath, newT, newT); err != nil {
+		t.Fatal(err)
+	}
+
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) && pathChangeCalls.Load() < 1 {
+		time.Sleep(50 * time.Millisecond)
+	}
+	if pathChangeCalls.Load() != 1 {
+		t.Fatalf("path change callbacks = %d, want 1 after switch to newer log", pathChangeCalls.Load())
 	}
 }
 
