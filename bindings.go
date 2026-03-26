@@ -296,17 +296,60 @@ type UserCacheDTO struct {
 	LastUpdated   string `json:"lastUpdated"`
 	FirstSeenAt   string `json:"firstSeenAt,omitempty"`
 	LastContactAt string `json:"lastContactAt,omitempty"`
+	// Extended List Friends API fields (see VRChat GET /auth/user/friends).
+	Username                    string `json:"username,omitempty"`
+	StatusDescription           string `json:"statusDescription,omitempty"`
+	State                       string `json:"state,omitempty"`
+	CurrentAvatarThumbnailImage string `json:"currentAvatarThumbnailImageUrl,omitempty"`
+	UserIcon                    string `json:"userIcon,omitempty"`
+	ProfilePicOverrideThumbnail string `json:"profilePicOverrideThumbnail,omitempty"`
+	Bio                         string `json:"bio,omitempty"`
+	BioLinksJSON                string `json:"bioLinksJson,omitempty"`
+	CurrentAvatarImageURL       string `json:"currentAvatarImageUrl,omitempty"`
+	CurrentAvatarTagsJSON       string `json:"currentAvatarTagsJson,omitempty"`
+	DeveloperType               string `json:"developerType,omitempty"`
+	FriendKey                   string `json:"friendKey,omitempty"`
+	ImageURL                    string `json:"imageUrl,omitempty"`
+	LastPlatform                string `json:"lastPlatform,omitempty"`
+	Location                    string `json:"location,omitempty"`
+	LastLogin                   string `json:"lastLogin,omitempty"`
+	LastActivity                string `json:"lastActivity,omitempty"`
+	LastMobile                  string `json:"lastMobile,omitempty"`
+	Platform                    string `json:"platform,omitempty"`
+	ProfilePicOverride          string `json:"profilePicOverride,omitempty"`
+	TagsJSON                    string `json:"tagsJson,omitempty"`
 }
 
 func toUserCacheDTOs(list []*identity.UserCache) []UserCacheDTO {
 	out := make([]UserCacheDTO, len(list))
 	for i, f := range list {
 		dto := UserCacheDTO{
-			VRCUserID:   f.VRCUserID,
-			DisplayName: f.DisplayName,
-			Status:      f.Status,
-			IsFavorite:  f.IsFavorite,
-			LastUpdated: f.LastUpdated.Format(time.RFC3339),
+			VRCUserID:                   f.VRCUserID,
+			DisplayName:                 f.DisplayName,
+			Status:                      f.Status,
+			IsFavorite:                  f.IsFavorite,
+			LastUpdated:                 f.LastUpdated.Format(time.RFC3339),
+			Username:                    f.Username,
+			StatusDescription:           f.StatusDescription,
+			State:                       f.UserState,
+			CurrentAvatarThumbnailImage: f.AvatarThumbnailURL,
+			UserIcon:                    f.UserIconURL,
+			ProfilePicOverrideThumbnail: f.ProfilePicOverrideThumbnail,
+			Bio:                         f.Bio,
+			BioLinksJSON:                f.BioLinksJSON,
+			CurrentAvatarImageURL:       f.CurrentAvatarImageURL,
+			CurrentAvatarTagsJSON:       f.CurrentAvatarTagsJSON,
+			DeveloperType:               f.DeveloperType,
+			FriendKey:                   f.FriendKey,
+			ImageURL:                    f.ImageURL,
+			LastPlatform:                f.LastPlatform,
+			Location:                    f.Location,
+			LastLogin:                   f.LastLogin,
+			LastActivity:                f.LastActivity,
+			LastMobile:                  f.LastMobile,
+			Platform:                    f.Platform,
+			ProfilePicOverride:          f.ProfilePicOverride,
+			TagsJSON:                    f.TagsJSON,
 		}
 		if f.FirstSeenAt != nil {
 			dto.FirstSeenAt = f.FirstSeenAt.Format(time.RFC3339)

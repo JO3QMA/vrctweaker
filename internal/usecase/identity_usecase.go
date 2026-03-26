@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
@@ -225,14 +226,7 @@ func (uc *IdentityUseCase) RefreshFriends(ctx context.Context) error {
 			existing = &identity.UserCache{VRCUserID: f.ID}
 		}
 		isFav := existing.IsFavorite
-		apiSnap := &identity.UserCache{
-			VRCUserID:   f.ID,
-			DisplayName: f.DisplayName,
-			Status:      f.Status,
-			IsFavorite:  isFav,
-			UserKind:    identity.UserKindFriend,
-			LastUpdated: now,
-		}
+		apiSnap := userCacheFromFriend(f, isFav, now)
 		existing.MergeFromAPIFriend(apiSnap)
 		cached[i] = existing
 	}
@@ -266,4 +260,47 @@ func (uc *IdentityUseCase) RefreshFriends(ctx context.Context) error {
 // SetStatus changes the current user's status via API.
 func (uc *IdentityUseCase) SetStatus(ctx context.Context, status string) error {
 	return uc.apiClient.SetUserStatus(ctx, vrchatapi.UserStatus(status))
+}
+
+func jsonStringSlice(s []string) string {
+	if len(s) == 0 {
+		return ""
+	}
+	b, err := json.Marshal(s)
+	if err != nil {
+		return ""
+	}
+	return string(b)
+}
+
+func userCacheFromFriend(f vrchatapi.Friend, isFavorite bool, now time.Time) *identity.UserCache {
+	return &identity.UserCache{
+		VRCUserID:                   f.ID,
+		DisplayName:                 f.DisplayName,
+		Status:                      f.Status,
+		IsFavorite:                  isFavorite,
+		LastUpdated:                 now,
+		UserKind:                    identity.UserKindFriend,
+		Username:                    f.Username,
+		StatusDescription:           f.StatusDescription,
+		UserState:                   f.UserState,
+		AvatarThumbnailURL:          f.CurrentAvatarThumbnailImageURL,
+		UserIconURL:                 f.UserIcon,
+		ProfilePicOverrideThumbnail: f.ProfilePicOverrideThumbnail,
+		Bio:                         f.Bio,
+		BioLinksJSON:                jsonStringSlice(f.BioLinks),
+		CurrentAvatarImageURL:       f.CurrentAvatarImageURL,
+		CurrentAvatarTagsJSON:       jsonStringSlice(f.CurrentAvatarTags),
+		DeveloperType:               f.DeveloperType,
+		FriendKey:                   f.FriendKey,
+		ImageURL:                    f.ImageURL,
+		LastPlatform:                f.LastPlatform,
+		Location:                    f.Location,
+		LastLogin:                   f.LastLogin,
+		LastActivity:                f.LastActivity,
+		LastMobile:                  f.LastMobile,
+		Platform:                    f.Platform,
+		ProfilePicOverride:          f.ProfilePicOverride,
+		TagsJSON:                    jsonStringSlice(f.Tags),
+	}
 }

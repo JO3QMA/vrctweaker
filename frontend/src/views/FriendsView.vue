@@ -42,6 +42,15 @@
           :class="{ active: selected?.vrcUserId === f.vrcUserId }"
           @click="selected = f"
         >
+          <img
+            v-if="friendThumbUrl(f)"
+            class="friend-thumb"
+            :src="friendThumbUrl(f)!"
+            alt=""
+            width="40"
+            height="40"
+          />
+          <div v-else class="friend-thumb friend-thumb-placeholder" />
           <span class="friend-name">{{ f.displayName }}</span>
           <span class="friend-status">{{ f.status || "—" }}</span>
           <button
@@ -66,12 +75,175 @@
         </p>
       </div>
       <div v-if="selected" class="friend-detail">
-        <h3>詳細</h3>
+        <div class="detail-head">
+          <img
+            v-if="friendThumbUrl(selected)"
+            class="detail-avatar"
+            :src="friendThumbUrl(selected)!"
+            alt=""
+            width="96"
+            height="96"
+          />
+          <h3>詳細</h3>
+        </div>
         <dl class="detail-list">
           <dt>表示名</dt>
           <dd>{{ selected.displayName }}</dd>
+          <dt>ユーザーID</dt>
+          <dd class="mono">{{ selected.vrcUserId }}</dd>
+          <template v-if="selected.username">
+            <dt>ユーザー名</dt>
+            <dd>{{ selected.username }}</dd>
+          </template>
           <dt>ステータス</dt>
           <dd>{{ selected.status || "—" }}</dd>
+          <template v-if="selected.statusDescription">
+            <dt>ステータス説明</dt>
+            <dd>{{ selected.statusDescription }}</dd>
+          </template>
+          <template v-if="selected.state">
+            <dt>状態 (state)</dt>
+            <dd>{{ selected.state }}</dd>
+          </template>
+          <template v-if="selected.bio">
+            <dt>自己紹介</dt>
+            <dd class="multiline">{{ selected.bio }}</dd>
+          </template>
+          <template v-if="jsonStringArray(selected.bioLinksJson).length">
+            <dt>bio リンク</dt>
+            <dd>
+              <ul class="link-list">
+                <li
+                  v-for="(u, i) in jsonStringArray(selected.bioLinksJson)"
+                  :key="i"
+                >
+                  <a :href="u" target="_blank" rel="noopener noreferrer">{{
+                    u
+                  }}</a>
+                </li>
+              </ul>
+            </dd>
+          </template>
+          <template v-if="selected.location">
+            <dt>ロケーション</dt>
+            <dd class="mono wrap">{{ selected.location }}</dd>
+          </template>
+          <template v-if="selected.developerType">
+            <dt>開発者種別</dt>
+            <dd>{{ selected.developerType }}</dd>
+          </template>
+          <template v-if="selected.lastPlatform || selected.platform">
+            <dt>プラットフォーム</dt>
+            <dd>
+              {{
+                [selected.platform, selected.lastPlatform]
+                  .filter(Boolean)
+                  .join(" / ")
+              }}
+            </dd>
+          </template>
+          <template v-if="selected.lastLogin">
+            <dt>最終ログイン</dt>
+            <dd>{{ selected.lastLogin }}</dd>
+          </template>
+          <template v-if="selected.lastActivity">
+            <dt>最終アクティビティ</dt>
+            <dd>{{ selected.lastActivity }}</dd>
+          </template>
+          <template v-if="selected.lastMobile">
+            <dt>最終モバイル</dt>
+            <dd>{{ selected.lastMobile }}</dd>
+          </template>
+          <template v-if="jsonStringArray(selected.tagsJson).length">
+            <dt>タグ</dt>
+            <dd>
+              <span
+                v-for="tag in jsonStringArray(selected.tagsJson)"
+                :key="tag"
+                class="tag-chip"
+                >{{ tag }}</span
+              >
+            </dd>
+          </template>
+          <template
+            v-if="jsonStringArray(selected.currentAvatarTagsJson).length"
+          >
+            <dt>アバタータグ</dt>
+            <dd>
+              <span
+                v-for="tag in jsonStringArray(selected.currentAvatarTagsJson)"
+                :key="tag"
+                class="tag-chip"
+                >{{ tag }}</span
+              >
+            </dd>
+          </template>
+          <template v-if="selected.currentAvatarImageUrl">
+            <dt>アバター画像 URL</dt>
+            <dd>
+              <a
+                :href="selected.currentAvatarImageUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="wrap"
+                >{{ selected.currentAvatarImageUrl }}</a
+              >
+            </dd>
+          </template>
+          <template v-if="selected.userIcon">
+            <dt>ユーザーアイコン URL</dt>
+            <dd>
+              <a
+                :href="selected.userIcon"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="wrap"
+                >{{ selected.userIcon }}</a
+              >
+            </dd>
+          </template>
+          <template v-if="selected.imageUrl">
+            <dt>imageUrl</dt>
+            <dd>
+              <a
+                :href="selected.imageUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="wrap"
+                >{{ selected.imageUrl }}</a
+              >
+            </dd>
+          </template>
+          <template v-if="selected.profilePicOverride">
+            <dt>プロフィール画像 (上書き)</dt>
+            <dd>
+              <a
+                :href="selected.profilePicOverride"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="wrap"
+                >{{ selected.profilePicOverride }}</a
+              >
+            </dd>
+          </template>
+          <template v-if="selected.profilePicOverrideThumbnail">
+            <dt>プロフィール画像サムネ</dt>
+            <dd>
+              <a
+                :href="selected.profilePicOverrideThumbnail"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="wrap"
+                >{{ selected.profilePicOverrideThumbnail }}</a
+              >
+            </dd>
+          </template>
+          <template v-if="selected.friendKey">
+            <dt>friendKey</dt>
+            <dd class="mono wrap">{{ selected.friendKey }}</dd>
+          </template>
+          <dt>キャッシュ更新</dt>
+          <dd>{{ selected.lastUpdated }}</dd>
         </dl>
         <label class="favorite-toggle">
           <input
@@ -106,6 +278,26 @@ const filteredFriends = computed(() => {
   }
   return list.filter((f) => isOffline(f.status));
 });
+
+function friendThumbUrl(f: UserCacheDTO): string | undefined {
+  return (
+    f.currentAvatarThumbnailImageUrl ||
+    f.profilePicOverrideThumbnail ||
+    f.userIcon ||
+    f.imageUrl
+  );
+}
+
+function jsonStringArray(raw: string | undefined): string[] {
+  if (!raw?.trim()) return [];
+  try {
+    const v = JSON.parse(raw) as unknown;
+    if (!Array.isArray(v)) return [];
+    return v.filter((x): x is string => typeof x === "string");
+  } catch {
+    return [];
+  }
+}
 
 onMounted(async () => {
   await loadFriends();
@@ -243,9 +435,23 @@ async function applyFavorite(f: UserCacheDTO) {
   background: var(--bg-tertiary);
 }
 
+.friend-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.friend-thumb-placeholder {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+}
+
 .friend-name {
   flex: 1;
   font-weight: 500;
+  min-width: 0;
 }
 
 .friend-status {
@@ -281,11 +487,26 @@ async function applyFavorite(f: UserCacheDTO) {
   padding: 1rem;
   background: var(--bg-secondary);
   border-radius: var(--radius);
+  max-height: 560px;
+  overflow-y: auto;
 }
 
-.friend-detail h3 {
-  margin: 0 0 1rem;
+.detail-head {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.detail-head h3 {
+  margin: 0;
   font-size: 1.1rem;
+}
+
+.detail-avatar {
+  border-radius: var(--radius);
+  object-fit: cover;
+  flex-shrink: 0;
 }
 
 .detail-list {
@@ -304,6 +525,34 @@ async function applyFavorite(f: UserCacheDTO) {
 
 .detail-list dd {
   margin: 0.2rem 0 0;
+}
+
+.mono {
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+.wrap {
+  word-break: break-all;
+}
+
+.multiline {
+  white-space: pre-wrap;
+}
+
+.link-list {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.tag-chip {
+  display: inline-block;
+  margin: 0.15rem 0.35rem 0 0;
+  padding: 0.1rem 0.45rem;
+  font-size: 0.75rem;
+  background: var(--bg-tertiary);
+  border-radius: 999px;
+  border: 1px solid var(--border);
 }
 
 .favorite-toggle {

@@ -6,18 +6,51 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 )
 
-// Friend represents a VRChat API friend response.
+// Friend is a VRChat List Friends API user object (GET /auth/user/friends).
+// See https://vrchat.community/reference/get-friends
 type Friend struct {
-	ID          string `json:"id"`
-	DisplayName string `json:"displayName"`
-	Status      string `json:"status"`
+	Bio                            string   `json:"bio"`
+	BioLinks                       []string `json:"bioLinks"`
+	CurrentAvatarImageURL          string   `json:"currentAvatarImageUrl"`
+	CurrentAvatarThumbnailImageURL string   `json:"currentAvatarThumbnailImageUrl"`
+	CurrentAvatarTags              []string `json:"currentAvatarTags"`
+	DeveloperType                  string   `json:"developerType"`
+	DisplayName                    string   `json:"displayName"`
+	FriendKey                      string   `json:"friendKey"`
+	ID                             string   `json:"id"`
+	IsFriend                       bool     `json:"isFriend"`
+	ImageURL                       string   `json:"imageUrl"`
+	LastPlatform                   string   `json:"last_platform"`
+	Location                       string   `json:"location"`
+	LastLogin                      string   `json:"last_login"`
+	LastActivity                   string   `json:"last_activity"`
+	LastMobile                     string   `json:"last_mobile"`
+	Platform                       string   `json:"platform"`
+	ProfilePicOverride             string   `json:"profilePicOverride"`
+	ProfilePicOverrideThumbnail    string   `json:"profilePicOverrideThumbnail"`
+	Status                         string   `json:"status"`
+	StatusDescription              string   `json:"statusDescription"`
+	Tags                           []string `json:"tags"`
+	UserIcon                       string   `json:"userIcon"`
+	Username                       string   `json:"username"`
+	UserState                      string   `json:"state"`
 }
 
-// GetFriends fetches the current user's friend list.
-func (c *Client) GetFriends(ctx context.Context) ([]Friend, error) {
-	resp, err := c.do(ctx, http.MethodGet, "/auth/user/friends", nil)
+func friendsListPath(offset, n int, offline bool) string {
+	q := url.Values{}
+	q.Set("offset", strconv.Itoa(offset))
+	q.Set("n", strconv.Itoa(n))
+	q.Set("offline", strconv.FormatBool(offline))
+	return "/auth/user/friends?" + q.Encode()
+}
+
+func (c *Client) getFriendsPage(ctx context.Context, offset, n int, offline bool) ([]Friend, error) {
+	path := friendsListPath(offset, n, offline)
+	resp, err := c.do(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -30,9 +63,40 @@ func (c *Client) GetFriends(ctx context.Context) ([]Friend, error) {
 
 	var friends []Friend
 	if err := json.Unmarshal(body, &friends); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decode friends page: %w", err)
 	}
 	return friends, nil
+}
+
+// GetFriends fetches every friend by paging GET /auth/user/friends (online/active and offline passes).
+func (c *Client) GetFriends(ctx context.Context) ([]Friend, error) {
+	const pageSize = 100
+	seen := make(map[string]struct{})
+	var out []Friend
+	for _, offline := range []bool{false, true} {
+		offset := 0
+		for {
+			batch, err := c.getFriendsPage(ctx, offset, pageSize, offline)
+			if err != nil {
+				return nil, err
+			}
+			for _, f := range batch {
+				if f.ID == "" {
+					continue
+				}
+				if _, dup := seen[f.ID]; dup {
+					continue
+				}
+				seen[f.ID] = struct{}{}
+				out = append(out, f)
+			}
+			if len(batch) < pageSize {
+				break
+			}
+			offset += pageSize
+		}
+	}
+	return out, nil
 }
 
 // SetFavorite sets or unsets a friend as favorite.
