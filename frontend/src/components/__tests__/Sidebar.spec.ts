@@ -21,7 +21,7 @@ describe("Sidebar", () => {
       },
     });
     const links = wrapper.findAll(".sidebar-link");
-    expect(links.length).toBeGreaterThanOrEqual(7); // 7 main + settings
+    expect(links.length).toBeGreaterThanOrEqual(9); // 8 main + settings
   });
 
   it("has dashboard link", () => {
@@ -31,5 +31,14 @@ describe("Sidebar", () => {
       },
     });
     expect(wrapper.text()).toContain("ダッシュボード");
+  });
+
+  it("has video link", () => {
+    const wrapper = mount(Sidebar, {
+      global: {
+        plugins: [router],
+      },
+    });
+    expect(wrapper.text()).toContain("動画");
   });
 });

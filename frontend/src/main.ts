@@ -24,6 +24,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "ギャラリー" },
   },
   {
+    path: "/video",
+    name: "video",
+    component: () => import("./views/VideoView.vue"),
+    meta: { title: "動画" },
+  },
+  {
     path: "/activity",
     name: "activity",
     component: () => import("./views/ActivityView.vue"),

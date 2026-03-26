@@ -24,6 +24,15 @@ test.describe("VRChat Tweaker", () => {
     await expect(page.locator("h1")).toContainText("設定");
   });
 
+  test("navigates to video", async ({ page }) => {
+    await page.goto("/");
+    await page.click("text=動画");
+    await expect(page.locator("h1")).toContainText("動画");
+    await expect(
+      page.getByRole("heading", { name: "yt-dlp のバージョン管理" }),
+    ).toBeVisible();
+  });
+
   test.describe("Dashboard", () => {
     test("displays default profile and status buttons", async ({ page }) => {
       await page.goto("/");

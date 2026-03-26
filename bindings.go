@@ -492,3 +492,45 @@ func fromVRChatConfigDTO(d VRChatConfigDTO) *vrchatconfig.VRChatConfig {
 		DisableRichPresence:      d.DisableRichPresence,
 	}
 }
+
+// YTDLPUpdateStatusDTO is returned by GetYTDLPUpdateStatus (yt-dlp release vs local exe).
+type YTDLPUpdateStatusDTO struct {
+	Supported         bool   `json:"supported"`
+	TargetPath        string `json:"targetPath"`
+	LocalVersion      string `json:"localVersion"`
+	LatestVersion     string `json:"latestVersion"`
+	LatestTag         string `json:"latestTag"`
+	LatestDownloadURL string `json:"latestDownloadUrl"`
+	LatestError       string `json:"latestError"`
+	UnsupportedReason string `json:"unsupportedReason,omitempty"`
+}
+
+// YTDLPApplyResultDTO is returned by ApplyYTDLP.
+type YTDLPApplyResultDTO struct {
+	Ok             bool   `json:"ok"`
+	AppliedVersion string `json:"appliedVersion"`
+	Message        string `json:"message"`
+	Error          string `json:"error"`
+}
+
+func toYTDLPUpdateStatusDTO(s usecase.YTDLPUpdateStatus) YTDLPUpdateStatusDTO {
+	return YTDLPUpdateStatusDTO{
+		Supported:         s.Supported,
+		TargetPath:        s.TargetPath,
+		LocalVersion:      s.LocalVersion,
+		LatestVersion:     s.LatestVersion,
+		LatestTag:         s.LatestTag,
+		LatestDownloadURL: s.LatestDownloadURL,
+		LatestError:       s.LatestError,
+		UnsupportedReason: s.UnsupportedReason,
+	}
+}
+
+func toYTDLPApplyResultDTO(r usecase.YTDLPApplyResult) YTDLPApplyResultDTO {
+	return YTDLPApplyResultDTO{
+		Ok:             r.Ok,
+		AppliedVersion: r.AppliedVersion,
+		Message:        r.Message,
+		Error:          r.Error,
+	}
+}

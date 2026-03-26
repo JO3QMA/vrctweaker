@@ -1066,6 +1066,43 @@ func (a *App) DefaultVRChatPictureFolder() (string, error) {
 	return filepath.Join(home, "Pictures", "VRChat"), nil
 }
 
+// GetYTDLPBasics returns the yt-dlp install path and local version without calling GitHub.
+func (a *App) GetYTDLPBasics() YTDLPUpdateStatusDTO {
+	u := usecase.NewYTDLPUpdater()
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	st := u.GetBasics(ctx, getVRChatConfigPath())
+	return toYTDLPUpdateStatusDTO(st)
+}
+
+// GetYTDLPUpdateStatus compares the local VRChat yt-dlp.exe (if any) with the latest GitHub release.
+// Call from the UI on user action only; GitHub API is rate-limited when unauthenticated.
+func (a *App) GetYTDLPUpdateStatus() YTDLPUpdateStatusDTO {
+	u := usecase.NewYTDLPUpdater()
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
+	defer cancel()
+	st := u.GetUpdateStatus(ctx, getVRChatConfigPath())
+	return toYTDLPUpdateStatusDTO(st)
+}
+
+// ApplyYTDLP downloads yt-dlp.exe from downloadURL and installs it under VRChat's Tools folder.
+// downloadURL and latestTag should come from a successful GetYTDLPUpdateStatus response.
+func (a *App) ApplyYTDLP(downloadURL, latestTag string) YTDLPApplyResultDTO {
+	downloadURL = strings.TrimSpace(downloadURL)
+	latestTag = strings.TrimSpace(latestTag)
+	if downloadURL == "" {
+		return YTDLPApplyResultDTO{
+			Ok:    false,
+			Error: "ダウンロード URL がありません。先に「最新版を確認」を実行してください。",
+		}
+	}
+	u := usecase.NewYTDLPUpdater()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+	r := u.ApplyLatest(ctx, getVRChatConfigPath(), downloadURL, latestTag)
+	return toYTDLPApplyResultDTO(r)
+}
+
 // getVRChatConfigPath returns the path to VRChat's config.json.
 // On Windows: %LocalAppData%Low\VRChat\VRChat\config.json
 // On other OS: falls back to ~/.local/share/VRChat/VRChat/config.json
