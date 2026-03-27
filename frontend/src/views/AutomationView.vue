@@ -1,12 +1,17 @@
 <template>
   <div class="automation-view">
     <h1 class="page-title">オートメーション</h1>
-    <p class="page-desc">
+    <el-text
+      type="info"
+      size="small"
+      style="display: block; margin-bottom: 1rem"
+    >
       IF-THEN 形式のルールで、トリガー発生時にアクションを実行します。
-    </p>
+    </el-text>
     <div class="rules-section">
+      <!-- ルールリスト -->
       <div class="rules-list">
-        <button class="btn-add" @click="addNew">+ 新規ルール</button>
+        <el-button class="btn-add" @click="addNew">+ 新規ルール</el-button>
         <div
           v-for="r in rules"
           :key="r.id"
@@ -16,95 +21,106 @@
         >
           <div class="rule-header">
             <span class="rule-name">{{ r.name }}</span>
-            <label class="toggle-wrap" title="有効/無効" @click.stop>
-              <input
+            <div class="toggle-wrap" @click.stop>
+              <el-switch
                 v-model="r.isEnabled"
-                type="checkbox"
+                size="small"
                 @change="toggleRule(r)"
               />
-              <span class="toggle-label">{{ r.isEnabled ? "ON" : "OFF" }}</span>
-            </label>
+            </div>
           </div>
           <div class="rule-summary">
-            <span class="if-then">
-              IF {{ triggerLabel(r.triggerType) }} → THEN
-              {{ actionLabel(r.actionType, r.actionPayload) }}
-            </span>
+            <span
+              >IF {{ triggerLabel(r.triggerType) }} → THEN
+              {{ actionLabel(r.actionType, r.actionPayload) }}</span
+            >
           </div>
         </div>
       </div>
-      <div v-if="selected" class="rule-editor">
-        <h3 class="editor-title">
+
+      <!-- ルールエディタ -->
+      <el-card v-if="selected" class="rule-editor" shadow="never">
+        <template #header>
           {{ selected.id ? "ルールを編集" : "新規ルール" }}
-        </h3>
-        <form class="editor-form" @submit.prevent="save">
-          <label>ルール名</label>
-          <input
-            v-model="selected.name"
-            type="text"
-            placeholder="例: AFK時にステータスをbusyに"
-            required
-          />
-          <div class="if-then-block">
-            <h4>IF（トリガー）</h4>
-            <label>条件</label>
-            <select v-model="selected.triggerType" required>
-              <option
+        </template>
+        <el-form label-position="top" @submit.prevent="save">
+          <el-form-item label="ルール名">
+            <el-input
+              v-model="selected.name"
+              placeholder="例: AFK時にステータスをbusyに"
+              required
+            />
+          </el-form-item>
+
+          <el-divider>IF（トリガー）</el-divider>
+          <el-form-item label="条件">
+            <el-select
+              v-model="selected.triggerType"
+              required
+              style="width: 100%; max-width: 320px"
+            >
+              <el-option
                 v-for="opt in triggerOptions"
                 :key="opt.value"
                 :value="opt.value"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
-          </div>
-          <div class="if-then-block">
-            <h4>THEN（アクション）</h4>
-            <label>アクション</label>
-            <select v-model="selected.actionType" required>
-              <option
+                :label="opt.label"
+              />
+            </el-select>
+          </el-form-item>
+
+          <el-divider>THEN（アクション）</el-divider>
+          <el-form-item label="アクション">
+            <el-select
+              v-model="selected.actionType"
+              required
+              style="width: 100%; max-width: 320px"
+            >
+              <el-option
                 v-for="opt in actionOptions"
                 :key="opt.value"
                 :value="opt.value"
-              >
-                {{ opt.label }}
-              </option>
-            </select>
-            <template v-if="selected.actionType === 'change_status'">
-              <label>ステータス</label>
-              <select v-model="statusValue">
-                <option
-                  v-for="opt in statusOptions"
-                  :key="opt.value"
-                  :value="opt.value"
-                >
-                  {{ opt.label }}
-                </option>
-              </select>
-            </template>
-          </div>
+                :label="opt.label"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item
+            v-if="selected.actionType === 'change_status'"
+            label="ステータス"
+          >
+            <el-select
+              v-model="statusValue"
+              style="width: 100%; max-width: 320px"
+            >
+              <el-option
+                v-for="opt in statusOptions"
+                :key="opt.value"
+                :value="opt.value"
+                :label="opt.label"
+              />
+            </el-select>
+          </el-form-item>
+
           <div class="editor-actions">
-            <button type="submit" class="btn-save">保存</button>
-            <button
+            <el-button type="primary" @click="save">保存</el-button>
+            <el-button
               v-if="selected.id"
-              type="button"
-              class="btn-delete"
+              type="danger"
+              plain
               @click="confirmDelete"
             >
               削除
-            </button>
-            <button type="button" class="btn-cancel" @click="cancelEdit">
-              キャンセル
-            </button>
+            </el-button>
+            <el-button @click="cancelEdit">キャンセル</el-button>
           </div>
-        </form>
-      </div>
+        </el-form>
+      </el-card>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from "vue";
+import { ElMessageBox } from "element-plus";
 import { App, type AutomationRuleDTO } from "../wails/app";
 
 const TRIGGER_OPTIONS = [
@@ -241,7 +257,20 @@ async function toggleRule(r: AutomationRuleDTO) {
 
 async function confirmDelete() {
   if (!selected.value?.id) return;
-  if (!window.confirm(`「${selected.value.name}」を削除しますか？`)) return;
+  try {
+    await ElMessageBox.confirm(
+      `「${selected.value.name}」を削除しますか？`,
+      "確認",
+      {
+        confirmButtonText: "削除",
+        cancelButtonText: "キャンセル",
+        type: "warning",
+        confirmButtonClass: "el-button--danger",
+      },
+    );
+  } catch {
+    return;
+  }
   await App.deleteAutomationRule(selected.value.id);
   selected.value = null;
   await loadRules();
@@ -249,52 +278,47 @@ async function confirmDelete() {
 </script>
 
 <style scoped>
-.page-title {
-  margin: 0 0 0.25rem;
-  font-size: 1.5rem;
-}
-.page-desc {
-  margin: 0 0 1rem;
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-}
 .rules-section {
   display: flex;
   gap: 1.5rem;
 }
+
 .rules-list {
   width: 280px;
   flex-shrink: 0;
 }
+
 .btn-add {
   width: 100%;
-  padding: 0.5rem;
   margin-bottom: 0.5rem;
-  background: var(--bg-tertiary);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  color: var(--text-secondary);
-  cursor: pointer;
+  border-style: dashed !important;
+  color: var(--text-secondary) !important;
 }
+
 .btn-add:hover {
-  background: var(--bg-secondary);
-  color: var(--accent);
+  color: var(--accent) !important;
 }
+
 .rule-card {
   padding: 0.75rem;
   margin-bottom: 0.5rem;
   background: var(--bg-secondary);
   border-radius: var(--radius);
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition:
+    background 0.15s,
+    opacity 0.15s;
 }
+
 .rule-card:hover,
 .rule-card.active {
   background: var(--bg-tertiary);
 }
+
 .rule-card.disabled {
   opacity: 0.65;
 }
+
 .rule-header {
   display: flex;
   align-items: center;
@@ -302,93 +326,41 @@ async function confirmDelete() {
   gap: 0.5rem;
   margin-bottom: 0.35rem;
 }
+
 .rule-name {
   font-weight: 500;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
 }
+
 .toggle-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  cursor: pointer;
   flex-shrink: 0;
 }
-.toggle-label {
-  font-size: 0.7rem;
-  color: var(--text-secondary);
-}
+
 .rule-summary {
   font-size: 0.8rem;
   color: var(--text-secondary);
-}
-.if-then {
   font-style: italic;
 }
+
 .rule-editor {
   flex: 1;
   min-width: 0;
+  background: var(--bg-secondary) !important;
+  border-color: var(--border) !important;
 }
-.editor-title {
-  margin: 0 0 1rem;
-  font-size: 1.1rem;
+
+.rule-editor :deep(.el-card__header) {
+  font-weight: 600;
+  border-bottom-color: var(--border);
 }
-.editor-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-.editor-form label {
-  font-size: 0.85rem;
-  margin-top: 0.5rem;
-}
-.editor-form label:first-of-type {
-  margin-top: 0;
-}
-.editor-form input[type="text"],
-.editor-form select {
-  width: 100%;
-  max-width: 320px;
-  padding: 0.5rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-}
-.if-then-block {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-}
-.if-then-block h4 {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
-}
+
 .editor-actions {
   margin-top: 1rem;
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
-}
-.btn-save,
-.btn-delete,
-.btn-cancel {
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius);
-  border: none;
-  cursor: pointer;
-}
-.btn-save {
-  background: var(--accent);
-  color: white;
-}
-.btn-delete {
-  background: #8b2635;
-  color: white;
-}
-.btn-cancel {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
 }
 </style>

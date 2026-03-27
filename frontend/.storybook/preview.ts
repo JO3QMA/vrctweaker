@@ -1,6 +1,10 @@
 import type { Preview } from "@storybook/vue3-vite";
 import { setup } from "@storybook/vue3-vite";
 import { createMemoryHistory, createRouter } from "vue-router";
+import ElementPlus from "element-plus";
+import "element-plus/dist/index.css";
+import "element-plus/theme-chalk/dark/css-vars.css";
+import * as ElementPlusIconsVue from "@element-plus/icons-vue";
 import "../src/assets/style.css";
 
 const router = createRouter({
@@ -29,6 +33,10 @@ const router = createRouter({
 
 setup((app) => {
   app.use(router);
+  app.use(ElementPlus);
+  for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+    app.component(key, component);
+  }
 });
 
 const preview: Preview = {

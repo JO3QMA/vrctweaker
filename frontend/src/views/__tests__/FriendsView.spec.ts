@@ -33,6 +33,22 @@ function minimalUser(
   } as UserCacheDTO;
 }
 
+/**
+ * ElSwitch の inner checkbox input を返す
+ * （ElSwitch は data-testid を外側 div に残すため `input` サフィックスが必要）
+ */
+function switchInput(wrapper: ReturnType<typeof mount>, testId: string) {
+  return wrapper.find(`[data-testid="${testId}"] input`);
+}
+
+/**
+ * ElInput の inner input を返す
+ * （ElInput は data-testid を inner input に転送するため直接セレクタで取得できる）
+ */
+function elInputEl(wrapper: ReturnType<typeof mount>, testId: string) {
+  return wrapper.find(`[data-testid="${testId}"]`);
+}
+
 describe("FriendsView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -67,7 +83,8 @@ describe("FriendsView", () => {
     const wrapper = mount(FriendsView);
     await flushPromises();
 
-    const mode = wrapper.find('[data-testid="friends-filter-mode"]')
+    // ElSwitch の inner checkbox input で確認
+    const mode = switchInput(wrapper, "friends-filter-mode")
       .element as HTMLInputElement;
     expect(mode.checked).toBe(false);
 
@@ -91,7 +108,7 @@ describe("FriendsView", () => {
     const wrapper = mount(FriendsView);
     await flushPromises();
 
-    await wrapper.find('[data-testid="friends-filter-mode"]').setValue(true);
+    await switchInput(wrapper, "friends-filter-mode").setValue(true);
     await wrapper.vm.$nextTick();
 
     expect(wrapper.text()).not.toContain("OnUser");
@@ -103,11 +120,13 @@ describe("FriendsView", () => {
     const wrapper = mount(FriendsView);
     await flushPromises();
 
-    const input = wrapper.find('[data-testid="friends-search-display-name"]');
-    expect(input.exists()).toBe(true);
-    expect((input.element as HTMLInputElement).placeholder).toBe(
-      "表示名で検索",
-    );
+    expect(
+      wrapper.find('[data-testid="friends-search-display-name"]').exists(),
+    ).toBe(true);
+    // ElInput は data-testid を inner input に転送するため直接 .element で参照可
+    const inner = elInputEl(wrapper, "friends-search-display-name")
+      .element as HTMLInputElement;
+    expect(inner.placeholder).toBe("表示名で検索");
   });
 
   it("filters friends by display name (case-insensitive)", async () => {
@@ -126,9 +145,8 @@ describe("FriendsView", () => {
     const wrapper = mount(FriendsView);
     await flushPromises();
 
-    await wrapper
-      .find('[data-testid="friends-search-display-name"]')
-      .setValue("beta");
+    // ElInput の data-testid は inner input に行くため直接 setValue
+    await elInputEl(wrapper, "friends-search-display-name").setValue("beta");
     await wrapper.vm.$nextTick();
 
     expect(wrapper.text()).toContain("BetaUser");
@@ -146,9 +164,7 @@ describe("FriendsView", () => {
     const wrapper = mount(FriendsView);
     await flushPromises();
 
-    await wrapper
-      .find('[data-testid="friends-search-display-name"]')
-      .setValue("nope");
+    await elInputEl(wrapper, "friends-search-display-name").setValue("nope");
     await wrapper.vm.$nextTick();
 
     expect(wrapper.text()).toContain("検索に一致するフレンドはいません");

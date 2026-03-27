@@ -1,23 +1,31 @@
 <template>
   <nav class="sidebar">
-    <ul class="sidebar-menu">
-      <li v-for="item in menuItems" :key="item.path">
-        <router-link :to="item.path" class="sidebar-link" active-class="active">
-          <span class="sidebar-icon">{{ item.icon }}</span>
-          <span class="sidebar-label">{{ item.label }}</span>
-        </router-link>
-      </li>
-    </ul>
+    <el-menu :default-active="route.path" router class="sidebar-nav">
+      <el-menu-item
+        v-for="item in menuItems"
+        :key="item.path"
+        :index="item.path"
+      >
+        <span class="sidebar-icon">{{ item.icon }}</span>
+        <template #title>{{ item.label }}</template>
+      </el-menu-item>
+    </el-menu>
     <div class="sidebar-footer">
-      <router-link to="/settings" class="sidebar-link settings-link">
-        <span class="sidebar-icon">⚙️</span>
-        <span class="sidebar-label">設定</span>
-      </router-link>
+      <el-menu :default-active="route.path" router class="sidebar-nav">
+        <el-menu-item index="/settings">
+          <span class="sidebar-icon">⚙️</span>
+          <template #title>設定</template>
+        </el-menu-item>
+      </el-menu>
     </div>
   </nav>
 </template>
 
 <script setup lang="ts">
+import { useRoute } from "vue-router";
+
+const route = useRoute();
+
 const menuItems = [
   { path: "/", icon: "🏠", label: "ダッシュボード" },
   { path: "/launcher", icon: "🚀", label: "ランチャー" },
@@ -36,50 +44,37 @@ const menuItems = [
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
 }
 
-.sidebar-menu {
-  list-style: none;
-  margin: 0;
-  padding: 0.5rem 0;
+.sidebar-nav {
+  background: transparent;
+  border-right: none !important;
 }
 
-.sidebar-link {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 1rem;
+.sidebar-nav :deep(.el-menu-item) {
   color: var(--text-secondary);
-  transition:
-    background 0.15s,
-    color 0.15s;
+  height: 42px;
+  line-height: 42px;
 }
 
-.sidebar-link:hover,
-.sidebar-link.active {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
+.sidebar-nav :deep(.el-menu-item:hover),
+.sidebar-nav :deep(.el-menu-item.is-active) {
+  background: var(--bg-tertiary) !important;
+  color: var(--text-primary) !important;
 }
 
-.sidebar-link.active {
+.sidebar-nav :deep(.el-menu-item.is-active) {
   border-left: 3px solid var(--accent);
-}
-
-.sidebar-icon {
-  font-size: 1.1rem;
-}
-
-.sidebar-label {
-  font-size: 0.9rem;
 }
 
 .sidebar-footer {
   margin-top: auto;
-  padding: 0.5rem 0;
   border-top: 1px solid var(--border);
 }
 
-.settings-link {
-  color: var(--text-secondary);
+.sidebar-icon {
+  margin-right: 0.5rem;
+  font-size: 1rem;
 }
 </style>

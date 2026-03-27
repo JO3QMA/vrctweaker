@@ -2,60 +2,77 @@
   <div class="gallery-view">
     <h1 class="page-title">ギャラリー</h1>
 
-    <!-- フィルタ（最小: worldId） -->
     <div class="filters">
-      <input
+      <el-input
         v-model="filterWorldId"
         data-testid="gallery-world-filter"
         type="search"
         placeholder="World ID で検索（入力で自動検索 / Enter）"
-        class="filter-input"
+        clearable
+        style="flex: 1; max-width: 400px"
         @keyup.enter="onFilterEnter"
-      />
-      <button
-        type="button"
-        class="btn-refresh"
-        :disabled="loading || scanning"
-        @click="onRefreshClick"
       >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+      </el-input>
+      <el-button :disabled="loading || scanning" @click="onRefreshClick">
         更新
-      </button>
-      <button
-        type="button"
+      </el-button>
+      <el-button
         data-testid="gallery-scan-folder"
-        class="btn-scan"
         :disabled="loading || scanning"
+        :loading="scanning"
         @click="scanFolder"
       >
         {{ scanning ? "スキャン中…" : "Scan Folder" }}
-      </button>
+      </el-button>
     </div>
 
-    <p v-if="loadError" class="banner-error" role="alert">
-      {{ loadError }}
-    </p>
-    <p v-if="scanError" class="banner-error banner-warn" role="status">
-      {{ scanError }}
-    </p>
+    <el-alert
+      v-if="loadError"
+      :title="loadError"
+      type="error"
+      :closable="false"
+      show-icon
+    />
+    <el-alert
+      v-if="scanError"
+      :title="scanError"
+      type="warning"
+      :closable="false"
+      show-icon
+    />
 
     <div class="gallery-body">
-      <!-- グリッド一覧（この領域のみ縦スクロール） -->
+      <!-- グリッド一覧 -->
       <div class="grid-section">
         <div
           v-if="scanning"
           class="loading gallery-scan-progress"
           data-testid="gallery-scan-progress"
         >
-          <p class="gallery-scan-status">
-            {{ scanStatusText }}
-          </p>
-          <progress
+          <p class="gallery-scan-status">{{ scanStatusText }}</p>
+          <el-progress
             v-if="scanProgressDeterminate"
-            class="gallery-scan-progress-bar"
-            :value="scanProgress?.current ?? 0"
-            :max="Math.max(1, scanProgress?.total ?? 1)"
+            :percentage="
+              Math.round(
+                ((scanProgress?.current ?? 0) /
+                  Math.max(1, scanProgress?.total ?? 1)) *
+                  100,
+              )
+            "
+            :striped="true"
+            :striped-flow="true"
           />
-          <progress v-else class="gallery-scan-progress-bar" />
+          <el-progress
+            v-else
+            :percentage="100"
+            status="striped"
+            :striped="true"
+            :striped-flow="true"
+            :duration="10"
+          />
         </div>
         <div v-else-if="loading" class="loading">読み込み中…</div>
         <div v-else-if="list.length === 0" class="empty">
@@ -121,9 +138,9 @@
         </div>
       </div>
 
-      <!-- 詳細プレビュー（スクロールに追従しない） -->
-      <aside v-if="selected" class="detail-panel">
-        <h3>詳細</h3>
+      <!-- 詳細プレビュー -->
+      <el-card v-if="selected" class="detail-panel" shadow="never">
+        <template #header>詳細</template>
         <div class="detail-preview">
           <img
             data-testid="gallery-detail-preview"
@@ -133,54 +150,69 @@
             @error="onThumbnailError"
           />
         </div>
-        <dl class="detail-list">
-          <dt>ファイル名</dt>
-          <dd>{{ fileNameFromPath(selected.filePath) }}</dd>
-          <dt>ファイルサイズ</dt>
-          <dd>{{ formatFileSize(selected.fileSizeBytes) }}</dd>
-          <dt>撮影日時</dt>
-          <dd>{{ formatTakenAt(selected.takenAt) }}</dd>
-          <dt>ワールド名</dt>
-          <dd>{{ selected.worldName || "—" }}</dd>
-          <dt>作者表示名</dt>
-          <dd>{{ selected.authorDisplayName || "—" }}</dd>
-          <dt>ファイルパス</dt>
-          <dd>
-            <button
-              type="button"
-              class="file-path-btn"
+        <el-descriptions :column="1" border size="small">
+          <el-descriptions-item label="ファイル名">
+            {{ fileNameFromPath(selected.filePath) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="ファイルサイズ">
+            {{ formatFileSize(selected.fileSizeBytes) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="撮影日時">
+            {{ formatTakenAt(selected.takenAt) }}
+          </el-descriptions-item>
+          <el-descriptions-item label="ワールド名">
+            {{ selected.worldName || "—" }}
+          </el-descriptions-item>
+          <el-descriptions-item label="作者表示名">
+            {{ selected.authorDisplayName || "—" }}
+          </el-descriptions-item>
+          <el-descriptions-item label="ファイルパス">
+            <el-button
+              link
+              type="primary"
               data-testid="gallery-detail-open-file"
-              :title="'既定のアプリで画像を開く'"
+              title="既定のアプリで画像を開く"
+              class="file-path-btn"
               @click="openSelectedFileExternally"
             >
               {{ selected.filePath }}
-            </button>
-          </dd>
-        </dl>
-        <p v-if="detailActionError" class="detail-action-error">
-          {{ detailActionError }}
-        </p>
-        <button
-          type="button"
-          class="btn-open-folder"
+            </el-button>
+          </el-descriptions-item>
+        </el-descriptions>
+        <el-alert
+          v-if="detailActionError"
+          :title="detailActionError"
+          type="error"
+          :closable="false"
+          show-icon
+          style="margin: 0.75rem 0"
+        />
+        <el-button
+          style="width: 100%; margin: 0.75rem 0 0.5rem"
           data-testid="gallery-detail-open-folder"
           :title="openFolderButtonTitle"
           @click="revealSelectedInFolder"
         >
           フォルダを開く
-        </button>
-        <p v-if="joinError" class="join-error">
-          {{ joinError }}
-        </p>
-        <button
-          class="btn-join"
+        </el-button>
+        <el-alert
+          v-if="joinError"
+          :title="joinError"
+          type="error"
+          :closable="false"
+          show-icon
+          style="margin-bottom: 0.5rem"
+        />
+        <el-button
+          type="primary"
+          style="width: 100%"
           :disabled="!selected.worldId || selected.worldId.trim() === ''"
           :title="joinButtonTitle"
           @click="onJoin"
         >
           このワールドへJoin
-        </button>
-      </aside>
+        </el-button>
+      </el-card>
     </div>
   </div>
 </template>
@@ -212,9 +244,7 @@ import {
 import { pruneThumbnailUrlMap } from "./galleryThumbnailCache";
 
 const FILTER_DEBOUNCE_MS = 400;
-/** Debounce reload when picture folder watcher emits gallery:screenshots-changed. */
 const GALLERY_SCREENSHOTS_CHANGED_DEBOUNCE_MS = 400;
-/** Debounced prune after scroll so off-screen Data URLs are released without thrashing. */
 const THUMBNAIL_PRUNE_SCROLL_DEBOUNCE_MS = 150;
 const THUMBNAIL_FETCH_CONCURRENCY = 4;
 const GRID_GAP_PX = 12;
@@ -226,7 +256,6 @@ const missingThumbDataUrl =
     '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90" viewBox="0 0 120 90"><rect fill="#333" width="120" height="90"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12">画像なし</text></svg>',
   );
 
-/** Placeholder while backend thumbnail is loading (avoids file:// in WebView). */
 const transparentPixelDataUrl =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
 
@@ -234,20 +263,14 @@ const list = ref<ScreenshotDTO[]>([]);
 const selected = ref<ScreenshotDTO | null>(null);
 const loading = ref(false);
 const scanning = ref(false);
-/** Latest scan progress from Wails event gallery:scan-progress (cleared when scan ends). */
 const scanProgress = ref<ScanProgressPayload | null>(null);
 const loadError = ref<string | null>(null);
 const scanError = ref<string | null>(null);
 const filterWorldId = ref("");
 const thumbnailUrls = ref<Record<string, string>>({});
-
-/** Collapsed section keys (`y:…`, `m:…`, `d:…`). */
 const collapsed = ref(new Set<string>());
-
 const gridScrollRef = ref<HTMLElement | null>(null);
-/** Content width inside .grid-scroll (from ResizeObserver). */
 const gridInnerWidth = ref(0);
-/** Bumps when the grid scrolls so virtual rows / thumb prefetch stay in sync. */
 const scrollSync = ref(0);
 
 let filterDebounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -266,38 +289,23 @@ const scanProgressDeterminate = computed(() => {
 
 const scanStatusText = computed(() => {
   const p = scanProgress.value;
-  if (!p) {
-    return "フォルダをスキャンしています…";
-  }
-  if (p.phase === "listing") {
+  if (!p) return "フォルダをスキャンしています…";
+  if (p.phase === "listing")
     return `画像ファイルを検索しています…（${p.current} 件）`;
-  }
   if (p.phase === "importing") {
-    if (p.total === 0) {
-      return "画像ファイルは見つかりませんでした";
-    }
-    if (p.current === 0) {
-      return `画像 ${p.total} 件を取り込みます…`;
-    }
-    if (p.item) {
-      return `取り込み中: ${p.item}（${p.current} / ${p.total}）`;
-    }
+    if (p.total === 0) return "画像ファイルは見つかりませんでした";
+    if (p.current === 0) return `画像 ${p.total} 件を取り込みます…`;
+    if (p.item) return `取り込み中: ${p.item}（${p.current} / ${p.total}）`;
     return `取り込み中（${p.current} / ${p.total}）`;
   }
   return "フォルダをスキャンしています…";
 });
 
 function applyScanProgressPayload(data: unknown): void {
-  if (typeof data !== "object" || data === null) {
-    return;
-  }
+  if (typeof data !== "object" || data === null) return;
   const o = data as Record<string, unknown>;
-  if (typeof o.phase !== "string") {
-    return;
-  }
-  if (typeof o.current !== "number" || typeof o.total !== "number") {
-    return;
-  }
+  if (typeof o.phase !== "string") return;
+  if (typeof o.current !== "number" || typeof o.total !== "number") return;
   const item = o.item;
   scanProgress.value = {
     phase: o.phase,
@@ -338,9 +346,7 @@ function applyGalleryScanDonePayload(data: unknown): void {
 
 const columnCount = computed(() => {
   const w = gridInnerWidth.value;
-  if (w <= 0) {
-    return 1;
-  }
+  if (w <= 0) return 1;
   return Math.max(
     1,
     Math.floor((w + GRID_GAP_PX) / (MIN_CELL_WIDTH + GRID_GAP_PX)),
@@ -350,14 +356,11 @@ const columnCount = computed(() => {
 const cellWidthPx = computed(() => {
   const cols = columnCount.value;
   const w = gridInnerWidth.value;
-  if (cols <= 0 || w <= 0) {
-    return MIN_CELL_WIDTH;
-  }
+  if (cols <= 0 || w <= 0) return MIN_CELL_WIDTH;
   return (w - GRID_GAP_PX * (cols - 1)) / cols;
 });
 
 const cellHeightPx = computed(() => (cellWidthPx.value * 3) / 4);
-
 const rowHeightPx = computed(() => cellHeightPx.value + GRID_GAP_PX);
 
 const flatGalleryRows = computed(() =>
@@ -370,9 +373,7 @@ const rowVirtualizer = useVirtualizer(
     getScrollElement: () => gridScrollRef.value,
     estimateSize: (index: number) => {
       const row = flatGalleryRows.value[index];
-      if (!row) {
-        return rowHeightPx.value;
-      }
+      if (!row) return rowHeightPx.value;
       return galleryRowHeight(row, rowHeightPx.value);
     },
     overscan: 3,
@@ -458,12 +459,8 @@ function galleryHeaderAt(
 function galleryHeaderIndentClass(
   row: NonNullable<ReturnType<typeof galleryHeaderAt>>,
 ): string {
-  if (row.type === "yearHeader") {
-    return "gallery-group-h-year";
-  }
-  if (row.type === "monthHeader") {
-    return "gallery-group-h-month";
-  }
+  if (row.type === "yearHeader") return "gallery-group-h-year";
+  if (row.type === "monthHeader") return "gallery-group-h-month";
   return "gallery-group-h-day";
 }
 
@@ -486,9 +483,7 @@ function toggleGalleryCollapse(key: string): void {
 
 watchEffect((onCleanup) => {
   const el = gridScrollRef.value;
-  if (!el || list.value.length === 0) {
-    return;
-  }
+  if (!el || list.value.length === 0) return;
   const ro = new ResizeObserver((entries) => {
     const w = entries[0]?.contentRect.width ?? 0;
     gridInnerWidth.value = Math.floor(w);
@@ -587,11 +582,8 @@ function onGridScroll(): void {
   }, THUMBNAIL_PRUNE_SCROLL_DEBOUNCE_MS);
 }
 
-/** IDs in virtualizer-rendered rows (includes overscan) plus the selected screenshot. */
 function visibleScreenshotIds(): string[] {
-  if (list.value.length === 0) {
-    return [];
-  }
+  if (list.value.length === 0) return [];
   const vItems = rowVirtualizer.value.getVirtualItems();
   const idSet = new Set<string>();
   for (const v of vItems) {
@@ -603,9 +595,7 @@ function visibleScreenshotIds(): string[] {
     }
   }
   const sel = selected.value?.id;
-  if (sel) {
-    idSet.add(sel);
-  }
+  if (sel) idSet.add(sel);
   return [...idSet];
 }
 
@@ -623,31 +613,23 @@ async function syncThumbnailsForVisible(): Promise<void> {
   const gen = thumbnailFetchGeneration;
   const ids = visibleScreenshotIds();
   const toFetch = ids.filter((id) => thumbnailUrls.value[id] === undefined);
-  if (toFetch.length === 0) {
-    return;
-  }
+  if (toFetch.length === 0) return;
 
   let cursor = 0;
   async function worker(): Promise<void> {
     while (gen === thumbnailFetchGeneration) {
       const i = cursor++;
-      if (i >= toFetch.length) {
-        return;
-      }
+      if (i >= toFetch.length) return;
       const id = toFetch[i]!;
       try {
         const url = await App.screenshotThumbnailDataURL(id);
-        if (gen !== thumbnailFetchGeneration) {
-          return;
-        }
+        if (gen !== thumbnailFetchGeneration) return;
         thumbnailUrls.value = {
           ...thumbnailUrls.value,
           [id]: url && url.length > 0 ? url : missingThumbDataUrl,
         };
       } catch {
-        if (gen !== thumbnailFetchGeneration) {
-          return;
-        }
+        if (gen !== thumbnailFetchGeneration) return;
         thumbnailUrls.value = {
           ...thumbnailUrls.value,
           [id]: missingThumbDataUrl,
@@ -690,12 +672,8 @@ function formatTakenAt(takenAt?: string): string {
 }
 
 function formatFileSize(bytes?: number): string {
-  if (bytes == null || bytes < 0 || !Number.isFinite(bytes)) {
-    return "—";
-  }
-  if (bytes === 0) {
-    return "0 B";
-  }
+  if (bytes == null || bytes < 0 || !Number.isFinite(bytes)) return "—";
+  if (bytes === 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
   let v = bytes;
   let u = 0;
@@ -807,7 +785,6 @@ async function scanFolder(): Promise<void> {
       const cfg = await App.getVRChatConfig();
       path = (cfg.pictureOutputFolder ?? "").trim();
     } catch {
-      // Unreadable config — same as empty pictureOutputFolder: try OS default folder.
       path = "";
     }
     if (!path) {
@@ -907,81 +884,12 @@ onMounted(() => {
   overflow: hidden;
 }
 
-.page-title {
-  margin: 0;
-  font-size: 1.5rem;
-  flex-shrink: 0;
-}
-
 .filters {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   align-items: center;
   flex-shrink: 0;
-}
-
-.filter-input {
-  flex: 1;
-  min-width: 12rem;
-  max-width: 24rem;
-  padding: 0.5rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-}
-
-.btn-refresh {
-  padding: 0.5rem 1rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.btn-refresh:hover:not(:disabled) {
-  background: var(--accent);
-  color: white;
-  border-color: var(--accent);
-}
-
-.btn-scan {
-  padding: 0.5rem 1rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.btn-scan:hover:not(:disabled) {
-  background: var(--accent);
-  color: white;
-  border-color: var(--accent);
-}
-
-.btn-refresh:disabled,
-.btn-scan:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.banner-error {
-  margin: 0;
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--radius);
-  font-size: 0.9rem;
-  background: color-mix(in srgb, var(--accent) 15%, transparent);
-  color: var(--text-primary);
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-  flex-shrink: 0;
-}
-
-.banner-warn {
-  background: color-mix(in srgb, var(--text-secondary) 12%, transparent);
-  border-color: var(--border);
 }
 
 .gallery-body {
@@ -1026,6 +934,7 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   gap: 0.75rem;
+  padding: 2rem;
 }
 
 .gallery-scan-status {
@@ -1034,17 +943,6 @@ onMounted(() => {
   color: var(--text-secondary);
   max-width: 28rem;
   word-break: break-all;
-}
-
-.gallery-scan-progress-bar {
-  width: 100%;
-  max-width: 28rem;
-  height: 0.55rem;
-  border-radius: var(--radius);
-  overflow: hidden;
-  border: 1px solid var(--border);
-  background: var(--bg-tertiary);
-  accent-color: var(--accent);
 }
 
 .grid-section {
@@ -1093,16 +991,14 @@ onMounted(() => {
 }
 
 .detail-panel {
-  padding: 1rem;
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
   flex-shrink: 0;
+  background: var(--bg-secondary) !important;
+  border-color: var(--border) !important;
 }
 
-.detail-panel h3 {
-  margin: 0 0 0.75rem;
-  font-size: 1rem;
+.detail-panel :deep(.el-card__header) {
+  font-weight: 600;
+  border-bottom-color: var(--border);
 }
 
 .detail-preview {
@@ -1124,94 +1020,12 @@ onMounted(() => {
   object-fit: contain;
 }
 
-.detail-list {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.25rem 1rem;
-  font-size: 0.9rem;
-  margin: 0 0 1rem;
-}
-
-.detail-list dt {
-  color: var(--text-secondary);
-}
-
-.detail-list dd {
-  margin: 0;
-}
-
 .file-path-btn {
-  display: inline;
-  max-width: 100%;
-  padding: 0;
-  margin: 0;
-  border: none;
-  background: none;
-  font: inherit;
-  font-size: 0.8rem;
-  color: var(--accent);
-  text-decoration: underline;
-  text-align: left;
-  cursor: pointer;
   word-break: break-all;
-}
-
-.file-path-btn:hover {
-  color: var(--accent-hover);
-}
-
-.file-path-btn:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.btn-open-folder {
-  display: block;
-  width: 100%;
-  margin: 0 0 0.75rem;
-  padding: 0.5rem 1rem;
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-
-.btn-open-folder:hover {
-  background: color-mix(in srgb, var(--accent) 12%, var(--bg-tertiary));
-  border-color: var(--accent);
-}
-
-.detail-action-error {
-  margin: 0 0 0.5rem;
-  font-size: 0.85rem;
-  color: var(--accent);
-}
-
-.btn-join {
-  padding: 0.5rem 1rem;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
-.btn-join:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-
-.btn-join:disabled {
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
-  cursor: not-allowed;
-}
-
-.join-error {
-  margin: 0 0 0.5rem;
-  font-size: 0.85rem;
-  color: var(--accent);
+  white-space: normal;
+  text-align: left;
+  height: auto !important;
+  line-height: 1.4 !important;
 }
 
 .gallery-group-header {

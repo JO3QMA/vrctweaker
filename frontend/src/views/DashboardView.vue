@@ -2,26 +2,33 @@
   <div class="dashboard">
     <h1 class="page-title">ダッシュボード</h1>
     <div class="quick-actions">
-      <button class="launch-btn" :disabled="!defaultProfile" @click="launch">
+      <el-button
+        type="primary"
+        size="large"
+        class="launch-btn"
+        :disabled="!defaultProfile"
+        @click="launch"
+      >
         {{
           defaultProfile
             ? `VRChat 起動 (${defaultProfile.name})`
             : "VRChat 起動"
         }}
-      </button>
-      <div class="status-panel">
-        <p class="status-label">クイックステータス</p>
+      </el-button>
+      <el-card class="status-panel" shadow="never">
+        <template #header>
+          <span class="status-label">クイックステータス</span>
+        </template>
         <div class="status-buttons">
-          <button
+          <el-button
             v-for="s in statusOptions"
             :key="s.value"
-            class="status-btn"
             @click="setStatus(s.value)"
           >
             {{ s.label }}
-          </button>
+          </el-button>
         </div>
-      </div>
+      </el-card>
     </div>
   </div>
 </template>
@@ -59,51 +66,31 @@ async function setStatus(status: string) {
   margin: 0 auto;
 }
 
-.page-title {
-  margin: 0 0 1.5rem;
-  font-size: 1.5rem;
+.quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
 }
 
 .launch-btn {
   width: 100%;
-  padding: 1rem 2rem;
-  font-size: 1.2rem;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: var(--radius);
-  margin-bottom: 1rem;
-}
-
-.launch-btn:hover {
-  background: var(--accent-hover);
+  font-size: 1.1rem !important;
+  height: 52px !important;
 }
 
 .status-panel {
-  padding: 1rem;
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
+  background: var(--bg-secondary) !important;
+  border-color: var(--border) !important;
 }
 
 .status-label {
-  margin: 0 0 0.5rem;
   font-size: 0.9rem;
   color: var(--text-secondary);
 }
+
 .status-buttons {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
-}
-.status-btn {
-  padding: 0.4rem 0.8rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-}
-.status-btn:hover {
-  background: var(--accent);
-  color: white;
 }
 </style>

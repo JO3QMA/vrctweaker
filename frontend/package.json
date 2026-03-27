@@ -17,13 +17,18 @@
     "build-storybook": "storybook build"
   },
   "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
     "@tanstack/vue-virtual": "^3.13.23",
     "chart.js": "^4.5.1",
+    "element-plus": "^2.13.6",
     "vue": "^3.4.21",
     "vue-router": "^4.3.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.45.0",
+    "@storybook/addon-a11y": "^10.3.3",
+    "@storybook/addon-docs": "^10.3.3",
+    "@storybook/vue3-vite": "^10.3.3",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
@@ -35,14 +40,11 @@
     "jsdom": "^24.0.0",
     "license-checker": "^25.0.1",
     "prettier": "^3.2.5",
+    "storybook": "^10.3.3",
     "typescript": "~5.4.0",
     "vite": "^5.2.8",
     "vitest": "^1.6.0",
     "vue-eslint-parser": "^9.4.3",
-    "vue-tsc": "^2.0.6",
-    "storybook": "^10.3.3",
-    "@storybook/vue3-vite": "^10.3.3",
-    "@storybook/addon-a11y": "^10.3.3",
-    "@storybook/addon-docs": "^10.3.3"
+    "vue-tsc": "^2.0.6"
   }
 }

@@ -2,8 +2,11 @@
   <div class="launcher-view">
     <h1 class="page-title">ランチャー</h1>
     <div class="profiles-section">
+      <!-- プロファイルリスト -->
       <div class="profiles-list">
-        <button class="btn-add" @click="addNew">+ 新規プロファイル</button>
+        <el-button class="btn-add" @click="addNew"
+          >+ 新規プロファイル</el-button
+        >
         <div
           v-for="p in profiles"
           :key="p.id"
@@ -12,487 +15,452 @@
           @click="select(p)"
         >
           <span class="profile-name">{{ p.name }}</span>
-          <span v-if="p.isDefault" class="badge">既定</span>
+          <el-tag v-if="p.isDefault" size="small" type="primary">既定</el-tag>
         </div>
       </div>
+
+      <!-- プロファイルエディタ -->
       <div v-if="selected" class="profile-editor">
-        <label>プロファイル名</label>
-        <input v-model="selected.name" type="text" />
-        <label>起動引数</label>
-        <div class="launch-args-gui">
-          <label class="checkbox-row">
-            <input
-              v-model="launchArgs.noVr"
-              type="checkbox"
-              data-testid="no-vr-checkbox"
-            />
-            デスクトップモードで起動（-no-vr）
-          </label>
-          <div class="screen-mode-section">
-            <label class="block-label">表示モード</label>
-            <div class="toggle-group" role="group" aria-label="表示モード">
-              <label
-                class="toggle-option"
-                :class="{ active: launchArgs.screenMode === 'fullscreen' }"
-              >
-                <input
-                  v-model="launchArgs.screenMode"
-                  type="radio"
-                  value="fullscreen"
-                  data-testid="screen-mode-fullscreen"
+        <el-form label-position="top" size="default">
+          <el-form-item label="プロファイル名">
+            <el-input v-model="selected.name" />
+          </el-form-item>
+
+          <el-form-item label="起動引数">
+            <div class="launch-args-gui">
+              <div class="arg-row">
+                <el-checkbox
+                  v-model="launchArgs.noVr"
+                  data-testid="no-vr-checkbox"
+                >
+                  デスクトップモードで起動（-no-vr）
+                </el-checkbox>
+              </div>
+
+              <!-- 表示モード -->
+              <el-form-item label="表示モード" class="nested-form-item">
+                <el-radio-group v-model="launchArgs.screenMode" size="default">
+                  <el-radio-button
+                    value="fullscreen"
+                    data-testid="screen-mode-fullscreen"
+                    >フルスクリーン</el-radio-button
+                  >
+                  <el-radio-button
+                    value="windowed"
+                    data-testid="screen-mode-windowed"
+                    >ウィンドウ</el-radio-button
+                  >
+                  <el-radio-button
+                    value="popupwindow"
+                    data-testid="screen-mode-popupwindow"
+                    >仮想フルスクリーン</el-radio-button
+                  >
+                </el-radio-group>
+              </el-form-item>
+
+              <!-- 詳細設定 -->
+              <el-collapse class="args-collapse">
+                <el-collapse-item title="詳細設定" name="advanced">
+                  <div class="launch-args-advanced">
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="valueOptionsEnabled.resolution"
+                        data-testid="resolution-enabled-checkbox"
+                        @change="onResolutionEnabledChange"
+                      >
+                        解像度を指定（-screen-width, -screen-height）
+                      </el-checkbox>
+                    </div>
+                    <div
+                      v-if="valueOptionsEnabled.resolution"
+                      class="sub-options"
+                    >
+                      <el-form-item label="プリセット" class="nested-form-item">
+                        <el-radio-group v-model="resolutionPreset" size="small">
+                          <el-radio-button
+                            value="HD"
+                            data-testid="resolution-preset-hd"
+                            @change="applyResolutionPreset"
+                            >HD</el-radio-button
+                          >
+                          <el-radio-button
+                            value="FHD"
+                            data-testid="resolution-preset-fhd"
+                            @change="applyResolutionPreset"
+                            >FHD</el-radio-button
+                          >
+                          <el-radio-button
+                            value="WQHD"
+                            data-testid="resolution-preset-wqhd"
+                            @change="applyResolutionPreset"
+                            >WQHD</el-radio-button
+                          >
+                          <el-radio-button
+                            value="4K"
+                            data-testid="resolution-preset-4k"
+                            @change="applyResolutionPreset"
+                            >4K</el-radio-button
+                          >
+                          <el-radio-button
+                            value="custom"
+                            data-testid="resolution-preset-custom"
+                            @change="applyResolutionPreset"
+                            >手動設定</el-radio-button
+                          >
+                        </el-radio-group>
+                      </el-form-item>
+                      <div class="resolution-fields">
+                        <el-input-number
+                          v-model="launchArgs.screenWidth"
+                          :min="1280"
+                          :max="7680"
+                          :disabled="resolutionPreset !== 'custom'"
+                          data-testid="screen-width-input"
+                          size="small"
+                          placeholder="幅"
+                          style="width: 120px"
+                        />
+                        <span class="resolution-sep">×</span>
+                        <el-input-number
+                          v-model="launchArgs.screenHeight"
+                          :min="720"
+                          :max="4320"
+                          :disabled="resolutionPreset !== 'custom'"
+                          data-testid="screen-height-input"
+                          size="small"
+                          placeholder="高さ"
+                          style="width: 120px"
+                        />
+                      </div>
+                    </div>
+
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="valueOptionsEnabled.monitor"
+                        data-testid="monitor-enabled-checkbox"
+                        @change="onMonitorEnabledChange"
+                      >
+                        モニター指定（-monitor N）
+                      </el-checkbox>
+                    </div>
+                    <div v-if="valueOptionsEnabled.monitor" class="sub-options">
+                      <el-input-number
+                        v-model="launchArgs.monitor"
+                        :min="1"
+                        data-testid="monitor-input"
+                        size="small"
+                        placeholder="1=1番目"
+                        style="width: 120px"
+                      />
+                    </div>
+
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="valueOptionsEnabled.fps"
+                        data-testid="fps-enabled-checkbox"
+                        @change="onFpsEnabledChange"
+                      >
+                        FPS制限（--fps=N）
+                      </el-checkbox>
+                    </div>
+                    <div v-if="valueOptionsEnabled.fps" class="sub-options">
+                      <el-input-number
+                        v-model="launchArgs.fps"
+                        :min="1"
+                        data-testid="fps-input"
+                        size="small"
+                        placeholder="90"
+                        style="width: 120px"
+                      />
+                    </div>
+
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="launchArgs.skipRegistry"
+                        data-testid="skip-registry-checkbox"
+                      >
+                        レジストリ登録スキップ（--skip-registry-install）
+                      </el-checkbox>
+                    </div>
+
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="valueOptionsEnabled.processPriority"
+                        data-testid="process-priority-enabled-checkbox"
+                        @change="onProcessPriorityEnabledChange"
+                      >
+                        プロセス優先度（--process-priority=N）
+                      </el-checkbox>
+                    </div>
+                    <div
+                      v-if="valueOptionsEnabled.processPriority"
+                      class="sub-options"
+                    >
+                      <el-input-number
+                        v-model="launchArgs.processPriority"
+                        :min="-2"
+                        :max="2"
+                        data-testid="process-priority-input"
+                        size="small"
+                        placeholder="-2～2"
+                        style="width: 120px"
+                      />
+                    </div>
+
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="valueOptionsEnabled.mainThreadPriority"
+                        data-testid="main-thread-priority-enabled-checkbox"
+                        @change="onMainThreadPriorityEnabledChange"
+                      >
+                        メインスレッド優先度（--main-thread-priority=N）
+                      </el-checkbox>
+                    </div>
+                    <div
+                      v-if="valueOptionsEnabled.mainThreadPriority"
+                      class="sub-options"
+                    >
+                      <el-input-number
+                        v-model="launchArgs.mainThreadPriority"
+                        :min="-2"
+                        :max="2"
+                        data-testid="main-thread-priority-input"
+                        size="small"
+                        placeholder="-2～2"
+                        style="width: 120px"
+                      />
+                    </div>
+
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="valueOptionsEnabled.profile"
+                        data-testid="profile-enabled-checkbox"
+                        @change="onProfileEnabledChange"
+                      >
+                        プロファイル（--profile=N）
+                      </el-checkbox>
+                    </div>
+                    <div v-if="valueOptionsEnabled.profile" class="sub-options">
+                      <el-input-number
+                        v-model="launchArgs.profile"
+                        :min="0"
+                        data-testid="profile-input"
+                        size="small"
+                        placeholder="0=既定"
+                        style="width: 120px"
+                      />
+                    </div>
+                  </div>
+                </el-collapse-item>
+                <el-collapse-item
+                  title="クリエイター・デバッグ向け"
+                  name="debug"
+                >
+                  <div class="launch-args-advanced">
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="launchArgs.enableDebugGui"
+                        data-testid="enable-debug-gui-checkbox"
+                      >
+                        デバッグGUI（--enable-debug-gui）
+                      </el-checkbox>
+                    </div>
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="launchArgs.enableSDKLogLevels"
+                        data-testid="enable-sdk-log-levels-checkbox"
+                      >
+                        SDKログ拡張（--enable-sdk-log-levels）
+                      </el-checkbox>
+                    </div>
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="launchArgs.enableUdonDebugLogging"
+                        data-testid="enable-udon-debug-logging-checkbox"
+                      >
+                        Udonデバッグログ（--enable-udon-debug-logging）
+                      </el-checkbox>
+                    </div>
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="launchArgs.watchWorlds"
+                        data-testid="watch-worlds-checkbox"
+                      >
+                        ワールド監視（--watch-worlds）
+                      </el-checkbox>
+                    </div>
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="launchArgs.watchAvatars"
+                        data-testid="watch-avatars-checkbox"
+                      >
+                        アバター監視（--watch-avatars）
+                      </el-checkbox>
+                    </div>
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="launchArgs.enforceWorldServerChecks"
+                        data-testid="enforce-world-server-checks-checkbox"
+                      >
+                        ワールドサーバーチェック強制（--enforce-world-server-checks）
+                      </el-checkbox>
+                    </div>
+
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="valueOptionsEnabled.midi"
+                        data-testid="midi-enabled-checkbox"
+                        @change="onMidiEnabledChange"
+                      >
+                        MIDIデバイス（--midi=deviceName）
+                      </el-checkbox>
+                    </div>
+                    <div v-if="valueOptionsEnabled.midi" class="sub-options">
+                      <el-input
+                        v-model="launchArgs.midi"
+                        placeholder="デバイス名"
+                        data-testid="midi-input"
+                        size="small"
+                        style="max-width: 240px"
+                      />
+                    </div>
+
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="valueOptionsEnabled.ignoreTrackers"
+                        data-testid="ignore-trackers-enabled-checkbox"
+                        @change="onIgnoreTrackersEnabledChange"
+                      >
+                        無視トラッカー（--ignore-trackers=serial1,serial2）
+                      </el-checkbox>
+                    </div>
+                    <div
+                      v-if="valueOptionsEnabled.ignoreTrackers"
+                      class="sub-options"
+                    >
+                      <el-input
+                        v-model="launchArgs.ignoreTrackers"
+                        placeholder="serial1,serial2"
+                        data-testid="ignore-trackers-input"
+                        size="small"
+                        style="max-width: 240px"
+                      />
+                    </div>
+
+                    <el-form-item
+                      label="動画デコーディング"
+                      class="nested-form-item"
+                    >
+                      <el-radio-group
+                        v-model="launchArgs.videoDecoding"
+                        size="small"
+                      >
+                        <el-radio-button
+                          value=""
+                          data-testid="video-decoding-default"
+                          >既定</el-radio-button
+                        >
+                        <el-radio-button
+                          value="software"
+                          data-testid="video-decoding-software"
+                          >ソフトウェア</el-radio-button
+                        >
+                        <el-radio-button
+                          value="hardware"
+                          data-testid="video-decoding-hardware"
+                          >ハードウェア</el-radio-button
+                        >
+                      </el-radio-group>
+                    </el-form-item>
+
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="launchArgs.disableAMDStutterWorkaround"
+                        data-testid="disable-amd-stutter-workaround-checkbox"
+                      >
+                        AMDスタッター回避無効（--disable-amd-stutter-workaround）
+                      </el-checkbox>
+                    </div>
+
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="valueOptionsEnabled.osc"
+                        data-testid="osc-enabled-checkbox"
+                        @change="onOscEnabledChange"
+                      >
+                        OSC（--osc=inPort:outIP:outPort）
+                      </el-checkbox>
+                    </div>
+                    <div v-if="valueOptionsEnabled.osc" class="sub-options">
+                      <el-input
+                        v-model="launchArgs.osc"
+                        placeholder="例: 9000:127.0.0.1:9001"
+                        data-testid="osc-input"
+                        size="small"
+                        style="max-width: 240px"
+                      />
+                    </div>
+
+                    <div class="arg-row">
+                      <el-checkbox
+                        v-model="valueOptionsEnabled.affinity"
+                        data-testid="affinity-enabled-checkbox"
+                        @change="onAffinityEnabledChange"
+                      >
+                        スレッドアフィニティ（--affinity=FFFF）
+                      </el-checkbox>
+                    </div>
+                    <div
+                      v-if="valueOptionsEnabled.affinity"
+                      class="sub-options"
+                    >
+                      <el-input
+                        v-model="launchArgs.affinity"
+                        placeholder="16進ビットマスク"
+                        data-testid="affinity-input"
+                        size="small"
+                        style="max-width: 200px"
+                      />
+                    </div>
+                  </div>
+                </el-collapse-item>
+              </el-collapse>
+
+              <el-form-item label="カスタム引数（上級者向け）">
+                <el-input
+                  v-model="launchArgs.custom"
+                  placeholder="-batchmode"
+                  data-testid="custom-args-input"
                 />
-                <span>フルスクリーン</span>
-              </label>
-              <label
-                class="toggle-option"
-                :class="{ active: launchArgs.screenMode === 'windowed' }"
-              >
-                <input
-                  v-model="launchArgs.screenMode"
-                  type="radio"
-                  value="windowed"
-                  data-testid="screen-mode-windowed"
-                />
-                <span>ウィンドウ</span>
-              </label>
-              <label
-                class="toggle-option"
-                :class="{ active: launchArgs.screenMode === 'popupwindow' }"
-              >
-                <input
-                  v-model="launchArgs.screenMode"
-                  type="radio"
-                  value="popupwindow"
-                  data-testid="screen-mode-popupwindow"
-                />
-                <span>仮想フルスクリーン</span>
-              </label>
+              </el-form-item>
             </div>
+          </el-form-item>
+
+          <el-form-item>
+            <el-checkbox v-model="selected.isDefault">
+              デフォルトに設定
+            </el-checkbox>
+          </el-form-item>
+
+          <div class="editor-actions">
+            <el-button class="btn-save" type="primary" @click="save"
+              >保存</el-button
+            >
+            <el-button class="btn-launch" type="success" @click="launch"
+              >この設定で起動</el-button
+            >
+            <el-button
+              v-if="selected.id"
+              type="danger"
+              plain
+              data-testid="delete-profile-btn"
+              style="margin-left: auto"
+              @click="confirmDelete"
+            >
+              削除
+            </el-button>
           </div>
-          <details class="details-advanced">
-            <summary>詳細設定</summary>
-            <div class="launch-args-advanced">
-              <label class="checkbox-row">
-                <input
-                  v-model="valueOptionsEnabled.resolution"
-                  type="checkbox"
-                  data-testid="resolution-enabled-checkbox"
-                  @change="onResolutionEnabledChange"
-                />
-                解像度を指定（-screen-width, -screen-height）
-              </label>
-              <div
-                v-if="valueOptionsEnabled.resolution"
-                class="resolution-preset-section"
-              >
-                <label class="block-label">プリセット</label>
-                <div
-                  class="toggle-group"
-                  role="group"
-                  aria-label="起動時解像度プリセット"
-                >
-                  <label
-                    class="toggle-option"
-                    :class="{ active: resolutionPreset === 'HD' }"
-                  >
-                    <input
-                      v-model="resolutionPreset"
-                      type="radio"
-                      value="HD"
-                      data-testid="resolution-preset-hd"
-                      @change="applyResolutionPreset"
-                    />
-                    <span>HD</span>
-                  </label>
-                  <label
-                    class="toggle-option"
-                    :class="{ active: resolutionPreset === 'FHD' }"
-                  >
-                    <input
-                      v-model="resolutionPreset"
-                      type="radio"
-                      value="FHD"
-                      data-testid="resolution-preset-fhd"
-                      @change="applyResolutionPreset"
-                    />
-                    <span>FHD</span>
-                  </label>
-                  <label
-                    class="toggle-option"
-                    :class="{ active: resolutionPreset === 'WQHD' }"
-                  >
-                    <input
-                      v-model="resolutionPreset"
-                      type="radio"
-                      value="WQHD"
-                      data-testid="resolution-preset-wqhd"
-                      @change="applyResolutionPreset"
-                    />
-                    <span>WQHD</span>
-                  </label>
-                  <label
-                    class="toggle-option"
-                    :class="{ active: resolutionPreset === '4K' }"
-                  >
-                    <input
-                      v-model="resolutionPreset"
-                      type="radio"
-                      value="4K"
-                      data-testid="resolution-preset-4k"
-                      @change="applyResolutionPreset"
-                    />
-                    <span>4K</span>
-                  </label>
-                  <label
-                    class="toggle-option"
-                    :class="{ active: resolutionPreset === 'custom' }"
-                  >
-                    <input
-                      v-model="resolutionPreset"
-                      type="radio"
-                      value="custom"
-                      data-testid="resolution-preset-custom"
-                      @change="applyResolutionPreset"
-                    />
-                    <span>手動設定</span>
-                  </label>
-                </div>
-                <div class="resolution-fields">
-                  <label class="resolution-field">
-                    <span class="resolution-field-label">幅</span>
-                    <input
-                      v-model.number="launchArgs.screenWidth"
-                      type="number"
-                      :min="1280"
-                      :max="7680"
-                      :disabled="resolutionPreset !== 'custom'"
-                      data-testid="screen-width-input"
-                    />
-                  </label>
-                  <span class="resolution-sep">&times;</span>
-                  <label class="resolution-field">
-                    <span class="resolution-field-label">高さ</span>
-                    <input
-                      v-model.number="launchArgs.screenHeight"
-                      type="number"
-                      :min="720"
-                      :max="4320"
-                      :disabled="resolutionPreset !== 'custom'"
-                      data-testid="screen-height-input"
-                    />
-                  </label>
-                </div>
-              </div>
-              <label class="checkbox-row">
-                <input
-                  v-model="valueOptionsEnabled.monitor"
-                  type="checkbox"
-                  data-testid="monitor-enabled-checkbox"
-                  @change="onMonitorEnabledChange"
-                />
-                モニター指定（-monitor N）
-              </label>
-              <div v-if="valueOptionsEnabled.monitor" class="option-value-row">
-                <input
-                  v-model.number="launchArgs.monitor"
-                  type="number"
-                  min="1"
-                  placeholder="1=1番目"
-                  data-testid="monitor-input"
-                />
-              </div>
-              <label class="checkbox-row">
-                <input
-                  v-model="valueOptionsEnabled.fps"
-                  type="checkbox"
-                  data-testid="fps-enabled-checkbox"
-                  @change="onFpsEnabledChange"
-                />
-                FPS制限（--fps=N）
-              </label>
-              <div v-if="valueOptionsEnabled.fps" class="option-value-row">
-                <input
-                  v-model.number="launchArgs.fps"
-                  type="number"
-                  min="1"
-                  placeholder="90"
-                  data-testid="fps-input"
-                />
-              </div>
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.skipRegistry"
-                  type="checkbox"
-                  data-testid="skip-registry-checkbox"
-                />
-                レジストリ登録スキップ（--skip-registry-install）
-              </label>
-              <label class="checkbox-row">
-                <input
-                  v-model="valueOptionsEnabled.processPriority"
-                  type="checkbox"
-                  data-testid="process-priority-enabled-checkbox"
-                  @change="onProcessPriorityEnabledChange"
-                />
-                プロセス優先度（--process-priority=N）
-              </label>
-              <div
-                v-if="valueOptionsEnabled.processPriority"
-                class="option-value-row"
-              >
-                <input
-                  v-model.number="launchArgs.processPriority"
-                  type="number"
-                  min="-2"
-                  max="2"
-                  placeholder="-2～2"
-                  data-testid="process-priority-input"
-                />
-              </div>
-              <label class="checkbox-row">
-                <input
-                  v-model="valueOptionsEnabled.mainThreadPriority"
-                  type="checkbox"
-                  data-testid="main-thread-priority-enabled-checkbox"
-                  @change="onMainThreadPriorityEnabledChange"
-                />
-                メインスレッド優先度（--main-thread-priority=N）
-              </label>
-              <div
-                v-if="valueOptionsEnabled.mainThreadPriority"
-                class="option-value-row"
-              >
-                <input
-                  v-model.number="launchArgs.mainThreadPriority"
-                  type="number"
-                  min="-2"
-                  max="2"
-                  placeholder="-2～2"
-                  data-testid="main-thread-priority-input"
-                />
-              </div>
-              <label class="checkbox-row">
-                <input
-                  v-model="valueOptionsEnabled.profile"
-                  type="checkbox"
-                  data-testid="profile-enabled-checkbox"
-                  @change="onProfileEnabledChange"
-                />
-                プロファイル（--profile=N）
-              </label>
-              <div v-if="valueOptionsEnabled.profile" class="option-value-row">
-                <input
-                  v-model.number="launchArgs.profile"
-                  type="number"
-                  min="0"
-                  placeholder="0=既定"
-                  data-testid="profile-input"
-                />
-              </div>
-            </div>
-          </details>
-          <details class="details-advanced">
-            <summary>クリエイター・デバッグ向け</summary>
-            <div class="launch-args-advanced">
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.enableDebugGui"
-                  type="checkbox"
-                  data-testid="enable-debug-gui-checkbox"
-                />
-                デバッグGUI（--enable-debug-gui）
-              </label>
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.enableSDKLogLevels"
-                  type="checkbox"
-                  data-testid="enable-sdk-log-levels-checkbox"
-                />
-                SDKログ拡張（--enable-sdk-log-levels）
-              </label>
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.enableUdonDebugLogging"
-                  type="checkbox"
-                  data-testid="enable-udon-debug-logging-checkbox"
-                />
-                Udonデバッグログ（--enable-udon-debug-logging）
-              </label>
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.watchWorlds"
-                  type="checkbox"
-                  data-testid="watch-worlds-checkbox"
-                />
-                ワールド監視（--watch-worlds）
-              </label>
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.watchAvatars"
-                  type="checkbox"
-                  data-testid="watch-avatars-checkbox"
-                />
-                アバター監視（--watch-avatars）
-              </label>
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.enforceWorldServerChecks"
-                  type="checkbox"
-                  data-testid="enforce-world-server-checks-checkbox"
-                />
-                ワールドサーバーチェック強制（--enforce-world-server-checks）
-              </label>
-              <label class="checkbox-row">
-                <input
-                  v-model="valueOptionsEnabled.midi"
-                  type="checkbox"
-                  data-testid="midi-enabled-checkbox"
-                  @change="onMidiEnabledChange"
-                />
-                MIDIデバイス（--midi=deviceName）
-              </label>
-              <div v-if="valueOptionsEnabled.midi" class="option-value-row">
-                <input
-                  v-model="launchArgs.midi"
-                  type="text"
-                  placeholder="デバイス名"
-                  data-testid="midi-input"
-                />
-              </div>
-              <label class="checkbox-row">
-                <input
-                  v-model="valueOptionsEnabled.ignoreTrackers"
-                  type="checkbox"
-                  data-testid="ignore-trackers-enabled-checkbox"
-                  @change="onIgnoreTrackersEnabledChange"
-                />
-                無視トラッカー（--ignore-trackers=serial1,serial2）
-              </label>
-              <div
-                v-if="valueOptionsEnabled.ignoreTrackers"
-                class="option-value-row"
-              >
-                <input
-                  v-model="launchArgs.ignoreTrackers"
-                  type="text"
-                  placeholder="serial1,serial2"
-                  data-testid="ignore-trackers-input"
-                />
-              </div>
-              <div class="render-backend-section">
-                <label class="block-label">動画デコーディング</label>
-                <div
-                  class="toggle-group"
-                  role="group"
-                  aria-label="動画デコーディング"
-                >
-                  <label
-                    class="toggle-option"
-                    :class="{ active: launchArgs.videoDecoding === '' }"
-                  >
-                    <input
-                      v-model="launchArgs.videoDecoding"
-                      type="radio"
-                      value=""
-                      data-testid="video-decoding-default"
-                    />
-                    <span>既定</span>
-                  </label>
-                  <label
-                    class="toggle-option"
-                    :class="{ active: launchArgs.videoDecoding === 'software' }"
-                  >
-                    <input
-                      v-model="launchArgs.videoDecoding"
-                      type="radio"
-                      value="software"
-                      data-testid="video-decoding-software"
-                    />
-                    <span>ソフトウェア</span>
-                  </label>
-                  <label
-                    class="toggle-option"
-                    :class="{ active: launchArgs.videoDecoding === 'hardware' }"
-                  >
-                    <input
-                      v-model="launchArgs.videoDecoding"
-                      type="radio"
-                      value="hardware"
-                      data-testid="video-decoding-hardware"
-                    />
-                    <span>ハードウェア</span>
-                  </label>
-                </div>
-              </div>
-              <label class="checkbox-row">
-                <input
-                  v-model="launchArgs.disableAMDStutterWorkaround"
-                  type="checkbox"
-                  data-testid="disable-amd-stutter-workaround-checkbox"
-                />
-                AMDスタッター回避無効（--disable-amd-stutter-workaround）
-              </label>
-              <label class="checkbox-row">
-                <input
-                  v-model="valueOptionsEnabled.osc"
-                  type="checkbox"
-                  data-testid="osc-enabled-checkbox"
-                  @change="onOscEnabledChange"
-                />
-                OSC（--osc=inPort:outIP:outPort）
-              </label>
-              <div v-if="valueOptionsEnabled.osc" class="option-value-row">
-                <input
-                  v-model="launchArgs.osc"
-                  type="text"
-                  placeholder="例: 9000:127.0.0.1:9001"
-                  data-testid="osc-input"
-                />
-              </div>
-              <label class="checkbox-row">
-                <input
-                  v-model="valueOptionsEnabled.affinity"
-                  type="checkbox"
-                  data-testid="affinity-enabled-checkbox"
-                  @change="onAffinityEnabledChange"
-                />
-                スレッドアフィニティ（--affinity=FFFF）
-              </label>
-              <div v-if="valueOptionsEnabled.affinity" class="option-value-row">
-                <input
-                  v-model="launchArgs.affinity"
-                  type="text"
-                  placeholder="16進ビットマスク"
-                  data-testid="affinity-input"
-                />
-              </div>
-            </div>
-          </details>
-          <label>カスタム引数（上級者向け）</label>
-          <input
-            v-model="launchArgs.custom"
-            type="text"
-            placeholder="-batchmode"
-            data-testid="custom-args-input"
-          />
-        </div>
-        <label>
-          <input v-model="selected.isDefault" type="checkbox" />
-          デフォルトに設定
-        </label>
-        <div class="editor-actions">
-          <button class="btn-save" @click="save">保存</button>
-          <button class="btn-launch" @click="launch">この設定で起動</button>
-          <button
-            v-if="selected.id"
-            type="button"
-            class="btn-delete"
-            data-testid="delete-profile-btn"
-            @click="confirmDelete"
-          >
-            削除
-          </button>
-        </div>
+        </el-form>
       </div>
     </div>
   </div>
@@ -500,6 +468,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
+import { ElMessageBox } from "element-plus";
 import {
   App,
   type LaunchProfileDTO,
@@ -780,7 +749,20 @@ async function launch() {
 
 async function confirmDelete() {
   if (!selected.value?.id) return;
-  if (!window.confirm(`「${selected.value.name}」を削除しますか？`)) return;
+  try {
+    await ElMessageBox.confirm(
+      `「${selected.value.name}」を削除しますか？`,
+      "確認",
+      {
+        confirmButtonText: "削除",
+        cancelButtonText: "キャンセル",
+        type: "warning",
+        confirmButtonClass: "el-button--danger",
+      },
+    );
+  } catch {
+    return;
+  }
   await App.deleteLaunchProfile(selected.value.id);
   selected.value = null;
   launchArgs.value = defaultLaunchArgs();
@@ -799,23 +781,23 @@ async function confirmDelete() {
   display: flex;
   gap: 1.5rem;
 }
+
 .profiles-list {
   width: 240px;
+  flex-shrink: 0;
 }
+
 .btn-add {
   width: 100%;
-  padding: 0.5rem;
   margin-bottom: 0.5rem;
-  background: var(--bg-tertiary);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  color: var(--text-secondary);
-  cursor: pointer;
+  border-style: dashed !important;
+  color: var(--text-secondary) !important;
 }
+
 .btn-add:hover {
-  background: var(--bg-secondary);
-  color: var(--accent);
+  color: var(--accent) !important;
 }
+
 .profile-card {
   padding: 0.75rem;
   margin-bottom: 0.5rem;
@@ -825,244 +807,102 @@ async function confirmDelete() {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  transition: background 0.15s;
 }
+
 .profile-card:hover,
 .profile-card.active {
   background: var(--bg-tertiary);
 }
-.badge {
-  font-size: 0.7rem;
-  color: var(--accent);
+
+.profile-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
+
 .profile-editor {
   flex: 1;
+  min-width: 0;
+  overflow-y: auto;
 }
-.profile-editor label {
-  display: block;
-  margin: 0.5rem 0 0.2rem;
-  font-size: 0.85rem;
-}
+
 .launch-args-gui {
-  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  width: 100%;
 }
-.details-advanced {
-  margin: 0.75rem 0;
-  padding: 0.5rem;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
+
+.arg-row {
+  display: flex;
+  align-items: center;
 }
-.details-advanced summary {
-  cursor: pointer;
-  font-size: 0.9rem;
+
+.sub-options {
+  margin: 0.25rem 0 0.5rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.nested-form-item {
+  margin-bottom: 0.5rem !important;
+}
+
+.nested-form-item :deep(.el-form-item__label) {
+  font-size: 0.85rem;
   color: var(--text-secondary);
+  padding-bottom: 0.25rem !important;
 }
-.launch-args-advanced {
-  margin-top: 0.75rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid var(--border);
-}
-.screen-mode-section,
-.render-backend-section {
-  margin: 0.75rem 0;
-}
-.resolution-preset-section {
-  margin: 0.5rem 0 0.75rem 1.5rem;
-}
+
 .resolution-fields {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-top: 0.5rem;
 }
-.resolution-fields .resolution-field input {
-  width: 7rem;
-  padding: 0.4rem;
-  background: var(--bg-tertiary);
+
+.resolution-sep {
+  color: var(--text-secondary);
+}
+
+.args-collapse {
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  color: var(--text-primary);
-}
-.resolution-fields .resolution-field input:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.block-label {
-  display: block;
-  margin-bottom: 0.4rem;
-  font-size: 0.85rem;
-}
-.toggle-group {
-  display: flex;
-  gap: 0.25rem;
-  flex-wrap: wrap;
-}
-.toggle-option {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 0.4rem 0.6rem;
   background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition:
-    background 0.15s,
-    border-color 0.15s;
+  margin: 0.5rem 0;
 }
-.toggle-option:first-of-type {
-  border-radius: var(--radius) 0 0 var(--radius);
+
+.args-collapse :deep(.el-collapse-item__header) {
+  background: transparent;
+  border-bottom-color: var(--border);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  padding: 0 0.75rem;
+  height: 40px;
 }
-.toggle-option:not(:first-of-type):not(:last-of-type) {
-  border-radius: 0;
+
+.args-collapse :deep(.el-collapse-item__content) {
+  padding: 0.75rem;
 }
-.toggle-option:last-of-type {
-  border-radius: 0 var(--radius) var(--radius) 0;
+
+.args-collapse :deep(.el-collapse-item__wrap) {
+  border-bottom-color: var(--border);
+  background: transparent;
 }
-.toggle-option:first-of-type:last-of-type {
-  border-radius: var(--radius);
-}
-.toggle-option:hover {
-  background: var(--bg-secondary);
-}
-.toggle-option.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: white;
-}
-.toggle-option input {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-.resolution-row {
-  margin-top: 0.75rem;
+
+.launch-args-advanced {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
 }
-.resolution-label {
-  font-size: 0.85rem;
-}
-.resolution-inputs {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.resolution-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-.resolution-field-label {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-.option-value-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.25rem 0 0.75rem 1.5rem;
-}
-.option-value-row input {
-  padding: 0.35rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-}
-.option-value-row input[type="number"] {
-  width: 6rem;
-}
-.resolution-inputs input,
-.screen-mode-section input[type="number"] {
-  width: 6rem;
-  padding: 0.4rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-}
-.resolution-sep {
-  color: var(--text-secondary);
-  font-size: 0.9rem;
-}
-.number-row {
-  display: flex;
-  gap: 1rem;
-  margin: 0.5rem 0;
-}
-.number-row label {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-.number-row input,
-.launch-args-advanced input[type="number"] {
-  width: 6rem;
-  padding: 0.35rem;
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-}
-.hint {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-}
-.checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0.3rem 0;
-  cursor: pointer;
-}
-.checkbox-row input {
-  margin: 0;
-}
-.profile-editor input[type="text"] {
-  width: 100%;
-  padding: 0.5rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-}
+
 .editor-actions {
-  margin-top: 1rem;
   display: flex;
   gap: 0.5rem;
-}
-.btn-save,
-.btn-launch {
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius);
-  border: none;
-}
-.btn-save {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-}
-.btn-launch {
-  background: var(--accent);
-  color: white;
-}
-.btn-delete {
-  margin-left: auto;
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-.btn-delete:hover {
-  background: rgba(220, 53, 69, 0.15);
-  color: #dc3545;
-  border-color: #dc3545;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
 }
 </style>

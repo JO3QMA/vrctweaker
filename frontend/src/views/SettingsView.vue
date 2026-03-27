@@ -1,8 +1,12 @@
 <template>
   <div class="settings-view">
     <h1 class="page-title">設定</h1>
-    <section class="settings-section">
-      <h2>VRChat ログイン</h2>
+
+    <!-- VRChat ログイン -->
+    <el-card class="settings-card" shadow="never">
+      <template #header>
+        <span>VRChat ログイン</span>
+      </template>
       <div v-if="isLoggedIn" class="login-status">
         <div v-if="profileLoading && !currentUser" class="profile-loading">
           プロフィールを読み込み中…
@@ -38,286 +42,222 @@
             </p>
           </div>
         </div>
-        <p v-if="profileError" class="profile-error">{{ profileError }}</p>
-        <span class="logged-in-label">ログイン済み</span>
+        <el-alert
+          v-if="profileError"
+          :title="profileError"
+          type="error"
+          :closable="false"
+          show-icon
+        />
+        <el-tag type="success" size="large">ログイン済み</el-tag>
         <div class="login-actions">
-          <button
-            type="button"
-            class="btn-refresh"
-            :disabled="profileLoading"
+          <el-button
+            type="primary"
+            :loading="profileLoading"
             @click="loadCurrentUser(true)"
           >
             プロフィール再取得
-          </button>
-          <button type="button" class="btn-refresh" @click="refreshFriends">
+          </el-button>
+          <el-button type="primary" @click="refreshFriends">
             フレンド一覧を更新
-          </button>
-          <button type="button" class="btn-logout" @click="logout">
+          </el-button>
+          <el-button type="danger" plain @click="logout">
             ログアウト
-          </button>
+          </el-button>
         </div>
       </div>
       <div v-else class="login-form">
-        <div class="form-row">
-          <label for="login-username">ユーザー名</label>
-          <input
-            id="login-username"
-            v-model="loginForm.username"
-            type="text"
-            placeholder="VRChat ユーザー名"
-            autocomplete="username"
+        <el-form label-position="top" size="default">
+          <el-form-item label="ユーザー名">
+            <el-input
+              id="login-username"
+              v-model="loginForm.username"
+              placeholder="VRChat ユーザー名"
+              autocomplete="username"
+            />
+          </el-form-item>
+          <el-form-item label="パスワード">
+            <el-input
+              id="login-password"
+              v-model="loginForm.password"
+              type="password"
+              placeholder="パスワード"
+              autocomplete="current-password"
+              show-password
+            />
+          </el-form-item>
+          <el-form-item label="2FAコード（オプション）">
+            <el-input
+              id="login-2fa"
+              v-model="loginForm.twoFactorCode"
+              placeholder="6桁の認証コード"
+              autocomplete="one-time-code"
+            />
+          </el-form-item>
+          <el-alert
+            v-if="loginError"
+            :title="loginError"
+            type="error"
+            :closable="false"
+            show-icon
+            class="login-error"
           />
-        </div>
-        <div class="form-row">
-          <label for="login-password">パスワード</label>
-          <input
-            id="login-password"
-            v-model="loginForm.password"
-            type="password"
-            placeholder="パスワード"
-            autocomplete="current-password"
-          />
-        </div>
-        <div class="form-row">
-          <label for="login-2fa">2FAコード（オプション）</label>
-          <input
-            id="login-2fa"
-            v-model="loginForm.twoFactorCode"
-            type="text"
-            placeholder="6桁の認証コード"
-            autocomplete="one-time-code"
-          />
-        </div>
-        <p v-if="loginError" class="login-error">
-          {{ loginError }}
-        </p>
-        <button
-          type="button"
-          class="btn-login"
-          :disabled="loginLoading || !loginForm.username || !loginForm.password"
-          @click="login"
-        >
-          {{ loginLoading ? "ログイン中..." : "ログイン" }}
-        </button>
+          <el-button
+            type="primary"
+            :loading="loginLoading"
+            :disabled="
+              loginLoading || !loginForm.username || !loginForm.password
+            "
+            @click="login"
+          >
+            {{ loginLoading ? "ログイン中..." : "ログイン" }}
+          </el-button>
+        </el-form>
       </div>
-    </section>
-    <section class="settings-section">
-      <h2>パス設定</h2>
+    </el-card>
+
+    <!-- パス設定 -->
+    <el-card class="settings-card" shadow="never">
+      <template #header>
+        <span>パス設定</span>
+      </template>
       <div class="path-settings">
-        <div class="path-row">
-          <label for="vrchat-path">VRChat実行ファイル（Windows）</label>
+        <div v-for="field in pathFields" :key="field.key" class="path-row">
+          <label class="path-label">{{ field.label }}</label>
           <div class="path-input-group">
-            <input
-              id="vrchat-path"
-              v-model="pathSettings.vrchatPathWindows"
-              type="text"
-              placeholder="例: C:\Program Files (x86)\Steam\steamapps\common\VRChat\launch.exe"
+            <el-input
+              v-model="pathSettings[field.key]"
+              :placeholder="field.placeholder"
               @change="savePathSettings"
             />
-            <button
-              type="button"
-              class="btn-browse"
-              data-testid="vrchat-path-browse"
-              title="ファイルを選択"
-              @click="browseVrchatPath"
+            <el-button
+              v-for="btn in field.buttons"
+              :key="btn.label"
+              :data-testid="btn.testid"
+              :title="btn.title"
+              @click="btn.handler"
             >
-              参照
-            </button>
-            <button
-              type="button"
-              class="btn-validate"
-              :disabled="!pathSettings.vrchatPathWindows"
-              @click="validatePathField('vrchatPathWindows')"
-            >
-              存在確認
-            </button>
-          </div>
-          <span
-            v-if="validateResult.vrchatPathWindows !== null"
-            :class="
-              validateResult.vrchatPathWindows ? 'validate-ok' : 'validate-ng'
-            "
-          >
-            {{
-              validateResult.vrchatPathWindows ? "存在します" : "存在しません"
-            }}
-          </span>
-        </div>
-        <div class="path-row">
-          <label for="steam-path">Steamコマンド（Linux）</label>
-          <div class="path-input-group">
-            <input
-              id="steam-path"
-              v-model="pathSettings.steamPathLinux"
-              type="text"
-              placeholder="例: steam または /usr/bin/steam"
-              @change="savePathSettings"
-            />
-            <button
-              type="button"
-              class="btn-browse"
-              data-testid="steam-path-browse"
-              title="ファイルを選択"
-              @click="browseSteamPath"
-            >
-              参照
-            </button>
-            <button
-              type="button"
-              class="btn-validate"
-              :disabled="!pathSettings.steamPathLinux"
-              @click="validatePathField('steamPathLinux')"
+              {{ btn.label }}
+            </el-button>
+            <el-button
+              type="primary"
+              :disabled="!pathSettings[field.key]"
+              @click="validatePathField(field.key)"
             >
               存在確認
-            </button>
+            </el-button>
           </div>
-          <span
-            v-if="validateResult.steamPathLinux !== null"
-            :class="
-              validateResult.steamPathLinux ? 'validate-ok' : 'validate-ng'
-            "
+          <el-text
+            v-if="validateResult[field.key] !== null"
+            :type="validateResult[field.key] ? 'success' : 'danger'"
+            size="small"
           >
-            {{ validateResult.steamPathLinux ? "存在します" : "存在しません" }}
-          </span>
-        </div>
-        <div class="path-row">
-          <label for="output-log-path"
-            >output_log（ファイルまたはフォルダ）</label
-          >
-          <div class="path-input-group">
-            <input
-              id="output-log-path"
-              v-model="pathSettings.outputLogPath"
-              type="text"
-              placeholder="例: ...\VRChat\VRChat\output_log_....txt または ...\VRChat\VRChat フォルダ"
-              @change="savePathSettings"
-            />
-            <button
-              type="button"
-              class="btn-browse"
-              data-testid="output-log-path-browse"
-              title="ログファイルを選択"
-              @click="browseOutputLogPath"
-            >
-              ファイル
-            </button>
-            <button
-              type="button"
-              class="btn-browse"
-              data-testid="output-log-dir-browse"
-              title="VRChat ログフォルダを選択（最新 output_log*.txt に追従）"
-              @click="browseOutputLogDirectory"
-            >
-              フォルダ
-            </button>
-            <button
-              type="button"
-              class="btn-validate"
-              :disabled="!pathSettings.outputLogPath"
-              @click="validatePathField('outputLogPath')"
-            >
-              存在確認
-            </button>
-            <button
-              type="button"
-              class="btn-browse"
-              title="VRChat のログフォルダをファイルマネージャで開く"
-              @click="openVRChatLogFolder"
-            >
-              ログフォルダを開く
-            </button>
-          </div>
-          <span
-            v-if="validateResult.outputLogPath !== null"
-            :class="
-              validateResult.outputLogPath ? 'validate-ok' : 'validate-ng'
-            "
-          >
-            {{ validateResult.outputLogPath ? "存在します" : "存在しません" }}
-          </span>
+            {{ validateResult[field.key] ? "存在します" : "存在しません" }}
+          </el-text>
         </div>
       </div>
-      <p class="hint">
+      <el-text type="info" size="small" class="hint">
         VRChatの起動とログ監視で使用します。launch.exeを指定してください（VRChat.exe直接起動はオフラインモードになります）。空の場合はデフォルトパスを使用します。
         output_log は<strong>1ファイル</strong>を指定するか、<code
           >...\VRChat\VRChat</code
         >
         の<strong>フォルダ</strong>を指定してください。フォルダのときは更新日時が最新の
-        <code>output_log*.txt</code> を自動で選び、VRChat
-        再起動で新しいログファイルができても追従します。
-      </p>
-    </section>
-    <section class="settings-section">
-      <h2>ログ・データ管理</h2>
+        <code>output_log*.txt</code>
+        を自動で選び、VRChat再起動で新しいログファイルができても追従します。
+      </el-text>
+    </el-card>
+
+    <!-- ログ・データ管理 -->
+    <el-card class="settings-card" shadow="never">
+      <template #header>
+        <span>ログ・データ管理</span>
+      </template>
       <div class="setting-row">
         <label>遭遇記録の保存期間（日）</label>
-        <input
-          v-model.number="logRetentionDays"
-          type="number"
-          min="1"
-          max="365"
+        <el-input-number
+          v-model="logRetentionDays"
+          :min="1"
+          :max="365"
           @change="saveRetention"
         />
       </div>
-      <p class="hint">この日数を過ぎたuser_encountersは自動削除されます</p>
-    </section>
-    <section class="settings-section">
-      <h2>OSS ライセンス</h2>
-      <p class="hint">
+      <el-text type="info" size="small" class="hint">
+        この日数を過ぎたuser_encountersは自動削除されます
+      </el-text>
+    </el-card>
+
+    <!-- OSS ライセンス -->
+    <el-card class="settings-card" shadow="never">
+      <template #header>
+        <span>OSS ライセンス</span>
+      </template>
+      <el-text type="info" size="small" class="hint">
         本アプリケーションで使用しているオープンソースソフトウェアのライセンス一覧を確認できます。
-      </p>
-      <router-link to="/licenses" class="btn-licenses">
-        OSS ライセンス一覧を表示
-      </router-link>
-    </section>
-    <section class="settings-section">
-      <h2>DBメンテナンス</h2>
-      <p class="hint" style="margin-bottom: 1rem">
+      </el-text>
+      <div style="margin-top: 0.75rem">
+        <router-link class="btn-licenses" to="/licenses">
+          <el-button type="primary">OSS ライセンス一覧を表示</el-button>
+        </router-link>
+      </div>
+    </el-card>
+
+    <!-- DB メンテナンス -->
+    <el-card class="settings-card" shadow="never">
+      <template #header>
+        <span>DBメンテナンス</span>
+      </template>
+      <el-text
+        type="info"
+        size="small"
+        class="hint"
+        style="display: block; margin-bottom: 1rem"
+      >
         データベースの最適化と、各テーブルのクリア操作を行います。操作前に確認ダイアログが表示されます。
-      </p>
-      <p v-if="maintenanceError" class="maintenance-error">
-        {{ maintenanceError }}
-      </p>
+      </el-text>
+      <el-alert
+        v-if="maintenanceError"
+        :title="maintenanceError"
+        type="error"
+        :closable="false"
+        show-icon
+        style="margin-bottom: 0.75rem"
+      />
       <div class="maintenance-actions">
-        <button
-          type="button"
-          class="btn-maintenance"
-          :disabled="maintenanceLoading"
-          @click="doVacuumDb"
-        >
+        <el-button :loading="maintenanceLoading" @click="doVacuumDb">
           {{ maintenanceLoading ? "実行中..." : "DB最適化 (VACUUM)" }}
-        </button>
-        <button
-          type="button"
-          class="btn-maintenance btn-maintenance-danger"
-          :disabled="maintenanceLoading"
+        </el-button>
+        <el-button
+          type="danger"
+          plain
+          :loading="maintenanceLoading"
           @click="doClearEncounters"
         >
           遭遇ログをクリア
-        </button>
-        <button
-          type="button"
-          class="btn-maintenance btn-maintenance-danger"
-          :disabled="maintenanceLoading"
+        </el-button>
+        <el-button
+          type="danger"
+          plain
+          :loading="maintenanceLoading"
           @click="doClearScreenshots"
         >
           スクショインデックスをクリア
-        </button>
-        <button
-          type="button"
-          class="btn-maintenance btn-maintenance-danger"
-          :disabled="maintenanceLoading"
+        </el-button>
+        <el-button
+          type="danger"
+          plain
+          :loading="maintenanceLoading"
           @click="doClearFriendsCache"
         >
           フレンドキャッシュをクリア
-        </button>
+        </el-button>
       </div>
-    </section>
+    </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from "vue";
+import { ElMessageBox, ElMessage } from "element-plus";
 import { App } from "../wails/app";
 import type { PathSettingsDTO, VRChatCurrentUserDTO } from "../wails/app";
 
@@ -346,6 +286,7 @@ function formatBackendError(e: unknown, fallback: string): string {
   }
   return fallback;
 }
+
 const loginForm = reactive({
   username: "",
   password: "",
@@ -368,6 +309,62 @@ const validateResult = reactive<Record<keyof PathSettingsDTO, boolean | null>>({
   steamPathLinux: null,
   outputLogPath: null,
 });
+
+const pathFields = computed(() => [
+  {
+    key: "vrchatPathWindows" as keyof PathSettingsDTO,
+    label: "VRChat実行ファイル（Windows）",
+    placeholder:
+      "例: C:\\Program Files (x86)\\Steam\\steamapps\\common\\VRChat\\launch.exe",
+    buttons: [
+      {
+        label: "参照",
+        testid: "vrchat-path-browse",
+        title: "ファイルを選択",
+        handler: browseVrchatPath,
+      },
+    ],
+  },
+  {
+    key: "steamPathLinux" as keyof PathSettingsDTO,
+    label: "Steamコマンド（Linux）",
+    placeholder: "例: steam または /usr/bin/steam",
+    buttons: [
+      {
+        label: "参照",
+        testid: "steam-path-browse",
+        title: "ファイルを選択",
+        handler: browseSteamPath,
+      },
+    ],
+  },
+  {
+    key: "outputLogPath" as keyof PathSettingsDTO,
+    label: "output_log（ファイルまたはフォルダ）",
+    placeholder:
+      "例: ...\\VRChat\\VRChat\\output_log_....txt または ...\\VRChat\\VRChat フォルダ",
+    buttons: [
+      {
+        label: "ファイル",
+        testid: "output-log-path-browse",
+        title: "ログファイルを選択",
+        handler: browseOutputLogPath,
+      },
+      {
+        label: "フォルダ",
+        testid: "output-log-dir-browse",
+        title: "VRChat ログフォルダを選択（最新 output_log*.txt に追従）",
+        handler: browseOutputLogDirectory,
+      },
+      {
+        label: "ログフォルダを開く",
+        testid: "",
+        title: "VRChat のログフォルダをファイルマネージャで開く",
+        handler: openVRChatLogFolder,
+      },
+    ],
+  },
+]);
 
 onMounted(async () => {
   try {
@@ -530,37 +527,40 @@ async function validatePathField(field: keyof PathSettingsDTO) {
   validateResult[field] = await App.validatePath(path);
 }
 
-function runWithConfirm(
+async function runWithConfirm(
   message: string,
   fn: () => Promise<number | void>,
   successMessage?: (result?: number) => string,
 ) {
-  if (!window.confirm(message)) {
+  try {
+    await ElMessageBox.confirm(message, "確認", {
+      confirmButtonText: "実行",
+      cancelButtonText: "キャンセル",
+      type: "warning",
+    });
+  } catch {
     return;
   }
   maintenanceError.value = "";
   maintenanceLoading.value = true;
-  fn()
-    .then((result) => {
-      const msg = successMessage
-        ? successMessage(typeof result === "number" ? result : undefined)
-        : "完了しました";
-      if (msg) {
-        maintenanceError.value = "";
-        window.alert(msg);
-      }
-    })
-    .catch((e) => {
-      maintenanceError.value =
-        e instanceof Error ? e.message : "操作に失敗しました";
-    })
-    .finally(() => {
-      maintenanceLoading.value = false;
-    });
+  try {
+    const result = await fn();
+    const msg = successMessage
+      ? successMessage(typeof result === "number" ? result : undefined)
+      : "完了しました";
+    if (msg) {
+      ElMessage.success(msg);
+    }
+  } catch (e) {
+    maintenanceError.value =
+      e instanceof Error ? e.message : "操作に失敗しました";
+  } finally {
+    maintenanceLoading.value = false;
+  }
 }
 
 function doVacuumDb() {
-  runWithConfirm(
+  void runWithConfirm(
     "データベースを最適化（VACUUM）します。よろしいですか？",
     async () => {
       await App.vacuumDb();
@@ -570,7 +570,7 @@ function doVacuumDb() {
 }
 
 function doClearEncounters() {
-  runWithConfirm(
+  void runWithConfirm(
     "遭遇ログ（user_encounters）をすべて削除します。よろしいですか？",
     async () => App.clearEncounters(),
     (n) => `${n}件の遭遇ログを削除しました`,
@@ -578,7 +578,7 @@ function doClearEncounters() {
 }
 
 function doClearScreenshots() {
-  runWithConfirm(
+  void runWithConfirm(
     "スクリーンショットインデックス（screenshots）をすべて削除します。よろしいですか？",
     async () => App.clearScreenshots(),
     (n) => `${n}件のスクショインデックスを削除しました`,
@@ -586,7 +586,7 @@ function doClearScreenshots() {
 }
 
 function doClearFriendsCache() {
-  runWithConfirm(
+  void runWithConfirm(
     "ユーザーキャッシュ（users_cache）の全行（自分・フレンド・遭遇ログ由来のユーザー）を削除します。よろしいですか？",
     async () => App.clearFriendsCache(),
     (n) => {
@@ -599,109 +599,28 @@ function doClearFriendsCache() {
 </script>
 
 <style scoped>
-.settings-section {
-  margin-bottom: 2rem;
-}
-.settings-section h2 {
-  font-size: 1.1rem;
-  margin: 0 0 1rem;
-}
-.setting-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
-}
-.setting-row input {
-  width: 80px;
-  padding: 0.4rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-primary);
+.settings-card {
+  margin-bottom: 1.5rem;
+  background: var(--bg-secondary) !important;
+  border-color: var(--border) !important;
 }
 
-.path-settings {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-.path-row {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-.path-row label {
-  font-size: 0.95rem;
-}
-.path-input-group {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-.path-input-group input {
-  flex: 1;
-  min-width: 0;
-  padding: 0.4rem 0.6rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-}
-.btn-browse {
-  flex-shrink: 0;
-  padding: 0.4rem 0.75rem;
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-.btn-browse:hover {
-  opacity: 0.9;
-}
-.btn-validate {
-  flex-shrink: 0;
-  padding: 0.4rem 0.75rem;
-  background: var(--accent);
-  color: var(--bg-primary);
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-.btn-validate:hover:not(:disabled) {
-  opacity: 0.9;
-}
-.btn-validate:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.validate-ok {
-  font-size: 0.85rem;
-  color: var(--success, #22c55e);
-}
-.validate-ng {
-  font-size: 0.85rem;
-  color: var(--error, #ef4444);
+.settings-card :deep(.el-card__header) {
+  font-weight: 600;
+  border-bottom-color: var(--border);
 }
 
-.hint {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin-top: 0.5rem;
-}
-
-/* Login section */
 .login-status {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
 }
+
 .profile-loading {
   font-size: 0.9rem;
   color: var(--text-secondary);
 }
+
 .current-user-card {
   display: flex;
   gap: 1rem;
@@ -712,148 +631,95 @@ function doClearFriendsCache() {
   border-radius: var(--radius);
   max-width: 480px;
 }
+
 .current-user-avatar {
   flex-shrink: 0;
   border-radius: var(--radius);
   object-fit: cover;
   background: var(--bg-primary);
 }
+
 .current-user-details {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
 }
+
 .current-user-display-name {
   margin: 0;
   font-size: 1.05rem;
   font-weight: 600;
-  color: var(--text-primary);
 }
+
 .current-user-line {
   margin: 0;
   font-size: 0.88rem;
-  color: var(--text-primary);
   word-break: break-all;
 }
+
 .current-user-line.muted {
   color: var(--text-secondary);
 }
-.profile-error {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--error, #ef4444);
-  max-width: 480px;
-}
-.logged-in-label {
-  font-size: 0.95rem;
-  color: var(--success, #22c55e);
-}
+
 .login-actions {
   display: flex;
   gap: 0.5rem;
   flex-wrap: wrap;
 }
-.btn-login,
-.btn-logout,
-.btn-refresh {
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius);
-  cursor: pointer;
-  border: none;
-  font-size: 0.9rem;
-}
-.btn-login,
-.btn-refresh {
-  background: var(--accent);
-  color: var(--bg-primary);
-}
-.btn-logout {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-}
-.btn-login:hover:not(:disabled),
-.btn-refresh:hover,
-.btn-logout:hover {
-  opacity: 0.9;
-}
-.btn-login:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
 
 .login-form {
+  max-width: 360px;
+}
+
+.login-error {
+  margin-bottom: 0.75rem;
+}
+
+.hint {
+  display: block;
+  margin-top: 0.75rem;
+}
+
+.path-settings {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  max-width: 360px;
 }
-.login-form .form-row {
+
+.path-row {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.35rem;
 }
-.login-form .form-row label {
+
+.path-label {
   font-size: 0.95rem;
-}
-.login-form .form-row input {
-  padding: 0.5rem 0.6rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
   color: var(--text-primary);
 }
-.login-error {
-  font-size: 0.9rem;
-  color: var(--error, #ef4444);
-  margin: 0;
+
+.path-input-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
-.btn-licenses {
-  display: inline-block;
-  padding: 0.5rem 1rem;
-  background: var(--accent);
-  color: var(--bg-primary);
-  border-radius: var(--radius);
-  text-decoration: none;
-  font-size: 0.9rem;
-  border: none;
-  cursor: pointer;
-}
-.btn-licenses:hover {
-  opacity: 0.9;
+.path-input-group :deep(.el-input) {
+  flex: 1;
+  min-width: 0;
 }
 
-/* DB Maintenance */
-.maintenance-error {
-  font-size: 0.9rem;
-  color: var(--error, #ef4444);
-  margin: 0 0 0.5rem;
+.setting-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
 }
+
 .maintenance-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
-}
-.btn-maintenance {
-  padding: 0.5rem 1rem;
-  border-radius: var(--radius);
-  cursor: pointer;
-  border: 1px solid var(--border);
-  font-size: 0.9rem;
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-}
-.btn-maintenance:hover:not(:disabled) {
-  opacity: 0.9;
-}
-.btn-maintenance:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.btn-maintenance-danger {
-  border-color: var(--error, #ef4444);
-  color: var(--error, #ef4444);
 }
 </style>
