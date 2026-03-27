@@ -97,4 +97,104 @@ describe("FriendsView", () => {
     expect(wrapper.text()).not.toContain("OnUser");
     expect(wrapper.text()).toContain("OffUser");
   });
+
+  it("renders display name search input below toolbar", async () => {
+    mockFriends.mockResolvedValue([]);
+    const wrapper = mount(FriendsView);
+    await flushPromises();
+
+    const input = wrapper.find('[data-testid="friends-search-display-name"]');
+    expect(input.exists()).toBe(true);
+    expect((input.element as HTMLInputElement).placeholder).toBe(
+      "表示名で検索",
+    );
+  });
+
+  it("filters friends by display name (case-insensitive)", async () => {
+    mockFriends.mockResolvedValue([
+      minimalUser({
+        vrcUserId: "1",
+        displayName: "AlphaTest",
+        status: "join me",
+      }),
+      minimalUser({
+        vrcUserId: "2",
+        displayName: "BetaUser",
+        status: "join me",
+      }),
+    ]);
+    const wrapper = mount(FriendsView);
+    await flushPromises();
+
+    await wrapper
+      .find('[data-testid="friends-search-display-name"]')
+      .setValue("beta");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("BetaUser");
+    expect(wrapper.text()).not.toContain("AlphaTest");
+  });
+
+  it("shows message when search matches no one", async () => {
+    mockFriends.mockResolvedValue([
+      minimalUser({
+        vrcUserId: "1",
+        displayName: "OnlyOne",
+        status: "join me",
+      }),
+    ]);
+    const wrapper = mount(FriendsView);
+    await flushPromises();
+
+    await wrapper
+      .find('[data-testid="friends-search-display-name"]')
+      .setValue("nope");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("検索に一致するフレンドはいません");
+  });
+
+  it("detail omits user id row and offers copy on display name", async () => {
+    mockFriends.mockResolvedValue([
+      minimalUser({
+        vrcUserId: "usr_internal_id_value",
+        displayName: "VisibleName",
+        status: "active",
+      }),
+    ]);
+    const wrapper = mount(FriendsView);
+    await flushPromises();
+
+    await wrapper.find(".friend-card").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).not.toContain("ユーザーID");
+    expect(wrapper.text()).not.toContain("usr_internal_id_value");
+    expect(
+      wrapper.find('[data-testid="friend-copy-display-name"]').exists(),
+    ).toBe(true);
+  });
+
+  it("copy button writes display name to clipboard", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+
+    mockFriends.mockResolvedValue([
+      minimalUser({
+        vrcUserId: "1",
+        displayName: "CopyMe Friend",
+        status: "active",
+      }),
+    ]);
+    const wrapper = mount(FriendsView);
+    await flushPromises();
+
+    await wrapper.find(".friend-card").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    await wrapper
+      .find('[data-testid="friend-copy-display-name"]')
+      .trigger("click");
+    expect(writeText).toHaveBeenCalledWith("CopyMe Friend");
+  });
 });

@@ -1,40 +1,51 @@
 <template>
   <div class="friends-view">
     <h1 class="page-title">フレンド</h1>
-    <div class="friends-header">
-      <div
-        class="filter-mode"
-        role="group"
-        aria-label="フレンド一覧: Online または Offline"
-      >
-        <span class="mode-label" :class="{ active: !showOfflineList }"
-          >Online</span
+    <div class="friends-toolbar">
+      <div class="friends-header">
+        <div
+          class="filter-mode"
+          role="group"
+          aria-label="フレンド一覧: Online または Offline"
         >
-        <label class="switch mode-switch">
-          <input
-            v-model="showOfflineList"
-            type="checkbox"
-            class="switch-input"
-            data-testid="friends-filter-mode"
-            aria-label="Offline 一覧を表示する（オフのときは Online）"
-          />
-          <span class="switch-track" aria-hidden="true" />
-        </label>
-        <span class="mode-label" :class="{ active: showOfflineList }"
-          >Offline</span
+          <span class="mode-label" :class="{ active: !showOfflineList }"
+            >Online</span
+          >
+          <label class="switch mode-switch">
+            <input
+              v-model="showOfflineList"
+              type="checkbox"
+              class="switch-input"
+              data-testid="friends-filter-mode"
+              aria-label="Offline 一覧を表示する（オフのときは Online）"
+            />
+            <span class="switch-track" aria-hidden="true" />
+          </label>
+          <span class="mode-label" :class="{ active: showOfflineList }"
+            >Offline</span
+          >
+        </div>
+        <button
+          type="button"
+          class="btn-refresh"
+          :disabled="!isLoggedIn || refreshLoading"
+          :title="
+            isLoggedIn ? 'フレンド一覧をAPIから再取得' : 'ログインが必要です'
+          "
+          @click="doRefresh"
         >
+          {{ refreshLoading ? "更新中..." : "更新" }}
+        </button>
       </div>
-      <button
-        type="button"
-        class="btn-refresh"
-        :disabled="!isLoggedIn || refreshLoading"
-        :title="
-          isLoggedIn ? 'フレンド一覧をAPIから再取得' : 'ログインが必要です'
-        "
-        @click="doRefresh"
-      >
-        {{ refreshLoading ? "更新中..." : "更新" }}
-      </button>
+      <input
+        v-model.trim="displayNameQuery"
+        type="search"
+        class="friends-search-input"
+        placeholder="表示名で検索"
+        data-testid="friends-search-display-name"
+        autocomplete="off"
+        enterkeyhint="search"
+      />
     </div>
     <p v-if="!isLoggedIn" class="hint">
       フレンド一覧の更新にはログインが必要です。設定画面でログインしてください。
@@ -90,9 +101,35 @@
         </div>
         <dl class="detail-list">
           <dt>表示名</dt>
-          <dd>{{ selected.displayName }}</dd>
-          <dt>ユーザーID</dt>
-          <dd class="mono">{{ selected.vrcUserId }}</dd>
+          <dd class="detail-display-name">
+            <span>{{ selected.displayName }}</span>
+            <button
+              type="button"
+              class="btn-copy-name"
+              title="表示名をコピー"
+              aria-label="表示名をコピー"
+              data-testid="friend-copy-display-name"
+              @click="copyDisplayName(selected.displayName)"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+                <path
+                  d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+                />
+              </svg>
+            </button>
+          </dd>
           <template v-if="selected.username">
             <dt>ユーザー名</dt>
             <dd>{{ selected.username }}</dd>
@@ -267,6 +304,7 @@ import type { UserCacheDTO } from "../wails/app";
 
 /** false: オンラインのみ / true: オフラインのみ */
 const showOfflineList = ref(false);
+const displayNameQuery = ref("");
 const friends = ref<UserCacheDTO[]>([]);
 const selected = ref<UserCacheDTO | null>(null);
 const isLoggedIn = ref(false);
@@ -277,7 +315,7 @@ function friendIsOffline(status: string): boolean {
   return !status || status.toLowerCase() === "offline";
 }
 
-const filteredFriends = computed(() => {
+const friendsByStatus = computed(() => {
   const list = friends.value;
   if (showOfflineList.value) {
     return list.filter((f) => friendIsOffline(f.status));
@@ -285,11 +323,48 @@ const filteredFriends = computed(() => {
   return list.filter((f) => !friendIsOffline(f.status));
 });
 
-const emptyListMessage = computed(() =>
-  showOfflineList.value
-    ? "オフラインのフレンドはいません"
-    : "オンラインのフレンドはいません",
-);
+const filteredFriends = computed(() => {
+  const q = displayNameQuery.value.trim().toLowerCase();
+  const base = friendsByStatus.value;
+  if (!q) return base;
+  return base.filter((f) => f.displayName.toLowerCase().includes(q));
+});
+
+const emptyListMessage = computed(() => {
+  if (friendsByStatus.value.length === 0) {
+    return showOfflineList.value
+      ? "オフラインのフレンドはいません"
+      : "オンラインのフレンドはいません";
+  }
+  if (
+    displayNameQuery.value.trim() !== "" &&
+    filteredFriends.value.length === 0
+  ) {
+    return "検索に一致するフレンドはいません";
+  }
+  return "該当するフレンドはいません";
+});
+
+async function copyDisplayName(name: string): Promise<void> {
+  const text = name || "";
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.setAttribute("readonly", "");
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand("copy");
+    } finally {
+      document.body.removeChild(ta);
+    }
+  }
+}
 
 function friendThumbUrl(f: UserCacheDTO): string | undefined {
   return (
@@ -364,11 +439,36 @@ async function applyFavorite(f: UserCacheDTO) {
   font-size: 1.5rem;
 }
 
+.friends-toolbar {
+  margin-bottom: 1rem;
+}
+
 .friends-header {
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 1rem;
+}
+
+.friends-search-input {
+  width: 100%;
+  max-width: 20rem;
+  margin-top: 0.65rem;
+  padding: 0.45rem 0.65rem;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-sizing: border-box;
+}
+
+.friends-search-input::placeholder {
+  color: var(--text-secondary);
+}
+
+.friends-search-input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .filter-mode {
@@ -591,6 +691,38 @@ async function applyFavorite(f: UserCacheDTO) {
 
 .detail-list dd {
   margin: 0.2rem 0 0;
+}
+
+.detail-display-name {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.btn-copy-name {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  margin: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.btn-copy-name:hover {
+  color: var(--accent);
+  border-color: var(--border);
+  background: var(--bg-tertiary);
+}
+
+.btn-copy-name:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .mono {
