@@ -68,15 +68,25 @@ func (c *Client) getFriendsPage(ctx context.Context, offset, n int, offline bool
 	return friends, nil
 }
 
+const (
+	// friendsListPageSize is the VRChat List Friends API max per request (see n parameter).
+	friendsListPageSize = 100
+	// friendsListMaxPagesPerOfflinePass caps each offline=false / offline=true pass (~10k friends max).
+	friendsListMaxPagesPerOfflinePass = 100
+)
+
 // GetFriends fetches every friend by paging GET /auth/user/friends (online/active and offline passes).
 func (c *Client) GetFriends(ctx context.Context) ([]Friend, error) {
-	const pageSize = 100
 	seen := make(map[string]struct{})
 	var out []Friend
 	for _, offline := range []bool{false, true} {
 		offset := 0
-		for {
-			batch, err := c.getFriendsPage(ctx, offset, pageSize, offline)
+		for page := 1; ; page++ {
+			if page > friendsListMaxPagesPerOfflinePass {
+				return nil, fmt.Errorf("friends list: exceeded max pages (%d) for offline=%v (possible API stuck returning full pages)",
+					friendsListMaxPagesPerOfflinePass, offline)
+			}
+			batch, err := c.getFriendsPage(ctx, offset, friendsListPageSize, offline)
 			if err != nil {
 				return nil, err
 			}
@@ -90,10 +100,10 @@ func (c *Client) GetFriends(ctx context.Context) ([]Friend, error) {
 				seen[f.ID] = struct{}{}
 				out = append(out, f)
 			}
-			if len(batch) < pageSize {
+			if len(batch) < friendsListPageSize {
 				break
 			}
-			offset += pageSize
+			offset += friendsListPageSize
 		}
 	}
 	return out, nil

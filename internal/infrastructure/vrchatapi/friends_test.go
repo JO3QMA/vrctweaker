@@ -3,8 +3,11 @@ package vrchatapi
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -129,5 +132,45 @@ func TestClient_GetFriends_paginationAndOfflinePasses(t *testing.T) {
 	}
 	if ids["usr_b"] != "B" {
 		t.Fatalf("usr_b: %v", ids)
+	}
+}
+
+func TestClient_GetFriends_errorsWhenPagesNeverShrink(t *testing.T) {
+	var nCalls int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/1/auth/user/friends" {
+			http.NotFound(w, r)
+			return
+		}
+		q := r.URL.Query()
+		if q.Get("offline") != "false" {
+			_ = json.NewEncoder(w).Encode([]Friend{})
+			return
+		}
+		nCalls++
+		off, _ := strconv.Atoi(q.Get("offset"))
+		batch := make([]Friend, friendsListPageSize)
+		for i := range batch {
+			batch[i] = Friend{
+				ID:          fmt.Sprintf("usr_%d_%d", off, i),
+				DisplayName: "X",
+				Status:      "active",
+			}
+		}
+		_ = json.NewEncoder(w).Encode(batch)
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient("")
+	c.apiRoot = srv.URL + "/api/1"
+	_, err := c.GetFriends(context.Background())
+	if err == nil {
+		t.Fatal("expected error when API keeps returning full pages beyond max")
+	}
+	if !strings.Contains(err.Error(), "exceeded max pages") {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if nCalls != friendsListMaxPagesPerOfflinePass {
+		t.Fatalf("HTTP calls = %d, want %d (one pass of full pages before guard)", nCalls, friendsListMaxPagesPerOfflinePass)
 	}
 }
