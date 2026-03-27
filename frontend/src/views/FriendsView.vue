@@ -2,21 +2,27 @@
   <div class="friends-view">
     <h1 class="page-title">フレンド</h1>
     <div class="friends-header">
-      <div class="tabs">
-        <button
-          class="tab-btn"
-          :class="{ active: activeTab === 'online' }"
-          @click="activeTab = 'online'"
+      <div
+        class="filter-mode"
+        role="group"
+        aria-label="フレンド一覧: Online または Offline"
+      >
+        <span class="mode-label" :class="{ active: !showOfflineList }"
+          >Online</span
         >
-          Online
-        </button>
-        <button
-          class="tab-btn"
-          :class="{ active: activeTab === 'offline' }"
-          @click="activeTab = 'offline'"
+        <label class="switch mode-switch">
+          <input
+            v-model="showOfflineList"
+            type="checkbox"
+            class="switch-input"
+            data-testid="friends-filter-mode"
+            aria-label="Offline 一覧を表示する（オフのときは Online）"
+          />
+          <span class="switch-track" aria-hidden="true" />
+        </label>
+        <span class="mode-label" :class="{ active: showOfflineList }"
+          >Offline</span
         >
-          Offline
-        </button>
       </div>
       <button
         type="button"
@@ -67,11 +73,7 @@
           v-if="filteredFriends.length === 0 && !loading"
           class="empty-message"
         >
-          {{
-            activeTab === "online"
-              ? "オンラインのフレンドはいません"
-              : "オフラインのフレンドはいません"
-          }}
+          {{ emptyListMessage }}
         </p>
       </div>
       <div v-if="selected" class="friend-detail">
@@ -263,21 +265,31 @@ import { ref, computed, onMounted } from "vue";
 import { App } from "../wails/app";
 import type { UserCacheDTO } from "../wails/app";
 
-const activeTab = ref<"online" | "offline">("online");
+/** false: オンラインのみ / true: オフラインのみ */
+const showOfflineList = ref(false);
 const friends = ref<UserCacheDTO[]>([]);
 const selected = ref<UserCacheDTO | null>(null);
 const isLoggedIn = ref(false);
 const loading = ref(true);
 const refreshLoading = ref(false);
 
+function friendIsOffline(status: string): boolean {
+  return !status || status.toLowerCase() === "offline";
+}
+
 const filteredFriends = computed(() => {
   const list = friends.value;
-  const isOffline = (s: string) => !s || s.toLowerCase() === "offline";
-  if (activeTab.value === "online") {
-    return list.filter((f) => !isOffline(f.status));
+  if (showOfflineList.value) {
+    return list.filter((f) => friendIsOffline(f.status));
   }
-  return list.filter((f) => isOffline(f.status));
+  return list.filter((f) => !friendIsOffline(f.status));
 });
+
+const emptyListMessage = computed(() =>
+  showOfflineList.value
+    ? "オフラインのフレンドはいません"
+    : "オンラインのフレンドはいません",
+);
 
 function friendThumbUrl(f: UserCacheDTO): string | undefined {
   return (
@@ -359,29 +371,83 @@ async function applyFavorite(f: UserCacheDTO) {
   margin-bottom: 1rem;
 }
 
-.tabs {
+.filter-mode {
   display: flex;
-  gap: 0.25rem;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
 }
 
-.tab-btn {
-  padding: 0.4rem 1rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+.mode-label {
+  font-size: 0.9rem;
   color: var(--text-secondary);
+  min-width: 3.25rem;
+  transition: color 0.15s ease;
+}
+
+.mode-label.active {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.mode-switch {
   cursor: pointer;
 }
 
-.tab-btn:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 2.75rem;
+  height: 1.375rem;
+  flex-shrink: 0;
 }
 
-.tab-btn.active {
+.switch-input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.switch-track {
+  position: absolute;
+  inset: 0;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+  pointer-events: none;
+}
+
+.switch-track::after {
+  content: "";
+  position: absolute;
+  top: 0.125rem;
+  left: 0.125rem;
+  width: 1.125rem;
+  height: 1.125rem;
+  background: #fff;
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+  transition: transform 0.2s ease;
+}
+
+.switch-input:checked + .switch-track {
   background: var(--accent);
-  color: white;
   border-color: var(--accent);
+}
+
+.switch-input:checked + .switch-track::after {
+  transform: translateX(1.25rem);
+}
+
+.switch-input:focus-visible + .switch-track {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .btn-refresh {
