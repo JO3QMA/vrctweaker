@@ -112,7 +112,22 @@ func schemaStatements() []string {
 			user_state TEXT,
 			avatar_thumbnail_url TEXT,
 			user_icon_url TEXT,
-			profile_pic_override_thumbnail TEXT
+			profile_pic_override_thumbnail TEXT,
+			bio TEXT,
+			bio_links_json TEXT,
+			current_avatar_image_url TEXT,
+			current_avatar_tags_json TEXT,
+			developer_type TEXT,
+			friend_key TEXT,
+			image_url TEXT,
+			last_platform TEXT,
+			location TEXT,
+			last_login TEXT,
+			last_activity TEXT,
+			last_mobile TEXT,
+			platform TEXT,
+			profile_pic_override TEXT,
+			tags_json TEXT
 		)`,
 		`CREATE TABLE IF NOT EXISTS world_info (
 			world_id TEXT PRIMARY KEY,

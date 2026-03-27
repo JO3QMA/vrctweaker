@@ -238,6 +238,65 @@ func TestUserCacheRepository_List_onlyFriendsWithStatus(t *testing.T) {
 	}
 }
 
+func TestUserCacheRepository_SaveBatch_persistsFriendExtendedFields(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db")+"?_pragma=foreign_keys(1)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	if migErr := applySchema(db); migErr != nil {
+		t.Fatal(migErr)
+	}
+	repo := NewUserCacheRepository(db)
+	ctx := context.Background()
+	at := time.Now().UTC().Truncate(time.Second)
+	fr := &identity.UserCache{
+		VRCUserID:                   "usr_ext",
+		DisplayName:                 "Ext",
+		Status:                      "offline",
+		UserKind:                    identity.UserKindFriend,
+		LastUpdated:                 at,
+		Username:                    "ext_u",
+		StatusDescription:           "sd",
+		UserState:                   "active",
+		AvatarThumbnailURL:          "https://thumb",
+		UserIconURL:                 "https://icon",
+		ProfilePicOverrideThumbnail: "https://ppt",
+		Bio:                         "my bio",
+		BioLinksJSON:                `["https://a.example"]`,
+		CurrentAvatarImageURL:       "https://full",
+		CurrentAvatarTagsJSON:       `["t1"]`,
+		DeveloperType:               "none",
+		FriendKey:                   "fk",
+		ImageURL:                    "https://img",
+		LastPlatform:                "win",
+		Location:                    "wrld_1:1~grp",
+		LastLogin:                   "2019-08-24T14:15:22Z",
+		LastActivity:                "2019-08-24T15:15:22Z",
+		LastMobile:                  "2019-08-24T16:15:22Z",
+		Platform:                    "standalonewindows",
+		ProfilePicOverride:          "https://ppo",
+		TagsJSON:                    `["system_trust_basic"]`,
+	}
+	if batchErr := repo.SaveBatch(ctx, []*identity.UserCache{fr}); batchErr != nil {
+		t.Fatal(batchErr)
+	}
+	got, err := repo.GetByVRCUserID(ctx, "usr_ext")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Bio != "my bio" || got.Location != "wrld_1:1~grp" {
+		t.Fatalf("bio/location: %+v", got)
+	}
+	if got.BioLinksJSON != `["https://a.example"]` || got.TagsJSON != `["system_trust_basic"]` {
+		t.Fatalf("json cols: bioLinks=%q tags=%q", got.BioLinksJSON, got.TagsJSON)
+	}
+	if got.AvatarThumbnailURL != "https://thumb" {
+		t.Fatalf("thumb: %q", got.AvatarThumbnailURL)
+	}
+}
+
 func TestUserCacheRepository_SaveBatch_afterMergeFromAPIFriend_keepsSelf(t *testing.T) {
 	dir := t.TempDir()
 	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))

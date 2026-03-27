@@ -21,6 +21,22 @@ type UserCache struct {
 	AvatarThumbnailURL          string
 	UserIconURL                 string
 	ProfilePicOverrideThumbnail string
+	// List Friends API (GET /auth/user/friends); primarily populated for user_kind=friend.
+	Bio                   string
+	BioLinksJSON          string
+	CurrentAvatarImageURL string
+	CurrentAvatarTagsJSON string
+	DeveloperType         string
+	FriendKey             string
+	ImageURL              string
+	LastPlatform          string
+	Location              string
+	LastLogin             string
+	LastActivity          string
+	LastMobile            string
+	Platform              string
+	ProfilePicOverride    string
+	TagsJSON              string
 }
 
 // MergeFromLog merges log-derived contact info without downgrading friend or self rows.
@@ -58,7 +74,7 @@ func (u *UserCache) MergeFromLog(displayName string, at time.Time) {
 }
 
 // MergeFromAPIFriend merges a friends-list API snapshot into this row.
-// Self rows are never modified. Other kinds become friend with API display name, status, favorite, and last updated.
+// Self rows are never modified. Other kinds become friend; IsFavorite comes from the snapshot (caller sets from existing row).
 func (u *UserCache) MergeFromAPIFriend(apiUser *UserCache) {
 	if u == nil || apiUser == nil {
 		return
@@ -71,4 +87,25 @@ func (u *UserCache) MergeFromAPIFriend(apiUser *UserCache) {
 	u.Status = apiUser.Status
 	u.IsFavorite = apiUser.IsFavorite
 	u.LastUpdated = apiUser.LastUpdated
+	u.Username = apiUser.Username
+	u.StatusDescription = apiUser.StatusDescription
+	u.UserState = apiUser.UserState
+	u.AvatarThumbnailURL = apiUser.AvatarThumbnailURL
+	u.UserIconURL = apiUser.UserIconURL
+	u.ProfilePicOverrideThumbnail = apiUser.ProfilePicOverrideThumbnail
+	u.Bio = apiUser.Bio
+	u.BioLinksJSON = apiUser.BioLinksJSON
+	u.CurrentAvatarImageURL = apiUser.CurrentAvatarImageURL
+	u.CurrentAvatarTagsJSON = apiUser.CurrentAvatarTagsJSON
+	u.DeveloperType = apiUser.DeveloperType
+	u.FriendKey = apiUser.FriendKey
+	u.ImageURL = apiUser.ImageURL
+	u.LastPlatform = apiUser.LastPlatform
+	u.Location = apiUser.Location
+	u.LastLogin = apiUser.LastLogin
+	u.LastActivity = apiUser.LastActivity
+	u.LastMobile = apiUser.LastMobile
+	u.Platform = apiUser.Platform
+	u.ProfilePicOverride = apiUser.ProfilePicOverride
+	u.TagsJSON = apiUser.TagsJSON
 }

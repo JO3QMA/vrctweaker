@@ -74,6 +74,52 @@ func TestUserCache_MergeFromLog_doesNotDemoteFriendOrSelf(t *testing.T) {
 	}
 }
 
+func TestUserCache_MergeFromAPIFriend_copiesExtendedFriendFields(t *testing.T) {
+	at := time.Date(2026, 3, 20, 12, 0, 0, 0, time.UTC)
+	u := &UserCache{
+		VRCUserID:   "usr_1",
+		UserKind:    UserKindContact,
+		IsFavorite:  true,
+		DisplayName: "Old",
+	}
+	api := &UserCache{
+		VRCUserID:                   "usr_1",
+		DisplayName:                 "API",
+		Status:                      "active",
+		IsFavorite:                  true,
+		LastUpdated:                 at,
+		UserKind:                    UserKindFriend,
+		Username:                    "u1",
+		StatusDescription:           "sd",
+		UserState:                   "st",
+		AvatarThumbnailURL:          "https://thumb",
+		UserIconURL:                 "https://icon",
+		ProfilePicOverrideThumbnail: "https://ppo/t",
+		Bio:                         "bio text",
+		BioLinksJSON:                `["https://a"]`,
+		CurrentAvatarImageURL:       "https://full",
+		CurrentAvatarTagsJSON:       `["t1"]`,
+		DeveloperType:               "none",
+		FriendKey:                   "fk",
+		ImageURL:                    "https://img",
+		LastPlatform:                "win",
+		Location:                    "wrld:x",
+		LastLogin:                   "2020-01-01T00:00:00Z",
+		LastActivity:                "2020-01-02T00:00:00Z",
+		LastMobile:                  "2020-01-03T00:00:00Z",
+		Platform:                    "standalonewindows",
+		ProfilePicOverride:          "https://ppo",
+		TagsJSON:                    `["tag_a"]`,
+	}
+	u.MergeFromAPIFriend(api)
+	if u.Bio != "bio text" || u.Location != "wrld:x" || u.BioLinksJSON != `["https://a"]` {
+		t.Fatalf("extended fields: %+v", u)
+	}
+	if u.AvatarThumbnailURL != "https://thumb" || u.TagsJSON != `["tag_a"]` {
+		t.Fatalf("thumb/tags: %+v", u)
+	}
+}
+
 func TestUserCache_MergeFromAPIFriend_doesNotOverwriteSelf(t *testing.T) {
 	at := time.Date(2026, 3, 20, 12, 0, 0, 0, time.UTC)
 	u := &UserCache{

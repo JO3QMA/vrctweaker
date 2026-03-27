@@ -95,6 +95,27 @@ export interface UserCacheDTO {
   lastUpdated: string;
   firstSeenAt?: string;
   lastContactAt?: string;
+  username?: string;
+  statusDescription?: string;
+  state?: string;
+  currentAvatarThumbnailImageUrl?: string;
+  userIcon?: string;
+  profilePicOverrideThumbnail?: string;
+  bio?: string;
+  bioLinksJson?: string;
+  currentAvatarImageUrl?: string;
+  currentAvatarTagsJson?: string;
+  developerType?: string;
+  friendKey?: string;
+  imageUrl?: string;
+  lastPlatform?: string;
+  location?: string;
+  lastLogin?: string;
+  lastActivity?: string;
+  lastMobile?: string;
+  platform?: string;
+  profilePicOverride?: string;
+  tagsJson?: string;
 }
 
 export interface PathSettingsDTO {

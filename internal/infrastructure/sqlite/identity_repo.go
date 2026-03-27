@@ -23,7 +23,58 @@ func NewUserCacheRepository(db *sql.DB) *UserCacheRepository {
 }
 
 const userCacheSelectCols = `vrc_user_id, display_name, status, is_favorite, last_updated, first_seen_at, last_contact_at,
-	user_kind, session_fingerprint, username, status_description, user_state, avatar_thumbnail_url, user_icon_url, profile_pic_override_thumbnail`
+	user_kind, session_fingerprint, username, status_description, user_state, avatar_thumbnail_url, user_icon_url, profile_pic_override_thumbnail,
+	bio, bio_links_json, current_avatar_image_url, current_avatar_tags_json, developer_type, friend_key, image_url, last_platform, location,
+	last_login, last_activity, last_mobile, platform, profile_pic_override, tags_json`
+
+const userCacheUpsertExcluded = `display_name = excluded.display_name,
+		status = excluded.status,
+		is_favorite = excluded.is_favorite,
+		last_updated = excluded.last_updated,
+		first_seen_at = excluded.first_seen_at,
+		last_contact_at = excluded.last_contact_at,
+		user_kind = excluded.user_kind,
+		session_fingerprint = excluded.session_fingerprint,
+		username = excluded.username,
+		status_description = excluded.status_description,
+		user_state = excluded.user_state,
+		avatar_thumbnail_url = excluded.avatar_thumbnail_url,
+		user_icon_url = excluded.user_icon_url,
+		profile_pic_override_thumbnail = excluded.profile_pic_override_thumbnail,
+		bio = excluded.bio,
+		bio_links_json = excluded.bio_links_json,
+		current_avatar_image_url = excluded.current_avatar_image_url,
+		current_avatar_tags_json = excluded.current_avatar_tags_json,
+		developer_type = excluded.developer_type,
+		friend_key = excluded.friend_key,
+		image_url = excluded.image_url,
+		last_platform = excluded.last_platform,
+		location = excluded.location,
+		last_login = excluded.last_login,
+		last_activity = excluded.last_activity,
+		last_mobile = excluded.last_mobile,
+		platform = excluded.platform,
+		profile_pic_override = excluded.profile_pic_override,
+		tags_json = excluded.tags_json`
+
+func userCacheRowArgs(u *identity.UserCache, uk identity.UserKind, fs, lc interface{}) []any {
+	isFav := 0
+	if u.IsFavorite {
+		isFav = 1
+	}
+	if uk == "" {
+		uk = identity.UserKindContact
+	}
+	return []any{
+		u.VRCUserID, u.DisplayName, nullString(u.Status), isFav, u.LastUpdated.Format(time.RFC3339), fs, lc, string(uk), nullString(u.SessionFingerprint),
+		nullString(u.Username), nullString(u.StatusDescription), nullString(u.UserState),
+		nullString(u.AvatarThumbnailURL), nullString(u.UserIconURL), nullString(u.ProfilePicOverrideThumbnail),
+		nullString(u.Bio), nullString(u.BioLinksJSON), nullString(u.CurrentAvatarImageURL), nullString(u.CurrentAvatarTagsJSON),
+		nullString(u.DeveloperType), nullString(u.FriendKey), nullString(u.ImageURL), nullString(u.LastPlatform), nullString(u.Location),
+		nullString(u.LastLogin), nullString(u.LastActivity), nullString(u.LastMobile), nullString(u.Platform),
+		nullString(u.ProfilePicOverride), nullString(u.TagsJSON),
+	}
+}
 
 // List returns cached VRChat friends (user_kind=friend with API status).
 func (r *UserCacheRepository) List(ctx context.Context) ([]*identity.UserCache, error) {
@@ -57,10 +108,6 @@ func (r *UserCacheRepository) Save(ctx context.Context, u *identity.UserCache) e
 	if uk == "" {
 		uk = identity.UserKindContact
 	}
-	isFav := 0
-	if u.IsFavorite {
-		isFav = 1
-	}
 	var fs, lc interface{}
 	if u.FirstSeenAt != nil {
 		fs = u.FirstSeenAt.Format(time.RFC3339)
@@ -68,26 +115,23 @@ func (r *UserCacheRepository) Save(ctx context.Context, u *identity.UserCache) e
 	if u.LastContactAt != nil {
 		lc = u.LastContactAt.Format(time.RFC3339)
 	}
-	_, err := r.db.ExecContext(ctx, `INSERT INTO users_cache (vrc_user_id, display_name, status, is_favorite, last_updated, first_seen_at, last_contact_at, user_kind, session_fingerprint, username, status_description, user_state, avatar_thumbnail_url, user_icon_url, profile_pic_override_thumbnail)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(vrc_user_id) DO UPDATE SET
-		display_name = excluded.display_name,
-		status = excluded.status,
-		is_favorite = excluded.is_favorite,
-		last_updated = excluded.last_updated,
-		first_seen_at = excluded.first_seen_at,
-		last_contact_at = excluded.last_contact_at,
-		user_kind = excluded.user_kind,
-		session_fingerprint = excluded.session_fingerprint,
-		username = excluded.username,
-		status_description = excluded.status_description,
-		user_state = excluded.user_state,
-		avatar_thumbnail_url = excluded.avatar_thumbnail_url,
-		user_icon_url = excluded.user_icon_url,
-		profile_pic_override_thumbnail = excluded.profile_pic_override_thumbnail`,
-		u.VRCUserID, u.DisplayName, nullString(u.Status), isFav, u.LastUpdated.Format(time.RFC3339), fs, lc, string(uk), nullString(u.SessionFingerprint),
-		nullString(u.Username), nullString(u.StatusDescription), nullString(u.UserState),
-		nullString(u.AvatarThumbnailURL), nullString(u.UserIconURL), nullString(u.ProfilePicOverrideThumbnail))
+	args := userCacheRowArgs(u, uk, fs, lc)
+	q := `INSERT INTO users_cache (` + userCacheSelectCols + `)
+		VALUES (` + userCachePlaceholders(30) + `) ON CONFLICT(vrc_user_id) DO UPDATE SET ` + userCacheUpsertExcluded
+	_, err := r.db.ExecContext(ctx, q, args...)
 	return err
+}
+
+func userCachePlaceholders(n int) string {
+	// e.g. ?, ?, ? for n=3
+	if n <= 0 {
+		return ""
+	}
+	s := "?"
+	for i := 1; i < n; i++ {
+		s += ", ?"
+	}
+	return s
 }
 
 func nullString(s string) interface{} {
@@ -105,32 +149,15 @@ func (r *UserCacheRepository) SaveBatch(ctx context.Context, users []*identity.U
 	}
 	defer func() { _ = tx.Rollback() }()
 
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO users_cache (vrc_user_id, display_name, status, is_favorite, last_updated, first_seen_at, last_contact_at, user_kind, session_fingerprint, username, status_description, user_state, avatar_thumbnail_url, user_icon_url, profile_pic_override_thumbnail)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(vrc_user_id) DO UPDATE SET
-		display_name = excluded.display_name,
-		status = excluded.status,
-		is_favorite = excluded.is_favorite,
-		last_updated = excluded.last_updated,
-		first_seen_at = excluded.first_seen_at,
-		last_contact_at = excluded.last_contact_at,
-		user_kind = excluded.user_kind,
-		session_fingerprint = excluded.session_fingerprint,
-		username = excluded.username,
-		status_description = excluded.status_description,
-		user_state = excluded.user_state,
-		avatar_thumbnail_url = excluded.avatar_thumbnail_url,
-		user_icon_url = excluded.user_icon_url,
-		profile_pic_override_thumbnail = excluded.profile_pic_override_thumbnail`)
+	q := `INSERT INTO users_cache (` + userCacheSelectCols + `)
+		VALUES (` + userCachePlaceholders(30) + `) ON CONFLICT(vrc_user_id) DO UPDATE SET ` + userCacheUpsertExcluded
+	stmt, err := tx.PrepareContext(ctx, q)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = stmt.Close() }()
 
 	for _, u := range users {
-		isFav := 0
-		if u.IsFavorite {
-			isFav = 1
-		}
 		var fs, lc interface{}
 		if u.FirstSeenAt != nil {
 			fs = u.FirstSeenAt.Format(time.RFC3339)
@@ -142,10 +169,8 @@ func (r *UserCacheRepository) SaveBatch(ctx context.Context, users []*identity.U
 		if uk == "" {
 			uk = identity.UserKindContact
 		}
-		_, err = stmt.ExecContext(ctx, u.VRCUserID, u.DisplayName, nullString(u.Status), isFav, u.LastUpdated.Format(time.RFC3339), fs, lc, string(uk), nullString(u.SessionFingerprint),
-			nullString(u.Username), nullString(u.StatusDescription), nullString(u.UserState),
-			nullString(u.AvatarThumbnailURL), nullString(u.UserIconURL), nullString(u.ProfilePicOverrideThumbnail))
-		if err != nil {
+		args := userCacheRowArgs(u, uk, fs, lc)
+		if _, err = stmt.ExecContext(ctx, args...); err != nil {
 			return err
 		}
 	}
@@ -216,16 +241,9 @@ func (r *UserCacheRepository) UpsertSelf(ctx context.Context, u *identity.UserCa
 		return err
 	}
 
-	isFav := 0
-	if u.IsFavorite {
-		isFav = 1
-	}
-	if _, err := tx.ExecContext(ctx, `INSERT INTO users_cache (vrc_user_id, display_name, status, is_favorite, last_updated, first_seen_at, last_contact_at, user_kind, session_fingerprint, username, status_description, user_state, avatar_thumbnail_url, user_icon_url, profile_pic_override_thumbnail)
-		VALUES (?, ?, ?, ?, ?, ?, ?, 'self', ?, ?, ?, ?, ?, ?, ?)`,
-		u.VRCUserID, u.DisplayName, nullString(u.Status), isFav, u.LastUpdated.Format(time.RFC3339), fs, lc,
-		nullString(u.SessionFingerprint),
-		nullString(u.Username), nullString(u.StatusDescription), nullString(u.UserState),
-		nullString(u.AvatarThumbnailURL), nullString(u.UserIconURL), nullString(u.ProfilePicOverrideThumbnail)); err != nil {
+	args := userCacheRowArgs(u, identity.UserKindSelf, fs, lc)
+	q := `INSERT INTO users_cache (` + userCacheSelectCols + `) VALUES (` + userCachePlaceholders(30) + `)`
+	if _, err := tx.ExecContext(ctx, q, args...); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -254,10 +272,14 @@ func scanUserCacheScanner(sc interface {
 }) (*identity.UserCache, error) {
 	var vrcUserID, displayName, lastUpdated, userKindStr string
 	var status, sessionFP, username, statusDesc, userState, avatarURL, iconURL, profilePic sql.NullString
+	var bio, bioLinks, curAvImg, curAvTags, devType, friendKey, imageURL, lastPlat, location sql.NullString
+	var lastLogin, lastAct, lastMob, platform, profilePicOv, tagsJSON sql.NullString
 	var isFav int
 	var firstSeen, lastContact sql.NullString
 	if err := sc.Scan(&vrcUserID, &displayName, &status, &isFav, &lastUpdated, &firstSeen, &lastContact,
-		&userKindStr, &sessionFP, &username, &statusDesc, &userState, &avatarURL, &iconURL, &profilePic); err != nil {
+		&userKindStr, &sessionFP, &username, &statusDesc, &userState, &avatarURL, &iconURL, &profilePic,
+		&bio, &bioLinks, &curAvImg, &curAvTags, &devType, &friendKey, &imageURL, &lastPlat, &location,
+		&lastLogin, &lastAct, &lastMob, &platform, &profilePicOv, &tagsJSON); err != nil {
 		return nil, err
 	}
 	t, _ := time.Parse(time.RFC3339, lastUpdated)
@@ -283,6 +305,21 @@ func scanUserCacheScanner(sc interface {
 		AvatarThumbnailURL:          sessionStr(avatarURL),
 		UserIconURL:                 sessionStr(iconURL),
 		ProfilePicOverrideThumbnail: sessionStr(profilePic),
+		Bio:                         sessionStr(bio),
+		BioLinksJSON:                sessionStr(bioLinks),
+		CurrentAvatarImageURL:       sessionStr(curAvImg),
+		CurrentAvatarTagsJSON:       sessionStr(curAvTags),
+		DeveloperType:               sessionStr(devType),
+		FriendKey:                   sessionStr(friendKey),
+		ImageURL:                    sessionStr(imageURL),
+		LastPlatform:                sessionStr(lastPlat),
+		Location:                    sessionStr(location),
+		LastLogin:                   sessionStr(lastLogin),
+		LastActivity:                sessionStr(lastAct),
+		LastMobile:                  sessionStr(lastMob),
+		Platform:                    sessionStr(platform),
+		ProfilePicOverride:          sessionStr(profilePicOv),
+		TagsJSON:                    sessionStr(tagsJSON),
 	}
 	if firstSeen.Valid {
 		if ft, err := time.Parse(time.RFC3339, firstSeen.String); err == nil {

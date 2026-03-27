@@ -18,6 +18,8 @@ const baseURL = "https://api.vrchat.cloud/api/1"
 type Client struct {
 	httpClient *http.Client
 	authToken  string
+	// apiRoot is the full base URL including /api/1. Empty means use package baseURL (production).
+	apiRoot string
 }
 
 // NewClient creates a new VRChat API client.
@@ -69,7 +71,11 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}) 
 		bodyReader = bytes.NewReader(b)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, baseURL+path, bodyReader)
+	root := baseURL
+	if c.apiRoot != "" {
+		root = c.apiRoot
+	}
+	req, err := http.NewRequestWithContext(ctx, method, root+path, bodyReader)
 	if err != nil {
 		return nil, err
 	}
