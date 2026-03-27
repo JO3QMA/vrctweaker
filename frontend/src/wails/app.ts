@@ -183,6 +183,34 @@ export interface VRChatConfigDTO {
   disableRichPresence: boolean | null;
 }
 
+export interface YTDLPUpdateStatusDTO {
+  supported: boolean;
+  targetPath: string;
+  localVersion: string;
+  latestVersion: string;
+  latestTag: string;
+  latestDownloadUrl: string;
+  latestError: string;
+  unsupportedReason?: string;
+}
+
+export interface YTDLPApplyResultDTO {
+  ok: boolean;
+  appliedVersion: string;
+  message: string;
+  error: string;
+}
+
+const emptyYTDLPStatus: YTDLPUpdateStatusDTO = {
+  supported: false,
+  targetPath: "",
+  localVersion: "",
+  latestVersion: "",
+  latestTag: "",
+  latestDownloadUrl: "",
+  latestError: "",
+};
+
 interface AppBindings {
   Greet(name: string): Promise<string>;
   LaunchProfiles(): Promise<LaunchProfileDTO[]>;
@@ -246,6 +274,12 @@ interface AppBindings {
   SaveVRChatConfig(dto: VRChatConfigDTO): Promise<void>;
   DeleteVRChatConfig(): Promise<void>;
   DefaultVRChatPictureFolder(): Promise<string>;
+  GetYTDLPBasics(): Promise<YTDLPUpdateStatusDTO>;
+  GetYTDLPUpdateStatus(): Promise<YTDLPUpdateStatusDTO>;
+  ApplyYTDLP(
+    downloadURL: string,
+    latestTag: string,
+  ): Promise<YTDLPApplyResultDTO>;
 }
 
 declare global {
@@ -534,5 +568,22 @@ export const App = {
   },
   async defaultVRChatPictureFolder(): Promise<string> {
     return callApp((a) => a.DefaultVRChatPictureFolder(), "");
+  },
+  async getYTDLPBasics(): Promise<YTDLPUpdateStatusDTO> {
+    return callApp((a) => a.GetYTDLPBasics(), emptyYTDLPStatus);
+  },
+  async getYTDLPUpdateStatus(): Promise<YTDLPUpdateStatusDTO> {
+    return callApp((a) => a.GetYTDLPUpdateStatus(), emptyYTDLPStatus);
+  },
+  async applyYTDLP(
+    downloadURL: string,
+    latestTag: string,
+  ): Promise<YTDLPApplyResultDTO> {
+    return callApp((a) => a.ApplyYTDLP(downloadURL, latestTag), {
+      ok: false,
+      appliedVersion: "",
+      message: "",
+      error: "App not available",
+    });
   },
 };

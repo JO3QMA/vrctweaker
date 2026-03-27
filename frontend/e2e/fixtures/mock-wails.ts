@@ -137,6 +137,33 @@ export function getMockWailsInitScript(): string {
         DeleteVRChatConfig: () => Promise.resolve(),
         DefaultVRChatPictureFolder: () =>
           Promise.resolve('C:\\\\Temp\\\\VRChatTweakerE2E\\\\Pictures\\\\VRChat'),
+        GetYTDLPBasics: () =>
+          Promise.resolve({
+            supported: true,
+            targetPath: 'C:\\\\Mock\\\\VRChat\\\\VRChat\\\\Tools\\\\yt-dlp.exe',
+            localVersion: '2023.11.16',
+            latestVersion: '',
+            latestTag: '',
+            latestDownloadUrl: '',
+            latestError: '',
+          }),
+        GetYTDLPUpdateStatus: () =>
+          Promise.resolve({
+            supported: true,
+            targetPath: 'C:\\\\Mock\\\\VRChat\\\\VRChat\\\\Tools\\\\yt-dlp.exe',
+            localVersion: '2023.11.16',
+            latestVersion: '2025.12.31',
+            latestTag: '2025.12.31',
+            latestDownloadUrl: 'https://example.com/yt-dlp.exe',
+            latestError: '',
+          }),
+        ApplyYTDLP: (_url, _tag) =>
+          Promise.resolve({
+            ok: true,
+            appliedVersion: '2025.12.31',
+            message: '適用しました。変更を反映するには VRChat を再起動してください。',
+            error: '',
+          }),
       };
     })();
   `.trim();

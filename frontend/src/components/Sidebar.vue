@@ -22,6 +22,7 @@ const menuItems = [
   { path: "/", icon: "🏠", label: "ダッシュボード" },
   { path: "/launcher", icon: "🚀", label: "ランチャー" },
   { path: "/gallery", icon: "🖼️", label: "ギャラリー" },
+  { path: "/video", icon: "🎬", label: "動画" },
   { path: "/activity", icon: "📊", label: "アクティビティ" },
   { path: "/friends", icon: "👥", label: "フレンド" },
   { path: "/automation", icon: "🤖", label: "オートメーション" },
