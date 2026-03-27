@@ -37,3 +37,5 @@ test-results/
 
 # Tool caches (golangci-lint 等)
 .cache/
+*storybook.log
+storybook-static

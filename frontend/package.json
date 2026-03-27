@@ -12,7 +12,9 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build"
   },
   "dependencies": {
     "@tanstack/vue-virtual": "^3.13.23",
@@ -37,6 +39,10 @@
     "vite": "^5.2.8",
     "vitest": "^1.6.0",
     "vue-eslint-parser": "^9.4.3",
-    "vue-tsc": "^2.0.6"
+    "vue-tsc": "^2.0.6",
+    "storybook": "^10.3.3",
+    "@storybook/vue3-vite": "^10.3.3",
+    "@storybook/addon-a11y": "^10.3.3",
+    "@storybook/addon-docs": "^10.3.3"
   }
 }
