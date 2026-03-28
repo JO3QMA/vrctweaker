@@ -1,4 +1,10 @@
 {
+  "@element-plus/icons-vue@2.3.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/element-plus/element-plus-icons",
+    "path": "/workspaces/vrctweaker/frontend/node_modules/@element-plus/icons-vue",
+    "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@element-plus/icons-vue/LICENSE"
+  },
   "@playwright/test@1.58.2": {
     "licenses": "Apache-2.0",
     "repository": "https://github.com/microsoft/playwright",
@@ -6,6 +12,24 @@
     "path": "/workspaces/vrctweaker/frontend/node_modules/@playwright/test",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@playwright/test/LICENSE",
     "noticeFile": "/workspaces/vrctweaker/frontend/node_modules/@playwright/test/NOTICE"
+  },
+  "@storybook/addon-a11y@10.3.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/storybookjs/storybook",
+    "path": "/workspaces/vrctweaker/frontend/node_modules/@storybook/addon-a11y",
+    "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@storybook/addon-a11y/README.md"
+  },
+  "@storybook/addon-docs@10.3.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/storybookjs/storybook",
+    "path": "/workspaces/vrctweaker/frontend/node_modules/@storybook/addon-docs",
+    "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@storybook/addon-docs/README.md"
+  },
+  "@storybook/vue3-vite@10.3.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/storybookjs/storybook",
+    "path": "/workspaces/vrctweaker/frontend/node_modules/@storybook/vue3-vite",
+    "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@storybook/vue3-vite/README.md"
   },
   "@tanstack/vue-virtual@3.13.23": {
     "licenses": "MIT",
@@ -53,6 +77,12 @@
     "path": "/workspaces/vrctweaker/frontend/node_modules/chart.js",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/chart.js/LICENSE.md"
   },
+  "element-plus@2.13.6": {
+    "licenses": "MIT",
+    "repository": "https://github.com/element-plus/element-plus",
+    "path": "/workspaces/vrctweaker/frontend/node_modules/element-plus",
+    "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/element-plus/LICENSE"
+  },
   "eslint-config-prettier@10.1.8": {
     "licenses": "MIT",
     "repository": "https://github.com/prettier/eslint-config-prettier",
@@ -96,6 +126,12 @@
     "publisher": "James Long",
     "path": "/workspaces/vrctweaker/frontend/node_modules/prettier",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/prettier/LICENSE"
+  },
+  "storybook@10.3.3": {
+    "licenses": "MIT",
+    "repository": "https://github.com/storybookjs/storybook",
+    "path": "/workspaces/vrctweaker/frontend/node_modules/storybook",
+    "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/storybook/README.md"
   },
   "typescript@5.4.5": {
     "licenses": "Apache-2.0",

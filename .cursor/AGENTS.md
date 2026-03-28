@@ -63,8 +63,10 @@ GitHub Issue の URL・番号、または `docs/ai_dlc/issues/` 等の Issue ド
 - `.cursor/rules/tdd-workflow.mdc`: TDD と検証ループ（常時適用）
 - `.cursor/rules/go-conventions.mdc`: Go の規約
 - `.cursor/rules/vue-conventions.mdc`: Vue/TypeScript の規約
+- `.cursor/rules/element-plus-ui.mdc`: Element Plus を UI フレームワークとして使う方針（`frontend` の Vue/TS）
 
 ## スキル
 
 - **issue-to-pr-workflow**: Issue 起点でブランチ〜実装〜検証〜レビュー〜PR までを順に制御（Commands を束ねるオーケストレーター）
 - **tdd-workflow**: テスト駆動開発と fmt→test→lint の検証ループ。コード変更時に適用。
+- **element-plus-frontend**: Element Plus による UI 実装・Vitest/Playwright セレクタ・公式ドキュメント参照（`.cursor/skills/element-plus-frontend/SKILL.md`）

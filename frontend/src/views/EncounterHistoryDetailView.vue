@@ -3,38 +3,49 @@
     <h1 class="page-title">{{ pageTitle }}</h1>
     <p v-if="idLine" class="id-line">{{ idLine }}</p>
 
-    <div v-if="invalidQuery" class="message message--warn">
-      表示できません。URL の kind / vrcUserId / worldId を確認してください。
-    </div>
+    <el-alert
+      v-if="invalidQuery"
+      title="表示できません。URL の kind / vrcUserId / worldId を確認してください。"
+      type="warning"
+      :closable="false"
+      show-icon
+    />
     <div v-else-if="loading" class="message">読み込み中…</div>
-    <div v-else-if="error" class="message message--warn">{{ error }}</div>
+    <el-alert
+      v-else-if="error"
+      :title="error"
+      type="error"
+      :closable="false"
+      show-icon
+    />
     <div v-else-if="rows.length === 0" class="message">
       該当する遭遇ログがありません。
     </div>
-    <div v-else class="table-wrap">
-      <table class="history-table">
-        <thead>
-          <tr>
-            <th>入室</th>
-            <th>退室</th>
-            <th>表示名</th>
-            <th>ワールド名</th>
-            <th class="col-instance">インスタンス</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="row in rows" :key="row.id">
-            <td>{{ formatEncounteredAt(row.joinedAt) }}</td>
-            <td>{{ row.leftAt ? formatEncounteredAt(row.leftAt) : "—" }}</td>
-            <td>{{ row.displayName }}</td>
-            <td :title="row.worldId || ''">
-              {{ row.worldDisplayName || row.worldId || "—" }}
-            </td>
-            <td class="col-instance mono">{{ row.instanceId || "—" }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+    <el-table v-else :data="rows" style="width: 100%" size="small" stripe>
+      <el-table-column label="入室" width="155">
+        <template #default="{ row }">
+          {{ formatEncounteredAt(row.joinedAt) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="退室" width="155">
+        <template #default="{ row }">
+          {{ row.leftAt ? formatEncounteredAt(row.leftAt) : "—" }}
+        </template>
+      </el-table-column>
+      <el-table-column label="表示名" min-width="120" prop="displayName" />
+      <el-table-column label="ワールド名" min-width="120">
+        <template #default="{ row }">
+          <span :title="row.worldId || ''">
+            {{ row.worldDisplayName || row.worldId || "—" }}
+          </span>
+        </template>
+      </el-table-column>
+      <el-table-column label="インスタンス" min-width="120">
+        <template #default="{ row }">
+          <span class="mono">{{ row.instanceId || "—" }}</span>
+        </template>
+      </el-table-column>
+    </el-table>
   </div>
 </template>
 
@@ -61,21 +72,13 @@ function firstQueryString(v: unknown): string {
 }
 
 const kind = computed(() => firstQueryString(route.query.kind));
-
 const vrcUserId = computed(() => firstQueryString(route.query.vrcUserId));
-
 const worldId = computed(() => firstQueryString(route.query.worldId));
 
 const invalidQuery = computed(() => {
-  if (kind.value !== "user" && kind.value !== "world") {
-    return true;
-  }
-  if (kind.value === "user" && !vrcUserId.value.trim()) {
-    return true;
-  }
-  if (kind.value === "world" && !worldId.value.trim()) {
-    return true;
-  }
+  if (kind.value !== "user" && kind.value !== "world") return true;
+  if (kind.value === "user" && !vrcUserId.value.trim()) return true;
+  if (kind.value === "world" && !worldId.value.trim()) return true;
   return false;
 });
 
@@ -147,11 +150,6 @@ onMounted(() => {
   min-height: 0;
 }
 
-.page-title {
-  margin: 0;
-  font-size: 1.25rem;
-}
-
 .id-line {
   margin: 0;
   font-size: 0.8rem;
@@ -163,43 +161,6 @@ onMounted(() => {
   padding: 1.5rem;
   text-align: center;
   color: var(--text-secondary);
-}
-
-.message--warn {
-  color: var(--text-primary);
-}
-
-.table-wrap {
-  overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-}
-
-.history-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-}
-
-.history-table th,
-.history-table td {
-  padding: 0.45rem 0.6rem;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-}
-
-.history-table th {
-  background: var(--bg-tertiary);
-  color: var(--text-secondary);
-  font-weight: 600;
-}
-
-.history-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.col-instance {
-  max-width: 12rem;
 }
 
 .mono {

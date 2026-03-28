@@ -8,48 +8,52 @@
           role="group"
           aria-label="フレンド一覧: Online または Offline"
         >
-          <span class="mode-label" :class="{ active: !showOfflineList }"
+          <span :class="['mode-label', { active: !showOfflineList }]"
             >Online</span
           >
-          <label class="switch mode-switch">
-            <input
-              v-model="showOfflineList"
-              type="checkbox"
-              class="switch-input"
-              data-testid="friends-filter-mode"
-              aria-label="Offline 一覧を表示する（オフのときは Online）"
-            />
-            <span class="switch-track" aria-hidden="true" />
-          </label>
-          <span class="mode-label" :class="{ active: showOfflineList }"
+          <el-switch
+            v-model="showOfflineList"
+            data-testid="friends-filter-mode"
+            aria-label="Offline 一覧を表示する（オフのときは Online）"
+          />
+          <span :class="['mode-label', { active: showOfflineList }]"
             >Offline</span
           >
         </div>
-        <button
-          type="button"
-          class="btn-refresh"
+        <el-button
+          type="primary"
           :disabled="!isLoggedIn || refreshLoading"
+          :loading="refreshLoading"
           :title="
             isLoggedIn ? 'フレンド一覧をAPIから再取得' : 'ログインが必要です'
           "
           @click="doRefresh"
         >
           {{ refreshLoading ? "更新中..." : "更新" }}
-        </button>
+        </el-button>
       </div>
-      <input
+      <el-input
         v-model.trim="displayNameQuery"
         type="search"
-        class="friends-search-input"
         placeholder="表示名で検索"
         data-testid="friends-search-display-name"
+        clearable
+        class="friends-search-input"
         autocomplete="off"
-        enterkeyhint="search"
-      />
+      >
+        <template #prefix>
+          <el-icon><Search /></el-icon>
+        </template>
+      </el-input>
     </div>
-    <p v-if="!isLoggedIn" class="hint">
-      フレンド一覧の更新にはログインが必要です。設定画面でログインしてください。
-    </p>
+    <el-alert
+      v-if="!isLoggedIn"
+      title="フレンド一覧の更新にはログインが必要です。設定画面でログインしてください。"
+      type="info"
+      :closable="false"
+      show-icon
+      class="login-hint"
+    />
     <div class="friends-section">
       <div class="friends-list">
         <div
@@ -69,16 +73,22 @@
           />
           <div v-else class="friend-thumb friend-thumb-placeholder" />
           <span class="friend-name">{{ f.displayName }}</span>
-          <span class="friend-status">{{ f.status || "—" }}</span>
-          <button
-            type="button"
-            class="btn-favorite"
-            :class="{ on: f.isFavorite }"
+          <el-tag
+            size="small"
+            :type="statusTagType(f.status)"
+            class="friend-status-tag"
+          >
+            {{ f.status || "—" }}
+          </el-tag>
+          <el-button
+            link
+            :type="f.isFavorite ? 'primary' : 'info'"
             :title="f.isFavorite ? 'お気に入り解除' : 'お気に入り登録'"
+            class="btn-favorite"
             @click.stop="toggleFavorite(f)"
           >
             ★
-          </button>
+          </el-button>
         </div>
         <p
           v-if="filteredFriends.length === 0 && !loading"
@@ -87,7 +97,7 @@
           {{ emptyListMessage }}
         </p>
       </div>
-      <div v-if="selected" class="friend-detail">
+      <el-card v-if="selected" class="friend-detail" shadow="never">
         <div class="detail-head">
           <img
             v-if="friendThumbUrl(selected)"
@@ -99,200 +109,185 @@
           />
           <h3>詳細</h3>
         </div>
-        <dl class="detail-list">
-          <dt>表示名</dt>
-          <dd class="detail-display-name">
-            <span>{{ selected.displayName }}</span>
-            <button
-              type="button"
-              class="btn-copy-name"
-              title="表示名をコピー"
-              aria-label="表示名をコピー"
-              data-testid="friend-copy-display-name"
-              @click="copyDisplayName(selected.displayName)"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
+        <el-descriptions :column="1" border size="small">
+          <el-descriptions-item label="表示名">
+            <div class="detail-display-name">
+              <span>{{ selected.displayName }}</span>
+              <el-button
+                link
+                type="primary"
+                title="表示名をコピー"
+                aria-label="表示名をコピー"
+                data-testid="friend-copy-display-name"
+                @click="copyDisplayName(selected.displayName)"
               >
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-                <path
-                  d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
-                />
-              </svg>
-            </button>
-          </dd>
-          <template v-if="selected.username">
-            <dt>ユーザー名</dt>
-            <dd>{{ selected.username }}</dd>
-          </template>
-          <dt>ステータス</dt>
-          <dd>{{ selected.status || "—" }}</dd>
-          <template v-if="selected.statusDescription">
-            <dt>ステータス説明</dt>
-            <dd>{{ selected.statusDescription }}</dd>
-          </template>
-          <template v-if="selected.state">
-            <dt>状態 (state)</dt>
-            <dd>{{ selected.state }}</dd>
-          </template>
-          <template v-if="selected.bio">
-            <dt>自己紹介</dt>
-            <dd class="multiline">{{ selected.bio }}</dd>
-          </template>
-          <template v-if="jsonStringArray(selected.bioLinksJson).length">
-            <dt>bio リンク</dt>
-            <dd>
-              <ul class="link-list">
-                <li
-                  v-for="(u, i) in jsonStringArray(selected.bioLinksJson)"
-                  :key="i"
-                >
-                  <a :href="u" target="_blank" rel="noopener noreferrer">{{
-                    u
-                  }}</a>
-                </li>
-              </ul>
-            </dd>
-          </template>
-          <template v-if="selected.location">
-            <dt>ロケーション</dt>
-            <dd class="mono wrap">{{ selected.location }}</dd>
-          </template>
-          <template v-if="selected.developerType">
-            <dt>開発者種別</dt>
-            <dd>{{ selected.developerType }}</dd>
-          </template>
-          <template v-if="selected.lastPlatform || selected.platform">
-            <dt>プラットフォーム</dt>
-            <dd>
-              {{
-                [selected.platform, selected.lastPlatform]
-                  .filter(Boolean)
-                  .join(" / ")
-              }}
-            </dd>
-          </template>
-          <template v-if="selected.lastLogin">
-            <dt>最終ログイン</dt>
-            <dd>{{ selected.lastLogin }}</dd>
-          </template>
-          <template v-if="selected.lastActivity">
-            <dt>最終アクティビティ</dt>
-            <dd>{{ selected.lastActivity }}</dd>
-          </template>
-          <template v-if="selected.lastMobile">
-            <dt>最終モバイル</dt>
-            <dd>{{ selected.lastMobile }}</dd>
-          </template>
-          <template v-if="jsonStringArray(selected.tagsJson).length">
-            <dt>タグ</dt>
-            <dd>
-              <span
-                v-for="tag in jsonStringArray(selected.tagsJson)"
-                :key="tag"
-                class="tag-chip"
-                >{{ tag }}</span
-              >
-            </dd>
-          </template>
-          <template
-            v-if="jsonStringArray(selected.currentAvatarTagsJson).length"
+                <el-icon><CopyDocument /></el-icon>
+              </el-button>
+            </div>
+          </el-descriptions-item>
+          <el-descriptions-item v-if="selected.username" label="ユーザー名">
+            {{ selected.username }}
+          </el-descriptions-item>
+          <el-descriptions-item label="ステータス">
+            {{ selected.status || "—" }}
+          </el-descriptions-item>
+          <el-descriptions-item
+            v-if="selected.statusDescription"
+            label="ステータス説明"
           >
-            <dt>アバタータグ</dt>
-            <dd>
-              <span
-                v-for="tag in jsonStringArray(selected.currentAvatarTagsJson)"
-                :key="tag"
-                class="tag-chip"
-                >{{ tag }}</span
+            {{ selected.statusDescription }}
+          </el-descriptions-item>
+          <el-descriptions-item v-if="selected.state" label="状態 (state)">
+            {{ selected.state }}
+          </el-descriptions-item>
+          <el-descriptions-item v-if="selected.bio" label="自己紹介">
+            <span class="multiline">{{ selected.bio }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item
+            v-if="jsonStringArray(selected.bioLinksJson).length"
+            label="bio リンク"
+          >
+            <ul class="link-list">
+              <li
+                v-for="(u, i) in jsonStringArray(selected.bioLinksJson)"
+                :key="i"
               >
-            </dd>
-          </template>
-          <template v-if="selected.currentAvatarImageUrl">
-            <dt>アバター画像 URL</dt>
-            <dd>
-              <a
-                :href="selected.currentAvatarImageUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="wrap"
-                >{{ selected.currentAvatarImageUrl }}</a
-              >
-            </dd>
-          </template>
-          <template v-if="selected.userIcon">
-            <dt>ユーザーアイコン URL</dt>
-            <dd>
-              <a
-                :href="selected.userIcon"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="wrap"
-                >{{ selected.userIcon }}</a
-              >
-            </dd>
-          </template>
-          <template v-if="selected.imageUrl">
-            <dt>imageUrl</dt>
-            <dd>
-              <a
-                :href="selected.imageUrl"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="wrap"
-                >{{ selected.imageUrl }}</a
-              >
-            </dd>
-          </template>
-          <template v-if="selected.profilePicOverride">
-            <dt>プロフィール画像 (上書き)</dt>
-            <dd>
-              <a
-                :href="selected.profilePicOverride"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="wrap"
-                >{{ selected.profilePicOverride }}</a
-              >
-            </dd>
-          </template>
-          <template v-if="selected.profilePicOverrideThumbnail">
-            <dt>プロフィール画像サムネ</dt>
-            <dd>
-              <a
-                :href="selected.profilePicOverrideThumbnail"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="wrap"
-                >{{ selected.profilePicOverrideThumbnail }}</a
-              >
-            </dd>
-          </template>
-          <template v-if="selected.friendKey">
-            <dt>friendKey</dt>
-            <dd class="mono wrap">{{ selected.friendKey }}</dd>
-          </template>
-          <dt>キャッシュ更新</dt>
-          <dd>{{ selected.lastUpdated }}</dd>
-        </dl>
-        <label class="favorite-toggle">
-          <input
+                <a :href="u" target="_blank" rel="noopener noreferrer">{{
+                  u
+                }}</a>
+              </li>
+            </ul>
+          </el-descriptions-item>
+          <el-descriptions-item v-if="selected.location" label="ロケーション">
+            <span class="mono wrap">{{ selected.location }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item
+            v-if="selected.developerType"
+            label="開発者種別"
+          >
+            {{ selected.developerType }}
+          </el-descriptions-item>
+          <el-descriptions-item
+            v-if="selected.lastPlatform || selected.platform"
+            label="プラットフォーム"
+          >
+            {{
+              [selected.platform, selected.lastPlatform]
+                .filter(Boolean)
+                .join(" / ")
+            }}
+          </el-descriptions-item>
+          <el-descriptions-item v-if="selected.lastLogin" label="最終ログイン">
+            {{ selected.lastLogin }}
+          </el-descriptions-item>
+          <el-descriptions-item
+            v-if="selected.lastActivity"
+            label="最終アクティビティ"
+          >
+            {{ selected.lastActivity }}
+          </el-descriptions-item>
+          <el-descriptions-item v-if="selected.lastMobile" label="最終モバイル">
+            {{ selected.lastMobile }}
+          </el-descriptions-item>
+          <el-descriptions-item
+            v-if="jsonStringArray(selected.tagsJson).length"
+            label="タグ"
+          >
+            <el-tag
+              v-for="tag in jsonStringArray(selected.tagsJson)"
+              :key="tag"
+              size="small"
+              class="tag-chip"
+            >
+              {{ tag }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item
+            v-if="jsonStringArray(selected.currentAvatarTagsJson).length"
+            label="アバタータグ"
+          >
+            <el-tag
+              v-for="tag in jsonStringArray(selected.currentAvatarTagsJson)"
+              :key="tag"
+              size="small"
+              class="tag-chip"
+            >
+              {{ tag }}
+            </el-tag>
+          </el-descriptions-item>
+          <el-descriptions-item
+            v-if="selected.currentAvatarImageUrl"
+            label="アバター画像 URL"
+          >
+            <a
+              :href="selected.currentAvatarImageUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="wrap"
+              >{{ selected.currentAvatarImageUrl }}</a
+            >
+          </el-descriptions-item>
+          <el-descriptions-item
+            v-if="selected.userIcon"
+            label="ユーザーアイコン URL"
+          >
+            <a
+              :href="selected.userIcon"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="wrap"
+              >{{ selected.userIcon }}</a
+            >
+          </el-descriptions-item>
+          <el-descriptions-item v-if="selected.imageUrl" label="imageUrl">
+            <a
+              :href="selected.imageUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="wrap"
+              >{{ selected.imageUrl }}</a
+            >
+          </el-descriptions-item>
+          <el-descriptions-item
+            v-if="selected.profilePicOverride"
+            label="プロフィール画像 (上書き)"
+          >
+            <a
+              :href="selected.profilePicOverride"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="wrap"
+              >{{ selected.profilePicOverride }}</a
+            >
+          </el-descriptions-item>
+          <el-descriptions-item
+            v-if="selected.profilePicOverrideThumbnail"
+            label="プロフィール画像サムネ"
+          >
+            <a
+              :href="selected.profilePicOverrideThumbnail"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="wrap"
+              >{{ selected.profilePicOverrideThumbnail }}</a
+            >
+          </el-descriptions-item>
+          <el-descriptions-item v-if="selected.friendKey" label="friendKey">
+            <span class="mono wrap">{{ selected.friendKey }}</span>
+          </el-descriptions-item>
+          <el-descriptions-item label="キャッシュ更新">
+            {{ selected.lastUpdated }}
+          </el-descriptions-item>
+        </el-descriptions>
+        <div class="favorite-toggle">
+          <el-checkbox
             v-model="selected.isFavorite"
-            type="checkbox"
-            @change="applyFavorite(selected)"
-          />
-          お気に入り
-        </label>
-      </div>
+            @change="applyFavorite(selected!)"
+          >
+            お気に入り
+          </el-checkbox>
+        </div>
+      </el-card>
     </div>
   </div>
 </template>
@@ -313,6 +308,16 @@ const refreshLoading = ref(false);
 
 function friendIsOffline(status: string): boolean {
   return !status || status.toLowerCase() === "offline";
+}
+
+function statusTagType(
+  status: string,
+): "success" | "warning" | "info" | "danger" | "" {
+  if (!status || status.toLowerCase() === "offline") return "info";
+  if (status.toLowerCase() === "join me") return "success";
+  if (status.toLowerCase() === "busy") return "danger";
+  if (status.toLowerCase() === "ask me") return "warning";
+  return "";
 }
 
 const friendsByStatus = computed(() => {
@@ -420,7 +425,7 @@ async function toggleFavorite(f: UserCacheDTO) {
     await App.setFavorite(f.vrcUserId, next);
     f.isFavorite = next;
   } catch {
-    // 失敗時は変化なし（一覧の星ボタンではまだ反映していない）
+    // 失敗時は変化なし
   }
 }
 
@@ -434,13 +439,11 @@ async function applyFavorite(f: UserCacheDTO) {
 </script>
 
 <style scoped>
-.page-title {
-  margin: 0 0 1rem;
-  font-size: 1.5rem;
-}
-
 .friends-toolbar {
   margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
 }
 
 .friends-header {
@@ -450,25 +453,7 @@ async function applyFavorite(f: UserCacheDTO) {
 }
 
 .friends-search-input {
-  width: 100%;
   max-width: 20rem;
-  margin-top: 0.65rem;
-  padding: 0.45rem 0.65rem;
-  font-size: 0.9rem;
-  color: var(--text-primary);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-sizing: border-box;
-}
-
-.friends-search-input::placeholder {
-  color: var(--text-secondary);
-}
-
-.friends-search-input:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
 }
 
 .filter-mode {
@@ -490,88 +475,8 @@ async function applyFavorite(f: UserCacheDTO) {
   font-weight: 600;
 }
 
-.mode-switch {
-  cursor: pointer;
-}
-
-.switch {
-  position: relative;
-  display: inline-block;
-  width: 2.75rem;
-  height: 1.375rem;
-  flex-shrink: 0;
-}
-
-.switch-input {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  margin: 0;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.switch-track {
-  position: absolute;
-  inset: 0;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease;
-  pointer-events: none;
-}
-
-.switch-track::after {
-  content: "";
-  position: absolute;
-  top: 0.125rem;
-  left: 0.125rem;
-  width: 1.125rem;
-  height: 1.125rem;
-  background: #fff;
-  border-radius: 50%;
-  box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
-  transition: transform 0.2s ease;
-}
-
-.switch-input:checked + .switch-track {
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.switch-input:checked + .switch-track::after {
-  transform: translateX(1.25rem);
-}
-
-.switch-input:focus-visible + .switch-track {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.btn-refresh {
-  padding: 0.4rem 1rem;
-  background: var(--accent);
-  color: white;
-  border: none;
-  border-radius: var(--radius);
-  cursor: pointer;
-}
-
-.btn-refresh:hover:not(:disabled) {
-  opacity: 0.9;
-}
-
-.btn-refresh:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.hint {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin: 0 0 1rem;
+.login-hint {
+  margin-bottom: 1rem;
 }
 
 .friends-section {
@@ -581,6 +486,7 @@ async function applyFavorite(f: UserCacheDTO) {
 
 .friends-list {
   width: 320px;
+  flex-shrink: 0;
   max-height: 480px;
   overflow-y: auto;
 }
@@ -594,6 +500,7 @@ async function applyFavorite(f: UserCacheDTO) {
   background: var(--bg-secondary);
   border-radius: var(--radius);
   cursor: pointer;
+  transition: background 0.15s;
 }
 
 .friend-card:hover,
@@ -618,28 +525,19 @@ async function applyFavorite(f: UserCacheDTO) {
   flex: 1;
   font-weight: 500;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.friend-status {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
+.friend-status-tag {
+  flex-shrink: 0;
 }
 
 .btn-favorite {
-  padding: 0.2rem 0.4rem;
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  font-size: 1rem;
-}
-
-.btn-favorite:hover {
-  color: var(--accent);
-}
-
-.btn-favorite.on {
-  color: var(--accent);
+  flex-shrink: 0;
+  font-size: 1rem !important;
+  padding: 0 4px !important;
 }
 
 .empty-message {
@@ -650,11 +548,10 @@ async function applyFavorite(f: UserCacheDTO) {
 
 .friend-detail {
   flex: 1;
-  padding: 1rem;
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
   max-height: 560px;
   overflow-y: auto;
+  background: var(--bg-secondary) !important;
+  border-color: var(--border) !important;
 }
 
 .detail-head {
@@ -675,54 +572,18 @@ async function applyFavorite(f: UserCacheDTO) {
   flex-shrink: 0;
 }
 
-.detail-list {
-  margin: 0 0 1rem;
-}
-
-.detail-list dt {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
-  margin-top: 0.5rem;
-}
-
-.detail-list dt:first-child {
-  margin-top: 0;
-}
-
-.detail-list dd {
-  margin: 0.2rem 0 0;
-}
-
 .detail-display-name {
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  flex-wrap: wrap;
 }
 
-.btn-copy-name {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.25rem;
-  margin: 0;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius);
-  color: var(--text-secondary);
-  cursor: pointer;
-  flex-shrink: 0;
+.favorite-toggle {
+  margin-top: 1rem;
 }
 
-.btn-copy-name:hover {
-  color: var(--accent);
-  border-color: var(--border);
-  background: var(--bg-tertiary);
-}
-
-.btn-copy-name:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+.tag-chip {
+  margin: 0.15rem 0.2rem 0 0;
 }
 
 .mono {
@@ -741,23 +602,5 @@ async function applyFavorite(f: UserCacheDTO) {
 .link-list {
   margin: 0;
   padding-left: 1.25rem;
-}
-
-.tag-chip {
-  display: inline-block;
-  margin: 0.15rem 0.35rem 0 0;
-  padding: 0.1rem 0.45rem;
-  font-size: 0.75rem;
-  background: var(--bg-tertiary);
-  border-radius: 999px;
-  border: 1px solid var(--border);
-}
-
-.favorite-toggle {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  cursor: pointer;
 }
 </style>

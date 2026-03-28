@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
+import { ElMessageBox } from "element-plus";
 import LauncherView from "../LauncherView.vue";
 import type { LaunchProfileDTO, LaunchArgsParsedDTO } from "../../wails/app";
 
@@ -48,6 +49,26 @@ const sampleProfiles: LaunchProfileDTO[] = [
     isDefault: false,
   },
 ];
+
+/** ElRadioButton 内の native radio input を返す（checked 確認用） */
+function radioInput(wrapper: ReturnType<typeof mount>, testId: string) {
+  return wrapper.find(`[data-testid="${testId}"] input`);
+}
+
+/** ElCheckbox 内の native checkbox input を返す（setValue / checked 用） */
+function checkInput(wrapper: ReturnType<typeof mount>, testId: string) {
+  return wrapper.find(`[data-testid="${testId}"] input`);
+}
+
+/** ElInput / ElInputNumber の内側 input を返す */
+function inputInner(wrapper: ReturnType<typeof mount>, testId: string) {
+  return wrapper.find(`[data-testid="${testId}"] input`);
+}
+
+/** ElInputNumber 内 input の disabled を返す */
+function isDisabled(wrapper: ReturnType<typeof mount>, testId: string) {
+  return (inputInner(wrapper, testId).element as HTMLInputElement).disabled;
+}
 
 describe("LauncherView", () => {
   beforeEach(() => {
@@ -128,7 +149,6 @@ describe("LauncherView", () => {
   it("renders GUI items: desktop mode checkbox, screen mode toggle, custom args", async () => {
     const wrapper = mount(LauncherView);
     await flushPromises();
-    // Select first profile to show editor
     const card = wrapper.findAll(".profile-card")[0];
     await card?.trigger("click");
     await flushPromises();
@@ -171,13 +191,15 @@ describe("LauncherView", () => {
       "-screen-fullscreen 1 -windowed",
     );
 
-    const fullscreenRadio = wrapper.find(
-      '[data-testid="screen-mode-fullscreen"]',
+    // ElRadioButton 内の native radio input で checked を確認
+    const fullscreenRadioInput = radioInput(wrapper, "screen-mode-fullscreen");
+    expect((fullscreenRadioInput.element as HTMLInputElement).checked).toBe(
+      true,
     );
-    const customInput = wrapper.find('[data-testid="custom-args-input"]');
 
-    expect((fullscreenRadio.element as HTMLInputElement).checked).toBe(true);
-    expect((customInput.element as HTMLInputElement).value).toBe("-batchmode");
+    // ElInput は data-testid を inner input に転送するため直接セレクタで取得
+    const customInner = wrapper.find('[data-testid="custom-args-input"]');
+    expect((customInner.element as HTMLInputElement).value).toBe("-batchmode");
   });
 
   it("merges GUI state to arguments on save", async () => {
@@ -206,12 +228,14 @@ describe("LauncherView", () => {
     } as LaunchArgsParsedDTO);
     await flushPromises();
 
-    const fullscreenRadio = wrapper.find(
-      '[data-testid="screen-mode-fullscreen"]',
-    );
-    await fullscreenRadio.setValue("fullscreen");
-    const customInput = wrapper.find('[data-testid="custom-args-input"]');
-    await customInput.setValue("-batchmode");
+    // fullscreen ラジオボタンの inner input に setValue で選択
+    await wrapper
+      .find('[data-testid="screen-mode-fullscreen"] input')
+      .setValue(true);
+    // ElInput は data-testid を inner input に転送するため直接セレクタで値をセット
+    await wrapper
+      .find('[data-testid="custom-args-input"]')
+      .setValue("-batchmode");
     await flushPromises();
 
     const saveBtn = wrapper.find(".btn-save");
@@ -234,12 +258,14 @@ describe("LauncherView", () => {
     await card?.trigger("click");
     await flushPromises();
 
-    const details = wrapper.find(".details-advanced");
-    expect(details.exists()).toBe(true);
-    const summary = details.find("summary");
-    expect(summary.text()).toContain("詳細設定");
+    // el-collapse の存在確認
+    const collapse = wrapper.find(".args-collapse");
+    expect(collapse.exists()).toBe(true);
 
-    await summary.trigger("click");
+    // el-collapse-item のヘッダーをクリックして展開
+    const header = collapse.find(".el-collapse-item__header");
+    expect(header.text()).toContain("詳細設定");
+    await header.trigger("click");
     await flushPromises();
 
     expect(wrapper.find('[data-testid="screen-mode-windowed"]').exists()).toBe(
@@ -260,14 +286,12 @@ describe("LauncherView", () => {
     await card?.trigger("click");
     await flushPromises();
 
-    const details = wrapper.find(".details-advanced");
-    await details.find("summary").trigger("click");
+    const collapse = wrapper.find(".args-collapse");
+    await collapse.find(".el-collapse-item__header").trigger("click");
     await flushPromises();
 
-    const resolutionCheckbox = wrapper.find(
-      '[data-testid="resolution-enabled-checkbox"]',
-    );
-    await resolutionCheckbox.setValue(true);
+    // ElCheckbox 内の input で setValue
+    await checkInput(wrapper, "resolution-enabled-checkbox").setValue(true);
     await flushPromises();
 
     expect(wrapper.find("[data-testid='resolution-preset-hd']").exists()).toBe(
@@ -291,20 +315,16 @@ describe("LauncherView", () => {
     await card?.trigger("click");
     await flushPromises();
 
-    const details = wrapper.find(".details-advanced");
-    await details.find("summary").trigger("click");
+    const collapse = wrapper.find(".args-collapse");
+    await collapse.find(".el-collapse-item__header").trigger("click");
     await flushPromises();
 
-    const resolutionCheckbox = wrapper.find(
-      '[data-testid="resolution-enabled-checkbox"]',
-    );
-    await resolutionCheckbox.setValue(true);
+    await checkInput(wrapper, "resolution-enabled-checkbox").setValue(true);
     await flushPromises();
 
-    const widthInput = wrapper.find("[data-testid='screen-width-input']");
-    const heightInput = wrapper.find("[data-testid='screen-height-input']");
-    expect((widthInput.element as HTMLInputElement).disabled).toBe(true);
-    expect((heightInput.element as HTMLInputElement).disabled).toBe(true);
+    // デフォルトの HD プリセットでは disabled になる
+    expect(isDisabled(wrapper, "screen-width-input")).toBe(true);
+    expect(isDisabled(wrapper, "screen-height-input")).toBe(true);
   });
 
   it("enables resolution inputs when preset is custom", async () => {
@@ -314,26 +334,21 @@ describe("LauncherView", () => {
     await card?.trigger("click");
     await flushPromises();
 
-    const details = wrapper.find(".details-advanced");
-    await details.find("summary").trigger("click");
+    const collapse = wrapper.find(".args-collapse");
+    await collapse.find(".el-collapse-item__header").trigger("click");
     await flushPromises();
 
-    const resolutionCheckbox = wrapper.find(
-      '[data-testid="resolution-enabled-checkbox"]',
-    );
-    await resolutionCheckbox.setValue(true);
+    await checkInput(wrapper, "resolution-enabled-checkbox").setValue(true);
     await flushPromises();
 
-    const customRadio = wrapper.find(
-      "[data-testid='resolution-preset-custom']",
-    );
-    await customRadio.setValue(true);
+    // custom プリセットの inner radio input に setValue で選択
+    await wrapper
+      .find("[data-testid='resolution-preset-custom'] input")
+      .setValue(true);
     await flushPromises();
 
-    const widthInput = wrapper.find("[data-testid='screen-width-input']");
-    const heightInput = wrapper.find("[data-testid='screen-height-input']");
-    expect((widthInput.element as HTMLInputElement).disabled).toBe(false);
-    expect((heightInput.element as HTMLInputElement).disabled).toBe(false);
+    expect(isDisabled(wrapper, "screen-width-input")).toBe(false);
+    expect(isDisabled(wrapper, "screen-height-input")).toBe(false);
   });
 
   it("launch uses current GUI state via merge and launchVRChatWithArgs", async () => {
@@ -346,10 +361,9 @@ describe("LauncherView", () => {
 
     mockMergeLaunchArgsForGUI.mockResolvedValue("-screen-fullscreen 1");
 
-    const fullscreenRadio = wrapper.find(
-      '[data-testid="screen-mode-fullscreen"]',
-    );
-    await fullscreenRadio.setValue("fullscreen");
+    await wrapper
+      .find('[data-testid="screen-mode-fullscreen"]')
+      .trigger("click");
     await flushPromises();
 
     const launchBtn = wrapper.find(".btn-launch");
@@ -379,13 +393,21 @@ describe("LauncherView", () => {
     );
 
     mockDeleteLaunchProfile.mockResolvedValue(undefined);
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    // ElMessageBox.confirm をモック（resolve = 削除確定）
+    const confirmSpy = vi
+      .spyOn(ElMessageBox, "confirm")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .mockResolvedValue("confirm" as any);
 
     const deleteBtn = wrapper.find('[data-testid="delete-profile-btn"]');
     await deleteBtn.trigger("click");
     await flushPromises();
 
-    expect(confirmSpy).toHaveBeenCalledWith("「Default」を削除しますか？");
+    expect(confirmSpy).toHaveBeenCalledWith(
+      "「Default」を削除しますか？",
+      "確認",
+      expect.any(Object),
+    );
     expect(mockDeleteLaunchProfile).toHaveBeenCalledWith("1");
     expect(mockLaunchProfiles).toHaveBeenCalled();
 
@@ -400,7 +422,10 @@ describe("LauncherView", () => {
     await card?.trigger("click");
     await flushPromises();
 
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    // ElMessageBox.confirm をモック（reject = キャンセル）
+    const confirmSpy = vi
+      .spyOn(ElMessageBox, "confirm")
+      .mockRejectedValue("cancel");
 
     const deleteBtn = wrapper.find('[data-testid="delete-profile-btn"]');
     await deleteBtn.trigger("click");
@@ -421,5 +446,42 @@ describe("LauncherView", () => {
     expect(wrapper.find('[data-testid="delete-profile-btn"]').exists()).toBe(
       false,
     );
+  });
+
+  it("sets aria-label on screen mode, resolution preset, and video decoding radio groups", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+    const card = wrapper.findAll(".profile-card")[0];
+    await card?.trigger("click");
+    await flushPromises();
+
+    const screenRg = wrapper
+      .get('[data-testid="screen-mode-fullscreen"]')
+      .element.closest("[role='radiogroup']");
+    expect(screenRg?.getAttribute("aria-label")).toBe("表示モード");
+
+    const collapse = wrapper.find(".args-collapse");
+    await collapse.find(".el-collapse-item__header").trigger("click");
+    await flushPromises();
+    await checkInput(wrapper, "resolution-enabled-checkbox").setValue(true);
+    await flushPromises();
+
+    const resRg = wrapper
+      .get("[data-testid='resolution-preset-hd']")
+      .element.closest("[role='radiogroup']");
+    expect(resRg?.getAttribute("aria-label")).toBe("起動時解像度プリセット");
+
+    const debugHeaders = wrapper.findAll(".el-collapse-item__header");
+    const debugHeader = debugHeaders.find((h) =>
+      h.text().includes("クリエイター・デバッグ向け"),
+    );
+    expect(debugHeader?.exists()).toBe(true);
+    await debugHeader!.trigger("click");
+    await flushPromises();
+
+    const vdRg = wrapper
+      .get('[data-testid="video-decoding-default"]')
+      .element.closest("[role='radiogroup']");
+    expect(vdRg?.getAttribute("aria-label")).toBe("動画デコーディング");
   });
 });

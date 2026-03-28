@@ -20,7 +20,7 @@ describe("Sidebar", () => {
         plugins: [router],
       },
     });
-    const links = wrapper.findAll(".sidebar-link");
+    const links = wrapper.findAll(".el-menu-item");
     expect(links.length).toBeGreaterThanOrEqual(7); // 7 main + settings
   });
 

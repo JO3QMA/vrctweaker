@@ -35,6 +35,7 @@ function close() {
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
   user-select: none;
+  flex-shrink: 0;
 }
 
 .title-bar-text {
@@ -56,6 +57,7 @@ function close() {
   color: var(--text-secondary);
   font-size: 16px;
   line-height: 1;
+  cursor: pointer;
   transition:
     background 0.15s,
     color 0.15s;

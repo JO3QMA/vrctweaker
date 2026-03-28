@@ -3,78 +3,96 @@
     <h1 class="page-title">アクティビティ</h1>
 
     <!-- 統計セクション（直近14日） -->
-    <section class="stats-section">
-      <h2 class="section-title">プレイ時間（直近14日）</h2>
+    <el-card class="section-card" shadow="never">
+      <template #header>
+        <span>プレイ時間（直近14日）</span>
+      </template>
       <div v-if="statsLoading" class="loading">読み込み中…</div>
       <div v-else-if="!statsRangeFrom" class="empty-stats">
         データがありません
       </div>
       <PlayTimeChart v-else :series="dailyPlayChartSeries" />
-    </section>
+    </el-card>
 
     <!-- タイムラインセクション -->
-    <section class="timeline-section">
-      <h2 class="section-title">遭遇ログ（滞在区間）</h2>
-
+    <el-card class="section-card" shadow="never">
+      <template #header>
+        <span>遭遇ログ（滞在区間）</span>
+      </template>
       <!-- フィルタ -->
       <div class="filters">
-        <input
+        <el-input
           v-model="displayNameFilter"
-          type="text"
           placeholder="表示名で検索"
-          class="filter-input"
-        />
-        <button class="btn-refresh" @click="loadEncounters">更新</button>
+          clearable
+          style="max-width: 220px"
+        >
+          <template #prefix>
+            <el-icon><Search /></el-icon>
+          </template>
+        </el-input>
+        <el-button @click="loadEncounters">更新</el-button>
       </div>
 
       <div v-if="encountersLoading" class="loading">読み込み中…</div>
       <div v-else-if="filteredEncounters.length === 0" class="empty">
         遭遇ログがありません。
       </div>
-      <ul v-else class="timeline">
-        <li class="timeline-header-row" aria-hidden="true">
-          <span class="timeline-h">入室</span>
-          <span class="timeline-h">退室</span>
-          <span class="timeline-h">表示名</span>
-          <span class="timeline-h">ワールド名</span>
-        </li>
-        <li
-          v-for="enc in filteredEncounters"
-          :key="enc.id"
-          class="timeline-item"
-        >
-          <span class="timeline-time">{{
-            formatEncounteredAt(enc.joinedAt)
-          }}</span>
-          <span class="timeline-time timeline-time--secondary">{{
-            enc.leftAt ? formatEncounteredAt(enc.leftAt) : "—"
-          }}</span>
-          <button
-            v-if="enc.vrcUserId"
-            type="button"
-            class="timeline-link timeline-name"
-            @click="openUserHistory(enc.vrcUserId)"
-          >
-            {{ enc.displayName }}
-          </button>
-          <span v-else class="timeline-name timeline-name--muted">{{
-            enc.displayName
-          }}</span>
-          <button
-            v-if="enc.worldId"
-            type="button"
-            class="timeline-link timeline-world"
-            :title="enc.worldId"
-            @click="openWorldHistory(enc.worldId)"
-          >
-            {{ enc.worldDisplayName || enc.worldId }}
-          </button>
-          <span v-else class="timeline-world timeline-world--muted" title="">
-            —
-          </span>
-        </li>
-      </ul>
-    </section>
+      <el-table
+        v-else
+        :data="filteredEncounters"
+        style="width: 100%"
+        size="small"
+        :border="false"
+        stripe
+      >
+        <el-table-column label="入室" width="150">
+          <template #default="{ row }">
+            <span class="timeline-time">{{
+              formatEncounteredAt(row.joinedAt)
+            }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="退室" width="150">
+          <template #default="{ row }">
+            <span class="timeline-time">{{
+              row.leftAt ? formatEncounteredAt(row.leftAt) : "—"
+            }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="表示名" min-width="120">
+          <template #default="{ row }">
+            <el-button
+              v-if="row.vrcUserId"
+              link
+              type="primary"
+              class="timeline-link"
+              @click="openUserHistory(row.vrcUserId)"
+            >
+              {{ row.displayName }}
+            </el-button>
+            <span v-else class="timeline-name-muted">{{
+              row.displayName
+            }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="ワールド名" min-width="120">
+          <template #default="{ row }">
+            <el-button
+              v-if="row.worldId"
+              link
+              type="primary"
+              class="timeline-link"
+              :title="row.worldId"
+              @click="openWorldHistory(row.worldId)"
+            >
+              {{ row.worldDisplayName || row.worldId }}
+            </el-button>
+            <span v-else>—</span>
+          </template>
+        </el-table-column>
+      </el-table>
+    </el-card>
   </div>
 </template>
 
@@ -92,9 +110,7 @@ import PlayTimeChart, {
 } from "../components/PlayTimeChart.vue";
 import { openEncounterHistoryWindow } from "../utils/openEncounterHistoryWindow";
 
-/** プレイ時間グラフに表示する暦日数（最大14日、今日を含む） */
 const PLAYTIME_CHART_MAX_DAYS = 14;
-
 const ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS = 400;
 
 const router = useRouter();
@@ -231,26 +247,18 @@ onUnmounted(() => {
 .activity-view {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
 }
 
-.page-title {
-  margin: 0;
-  font-size: 1.5rem;
+.section-card {
+  background: var(--bg-secondary) !important;
+  border-color: var(--border) !important;
 }
 
-.section-title {
-  margin: 0 0 1rem;
-  font-size: 1.1rem;
+.section-card :deep(.el-card__header) {
+  font-weight: 600;
+  border-bottom-color: var(--border);
   color: var(--text-secondary);
-}
-
-.stats-section,
-.timeline-section {
-  padding: 1rem;
-  background: var(--bg-secondary);
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
 }
 
 .filters {
@@ -258,30 +266,7 @@ onUnmounted(() => {
   gap: 0.5rem;
   align-items: center;
   margin-bottom: 1rem;
-}
-
-.filter-input {
-  width: 220px;
-  padding: 0.5rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-}
-
-.btn-refresh {
-  padding: 0.5rem 1rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.btn-refresh:hover {
-  background: var(--accent);
-  color: white;
-  border-color: var(--accent);
+  flex-wrap: wrap;
 }
 
 .loading,
@@ -292,93 +277,19 @@ onUnmounted(() => {
   color: var(--text-secondary);
 }
 
-.timeline {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.timeline-header-row,
-.timeline-item {
-  display: grid;
-  grid-template-columns: 9rem 9rem minmax(0, 1fr) minmax(0, 1fr);
-  gap: 0.75rem;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--border);
-  font-size: 0.9rem;
-  align-items: center;
-}
-
-.timeline-header-row {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  padding-top: 0;
-}
-
-.timeline-item:last-child {
-  border-bottom: none;
-}
-
-.timeline-h {
-  min-width: 0;
-}
-
 .timeline-time {
-  color: var(--text-secondary);
   font-size: 0.85rem;
-}
-
-.timeline-time--secondary {
-  font-size: 0.8rem;
-}
-
-.timeline-name {
-  font-weight: 500;
-  min-width: 0;
-  text-align: left;
-}
-
-.timeline-name--muted {
-  color: var(--text-secondary);
-}
-
-.timeline-world {
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  min-width: 0;
-  text-align: left;
-}
-
-.timeline-world--muted {
   color: var(--text-secondary);
 }
 
 .timeline-link {
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: none;
-  font: inherit;
-  cursor: pointer;
-  color: var(--accent);
-  text-decoration: underline;
-  text-underline-offset: 2px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
 }
 
-.timeline-link:hover {
-  color: var(--text-primary);
-}
-
-.timeline-link:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-  border-radius: 2px;
+.timeline-name-muted {
+  color: var(--text-secondary);
 }
 </style>

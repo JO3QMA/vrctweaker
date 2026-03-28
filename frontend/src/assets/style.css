@@ -1,4 +1,6 @@
-/* VRChat Tweaker - Dark theme base */
+/* VRChat Tweaker - Dark theme base + Element Plus dark mode overrides */
+
+/* ─── App color tokens ─────────────────────────────────────────── */
 :root {
   --bg-primary: #1b2636;
   --bg-secondary: #243447;
@@ -14,6 +16,107 @@
   --sidebar-width: 220px;
 }
 
+/* ─── Element Plus dark theme CSS variable overrides ───────────── */
+html.dark {
+  --el-bg-color-page: #1b2636;
+  --el-bg-color: #243447;
+  --el-bg-color-overlay: #2d3f54;
+
+  --el-color-primary: #5c9ce6;
+  --el-color-primary-light-3: #7ab3f0;
+  --el-color-primary-light-5: #8ec4f5;
+  --el-color-primary-light-7: #a8d3f7;
+  --el-color-primary-light-8: #b8dcf9;
+  --el-color-primary-light-9: #d0eafc;
+  --el-color-primary-dark-2: #4a88d0;
+
+  --el-color-success: #81c784;
+  --el-color-warning: #ffb74d;
+  --el-color-danger: #e57373;
+  --el-color-error: #e57373;
+  --el-color-info: #9aa0a6;
+
+  --el-text-color-primary: #e8eaed;
+  --el-text-color-regular: #c8cbd0;
+  --el-text-color-secondary: #9aa0a6;
+  --el-text-color-placeholder: #6b7280;
+  --el-text-color-disabled: #4b5563;
+
+  --el-border-color: #3d4f66;
+  --el-border-color-light: #334155;
+  --el-border-color-lighter: #2d3f54;
+  --el-border-color-extra-light: #243447;
+  --el-border-color-dark: #4a5f7a;
+  --el-border-color-darker: #5a7090;
+
+  --el-fill-color: #2d3f54;
+  --el-fill-color-light: #243447;
+  --el-fill-color-lighter: #1f2e40;
+  --el-fill-color-extra-light: #1b2636;
+  --el-fill-color-dark: #374d66;
+  --el-fill-color-darker: #3f5573;
+  --el-fill-color-blank: #243447;
+
+  --el-mask-color: rgba(0, 0, 0, 0.6);
+  --el-mask-color-extra-light: rgba(0, 0, 0, 0.3);
+
+  --el-box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  --el-box-shadow-light: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --el-box-shadow-lighter: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --el-box-shadow-dark: 0 4px 16px rgba(0, 0, 0, 0.5);
+
+  /* Menu */
+  --el-menu-bg-color: #243447;
+  --el-menu-hover-bg-color: #2d3f54;
+  --el-menu-text-color: #9aa0a6;
+  --el-menu-active-color: #5c9ce6;
+  --el-menu-border-color: #3d4f66;
+
+  /* Table */
+  --el-table-bg-color: #243447;
+  --el-table-tr-bg-color: #243447;
+  --el-table-header-bg-color: #1f2e40;
+  --el-table-header-text-color: #9aa0a6;
+  --el-table-text-color: #e8eaed;
+  --el-table-row-hover-bg-color: #2d3f54;
+  --el-table-border-color: #3d4f66;
+  --el-table-fixed-box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+
+  /* Input */
+  --el-input-bg-color: #2d3f54;
+  --el-input-text-color: #e8eaed;
+  --el-input-placeholder-color: #6b7280;
+  --el-input-hover-border-color: #5c9ce6;
+  --el-input-focus-border-color: #5c9ce6;
+  --el-input-border-color: #3d4f66;
+
+  /* Button */
+  --el-button-bg-color: #2d3f54;
+  --el-button-text-color: #e8eaed;
+  --el-button-hover-text-color: #e8eaed;
+  --el-button-hover-bg-color: #374d66;
+  --el-button-hover-border-color: #5c9ce6;
+  --el-button-active-text-color: #e8eaed;
+  --el-button-disabled-text-color: #4b5563;
+  --el-button-disabled-bg-color: #1f2e40;
+  --el-button-disabled-border-color: #2d3f54;
+
+  /* Switch */
+  --el-switch-off-color: #3d4f66;
+  --el-switch-on-color: #5c9ce6;
+
+  /* Dropdown */
+  --el-dropdown-menuItem-hover-fill: #2d3f54;
+  --el-dropdown-menuItem-hover-color: #e8eaed;
+
+  /* Scrollbar */
+  --el-scrollbar-opacity: 0.5;
+  --el-scrollbar-bg-color: #3d4f66;
+  --el-scrollbar-hover-opacity: 0.8;
+  --el-scrollbar-hover-bg-color: #5c9ce6;
+}
+
+/* ─── Base resets ──────────────────────────────────────────────── */
 *,
 *::before,
 *::after {
@@ -37,6 +140,17 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
 #app {
   height: 100vh;
 }
@@ -50,13 +164,31 @@ a:hover {
   color: var(--accent-hover);
 }
 
-button {
-  font-family: inherit;
-  cursor: pointer;
+/* ─── Element Plus component tweaks ───────────────────────────── */
+
+/* Make ElMenu fill the sidebar naturally */
+.el-menu {
+  border-right: none !important;
 }
 
-input,
-select,
-textarea {
-  font-family: inherit;
+.el-menu--vertical .el-menu-item {
+  height: 42px;
+  line-height: 42px;
+}
+
+/* Page title shared style */
+.page-title {
+  margin: 0 0 1rem;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+/* Shared section card */
+.section-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
 }

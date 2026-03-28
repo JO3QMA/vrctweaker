@@ -1,3 +1,13 @@
+import { config } from "@vue/test-utils";
+import ElementPlus from "element-plus";
+import * as ElementPlusIconsVue from "@element-plus/icons-vue";
+
+// テスト環境で Element Plus とアイコンをグローバル登録
+config.global.plugins = [ElementPlus];
+config.global.components = Object.fromEntries(
+  Object.entries(ElementPlusIconsVue),
+);
+
 /**
  * jsdom does not implement ResizeObserver; TanStack Virtual and the gallery grid rely on it.
  */

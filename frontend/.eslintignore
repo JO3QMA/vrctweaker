@@ -1,5 +1,6 @@
 # Build outputs and generated files
 dist
+storybook-static
 playwright-report
 test-results
 *.local
