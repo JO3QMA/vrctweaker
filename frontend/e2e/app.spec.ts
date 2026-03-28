@@ -50,9 +50,9 @@ test.describe("VRChat Tweaker", () => {
       await page.goto("/#/launcher");
       await expect(page.locator("h1")).toContainText("ランチャー");
       await expect(page.getByText("デフォルトプロファイル")).toBeVisible();
-      // プロファイルカードの既定バッジのみ対象（動画デコーディングの「既定」と区別）
+      // プロファイルカードの既定タグのみ対象（動画デコーディングの「既定」と区別）
       await expect(
-        page.locator(".profiles-list .badge").getByText("既定"),
+        page.locator(".profiles-list .el-tag").getByText("既定"),
       ).toBeVisible();
     });
 
@@ -95,9 +95,10 @@ test.describe("VRChat Tweaker", () => {
     test("log retention input has default value", async ({ page }) => {
       await page.goto("/#/settings");
       await expect(page.locator("h1")).toContainText("設定");
-      const retentionInput = page.locator(
-        'section:has(h2:has-text("ログ・データ管理")) input[type="number"]',
-      );
+      const retentionRow = page
+        .locator(".setting-row")
+        .filter({ hasText: /遭遇記録の保存期間/ });
+      const retentionInput = retentionRow.locator(".el-input__inner").first();
       await retentionInput.scrollIntoViewIfNeeded();
       await expect(retentionInput).toHaveValue("30");
     });
