@@ -68,7 +68,6 @@
           <el-progress
             v-else
             :percentage="100"
-            status="striped"
             :striped="true"
             :striped-flow="true"
             :duration="10"

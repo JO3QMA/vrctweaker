@@ -62,43 +62,27 @@
         <div class="resolution-section">
           <el-radio-group
             v-model="cameraPreset"
+            aria-label="カメラ解像度プリセット"
             size="small"
             style="flex-wrap: wrap; gap: 4px"
+            @change="applyCameraPreset"
           >
-            <el-radio-button
-              value="HD"
-              data-testid="camera-preset-hd"
-              @change="applyCameraPreset"
+            <el-radio-button value="HD" data-testid="camera-preset-hd"
               >HD</el-radio-button
             >
-            <el-radio-button
-              value="FHD"
-              data-testid="camera-preset-fhd"
-              @change="applyCameraPreset"
+            <el-radio-button value="FHD" data-testid="camera-preset-fhd"
               >FHD</el-radio-button
             >
-            <el-radio-button
-              value="WQHD"
-              data-testid="camera-preset-wqhd"
-              @change="applyCameraPreset"
+            <el-radio-button value="WQHD" data-testid="camera-preset-wqhd"
               >WQHD</el-radio-button
             >
-            <el-radio-button
-              value="4K"
-              data-testid="camera-preset-4k"
-              @change="applyCameraPreset"
+            <el-radio-button value="4K" data-testid="camera-preset-4k"
               >4K</el-radio-button
             >
-            <el-radio-button
-              value="8K"
-              data-testid="camera-preset-8k"
-              @change="applyCameraPreset"
+            <el-radio-button value="8K" data-testid="camera-preset-8k"
               >8K</el-radio-button
             >
-            <el-radio-button
-              value="custom"
-              data-testid="camera-preset-custom"
-              @change="applyCameraPreset"
+            <el-radio-button value="custom" data-testid="camera-preset-custom"
               >手動設定</el-radio-button
             >
           </el-radio-group>
@@ -142,37 +126,26 @@
         <div class="resolution-section">
           <el-radio-group
             v-model="screenshotPreset"
+            aria-label="スクリーンショット解像度プリセット"
             size="small"
             style="flex-wrap: wrap; gap: 4px"
+            @change="applyScreenshotPreset"
           >
-            <el-radio-button
-              value="HD"
-              data-testid="screenshot-preset-hd"
-              @change="applyScreenshotPreset"
+            <el-radio-button value="HD" data-testid="screenshot-preset-hd"
               >HD</el-radio-button
             >
-            <el-radio-button
-              value="FHD"
-              data-testid="screenshot-preset-fhd"
-              @change="applyScreenshotPreset"
+            <el-radio-button value="FHD" data-testid="screenshot-preset-fhd"
               >FHD</el-radio-button
             >
-            <el-radio-button
-              value="WQHD"
-              data-testid="screenshot-preset-wqhd"
-              @change="applyScreenshotPreset"
+            <el-radio-button value="WQHD" data-testid="screenshot-preset-wqhd"
               >WQHD</el-radio-button
             >
-            <el-radio-button
-              value="4K"
-              data-testid="screenshot-preset-4k"
-              @change="applyScreenshotPreset"
+            <el-radio-button value="4K" data-testid="screenshot-preset-4k"
               >4K</el-radio-button
             >
             <el-radio-button
               value="custom"
               data-testid="screenshot-preset-custom"
-              @change="applyScreenshotPreset"
               >手動設定</el-radio-button
             >
           </el-radio-group>
@@ -357,6 +330,7 @@ import { ref, computed, onMounted } from "vue";
 import { ElMessageBox } from "element-plus";
 import { App } from "../wails/app";
 import type { VRChatConfigDTO } from "../wails/app";
+import { clampCacheNumeric } from "../utils/cacheNormalize";
 
 type ResolutionPreset = "HD" | "FHD" | "WQHD" | "4K" | "8K" | "custom";
 
@@ -467,15 +441,14 @@ function applyScreenshotPreset() {
 }
 
 function clampCacheSize() {
-  if (config.value.cacheSize < CACHE_MIN) {
-    config.value.cacheSize = CACHE_MIN;
-  }
+  config.value.cacheSize = clampCacheNumeric(config.value.cacheSize, CACHE_MIN);
 }
 
 function clampCacheExpiry() {
-  if (config.value.cacheExpiryDelay < CACHE_MIN) {
-    config.value.cacheExpiryDelay = CACHE_MIN;
-  }
+  config.value.cacheExpiryDelay = clampCacheNumeric(
+    config.value.cacheExpiryDelay,
+    CACHE_MIN,
+  );
 }
 
 const steadycamFovSliderValue = computed(() => {
@@ -537,8 +510,11 @@ async function createConfig() {
 async function saveConfig() {
   saveError.value = "";
   saveSuccess.value = false;
-  const cacheSize = Math.max(CACHE_MIN, config.value.cacheSize);
-  const cacheExpiryDelay = Math.max(CACHE_MIN, config.value.cacheExpiryDelay);
+  const cacheSize = clampCacheNumeric(config.value.cacheSize, CACHE_MIN);
+  const cacheExpiryDelay = clampCacheNumeric(
+    config.value.cacheExpiryDelay,
+    CACHE_MIN,
+  );
   const dto: VRChatConfigDTO = {
     ...config.value,
     cacheSize,

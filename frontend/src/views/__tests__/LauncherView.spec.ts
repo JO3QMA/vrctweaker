@@ -447,4 +447,41 @@ describe("LauncherView", () => {
       false,
     );
   });
+
+  it("sets aria-label on screen mode, resolution preset, and video decoding radio groups", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+    const card = wrapper.findAll(".profile-card")[0];
+    await card?.trigger("click");
+    await flushPromises();
+
+    const screenRg = wrapper
+      .get('[data-testid="screen-mode-fullscreen"]')
+      .element.closest("[role='radiogroup']");
+    expect(screenRg?.getAttribute("aria-label")).toBe("表示モード");
+
+    const collapse = wrapper.find(".args-collapse");
+    await collapse.find(".el-collapse-item__header").trigger("click");
+    await flushPromises();
+    await checkInput(wrapper, "resolution-enabled-checkbox").setValue(true);
+    await flushPromises();
+
+    const resRg = wrapper
+      .get("[data-testid='resolution-preset-hd']")
+      .element.closest("[role='radiogroup']");
+    expect(resRg?.getAttribute("aria-label")).toBe("起動時解像度プリセット");
+
+    const debugHeaders = wrapper.findAll(".el-collapse-item__header");
+    const debugHeader = debugHeaders.find((h) =>
+      h.text().includes("クリエイター・デバッグ向け"),
+    );
+    expect(debugHeader?.exists()).toBe(true);
+    await debugHeader!.trigger("click");
+    await flushPromises();
+
+    const vdRg = wrapper
+      .get('[data-testid="video-decoding-default"]')
+      .element.closest("[role='radiogroup']");
+    expect(vdRg?.getAttribute("aria-label")).toBe("動画デコーディング");
+  });
 });

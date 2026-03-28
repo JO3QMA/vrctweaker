@@ -39,7 +39,11 @@
 
               <!-- 表示モード -->
               <el-form-item label="表示モード" class="nested-form-item">
-                <el-radio-group v-model="launchArgs.screenMode" size="default">
+                <el-radio-group
+                  v-model="launchArgs.screenMode"
+                  aria-label="表示モード"
+                  size="default"
+                >
                   <el-radio-button
                     value="fullscreen"
                     data-testid="screen-mode-fullscreen"
@@ -76,35 +80,35 @@
                       class="sub-options"
                     >
                       <el-form-item label="プリセット" class="nested-form-item">
-                        <el-radio-group v-model="resolutionPreset" size="small">
+                        <el-radio-group
+                          v-model="resolutionPreset"
+                          aria-label="起動時解像度プリセット"
+                          size="small"
+                          @change="applyResolutionPreset"
+                        >
                           <el-radio-button
                             value="HD"
                             data-testid="resolution-preset-hd"
-                            @change="applyResolutionPreset"
                             >HD</el-radio-button
                           >
                           <el-radio-button
                             value="FHD"
                             data-testid="resolution-preset-fhd"
-                            @change="applyResolutionPreset"
                             >FHD</el-radio-button
                           >
                           <el-radio-button
                             value="WQHD"
                             data-testid="resolution-preset-wqhd"
-                            @change="applyResolutionPreset"
                             >WQHD</el-radio-button
                           >
                           <el-radio-button
                             value="4K"
                             data-testid="resolution-preset-4k"
-                            @change="applyResolutionPreset"
                             >4K</el-radio-button
                           >
                           <el-radio-button
                             value="custom"
                             data-testid="resolution-preset-custom"
-                            @change="applyResolutionPreset"
                             >手動設定</el-radio-button
                           >
                         </el-radio-group>
@@ -353,6 +357,7 @@
                     >
                       <el-radio-group
                         v-model="launchArgs.videoDecoding"
+                        aria-label="動画デコーディング"
                         size="small"
                       >
                         <el-radio-button

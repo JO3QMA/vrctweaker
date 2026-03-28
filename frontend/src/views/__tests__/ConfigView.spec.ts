@@ -24,7 +24,6 @@ function numInput(wrapper: ReturnType<typeof mount>, testId: string) {
   return wrapper.find(`[data-testid="${testId}"] input`);
 }
 
-
 describe("ConfigView", () => {
   it("renders page title", async () => {
     await router.push("/config");
@@ -296,5 +295,27 @@ describe("ConfigView", () => {
     expect(
       wrapper.find("[data-testid='disable-rich-presence-checkbox']").exists(),
     ).toBe(true);
+  });
+
+  it("sets aria-label on camera and screenshot resolution radio groups", async () => {
+    await router.push("/config");
+    await router.isReady();
+    const wrapper = mount(ConfigView, {
+      global: { plugins: [router] },
+    });
+    await wrapper.find("[data-testid='create-config-btn']").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const cam = wrapper
+      .get("[data-testid='camera-preset-hd']")
+      .element.closest("[role='radiogroup']");
+    expect(cam?.getAttribute("aria-label")).toBe("カメラ解像度プリセット");
+
+    const shot = wrapper
+      .get("[data-testid='screenshot-preset-hd']")
+      .element.closest("[role='radiogroup']");
+    expect(shot?.getAttribute("aria-label")).toBe(
+      "スクリーンショット解像度プリセット",
+    );
   });
 });

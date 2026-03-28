@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
+import { ElProgress } from "element-plus";
 import { ref } from "vue";
 import GalleryView from "../GalleryView.vue";
 import * as galleryThumbnailCache from "../galleryThumbnailCache";
@@ -366,6 +367,45 @@ describe("GalleryView", () => {
     expect(panel.find(".el-progress").exists()).toBe(true);
 
     resolveScan(1);
+    await flushPromises();
+  });
+
+  it("indeterminate scan progress el-progress does not use invalid status striped", async () => {
+    let resolveScan!: (n: number) => void;
+    mockScanScreenshotDir.mockImplementation(
+      () =>
+        new Promise<number>((resolve) => {
+          resolveScan = (n: number) => {
+            queueMicrotask(() => {
+              wailsEventListeners["gallery:scan-done"]?.({ count: n });
+            });
+            resolve(n);
+          };
+        }),
+    );
+
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+
+    void wrapper.find("[data-testid='gallery-scan-folder']").trigger("click");
+    await flushPromises();
+
+    const panel = wrapper.find('[data-testid="gallery-scan-progress"]');
+    expect(panel.exists()).toBe(true);
+
+    wailsEventListeners["gallery:scan-progress"]?.({
+      phase: "listing",
+      current: 3,
+      total: 0,
+    });
+    await wrapper.vm.$nextTick();
+
+    const progress = panel.findComponent(ElProgress);
+    expect(progress.exists()).toBe(true);
+    expect(progress.props("status")).not.toBe("striped");
+    expect(progress.props("striped")).toBe(true);
+
+    resolveScan(0);
     await flushPromises();
   });
 
