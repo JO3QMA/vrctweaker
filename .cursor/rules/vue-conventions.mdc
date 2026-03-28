@@ -9,6 +9,7 @@ alwaysApply: false
 ## 構成
 - Composition API 使用
 - TypeScript 厳格モード
+- UI: **Element Plus**（詳細・DOM/テスト注意は `.cursor/rules/element-plus-ui.mdc`）
 - Wails: `window.go.main.App` 経由でバックエンド呼び出し
 
 ## 命名

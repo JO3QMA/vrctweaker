@@ -1,0 +1,29 @@
+---
+description: Element Plus を UI フレームワークとして使う frontend の方針・DOM・テストの注意点
+globs: "frontend/**/*.{vue,ts}"
+alwaysApply: false
+---
+
+# Element Plus（UI）
+
+## スタック
+
+- **element-plus**（Vue 3 向け）と **@element-plus/icons-vue** を標準 UI とする。
+- `frontend/src/main.ts` で `app.use(ElementPlus)` とアイコンを **グローバル登録**している。新規画面でも `el-*` コンポーネントをそのまま使う（このリポジトリでは unplugin によるオートインポートは未使用）。
+- スタイル: `element-plus/dist/index.css` とダーク用 `theme-chalk/dark/css-vars.css` を読み込み済み。テーマは既存の `style.css` / 各ビューに合わせる。
+
+## 実装の指針
+
+- ボタン・フォーム・ダイアログ・テーブル・タグなどは **Element Plus コンポーネントを優先**し、素の HTML で同等物を作らない（デザインと挙動の一貫性のため）。
+- 仕様・props・スロットは **[Element Plus 公式ドキュメント](https://element-plus.org/)** を正とする（バージョンは `frontend/package.json` の依存に合わせる）。
+
+## DOM とセレクタ（テスト・E2E）
+
+- テンプレート上は `<el-tag>` でも、実 DOM では **`.el-tag`** など **`.el-*` クラス**になる。`type="number"` など HTML の型は **素の input と一致しない**ことがある（例: `el-input-number` は内側が `.el-input__inner` や spinbutton 扱い）。
+- Playwright や Vitest のセレクタは **実 DOM / アクセシビリティロール**で検証する。見出しが `h2` にならない箇所がある（`el-card` の `#header` は `span` 等）。
+- 重要な操作箇所は既存ビュー同様 **`data-testid`** を付けて安定させる。
+
+## 参考
+
+- プロジェクト共通の Vue 規約: `.cursor/rules/vue-conventions.mdc`
+- UI 実装で深い文脈が必要なとき: `.cursor/skills/element-plus-frontend/SKILL.md`
