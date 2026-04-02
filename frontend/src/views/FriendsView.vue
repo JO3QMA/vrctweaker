@@ -1,31 +1,35 @@
 <template>
   <div class="friends-view">
-    <h1 class="page-title">フレンド</h1>
-    <FriendsViewToolbar
-      v-model:show-offline-list="showOfflineList"
-      v-model:display-name-query="displayNameQuery"
-      :is-logged-in="isLoggedIn"
-      :refresh-loading="refreshLoading"
-      @refresh="doRefresh"
-    />
-    <el-alert
-      v-if="!isLoggedIn"
-      title="フレンド一覧の更新にはログインが必要です。設定画面でログインしてください。"
-      type="info"
-      :closable="false"
-      show-icon
-      class="login-hint"
-    />
     <div class="friends-section">
-      <FriendsListPanel
-        :friends="filteredFriends"
-        :selected="selected"
-        :loading="loading"
-        :empty-message="emptyListMessage"
-        @select="selected = $event"
-        @toggle-favorite="toggleFavorite"
-      />
-      <FriendsDetailPanel
+      <section class="friends-pane friends-pane--left">
+        <h1 class="page-title">フレンド</h1>
+        <FriendsViewToolbar
+          v-model:show-offline-list="showOfflineList"
+          v-model:display-name-query="displayNameQuery"
+          :is-logged-in="isLoggedIn"
+          :refresh-loading="refreshLoading"
+          @refresh="doRefresh"
+        />
+        <el-alert
+          v-if="!isLoggedIn"
+          title="フレンド一覧の更新にはログインが必要です。設定画面でログインしてください。"
+          type="info"
+          :closable="false"
+          show-icon
+          class="login-hint"
+        />
+        <div class="friends-list-wrap">
+          <FriendsListPanel
+            :friends="filteredFriends"
+            :selected="selected"
+            :loading="loading"
+            :empty-message="emptyListMessage"
+            @select="selected = $event"
+            @toggle-favorite="toggleFavorite"
+          />
+        </div>
+      </section>
+      <FriendsDetailPane
         :selected="selected"
         @favorite-change="onDetailFavoriteChange"
       />
@@ -35,7 +39,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import FriendsDetailPanel from "./friends/FriendsDetailPanel.vue";
+import FriendsDetailPane from "./friends/FriendsDetailPane.vue";
 import FriendsListPanel from "./friends/FriendsListPanel.vue";
 import FriendsViewToolbar from "./friends/FriendsViewToolbar.vue";
 import { friendIsOffline } from "./friends/friendsViewUtils";
@@ -144,10 +148,23 @@ async function onDetailFavoriteChange(f: UserCacheDTO, isFavorite: boolean) {
 
 .friends-section {
   display: flex;
-  align-items: flex-start;
+  align-items: stretch;
   flex: 1;
   min-height: 0;
   overflow: hidden;
   gap: 1.5rem;
+}
+
+.friends-pane--left {
+  width: 320px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.friends-list-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
 }
 </style>

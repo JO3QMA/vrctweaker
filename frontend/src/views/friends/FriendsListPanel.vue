@@ -54,6 +54,7 @@ const emit = defineEmits<{
 
 <style scoped>
 .friends-list {
+  align-self: flex-start;
   box-sizing: border-box;
   width: 320px;
   flex-shrink: 0;
