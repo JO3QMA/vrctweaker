@@ -130,12 +130,24 @@ async function onDetailFavoriteChange(f: UserCacheDTO, isFavorite: boolean) {
 </script>
 
 <style scoped>
+.friends-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .login-hint {
   margin-bottom: 1rem;
 }
 
 .friends-section {
   display: flex;
+  align-items: flex-start;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
   gap: 1.5rem;
 }
 </style>

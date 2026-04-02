@@ -240,8 +240,8 @@ function onFavoriteUpdate(val: boolean | string | number | undefined) {
 <style scoped>
 .friend-detail {
   flex: 1;
-  max-height: 560px;
-  overflow-y: auto;
+  max-height: none;
+  overflow-y: visible;
   background: var(--bg-secondary) !important;
   border-color: var(--border) !important;
 }

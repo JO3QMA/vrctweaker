@@ -54,9 +54,11 @@ const emit = defineEmits<{
 
 <style scoped>
 .friends-list {
+  box-sizing: border-box;
   width: 320px;
   flex-shrink: 0;
-  max-height: 480px;
+  min-height: 0;
+  max-height: 100%;
   overflow-y: auto;
 }
 
