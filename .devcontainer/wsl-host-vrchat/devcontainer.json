@@ -1,8 +1,8 @@
 {
-  // WSL かつ Docker Desktop で /mnt/c の VRChat フォルダを載せるときは、別構成「wsl-host-vrchat」を選んでください（自動判定はできません）。
-  "name": "VRChat Tweaker Dev",
+  "name": "VRChat Tweaker Dev (WSL → Windows VRChat folders)",
   "build": {
-    "dockerfile": "Dockerfile"
+    "dockerfile": "../Dockerfile",
+    "context": ".."
   },
   "features": {
     "ghcr.io/devcontainers/features/node:1": {
@@ -17,7 +17,9 @@
   "remoteUser": "vscode",
   "initializeCommand": "mkdir -p \"${localEnv:HOME}${localEnv:USERPROFILE}/.config/gh\"",
   "mounts": [
-    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.config/gh,target=/home/vscode/.config/gh,type=bind,consistency=cached"
+    "source=${localEnv:HOME}${localEnv:USERPROFILE}/.config/gh,target=/home/vscode/.config/gh,type=bind,consistency=cached",
+    "source=/mnt/c/Users/${localEnv:USER}/Pictures/VRChat,target=/home/vscode/Pictures/VRChat,type=bind,consistency=cached,readonly",
+    "source=/mnt/c/Users/${localEnv:USER}/AppData/LocalLow/VRChat/VRChat,target=/home/vscode/.local/share/VRChat/VRChat,type=bind,consistency=cached"
   ],
   "containerEnv": {
     "GOMODCACHE": "/home/vscode/.gomodcache",
@@ -39,4 +41,3 @@
     }
   }
 }
-
