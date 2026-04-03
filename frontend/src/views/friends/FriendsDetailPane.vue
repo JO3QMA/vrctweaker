@@ -30,5 +30,7 @@ function onFavoriteChange(user: UserCacheDTO, isFavorite: boolean) {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 </style>
