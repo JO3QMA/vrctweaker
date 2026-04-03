@@ -1,7 +1,7 @@
 # vrchat-tweaker Makefile
 # フルビルド、front/backendビルド、lint、fmt、test、e2e を実行
 
-.PHONY: all build build-native build-windows build-front build-back lint fmt test test-e2e clean help
+.PHONY: all build build-native build-windows build-front build-back dev-wails lint fmt test test-e2e clean help
 
 # デフォルトターゲット
 all: build
@@ -27,6 +27,11 @@ build-front:
 ## バックエンド（Go）のみビルド
 build-back:
 	go build ./...
+
+## Wails 開発サーバ（DISPLAY 無し環境向け: DevContainer 等では xvfb で仮想 X を用意）
+## ブラウザは VSCode のポート転送で http://localhost:34115 を開く
+dev-wails:
+	xvfb-run -a wails dev
 
 # --- Lint ---
 
@@ -101,6 +106,7 @@ help:
 	@echo "  make build-windows - Windows 版のみビルド"
 	@echo "  make build-front   - フロントエンドのみビルド"
 	@echo "  make build-back    - バックエンド（Go）のみビルド"
+	@echo "  make dev-wails     - Wails dev（xvfb 付き・ヘッドレス向け）"
 	@echo ""
 	@echo "品質チェック:"
 	@echo "  make lint         - 全体の Lint（golangci-lint + ESLint + vue-tsc）"

@@ -13,6 +13,8 @@ RUN apt-get update \
     libgtk-3-dev \
     libwebkit2gtk-4.1-dev \
     mingw-w64 \
+    xvfb \
+    xauth \
   && rm -rf /var/lib/apt/lists/*
 
 # Wails は webkit2gtk-4.0 を参照するが、Debian Bookworm+ では 4.1 のみ提供されるため互換用シンボリックリンクを作成
