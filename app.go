@@ -79,7 +79,9 @@ func (a *App) startup(ctx context.Context) {
 	automationRepo := sqlite.NewAutomationRuleRepository(db)
 	settingsRepo := sqlite.NewAppSettingsRepository(db)
 
-	credStore := vrchatapi.NewKeyringCredentialStore()
+	credStore := vrchatapi.NewAutoCredentialStore(dataDir, func(msg string) {
+		runtime.LogWarning(ctx, msg)
+	})
 	apiClient := vrchatapi.NewClient("")
 	if token, err := credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser); err == nil && token != "" {
 		apiClient.SetAuthToken(token)
