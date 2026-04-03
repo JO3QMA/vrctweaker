@@ -26,7 +26,7 @@ export const WithSampleUser: Story = {
       return { selected };
     },
     template: `
-      <div style="max-width: 42rem">
+      <div style="max-width: 42rem; height: 28rem; display: flex; flex-direction: column; min-height: 0">
         <FriendsDetailPanel
           :selected="selected"
           @favorite-change="(f, v) => { f.isFavorite = v }"

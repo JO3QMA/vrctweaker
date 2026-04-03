@@ -1,10 +1,5 @@
 <template>
-  <div
-    v-if="selected"
-    ref="detailRoot"
-    class="friend-detail"
-    @scroll="onScroll"
-  >
+  <div v-if="selected" ref="detailRoot" class="friend-detail">
     <el-card
       class="friend-detail-card"
       shadow="never"
@@ -234,7 +229,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import VrcStatusTag from "../../components/VrcStatusTag.vue";
 import type { UserCacheDTO } from "../../wails/app";
 import {
@@ -251,6 +246,27 @@ const props = defineProps<{
 const detailRoot = ref<HTMLElement | null>(null);
 const nameAnchor = ref<HTMLElement | null>(null);
 const stickyHeaderVisible = ref(false);
+
+let cardBodyScrollEl: HTMLElement | null = null;
+
+function getCardBodyEl(): HTMLElement | null {
+  return detailRoot.value?.querySelector(".el-card__body") ?? null;
+}
+
+function detachCardBodyScroll() {
+  if (cardBodyScrollEl) {
+    cardBodyScrollEl.removeEventListener("scroll", onScroll);
+    cardBodyScrollEl = null;
+  }
+}
+
+function attachCardBodyScroll() {
+  detachCardBodyScroll();
+  const body = getCardBodyEl();
+  if (!body) return;
+  cardBodyScrollEl = body;
+  body.addEventListener("scroll", onScroll, { passive: true });
+}
 
 const emit = defineEmits<{
   favoriteChange: [user: UserCacheDTO, isFavorite: boolean];
@@ -271,11 +287,12 @@ function onFavoriteUpdate(val: boolean | string | number | undefined) {
 }
 
 function updateStickyHeaderVisibility() {
-  const root = detailRoot.value;
+  const body = getCardBodyEl();
   const anchor = nameAnchor.value;
-  if (!root || !anchor) return;
-  stickyHeaderVisible.value =
-    root.scrollTop >= Math.max(anchor.offsetTop - 8, 0);
+  if (!body || !anchor) return;
+  const bodyRect = body.getBoundingClientRect();
+  const anchorRect = anchor.getBoundingClientRect();
+  stickyHeaderVisible.value = anchorRect.top <= bodyRect.top + 8;
 }
 
 function onScroll() {
@@ -283,17 +300,28 @@ function onScroll() {
 }
 
 watch(
-  () => props.selected?.vrcUserId,
-  async () => {
+  () => props.selected,
+  async (sel, prev) => {
+    detachCardBodyScroll();
     stickyHeaderVisible.value = false;
+    if (!sel) return;
     await nextTick();
-    if (detailRoot.value) detailRoot.value.scrollTop = 0;
+    attachCardBodyScroll();
+    const body = getCardBodyEl();
+    if (body && (!prev || prev.vrcUserId !== sel.vrcUserId)) {
+      body.scrollTop = 0;
+    }
     updateStickyHeaderVisibility();
   },
+  { immediate: true },
 );
 
 onMounted(() => {
-  updateStickyHeaderVisibility();
+  void nextTick(() => updateStickyHeaderVisibility());
+});
+
+onUnmounted(() => {
+  detachCardBodyScroll();
 });
 </script>
 
@@ -301,12 +329,25 @@ onMounted(() => {
 .friend-detail {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .friend-detail-card {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   background: var(--bg-secondary) !important;
   border-color: var(--border) !important;
+}
+
+.friend-detail-card :deep(.el-card__body) {
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .detail-sticky-header {
