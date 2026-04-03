@@ -23,6 +23,22 @@ export function friendProfileBannerUrl(f: UserCacheDTO): string | undefined {
   );
 }
 
+/**
+ * フレンド詳細のコンパクトヘッダーを出すか。
+ * 未スクロールでは出さず、表示名行がスクロール領域上端付近まで来たときだけ出す。
+ */
+export function friendDetailStickyHeaderVisible(opts: {
+  scrollTop: number;
+  anchorTopViewport: number;
+  bodyTopViewport: number;
+  edgeSlopPx?: number;
+}): boolean {
+  const slop = opts.edgeSlopPx ?? 8;
+  return (
+    opts.scrollTop > 0 && opts.anchorTopViewport <= opts.bodyTopViewport + slop
+  );
+}
+
 export function jsonStringArray(raw: string | undefined): string[] {
   if (!raw?.trim()) return [];
   try {

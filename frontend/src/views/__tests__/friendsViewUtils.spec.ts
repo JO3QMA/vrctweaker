@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  friendDetailStickyHeaderVisible,
   friendIsOffline,
   friendProfileBannerUrl,
   friendThumbUrl,
@@ -17,6 +18,38 @@ function u(
     ...partial,
   } as UserCacheDTO;
 }
+
+describe("friendDetailStickyHeaderVisible", () => {
+  it("is false when not scrolled yet even if name is near top", () => {
+    expect(
+      friendDetailStickyHeaderVisible({
+        scrollTop: 0,
+        anchorTopViewport: 100,
+        bodyTopViewport: 100,
+      }),
+    ).toBe(false);
+  });
+
+  it("is false when scrolled but name is still below header band", () => {
+    expect(
+      friendDetailStickyHeaderVisible({
+        scrollTop: 40,
+        anchorTopViewport: 200,
+        bodyTopViewport: 100,
+      }),
+    ).toBe(false);
+  });
+
+  it("is true when scrolled and name row reaches body top band", () => {
+    expect(
+      friendDetailStickyHeaderVisible({
+        scrollTop: 80,
+        anchorTopViewport: 100,
+        bodyTopViewport: 100,
+      }),
+    ).toBe(true);
+  });
+});
 
 describe("friendIsOffline", () => {
   it("treats empty and offline as offline", () => {

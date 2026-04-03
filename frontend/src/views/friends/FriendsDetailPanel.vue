@@ -234,6 +234,7 @@ import VrcStatusTag from "../../components/VrcStatusTag.vue";
 import type { UserCacheDTO } from "../../wails/app";
 import {
   copyDisplayName,
+  friendDetailStickyHeaderVisible,
   friendProfileBannerUrl,
   friendThumbUrl,
   jsonStringArray,
@@ -292,7 +293,11 @@ function updateStickyHeaderVisibility() {
   if (!body || !anchor) return;
   const bodyRect = body.getBoundingClientRect();
   const anchorRect = anchor.getBoundingClientRect();
-  stickyHeaderVisible.value = anchorRect.top <= bodyRect.top + 8;
+  stickyHeaderVisible.value = friendDetailStickyHeaderVisible({
+    scrollTop: body.scrollTop,
+    anchorTopViewport: anchorRect.top,
+    bodyTopViewport: bodyRect.top,
+  });
 }
 
 function onScroll() {
@@ -357,21 +362,32 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.55rem;
-  padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid var(--border);
+  box-sizing: border-box;
+  max-height: 0;
+  min-height: 0;
+  padding: 0 0.75rem;
+  overflow: hidden;
+  border-bottom: 0 solid var(--border);
   background: color-mix(in srgb, var(--bg-secondary) 92%, #000);
   backdrop-filter: blur(6px);
   opacity: 0;
-  transform: translateY(-6px);
+  transform: translateY(-0.35rem);
   pointer-events: none;
   transition:
+    max-height 0.2s ease,
     opacity 0.15s ease,
-    transform 0.15s ease;
+    transform 0.15s ease,
+    padding 0.2s ease,
+    border-bottom-width 0.2s ease;
 }
 
 .detail-sticky-header.visible {
+  max-height: 3.5rem;
+  padding: 0.55rem 0.75rem;
+  border-bottom-width: 1px;
   opacity: 1;
   transform: translateY(0);
+  pointer-events: auto;
 }
 
 .detail-sticky-avatar {
