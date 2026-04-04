@@ -235,7 +235,11 @@
             </el-descriptions>
           </el-tab-pane>
           <el-tab-pane label="遭遇履歴" name="encounters" lazy>
-            <EncounterHistoryList mode="user" :user-id="selected.vrcUserId" />
+            <EncounterHistoryList
+              mode="user"
+              :user-id="selected.vrcUserId"
+              hide-display-name-column
+            />
           </el-tab-pane>
         </el-tabs>
       </div>

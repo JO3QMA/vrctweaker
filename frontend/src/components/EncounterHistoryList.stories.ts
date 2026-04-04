@@ -33,6 +33,7 @@ export const ByUser: Story = {
   args: {
     mode: "user",
     userId: "usr_story",
+    hideDisplayNameColumn: true,
   },
   render: (args) => ({
     components: { EncounterHistoryList },

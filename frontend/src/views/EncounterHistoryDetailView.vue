@@ -15,6 +15,7 @@
       :mode="listMode"
       :user-id="vrcUserId"
       :world-id="worldId"
+      :hide-display-name-column="listMode === 'user'"
     />
   </div>
 </template>

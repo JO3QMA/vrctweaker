@@ -65,6 +65,25 @@ describe("EncounterHistoryList", () => {
     expect(wailsApp.App.encountersByWorldID).not.toHaveBeenCalled();
   });
 
+  it("hides display name column when hideDisplayNameColumn is true", async () => {
+    vi.mocked(wailsApp.App.encountersByVRCUserID).mockResolvedValue([
+      sampleEncounter,
+    ]);
+
+    const wrapper = mount(EncounterHistoryList, {
+      props: {
+        mode: "user",
+        userId: "u1",
+        hideDisplayNameColumn: true,
+      },
+    });
+    await flushPromises();
+
+    const headerTexts = wrapper.findAll("th").map((th) => th.text());
+    expect(headerTexts.some((t) => t.includes("表示名"))).toBe(false);
+    expect(headerTexts.some((t) => t.includes("ワールド名"))).toBe(true);
+  });
+
   it("shows error alert when fetch fails", async () => {
     vi.mocked(wailsApp.App.encountersByVRCUserID).mockRejectedValue(
       new Error("network down"),

@@ -23,7 +23,12 @@
             {{ row.leftAt ? formatEncounteredAt(row.leftAt) : "—" }}
           </template>
         </el-table-column>
-        <el-table-column label="表示名" min-width="120" prop="displayName" />
+        <el-table-column
+          v-if="!hideDisplayNameColumn"
+          label="表示名"
+          min-width="120"
+          prop="displayName"
+        />
         <el-table-column label="ワールド名" min-width="120">
           <template #default="{ row }">
             <span :title="row.worldId || ''">
@@ -46,11 +51,20 @@ import { computed, ref, watch } from "vue";
 import { App, type UserEncounterDTO } from "../wails/app";
 import { formatEncounteredAt } from "../utils/formatEncounteredAt";
 
-const props = defineProps<{
-  mode: "user" | "world";
-  userId?: string;
-  worldId?: string;
-}>();
+const props = withDefaults(
+  defineProps<{
+    mode: "user" | "world";
+    userId?: string;
+    worldId?: string;
+    /** 同一ユーザーのプロフィール内など、表示名が自明なときは true */
+    hideDisplayNameColumn?: boolean;
+  }>(),
+  {
+    hideDisplayNameColumn: false,
+    userId: undefined,
+    worldId: undefined,
+  },
+);
 
 const loading = ref(false);
 const error = ref<string | null>(null);
