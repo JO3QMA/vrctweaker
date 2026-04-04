@@ -260,6 +260,7 @@ onUnmounted(() => {
   border-color: var(--border) !important;
   width: 100%;
   min-width: 0;
+  padding: 0;
 }
 
 .section-card :deep(.el-card__header) {

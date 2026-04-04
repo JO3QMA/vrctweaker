@@ -189,6 +189,6 @@ a:hover {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem 1.25rem;
+  padding: 0;
   margin-bottom: 1.5rem;
 }
