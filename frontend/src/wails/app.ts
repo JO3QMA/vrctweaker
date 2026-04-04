@@ -322,6 +322,10 @@ function reloadDevWailsScriptsOnce(): Promise<void> {
 /**
  * Wails dev over Vite can leave `/wails/*.js` in the DOM before `window.go` is
  * ready (IPC/WebSocket race). Wait with rAF (no setTimeout) before falling back.
+ *
+ * Worst case in `callApp`: up to 360 frames here, then (once per page load) script
+ * reload plus 180 more frames — roughly ~6s at 60fps. Only affects `wails dev`
+ * startup races; Vitest sets `MODE === "test"` and skips this path.
  */
 function waitForAppBindings(
   maxFrames: number,
@@ -357,6 +361,9 @@ export function isWailsRuntime(): boolean {
  * case the promise from `fn(app)` rejects and the error propagates. Callers must
  * use try/catch or `.catch()` for backend failures — do not assume errors are
  * swallowed or replaced by `fallback`.
+ *
+ * In DEV, when the page includes Wails script tags, this may wait many rAF ticks
+ * (see `waitForAppBindings`) and optionally reload scripts once before giving up.
  */
 export async function callApp<T>(
   fn: (app: AppBindings) => Promise<T>,

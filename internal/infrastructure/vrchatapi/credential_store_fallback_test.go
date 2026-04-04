@@ -43,6 +43,60 @@ func (v *variablePrimary) Set(_, _, password string) error {
 
 func (*variablePrimary) Delete(string, string) error { return nil }
 
+// memoryFileCredentialStore is an in-memory CredentialStore for tests (injectable Delete errors).
+type memoryFileCredentialStore struct {
+	secret    string
+	deleteErr error
+}
+
+func (m *memoryFileCredentialStore) Get(string, string) (string, error) {
+	if m.secret == "" {
+		return "", errors.New("not found")
+	}
+	return m.secret, nil
+}
+
+func (m *memoryFileCredentialStore) Set(_, _, password string) error {
+	m.secret = password
+	return nil
+}
+
+func (m *memoryFileCredentialStore) Delete(string, string) error {
+	if m.deleteErr != nil {
+		return m.deleteErr
+	}
+	m.secret = ""
+	return nil
+}
+
+// Documents rare edge case: primary Set succeeded but file Delete failed, so old file token remains;
+// if primary Get later fails, Get returns that stale file value.
+func TestCredentialStoreWithFileFallback_StaleFileWhenDeleteFailsAfterPrimarySet(t *testing.T) {
+	p := &variablePrimary{failSet: true, failGet: true}
+	fileMem := &memoryFileCredentialStore{deleteErr: errors.New("permission denied")}
+	var warned bool
+	s := newCredentialStoreWithFileFallback(p, fileMem, func(string) { warned = true })
+
+	if err := s.Set(CredentialService, CredentialUser, "tokenA"); err != nil {
+		t.Fatalf("first Set (file fallback): %v", err)
+	}
+	p.failSet = false
+	if err := s.Set(CredentialService, CredentialUser, "tokenB"); err != nil {
+		t.Fatalf("second Set (keyring): %v", err)
+	}
+	if !warned {
+		t.Fatal("expected warn callback after failed file Delete")
+	}
+
+	got, err := s.Get(CredentialService, CredentialUser)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got != "tokenA" {
+		t.Fatalf("Get: want stale file token tokenA, got %q", got)
+	}
+}
+
 // Regression: after keyring Set succeeds, stale file fallback from an earlier failed Set must not be used when Get falls back to file.
 func TestCredentialStoreWithFileFallback_SetClearsFileAfterPrimarySucceeds(t *testing.T) {
 	dir := t.TempDir()

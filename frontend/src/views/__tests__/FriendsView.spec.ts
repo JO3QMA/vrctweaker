@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createRouter, createWebHashHistory } from "vue-router";
+import { ElMessage } from "element-plus";
 import FriendsView from "../FriendsView.vue";
 import type { UserCacheDTO } from "../../wails/app";
 
@@ -238,5 +239,26 @@ describe("FriendsView", () => {
     expect(mode.checked).toBe(true);
     expect(wrapper.find(".friend-card.active").exists()).toBe(true);
     expect(wrapper.text()).toContain("OffUser");
+  });
+
+  it("warns and removes vrcUserId query when id is not in friends list", async () => {
+    const noopHandler = { close: () => {} };
+    const warnSpy = vi
+      .spyOn(ElMessage, "warning")
+      .mockImplementation(() => noopHandler);
+    mockFriends.mockResolvedValue([
+      minimalUser({
+        vrcUserId: "1",
+        displayName: "OnlyOne",
+        status: "join me",
+      }),
+    ]);
+    const wrapper = await mountFriendsView({ vrcUserId: "missing-id" });
+    await flushPromises();
+
+    expect(warnSpy).toHaveBeenCalled();
+    const router = wrapper.vm.$router;
+    expect(router.currentRoute.value.query.vrcUserId).toBeUndefined();
+    warnSpy.mockRestore();
   });
 });

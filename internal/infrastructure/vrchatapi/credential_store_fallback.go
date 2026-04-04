@@ -10,13 +10,13 @@ import (
 type credentialStoreWithFileFallback struct {
 	mu      sync.Mutex
 	primary CredentialStore
-	file    *FileCredentialStore
+	file    CredentialStore
 	warn    func(string)
 }
 
 func newCredentialStoreWithFileFallback(
 	primary CredentialStore,
-	file *FileCredentialStore,
+	file CredentialStore,
 	warn func(string),
 ) CredentialStore {
 	if warn == nil {
@@ -43,6 +43,8 @@ func (s *credentialStoreWithFileFallback) Set(service, user, password string) er
 	defer s.mu.Unlock()
 	err := s.primary.Set(service, user, password)
 	if err == nil {
+		// If Delete fails, the old file token may remain; a later Get that misses
+		// the primary could still return that stale file value (rare: e.g. os.Remove error).
 		if delErr := s.file.Delete(service, user); delErr != nil {
 			s.warn("credential store: file fallback cleanup failed after keyring Set (" + delErr.Error() + ")")
 		}

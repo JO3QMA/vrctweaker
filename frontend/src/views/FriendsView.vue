@@ -40,6 +40,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
 import FriendsDetailPane from "./friends/FriendsDetailPane.vue";
 import FriendsListPanel from "./friends/FriendsListPanel.vue";
 import FriendsViewToolbar from "./friends/FriendsViewToolbar.vue";
@@ -100,6 +101,13 @@ const emptyListMessage = computed(() => {
   return "該当するフレンドはいません";
 });
 
+async function stripVrcUserIdFromQuery(): Promise<void> {
+  const q = { ...route.query } as Record<string, string | string[] | undefined>;
+  if (q.vrcUserId == null) return;
+  delete q.vrcUserId;
+  await router.replace({ path: route.path, query: q });
+}
+
 async function applyVrcUserIdFromQuery(): Promise<void> {
   const id = firstQueryString(route.query.vrcUserId).trim();
   if (!id) return;
@@ -108,13 +116,17 @@ async function applyVrcUserIdFromQuery(): Promise<void> {
     await loadFriends();
     f = friends.value.find((x) => x.vrcUserId === id);
   }
-  if (!f) return;
+  if (!f) {
+    ElMessage.warning(
+      "指定されたユーザーはフレンド一覧に見つかりませんでした。",
+    );
+    await stripVrcUserIdFromQuery();
+    return;
+  }
   selected.value = f;
   showOfflineList.value = friendIsOffline(f.status);
   displayNameQuery.value = "";
-  const q = { ...route.query } as Record<string, string | string[] | undefined>;
-  delete q.vrcUserId;
-  await router.replace({ path: route.path, query: q });
+  await stripVrcUserIdFromQuery();
 }
 
 onMounted(async () => {
