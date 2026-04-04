@@ -38,13 +38,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import FriendsDetailPane from "./friends/FriendsDetailPane.vue";
 import FriendsListPanel from "./friends/FriendsListPanel.vue";
 import FriendsViewToolbar from "./friends/FriendsViewToolbar.vue";
 import { friendIsOffline } from "./friends/friendsViewUtils";
 import { App } from "../wails/app";
 import type { UserCacheDTO } from "../wails/app";
+
+const route = useRoute();
+const router = useRouter();
+
+function firstQueryString(v: unknown): string {
+  if (v == null) return "";
+  if (typeof v === "string") return v;
+  if (Array.isArray(v)) {
+    for (const x of v) {
+      if (typeof x === "string") return x;
+    }
+  }
+  return "";
+}
 
 /** false: オンラインのみ / true: オフラインのみ */
 const showOfflineList = ref(false);
@@ -85,10 +100,35 @@ const emptyListMessage = computed(() => {
   return "該当するフレンドはいません";
 });
 
+async function applyVrcUserIdFromQuery(): Promise<void> {
+  const id = firstQueryString(route.query.vrcUserId).trim();
+  if (!id) return;
+  let f = friends.value.find((x) => x.vrcUserId === id);
+  if (!f) {
+    await loadFriends();
+    f = friends.value.find((x) => x.vrcUserId === id);
+  }
+  if (!f) return;
+  selected.value = f;
+  showOfflineList.value = friendIsOffline(f.status);
+  displayNameQuery.value = "";
+  const q = { ...route.query } as Record<string, string | string[] | undefined>;
+  delete q.vrcUserId;
+  await router.replace({ path: route.path, query: q });
+}
+
 onMounted(async () => {
   await loadFriends();
   isLoggedIn.value = await App.isLoggedIn();
+  await applyVrcUserIdFromQuery();
 });
+
+watch(
+  () => firstQueryString(route.query.vrcUserId),
+  (id) => {
+    if (id.trim() !== "") void applyVrcUserIdFromQuery();
+  },
+);
 
 async function loadFriends() {
   loading.value = true;

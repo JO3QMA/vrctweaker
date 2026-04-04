@@ -68,7 +68,7 @@
                 link
                 type="primary"
                 class="timeline-link"
-                @click="openUserHistory(row.vrcUserId)"
+                @click="openUserFromEncounter(row)"
               >
                 {{ row.displayName }}
               </el-button>
@@ -104,8 +104,8 @@ import { useRouter } from "vue-router";
 import CollapsibleSectionCard from "../components/CollapsibleSectionCard.vue";
 import {
   App,
-  type UserEncounterDTO,
   type ActivityStatsDTO,
+  type UserEncounterDTO,
 } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
 import PlayTimeChart, {
@@ -179,8 +179,26 @@ function formatEncounteredAt(iso: string): string {
   }
 }
 
-function openUserHistory(vrcUserId: string): void {
-  openEncounterHistoryWindow(router, "user", vrcUserId);
+async function openUserFromEncounter(row: UserEncounterDTO): Promise<void> {
+  const vrcUserId = row.vrcUserId;
+  if (!vrcUserId) return;
+  const displayName = row.displayName ?? "";
+  try {
+    const nav = await App.resolveUserProfileNavigation(vrcUserId);
+    if (nav.openInFriendsView) {
+      await router.push({ name: "friends", query: { vrcUserId } });
+    } else {
+      await router.push({
+        name: "user-profile",
+        query: { vrcUserId, displayName },
+      });
+    }
+  } catch {
+    await router.push({
+      name: "user-profile",
+      query: { vrcUserId, displayName },
+    });
+  }
 }
 
 function openWorldHistory(worldId: string): void {

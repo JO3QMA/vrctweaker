@@ -320,44 +320,57 @@ type UserCacheDTO struct {
 	TagsJSON                    string `json:"tagsJson,omitempty"`
 }
 
+// UserProfileNavigationDTO is returned by ResolveUserProfileNavigation for routing (friends vs profile view).
+type UserProfileNavigationDTO struct {
+	User              UserCacheDTO `json:"user"`
+	OpenInFriendsView bool         `json:"openInFriendsView"`
+}
+
+func toUserCacheDTO(f *identity.UserCache) UserCacheDTO {
+	if f == nil {
+		return UserCacheDTO{}
+	}
+	dto := UserCacheDTO{
+		VRCUserID:                   f.VRCUserID,
+		DisplayName:                 f.DisplayName,
+		Status:                      f.Status,
+		IsFavorite:                  f.IsFavorite,
+		LastUpdated:                 f.LastUpdated.Format(time.RFC3339),
+		Username:                    f.Username,
+		StatusDescription:           f.StatusDescription,
+		State:                       f.UserState,
+		CurrentAvatarThumbnailImage: f.AvatarThumbnailURL,
+		UserIcon:                    f.UserIconURL,
+		ProfilePicOverrideThumbnail: f.ProfilePicOverrideThumbnail,
+		Bio:                         f.Bio,
+		BioLinksJSON:                f.BioLinksJSON,
+		CurrentAvatarImageURL:       f.CurrentAvatarImageURL,
+		CurrentAvatarTagsJSON:       f.CurrentAvatarTagsJSON,
+		DeveloperType:               f.DeveloperType,
+		FriendKey:                   f.FriendKey,
+		ImageURL:                    f.ImageURL,
+		LastPlatform:                f.LastPlatform,
+		Location:                    f.Location,
+		LastLogin:                   f.LastLogin,
+		LastActivity:                f.LastActivity,
+		LastMobile:                  f.LastMobile,
+		Platform:                    f.Platform,
+		ProfilePicOverride:          f.ProfilePicOverride,
+		TagsJSON:                    f.TagsJSON,
+	}
+	if f.FirstSeenAt != nil {
+		dto.FirstSeenAt = f.FirstSeenAt.Format(time.RFC3339)
+	}
+	if f.LastContactAt != nil {
+		dto.LastContactAt = f.LastContactAt.Format(time.RFC3339)
+	}
+	return dto
+}
+
 func toUserCacheDTOs(list []*identity.UserCache) []UserCacheDTO {
 	out := make([]UserCacheDTO, len(list))
 	for i, f := range list {
-		dto := UserCacheDTO{
-			VRCUserID:                   f.VRCUserID,
-			DisplayName:                 f.DisplayName,
-			Status:                      f.Status,
-			IsFavorite:                  f.IsFavorite,
-			LastUpdated:                 f.LastUpdated.Format(time.RFC3339),
-			Username:                    f.Username,
-			StatusDescription:           f.StatusDescription,
-			State:                       f.UserState,
-			CurrentAvatarThumbnailImage: f.AvatarThumbnailURL,
-			UserIcon:                    f.UserIconURL,
-			ProfilePicOverrideThumbnail: f.ProfilePicOverrideThumbnail,
-			Bio:                         f.Bio,
-			BioLinksJSON:                f.BioLinksJSON,
-			CurrentAvatarImageURL:       f.CurrentAvatarImageURL,
-			CurrentAvatarTagsJSON:       f.CurrentAvatarTagsJSON,
-			DeveloperType:               f.DeveloperType,
-			FriendKey:                   f.FriendKey,
-			ImageURL:                    f.ImageURL,
-			LastPlatform:                f.LastPlatform,
-			Location:                    f.Location,
-			LastLogin:                   f.LastLogin,
-			LastActivity:                f.LastActivity,
-			LastMobile:                  f.LastMobile,
-			Platform:                    f.Platform,
-			ProfilePicOverride:          f.ProfilePicOverride,
-			TagsJSON:                    f.TagsJSON,
-		}
-		if f.FirstSeenAt != nil {
-			dto.FirstSeenAt = f.FirstSeenAt.Format(time.RFC3339)
-		}
-		if f.LastContactAt != nil {
-			dto.LastContactAt = f.LastContactAt.Format(time.RFC3339)
-		}
-		out[i] = dto
+		out[i] = toUserCacheDTO(f)
 	}
 	return out
 }

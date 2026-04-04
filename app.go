@@ -967,6 +967,18 @@ func (a *App) Friends() ([]UserCacheDTO, error) {
 	return toUserCacheDTOs(list), nil
 }
 
+// ResolveUserProfileForNavigation refreshes users_cache when logged in (GET /users/{id}) and returns routing hints.
+func (a *App) ResolveUserProfileNavigation(vrcUserID string) (UserProfileNavigationDTO, error) {
+	u, openFriends, err := a.identity.ResolveUserProfileForNavigation(a.ctx, vrcUserID)
+	if err != nil {
+		return UserProfileNavigationDTO{}, err
+	}
+	return UserProfileNavigationDTO{
+		User:              toUserCacheDTO(u),
+		OpenInFriendsView: openFriends,
+	}, nil
+}
+
 // SetFavorite updates a friend's favorite flag.
 func (a *App) SetFavorite(vrcUserID string, favorite bool) error {
 	return a.identity.SetFavorite(a.ctx, vrcUserID, favorite)

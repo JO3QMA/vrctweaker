@@ -20,6 +20,17 @@ export function activityViewWailsDecorator(
               Encounters: () => Promise.resolve(encounters),
               GetActivityStats: (_from: string, _to: string) =>
                 Promise.resolve(stats),
+              ResolveUserProfileNavigation: (id: string) =>
+                Promise.resolve({
+                  user: {
+                    vrcUserId: id,
+                    displayName: "mock",
+                    status: "",
+                    isFavorite: false,
+                    lastUpdated: "",
+                  },
+                  openInFriendsView: false,
+                }),
             } as unknown as NonNullable<
               NonNullable<typeof window.go>["main"]
             >["App"],

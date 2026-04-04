@@ -118,6 +118,12 @@ export interface UserCacheDTO {
   tagsJson?: string;
 }
 
+/** ResolveUserProfileNavigation の戻り値（フレンド画面 vs ユーザープロフィール画面）。 */
+export interface UserProfileNavigationDTO {
+  user: UserCacheDTO;
+  openInFriendsView: boolean;
+}
+
 export interface PathSettingsDTO {
   vrchatPathWindows: string;
   steamPathLinux: string;
@@ -222,6 +228,9 @@ interface AppBindings {
   RotateEncounters(): Promise<number>;
   GetActivityStats(fromISO: string, toISO: string): Promise<ActivityStatsDTO>;
   Friends(): Promise<UserCacheDTO[]>;
+  ResolveUserProfileNavigation(
+    vrcUserID: string,
+  ): Promise<UserProfileNavigationDTO>;
   SetFavorite(vrcUserId: string, favorite: boolean): Promise<void>;
   SetStatus(status: string): Promise<void>;
   Login(
@@ -515,6 +524,20 @@ export const App = {
   },
   async friends(): Promise<UserCacheDTO[]> {
     return callApp((a) => a.Friends(), []);
+  },
+  async resolveUserProfileNavigation(
+    vrcUserID: string,
+  ): Promise<UserProfileNavigationDTO> {
+    return callApp((a) => a.ResolveUserProfileNavigation(vrcUserID), {
+      user: {
+        vrcUserId: vrcUserID,
+        displayName: "",
+        status: "",
+        isFavorite: false,
+        lastUpdated: "",
+      },
+      openInFriendsView: false,
+    });
   },
   async setFavorite(vrcUserId: string, favorite: boolean): Promise<void> {
     return callApp((a) => a.SetFavorite(vrcUserId, favorite), undefined);

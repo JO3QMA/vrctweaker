@@ -103,6 +103,17 @@ export function getMockWailsInitScript(): string {
         RotateEncounters: () => Promise.resolve(0),
         GetActivityStats: () => Promise.resolve({ dailyPlaySeconds: [], topWorlds: [] }),
         Friends: () => Promise.resolve([]),
+        ResolveUserProfileNavigation: (_id: string) =>
+          Promise.resolve({
+            user: {
+              vrcUserId: _id,
+              displayName: '',
+              status: '',
+              isFavorite: false,
+              lastUpdated: '',
+            },
+            openInFriendsView: false,
+          }),
         SetFavorite: () => Promise.resolve(),
         SetStatus: () => Promise.resolve(),
         Login: () => Promise.resolve({ ok: false, error: 'E2E mock' }),
