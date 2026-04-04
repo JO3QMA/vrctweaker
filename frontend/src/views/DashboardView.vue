@@ -39,6 +39,7 @@ import { App, type LaunchProfileDTO } from "../wails/app";
 
 const defaultProfile = ref<LaunchProfileDTO | null>(null);
 const statusOptions = [
+  { label: "Active", value: "active" },
   { label: "Join Me", value: "join me" },
   { label: "Ask Me", value: "ask me" },
   { label: "Busy", value: "busy" },

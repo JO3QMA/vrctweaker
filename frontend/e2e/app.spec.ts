@@ -32,6 +32,7 @@ test.describe("VRChat Tweaker", () => {
       await expect(
         page.getByRole("button", { name: /VRChat 起動/ }),
       ).toBeVisible();
+      await expect(page.getByRole("button", { name: "Active" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Join Me" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Ask Me" })).toBeVisible();
       await expect(page.getByRole("button", { name: "Busy" })).toBeVisible();
