@@ -97,132 +97,147 @@
       </div>
 
       <div class="profile-details-wrap">
-        <h3 class="profile-details-heading">詳細情報</h3>
-        <el-descriptions :column="1" border size="small">
-          <el-descriptions-item v-if="selected.state" label="状態 (state)">
-            {{ selected.state }}
-          </el-descriptions-item>
-          <el-descriptions-item v-if="selected.location" label="ロケーション">
-            <span class="mono wrap">{{ selected.location }}</span>
-          </el-descriptions-item>
-          <el-descriptions-item
-            v-if="selected.developerType"
-            label="開発者種別"
-          >
-            {{ selected.developerType }}
-          </el-descriptions-item>
-          <el-descriptions-item
-            v-if="selected.lastPlatform || selected.platform"
-            label="プラットフォーム"
-          >
-            {{
-              [selected.platform, selected.lastPlatform]
-                .filter(Boolean)
-                .join(" / ")
-            }}
-          </el-descriptions-item>
-          <el-descriptions-item v-if="selected.lastLogin" label="最終ログイン">
-            {{ selected.lastLogin }}
-          </el-descriptions-item>
-          <el-descriptions-item
-            v-if="selected.lastActivity"
-            label="最終アクティビティ"
-          >
-            {{ selected.lastActivity }}
-          </el-descriptions-item>
-          <el-descriptions-item v-if="selected.lastMobile" label="最終モバイル">
-            {{ selected.lastMobile }}
-          </el-descriptions-item>
-          <el-descriptions-item
-            v-if="jsonStringArray(selected.tagsJson).length"
-            label="タグ"
-          >
-            <el-tag
-              v-for="tag in jsonStringArray(selected.tagsJson)"
-              :key="tag"
-              size="small"
-              class="tag-chip"
-            >
-              {{ tag }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item
-            v-if="jsonStringArray(selected.currentAvatarTagsJson).length"
-            label="アバタータグ"
-          >
-            <el-tag
-              v-for="tag in jsonStringArray(selected.currentAvatarTagsJson)"
-              :key="tag"
-              size="small"
-              class="tag-chip"
-            >
-              {{ tag }}
-            </el-tag>
-          </el-descriptions-item>
-          <el-descriptions-item
-            v-if="selected.currentAvatarImageUrl"
-            label="アバター画像 URL"
-          >
-            <a
-              :href="selected.currentAvatarImageUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="wrap"
-              >{{ selected.currentAvatarImageUrl }}</a
-            >
-          </el-descriptions-item>
-          <el-descriptions-item
-            v-if="selected.userIcon"
-            label="ユーザーアイコン URL"
-          >
-            <a
-              :href="selected.userIcon"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="wrap"
-              >{{ selected.userIcon }}</a
-            >
-          </el-descriptions-item>
-          <el-descriptions-item v-if="selected.imageUrl" label="imageUrl">
-            <a
-              :href="selected.imageUrl"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="wrap"
-              >{{ selected.imageUrl }}</a
-            >
-          </el-descriptions-item>
-          <el-descriptions-item
-            v-if="selected.profilePicOverride"
-            label="プロフィール画像 (上書き)"
-          >
-            <a
-              :href="selected.profilePicOverride"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="wrap"
-              >{{ selected.profilePicOverride }}</a
-            >
-          </el-descriptions-item>
-          <el-descriptions-item
-            v-if="selected.profilePicOverrideThumbnail"
-            label="プロフィール画像サムネ"
-          >
-            <a
-              :href="selected.profilePicOverrideThumbnail"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="wrap"
-              >{{ selected.profilePicOverrideThumbnail }}</a
-            >
-          </el-descriptions-item>
-          <el-descriptions-item v-if="selected.friendKey" label="friendKey">
-            <span class="mono wrap">{{ selected.friendKey }}</span>
-          </el-descriptions-item>
-          <el-descriptions-item label="キャッシュ更新">
-            {{ selected.lastUpdated }}
-          </el-descriptions-item>
-        </el-descriptions>
+        <el-tabs v-model="detailTab" class="profile-detail-tabs">
+          <el-tab-pane label="詳細" name="detail">
+            <el-descriptions :column="1" border size="small">
+              <el-descriptions-item v-if="selected.state" label="状態 (state)">
+                {{ selected.state }}
+              </el-descriptions-item>
+              <el-descriptions-item
+                v-if="selected.location"
+                label="ロケーション"
+              >
+                <span class="mono wrap">{{ selected.location }}</span>
+              </el-descriptions-item>
+              <el-descriptions-item
+                v-if="selected.developerType"
+                label="開発者種別"
+              >
+                {{ selected.developerType }}
+              </el-descriptions-item>
+              <el-descriptions-item
+                v-if="selected.lastPlatform || selected.platform"
+                label="プラットフォーム"
+              >
+                {{
+                  [selected.platform, selected.lastPlatform]
+                    .filter(Boolean)
+                    .join(" / ")
+                }}
+              </el-descriptions-item>
+              <el-descriptions-item
+                v-if="selected.lastLogin"
+                label="最終ログイン"
+              >
+                {{ selected.lastLogin }}
+              </el-descriptions-item>
+              <el-descriptions-item
+                v-if="selected.lastActivity"
+                label="最終アクティビティ"
+              >
+                {{ selected.lastActivity }}
+              </el-descriptions-item>
+              <el-descriptions-item
+                v-if="selected.lastMobile"
+                label="最終モバイル"
+              >
+                {{ selected.lastMobile }}
+              </el-descriptions-item>
+              <el-descriptions-item
+                v-if="jsonStringArray(selected.tagsJson).length"
+                label="タグ"
+              >
+                <el-tag
+                  v-for="tag in jsonStringArray(selected.tagsJson)"
+                  :key="tag"
+                  size="small"
+                  class="tag-chip"
+                >
+                  {{ tag }}
+                </el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item
+                v-if="jsonStringArray(selected.currentAvatarTagsJson).length"
+                label="アバタータグ"
+              >
+                <el-tag
+                  v-for="tag in jsonStringArray(selected.currentAvatarTagsJson)"
+                  :key="tag"
+                  size="small"
+                  class="tag-chip"
+                >
+                  {{ tag }}
+                </el-tag>
+              </el-descriptions-item>
+              <el-descriptions-item
+                v-if="selected.currentAvatarImageUrl"
+                label="アバター画像 URL"
+              >
+                <a
+                  :href="selected.currentAvatarImageUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="wrap"
+                  >{{ selected.currentAvatarImageUrl }}</a
+                >
+              </el-descriptions-item>
+              <el-descriptions-item
+                v-if="selected.userIcon"
+                label="ユーザーアイコン URL"
+              >
+                <a
+                  :href="selected.userIcon"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="wrap"
+                  >{{ selected.userIcon }}</a
+                >
+              </el-descriptions-item>
+              <el-descriptions-item v-if="selected.imageUrl" label="imageUrl">
+                <a
+                  :href="selected.imageUrl"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="wrap"
+                  >{{ selected.imageUrl }}</a
+                >
+              </el-descriptions-item>
+              <el-descriptions-item
+                v-if="selected.profilePicOverride"
+                label="プロフィール画像 (上書き)"
+              >
+                <a
+                  :href="selected.profilePicOverride"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="wrap"
+                  >{{ selected.profilePicOverride }}</a
+                >
+              </el-descriptions-item>
+              <el-descriptions-item
+                v-if="selected.profilePicOverrideThumbnail"
+                label="プロフィール画像サムネ"
+              >
+                <a
+                  :href="selected.profilePicOverrideThumbnail"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="wrap"
+                  >{{ selected.profilePicOverrideThumbnail }}</a
+                >
+              </el-descriptions-item>
+              <el-descriptions-item v-if="selected.friendKey" label="friendKey">
+                <span class="mono wrap">{{ selected.friendKey }}</span>
+              </el-descriptions-item>
+              <el-descriptions-item label="キャッシュ更新">
+                {{ selected.lastUpdated }}
+              </el-descriptions-item>
+            </el-descriptions>
+          </el-tab-pane>
+          <el-tab-pane label="遭遇履歴" name="encounters" lazy>
+            <EncounterHistoryList mode="user" :user-id="selected.vrcUserId" />
+          </el-tab-pane>
+        </el-tabs>
       </div>
     </el-card>
   </div>
@@ -230,6 +245,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import EncounterHistoryList from "./EncounterHistoryList.vue";
 import VrcStatusTag from "./VrcStatusTag.vue";
 import type { UserCacheDTO } from "../wails/app";
 import {
@@ -243,6 +259,8 @@ import {
 const props = defineProps<{
   selected: UserCacheDTO | null;
 }>();
+
+const detailTab = ref<"detail" | "encounters">("detail");
 
 const detailRoot = ref<HTMLElement | null>(null);
 const nameAnchor = ref<HTMLElement | null>(null);
@@ -303,6 +321,17 @@ function updateStickyHeaderVisibility() {
 function onScroll() {
   updateStickyHeaderVisibility();
 }
+
+watch(detailTab, () => {
+  void nextTick(() => updateStickyHeaderVisibility());
+});
+
+watch(
+  () => props.selected?.vrcUserId,
+  () => {
+    detailTab.value = "detail";
+  },
+);
 
 watch(
   () => props.selected,
@@ -550,13 +579,20 @@ onUnmounted(() => {
 
 .profile-details-wrap {
   padding: 0 1rem 1rem;
+  min-height: 0;
 }
 
-.profile-details-heading {
-  margin: 0 0 0.5rem;
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--el-text-color-regular);
+.profile-detail-tabs {
+  min-height: 0;
+}
+
+.profile-detail-tabs :deep(.el-tabs__header) {
+  margin-bottom: 0.65rem;
+}
+
+.profile-detail-tabs :deep(.el-tabs__content),
+.profile-detail-tabs :deep(.el-tab-pane) {
+  min-height: 0;
 }
 
 .tag-chip {

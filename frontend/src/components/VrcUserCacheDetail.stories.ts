@@ -1,7 +1,22 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
 import { ref } from "vue";
 import VrcUserCacheDetail from "./VrcUserCacheDetail.vue";
+import type { UserEncounterDTO } from "../wails/app";
 import { sampleFriendsList } from "../views/friends/friendsSampleData";
+import { wailsEncountersByUserDecorator } from "./vrcUserCacheDetailStoryDecorator";
+
+const storyEncounters: UserEncounterDTO[] = [
+  {
+    id: "enc_sb_1",
+    vrcUserId: sampleFriendsList[0]!.vrcUserId,
+    displayName: sampleFriendsList[0]!.displayName,
+    instanceId: "instance~abc",
+    worldId: "wrld_sample_001",
+    worldDisplayName: "Storybook 用ワールド",
+    joinedAt: "2026-01-15T12:00:00+09:00",
+    leftAt: "2026-01-15T13:30:00+09:00",
+  },
+];
 
 const meta = {
   title: "Components/VrcUserCacheDetail",
@@ -19,6 +34,7 @@ export const WithSampleUser: Story = {
   args: {
     selected: null,
   },
+  decorators: [wailsEncountersByUserDecorator(storyEncounters)],
   render: () => ({
     components: { VrcUserCacheDetail },
     setup() {

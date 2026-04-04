@@ -18,6 +18,9 @@ describe("VrcUserCacheDetail", () => {
   it("renders profile content inside Element Plus card body", async () => {
     const wrapper = mount(VrcUserCacheDetail, {
       props: { selected: minimalUser() },
+      global: {
+        stubs: { EncounterHistoryList: true },
+      },
     });
     await flushPromises();
     await nextTick();
@@ -25,5 +28,8 @@ describe("VrcUserCacheDetail", () => {
     expect(wrapper.find(".friend-detail").exists()).toBe(true);
     expect(wrapper.find(".el-card__body").exists()).toBe(true);
     expect(wrapper.find(".profile-display-name").text()).toBe("Detail Test");
+    expect(wrapper.find(".el-tabs").exists()).toBe(true);
+    expect(wrapper.text()).toContain("遭遇履歴");
+    expect(wrapper.find(".el-descriptions").exists()).toBe(true);
   });
 });
