@@ -53,4 +53,27 @@ describe("ActivityView", () => {
     const encountersCard = wrapper.find(".section-card--encounters");
     expect(encountersCard.exists()).toBe(true);
   });
+
+  it("collapses playtime section when header toggle is clicked", async () => {
+    const router = createRouter({
+      history: createWebHashHistory(),
+      routes: [{ path: "/activity", component: ActivityView }],
+    });
+    await router.push("/activity");
+    await router.isReady();
+
+    const wrapper = mount(ActivityView, {
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+    await wrapper.vm.$nextTick();
+
+    const playtimeCard = wrapper.find(".section-card--playtime");
+    const toggle = playtimeCard.find(".section-card__toggle");
+    expect(toggle.attributes("aria-expanded")).toBe("true");
+
+    await toggle.trigger("click");
+    expect(playtimeCard.classes()).toContain("section-card--collapsed");
+    expect(toggle.attributes("aria-expanded")).toBe("false");
+  });
 });

@@ -3,22 +3,22 @@
     <h1 class="page-title">アクティビティ</h1>
 
     <!-- 統計セクション（直近14日） -->
-    <el-card class="section-card section-card--playtime" shadow="never">
-      <template #header>
-        <span>プレイ時間（直近14日）</span>
-      </template>
+    <CollapsibleSectionCard
+      class="section-card--playtime"
+      title="プレイ時間（直近14日）"
+    >
       <div v-if="statsLoading" class="loading">読み込み中…</div>
       <div v-else-if="!statsRangeFrom" class="empty-stats">
         データがありません
       </div>
       <PlayTimeChart v-else :series="dailyPlayChartSeries" />
-    </el-card>
+    </CollapsibleSectionCard>
 
     <!-- タイムラインセクション -->
-    <el-card class="section-card section-card--encounters" shadow="never">
-      <template #header>
-        <span>遭遇ログ（滞在区間）</span>
-      </template>
+    <CollapsibleSectionCard
+      class="section-card--encounters"
+      title="遭遇ログ（滞在区間）"
+    >
       <!-- フィルタ -->
       <div class="filters">
         <el-input
@@ -94,13 +94,14 @@
           </el-table-column>
         </el-table>
       </div>
-    </el-card>
+    </CollapsibleSectionCard>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
+import CollapsibleSectionCard from "../components/CollapsibleSectionCard.vue";
 import {
   App,
   type UserEncounterDTO,
@@ -280,6 +281,12 @@ onUnmounted(() => {
   max-height: 336px;
 }
 
+.section-card--playtime.section-card--collapsed {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+}
+
 .section-card--playtime :deep(.el-card__header) {
   flex-shrink: 0;
 }
@@ -309,6 +316,10 @@ onUnmounted(() => {
 
 .section-card--encounters {
   min-height: 320px;
+}
+
+.section-card--encounters.section-card--collapsed {
+  min-height: 0;
 }
 
 .section-card--encounters :deep(.el-card__body) {

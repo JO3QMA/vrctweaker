@@ -64,6 +64,7 @@ GitHub Issue の URL・番号、または `docs/ai_dlc/issues/` 等の Issue ド
 - `.cursor/rules/go-conventions.mdc`: Go の規約
 - `.cursor/rules/vue-conventions.mdc`: Vue/TypeScript の規約
 - `.cursor/rules/element-plus-ui.mdc`: Element Plus を UI フレームワークとして使う方針（`frontend` の Vue/TS）
+- `.cursor/rules/storybook-wails-ui.mdc`: Wails WebView の UI 変更・抽象化時は **Storybook 側も更新**（`frontend` の Vue/TS/CSS でヒット）
 
 ## スキル
 
