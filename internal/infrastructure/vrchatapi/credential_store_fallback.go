@@ -43,6 +43,9 @@ func (s *credentialStoreWithFileFallback) Set(service, user, password string) er
 	defer s.mu.Unlock()
 	err := s.primary.Set(service, user, password)
 	if err == nil {
+		if delErr := s.file.Delete(service, user); delErr != nil {
+			s.warn("credential store: file fallback cleanup failed after keyring Set (" + delErr.Error() + ")")
+		}
 		return nil
 	}
 	s.warn("credential store: keyring Set failed; using file fallback (" + err.Error() + ")")
