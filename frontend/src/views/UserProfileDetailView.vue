@@ -117,8 +117,10 @@ void load();
 .detail-wrap {
   flex: 1;
   min-height: 0;
+  min-width: 0;
+  width: 100%;
+  align-self: stretch;
   display: flex;
   flex-direction: column;
-  max-width: 42rem;
 }
 </style>

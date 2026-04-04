@@ -147,6 +147,9 @@ func (uc *IdentityUseCase) Login(ctx context.Context, username, password, twoFac
 		return fmt.Errorf("認証情報の保存に失敗しました: %w", err)
 	}
 	uc.apiClient.SetAuthToken(authToken)
+	if _, err := uc.GetCurrentUser(ctx, true); err != nil {
+		log.Printf("identity: current user after login: %v", err)
+	}
 	return nil
 }
 

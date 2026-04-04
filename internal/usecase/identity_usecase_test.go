@@ -285,8 +285,12 @@ func TestIdentityUseCase_Login(t *testing.T) {
 
 	t.Run("success_saves_token_and_sets_client", func(t *testing.T) {
 		credStore := vrchatapi.NewStubCredentialStore()
-		apiClient := &mockAPIClient{loginToken: "auth-token-123"}
-		uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo)
+		repo := &mockUserCacheRepo{}
+		apiClient := &mockAPIClient{
+			loginToken:     "auth-token-123",
+			getCurrentUser: &vrchatapi.CurrentUserProfile{ID: "usr_login", DisplayName: "LoginUser"},
+		}
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
 		err := uc.Login(ctx, "user", "pass", "")
 		if err != nil {
 			t.Fatalf("Login: %v", err)
@@ -300,6 +304,29 @@ func TestIdentityUseCase_Login(t *testing.T) {
 		}
 		if apiClient.token != "auth-token-123" {
 			t.Errorf("apiClient token: want auth-token-123, got %q", apiClient.token)
+		}
+		if apiClient.getCurrentUserCalls != 1 {
+			t.Errorf("GetCurrentUser calls after login: want 1, got %d", apiClient.getCurrentUserCalls)
+		}
+		if repo.lastUpsertSelf == nil || repo.lastUpsertSelf.VRCUserID != "usr_login" {
+			t.Fatalf("UpsertSelf after login: want usr_login, got %+v", repo.lastUpsertSelf)
+		}
+	})
+
+	t.Run("success_current_user_fetch_failure_still_ok", func(t *testing.T) {
+		credStore := vrchatapi.NewStubCredentialStore()
+		apiClient := &mockAPIClient{
+			loginToken:        "auth-token-123",
+			getCurrentUserErr: errors.New("api unavailable"),
+		}
+		repo := &mockUserCacheRepo{}
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		err := uc.Login(ctx, "user", "pass", "")
+		if err != nil {
+			t.Fatalf("Login: want nil when profile fetch fails, got %v", err)
+		}
+		if apiClient.getCurrentUserCalls != 1 {
+			t.Errorf("GetCurrentUser calls: want 1, got %d", apiClient.getCurrentUserCalls)
 		}
 	})
 }
