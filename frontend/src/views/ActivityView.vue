@@ -247,13 +247,20 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* メイン領域（router-outlet-host）の残り高さを使い、遭遇ログはカード内でスクロール */
 .activity-view {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
   min-width: 0;
   width: 100%;
-  overflow-y: auto;
+  min-height: 0;
+  flex: 1 1 0;
+  overflow: hidden;
+}
+
+.activity-view > .page-title {
+  flex-shrink: 0;
 }
 
 .section-card {
@@ -314,20 +321,41 @@ onUnmounted(() => {
   padding: 1rem;
 }
 
-.section-card--encounters {
-  min-height: 320px;
-}
-
 .section-card--encounters.section-card--collapsed {
-  min-height: 0;
+  flex: 0 0 auto;
 }
 
-.section-card--encounters :deep(.el-card__body) {
+.section-card--encounters:not(.section-card--collapsed) {
+  flex: 1 1 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.section-card--encounters:not(.section-card--collapsed)
+  :deep(.el-card__header) {
+  flex-shrink: 0;
+}
+
+.section-card--encounters:not(.section-card--collapsed) :deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  overflow: hidden;
   min-height: 0;
   width: 100%;
+}
+
+.section-card--encounters:not(.section-card--collapsed)
+  :deep(.section-card__panel) {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+  min-width: 0;
 }
 
 .filters {
@@ -339,13 +367,14 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-/* 一覧・空表示のみスクロール（el-card__body 全体はスクロールさせない） */
+/* セクションカードの残り高さに合わせてスクロール（親チェーンに flex + min-height:0 あり） */
 .encounter-log-scroll {
-  overflow-y: auto;
+  flex: 1 1 0;
   min-height: 0;
-  flex: 1 1 auto;
-  max-height: min(60vh, 32rem);
+  overflow-x: hidden;
+  overflow-y: auto;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .loading,
