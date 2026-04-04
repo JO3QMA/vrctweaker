@@ -230,15 +230,15 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
-import VrcStatusTag from "../../components/VrcStatusTag.vue";
-import type { UserCacheDTO } from "../../wails/app";
+import VrcStatusTag from "./VrcStatusTag.vue";
+import type { UserCacheDTO } from "../wails/app";
 import {
   copyDisplayName,
   friendDetailStickyHeaderVisible,
   friendProfileBannerUrl,
   friendThumbUrl,
   jsonStringArray,
-} from "./friendsViewUtils";
+} from "../utils/vrcUserCacheDisplay";
 
 const props = defineProps<{
   selected: UserCacheDTO | null;

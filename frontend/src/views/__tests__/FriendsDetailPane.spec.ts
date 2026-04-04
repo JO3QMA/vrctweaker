@@ -24,7 +24,7 @@ describe("FriendsDetailPane", () => {
 
   it("re-emits favorite change from detail panel", async () => {
     const panelStub = defineComponent({
-      name: "FriendsDetailPanel",
+      name: "VrcUserCacheDetail",
       emits: ["favorite-change"],
       data() {
         return { user: minimalUser() };
@@ -36,7 +36,7 @@ describe("FriendsDetailPane", () => {
       props: { selected: minimalUser() },
       global: {
         stubs: {
-          FriendsDetailPanel: panelStub,
+          VrcUserCacheDetail: panelStub,
         },
       },
     });

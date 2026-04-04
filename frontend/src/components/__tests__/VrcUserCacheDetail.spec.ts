@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { nextTick } from "vue";
-import FriendsDetailPanel from "../friends/FriendsDetailPanel.vue";
+import VrcUserCacheDetail from "../VrcUserCacheDetail.vue";
 import type { UserCacheDTO } from "../../wails/app";
 
 function minimalUser(): UserCacheDTO {
@@ -14,9 +14,9 @@ function minimalUser(): UserCacheDTO {
   } as UserCacheDTO;
 }
 
-describe("FriendsDetailPanel", () => {
+describe("VrcUserCacheDetail", () => {
   it("renders profile content inside Element Plus card body", async () => {
-    const wrapper = mount(FriendsDetailPanel, {
+    const wrapper = mount(VrcUserCacheDetail, {
       props: { selected: minimalUser() },
     });
     await flushPromises();

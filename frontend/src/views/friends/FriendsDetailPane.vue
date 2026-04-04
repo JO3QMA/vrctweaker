@@ -1,6 +1,6 @@
 <template>
   <section class="friends-detail-pane">
-    <FriendsDetailPanel
+    <VrcUserCacheDetail
       :selected="selected"
       @favorite-change="onFavoriteChange"
     />
@@ -8,7 +8,7 @@
 </template>
 
 <script setup lang="ts">
-import FriendsDetailPanel from "./FriendsDetailPanel.vue";
+import VrcUserCacheDetail from "../../components/VrcUserCacheDetail.vue";
 import type { UserCacheDTO } from "../../wails/app";
 
 defineProps<{
