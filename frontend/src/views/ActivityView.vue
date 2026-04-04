@@ -3,7 +3,7 @@
     <h1 class="page-title">アクティビティ</h1>
 
     <!-- 統計セクション（直近14日） -->
-    <el-card class="section-card" shadow="never">
+    <el-card class="section-card section-card--playtime" shadow="never">
       <template #header>
         <span>プレイ時間（直近14日）</span>
       </template>
@@ -15,7 +15,7 @@
     </el-card>
 
     <!-- タイムラインセクション -->
-    <el-card class="section-card" shadow="never">
+    <el-card class="section-card section-card--encounters" shadow="never">
       <template #header>
         <span>遭遇ログ（滞在区間）</span>
       </template>
@@ -34,64 +34,66 @@
         <el-button @click="loadEncounters">更新</el-button>
       </div>
 
-      <div v-if="encountersLoading" class="loading">読み込み中…</div>
-      <div v-else-if="filteredEncounters.length === 0" class="empty">
-        遭遇ログがありません。
+      <div class="encounter-log-scroll">
+        <div v-if="encountersLoading" class="loading">読み込み中…</div>
+        <div v-else-if="filteredEncounters.length === 0" class="empty">
+          遭遇ログがありません。
+        </div>
+        <el-table
+          v-else
+          :data="filteredEncounters"
+          style="width: 100%"
+          size="small"
+          :border="false"
+          stripe
+        >
+          <el-table-column label="入室" width="150">
+            <template #default="{ row }">
+              <span class="timeline-time">{{
+                formatEncounteredAt(row.joinedAt)
+              }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="退室" width="150">
+            <template #default="{ row }">
+              <span class="timeline-time">{{
+                row.leftAt ? formatEncounteredAt(row.leftAt) : "—"
+              }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="表示名" min-width="120">
+            <template #default="{ row }">
+              <el-button
+                v-if="row.vrcUserId"
+                link
+                type="primary"
+                class="timeline-link"
+                @click="openUserHistory(row.vrcUserId)"
+              >
+                {{ row.displayName }}
+              </el-button>
+              <span v-else class="timeline-name-muted">{{
+                row.displayName
+              }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column label="ワールド名" min-width="120">
+            <template #default="{ row }">
+              <el-button
+                v-if="row.worldId"
+                link
+                type="primary"
+                class="timeline-link"
+                :title="row.worldId"
+                @click="openWorldHistory(row.worldId)"
+              >
+                {{ row.worldDisplayName || row.worldId }}
+              </el-button>
+              <span v-else>—</span>
+            </template>
+          </el-table-column>
+        </el-table>
       </div>
-      <el-table
-        v-else
-        :data="filteredEncounters"
-        style="width: 100%"
-        size="small"
-        :border="false"
-        stripe
-      >
-        <el-table-column label="入室" width="150">
-          <template #default="{ row }">
-            <span class="timeline-time">{{
-              formatEncounteredAt(row.joinedAt)
-            }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="退室" width="150">
-          <template #default="{ row }">
-            <span class="timeline-time">{{
-              row.leftAt ? formatEncounteredAt(row.leftAt) : "—"
-            }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="表示名" min-width="120">
-          <template #default="{ row }">
-            <el-button
-              v-if="row.vrcUserId"
-              link
-              type="primary"
-              class="timeline-link"
-              @click="openUserHistory(row.vrcUserId)"
-            >
-              {{ row.displayName }}
-            </el-button>
-            <span v-else class="timeline-name-muted">{{
-              row.displayName
-            }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column label="ワールド名" min-width="120">
-          <template #default="{ row }">
-            <el-button
-              v-if="row.worldId"
-              link
-              type="primary"
-              class="timeline-link"
-              :title="row.worldId"
-              @click="openWorldHistory(row.worldId)"
-            >
-              {{ row.worldDisplayName || row.worldId }}
-            </el-button>
-            <span v-else>—</span>
-          </template>
-        </el-table-column>
-      </el-table>
     </el-card>
   </div>
 </template>
@@ -248,11 +250,16 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+  min-width: 0;
+  width: 100%;
+  overflow-y: auto;
 }
 
 .section-card {
   background: var(--bg-secondary) !important;
   border-color: var(--border) !important;
+  width: 100%;
+  min-width: 0;
 }
 
 .section-card :deep(.el-card__header) {
@@ -261,12 +268,72 @@ onUnmounted(() => {
   color: var(--text-secondary);
 }
 
+/* プレイ時間カード全体の縦幅を固定（ヘッダー + グラフ 280px 相当の body） */
+.section-card--playtime {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  height: 336px;
+  min-height: 336px;
+  max-height: 336px;
+}
+
+.section-card--playtime :deep(.el-card__header) {
+  flex-shrink: 0;
+}
+
+/* グラフ枠: 残り領域いっぱい・内部スクロールなし（PlayTimeChart は 280px 固定で中央寄せ可） */
+.section-card--playtime :deep(.el-card__body) {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding-top: 0;
+  padding-bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.section-card--playtime :deep(.el-card__body) > * {
+  width: 100%;
+}
+
+.section-card--playtime :deep(.el-card__body) .loading,
+.section-card--playtime :deep(.el-card__body) .empty-stats {
+  padding: 1rem;
+}
+
+.section-card--encounters {
+  min-height: 320px;
+}
+
+.section-card--encounters :deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+  width: 100%;
+}
+
 .filters {
   display: flex;
   gap: 0.5rem;
   align-items: center;
   margin-bottom: 1rem;
   flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+/* 一覧・空表示のみスクロール（el-card__body 全体はスクロールさせない） */
+.encounter-log-scroll {
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1 1 auto;
+  max-height: min(60vh, 32rem);
+  width: 100%;
 }
 
 .loading,
