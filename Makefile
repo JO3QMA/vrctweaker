@@ -78,6 +78,7 @@ test-front:
 
 ## E2Eテスト（Playwright）
 ## 初回は `make test-e2e-install` でブラウザをインストール
+## 手元で通常の `pnpm run dev` が :5173 を占有していると E2E 用サーバーが起動できないため、失敗時は dev を止めてから再実行すること
 test-e2e:
 	cd frontend && pnpm run test:e2e
 
