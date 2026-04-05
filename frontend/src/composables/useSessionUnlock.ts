@@ -85,10 +85,11 @@ export function useSessionUnlock() {
 
       await App.unlockVRChatSession(token);
       state.value = "unlocked";
-    } catch (e) {
-      state.value = "error";
+      // Server-side session expiry or other unlock failure – clear the unusable blob
+      // so the next startup doesn't retry the same expired token in a loop.
+      await App.clearStoredCredential().catch(() => undefined);
+      state.value = "needs-relogin";
       errorMessage.value = e instanceof Error ? e.message : String(e);
-    }
   }
 
   /**
