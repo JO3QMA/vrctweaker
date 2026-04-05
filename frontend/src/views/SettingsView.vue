@@ -67,6 +67,14 @@
         </div>
       </div>
       <div v-else class="login-form">
+        <el-alert
+          v-if="unlockState === 'needs-relogin' && unlockErrorMessage"
+          :title="unlockErrorMessage"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="login-error"
+        />
         <el-form label-position="top" size="default">
           <el-form-item label="ユーザー名">
             <el-input
@@ -262,7 +270,12 @@ import { App } from "../wails/app";
 import type { PathSettingsDTO, VRChatCurrentUserDTO } from "../wails/app";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
 
-const { persistAfterLogin } = useSessionUnlock();
+const {
+  state: unlockState,
+  errorMessage: unlockErrorMessage,
+  persistAfterLogin,
+  handleLogout,
+} = useSessionUnlock();
 
 const isLoggedIn = ref(false);
 const currentUser = ref<VRChatCurrentUserDTO | null>(null);
@@ -428,8 +441,6 @@ async function login() {
     loginLoading.value = false;
   }
 }
-
-const { handleLogout } = useSessionUnlock();
 
 async function logout() {
   loginError.value = "";

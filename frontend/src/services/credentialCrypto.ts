@@ -95,7 +95,11 @@ export async function wrapToken(token: string): Promise<string> {
   packed.set(nonce, 0);
   packed.set(new Uint8Array(ciphertext), NONCE_LENGTH);
 
-  return WRAPPED_BLOB_MAGIC + btoa(String.fromCharCode(...packed));
+  // Use reduce instead of spread to avoid stack overflow for large arrays.
+  return (
+    WRAPPED_BLOB_MAGIC +
+    btoa(packed.reduce((s, b) => s + String.fromCharCode(b), ""))
+  );
 }
 
 /**

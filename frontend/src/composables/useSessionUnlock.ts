@@ -31,10 +31,12 @@ export type UnlockState =
   | "needs-relogin"
   | "error";
 
-export function useSessionUnlock() {
-  const state = ref<UnlockState>("idle");
-  const errorMessage = ref("");
+// Module-level shared state so all consumers (App.vue, SettingsView.vue, etc.)
+// observe the same unlock lifecycle without prop drilling or provide/inject.
+const state = ref<UnlockState>("idle");
+const errorMessage = ref("");
 
+export function useSessionUnlock() {
   /**
    * Called at app startup. Fetches the blob from Go and attempts to unlock the session.
    * Sets `state` to `"unlocked"`, `"needs-relogin"`, or `"error"` depending on outcome.

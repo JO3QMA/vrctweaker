@@ -272,7 +272,13 @@ func (uc *IdentityUseCase) SetFavorite(ctx context.Context, vrcUserID string, fa
 }
 
 // RefreshFriends fetches from API, updates cache, and notifies when favorites come online.
+// Returns ErrNotAuthenticated when called before UnlockSession has been called.
 func (uc *IdentityUseCase) RefreshFriends(ctx context.Context) error {
+	loggedIn, _ := uc.IsLoggedIn(ctx)
+	if !loggedIn {
+		return vrchatapi.ErrNotAuthenticated
+	}
+
 	// Capture state before refresh for offline→online diff detection
 	beforeFavorites, _ := uc.userCacheRepo.ListFavorites(ctx)
 	beforeMap := make(map[string]string)

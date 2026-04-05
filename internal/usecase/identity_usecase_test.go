@@ -699,4 +699,3 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_apiErr_fallsBa
 		t.Fatalf("openF=%v u=%+v", openF, u)
 	}
 }
-
