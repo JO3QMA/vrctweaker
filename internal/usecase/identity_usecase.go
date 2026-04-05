@@ -291,6 +291,11 @@ func (uc *IdentityUseCase) ResolveUserProfileForNavigation(ctx context.Context, 
 		}
 		return row, row.UserKind == identity.UserKindFriend, nil
 	}
+	token, terr := uc.credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
+	if terr != nil || token == "" {
+		return nil, false, vrchatapi.ErrNotAuthenticated
+	}
+	uc.apiClient.SetAuthToken(token)
 	f, err := uc.apiClient.GetUser(ctx, id)
 	if err != nil {
 		if row == nil {

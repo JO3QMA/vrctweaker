@@ -644,6 +644,9 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_newContactFrom
 	if err != nil {
 		t.Fatal(err)
 	}
+	if apiClient.token != "tok" {
+		t.Errorf("SetAuthToken: apiClient.token = %q, want %q", apiClient.token, "tok")
+	}
 	if openF {
 		t.Error("non-friend API should not open friends view")
 	}
@@ -675,6 +678,9 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_friendFromAPI(
 	if err != nil {
 		t.Fatal(err)
 	}
+	if apiClient.token != "tok" {
+		t.Errorf("SetAuthToken: apiClient.token = %q, want %q", apiClient.token, "tok")
+	}
 	if !openF || u.UserKind != identity.UserKindFriend {
 		t.Fatalf("openF=%v kind=%v", openF, u.UserKind)
 	}
@@ -693,6 +699,9 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_apiErr_fallsBa
 	u, openF, err := uc.ResolveUserProfileForNavigation(ctx, "u1")
 	if err != nil {
 		t.Fatal(err)
+	}
+	if apiClient.token != "tok" {
+		t.Errorf("SetAuthToken: apiClient.token = %q, want %q", apiClient.token, "tok")
 	}
 	if openF || u.DisplayName != "Cached" {
 		t.Fatalf("openF=%v u=%+v", openF, u)
