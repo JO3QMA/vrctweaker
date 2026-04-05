@@ -109,3 +109,49 @@ func (u *UserCache) MergeFromAPIFriend(apiUser *UserCache) {
 	u.ProfilePicOverride = apiUser.ProfilePicOverride
 	u.TagsJSON = apiUser.TagsJSON
 }
+
+// MergeFromGetUserAPI merges GET /users/{id} data (Friend-shaped JSON). Self rows are not modified.
+// When apiReportsFriend, the row becomes a friend (MergeFromAPIFriend); IsFavorite is preserved from this row before merge.
+// When not apiReportsFriend, profile fields are updated; UserKindContact is set unless the row is already a friend (no demotion).
+func (u *UserCache) MergeFromGetUserAPI(apiReportsFriend bool, api *UserCache, now time.Time) {
+	if u == nil || api == nil || u.UserKind == UserKindSelf {
+		return
+	}
+	if apiReportsFriend {
+		preserveFav := u.IsFavorite
+		u.MergeFromAPIFriend(api)
+		u.IsFavorite = preserveFav
+		return
+	}
+	u.applyAPIProfileFields(api)
+	u.LastUpdated = now
+	if u.UserKind != UserKindFriend {
+		u.UserKind = UserKindContact
+	}
+}
+
+func (u *UserCache) applyAPIProfileFields(api *UserCache) {
+	u.DisplayName = api.DisplayName
+	u.Status = api.Status
+	u.Username = api.Username
+	u.StatusDescription = api.StatusDescription
+	u.UserState = api.UserState
+	u.AvatarThumbnailURL = api.AvatarThumbnailURL
+	u.UserIconURL = api.UserIconURL
+	u.ProfilePicOverrideThumbnail = api.ProfilePicOverrideThumbnail
+	u.Bio = api.Bio
+	u.BioLinksJSON = api.BioLinksJSON
+	u.CurrentAvatarImageURL = api.CurrentAvatarImageURL
+	u.CurrentAvatarTagsJSON = api.CurrentAvatarTagsJSON
+	u.DeveloperType = api.DeveloperType
+	u.FriendKey = api.FriendKey
+	u.ImageURL = api.ImageURL
+	u.LastPlatform = api.LastPlatform
+	u.Location = api.Location
+	u.LastLogin = api.LastLogin
+	u.LastActivity = api.LastActivity
+	u.LastMobile = api.LastMobile
+	u.Platform = api.Platform
+	u.ProfilePicOverride = api.ProfilePicOverride
+	u.TagsJSON = api.TagsJSON
+}

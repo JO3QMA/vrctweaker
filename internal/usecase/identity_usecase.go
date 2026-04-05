@@ -3,8 +3,10 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"vrchat-tweaker/internal/domain/identity"
@@ -145,6 +147,9 @@ func (uc *IdentityUseCase) Login(ctx context.Context, username, password, twoFac
 		return fmt.Errorf("認証情報の保存に失敗しました: %w", err)
 	}
 	uc.apiClient.SetAuthToken(authToken)
+	if _, err := uc.GetCurrentUser(ctx, true); err != nil {
+		log.Printf("identity: current user after login: %v", err)
+	}
 	return nil
 }
 
@@ -260,6 +265,54 @@ func (uc *IdentityUseCase) RefreshFriends(ctx context.Context) error {
 // SetStatus changes the current user's status via API.
 func (uc *IdentityUseCase) SetStatus(ctx context.Context, status string) error {
 	return uc.apiClient.SetUserStatus(ctx, vrchatapi.UserStatus(status))
+}
+
+// ErrProfileNotInCache is returned when the user is not in users_cache and the client is not logged in.
+var ErrProfileNotInCache = errors.New("user not in cache; log in to load profile from VRChat")
+
+// ResolveUserProfileForNavigation loads or refreshes a user row via cache and GET /users/{id} when logged in.
+// The second return value is true when the row should be shown in the friends list view (user_kind friend).
+func (uc *IdentityUseCase) ResolveUserProfileForNavigation(ctx context.Context, vrcUserID string) (*identity.UserCache, bool, error) {
+	id := strings.TrimSpace(vrcUserID)
+	if id == "" {
+		return nil, false, fmt.Errorf("empty vrc user id")
+	}
+	row, err := uc.userCacheRepo.GetByVRCUserID(ctx, id)
+	if err != nil {
+		return nil, false, err
+	}
+	loggedIn, err := uc.IsLoggedIn(ctx)
+	if err != nil {
+		return nil, false, err
+	}
+	if !loggedIn {
+		if row == nil {
+			return nil, false, ErrProfileNotInCache
+		}
+		return row, row.UserKind == identity.UserKindFriend, nil
+	}
+	token, terr := uc.credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
+	if terr != nil || token == "" {
+		return nil, false, vrchatapi.ErrNotAuthenticated
+	}
+	uc.apiClient.SetAuthToken(token)
+	f, err := uc.apiClient.GetUser(ctx, id)
+	if err != nil {
+		if row == nil {
+			return nil, false, err
+		}
+		return row, row.UserKind == identity.UserKindFriend, nil
+	}
+	now := time.Now()
+	if row == nil {
+		row = &identity.UserCache{VRCUserID: id}
+	}
+	snap := userCacheFromFriend(*f, row.IsFavorite, now)
+	row.MergeFromGetUserAPI(f.IsFriend, snap, now)
+	if err := uc.userCacheRepo.Save(ctx, row); err != nil {
+		return nil, false, err
+	}
+	return row, row.UserKind == identity.UserKindFriend, nil
 }
 
 func jsonStringSlice(s []string) string {

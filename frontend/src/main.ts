@@ -46,6 +46,12 @@ const routes: RouteRecordRaw[] = [
     meta: { title: "フレンド" },
   },
   {
+    path: "/user-profile",
+    name: "user-profile",
+    component: () => import("./views/UserProfileDetailView.vue"),
+    meta: { title: "ユーザー" },
+  },
+  {
     path: "/automation",
     name: "automation",
     component: () => import("./views/AutomationView.vue"),

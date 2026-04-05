@@ -193,6 +193,45 @@ func TestUserCache_MergeFromLog_newRowSetsContactTimestamps(t *testing.T) {
 	}
 }
 
+func TestUserCache_MergeFromGetUserAPI_nonFriend_doesNotDemoteFriend(t *testing.T) {
+	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
+	u := &UserCache{VRCUserID: "x", UserKind: UserKindFriend, DisplayName: "F", IsFavorite: true}
+	api := &UserCache{DisplayName: "API", Bio: "bio", Status: "offline"}
+	u.MergeFromGetUserAPI(false, api, now)
+	if u.UserKind != UserKindFriend {
+		t.Fatalf("UserKind = %q, want friend", u.UserKind)
+	}
+	if u.Bio != "bio" || u.DisplayName != "API" {
+		t.Fatalf("fields: %+v", u)
+	}
+}
+
+func TestUserCache_MergeFromGetUserAPI_nonFriend_contact(t *testing.T) {
+	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
+	u := &UserCache{VRCUserID: "x", UserKind: UserKindContact, DisplayName: "C"}
+	api := &UserCache{DisplayName: "API", Username: "u"}
+	u.MergeFromGetUserAPI(false, api, now)
+	if u.UserKind != UserKindContact {
+		t.Fatalf("UserKind = %q", u.UserKind)
+	}
+	if u.Username != "u" {
+		t.Fatalf("Username = %q", u.Username)
+	}
+}
+
+func TestUserCache_MergeFromGetUserAPI_friend_upgrades(t *testing.T) {
+	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
+	u := &UserCache{VRCUserID: "x", UserKind: UserKindContact}
+	api := &UserCache{DisplayName: "Pal", Status: "active", Bio: "b"}
+	u.MergeFromGetUserAPI(true, api, now)
+	if u.UserKind != UserKindFriend {
+		t.Fatalf("UserKind = %q, want friend", u.UserKind)
+	}
+	if u.Bio != "b" {
+		t.Fatalf("Bio not merged")
+	}
+}
+
 func ptrTime(t time.Time) *time.Time {
 	return &t
 }

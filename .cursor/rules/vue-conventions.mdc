@@ -11,6 +11,7 @@ alwaysApply: false
 - TypeScript 厳格モード
 - UI: **Element Plus**（詳細・DOM/テスト注意は `.cursor/rules/element-plus-ui.mdc`）
 - Wails: `window.go.main.App` 経由でバックエンド呼び出し
+- WebView の見た目は **Storybook** と **wails dev** で管理する。UI の変更・抽象化時は `.cursor/rules/storybook-wails-ui.mdc` に従い Storybook も更新する
 
 ## 命名
 - コンポーネント: PascalCase

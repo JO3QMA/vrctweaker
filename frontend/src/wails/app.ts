@@ -118,6 +118,12 @@ export interface UserCacheDTO {
   tagsJson?: string;
 }
 
+/** ResolveUserProfileNavigation の戻り値（フレンド画面 vs ユーザープロフィール画面）。 */
+export interface UserProfileNavigationDTO {
+  user: UserCacheDTO;
+  openInFriendsView: boolean;
+}
+
 export interface PathSettingsDTO {
   vrchatPathWindows: string;
   steamPathLinux: string;
@@ -222,6 +228,9 @@ interface AppBindings {
   RotateEncounters(): Promise<number>;
   GetActivityStats(fromISO: string, toISO: string): Promise<ActivityStatsDTO>;
   Friends(): Promise<UserCacheDTO[]>;
+  ResolveUserProfileNavigation(
+    vrcUserID: string,
+  ): Promise<UserProfileNavigationDTO>;
   SetFavorite(vrcUserId: string, favorite: boolean): Promise<void>;
   SetStatus(status: string): Promise<void>;
   Login(
@@ -262,6 +271,83 @@ function getApp(): AppBindings | undefined {
   return typeof window !== "undefined" ? window.go?.main?.App : undefined;
 }
 
+/** True when index was built to load Wails IPC/runtime (Vite dev injection or Wails-served HTML). */
+function pageExpectsWailsBindings(): boolean {
+  if (typeof document === "undefined") {
+    return false;
+  }
+  for (const el of document.querySelectorAll("head script[src]")) {
+    const src = el.getAttribute("src") ?? "";
+    if (src.includes("wails/runtime") || src.includes("wails/ipc")) {
+      return true;
+    }
+  }
+  return false;
+}
+
+let wailsDevScriptReloadTried = false;
+
+/**
+ * Vite プロキシのレースや一時的な取得失敗で /wails/*.js が実行されないことがある。
+ * head から該当 script を外し、キャッシュバスト付きで公式どおり ipc → runtime の順で再挿入する（1 回だけ）。
+ */
+function reloadDevWailsScriptsOnce(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (typeof document === "undefined") {
+      resolve();
+      return;
+    }
+    for (const el of document.querySelectorAll('head script[src*="wails/"]')) {
+      el.remove();
+    }
+    const stamp = Date.now();
+    const ipc = document.createElement("script");
+    ipc.src = `/wails/ipc.js?wailsRetry=${stamp}`;
+    ipc.async = false;
+    ipc.onload = () => {
+      const runtime = document.createElement("script");
+      runtime.src = `/wails/runtime.js?wailsRetry=${stamp}`;
+      runtime.async = false;
+      runtime.onload = () => resolve();
+      runtime.onerror = () =>
+        reject(new Error("failed to load /wails/runtime.js after retry"));
+      document.head.appendChild(runtime);
+    };
+    ipc.onerror = () =>
+      reject(new Error("failed to load /wails/ipc.js after retry"));
+    document.head.appendChild(ipc);
+  });
+}
+
+/**
+ * Wails dev over Vite can leave `/wails/*.js` in the DOM before `window.go` is
+ * ready (IPC/WebSocket race). Wait with rAF (no setTimeout) before falling back.
+ *
+ * Worst case in `callApp`: up to 360 frames here, then (once per page load) script
+ * reload plus 180 more frames — roughly ~6s at 60fps. Only affects `wails dev`
+ * startup races; Vitest sets `MODE === "test"` and skips this path.
+ */
+function waitForAppBindings(
+  maxFrames: number,
+): Promise<AppBindings | undefined> {
+  return new Promise((resolve) => {
+    let frames = 0;
+    function onFrame() {
+      const app = getApp();
+      if (app) {
+        resolve(app);
+        return;
+      }
+      if (++frames >= maxFrames) {
+        resolve(undefined);
+        return;
+      }
+      requestAnimationFrame(onFrame);
+    }
+    requestAnimationFrame(onFrame);
+  });
+}
+
 /** True when running inside Wails (second windows from window.open cannot load wails.localhost). */
 export function isWailsRuntime(): boolean {
   return getApp() !== undefined;
@@ -275,12 +361,38 @@ export function isWailsRuntime(): boolean {
  * case the promise from `fn(app)` rejects and the error propagates. Callers must
  * use try/catch or `.catch()` for backend failures — do not assume errors are
  * swallowed or replaced by `fallback`.
+ *
+ * In DEV, when the page includes Wails script tags, this may wait many rAF ticks
+ * (see `waitForAppBindings`) and optionally reload scripts once before giving up.
  */
 export async function callApp<T>(
   fn: (app: AppBindings) => Promise<T>,
   fallback: T,
 ): Promise<T> {
-  const app = getApp();
+  let app = getApp();
+  if (
+    !app &&
+    import.meta.env.DEV &&
+    import.meta.env.MODE !== "test" &&
+    pageExpectsWailsBindings()
+  ) {
+    app = await waitForAppBindings(360);
+  }
+  if (
+    !app &&
+    import.meta.env.DEV &&
+    import.meta.env.MODE !== "test" &&
+    pageExpectsWailsBindings() &&
+    !wailsDevScriptReloadTried
+  ) {
+    wailsDevScriptReloadTried = true;
+    try {
+      await reloadDevWailsScriptsOnce();
+      app = await waitForAppBindings(180);
+    } catch {
+      /* keep app undefined */
+    }
+  }
   if (!app) {
     return fallback;
   }
@@ -419,6 +531,20 @@ export const App = {
   },
   async friends(): Promise<UserCacheDTO[]> {
     return callApp((a) => a.Friends(), []);
+  },
+  async resolveUserProfileNavigation(
+    vrcUserID: string,
+  ): Promise<UserProfileNavigationDTO> {
+    return callApp((a) => a.ResolveUserProfileNavigation(vrcUserID), {
+      user: {
+        vrcUserId: vrcUserID,
+        displayName: "",
+        status: "",
+        isFavorite: false,
+        lastUpdated: "",
+      },
+      openInFriendsView: false,
+    });
   },
   async setFavorite(vrcUserId: string, favorite: boolean): Promise<void> {
     return callApp((a) => a.SetFavorite(vrcUserId, favorite), undefined);

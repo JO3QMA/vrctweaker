@@ -21,6 +21,11 @@ const router = createRouter({
     },
     { path: "/friends", name: "friends", component: { template: "<div />" } },
     {
+      path: "/user-profile",
+      name: "user-profile",
+      component: { template: "<div />" },
+    },
+    {
       path: "/automation",
       name: "automation",
       component: { template: "<div />" },

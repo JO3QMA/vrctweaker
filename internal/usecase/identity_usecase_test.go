@@ -80,7 +80,14 @@ func (m *mockUserCacheRepo) ListFavorites(_ context.Context) ([]*identity.UserCa
 }
 
 func (m *mockUserCacheRepo) Save(_ context.Context, f *identity.UserCache) error {
-	return m.saveErr
+	if m.saveErr != nil {
+		return m.saveErr
+	}
+	if m.getByID != nil && f != nil {
+		cpy := *f
+		m.getByID[f.VRCUserID] = &cpy
+	}
+	return nil
 }
 
 func (m *mockUserCacheRepo) SaveBatch(_ context.Context, users []*identity.UserCache) error {
@@ -134,6 +141,9 @@ type mockAPIClient struct {
 	getFriends          []vrchatapi.Friend
 	getFriendsErr       error
 	getFriendsCalls     int
+	getUser             *vrchatapi.Friend
+	getUserErr          error
+	getUserCalls        int
 	setStatusErr        error
 }
 
@@ -156,6 +166,14 @@ func (m *mockAPIClient) GetCurrentUser(_ context.Context) (*vrchatapi.CurrentUse
 func (m *mockAPIClient) GetFriends(_ context.Context) ([]vrchatapi.Friend, error) {
 	m.getFriendsCalls++
 	return m.getFriends, m.getFriendsErr
+}
+
+func (m *mockAPIClient) GetUser(_ context.Context, _ string) (*vrchatapi.Friend, error) {
+	m.getUserCalls++
+	if m.getUserErr != nil {
+		return nil, m.getUserErr
+	}
+	return m.getUser, nil
 }
 
 func (m *mockAPIClient) SetUserStatus(_ context.Context, _ vrchatapi.UserStatus) error {
@@ -267,8 +285,12 @@ func TestIdentityUseCase_Login(t *testing.T) {
 
 	t.Run("success_saves_token_and_sets_client", func(t *testing.T) {
 		credStore := vrchatapi.NewStubCredentialStore()
-		apiClient := &mockAPIClient{loginToken: "auth-token-123"}
-		uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo)
+		repo := &mockUserCacheRepo{}
+		apiClient := &mockAPIClient{
+			loginToken:     "auth-token-123",
+			getCurrentUser: &vrchatapi.CurrentUserProfile{ID: "usr_login", DisplayName: "LoginUser"},
+		}
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
 		err := uc.Login(ctx, "user", "pass", "")
 		if err != nil {
 			t.Fatalf("Login: %v", err)
@@ -282,6 +304,29 @@ func TestIdentityUseCase_Login(t *testing.T) {
 		}
 		if apiClient.token != "auth-token-123" {
 			t.Errorf("apiClient token: want auth-token-123, got %q", apiClient.token)
+		}
+		if apiClient.getCurrentUserCalls != 1 {
+			t.Errorf("GetCurrentUser calls after login: want 1, got %d", apiClient.getCurrentUserCalls)
+		}
+		if repo.lastUpsertSelf == nil || repo.lastUpsertSelf.VRCUserID != "usr_login" {
+			t.Fatalf("UpsertSelf after login: want usr_login, got %+v", repo.lastUpsertSelf)
+		}
+	})
+
+	t.Run("success_current_user_fetch_failure_still_ok", func(t *testing.T) {
+		credStore := vrchatapi.NewStubCredentialStore()
+		apiClient := &mockAPIClient{
+			loginToken:        "auth-token-123",
+			getCurrentUserErr: errors.New("api unavailable"),
+		}
+		repo := &mockUserCacheRepo{}
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		err := uc.Login(ctx, "user", "pass", "")
+		if err != nil {
+			t.Fatalf("Login: want nil when profile fetch fails, got %v", err)
+		}
+		if apiClient.getCurrentUserCalls != 1 {
+			t.Errorf("GetCurrentUser calls: want 1, got %d", apiClient.getCurrentUserCalls)
 		}
 	})
 }
@@ -527,6 +572,139 @@ func TestIdentityUseCase_RefreshFriends_preservesSelfRow(t *testing.T) {
 	saved := userRepo.lastSaveBatch[0]
 	if saved.UserKind != identity.UserKindSelf || saved.DisplayName != "OriginalMe" || saved.Status != "busy" {
 		t.Fatalf("self row overwritten by friends sync: %+v", saved)
+	}
+}
+
+func TestIdentityUseCase_ResolveUserProfileForNavigation_notLoggedIn_cacheHit(t *testing.T) {
+	ctx := context.Background()
+	credStore := vrchatapi.NewStubCredentialStore()
+	row := &identity.UserCache{VRCUserID: "u1", DisplayName: "A", UserKind: identity.UserKindContact}
+	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
+	apiClient := &mockAPIClient{}
+	settingsRepo := newMockSettingsRepo()
+	uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo)
+	u, openF, err := uc.ResolveUserProfileForNavigation(ctx, "u1")
+	if err != nil {
+		t.Fatalf("Resolve: %v", err)
+	}
+	if openF {
+		t.Error("contact should not use friends view")
+	}
+	if u.DisplayName != "A" {
+		t.Errorf("displayName %q", u.DisplayName)
+	}
+	if apiClient.getUserCalls != 0 {
+		t.Error("GetUser should not run when not logged in")
+	}
+}
+
+func TestIdentityUseCase_ResolveUserProfileForNavigation_notLoggedIn_friendOpensFriends(t *testing.T) {
+	ctx := context.Background()
+	credStore := vrchatapi.NewStubCredentialStore()
+	row := &identity.UserCache{VRCUserID: "u1", DisplayName: "F", UserKind: identity.UserKindFriend}
+	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
+	uc := NewIdentityUseCase(userRepo, &mockAPIClient{}, credStore, newMockSettingsRepo())
+	_, openF, err := uc.ResolveUserProfileForNavigation(ctx, "u1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !openF {
+		t.Error("want openInFriendsView for cached friend")
+	}
+}
+
+func TestIdentityUseCase_ResolveUserProfileForNavigation_notLoggedIn_miss(t *testing.T) {
+	ctx := context.Background()
+	credStore := vrchatapi.NewStubCredentialStore()
+	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{}}
+	uc := NewIdentityUseCase(userRepo, &mockAPIClient{}, credStore, newMockSettingsRepo())
+	_, _, err := uc.ResolveUserProfileForNavigation(ctx, "missing")
+	if !errors.Is(err, ErrProfileNotInCache) {
+		t.Fatalf("want ErrProfileNotInCache, got %v", err)
+	}
+}
+
+func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_newContactFromAPI(t *testing.T) {
+	ctx := context.Background()
+	credStore := vrchatapi.NewStubCredentialStore()
+	if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, "tok"); err != nil {
+		t.Fatal(err)
+	}
+	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{}}
+	apiClient := &mockAPIClient{
+		getUser: &vrchatapi.Friend{
+			ID:          "usr_new",
+			DisplayName: "FromAPI",
+			IsFriend:    false,
+			Status:      "active",
+		},
+	}
+	uc := NewIdentityUseCase(userRepo, apiClient, credStore, newMockSettingsRepo())
+	u, openF, err := uc.ResolveUserProfileForNavigation(ctx, "usr_new")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if apiClient.token != "tok" {
+		t.Errorf("SetAuthToken: apiClient.token = %q, want %q", apiClient.token, "tok")
+	}
+	if openF {
+		t.Error("non-friend API should not open friends view")
+	}
+	if u.UserKind != identity.UserKindContact || u.DisplayName != "FromAPI" {
+		t.Fatalf("row: %+v", u)
+	}
+	if apiClient.getUserCalls != 1 {
+		t.Errorf("GetUser calls %d", apiClient.getUserCalls)
+	}
+}
+
+func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_friendFromAPI(t *testing.T) {
+	ctx := context.Background()
+	credStore := vrchatapi.NewStubCredentialStore()
+	if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, "tok"); err != nil {
+		t.Fatal(err)
+	}
+	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{}}
+	apiClient := &mockAPIClient{
+		getUser: &vrchatapi.Friend{
+			ID:          "usr_f",
+			DisplayName: "Pal",
+			IsFriend:    true,
+			Status:      "active",
+		},
+	}
+	uc := NewIdentityUseCase(userRepo, apiClient, credStore, newMockSettingsRepo())
+	u, openF, err := uc.ResolveUserProfileForNavigation(ctx, "usr_f")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if apiClient.token != "tok" {
+		t.Errorf("SetAuthToken: apiClient.token = %q, want %q", apiClient.token, "tok")
+	}
+	if !openF || u.UserKind != identity.UserKindFriend {
+		t.Fatalf("openF=%v kind=%v", openF, u.UserKind)
+	}
+}
+
+func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_apiErr_fallsBackToCache(t *testing.T) {
+	ctx := context.Background()
+	credStore := vrchatapi.NewStubCredentialStore()
+	if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, "tok"); err != nil {
+		t.Fatal(err)
+	}
+	row := &identity.UserCache{VRCUserID: "u1", DisplayName: "Cached", UserKind: identity.UserKindContact}
+	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
+	apiClient := &mockAPIClient{getUserErr: errors.New("network")}
+	uc := NewIdentityUseCase(userRepo, apiClient, credStore, newMockSettingsRepo())
+	u, openF, err := uc.ResolveUserProfileForNavigation(ctx, "u1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if apiClient.token != "tok" {
+		t.Errorf("SetAuthToken: apiClient.token = %q, want %q", apiClient.token, "tok")
+	}
+	if openF || u.DisplayName != "Cached" {
+		t.Fatalf("openF=%v u=%+v", openF, u)
 	}
 }
 

@@ -189,6 +189,36 @@ a:hover {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem 1.25rem;
+  padding: 0;
   margin-bottom: 1.5rem;
+}
+
+/* 折りたたみ（CollapsibleSectionCard および手動でクラスを付けた .section-card 用） */
+.section-card__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.section-card__toggle:hover {
+  color: var(--text-primary);
+}
+
+.section-card__toggle-icon {
+  flex-shrink: 0;
+  font-size: 1rem;
+}
+
+.section-card.section-card--collapsed > .el-card__body {
+  display: none;
 }

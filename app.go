@@ -79,7 +79,9 @@ func (a *App) startup(ctx context.Context) {
 	automationRepo := sqlite.NewAutomationRuleRepository(db)
 	settingsRepo := sqlite.NewAppSettingsRepository(db)
 
-	credStore := vrchatapi.NewKeyringCredentialStore()
+	credStore := vrchatapi.NewAutoCredentialStore(dataDir, func(msg string) {
+		runtime.LogWarning(ctx, msg)
+	})
 	apiClient := vrchatapi.NewClient("")
 	if token, err := credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser); err == nil && token != "" {
 		apiClient.SetAuthToken(token)
@@ -963,6 +965,18 @@ func (a *App) Friends() ([]UserCacheDTO, error) {
 		return nil, err
 	}
 	return toUserCacheDTOs(list), nil
+}
+
+// ResolveUserProfileForNavigation refreshes users_cache when logged in (GET /users/{id}) and returns routing hints.
+func (a *App) ResolveUserProfileNavigation(vrcUserID string) (UserProfileNavigationDTO, error) {
+	u, openFriends, err := a.identity.ResolveUserProfileForNavigation(a.ctx, vrcUserID)
+	if err != nil {
+		return UserProfileNavigationDTO{}, err
+	}
+	return UserProfileNavigationDTO{
+		User:              toUserCacheDTO(u),
+		OpenInFriendsView: openFriends,
+	}, nil
 }
 
 // SetFavorite updates a friend's favorite flag.

@@ -1,0 +1,35 @@
+---
+description: Wails WebView の UI は Storybook と wails dev で管理するため、変更・抽象化時は Storybook 側も更新する
+globs: "frontend/**/*.{vue,ts,tsx,css}"
+alwaysApply: false
+---
+
+# Storybook と Wails（WebView デザイン）
+
+## 前提
+
+- 本プロジェクトは **Wails** でデスクトップアプリ化しており、画面は **WebView** で表示される。
+- **デザイン・UI の確認・調整**は **`pnpm run storybook`（またはビルド成果物）** と **`wails dev`** の両方を想定している。
+
+## エージェント・実装者が守ること
+
+UI の**変更**や**抽象化**（共通コンポーネント化・レイアウト移動・見た目の変更）を行うときは、**アプリ本体だけで終わらせず、Storybook 側にも同じ変更を反映する**。
+
+1. **新規の再利用 UI コンポーネント**  
+   - 可能なら `frontend/src/components/<Name>.stories.ts` を追加する（または既存ストーリーを更新する）。  
+   - 代表状態（デフォルト・空・エラー相当など）が分かるストーリーを置く。
+
+2. **ビュー（`views/*.vue`）の変更**  
+   - 対応する `*.stories.ts` を更新する。  
+   - Wails バインディングが必要な画面は、既存の **`window.go` スタブ用デコレータ**（例: `wailsFriendsStoryDecorator.ts`, `activityViewStoryDecorator.ts`）と同パターンで Storybook 上で意味のある表示になるようにする。
+
+3. **グローバルスタイル（`frontend/src/assets/style.css` 等）**  
+   - Storybook の `preview.ts` は既に `style.css` を読み込んでいる。クラス名の追加・変更時は、**コンポーネント／ビューのストーリーで実際にそのクラスが使われる**ようにして、Storybook 上でも差分が見えるようにする。
+
+4. **検証**  
+   - 変更にストーリーを触った場合は、可能なら `cd frontend && pnpm run build-storybook` でビルドが通ることを確認する。
+
+## 参照
+
+- Element Plus・DOM 方針: `.cursor/rules/element-plus-ui.mdc`  
+- 詳細な UI 作業フロー: `.cursor/skills/element-plus-frontend/SKILL.md`

@@ -1,4 +1,5 @@
 {
+  // WSL かつ Docker Desktop で /mnt/c の VRChat フォルダを載せるときは、別構成「wsl-host-vrchat」を選んでください（自動判定はできません）。
   "name": "VRChat Tweaker Dev",
   "build": {
     "dockerfile": "Dockerfile"

@@ -10,7 +10,7 @@
  * - mock-wails.ts は app.spec.ts 経由でのみ参照され、app.spec.ts は Playwright テストランナー専用
  */
 
-/** ページ読み込み前に注入する window.go スタブの初期化スクリプトを返す */
+/** ページ読み込み前に注入する window.go スタブの初期化スクリプトを返す（中身はブラウザでそのまま実行されるため TypeScript 構文不可） */
 export function getMockWailsInitScript(): string {
   const seedProfiles = [
     {
@@ -103,6 +103,17 @@ export function getMockWailsInitScript(): string {
         RotateEncounters: () => Promise.resolve(0),
         GetActivityStats: () => Promise.resolve({ dailyPlaySeconds: [], topWorlds: [] }),
         Friends: () => Promise.resolve([]),
+        ResolveUserProfileNavigation: (_id) =>
+          Promise.resolve({
+            user: {
+              vrcUserId: _id,
+              displayName: '',
+              status: '',
+              isFavorite: false,
+              lastUpdated: '',
+            },
+            openInFriendsView: false,
+          }),
         SetFavorite: () => Promise.resolve(),
         SetStatus: () => Promise.resolve(),
         Login: () => Promise.resolve({ ok: false, error: 'E2E mock' }),

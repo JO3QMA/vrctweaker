@@ -59,6 +59,8 @@ docs/features の機能仕様を読み、実装計画→実装→レビュー→
    - `description`: `Implement feature from plan using TDD`
    - `prompt`: [implementer.md の本文] + 改行 + `実装計画:` + 改行 + [Step 1 の plan_output] + 改行 + `上記に従い TDD（テストを先に書く、単体テスト必須）で実装せよ。`
 
+**frontend の UI を変更・抽象化する場合**: `.cursor/rules/storybook-wails-ui.mdc` に従い **Storybook（`*.stories.ts` 等）も更新**する。
+
 ### Step 3: Reviewer（レビュー）
 
 1. `.cursor/agents/reviewer.md` の本文を取得

@@ -72,7 +72,8 @@ const bareLayout = computed(() => route.meta.bare === true);
 /* `> *` matches the routed SFC root: Vue 3 applies this parent’s scope attribute to child
    component roots, so the combinator resolves to one element. `<Transition>` adds no wrapper
    DOM node. Gallery manages its own scroll, so its root `.gallery-view` is excluded here. */
-.router-outlet-host > *:not(.gallery-view) {
+/* アクティビティは遭遇ログカード内でスクロールするためルートははみ出し抑制 */
+.router-outlet-host > *:not(.gallery-view):not(.activity-view) {
   overflow-y: auto;
 }
 

@@ -26,4 +26,5 @@ alwaysApply: false
 ## 参考
 
 - プロジェクト共通の Vue 規約: `.cursor/rules/vue-conventions.mdc`
+- **Storybook と Wails WebView**: UI 変更・コンポーネント抽象化時はストーリー／デコレータも更新する（`.cursor/rules/storybook-wails-ui.mdc`）
 - UI 実装で深い文脈が必要なとき: `.cursor/skills/element-plus-frontend/SKILL.md`

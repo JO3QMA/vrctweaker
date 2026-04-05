@@ -9,6 +9,7 @@ import (
 type UserStatus string
 
 const (
+	StatusActive  UserStatus = "active"
 	StatusJoinMe  UserStatus = "join me"
 	StatusAskMe   UserStatus = "ask me"
 	StatusBusy    UserStatus = "busy"

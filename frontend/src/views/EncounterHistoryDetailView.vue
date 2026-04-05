@@ -10,55 +10,22 @@
       :closable="false"
       show-icon
     />
-    <div v-else-if="loading" class="message">読み込み中…</div>
-    <el-alert
-      v-else-if="error"
-      :title="error"
-      type="error"
-      :closable="false"
-      show-icon
+    <EncounterHistoryList
+      v-else
+      :mode="listMode"
+      :user-id="vrcUserId"
+      :world-id="worldId"
+      :hide-display-name-column="listMode === 'user'"
     />
-    <div v-else-if="rows.length === 0" class="message">
-      該当する遭遇ログがありません。
-    </div>
-    <el-table v-else :data="rows" style="width: 100%" size="small" stripe>
-      <el-table-column label="入室" width="155">
-        <template #default="{ row }">
-          {{ formatEncounteredAt(row.joinedAt) }}
-        </template>
-      </el-table-column>
-      <el-table-column label="退室" width="155">
-        <template #default="{ row }">
-          {{ row.leftAt ? formatEncounteredAt(row.leftAt) : "—" }}
-        </template>
-      </el-table-column>
-      <el-table-column label="表示名" min-width="120" prop="displayName" />
-      <el-table-column label="ワールド名" min-width="120">
-        <template #default="{ row }">
-          <span :title="row.worldId || ''">
-            {{ row.worldDisplayName || row.worldId || "—" }}
-          </span>
-        </template>
-      </el-table-column>
-      <el-table-column label="インスタンス" min-width="120">
-        <template #default="{ row }">
-          <span class="mono">{{ row.instanceId || "—" }}</span>
-        </template>
-      </el-table-column>
-    </el-table>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from "vue";
+import { computed } from "vue";
 import { useRoute } from "vue-router";
-import { App, type UserEncounterDTO } from "../wails/app";
+import EncounterHistoryList from "../components/EncounterHistoryList.vue";
 
 const route = useRoute();
-
-const loading = ref(false);
-const error = ref<string | null>(null);
-const rows = ref<UserEncounterDTO[]>([]);
 
 function firstQueryString(v: unknown): string {
   if (v == null) return "";
@@ -82,6 +49,10 @@ const invalidQuery = computed(() => {
   return false;
 });
 
+const listMode = computed<"user" | "world">(() =>
+  kind.value === "world" ? "world" : "user",
+);
+
 const pageTitle = computed(() => {
   if (kind.value === "user") return "ユーザー別 遭遇履歴";
   if (kind.value === "world") return "ワールド別 遭遇履歴";
@@ -93,52 +64,6 @@ const idLine = computed(() => {
   if (kind.value === "user") return vrcUserId.value;
   if (kind.value === "world") return worldId.value;
   return "";
-});
-
-function formatEncounteredAt(iso: string): string {
-  try {
-    return new Date(iso).toLocaleString("ja-JP");
-  } catch {
-    return iso;
-  }
-}
-
-async function load(): Promise<void> {
-  if (invalidQuery.value) {
-    rows.value = [];
-    error.value = null;
-    return;
-  }
-  loading.value = true;
-  error.value = null;
-  try {
-    if (kind.value === "user") {
-      rows.value = await App.encountersByVRCUserID(vrcUserId.value);
-    } else {
-      rows.value = await App.encountersByWorldID(worldId.value);
-    }
-  } catch (e) {
-    rows.value = [];
-    error.value =
-      e instanceof Error ? e.message : "データの取得に失敗しました。";
-  } finally {
-    loading.value = false;
-  }
-}
-
-watch(
-  () => ({
-    k: kind.value,
-    u: vrcUserId.value,
-    w: worldId.value,
-  }),
-  () => {
-    void load();
-  },
-);
-
-onMounted(() => {
-  void load();
 });
 </script>
 
@@ -154,18 +79,6 @@ onMounted(() => {
   margin: 0;
   font-size: 0.8rem;
   color: var(--text-secondary);
-  word-break: break-all;
-}
-
-.message {
-  padding: 1.5rem;
-  text-align: center;
-  color: var(--text-secondary);
-}
-
-.mono {
-  font-family: monospace;
-  font-size: 0.78rem;
   word-break: break-all;
 }
 </style>

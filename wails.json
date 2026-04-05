@@ -1,5 +1,6 @@
 {
   "name": "vrchat-tweaker",
+  "devServer": "localhost:34115",
   "outputfilename": "vrchat-tweaker",
   "frontend:install": "pnpm install",
   "frontend:build": "pnpm run build",

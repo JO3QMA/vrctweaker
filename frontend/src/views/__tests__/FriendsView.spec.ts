@@ -1,7 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
+import { createRouter, createWebHashHistory } from "vue-router";
+import { ElMessage } from "element-plus";
 import FriendsView from "../FriendsView.vue";
 import type { UserCacheDTO } from "../../wails/app";
+
+async function mountFriendsView(query: Record<string, string> = {}) {
+  const router = createRouter({
+    history: createWebHashHistory(),
+    routes: [
+      { path: "/friends", name: "friends", component: { template: "<div/>" } },
+    ],
+  });
+  await router.push({ path: "/friends", query });
+  await router.isReady();
+  const wrapper = mount(FriendsView, {
+    global: { plugins: [router] },
+  });
+  await flushPromises();
+  return wrapper;
+}
 
 const { mockFriends, mockIsLoggedIn } = vi.hoisted(() => ({
   mockFriends: vi.fn(),
@@ -57,8 +75,7 @@ describe("FriendsView", () => {
 
   it("renders single Online / Offline mode toggle", async () => {
     mockFriends.mockResolvedValue([]);
-    const wrapper = mount(FriendsView);
-    await flushPromises();
+    const wrapper = await mountFriendsView();
 
     expect(wrapper.find('[data-testid="friends-filter-mode"]').exists()).toBe(
       true,
@@ -80,8 +97,7 @@ describe("FriendsView", () => {
         status: "offline",
       }),
     ]);
-    const wrapper = mount(FriendsView);
-    await flushPromises();
+    const wrapper = await mountFriendsView();
 
     // ElSwitch の inner checkbox input で確認
     const mode = switchInput(wrapper, "friends-filter-mode")
@@ -105,8 +121,7 @@ describe("FriendsView", () => {
         status: "offline",
       }),
     ]);
-    const wrapper = mount(FriendsView);
-    await flushPromises();
+    const wrapper = await mountFriendsView();
 
     await switchInput(wrapper, "friends-filter-mode").setValue(true);
     await wrapper.vm.$nextTick();
@@ -117,8 +132,7 @@ describe("FriendsView", () => {
 
   it("renders display name search input below toolbar", async () => {
     mockFriends.mockResolvedValue([]);
-    const wrapper = mount(FriendsView);
-    await flushPromises();
+    const wrapper = await mountFriendsView();
 
     expect(
       wrapper.find('[data-testid="friends-search-display-name"]').exists(),
@@ -142,8 +156,7 @@ describe("FriendsView", () => {
         status: "join me",
       }),
     ]);
-    const wrapper = mount(FriendsView);
-    await flushPromises();
+    const wrapper = await mountFriendsView();
 
     // ElInput の data-testid は inner input に行くため直接 setValue
     await elInputEl(wrapper, "friends-search-display-name").setValue("beta");
@@ -161,8 +174,7 @@ describe("FriendsView", () => {
         status: "join me",
       }),
     ]);
-    const wrapper = mount(FriendsView);
-    await flushPromises();
+    const wrapper = await mountFriendsView();
 
     await elInputEl(wrapper, "friends-search-display-name").setValue("nope");
     await wrapper.vm.$nextTick();
@@ -178,8 +190,7 @@ describe("FriendsView", () => {
         status: "active",
       }),
     ]);
-    const wrapper = mount(FriendsView);
-    await flushPromises();
+    const wrapper = await mountFriendsView();
 
     await wrapper.find(".friend-card").trigger("click");
     await wrapper.vm.$nextTick();
@@ -202,8 +213,7 @@ describe("FriendsView", () => {
         status: "active",
       }),
     ]);
-    const wrapper = mount(FriendsView);
-    await flushPromises();
+    const wrapper = await mountFriendsView();
 
     await wrapper.find(".friend-card").trigger("click");
     await wrapper.vm.$nextTick();
@@ -212,5 +222,43 @@ describe("FriendsView", () => {
       .find('[data-testid="friend-copy-display-name"]')
       .trigger("click");
     expect(writeText).toHaveBeenCalledWith("CopyMe Friend");
+  });
+
+  it("selects friend from vrcUserId query and switches to offline list when needed", async () => {
+    mockFriends.mockResolvedValue([
+      minimalUser({
+        vrcUserId: "2",
+        displayName: "OffUser",
+        status: "offline",
+      }),
+    ]);
+    const wrapper = await mountFriendsView({ vrcUserId: "2" });
+
+    const mode = switchInput(wrapper, "friends-filter-mode")
+      .element as HTMLInputElement;
+    expect(mode.checked).toBe(true);
+    expect(wrapper.find(".friend-card.active").exists()).toBe(true);
+    expect(wrapper.text()).toContain("OffUser");
+  });
+
+  it("warns and removes vrcUserId query when id is not in friends list", async () => {
+    const noopHandler = { close: () => {} };
+    const warnSpy = vi
+      .spyOn(ElMessage, "warning")
+      .mockImplementation(() => noopHandler);
+    mockFriends.mockResolvedValue([
+      minimalUser({
+        vrcUserId: "1",
+        displayName: "OnlyOne",
+        status: "join me",
+      }),
+    ]);
+    const wrapper = await mountFriendsView({ vrcUserId: "missing-id" });
+    await flushPromises();
+
+    expect(warnSpy).toHaveBeenCalled();
+    const router = wrapper.vm.$router;
+    expect(router.currentRoute.value.query.vrcUserId).toBeUndefined();
+    warnSpy.mockRestore();
   });
 });

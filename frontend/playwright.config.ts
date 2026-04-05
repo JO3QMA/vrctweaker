@@ -13,8 +13,9 @@ export default defineConfig({
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: {
-    command: "pnpm run dev",
+    command: "pnpm run dev:e2e",
     url: "http://localhost:5173",
-    reuseExistingServer: !process.env.CI,
+    // Always spawn the e2e-mode dev server below; a hand-started `pnpm run dev` on :5173 prevents bind and breaks tests.
+    reuseExistingServer: false,
   },
 });

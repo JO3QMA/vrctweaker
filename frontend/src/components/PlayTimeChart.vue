@@ -48,6 +48,15 @@ function buildChartOptions() {
   return {
     responsive: true,
     maintainAspectRatio: false,
+    /* 上下: 軸ラベル・ポイントが canvas 端で欠けないよう余白を確保 */
+    layout: {
+      padding: {
+        top: 36,
+        left: 10,
+        right: 14,
+        bottom: 44,
+      },
+    },
     interaction: {
       mode: "index" as const,
       intersect: false,
@@ -57,6 +66,7 @@ function buildChartOptions() {
         beginAtZero: true,
         ticks: {
           color: textMuted,
+          padding: 6,
           callback: (tickValue: string | number) =>
             formatYAxisTickSeconds(Number(tickValue)),
         },
@@ -67,6 +77,7 @@ function buildChartOptions() {
           color: textMuted,
           maxRotation: 45,
           minRotation: 0,
+          padding: 4,
         },
         grid: { color: border },
       },
@@ -137,6 +148,8 @@ function createOrUpdateChart(): void {
           tension: 0.2,
           pointRadius: 4,
           pointHoverRadius: 6,
+          /* 最大値付近の点がチャート領域の上端で欠けないように */
+          clip: false,
         },
       ],
     },
