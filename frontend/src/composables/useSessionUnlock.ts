@@ -161,6 +161,7 @@ export function useSessionUnlock() {
   async function handleLogout(): Promise<void> {
     await App.clearStoredCredential().catch(() => undefined);
     await deleteWrappingKey().catch(() => undefined);
+    errorMessage.value = "";
     state.value = "needs-relogin";
   }
 
