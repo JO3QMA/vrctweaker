@@ -376,9 +376,12 @@ func toUserCacheDTOs(list []*identity.UserCache) []UserCacheDTO {
 }
 
 // LoginResultDTO is the result of a login attempt.
+// PlaintextToken is a one-time token the frontend must immediately wrap with Web Crypto
+// and persist via PersistWrappedCredential. It must not be stored or logged.
 type LoginResultDTO struct {
-	OK    bool   `json:"ok"`
-	Error string `json:"error,omitempty"`
+	OK             bool   `json:"ok"`
+	Error          string `json:"error,omitempty"`
+	PlaintextToken string `json:"plaintextToken,omitempty"`
 }
 
 // VRChatCurrentUserDTO is non-sensitive profile fields from GET /auth/user for the settings UI.

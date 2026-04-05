@@ -260,6 +260,9 @@ import { ref, reactive, computed, onMounted } from "vue";
 import { ElMessageBox, ElMessage } from "element-plus";
 import { App } from "../wails/app";
 import type { PathSettingsDTO, VRChatCurrentUserDTO } from "../wails/app";
+import { useSessionUnlock } from "../composables/useSessionUnlock";
+
+const { persistAfterLogin } = useSessionUnlock();
 
 const isLoggedIn = ref(false);
 const currentUser = ref<VRChatCurrentUserDTO | null>(null);
@@ -412,6 +415,11 @@ async function login() {
       loginForm.username = "";
       loginForm.password = "";
       loginForm.twoFactorCode = "";
+      // Wrap the one-time token with Web Crypto and persist the encrypted blob.
+      // This must be done immediately before the token reference is dropped.
+      if (result.plaintextToken) {
+        await persistAfterLogin(result.plaintextToken);
+      }
       await loadCurrentUser();
     } else {
       loginError.value = result.error || "ログインに失敗しました";
@@ -421,12 +429,16 @@ async function login() {
   }
 }
 
+const { handleLogout } = useSessionUnlock();
+
 async function logout() {
   loginError.value = "";
   profileError.value = "";
   currentUser.value = null;
   try {
     await App.logout();
+    // Also clear the IDB wrapping key and persisted blob.
+    await handleLogout();
     isLoggedIn.value = false;
   } catch (e) {
     loginError.value =

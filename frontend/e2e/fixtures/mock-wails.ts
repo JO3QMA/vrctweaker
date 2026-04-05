@@ -119,6 +119,11 @@ export function getMockWailsInitScript(): string {
         Login: () => Promise.resolve({ ok: false, error: 'E2E mock' }),
         Logout: () => Promise.resolve(),
         IsLoggedIn: () => Promise.resolve(false),
+        HasStoredCredential: () => Promise.resolve(false),
+        GetCredentialBlob: () => Promise.resolve(''),
+        UnlockVRChatSession: (_token: string) => Promise.resolve(),
+        PersistWrappedCredential: (_blob: string) => Promise.resolve(),
+        ClearStoredCredential: () => Promise.resolve(),
         GetVRChatCurrentUser: (_forceRefresh) =>
           Promise.reject(new Error('E2E mock: not logged in')),
         RefreshFriends: () => Promise.resolve(),

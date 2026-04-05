@@ -82,10 +82,9 @@ func (a *App) startup(ctx context.Context) {
 	credStore := vrchatapi.NewAutoCredentialStore(dataDir, func(msg string) {
 		runtime.LogWarning(ctx, msg)
 	})
+	// Do NOT set the auth token here. The frontend must call GetCredentialBlob,
+	// decrypt the wrapped blob with Web Crypto, and then call UnlockVRChatSession.
 	apiClient := vrchatapi.NewClient("")
-	if token, err := credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser); err == nil && token != "" {
-		apiClient.SetAuthToken(token)
-	}
 
 	extractor := media.NewDefaultMetadataExtractor()
 	maintenanceRepo := sqlite.NewMaintenanceRepository(db)
@@ -912,12 +911,15 @@ func (a *App) RotateEncounters() (int64, error) {
 
 // --- Identity bindings ---
 
-// Login authenticates with VRChat and saves credentials to OS keyring.
+// Login authenticates with VRChat. On success the returned PlaintextToken must be
+// immediately wrapped by the frontend via Web Crypto and persisted via
+// PersistWrappedCredential. The token is held in Go memory for the current session.
 func (a *App) Login(username, password, twoFactorCode string) LoginResultDTO {
-	if err := a.identity.Login(a.ctx, username, password, twoFactorCode); err != nil {
+	token, err := a.identity.Login(a.ctx, username, password, twoFactorCode)
+	if err != nil {
 		return LoginResultDTO{OK: false, Error: err.Error()}
 	}
-	return LoginResultDTO{OK: true}
+	return LoginResultDTO{OK: true, PlaintextToken: token}
 }
 
 // Logout clears stored credentials.
@@ -925,9 +927,41 @@ func (a *App) Logout() error {
 	return a.identity.Logout(a.ctx)
 }
 
-// IsLoggedIn returns true if we have stored credentials.
+// IsLoggedIn returns true when the session is active (token in memory).
 func (a *App) IsLoggedIn() (bool, error) {
 	return a.identity.IsLoggedIn(a.ctx)
+}
+
+// HasStoredCredential returns true when the credential store has a value (blob or legacy).
+// Use this on startup to decide whether to attempt unlock before showing the login form.
+func (a *App) HasStoredCredential() (bool, error) {
+	return a.identity.HasStoredCredential(a.ctx)
+}
+
+// GetCredentialBlob returns the raw credential value from the store.
+// The frontend inspects the value to decide whether to decrypt (wrapped blob, starts with
+// "VRCTWKV1:") or forward as-is (legacy plaintext) before calling UnlockVRChatSession.
+func (a *App) GetCredentialBlob() (string, error) {
+	return a.identity.GetCredentialBlob(a.ctx)
+}
+
+// UnlockVRChatSession sets the decrypted auth token from the frontend and loads the user profile.
+// Must be called after the frontend successfully decrypts the credential blob.
+func (a *App) UnlockVRChatSession(token string) error {
+	return a.identity.UnlockSession(a.ctx, token)
+}
+
+// PersistWrappedCredential saves a Web-Crypto wrapped blob to the credential store.
+// The blob must start with "VRCTWKV1:" (the WrappedBlobMagic prefix).
+// Call this after every successful login or key migration.
+func (a *App) PersistWrappedCredential(blob string) error {
+	return a.identity.PersistWrappedCredential(a.ctx, blob)
+}
+
+// ClearStoredCredential removes the credential blob from the store.
+// Call when IDB key loss makes the blob unrecoverable, or for a full logout.
+func (a *App) ClearStoredCredential() error {
+	return a.identity.ClearStoredCredential(a.ctx)
 }
 
 // GetVRChatCurrentUser returns the logged-in user's profile from the VRChat API.

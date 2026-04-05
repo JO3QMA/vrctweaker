@@ -27,7 +27,7 @@ func TestNewClient_SetAuthToken_setsAuthCookieInJar(t *testing.T) {
 func TestNewClient_SetAuthToken_empty_clearsStoredToken(t *testing.T) {
 	c := NewClient("tok")
 	c.SetAuthToken("")
-	if c.authToken != "" {
-		t.Fatalf("authToken = %q, want empty", c.authToken)
+	if c.GetAuthToken() != "" {
+		t.Fatalf("authToken = %q, want empty", c.GetAuthToken())
 	}
 }

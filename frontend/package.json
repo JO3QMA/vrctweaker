@@ -38,6 +38,7 @@
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-vue": "^9.25.0",
+    "fake-indexeddb": "^6.2.5",
     "jsdom": "^24.0.0",
     "license-checker": "^25.0.1",
     "prettier": "^3.2.5",

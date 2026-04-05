@@ -50,10 +50,74 @@ func NewIdentityUseCaseWithNotifier(
 	}
 }
 
-// IsLoggedIn returns true if we have stored credentials.
+// IsLoggedIn returns true when there is an active (unlocked) session token in memory.
+// For checking persisted storage regardless of unlock state, use HasStoredCredential.
 func (uc *IdentityUseCase) IsLoggedIn(ctx context.Context) (bool, error) {
-	_, err := uc.credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
-	return err == nil, nil
+	return uc.apiClient.GetAuthToken() != "", nil
+}
+
+// HasStoredCredential returns true when the credential store holds any value
+// (a Web-Crypto wrapped blob or a legacy plaintext token). This indicates that
+// a previous session can be restored if the user unlocks it via the frontend.
+func (uc *IdentityUseCase) HasStoredCredential(ctx context.Context) (bool, error) {
+	v, err := uc.credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
+	if err != nil {
+		return false, nil
+	}
+	return v != "", nil
+}
+
+// GetCredentialBlob returns the raw value from the credential store.
+// The frontend inspects the magic prefix to decide whether to decrypt (wrapped blob)
+// or forward as-is (legacy plaintext, migration path) before calling UnlockSession.
+// Returns ("", nil) when nothing is stored.
+func (uc *IdentityUseCase) GetCredentialBlob(ctx context.Context) (string, error) {
+	v, err := uc.credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
+	if err != nil {
+		return "", nil
+	}
+	return v, nil
+}
+
+// UnlockSession stores the decrypted auth token from the frontend and loads the
+// user profile into cache. Called after the frontend successfully decrypts the
+// credential blob from the store on startup or after IDB key migration.
+func (uc *IdentityUseCase) UnlockSession(ctx context.Context, token string) error {
+	if token == "" {
+		return errors.New("empty token")
+	}
+	uc.apiClient.SetAuthToken(token)
+	if _, err := uc.GetCurrentUser(ctx, true); err != nil {
+		log.Printf("identity: UnlockSession: profile fetch: %v", err)
+	}
+	return nil
+}
+
+// PersistWrappedCredential writes an AES-GCM wrapped blob produced by the frontend
+// to the credential store. The blob must carry the WrappedBlobMagic prefix.
+func (uc *IdentityUseCase) PersistWrappedCredential(ctx context.Context, blob string) error {
+	if !vrchatapi.IsWrappedBlob(blob) {
+		return errors.New("invalid blob: missing magic prefix")
+	}
+	return uc.credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, blob)
+}
+
+// ClearStoredCredential removes the credential blob from the store.
+// The frontend calls this when IDB key loss makes the blob unrecoverable, or to
+// force a clean logout that also removes stored data.
+func (uc *IdentityUseCase) ClearStoredCredential(ctx context.Context) error {
+	return uc.credStore.Delete(vrchatapi.CredentialService, vrchatapi.CredentialUser)
+}
+
+// handleSessionError detects ErrSessionExpired and auto-clears the Go-side session.
+// When the VRChat API invalidates the session, Go clears both the in-memory token
+// and the stored blob so the frontend can detect the unauthenticated state.
+func (uc *IdentityUseCase) handleSessionError(err error) error {
+	if errors.Is(err, vrchatapi.ErrSessionExpired) {
+		uc.apiClient.SetAuthToken("")
+		_ = uc.credStore.Delete(vrchatapi.CredentialService, vrchatapi.CredentialUser)
+	}
+	return err
 }
 
 func (uc *IdentityUseCase) friendsSyncStale(ctx context.Context) (bool, error) {
@@ -106,13 +170,13 @@ func currentUserProfileToSelfCache(p *vrchatapi.CurrentUserProfile, fingerprint 
 }
 
 // GetCurrentUser returns the logged-in VRChat user profile (cached up to UserCacheTTL).
-// When forceRefresh is true, the API is always called and the cache is updated (e.g. user-triggered re-fetch).
+// When forceRefresh is true, the API is always called and the cache is updated.
+// Requires UnlockSession to have been called first; returns ErrNotAuthenticated otherwise.
 func (uc *IdentityUseCase) GetCurrentUser(ctx context.Context, forceRefresh bool) (*vrchatapi.CurrentUserProfile, error) {
-	token, err := uc.credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
-	if err != nil || token == "" {
+	token := uc.apiClient.GetAuthToken()
+	if token == "" {
 		return nil, vrchatapi.ErrNotAuthenticated
 	}
-	uc.apiClient.SetAuthToken(token)
 	fp := identity.AuthTokenFingerprint(token)
 	if !forceRefresh && fp != "" {
 		row, gerr := uc.userCacheRepo.GetSelfBySessionFingerprint(ctx, fp)
@@ -125,7 +189,7 @@ func (uc *IdentityUseCase) GetCurrentUser(ctx context.Context, forceRefresh bool
 	}
 	u, err := uc.apiClient.GetCurrentUser(ctx)
 	if err != nil {
-		return nil, err
+		return nil, uc.handleSessionError(err)
 	}
 	cache := currentUserProfileToSelfCache(u, fp, time.Now())
 	if err := uc.userCacheRepo.UpsertSelf(ctx, cache); err != nil {
@@ -134,26 +198,26 @@ func (uc *IdentityUseCase) GetCurrentUser(ctx context.Context, forceRefresh bool
 	return u, nil
 }
 
-// Login authenticates with VRChat and persists the auth token to CredentialStore.
-func (uc *IdentityUseCase) Login(ctx context.Context, username, password, twoFactorCode string) error {
+// Login authenticates with VRChat and returns the plaintext auth token for the frontend
+// to wrap with Web Crypto before persisting. The token is stored in memory for immediate
+// use, but NOT written to the credential store – call PersistWrappedCredential after the
+// frontend encrypts the token.
+func (uc *IdentityUseCase) Login(ctx context.Context, username, password, twoFactorCode string) (string, error) {
 	if username == "" || password == "" {
-		return vrchatapi.ErrInvalidCredentials
+		return "", vrchatapi.ErrInvalidCredentials
 	}
 	authToken, err := uc.apiClient.Login(ctx, username, password, twoFactorCode)
 	if err != nil {
-		return err
-	}
-	if err := uc.credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, authToken); err != nil {
-		return fmt.Errorf("認証情報の保存に失敗しました: %w", err)
+		return "", err
 	}
 	uc.apiClient.SetAuthToken(authToken)
 	if _, err := uc.GetCurrentUser(ctx, true); err != nil {
 		log.Printf("identity: current user after login: %v", err)
 	}
-	return nil
+	return authToken, nil
 }
 
-// Logout clears stored credentials and removes cached self profile rows.
+// Logout clears the in-memory session and removes all stored credentials and cached self rows.
 func (uc *IdentityUseCase) Logout(ctx context.Context) error {
 	uc.apiClient.SetAuthToken("")
 	var selfErr error
@@ -218,7 +282,7 @@ func (uc *IdentityUseCase) RefreshFriends(ctx context.Context) error {
 
 	friends, err := uc.apiClient.GetFriends(ctx)
 	if err != nil {
-		return err
+		return uc.handleSessionError(err)
 	}
 	now := time.Now()
 	cached := make([]*identity.UserCache, len(friends))
@@ -291,13 +355,10 @@ func (uc *IdentityUseCase) ResolveUserProfileForNavigation(ctx context.Context, 
 		}
 		return row, row.UserKind == identity.UserKindFriend, nil
 	}
-	token, terr := uc.credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
-	if terr != nil || token == "" {
-		return nil, false, vrchatapi.ErrNotAuthenticated
-	}
-	uc.apiClient.SetAuthToken(token)
+	// Token is already in memory via UnlockSession – no credStore read needed.
 	f, err := uc.apiClient.GetUser(ctx, id)
 	if err != nil {
+		err = uc.handleSessionError(err)
 		if row == nil {
 			return nil, false, err
 		}

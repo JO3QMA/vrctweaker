@@ -133,6 +133,8 @@ export interface PathSettingsDTO {
 export interface LoginResultDTO {
   ok: boolean;
   error?: string;
+  /** One-time plaintext token; must be immediately wrapped by Web Crypto. Do not store or log. */
+  plaintextToken?: string;
 }
 
 /** GET /auth/user subset for settings UI (no authToken). */
@@ -240,6 +242,11 @@ interface AppBindings {
   ): Promise<LoginResultDTO>;
   Logout(): Promise<void>;
   IsLoggedIn(): Promise<boolean>;
+  HasStoredCredential(): Promise<boolean>;
+  GetCredentialBlob(): Promise<string>;
+  UnlockVRChatSession(token: string): Promise<void>;
+  PersistWrappedCredential(blob: string): Promise<void>;
+  ClearStoredCredential(): Promise<void>;
   GetVRChatCurrentUser(forceRefresh?: boolean): Promise<VRChatCurrentUserDTO>;
   RefreshFriends(): Promise<void>;
   VacuumDb(): Promise<void>;
@@ -567,6 +574,21 @@ export const App = {
   },
   async isLoggedIn(): Promise<boolean> {
     return callApp((a) => a.IsLoggedIn(), false);
+  },
+  async hasStoredCredential(): Promise<boolean> {
+    return callApp((a) => a.HasStoredCredential(), false);
+  },
+  async getCredentialBlob(): Promise<string> {
+    return callApp((a) => a.GetCredentialBlob(), "");
+  },
+  async unlockVRChatSession(token: string): Promise<void> {
+    return callApp((a) => a.UnlockVRChatSession(token), undefined);
+  },
+  async persistWrappedCredential(blob: string): Promise<void> {
+    return callApp((a) => a.PersistWrappedCredential(blob), undefined);
+  },
+  async clearStoredCredential(): Promise<void> {
+    return callApp((a) => a.ClearStoredCredential(), undefined);
   },
   async getVRChatCurrentUser(
     forceRefresh?: boolean,
