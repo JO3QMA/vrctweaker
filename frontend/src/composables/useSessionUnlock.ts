@@ -104,7 +104,9 @@ export function useSessionUnlock() {
   }
 
   /**
-   * Called when the user logs out. Removes the stored credential and the IDB wrapping key.
+   * Called when the user logs out. Clears the credential store and the IDB wrapping key.
+   * After App.logout(), Go already deletes the credential; clearStoredCredential here is
+   * redundant but idempotent and keeps this path correct when handleLogout is used alone.
    */
   async function handleLogout(): Promise<void> {
     await App.clearStoredCredential().catch(() => undefined);

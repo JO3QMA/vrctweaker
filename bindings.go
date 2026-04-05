@@ -378,6 +378,8 @@ func toUserCacheDTOs(list []*identity.UserCache) []UserCacheDTO {
 // LoginResultDTO is the result of a login attempt.
 // PlaintextToken is a one-time token the frontend must immediately wrap with Web Crypto
 // and persist via PersistWrappedCredential. It must not be stored or logged.
+// Over the Wails IPC bridge the field is JSON in cleartext, but that channel is local
+// to the app process (not sent over the network).
 type LoginResultDTO struct {
 	OK             bool   `json:"ok"`
 	Error          string `json:"error,omitempty"`

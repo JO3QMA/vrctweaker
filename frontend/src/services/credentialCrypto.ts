@@ -35,12 +35,28 @@ function openKeyDb(): Promise<IDBDatabase> {
   });
 }
 
+/** Opens the DB, runs fn, then closes the connection after all work completes. */
+async function withKeyDb<T>(fn: (db: IDBDatabase) => Promise<T>): Promise<T> {
+  const db = await openKeyDb();
+  try {
+    return await fn(db);
+  } finally {
+    db.close();
+  }
+}
+
 function idbGet(db: IDBDatabase, id: string): Promise<CryptoKey | undefined> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readonly");
     const req = tx.objectStore(STORE_NAME).get(id);
-    req.onsuccess = () => resolve(req.result as CryptoKey | undefined);
+    let value: CryptoKey | undefined;
+    req.onsuccess = () => {
+      value = req.result as CryptoKey | undefined;
+    };
     req.onerror = () => reject(req.error);
+    tx.onerror = () =>
+      reject(tx.error ?? new Error("IndexedDB transaction failed"));
+    tx.oncomplete = () => resolve(value);
   });
 }
 
@@ -48,8 +64,10 @@ function idbPut(db: IDBDatabase, id: string, key: CryptoKey): Promise<void> {
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, "readwrite");
     const req = tx.objectStore(STORE_NAME).put(key, id);
-    req.onsuccess = () => resolve();
     req.onerror = () => reject(req.error);
+    tx.onerror = () =>
+      reject(tx.error ?? new Error("IndexedDB transaction failed"));
+    tx.oncomplete = () => resolve();
   });
 }
 
@@ -58,17 +76,18 @@ function idbPut(db: IDBDatabase, id: string, key: CryptoKey): Promise<void> {
  * The key is `extractable: false` – it cannot be exported via `crypto.subtle.exportKey`.
  */
 export async function getOrCreateWrappingKey(): Promise<CryptoKey> {
-  const db = await openKeyDb();
-  const existing = await idbGet(db, KEY_ID);
-  if (existing) return existing;
+  return withKeyDb(async (db) => {
+    const existing = await idbGet(db, KEY_ID);
+    if (existing) return existing;
 
-  const key = await crypto.subtle.generateKey(
-    KEY_ALGO,
-    false /* not extractable */,
-    ["encrypt", "decrypt"],
-  );
-  await idbPut(db, KEY_ID, key);
-  return key;
+    const key = await crypto.subtle.generateKey(
+      KEY_ALGO,
+      false /* not extractable */,
+      ["encrypt", "decrypt"],
+    );
+    await idbPut(db, KEY_ID, key);
+    return key;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -137,11 +156,15 @@ export async function unwrapBlob(blob: string): Promise<string> {
  * unrecoverable blob on disk.
  */
 export async function deleteWrappingKey(): Promise<void> {
-  const db = await openKeyDb();
-  await new Promise<void>((resolve, reject) => {
-    const tx = db.transaction(STORE_NAME, "readwrite");
-    const req = tx.objectStore(STORE_NAME).delete(KEY_ID);
-    req.onsuccess = () => resolve();
-    req.onerror = () => reject(req.error);
-  });
+  await withKeyDb(
+    (db) =>
+      new Promise<void>((resolve, reject) => {
+        const tx = db.transaction(STORE_NAME, "readwrite");
+        const req = tx.objectStore(STORE_NAME).delete(KEY_ID);
+        req.onerror = () => reject(req.error);
+        tx.onerror = () =>
+          reject(tx.error ?? new Error("IndexedDB transaction failed"));
+        tx.oncomplete = () => resolve();
+      }),
+  );
 }

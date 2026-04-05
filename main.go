@@ -23,6 +23,13 @@ import (
 //   - connect-src 'self': VRChat API calls are made from Go, not from frontend fetch().
 //   - object-src 'none': Prevents plugin-based XSS vectors.
 //   - base-uri 'self': Prevents base tag hijacking.
+//
+// Dev vs production: during "wails dev" the WebView loads the Vite dev server
+// (see wails.json frontend:dev:serverUrl), so HTML is not served by this
+// AssetServer and this header does not apply to that document. Wails bridge
+// scripts are injected as external /wails/ipc.js and /wails/runtime.js
+// (frontend/vite.config.ts), not inline, so script-src 'self' is not an issue
+// there. This middleware applies to the embedded frontend/dist responses.
 func cspMiddleware(next http.Handler) http.Handler {
 	const policy = "default-src 'self'; " +
 		"script-src 'self'; " +
