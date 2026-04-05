@@ -87,8 +87,11 @@ func (uc *IdentityUseCase) UnlockSession(ctx context.Context, token string) erro
 		return errors.New("empty token")
 	}
 	uc.apiClient.SetAuthToken(token)
-	if _, err := uc.GetCurrentUser(ctx, true); err != nil {
+	fp := identity.AuthTokenFingerprint(token)
+	if _, err := uc.fetchAndUpsertCurrentUser(ctx, fp); err != nil {
+		uc.apiClient.SetAuthToken("")
 		log.Printf("identity: UnlockSession: profile fetch: %v", err)
+		return err
 	}
 	return nil
 }
@@ -118,6 +121,20 @@ func (uc *IdentityUseCase) handleSessionError(err error) error {
 		_ = uc.credStore.Delete(vrchatapi.CredentialService, vrchatapi.CredentialUser)
 	}
 	return err
+}
+
+// fetchAndUpsertCurrentUser loads the current user from the VRChat API and updates the self row in cache.
+// It does not call handleSessionError; callers decide whether to clear the credential store on failure.
+func (uc *IdentityUseCase) fetchAndUpsertCurrentUser(ctx context.Context, sessionFingerprint string) (*vrchatapi.CurrentUserProfile, error) {
+	u, err := uc.apiClient.GetCurrentUser(ctx)
+	if err != nil {
+		return nil, err
+	}
+	cache := currentUserProfileToSelfCache(u, sessionFingerprint, time.Now())
+	if err := uc.userCacheRepo.UpsertSelf(ctx, cache); err != nil {
+		return nil, fmt.Errorf("cache current user: %w", err)
+	}
+	return u, nil
 }
 
 func (uc *IdentityUseCase) friendsSyncStale(ctx context.Context) (bool, error) {
@@ -187,13 +204,9 @@ func (uc *IdentityUseCase) GetCurrentUser(ctx context.Context, forceRefresh bool
 			return userCacheToCurrentProfile(row), nil
 		}
 	}
-	u, err := uc.apiClient.GetCurrentUser(ctx)
+	u, err := uc.fetchAndUpsertCurrentUser(ctx, fp)
 	if err != nil {
 		return nil, uc.handleSessionError(err)
-	}
-	cache := currentUserProfileToSelfCache(u, fp, time.Now())
-	if err := uc.userCacheRepo.UpsertSelf(ctx, cache); err != nil {
-		return nil, fmt.Errorf("cache current user: %w", err)
 	}
 	return u, nil
 }
@@ -334,7 +347,7 @@ func (uc *IdentityUseCase) RefreshFriends(ctx context.Context) error {
 
 // SetStatus changes the current user's status via API.
 func (uc *IdentityUseCase) SetStatus(ctx context.Context, status string) error {
-	return uc.apiClient.SetUserStatus(ctx, vrchatapi.UserStatus(status))
+	return uc.handleSessionError(uc.apiClient.SetUserStatus(ctx, vrchatapi.UserStatus(status)))
 }
 
 // ErrProfileNotInCache is returned when the user is not in users_cache and the client is not logged in.

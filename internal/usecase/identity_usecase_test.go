@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -482,6 +483,128 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 		}
 		if repo.lastUpsertSelf == nil || repo.lastUpsertSelf.VRCUserID != "usr_fresh" {
 			t.Fatalf("UpsertSelf want usr_fresh, got %+v", repo.lastUpsertSelf)
+		}
+	})
+
+	t.Run("session_expired_clears_token_and_cred_store", func(t *testing.T) {
+		blob := vrchatapi.WrappedBlobMagic + "blob"
+		credStore := vrchatapi.NewStubCredentialStore()
+		if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, blob); err != nil {
+			t.Fatal(err)
+		}
+		apiClient := &mockAPIClient{
+			token:             "tok",
+			getCurrentUserErr: fmt.Errorf("%w: GET", vrchatapi.ErrSessionExpired),
+		}
+		repo := &mockUserCacheRepo{}
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		_, err := uc.GetCurrentUser(ctx, true)
+		if !errors.Is(err, vrchatapi.ErrSessionExpired) {
+			t.Fatalf("want ErrSessionExpired, got %v", err)
+		}
+		if apiClient.token != "" {
+			t.Error("token should be cleared")
+		}
+		_, gerr := credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
+		if gerr == nil {
+			t.Error("cred store should be cleared")
+		}
+	})
+}
+
+func TestIdentityUseCase_UnlockSession(t *testing.T) {
+	ctx := context.Background()
+	settingsRepo := newMockSettingsRepo()
+	blob := vrchatapi.WrappedBlobMagic + "stored-blob"
+
+	t.Run("session_expired_returns_error_preserves_cred_store", func(t *testing.T) {
+		credStore := vrchatapi.NewStubCredentialStore()
+		if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, blob); err != nil {
+			t.Fatal(err)
+		}
+		apiClient := &mockAPIClient{
+			getCurrentUserErr: fmt.Errorf("%w: GET /auth/user", vrchatapi.ErrSessionExpired),
+		}
+		repo := &mockUserCacheRepo{}
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		err := uc.UnlockSession(ctx, "tok-unlock")
+		if !errors.Is(err, vrchatapi.ErrSessionExpired) {
+			t.Fatalf("UnlockSession: want ErrSessionExpired, got %v", err)
+		}
+		if apiClient.token != "" {
+			t.Errorf("token should be cleared, got %q", apiClient.token)
+		}
+		got, gerr := credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
+		if gerr != nil || got != blob {
+			t.Errorf("cred store: want blob preserved, got %q err=%v", got, gerr)
+		}
+	})
+
+	t.Run("other_api_error_returns_error_preserves_cred_store", func(t *testing.T) {
+		credStore := vrchatapi.NewStubCredentialStore()
+		if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, blob); err != nil {
+			t.Fatal(err)
+		}
+		wantErr := errors.New("api unavailable")
+		apiClient := &mockAPIClient{getCurrentUserErr: wantErr}
+		repo := &mockUserCacheRepo{}
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		err := uc.UnlockSession(ctx, "tok-unlock")
+		if !errors.Is(err, wantErr) {
+			t.Fatalf("UnlockSession: want %v, got %v", wantErr, err)
+		}
+		if apiClient.token != "" {
+			t.Errorf("token should be cleared, got %q", apiClient.token)
+		}
+		got, _ := credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
+		if got != blob {
+			t.Errorf("cred store blob should be preserved")
+		}
+	})
+
+	t.Run("success_upserts_self", func(t *testing.T) {
+		credStore := vrchatapi.NewStubCredentialStore()
+		prof := &vrchatapi.CurrentUserProfile{ID: "usr_unlock", DisplayName: "Unlocked"}
+		apiClient := &mockAPIClient{getCurrentUser: prof}
+		repo := &mockUserCacheRepo{}
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		if err := uc.UnlockSession(ctx, "my-token"); err != nil {
+			t.Fatalf("UnlockSession: %v", err)
+		}
+		if apiClient.token != "my-token" {
+			t.Errorf("token want my-token, got %q", apiClient.token)
+		}
+		if repo.lastUpsertSelf == nil || repo.lastUpsertSelf.VRCUserID != "usr_unlock" {
+			t.Fatalf("UpsertSelf want usr_unlock, got %+v", repo.lastUpsertSelf)
+		}
+	})
+}
+
+func TestIdentityUseCase_SetStatus(t *testing.T) {
+	ctx := context.Background()
+	settingsRepo := newMockSettingsRepo()
+	blob := vrchatapi.WrappedBlobMagic + "blob"
+
+	t.Run("session_expired_clears_token_and_cred_store", func(t *testing.T) {
+		credStore := vrchatapi.NewStubCredentialStore()
+		if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, blob); err != nil {
+			t.Fatal(err)
+		}
+		apiClient := &mockAPIClient{
+			token:        "t-status",
+			setStatusErr: fmt.Errorf("%w: PUT /status", vrchatapi.ErrSessionExpired),
+		}
+		uc := NewIdentityUseCase(&mockUserCacheRepo{}, apiClient, credStore, settingsRepo)
+		err := uc.SetStatus(ctx, "busy")
+		if !errors.Is(err, vrchatapi.ErrSessionExpired) {
+			t.Fatalf("SetStatus: want ErrSessionExpired, got %v", err)
+		}
+		if apiClient.token != "" {
+			t.Errorf("token cleared want empty, got %q", apiClient.token)
+		}
+		_, gerr := credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
+		if gerr == nil {
+			t.Error("cred store should be empty after session expired")
 		}
 	})
 }
