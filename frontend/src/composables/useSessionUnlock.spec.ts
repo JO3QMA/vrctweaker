@@ -38,6 +38,7 @@ describe("useSessionUnlock beginStartupUnlock", () => {
   beforeEach(async () => {
     vi.resetModules();
     const { App } = await import("@/wails/app");
+    vi.mocked(App.hasStoredCredential).mockReset();
     vi.mocked(App.hasStoredCredential).mockResolvedValue(false);
   });
 
@@ -50,5 +51,27 @@ describe("useSessionUnlock beginStartupUnlock", () => {
     await p1;
     const { App } = await import("@/wails/app");
     expect(vi.mocked(App.hasStoredCredential)).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("resetSessionUnlockForStorybook", () => {
+  beforeEach(async () => {
+    vi.resetModules();
+    const { App } = await import("@/wails/app");
+    vi.mocked(App.hasStoredCredential).mockReset();
+    vi.mocked(App.hasStoredCredential).mockResolvedValue(false);
+  });
+
+  it("clears shared state so beginStartupUnlock can run again", async () => {
+    const { useSessionUnlock, resetSessionUnlockForStorybook } =
+      await import("./useSessionUnlock");
+    const u = useSessionUnlock();
+    await u.beginStartupUnlock();
+    expect(u.state.value).toBe("needs-relogin");
+    resetSessionUnlockForStorybook();
+    expect(u.state.value).toBe("idle");
+    await u.beginStartupUnlock();
+    const { App } = await import("@/wails/app");
+    expect(vi.mocked(App.hasStoredCredential)).toHaveBeenCalledTimes(2);
   });
 });

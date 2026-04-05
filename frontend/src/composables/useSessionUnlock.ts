@@ -57,6 +57,16 @@ const errorMessage = ref("");
 
 let startupUnlockPromise: Promise<void> | null = null;
 
+/**
+ * Clears module-level unlock state so each Storybook story (or test) starts isolated.
+ * Does not touch Go or IndexedDB.
+ */
+export function resetSessionUnlockForStorybook(): void {
+  state.value = "idle";
+  errorMessage.value = "";
+  startupUnlockPromise = null;
+}
+
 export function useSessionUnlock() {
   /**
    * Called at app startup. Fetches the blob from Go and attempts to unlock the session.
