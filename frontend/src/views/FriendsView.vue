@@ -45,11 +45,13 @@ import FriendsDetailPane from "./friends/FriendsDetailPane.vue";
 import FriendsListPanel from "./friends/FriendsListPanel.vue";
 import FriendsViewToolbar from "./friends/FriendsViewToolbar.vue";
 import { friendIsOffline } from "./friends/friendsViewUtils";
+import { useSessionUnlock } from "../composables/useSessionUnlock";
 import { App } from "../wails/app";
 import type { UserCacheDTO } from "../wails/app";
 
 const route = useRoute();
 const router = useRouter();
+const { beginStartupUnlock } = useSessionUnlock();
 
 function firstQueryString(v: unknown): string {
   if (v == null) return "";
@@ -130,6 +132,7 @@ async function applyVrcUserIdFromQuery(): Promise<void> {
 }
 
 onMounted(async () => {
+  await beginStartupUnlock().catch(() => undefined);
   await loadFriends();
   isLoggedIn.value = await App.isLoggedIn();
   await applyVrcUserIdFromQuery();
