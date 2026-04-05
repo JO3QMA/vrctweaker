@@ -6,6 +6,8 @@ import "context"
 type VRChatAPIClient interface {
 	Login(ctx context.Context, username, password, twoFactorCode string) (string, error)
 	SetAuthToken(token string)
+	// GetAuthToken returns the current in-memory auth token. Empty string means no active session.
+	GetAuthToken() string
 	GetCurrentUser(ctx context.Context) (*CurrentUserProfile, error)
 	GetFriends(ctx context.Context) ([]Friend, error)
 	GetUser(ctx context.Context, userID string) (*Friend, error)

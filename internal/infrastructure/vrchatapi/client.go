@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
+	"sync"
 	"time"
 )
 
@@ -16,6 +17,7 @@ const baseURL = "https://api.vrchat.cloud/api/1"
 
 // Client is the VRChat Web API client.
 type Client struct {
+	mu         sync.RWMutex
 	httpClient *http.Client
 	authToken  string
 	// apiRoot is the full base URL including /api/1. Empty means use package baseURL (production).
@@ -40,8 +42,12 @@ func NewClient(authToken string) *Client {
 // for api.vrchat.cloud. VRChat accepts either JSON authToken (often sent as
 // Basic in examples) or the `auth` cookie; after 2FA we only persist the cookie
 // value, which must be sent as Cookie, not as Authorization: Basic.
+// SetAuthToken is safe for concurrent use.
 func (c *Client) SetAuthToken(token string) {
+	c.mu.Lock()
 	c.authToken = token
+	c.mu.Unlock()
+
 	if c.httpClient.Jar == nil {
 		return
 	}
@@ -49,6 +55,7 @@ func (c *Client) SetAuthToken(token string) {
 	if err != nil {
 		return
 	}
+	// net/http/cookiejar.Jar is safe for concurrent use.
 	if token == "" {
 		c.httpClient.Jar.SetCookies(u, []*http.Cookie{
 			{Name: "auth", Path: "/", MaxAge: -1},
@@ -58,6 +65,14 @@ func (c *Client) SetAuthToken(token string) {
 	c.httpClient.Jar.SetCookies(u, []*http.Cookie{
 		{Name: "auth", Value: token, Path: "/", Secure: true},
 	})
+}
+
+// GetAuthToken returns the stored auth token. Empty string means no active session.
+// Safe for concurrent use.
+func (c *Client) GetAuthToken() string {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.authToken
 }
 
 // do performs an HTTP request; the CookieJar sends the `auth` cookie set by SetAuthToken.
@@ -88,6 +103,12 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}) 
 		return nil, err
 	}
 
+	if resp.StatusCode == 401 && c.GetAuthToken() != "" {
+		// A 401 while we believed we were authenticated means the server-side session
+		// has expired or been invalidated. Signal this so callers can clear state.
+		_ = resp.Body.Close()
+		return nil, fmt.Errorf("%w: %s %s", ErrSessionExpired, method, path)
+	}
 	if resp.StatusCode >= 400 {
 		snippet, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
 		_ = resp.Body.Close()

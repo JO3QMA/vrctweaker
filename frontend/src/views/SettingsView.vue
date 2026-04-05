@@ -67,6 +67,14 @@
         </div>
       </div>
       <div v-else class="login-form">
+        <el-alert
+          v-if="unlockState === 'needs-relogin' && unlockErrorMessage"
+          :title="unlockErrorMessage"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="login-error"
+        />
         <el-form label-position="top" size="default">
           <el-form-item label="ユーザー名">
             <el-input
@@ -260,6 +268,15 @@ import { ref, reactive, computed, onMounted } from "vue";
 import { ElMessageBox, ElMessage } from "element-plus";
 import { App } from "../wails/app";
 import type { PathSettingsDTO, VRChatCurrentUserDTO } from "../wails/app";
+import { useSessionUnlock } from "../composables/useSessionUnlock";
+
+const {
+  state: unlockState,
+  errorMessage: unlockErrorMessage,
+  beginStartupUnlock,
+  persistAfterLogin,
+  handleLogout,
+} = useSessionUnlock();
 
 const isLoggedIn = ref(false);
 const currentUser = ref<VRChatCurrentUserDTO | null>(null);
@@ -367,6 +384,7 @@ const pathFields = computed(() => [
 ]);
 
 onMounted(async () => {
+  await beginStartupUnlock().catch(() => undefined);
   try {
     isLoggedIn.value = await App.isLoggedIn();
   } catch {
@@ -412,6 +430,11 @@ async function login() {
       loginForm.username = "";
       loginForm.password = "";
       loginForm.twoFactorCode = "";
+      // Wrap the one-time token with Web Crypto and persist the encrypted blob.
+      // This must be done immediately before the token reference is dropped.
+      if (result.plaintextToken) {
+        await persistAfterLogin(result.plaintextToken);
+      }
       await loadCurrentUser();
     } else {
       loginError.value = result.error || "ログインに失敗しました";
@@ -427,11 +450,14 @@ async function logout() {
   currentUser.value = null;
   try {
     await App.logout();
-    isLoggedIn.value = false;
   } catch (e) {
     loginError.value =
       e instanceof Error ? e.message : "ログアウトに失敗しました";
   }
+  // Always clean up frontend-side state (IDB wrapping key + blob)
+  // even if the backend logout partially failed.
+  await handleLogout();
+  isLoggedIn.value = false;
 }
 
 async function refreshFriends() {

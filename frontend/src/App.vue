@@ -17,13 +17,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import TitleBar from "./components/TitleBar.vue";
 import Sidebar from "./components/Sidebar.vue";
+import { useSessionUnlock } from "./composables/useSessionUnlock";
 
 const route = useRoute();
 const bareLayout = computed(() => route.meta.bare === true);
+
+const { beginStartupUnlock } = useSessionUnlock();
+
+onMounted(() => {
+  // Best-effort: attempt to restore the previous session via the credential blob.
+  // The result (unlocked / needs-relogin) is reflected in Go-side IsLoggedIn state
+  // which individual views query via App.isLoggedIn().
+  beginStartupUnlock().catch(() => undefined);
+});
 </script>
 
 <style scoped>

@@ -16,6 +16,11 @@ export function wailsFriendsLoggedInDecorator(friends: UserCacheDTO[]) {
           IsLoggedIn: () => Promise.resolve(true),
           RefreshFriends: () => Promise.resolve(),
           SetFavorite: () => Promise.resolve(),
+          HasStoredCredential: () => Promise.resolve(false),
+          GetCredentialBlob: () => Promise.resolve(""),
+          UnlockVRChatSession: (_token: string) => Promise.resolve(),
+          PersistWrappedCredential: (_blob: string) => Promise.resolve(),
+          ClearStoredCredential: () => Promise.resolve(),
         };
         window.go = {
           main: {
