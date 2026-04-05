@@ -48,48 +48,51 @@ export function useSessionUnlock() {
     state.value = "unlocking";
     errorMessage.value = "";
 
+    const hasBlob = await App.hasStoredCredential();
+    if (!hasBlob) {
+      state.value = "needs-relogin";
+      return;
+    }
+
+    const blob = await App.getCredentialBlob();
+    if (!blob) {
+      state.value = "needs-relogin";
+      return;
+    }
+
+    let token: string;
     try {
-      const hasBlob = await App.hasStoredCredential();
-      if (!hasBlob) {
-        state.value = "needs-relogin";
-        return;
-      }
+      token = await unwrapBlob(blob);
+    } catch {
+      // IDB key loss or blob corruption – clear the unusable blob and request re-login.
+      await App.clearStoredCredential().catch(() => undefined);
+      state.value = "needs-relogin";
+      errorMessage.value =
+        "保存された認証情報を復号できませんでした。再ログインが必要です。";
+      return;
+    }
 
-      const blob = await App.getCredentialBlob();
-      if (!blob) {
-        state.value = "needs-relogin";
-        return;
-      }
-
-      let token: string;
+    // Migration: if the stored value was a legacy plaintext token, re-wrap it.
+    if (!blob.startsWith(WRAPPED_BLOB_MAGIC)) {
       try {
-        token = await unwrapBlob(blob);
+        const wrapped = await wrapToken(token);
+        await App.persistWrappedCredential(wrapped);
       } catch {
-        // IDB key loss or blob corruption – clear the unusable blob and request re-login.
-        await App.clearStoredCredential().catch(() => undefined);
-        state.value = "needs-relogin";
-        errorMessage.value =
-          "保存された認証情報を復号できませんでした。再ログインが必要です。";
-        return;
+        // Migration failure is non-fatal; the session still unlocks this time.
       }
+    }
 
-      // Migration: if the stored value was a legacy plaintext token, re-wrap it.
-      if (!blob.startsWith(WRAPPED_BLOB_MAGIC)) {
-        try {
-          const wrapped = await wrapToken(token);
-          await App.persistWrappedCredential(wrapped);
-        } catch {
-          // Migration failure is non-fatal; the session still unlocks this time.
-        }
-      }
-
+    // Server-side session expiry or other unlock failure clears the blob so the next
+    // startup doesn't retry the same expired token in a loop.
+    try {
       await App.unlockVRChatSession(token);
       state.value = "unlocked";
-      // Server-side session expiry or other unlock failure – clear the unusable blob
-      // so the next startup doesn't retry the same expired token in a loop.
+    } catch (e: unknown) {
       await App.clearStoredCredential().catch(() => undefined);
       state.value = "needs-relogin";
       errorMessage.value = e instanceof Error ? e.message : String(e);
+      return;
+    }
   }
 
   /**
