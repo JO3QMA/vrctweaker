@@ -17,6 +17,11 @@ var ErrNotAuthenticated = errors.New("not authenticated")
 // server-side (password change, manual logout, session expiry, etc.).
 var ErrSessionExpired = errors.New("session expired")
 
+// ErrUnlockSessionNeedsRelogin is wrapped by IdentityUseCase.UnlockSession for auth
+// failures (session expired, not authenticated). Error() includes this stable marker so
+// the Wails frontend can clear stored credentials without treating network errors as logout.
+var ErrUnlockSessionNeedsRelogin = errors.New("VRCTWK_UNLOCK_NEEDS_RELOGIN")
+
 // CurrentUserProfile is a subset of GET /auth/user for display (non-sensitive fields).
 type CurrentUserProfile struct {
 	ID                             string `json:"id"`

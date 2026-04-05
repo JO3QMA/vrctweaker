@@ -32,6 +32,24 @@ export type UnlockState =
   | "needs-relogin"
   | "error";
 
+/** Stable substring in errors from Go UnlockSession when the stored credential is invalid. */
+export const UNLOCK_NEEDS_RELOGIN_MARKER = "VRCTWK_UNLOCK_NEEDS_RELOGIN";
+
+/**
+ * True when startup unlock failed for auth/session reasons (clear stored blob, prompt re-login).
+ * Also matches legacy Go errors without the marker for older backends.
+ */
+export function unlockFailureRequiresRelogin(e: unknown): boolean {
+  const msg = e instanceof Error ? e.message : String(e);
+  if (msg.includes(UNLOCK_NEEDS_RELOGIN_MARKER)) return true;
+  if (/session expired/i.test(msg)) return true;
+  const lower = msg.toLowerCase();
+  if (lower === "not authenticated" || lower.startsWith("not authenticated:")) {
+    return true;
+  }
+  return false;
+}
+
 // Module-level shared state so all consumers (App.vue, SettingsView.vue, etc.)
 // observe the same unlock lifecycle without prop drilling or provide/inject.
 const state = ref<UnlockState>("idle");
@@ -82,15 +100,19 @@ export function useSessionUnlock() {
       }
     }
 
-    // Server-side session expiry or other unlock failure clears the blob so the next
-    // startup doesn't retry the same expired token in a loop.
+    // Auth/session failure: clear blob so we do not loop on a dead token. Transient errors
+    // (network, timeout): keep blob and surface "error" so a later retry can succeed.
     try {
       await App.unlockVRChatSession(token);
       state.value = "unlocked";
     } catch (e: unknown) {
-      await App.clearStoredCredential().catch(() => undefined);
-      state.value = "needs-relogin";
       errorMessage.value = e instanceof Error ? e.message : String(e);
+      if (unlockFailureRequiresRelogin(e)) {
+        await App.clearStoredCredential().catch(() => undefined);
+        state.value = "needs-relogin";
+      } else {
+        state.value = "error";
+      }
       return;
     }
   }

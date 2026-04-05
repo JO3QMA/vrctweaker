@@ -1,4 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  UNLOCK_NEEDS_RELOGIN_MARKER,
+  unlockFailureRequiresRelogin,
+} from "./useSessionUnlock";
 
 vi.mock("@/wails/app", () => ({
   App: {
@@ -9,6 +13,26 @@ vi.mock("@/wails/app", () => ({
     persistWrappedCredential: vi.fn().mockResolvedValue(undefined),
   },
 }));
+
+describe("unlockFailureRequiresRelogin", () => {
+  it.each([
+    [`wrapped: ${UNLOCK_NEEDS_RELOGIN_MARKER}: session expired`, true],
+    ["session expired: GET /auth/user", true],
+    ["Session Expired: foo", true],
+    ["not authenticated", true],
+    ["not authenticated: extra", true],
+    ["dial tcp: connection refused", false],
+    ["context deadline exceeded", false],
+    ["", false],
+  ])("%s → %s", (msg, want) => {
+    expect(unlockFailureRequiresRelogin(new Error(msg))).toBe(want);
+  });
+
+  it("handles non-Error throws", () => {
+    expect(unlockFailureRequiresRelogin("session expired")).toBe(true);
+    expect(unlockFailureRequiresRelogin(123)).toBe(false);
+  });
+});
 
 describe("useSessionUnlock beginStartupUnlock", () => {
   beforeEach(async () => {

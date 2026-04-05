@@ -82,6 +82,9 @@ func (uc *IdentityUseCase) GetCredentialBlob(ctx context.Context) (string, error
 // UnlockSession stores the decrypted auth token from the frontend and loads the
 // user profile into cache. Called after the frontend successfully decrypts the
 // credential blob from the store on startup or after IDB key migration.
+// On VRChat auth failure (ErrSessionExpired, ErrNotAuthenticated), the in-memory
+// token is cleared and the error wraps ErrUnlockSessionNeedsRelogin for the frontend.
+// Transient failures (e.g. network) leave the token set so the session can recover.
 func (uc *IdentityUseCase) UnlockSession(ctx context.Context, token string) error {
 	if token == "" {
 		return errors.New("empty token")
@@ -89,8 +92,11 @@ func (uc *IdentityUseCase) UnlockSession(ctx context.Context, token string) erro
 	uc.apiClient.SetAuthToken(token)
 	fp := identity.AuthTokenFingerprint(token)
 	if _, err := uc.fetchAndUpsertCurrentUser(ctx, fp); err != nil {
-		uc.apiClient.SetAuthToken("")
 		log.Printf("identity: UnlockSession: profile fetch: %v", err)
+		if errors.Is(err, vrchatapi.ErrSessionExpired) || errors.Is(err, vrchatapi.ErrNotAuthenticated) {
+			uc.apiClient.SetAuthToken("")
+			return fmt.Errorf("%w: %w", vrchatapi.ErrUnlockSessionNeedsRelogin, err)
+		}
 		return err
 	}
 	return nil

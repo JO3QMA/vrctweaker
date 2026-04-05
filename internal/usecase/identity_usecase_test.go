@@ -541,6 +541,32 @@ func TestIdentityUseCase_UnlockSession(t *testing.T) {
 	settingsRepo := newMockSettingsRepo()
 	blob := vrchatapi.WrappedBlobMagic + "stored-blob"
 
+	t.Run("not_authenticated_returns_wrapped_error_clears_token_preserves_cred_store", func(t *testing.T) {
+		credStore := vrchatapi.NewStubCredentialStore()
+		if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, blob); err != nil {
+			t.Fatal(err)
+		}
+		apiClient := &mockAPIClient{
+			getCurrentUserErr: vrchatapi.ErrNotAuthenticated,
+		}
+		repo := &mockUserCacheRepo{}
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		err := uc.UnlockSession(ctx, "tok-na")
+		if !errors.Is(err, vrchatapi.ErrNotAuthenticated) {
+			t.Fatalf("UnlockSession: want ErrNotAuthenticated, got %v", err)
+		}
+		if !errors.Is(err, vrchatapi.ErrUnlockSessionNeedsRelogin) {
+			t.Fatalf("UnlockSession: want ErrUnlockSessionNeedsRelogin, got %v", err)
+		}
+		if apiClient.token != "" {
+			t.Errorf("token should be cleared, got %q", apiClient.token)
+		}
+		got, gerr := credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
+		if gerr != nil || got != blob {
+			t.Errorf("cred store: want blob preserved, got %q err=%v", got, gerr)
+		}
+	})
+
 	t.Run("session_expired_returns_error_preserves_cred_store", func(t *testing.T) {
 		credStore := vrchatapi.NewStubCredentialStore()
 		if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, blob); err != nil {
@@ -554,6 +580,9 @@ func TestIdentityUseCase_UnlockSession(t *testing.T) {
 		err := uc.UnlockSession(ctx, "tok-unlock")
 		if !errors.Is(err, vrchatapi.ErrSessionExpired) {
 			t.Fatalf("UnlockSession: want ErrSessionExpired, got %v", err)
+		}
+		if !errors.Is(err, vrchatapi.ErrUnlockSessionNeedsRelogin) {
+			t.Fatalf("UnlockSession: want ErrUnlockSessionNeedsRelogin, got %v", err)
 		}
 		if apiClient.token != "" {
 			t.Errorf("token should be cleared, got %q", apiClient.token)
@@ -577,8 +606,8 @@ func TestIdentityUseCase_UnlockSession(t *testing.T) {
 		if !errors.Is(err, wantErr) {
 			t.Fatalf("UnlockSession: want %v, got %v", wantErr, err)
 		}
-		if apiClient.token != "" {
-			t.Errorf("token should be cleared, got %q", apiClient.token)
+		if apiClient.token != "tok-unlock" {
+			t.Errorf("token should remain set for transient errors, got %q", apiClient.token)
 		}
 		got, _ := credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
 		if got != blob {
