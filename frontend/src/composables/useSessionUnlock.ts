@@ -2,7 +2,8 @@
  * useSessionUnlock – manages the credential unlock lifecycle.
  *
  * Startup flow:
- *   1. `tryUnlockOnStartup()` is called from App.vue once the Wails runtime is ready.
+ *   1. `beginStartupUnlock()` is called from App.vue (and awaited from SettingsView) so all
+ *      consumers share one in-flight unlock; it wraps `tryUnlockOnStartup()`.
  *   2. It fetches the blob from Go, decrypts it with Web Crypto, and calls UnlockVRChatSession.
  *   3. If the blob is legacy plaintext, it migrates by re-wrapping before unlocking.
  *   4. If decryption fails (IDB key lost), it clears the stored credential and sets
@@ -35,6 +36,8 @@ export type UnlockState =
 // observe the same unlock lifecycle without prop drilling or provide/inject.
 const state = ref<UnlockState>("idle");
 const errorMessage = ref("");
+
+let startupUnlockPromise: Promise<void> | null = null;
 
 export function useSessionUnlock() {
   /**
@@ -89,6 +92,17 @@ export function useSessionUnlock() {
   }
 
   /**
+   * Starts startup unlock once per app lifetime; further calls return the same promise.
+   * Use from App.vue to kick off unlock and from SettingsView to wait before reading IsLoggedIn.
+   */
+  function beginStartupUnlock(): Promise<void> {
+    if (!startupUnlockPromise) {
+      startupUnlockPromise = tryUnlockOnStartup();
+    }
+    return startupUnlockPromise;
+  }
+
+  /**
    * Called immediately after a successful login with the plaintext token from LoginResultDTO.
    * Wraps the token and persists it so future startups can restore the session.
    */
@@ -118,6 +132,7 @@ export function useSessionUnlock() {
     state,
     errorMessage,
     tryUnlockOnStartup,
+    beginStartupUnlock,
     persistAfterLogin,
     handleLogout,
   };

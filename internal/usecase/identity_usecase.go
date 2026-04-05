@@ -224,8 +224,13 @@ func (uc *IdentityUseCase) Login(ctx context.Context, username, password, twoFac
 		return "", err
 	}
 	uc.apiClient.SetAuthToken(authToken)
-	if _, err := uc.GetCurrentUser(ctx, true); err != nil {
+	fp := identity.AuthTokenFingerprint(authToken)
+	if _, err := uc.fetchAndUpsertCurrentUser(ctx, fp); err != nil {
 		log.Printf("identity: current user after login: %v", err)
+		if errors.Is(err, vrchatapi.ErrSessionExpired) {
+			uc.apiClient.SetAuthToken("")
+			return "", err
+		}
 	}
 	return authToken, nil
 }

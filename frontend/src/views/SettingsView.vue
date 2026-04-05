@@ -273,6 +273,7 @@ import { useSessionUnlock } from "../composables/useSessionUnlock";
 const {
   state: unlockState,
   errorMessage: unlockErrorMessage,
+  beginStartupUnlock,
   persistAfterLogin,
   handleLogout,
 } = useSessionUnlock();
@@ -383,6 +384,7 @@ const pathFields = computed(() => [
 ]);
 
 onMounted(async () => {
+  await beginStartupUnlock().catch(() => undefined);
   try {
     isLoggedIn.value = await App.isLoggedIn();
   } catch {

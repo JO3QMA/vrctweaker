@@ -26,13 +26,13 @@ import { useSessionUnlock } from "./composables/useSessionUnlock";
 const route = useRoute();
 const bareLayout = computed(() => route.meta.bare === true);
 
-const { tryUnlockOnStartup } = useSessionUnlock();
+const { beginStartupUnlock } = useSessionUnlock();
 
 onMounted(() => {
   // Best-effort: attempt to restore the previous session via the credential blob.
   // The result (unlocked / needs-relogin) is reflected in Go-side IsLoggedIn state
   // which individual views query via App.isLoggedIn().
-  tryUnlockOnStartup().catch(() => undefined);
+  beginStartupUnlock().catch(() => undefined);
 });
 </script>
 

@@ -371,6 +371,30 @@ func TestIdentityUseCase_Login(t *testing.T) {
 			t.Errorf("GetCurrentUser calls: want 1, got %d", apiClient.getCurrentUserCalls)
 		}
 	})
+
+	t.Run("session_expired_after_login_clears_token_returns_error_preserves_cred_store", func(t *testing.T) {
+		cs := vrchatapi.NewStubCredentialStore()
+		if err := cs.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, "existing-blob"); err != nil {
+			t.Fatalf("credStore.Set: %v", err)
+		}
+		apiClient := &mockAPIClient{
+			loginToken:        "auth-token-123",
+			getCurrentUserErr: fmt.Errorf("%w: GET /auth/user", vrchatapi.ErrSessionExpired),
+		}
+		repo := &mockUserCacheRepo{}
+		uc := NewIdentityUseCase(repo, apiClient, cs, settingsRepo)
+		_, err := uc.Login(ctx, "user", "pass", "")
+		if err == nil || !errors.Is(err, vrchatapi.ErrSessionExpired) {
+			t.Fatalf("Login: want ErrSessionExpired, got %v", err)
+		}
+		if apiClient.token != "" {
+			t.Errorf("apiClient token want empty after session expired, got %q", apiClient.token)
+		}
+		v, gerr := cs.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
+		if gerr != nil || v != "existing-blob" {
+			t.Errorf("cred store should be unchanged: got %q, err %v", v, gerr)
+		}
+	})
 }
 
 func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
