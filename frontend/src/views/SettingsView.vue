@@ -448,15 +448,16 @@ async function logout() {
   loginError.value = "";
   profileError.value = "";
   currentUser.value = null;
-  try {
-    await App.logout();
-    // Also clear the IDB wrapping key and persisted blob.
+    try {
+      await App.logout();
+    } catch (e) {
+      loginError.value =
+        e instanceof Error ? e.message : "ログアウトに失敗しました";
+    }
+    // Always clean up frontend-side state (IDB wrapping key + blob)
+    // even if the backend logout partially failed.
     await handleLogout();
     isLoggedIn.value = false;
-  } catch (e) {
-    loginError.value =
-      e instanceof Error ? e.message : "ログアウトに失敗しました";
-  }
 }
 
 async function refreshFriends() {
