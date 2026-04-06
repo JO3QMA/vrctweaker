@@ -16,6 +16,8 @@ export default defineConfig({
       exclude: [
         "node_modules/**",
         "src/test/**",
+        // Vitest already omits test files from coverage; listed for clarity in reviews
+        "src/**/*.{spec,test}.{js,ts,vue}",
         "**/*.stories.ts",
         "**/*.config.*",
         "e2e/**",

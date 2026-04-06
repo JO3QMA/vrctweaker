@@ -140,6 +140,17 @@ func TestAutomationUseCase_ToggleRule_getFails(t *testing.T) {
 	}
 }
 
+// TestAutomationUseCase_ToggleRule_ruleNotFound documents ToggleRule when GetByID returns (nil, nil):
+// the use case returns nil error (silent no-op). See automation_usecase.go ToggleRule.
+func TestAutomationUseCase_ToggleRule_ruleNotFound(t *testing.T) {
+	ctx := context.Background()
+	repo := &mockAutomationRuleRepo{} // GetByID yields nil, nil for unknown id
+	uc := NewAutomationUseCase(repo, noopEventBus{}, &recordingActionRunner{})
+	if err := uc.ToggleRule(ctx, "missing", true); err != nil {
+		t.Fatalf("ToggleRule: got %v, want nil when rule is not found", err)
+	}
+}
+
 func TestAutomationUseCase_ToggleRule_updates(t *testing.T) {
 	ctx := context.Background()
 	repo := &mockAutomationRuleRepo{

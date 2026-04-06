@@ -141,7 +141,11 @@ describe("copyDisplayName", () => {
       configurable: true,
       writable: true,
     });
-    await copyDisplayName("x");
-    expect(execCommand).toHaveBeenCalledWith("copy");
+    try {
+      await copyDisplayName("x");
+      expect(execCommand).toHaveBeenCalledWith("copy");
+    } finally {
+      Reflect.deleteProperty(document, "execCommand");
+    }
   });
 });
