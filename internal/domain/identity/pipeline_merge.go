@@ -68,6 +68,7 @@ func (u *UserCache) MergeFromPipelineFriendLocation(now time.Time, location, tra
 }
 
 // MergeFromPipelineFriendActive applies friend-active (website activity).
+// Friends active on the website are not in VRChat; we still clear "offline" so the UI lists them as online.
 func (u *UserCache) MergeFromPipelineFriendActive(now time.Time, platform string) {
 	if u == nil || u.UserKind == UserKindSelf {
 		return
@@ -77,6 +78,9 @@ func (u *UserCache) MergeFromPipelineFriendActive(now time.Time, platform string
 	if p := strings.TrimSpace(platform); p != "" {
 		u.Platform = p
 		u.LastPlatform = p
+	}
+	if s := strings.TrimSpace(u.Status); s == "" || strings.EqualFold(s, "offline") {
+		u.Status = "active"
 	}
 }
 

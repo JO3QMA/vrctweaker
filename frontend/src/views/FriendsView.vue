@@ -180,10 +180,20 @@ watch(
   },
 );
 
+function syncSelectedFromFriends(): void {
+  const id = selected.value?.vrcUserId;
+  if (!id) {
+    selected.value = null;
+    return;
+  }
+  selected.value = friends.value.find((f) => f.vrcUserId === id) ?? null;
+}
+
 async function loadFriends() {
   loading.value = true;
   try {
     friends.value = await App.friends();
+    syncSelectedFromFriends();
   } finally {
     loading.value = false;
   }
@@ -196,9 +206,6 @@ async function doRefresh() {
     await App.reconcileVRChatSocialCache();
     lastSocialReconcileMs = Date.now();
     await loadFriends();
-    selected.value =
-      friends.value.find((f) => f.vrcUserId === selected.value?.vrcUserId) ??
-      null;
   } finally {
     refreshLoading.value = false;
   }

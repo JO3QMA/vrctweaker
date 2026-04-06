@@ -19,7 +19,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_preservesLocatio
 		getByID: map[string]*identity.UserCache{
 			"usr_f1": {
 				VRCUserID: "usr_f1", UserKind: identity.UserKindFriend,
-				Status: "active", Location: "wrld_keep:1~abc",
+				Status: "offline", Location: "wrld_keep:1~abc",
 			},
 		},
 	}
@@ -40,6 +40,9 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_preservesLocatio
 	}
 	if saved.Platform != "web" {
 		t.Fatalf("platform: got %q", saved.Platform)
+	}
+	if saved.Status != "active" {
+		t.Fatalf("friend-active should clear offline status, got %q", saved.Status)
 	}
 }
 

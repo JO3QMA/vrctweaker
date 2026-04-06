@@ -32,6 +32,21 @@ vi.mock("../../composables/useSessionUnlock", () => ({
   }),
 }));
 
+const runtimeHooks = vi.hoisted(() => ({
+  friendsChangedHandler: null as (() => void) | null,
+}));
+
+vi.mock("../../wails/runtime", () => ({
+  getRuntime: () => ({
+    EventsOn: (event: string, handler: () => void) => {
+      if (event === "vrchat:friends-changed") {
+        runtimeHooks.friendsChangedHandler = handler;
+      }
+      return () => {};
+    },
+  }),
+}));
+
 vi.mock("../../wails/app", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../wails/app")>();
   return {
@@ -78,6 +93,7 @@ describe("FriendsView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsLoggedIn.mockResolvedValue(false);
+    runtimeHooks.friendsChangedHandler = null;
   });
 
   it("renders single Online / Offline mode toggle", async () => {
@@ -246,6 +262,37 @@ describe("FriendsView", () => {
     expect(mode.checked).toBe(true);
     expect(wrapper.find(".friend-card.active").exists()).toBe(true);
     expect(wrapper.text()).toContain("OffUser");
+  });
+
+  it("updates detail pane when vrchat:friends-changed reloads friends", async () => {
+    mockFriends
+      .mockResolvedValueOnce([
+        minimalUser({
+          vrcUserId: "u1",
+          displayName: "Alice",
+          status: "active",
+          location: "wrld_before:inst",
+        }),
+      ])
+      .mockResolvedValueOnce([
+        minimalUser({
+          vrcUserId: "u1",
+          displayName: "Alice",
+          status: "active",
+          location: "wrld_after_refresh:inst",
+        }),
+      ]);
+    const wrapper = await mountFriendsView();
+    await flushPromises();
+
+    await wrapper.find(".friend-card").trigger("click");
+    await wrapper.vm.$nextTick();
+    expect(wrapper.text()).toContain("wrld_before:inst");
+
+    runtimeHooks.friendsChangedHandler?.();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("wrld_after_refresh:inst");
   });
 
   it("throttles reconcileVRChatSocialCache on visibility within 60s", async () => {

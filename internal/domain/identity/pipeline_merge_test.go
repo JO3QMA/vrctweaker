@@ -37,6 +37,26 @@ func TestUserCache_MergeFromPipelineFriendActive_preservesLocation(t *testing.T)
 	}
 }
 
+func TestUserCache_MergeFromPipelineFriendActive_offlineBecomesActive(t *testing.T) {
+	t.Parallel()
+	now := time.Unix(1700000011, 0)
+	u := &UserCache{VRCUserID: "usr_2", UserKind: UserKindFriend, Status: "offline"}
+	u.MergeFromPipelineFriendActive(now, "web")
+	if u.Status != "active" {
+		t.Fatalf("offline should become active, got %q", u.Status)
+	}
+}
+
+func TestUserCache_MergeFromPipelineFriendActive_preservesNonOfflineStatus(t *testing.T) {
+	t.Parallel()
+	now := time.Unix(1700000012, 0)
+	u := &UserCache{VRCUserID: "usr_3", UserKind: UserKindFriend, Status: "join me"}
+	u.MergeFromPipelineFriendActive(now, "web")
+	if u.Status != "join me" {
+		t.Fatalf("join me should be preserved, got %q", u.Status)
+	}
+}
+
 func TestUserCache_MergeFromPipelineFriendOnline(t *testing.T) {
 	t.Parallel()
 	now := time.Unix(1700000000, 0)
