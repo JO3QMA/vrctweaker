@@ -35,6 +35,7 @@ vi.mock("../../wails/app", async (importOriginal) => {
       friends: mockFriends,
       isLoggedIn: mockIsLoggedIn,
       refreshFriends: vi.fn(),
+      reconcileVRChatSocialCache: vi.fn().mockResolvedValue(undefined),
       setFavorite: vi.fn(),
     },
   };

@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import FriendsDetailPane from "./friends/FriendsDetailPane.vue";
@@ -48,6 +48,7 @@ import { friendIsOffline } from "./friends/friendsViewUtils";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
 import { App } from "../wails/app";
 import type { UserCacheDTO } from "../wails/app";
+import { getRuntime } from "../wails/runtime";
 
 const route = useRoute();
 const router = useRouter();
@@ -72,6 +73,18 @@ const selected = ref<UserCacheDTO | null>(null);
 const isLoggedIn = ref(false);
 const loading = ref(true);
 const refreshLoading = ref(false);
+
+let unsubscribeFriendsChanged: (() => void) | undefined;
+
+async function onDocumentVisibleReconcile(): Promise<void> {
+  if (document.visibilityState !== "visible") return;
+  try {
+    if (!(await App.isLoggedIn())) return;
+    await App.reconcileVRChatSocialCache();
+  } catch {
+    /* ignore */
+  }
+}
 
 const friendsByStatus = computed(() => {
   const list = friends.value;
@@ -132,10 +145,24 @@ async function applyVrcUserIdFromQuery(): Promise<void> {
 }
 
 onMounted(async () => {
+  const rt = getRuntime();
+  const off = rt?.EventsOn?.("vrchat:friends-changed", () => {
+    void loadFriends();
+  });
+  if (typeof off === "function") {
+    unsubscribeFriendsChanged = off;
+  }
+  document.addEventListener("visibilitychange", onDocumentVisibleReconcile);
+
   await beginStartupUnlock().catch(() => undefined);
   await loadFriends();
   isLoggedIn.value = await App.isLoggedIn();
   await applyVrcUserIdFromQuery();
+});
+
+onUnmounted(() => {
+  unsubscribeFriendsChanged?.();
+  document.removeEventListener("visibilitychange", onDocumentVisibleReconcile);
 });
 
 watch(
@@ -158,7 +185,7 @@ async function doRefresh() {
   if (!isLoggedIn.value) return;
   refreshLoading.value = true;
   try {
-    await App.refreshFriends();
+    await App.reconcileVRChatSocialCache();
     await loadFriends();
     selected.value =
       friends.value.find((f) => f.vrcUserId === selected.value?.vrcUserId) ??

@@ -249,6 +249,7 @@ interface AppBindings {
   ClearStoredCredential(): Promise<void>;
   GetVRChatCurrentUser(forceRefresh?: boolean): Promise<VRChatCurrentUserDTO>;
   RefreshFriends(): Promise<void>;
+  ReconcileVRChatSocialCache(): Promise<void>;
   VacuumDb(): Promise<void>;
   ClearEncounters(): Promise<number>;
   ClearScreenshots(): Promise<number>;
@@ -607,6 +608,9 @@ export const App = {
   },
   async refreshFriends(): Promise<void> {
     return callApp((a) => a.RefreshFriends(), undefined);
+  },
+  async reconcileVRChatSocialCache(): Promise<void> {
+    return callApp((a) => a.ReconcileVRChatSocialCache(), undefined);
   },
   async vacuumDb(): Promise<void> {
     return callApp((a) => a.VacuumDb(), undefined);

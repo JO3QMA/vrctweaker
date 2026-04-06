@@ -103,11 +103,8 @@
               <el-descriptions-item v-if="selected.state" label="状態 (state)">
                 {{ selected.state }}
               </el-descriptions-item>
-              <el-descriptions-item
-                v-if="selected.location"
-                label="ロケーション"
-              >
-                <span class="mono wrap">{{ selected.location }}</span>
+              <el-descriptions-item v-if="locationLabel" label="ロケーション">
+                <span class="mono wrap">{{ locationLabel }}</span>
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.developerType"
@@ -255,6 +252,7 @@ import type { UserCacheDTO } from "../wails/app";
 import {
   copyDisplayName,
   friendDetailStickyHeaderVisible,
+  friendLocationLabel,
   friendProfileBannerUrl,
   friendThumbUrl,
   jsonStringArray,
@@ -301,6 +299,10 @@ const bannerSrc = computed(() =>
 
 const avatarSrc = computed(() =>
   props.selected ? friendThumbUrl(props.selected) : undefined,
+);
+
+const locationLabel = computed(() =>
+  props.selected ? friendLocationLabel(props.selected.location) : "",
 );
 
 function onFavoriteUpdate(val: boolean | string | number | undefined) {
