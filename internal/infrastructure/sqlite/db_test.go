@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -86,6 +87,31 @@ func TestApplySchema_canonicalColumns(t *testing.T) {
 	thumbs := columnNames(t, db, "screenshot_thumbnails")
 	if !thumbs["jpeg_blob"] || thumbs["webp_blob"] {
 		t.Fatalf("screenshot_thumbnails: want jpeg_blob only, got %#v", thumbs)
+	}
+}
+
+func TestOpen_setsBusyTimeoutAndWAL(t *testing.T) {
+	dir := t.TempDir()
+	db, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	var journalMode string
+	if err := db.QueryRow(`PRAGMA journal_mode`).Scan(&journalMode); err != nil {
+		t.Fatal(err)
+	}
+	if strings.ToLower(journalMode) != "wal" {
+		t.Fatalf("journal_mode: got %q, want wal", journalMode)
+	}
+
+	var busyMs int
+	if err := db.QueryRow(`PRAGMA busy_timeout`).Scan(&busyMs); err != nil {
+		t.Fatal(err)
+	}
+	if busyMs != defaultBusyTimeoutMs {
+		t.Fatalf("busy_timeout: got %d, want %d", busyMs, defaultBusyTimeoutMs)
 	}
 }
 
