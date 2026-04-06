@@ -3,7 +3,7 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { createRouter, createWebHashHistory } from "vue-router";
 import { ElMessage } from "element-plus";
 import FriendsView from "../FriendsView.vue";
-import type { UserCacheDTO } from "../../wails/app";
+import { App, type UserCacheDTO } from "../../wails/app";
 
 async function mountFriendsView(query: Record<string, string> = {}) {
   const router = createRouter({
@@ -26,6 +26,27 @@ const { mockFriends, mockIsLoggedIn } = vi.hoisted(() => ({
   mockIsLoggedIn: vi.fn(),
 }));
 
+vi.mock("../../composables/useSessionUnlock", () => ({
+  useSessionUnlock: () => ({
+    beginStartupUnlock: vi.fn().mockResolvedValue(undefined),
+  }),
+}));
+
+const runtimeHooks = vi.hoisted(() => ({
+  friendsChangedHandler: null as (() => void) | null,
+}));
+
+vi.mock("../../wails/runtime", () => ({
+  getRuntime: () => ({
+    EventsOn: (event: string, handler: () => void) => {
+      if (event === "vrchat:friends-changed") {
+        runtimeHooks.friendsChangedHandler = handler;
+      }
+      return () => {};
+    },
+  }),
+}));
+
 vi.mock("../../wails/app", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../wails/app")>();
   return {
@@ -35,6 +56,7 @@ vi.mock("../../wails/app", async (importOriginal) => {
       friends: mockFriends,
       isLoggedIn: mockIsLoggedIn,
       refreshFriends: vi.fn(),
+      reconcileVRChatSocialCache: vi.fn().mockResolvedValue(undefined),
       setFavorite: vi.fn(),
     },
   };
@@ -71,6 +93,7 @@ describe("FriendsView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsLoggedIn.mockResolvedValue(false);
+    runtimeHooks.friendsChangedHandler = null;
   });
 
   it("renders single Online / Offline mode toggle", async () => {
@@ -239,6 +262,62 @@ describe("FriendsView", () => {
     expect(mode.checked).toBe(true);
     expect(wrapper.find(".friend-card.active").exists()).toBe(true);
     expect(wrapper.text()).toContain("OffUser");
+  });
+
+  it("updates detail pane when vrchat:friends-changed reloads friends", async () => {
+    mockFriends
+      .mockResolvedValueOnce([
+        minimalUser({
+          vrcUserId: "u1",
+          displayName: "Alice",
+          status: "active",
+          location: "wrld_before:inst",
+        }),
+      ])
+      .mockResolvedValueOnce([
+        minimalUser({
+          vrcUserId: "u1",
+          displayName: "Alice",
+          status: "active",
+          location: "wrld_after_refresh:inst",
+        }),
+      ]);
+    const wrapper = await mountFriendsView();
+    await flushPromises();
+
+    await wrapper.find(".friend-card").trigger("click");
+    await wrapper.vm.$nextTick();
+    expect(wrapper.text()).toContain("wrld_before:inst");
+
+    runtimeHooks.friendsChangedHandler?.();
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("wrld_after_refresh:inst");
+  });
+
+  it("throttles reconcileVRChatSocialCache on visibility within 60s", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T12:00:00.000Z"));
+    mockFriends.mockResolvedValue([]);
+    mockIsLoggedIn.mockResolvedValue(true);
+    const wrapper = await mountFriendsView();
+    await flushPromises();
+
+    const reconcile = vi.mocked(App.reconcileVRChatSocialCache);
+    reconcile.mockClear();
+
+    vi.setSystemTime(new Date("2026-01-01T12:00:30.000Z"));
+    document.dispatchEvent(new Event("visibilitychange"));
+    await flushPromises();
+    expect(reconcile).not.toHaveBeenCalled();
+
+    vi.setSystemTime(new Date("2026-01-01T12:01:01.000Z"));
+    document.dispatchEvent(new Event("visibilitychange"));
+    await flushPromises();
+    expect(reconcile).toHaveBeenCalledTimes(1);
+
+    wrapper.unmount();
+    vi.useRealTimers();
   });
 
   it("warns and removes vrcUserId query when id is not in friends list", async () => {

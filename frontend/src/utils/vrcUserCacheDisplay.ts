@@ -1,5 +1,15 @@
 import type { UserCacheDTO } from "../wails/app";
 
+/** Stored in users_cache.location when VRChat hides instance details (Pipeline). */
+export const PIPELINE_LOCATION_UNKNOWN = "pipeline:location_unknown";
+
+/** Label for the location field in profile UI (empty = omit row). */
+export function friendLocationLabel(loc: string | undefined): string {
+  if (!loc?.trim()) return "";
+  if (loc === PIPELINE_LOCATION_UNKNOWN) return "不明";
+  return loc;
+}
+
 export function friendThumbUrl(f: UserCacheDTO): string | undefined {
   return (
     f.currentAvatarThumbnailImageUrl ||

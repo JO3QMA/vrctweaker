@@ -3,9 +3,11 @@ import type { UserCacheDTO } from "../wails/app";
 import {
   copyDisplayName,
   friendDetailStickyHeaderVisible,
+  friendLocationLabel,
   friendProfileBannerUrl,
   friendThumbUrl,
   jsonStringArray,
+  PIPELINE_LOCATION_UNKNOWN,
 } from "./vrcUserCacheDisplay";
 
 function dto(partial: Partial<UserCacheDTO> = {}): UserCacheDTO {
@@ -18,6 +20,21 @@ function dto(partial: Partial<UserCacheDTO> = {}): UserCacheDTO {
     ...partial,
   };
 }
+
+describe("friendLocationLabel", () => {
+  it("returns empty for missing location", () => {
+    expect(friendLocationLabel(undefined)).toBe("");
+    expect(friendLocationLabel("")).toBe("");
+  });
+
+  it("maps pipeline unknown sentinel to 不明", () => {
+    expect(friendLocationLabel(PIPELINE_LOCATION_UNKNOWN)).toBe("不明");
+  });
+
+  it("passes through concrete locations", () => {
+    expect(friendLocationLabel("wrld_x:123~grp")).toBe("wrld_x:123~grp");
+  });
+});
 
 describe("friendThumbUrl", () => {
   it("prefers currentAvatarThumbnailImageUrl", () => {

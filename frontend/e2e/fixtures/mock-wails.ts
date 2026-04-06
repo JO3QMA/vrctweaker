@@ -127,6 +127,7 @@ export function getMockWailsInitScript(): string {
         GetVRChatCurrentUser: (_forceRefresh) =>
           Promise.reject(new Error('E2E mock: not logged in')),
         RefreshFriends: () => Promise.resolve(),
+        ReconcileVRChatSocialCache: () => Promise.resolve(),
         VacuumDb: () => Promise.resolve(),
         ClearEncounters: () => Promise.resolve(0),
         ClearScreenshots: () => Promise.resolve(0),

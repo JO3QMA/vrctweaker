@@ -84,7 +84,7 @@ func (c *Client) loginWithBasicAuth(ctx context.Context, client *http.Client, us
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", UserAgent)
 	req.SetBasicAuth(url.QueryEscape(username), url.QueryEscape(password))
 
 	resp, err := client.Do(req)
@@ -167,7 +167,7 @@ func (c *Client) verifyTwoFactor(ctx context.Context, client *http.Client, code 
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", UserAgent)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -193,7 +193,7 @@ func (c *Client) getAuthUserWithJar(ctx context.Context, client *http.Client) (s
 	if err != nil {
 		return "", err
 	}
-	req.Header.Set("User-Agent", userAgent)
+	req.Header.Set("User-Agent", UserAgent)
 
 	resp, err := client.Do(req)
 	if err != nil {

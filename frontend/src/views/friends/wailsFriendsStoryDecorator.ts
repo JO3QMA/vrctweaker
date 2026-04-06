@@ -15,6 +15,7 @@ export function wailsFriendsLoggedInDecorator(friends: UserCacheDTO[]) {
           Friends: () => Promise.resolve(friends),
           IsLoggedIn: () => Promise.resolve(true),
           RefreshFriends: () => Promise.resolve(),
+          ReconcileVRChatSocialCache: () => Promise.resolve(),
           SetFavorite: () => Promise.resolve(),
           HasStoredCredential: () => Promise.resolve(false),
           GetCredentialBlob: () => Promise.resolve(""),

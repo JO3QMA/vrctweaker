@@ -23,6 +23,7 @@ import (
 	"vrchat-tweaker/internal/infrastructure/picturewatcher"
 	"vrchat-tweaker/internal/infrastructure/sqlite"
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
+	"vrchat-tweaker/internal/infrastructure/vrchatpipeline"
 	"vrchat-tweaker/internal/usecase"
 )
 
@@ -41,6 +42,10 @@ type App struct {
 	galleryScanMu     sync.Mutex
 	galleryScanCancel context.CancelFunc
 	galleryScanWG     sync.WaitGroup
+
+	pipelineMu     sync.Mutex
+	pipelineCancel context.CancelFunc
+	pipelineWG     sync.WaitGroup
 }
 
 // NewApp creates a new App application struct.
@@ -734,6 +739,9 @@ const galleryScreenshotsChangedEvent = "gallery:screenshots-changed"
 // activityEncountersChangedEvent is emitted when a new encounter row is written from the log watcher.
 const activityEncountersChangedEvent = "activity:encounters-changed"
 
+// friendsChangedEvent is emitted when the friends cache may have changed (Pipeline or REST reconcile).
+const friendsChangedEvent = "vrchat:friends-changed"
+
 const galleryScanProgressEmitMinInterval = 90 * time.Millisecond
 
 // scanProgressEmitter throttles gallery:scan-progress EventsEmit; flush sends the latest pending payload.
@@ -909,6 +917,90 @@ func (a *App) RotateEncounters() (int64, error) {
 	return a.activity.RotateEncounters(a.ctx)
 }
 
+func pipelineEventUpdatesFriends(typ string) bool {
+	switch typ {
+	case "friend-delete", "friend-offline", "friend-active", "friend-online",
+		"friend-location", "friend-update", "friend-add":
+		return true
+	default:
+		return false
+	}
+}
+
+// stopVRChatPipelineCancel stops the pipeline without waiting. Do not call stopVRChatPipeline
+// (which waits) from callbacks invoked synchronously inside vrchatpipeline.Run — that deadlocks.
+func (a *App) stopVRChatPipelineCancel() {
+	var cancelFn context.CancelFunc
+	a.pipelineMu.Lock()
+	if a.pipelineCancel != nil {
+		cancelFn = a.pipelineCancel
+		a.pipelineCancel = nil
+	}
+	a.pipelineMu.Unlock()
+	if cancelFn != nil {
+		cancelFn()
+	}
+}
+
+func (a *App) stopVRChatPipeline() {
+	a.stopVRChatPipelineCancel()
+	a.pipelineWG.Wait()
+}
+
+func (a *App) startVRChatPipeline() {
+	a.pipelineMu.Lock()
+	for a.pipelineCancel != nil {
+		cancelFn := a.pipelineCancel
+		a.pipelineCancel = nil
+		a.pipelineMu.Unlock()
+		cancelFn()
+		a.pipelineWG.Wait()
+		a.pipelineMu.Lock()
+	}
+	if a.identity == nil {
+		a.pipelineMu.Unlock()
+		return
+	}
+	token := a.identity.CurrentAuthToken()
+	if token == "" {
+		a.pipelineMu.Unlock()
+		return
+	}
+	runCtx, cancel := context.WithCancel(a.ctx)
+	a.pipelineCancel = cancel
+	cfg := vrchatpipeline.Config{
+		AuthToken: token,
+		UserAgent: vrchatapi.UserAgent,
+		OnReconnect: func(ctx context.Context) error {
+			err := a.identity.PipelineReconnectRestSync(ctx)
+			if err != nil {
+				if errors.Is(err, vrchatapi.ErrSessionExpired) || errors.Is(err, vrchatapi.ErrNotAuthenticated) {
+					a.stopVRChatPipelineCancel()
+				}
+				return err
+			}
+			runtime.EventsEmit(a.ctx, friendsChangedEvent, struct{}{})
+			return nil
+		},
+		OnEvent: func(ctx context.Context, typ string, payload []byte) error {
+			err := a.identity.HandleVRChatPipelineEvent(ctx, typ, payload)
+			if err == nil && pipelineEventUpdatesFriends(typ) {
+				runtime.EventsEmit(a.ctx, friendsChangedEvent, struct{}{})
+			}
+			return err
+		},
+	}
+	a.pipelineWG.Add(1)
+	a.pipelineMu.Unlock()
+	go func() {
+		defer a.pipelineWG.Done()
+		err := vrchatpipeline.Run(runCtx, cfg)
+		if err != nil && !errors.Is(err, context.Canceled) {
+			runtime.LogWarning(a.ctx, "vrchat pipeline: "+err.Error())
+		}
+	}()
+}
+
 // --- Identity bindings ---
 
 // Login authenticates with VRChat. On success the returned PlaintextToken must be
@@ -919,11 +1011,13 @@ func (a *App) Login(username, password, twoFactorCode string) LoginResultDTO {
 	if err != nil {
 		return LoginResultDTO{OK: false, Error: err.Error()}
 	}
+	a.startVRChatPipeline()
 	return LoginResultDTO{OK: true, PlaintextToken: token}
 }
 
 // Logout clears stored credentials.
 func (a *App) Logout() error {
+	a.stopVRChatPipeline()
 	return a.identity.Logout(a.ctx)
 }
 
@@ -948,7 +1042,11 @@ func (a *App) GetCredentialBlob() (string, error) {
 // UnlockVRChatSession sets the decrypted auth token from the frontend and loads the user profile.
 // Must be called after the frontend successfully decrypts the credential blob.
 func (a *App) UnlockVRChatSession(token string) error {
-	return a.identity.UnlockSession(a.ctx, token)
+	if err := a.identity.UnlockSession(a.ctx, token); err != nil {
+		return err
+	}
+	a.startVRChatPipeline()
+	return nil
 }
 
 // PersistWrappedCredential saves a Web-Crypto wrapped blob to the credential store.
@@ -990,6 +1088,15 @@ func (a *App) GetVRChatCurrentUser(forceRefresh bool) (VRChatCurrentUserDTO, err
 // RefreshFriends fetches friends from API and updates cache.
 func (a *App) RefreshFriends() error {
 	return a.identity.RefreshFriends(a.ctx)
+}
+
+// ReconcileVRChatSocialCache refreshes self and friends from the VRChat REST API (e.g. after sleep resume).
+func (a *App) ReconcileVRChatSocialCache() error {
+	if err := a.identity.ReconcileSocialCacheFromAPIHandled(a.ctx); err != nil {
+		return err
+	}
+	runtime.EventsEmit(a.ctx, friendsChangedEvent, struct{}{})
+	return nil
 }
 
 // Friends returns cached friends.

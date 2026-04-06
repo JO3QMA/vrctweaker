@@ -38,7 +38,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { ElMessage } from "element-plus";
 import FriendsDetailPane from "./friends/FriendsDetailPane.vue";
@@ -48,6 +48,7 @@ import { friendIsOffline } from "./friends/friendsViewUtils";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
 import { App } from "../wails/app";
 import type { UserCacheDTO } from "../wails/app";
+import { getRuntime } from "../wails/runtime";
 
 const route = useRoute();
 const router = useRouter();
@@ -72,6 +73,25 @@ const selected = ref<UserCacheDTO | null>(null);
 const isLoggedIn = ref(false);
 const loading = ref(true);
 const refreshLoading = ref(false);
+
+let unsubscribeFriendsChanged: (() => void) | undefined;
+
+/** Min interval between visibility-triggered REST reconciles (avoids spam on tab focus). */
+const visibleReconcileMinIntervalMs = 60_000;
+let lastSocialReconcileMs = 0;
+
+async function onDocumentVisibleReconcile(): Promise<void> {
+  if (document.visibilityState !== "visible") return;
+  const now = Date.now();
+  if (now - lastSocialReconcileMs < visibleReconcileMinIntervalMs) return;
+  try {
+    if (!(await App.isLoggedIn())) return;
+    await App.reconcileVRChatSocialCache();
+    lastSocialReconcileMs = Date.now();
+  } catch {
+    /* ignore */
+  }
+}
 
 const friendsByStatus = computed(() => {
   const list = friends.value;
@@ -132,10 +152,25 @@ async function applyVrcUserIdFromQuery(): Promise<void> {
 }
 
 onMounted(async () => {
+  const rt = getRuntime();
+  const off = rt?.EventsOn?.("vrchat:friends-changed", () => {
+    void loadFriends();
+  });
+  if (typeof off === "function") {
+    unsubscribeFriendsChanged = off;
+  }
+  document.addEventListener("visibilitychange", onDocumentVisibleReconcile);
+
   await beginStartupUnlock().catch(() => undefined);
   await loadFriends();
   isLoggedIn.value = await App.isLoggedIn();
   await applyVrcUserIdFromQuery();
+  lastSocialReconcileMs = Date.now();
+});
+
+onUnmounted(() => {
+  unsubscribeFriendsChanged?.();
+  document.removeEventListener("visibilitychange", onDocumentVisibleReconcile);
 });
 
 watch(
@@ -145,10 +180,20 @@ watch(
   },
 );
 
+function syncSelectedFromFriends(): void {
+  const id = selected.value?.vrcUserId;
+  if (!id) {
+    selected.value = null;
+    return;
+  }
+  selected.value = friends.value.find((f) => f.vrcUserId === id) ?? null;
+}
+
 async function loadFriends() {
   loading.value = true;
   try {
     friends.value = await App.friends();
+    syncSelectedFromFriends();
   } finally {
     loading.value = false;
   }
@@ -158,11 +203,9 @@ async function doRefresh() {
   if (!isLoggedIn.value) return;
   refreshLoading.value = true;
   try {
-    await App.refreshFriends();
+    await App.reconcileVRChatSocialCache();
+    lastSocialReconcileMs = Date.now();
     await loadFriends();
-    selected.value =
-      friends.value.find((f) => f.vrcUserId === selected.value?.vrcUserId) ??
-      null;
   } finally {
     refreshLoading.value = false;
   }
