@@ -1282,7 +1282,6 @@ func (a *App) stopSleepSuppressLoop() {
 		cancel()
 		a.sleepSuppressWG.Wait()
 	}
-	_ = sleepsuppress.NewExecutionState().SetSuppress(false)
 }
 
 // getVRChatConfigPath returns the path to VRChat's config.json.

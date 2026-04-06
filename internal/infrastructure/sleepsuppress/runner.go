@@ -2,6 +2,7 @@ package sleepsuppress
 
 import (
 	"context"
+	"runtime"
 	"time"
 )
 
@@ -22,7 +23,12 @@ type ExecutionState interface {
 }
 
 // Run polls until ctx is cancelled, then clears execution state. Returns ctx.Err().
+// On Windows, SetThreadExecutionState applies per OS thread; LockOSThread keeps all
+// SetSuppress calls on one thread so flags are not left set after migration or shutdown.
 func Run(ctx context.Context, interval time.Duration, settings SettingGetter, proc ProcessChecker, exec ExecutionState) error {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
