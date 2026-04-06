@@ -8,6 +8,7 @@ build/bin/
 frontend/node_modules/
 frontend/package.json.md5
 frontend/dist/
+frontend/coverage/
 frontend/.pnpm-store/
 frontend/wailsjs/
 
