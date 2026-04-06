@@ -4,24 +4,32 @@ import (
 	"database/sql"
 	"fmt"
 	"path/filepath"
+	"strconv"
 
 	_ "modernc.org/sqlite"
 )
 
 const defaultLogRetentionDays = 30
 
+// defaultBusyTimeoutMs is how long SQLite waits for a write lock before returning SQLITE_BUSY.
+// Mitigates bursts (e.g. Pipeline + REST reconcile) after sleep resume.
+const defaultBusyTimeoutMs = 5000
+
 // Open opens or creates the SQLite database and applies the canonical schema.
 func Open(dataDir string) (*sql.DB, error) {
 	dbPath := filepath.Join(dataDir, "vrchat-tweaker.db")
 	// Foreign keys are per-connection; database/sql pools connections, so a one-off
 	// PRAGMA after Open only affects one handle. _pragma runs on every new connection.
-	dsn := dbPath + "?_pragma=foreign_keys(1)"
+	dsn := dbPath + "?_pragma=foreign_keys(1)" +
+		"&_pragma=busy_timeout(" + strconv.Itoa(defaultBusyTimeoutMs) + ")" +
+		"&_pragma=journal_mode(WAL)"
 	conn, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open db: %w", err)
 	}
 
 	if err := conn.Ping(); err != nil {
+		_ = conn.Close()
 		return nil, fmt.Errorf("ping db: %w", err)
 	}
 
@@ -29,6 +37,12 @@ func Open(dataDir string) (*sql.DB, error) {
 		_ = conn.Close()
 		return nil, fmt.Errorf("apply schema: %w", err)
 	}
+
+	// Serialize DB access through one pooled connection to avoid SQLITE_BUSY from
+	// concurrent writers. WAL still helps durability and write patterns vs rollback journal;
+	// SQLite's concurrent-reader behavior with WAL is not leveraged while MaxOpenConns(1).
+	conn.SetMaxOpenConns(1)
+	conn.SetMaxIdleConns(1)
 
 	return conn, nil
 }
