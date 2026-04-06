@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"vrchat-tweaker/internal/domain/settings"
@@ -64,10 +65,11 @@ func (uc *SettingsUseCase) SaveOutputLogPath(ctx context.Context, path string) e
 
 // Path settings keys in app_settings.
 const (
-	keyVRChatPathWindows = "vrchat_path_windows"
-	keySteamPathLinux    = "steam_path_linux"
-	keyOutputLogPath     = "output_log_path"
-	keyGalleryLastExitAt = "gallery_last_exit_at"
+	keyVRChatPathWindows        = "vrchat_path_windows"
+	keySteamPathLinux           = "steam_path_linux"
+	keyOutputLogPath            = "output_log_path"
+	keyGalleryLastExitAt        = "gallery_last_exit_at"
+	keySuppressSleepWhileVRChat = "suppress_sleep_while_vrchat"
 )
 
 // GetGalleryLastExitAt returns the last app shutdown time used for incremental gallery sync.
@@ -87,6 +89,31 @@ func (uc *SettingsUseCase) GetGalleryLastExitAt(ctx context.Context) (time.Time,
 // SetGalleryLastExitAt persists the shutdown instant for the next startup incremental gallery sync.
 func (uc *SettingsUseCase) SetGalleryLastExitAt(ctx context.Context, t time.Time) error {
 	return uc.repo.Set(ctx, keyGalleryLastExitAt, t.UTC().Format(time.RFC3339Nano))
+}
+
+// GetSuppressSleepWhileVRChat returns whether to suppress system sleep while VRChat.exe is running (Windows).
+// Default is false when unset or invalid.
+func (uc *SettingsUseCase) GetSuppressSleepWhileVRChat(ctx context.Context) (bool, error) {
+	v, err := uc.repo.Get(ctx, keySuppressSleepWhileVRChat)
+	if err != nil {
+		return false, err
+	}
+	return parseBoolSetting(v), nil
+}
+
+// SetSuppressSleepWhileVRChat persists the sleep-suppression toggle.
+func (uc *SettingsUseCase) SetSuppressSleepWhileVRChat(ctx context.Context, on bool) error {
+	return uc.repo.Set(ctx, keySuppressSleepWhileVRChat, strconv.FormatBool(on))
+}
+
+func parseBoolSetting(v string) bool {
+	v = strings.TrimSpace(strings.ToLower(v))
+	switch v {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
 }
 
 // PathSettings holds VRChat/Steam/output_log paths.

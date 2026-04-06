@@ -175,6 +175,27 @@
       </el-text>
     </el-card>
 
+    <!-- 電源（Windows） -->
+    <el-card class="settings-card" shadow="never">
+      <template #header>
+        <span>電源</span>
+      </template>
+      <div class="setting-row power-setting-row">
+        <div class="power-toggle-label">
+          <span>VRChat 起動中はスリープを抑制</span>
+          <el-text type="info" size="small" class="hint block-hint">
+            VRChat.exe
+            が動いている間だけ、PCのアイドルスリープとディスプレイの電源オフを抑えます（Windows・Tweaker起動中のみ有効）。初期状態はオフです。
+          </el-text>
+        </div>
+        <el-switch
+          v-model="suppressSleepWhileVRChat"
+          class="power-switch"
+          @change="saveSuppressSleepWhileVRChat"
+        />
+      </div>
+    </el-card>
+
     <!-- ログ・データ管理 -->
     <el-card class="settings-card" shadow="never">
       <template #header>
@@ -313,6 +334,7 @@ const loginError = ref("");
 const loginLoading = ref(false);
 
 const logRetentionDays = ref(30);
+const suppressSleepWhileVRChat = ref(false);
 const maintenanceError = ref("");
 const maintenanceLoading = ref(false);
 const pathSettings = reactive<PathSettingsDTO>({
@@ -394,6 +416,7 @@ onMounted(async () => {
     await loadCurrentUser();
   }
   logRetentionDays.value = await App.getLogRetentionDays();
+  suppressSleepWhileVRChat.value = await App.getSuppressSleepWhileVRChat();
   const ps = await App.getPathSettings();
   pathSettings.vrchatPathWindows = ps.vrchatPathWindows;
   pathSettings.steamPathLinux = ps.steamPathLinux;
@@ -472,6 +495,10 @@ async function refreshFriends() {
 
 async function saveRetention() {
   await App.setLogRetentionDays(logRetentionDays.value);
+}
+
+async function saveSuppressSleepWhileVRChat() {
+  await App.setSuppressSleepWhileVRChat(suppressSleepWhileVRChat.value);
 }
 
 async function savePathSettings() {
@@ -741,6 +768,25 @@ function doClearFriendsCache() {
   align-items: center;
   gap: 1rem;
   margin-bottom: 0.5rem;
+}
+
+.power-setting-row {
+  align-items: flex-start;
+}
+
+.power-toggle-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.block-hint {
+  display: block;
+  margin-top: 0.35rem;
+}
+
+.power-switch {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
 }
 
 .maintenance-actions {

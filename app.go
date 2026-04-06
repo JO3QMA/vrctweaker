@@ -21,6 +21,7 @@ import (
 	"vrchat-tweaker/internal/infrastructure/filesystem"
 	"vrchat-tweaker/internal/infrastructure/logwatcher"
 	"vrchat-tweaker/internal/infrastructure/picturewatcher"
+	"vrchat-tweaker/internal/infrastructure/sleepsuppress"
 	"vrchat-tweaker/internal/infrastructure/sqlite"
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
 	"vrchat-tweaker/internal/infrastructure/vrchatpipeline"
@@ -46,6 +47,10 @@ type App struct {
 	pipelineMu     sync.Mutex
 	pipelineCancel context.CancelFunc
 	pipelineWG     sync.WaitGroup
+
+	sleepSuppressMu     sync.Mutex
+	sleepSuppressCancel context.CancelFunc
+	sleepSuppressWG     sync.WaitGroup
 }
 
 // NewApp creates a new App application struct.
@@ -114,10 +119,12 @@ func (a *App) startup(ctx context.Context) {
 
 	a.startPictureFolderWatcher(ctx)
 	go a.startupGalleryIncremental()
+	a.startSleepSuppressLoop()
 }
 
 // onShutdown persists state before the process exits (Wails lifecycle).
 func (a *App) onShutdown(ctx context.Context) {
+	a.stopSleepSuppressLoop()
 	if a.settings == nil {
 		return
 	}
@@ -624,6 +631,16 @@ func (a *App) GetPathSettings() (PathSettingsDTO, error) {
 // SetPathSettings saves path settings.
 func (a *App) SetPathSettings(dto PathSettingsDTO) error {
 	return a.settings.SetPathSettings(a.ctx, toPathSettings(dto))
+}
+
+// GetSuppressSleepWhileVRChat returns whether sleep is suppressed while VRChat.exe runs (Windows).
+func (a *App) GetSuppressSleepWhileVRChat() (bool, error) {
+	return a.settings.GetSuppressSleepWhileVRChat(a.ctx)
+}
+
+// SetSuppressSleepWhileVRChat enables or disables sleep suppression while VRChat.exe runs.
+func (a *App) SetSuppressSleepWhileVRChat(on bool) error {
+	return a.settings.SetSuppressSleepWhileVRChat(a.ctx, on)
 }
 
 // ValidatePath checks if the path exists and is accessible.
@@ -1219,6 +1236,53 @@ func (a *App) DefaultVRChatPictureFolder() (string, error) {
 		return "", err
 	}
 	return filepath.Join(home, "Pictures", "VRChat"), nil
+}
+
+type sleepSuppressSettingGetter struct {
+	a *App
+}
+
+func (g sleepSuppressSettingGetter) SuppressSleepWhileVRChat(ctx context.Context) (bool, error) {
+	if g.a == nil || g.a.settings == nil {
+		return false, nil
+	}
+	return g.a.settings.GetSuppressSleepWhileVRChat(ctx)
+}
+
+func (a *App) startSleepSuppressLoop() {
+	a.sleepSuppressMu.Lock()
+	defer a.sleepSuppressMu.Unlock()
+	if a.settings == nil {
+		return
+	}
+	if a.sleepSuppressCancel != nil {
+		a.sleepSuppressCancel()
+		a.sleepSuppressWG.Wait()
+		a.sleepSuppressCancel = nil
+	}
+	runCtx, cancel := context.WithCancel(context.Background())
+	a.sleepSuppressCancel = cancel
+	a.sleepSuppressWG.Add(1)
+	go func() {
+		defer a.sleepSuppressWG.Done()
+		checker := sleepsuppress.NewVRChatProcessChecker()
+		exec := sleepsuppress.NewExecutionState()
+		sg := sleepSuppressSettingGetter{a: a}
+		_ = sleepsuppress.Run(runCtx, 8*time.Second, sg, checker, exec)
+	}()
+}
+
+func (a *App) stopSleepSuppressLoop() {
+	var cancel context.CancelFunc
+	a.sleepSuppressMu.Lock()
+	cancel = a.sleepSuppressCancel
+	a.sleepSuppressCancel = nil
+	a.sleepSuppressMu.Unlock()
+	if cancel != nil {
+		cancel()
+		a.sleepSuppressWG.Wait()
+	}
+	_ = sleepsuppress.NewExecutionState().SetSuppress(false)
 }
 
 // getVRChatConfigPath returns the path to VRChat's config.json.

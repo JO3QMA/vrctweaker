@@ -122,3 +122,47 @@ func TestSettingsUseCase_GetGalleryLastExitAt_invalid(t *testing.T) {
 		t.Error("GetGalleryLastExitAt: want ok false for invalid string")
 	}
 }
+
+func TestSettingsUseCase_SuppressSleepWhileVRChat_roundtrip(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	if err := uc.SetSuppressSleepWhileVRChat(ctx, true); err != nil {
+		t.Fatalf("SetSuppressSleepWhileVRChat: %v", err)
+	}
+	on, err := uc.GetSuppressSleepWhileVRChat(ctx)
+	if err != nil {
+		t.Fatalf("GetSuppressSleepWhileVRChat: %v", err)
+	}
+	if !on {
+		t.Fatal("want true")
+	}
+	if repo.m[keySuppressSleepWhileVRChat] != "true" {
+		t.Fatalf("stored value: got %q", repo.m[keySuppressSleepWhileVRChat])
+	}
+	if err2 := uc.SetSuppressSleepWhileVRChat(ctx, false); err2 != nil {
+		t.Fatalf("SetSuppressSleepWhileVRChat false: %v", err2)
+	}
+	off, err := uc.GetSuppressSleepWhileVRChat(ctx)
+	if err != nil {
+		t.Fatalf("GetSuppressSleepWhileVRChat: %v", err)
+	}
+	if off {
+		t.Fatal("want false")
+	}
+}
+
+func TestSettingsUseCase_GetSuppressSleepWhileVRChat_defaultFalse(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	v, err := uc.GetSuppressSleepWhileVRChat(ctx)
+	if err != nil {
+		t.Fatalf("GetSuppressSleepWhileVRChat: %v", err)
+	}
+	if v {
+		t.Fatal("want default false")
+	}
+}

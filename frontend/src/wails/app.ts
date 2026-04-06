@@ -206,6 +206,8 @@ interface AppBindings {
   SetLogRetentionDays(days: number): Promise<void>;
   GetPathSettings(): Promise<PathSettingsDTO>;
   SetPathSettings(dto: PathSettingsDTO): Promise<void>;
+  GetSuppressSleepWhileVRChat(): Promise<boolean>;
+  SetSuppressSleepWhileVRChat(on: boolean): Promise<void>;
   ValidatePath(path: string): Promise<boolean>;
   ValidateOutputLogPath(path: string): Promise<boolean>;
   OpenVRChatLogFolder(): Promise<void>;
@@ -477,6 +479,12 @@ export const App = {
   },
   async setPathSettings(dto: PathSettingsDTO): Promise<void> {
     return callApp((a) => a.SetPathSettings(dto), undefined);
+  },
+  async getSuppressSleepWhileVRChat(): Promise<boolean> {
+    return callApp((a) => a.GetSuppressSleepWhileVRChat(), false);
+  },
+  async setSuppressSleepWhileVRChat(on: boolean): Promise<void> {
+    return callApp((a) => a.SetSuppressSleepWhileVRChat(on), undefined);
   },
   async validatePath(path: string): Promise<boolean> {
     return callApp((a) => a.ValidatePath(path), false);
