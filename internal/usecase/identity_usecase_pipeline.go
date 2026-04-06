@@ -160,7 +160,9 @@ func (uc *IdentityUseCase) pipelineFriendOnline(ctx context.Context, payload []b
 		return nil
 	}
 	return uc.pipelineSaveFriendMerge(ctx, body.UserID, now, func(u *identity.UserCache) {
-		u.MergeFromPipelineFriendOnline(now, body.Platform, body.Location, false)
+		// Apply embedded `user` first, then envelope presence. MergeFromAPIFriend copies
+		// Location/Platform from the snapshot which may be empty, private, or stale relative
+		// to the top-level friend-online fields.
 		if len(bytes.TrimSpace(body.User)) > 0 {
 			var f vrchatapi.Friend
 			if err := json.Unmarshal(body.User, &f); err == nil && strings.TrimSpace(f.ID) != "" {
@@ -168,6 +170,7 @@ func (uc *IdentityUseCase) pipelineFriendOnline(ctx context.Context, payload []b
 				u.MergeFromPipelineFriendUser(snap, now)
 			}
 		}
+		u.MergeFromPipelineFriendOnline(now, body.Platform, body.Location, false)
 	})
 }
 

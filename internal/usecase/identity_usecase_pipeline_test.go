@@ -10,6 +10,44 @@ import (
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
 )
 
+func TestIdentityUseCase_HandleVRChatPipelineEvent_friendOnline_envelopeLocationWinsOverUserSnapshot(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	settingsRepo := newMockSettingsRepo()
+	apiClient := &mockAPIClient{token: "tok"}
+	repo := &mockUserCacheRepo{
+		getByID: map[string]*identity.UserCache{
+			"usr_f1": {
+				VRCUserID: "usr_f1", UserKind: identity.UserKindFriend,
+				Status: "offline", Location: "",
+			},
+		},
+	}
+	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+	payload, err := json.Marshal(map[string]any{
+		"userId":   "usr_f1",
+		"platform": "standalonewindows",
+		"location": "wrld_envelope:1~inst",
+		"user": map[string]any{
+			"id":       "usr_f1",
+			"location": "",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := uc.HandleVRChatPipelineEvent(ctx, "friend-online", payload); err != nil {
+		t.Fatal(err)
+	}
+	saved := repo.getByID["usr_f1"]
+	if saved.Location != "wrld_envelope:1~inst" {
+		t.Fatalf("envelope location must win over empty user snapshot, got %q", saved.Location)
+	}
+	if saved.Platform != "standalonewindows" {
+		t.Fatalf("platform: got %q", saved.Platform)
+	}
+}
+
 func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_preservesLocation(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
