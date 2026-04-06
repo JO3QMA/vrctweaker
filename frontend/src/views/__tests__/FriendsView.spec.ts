@@ -3,7 +3,7 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { createRouter, createWebHashHistory } from "vue-router";
 import { ElMessage } from "element-plus";
 import FriendsView from "../FriendsView.vue";
-import type { UserCacheDTO } from "../../wails/app";
+import { App, type UserCacheDTO } from "../../wails/app";
 
 async function mountFriendsView(query: Record<string, string> = {}) {
   const router = createRouter({
@@ -24,6 +24,12 @@ async function mountFriendsView(query: Record<string, string> = {}) {
 const { mockFriends, mockIsLoggedIn } = vi.hoisted(() => ({
   mockFriends: vi.fn(),
   mockIsLoggedIn: vi.fn(),
+}));
+
+vi.mock("../../composables/useSessionUnlock", () => ({
+  useSessionUnlock: () => ({
+    beginStartupUnlock: vi.fn().mockResolvedValue(undefined),
+  }),
 }));
 
 vi.mock("../../wails/app", async (importOriginal) => {
@@ -240,6 +246,31 @@ describe("FriendsView", () => {
     expect(mode.checked).toBe(true);
     expect(wrapper.find(".friend-card.active").exists()).toBe(true);
     expect(wrapper.text()).toContain("OffUser");
+  });
+
+  it("throttles reconcileVRChatSocialCache on visibility within 60s", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T12:00:00.000Z"));
+    mockFriends.mockResolvedValue([]);
+    mockIsLoggedIn.mockResolvedValue(true);
+    const wrapper = await mountFriendsView();
+    await flushPromises();
+
+    const reconcile = vi.mocked(App.reconcileVRChatSocialCache);
+    reconcile.mockClear();
+
+    vi.setSystemTime(new Date("2026-01-01T12:00:30.000Z"));
+    document.dispatchEvent(new Event("visibilitychange"));
+    await flushPromises();
+    expect(reconcile).not.toHaveBeenCalled();
+
+    vi.setSystemTime(new Date("2026-01-01T12:01:01.000Z"));
+    document.dispatchEvent(new Event("visibilitychange"));
+    await flushPromises();
+    expect(reconcile).toHaveBeenCalledTimes(1);
+
+    wrapper.unmount();
+    vi.useRealTimers();
   });
 
   it("warns and removes vrcUserId query when id is not in friends list", async () => {

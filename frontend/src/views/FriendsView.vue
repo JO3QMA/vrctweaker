@@ -76,11 +76,18 @@ const refreshLoading = ref(false);
 
 let unsubscribeFriendsChanged: (() => void) | undefined;
 
+/** Min interval between visibility-triggered REST reconciles (avoids spam on tab focus). */
+const visibleReconcileMinIntervalMs = 60_000;
+let lastSocialReconcileMs = 0;
+
 async function onDocumentVisibleReconcile(): Promise<void> {
   if (document.visibilityState !== "visible") return;
+  const now = Date.now();
+  if (now - lastSocialReconcileMs < visibleReconcileMinIntervalMs) return;
   try {
     if (!(await App.isLoggedIn())) return;
     await App.reconcileVRChatSocialCache();
+    lastSocialReconcileMs = Date.now();
   } catch {
     /* ignore */
   }
@@ -158,6 +165,7 @@ onMounted(async () => {
   await loadFriends();
   isLoggedIn.value = await App.isLoggedIn();
   await applyVrcUserIdFromQuery();
+  lastSocialReconcileMs = Date.now();
 });
 
 onUnmounted(() => {
@@ -186,6 +194,7 @@ async function doRefresh() {
   refreshLoading.value = true;
   try {
     await App.reconcileVRChatSocialCache();
+    lastSocialReconcileMs = Date.now();
     await loadFriends();
     selected.value =
       friends.value.find((f) => f.vrcUserId === selected.value?.vrcUserId) ??

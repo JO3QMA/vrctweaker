@@ -37,10 +37,11 @@ func (uc *IdentityUseCase) PipelineReconnectRestSync(ctx context.Context) error 
 // When not authenticated, it returns nil. Friend list failures are logged and do not fail the call
 // after a successful self fetch.
 func (uc *IdentityUseCase) ReconcileSocialCacheFromAPI(ctx context.Context) error {
-	if uc.apiClient.GetAuthToken() == "" {
+	token := uc.apiClient.GetAuthToken()
+	if token == "" {
 		return nil
 	}
-	fp := identity.AuthTokenFingerprint(uc.apiClient.GetAuthToken())
+	fp := identity.AuthTokenFingerprint(token)
 	if _, err := uc.fetchAndUpsertCurrentUser(ctx, fp); err != nil {
 		return err
 	}
@@ -143,7 +144,7 @@ func (uc *IdentityUseCase) pipelineFriendActive(ctx context.Context, payload []b
 		id = strings.TrimSpace(body.UserIDLo)
 	}
 	return uc.pipelineSaveFriendMerge(ctx, id, now, func(u *identity.UserCache) {
-		u.MergeFromPipelineFriendOnline(now, body.Platform, "", false)
+		u.MergeFromPipelineFriendActive(now, body.Platform)
 	})
 }
 

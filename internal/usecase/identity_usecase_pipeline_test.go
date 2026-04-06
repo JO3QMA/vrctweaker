@@ -10,6 +10,39 @@ import (
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
 )
 
+func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_preservesLocation(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+	settingsRepo := newMockSettingsRepo()
+	apiClient := &mockAPIClient{token: "tok"}
+	repo := &mockUserCacheRepo{
+		getByID: map[string]*identity.UserCache{
+			"usr_f1": {
+				VRCUserID: "usr_f1", UserKind: identity.UserKindFriend,
+				Status: "active", Location: "wrld_keep:1~abc",
+			},
+		},
+	}
+	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+	payload, err := json.Marshal(map[string]string{
+		"userId":   "usr_f1",
+		"platform": "web",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := uc.HandleVRChatPipelineEvent(ctx, "friend-active", payload); err != nil {
+		t.Fatal(err)
+	}
+	saved := repo.getByID["usr_f1"]
+	if saved.Location != "wrld_keep:1~abc" {
+		t.Fatalf("friend-active must not clobber location, got %q", saved.Location)
+	}
+	if saved.Platform != "web" {
+		t.Fatalf("platform: got %q", saved.Platform)
+	}
+}
+
 func TestIdentityUseCase_HandleVRChatPipelineEvent_friendOffline(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()

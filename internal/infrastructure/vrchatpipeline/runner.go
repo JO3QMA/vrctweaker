@@ -105,6 +105,16 @@ func dialPipeline(ctx context.Context, dialer websocket.Dialer, token, userAgent
 }
 
 func readLoop(ctx context.Context, conn *websocket.Conn, onEvent EventHandler) error {
+	closerDone := make(chan struct{})
+	go func() {
+		select {
+		case <-ctx.Done():
+			_ = conn.Close()
+		case <-closerDone:
+		}
+	}()
+	defer close(closerDone)
+
 	for {
 		select {
 		case <-ctx.Done():

@@ -21,6 +21,22 @@ func TestPipelineLocationIsHidden(t *testing.T) {
 	}
 }
 
+func TestUserCache_MergeFromPipelineFriendActive_preservesLocation(t *testing.T) {
+	t.Parallel()
+	now := time.Unix(1700000010, 0)
+	u := &UserCache{
+		VRCUserID: "usr_1", UserKind: UserKindFriend,
+		Location: "wrld_x:instance", Platform: "standalonewindows",
+	}
+	u.MergeFromPipelineFriendActive(now, "web")
+	if u.Location != "wrld_x:instance" {
+		t.Fatalf("location should be preserved, got %q", u.Location)
+	}
+	if u.Platform != "web" {
+		t.Fatalf("platform: got %q", u.Platform)
+	}
+}
+
 func TestUserCache_MergeFromPipelineFriendOnline(t *testing.T) {
 	t.Parallel()
 	now := time.Unix(1700000000, 0)
