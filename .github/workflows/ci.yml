@@ -5,6 +5,14 @@ on:
     branches: [main]
   push:
     branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   go:
@@ -31,10 +39,19 @@ jobs:
       - name: Build frontend (for //go:embed)
         run: cd frontend && pnpm install --frozen-lockfile && pnpm run build
 
+      - name: Verify gofmt
+        run: |
+          mapfile -t files < <(find . \
+            \( -path './.gomodcache' -o -path './frontend' -o -path './vendor' -o -path './build' -o -path './.git' \) -prune -o \
+            -name '*.go' -print)
+          if [[ ${#files[@]} -eq 0 ]]; then echo "no Go sources found"; exit 1; fi
+          out="$(gofmt -s -l "${files[@]}")"
+          if [[ -n "$out" ]]; then echo "$out"; exit 1; fi
+
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: latest
+          version: v2.11.4
 
       - name: Test
         run: go test -v -race -cover ./internal/...
@@ -58,8 +75,11 @@ jobs:
       - name: Install
         run: cd frontend && pnpm install --frozen-lockfile
 
+      - name: Prettier (check)
+        run: cd frontend && pnpm exec prettier --check .
+
       - name: Lint
-        run: cd frontend && pnpm run lint
+        run: cd frontend && pnpm run lint:ci
 
       - name: Type check
         run: cd frontend && pnpm exec vue-tsc --noEmit
