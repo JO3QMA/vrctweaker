@@ -17,7 +17,7 @@ frontend/wailsjs/
 *.out
 .gomodcache/
 
-# Local nested git worktrees (see `git worktree add`)
+# Local nested git worktrees (`git worktree add .worktrees/...`)
 .worktrees/
 
 # IDE

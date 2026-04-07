@@ -85,6 +85,8 @@ export function settingsViewWailsDecorator(preset: SettingsViewWailsPreset) {
               SetLogRetentionDays: (_days: number) => Promise.resolve(),
               GetPathSettings: () => Promise.resolve({ ...emptyPaths }),
               SetPathSettings: (_dto: PathSettingsDTO) => Promise.resolve(),
+              GetSuppressSleepWhileVRChat: () => Promise.resolve(false),
+              SetSuppressSleepWhileVRChat: (_on: boolean) => Promise.resolve(),
               ValidatePath: (_path: string) => Promise.resolve(true),
               ValidateOutputLogPath: (_path: string) => Promise.resolve(true),
               OpenVRChatLogFolder: () => Promise.resolve(),

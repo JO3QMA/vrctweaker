@@ -29,6 +29,7 @@ func Open(dataDir string) (*sql.DB, error) {
 	}
 
 	if err := conn.Ping(); err != nil {
+		_ = conn.Close()
 		return nil, fmt.Errorf("ping db: %w", err)
 	}
 
@@ -37,8 +38,9 @@ func Open(dataDir string) (*sql.DB, error) {
 		return nil, fmt.Errorf("apply schema: %w", err)
 	}
 
-	// Single open connection serializes writers and avoids SQLITE_BUSY from pool contention
-	// (still allows concurrent readers under WAL).
+	// Serialize DB access through one pooled connection to avoid SQLITE_BUSY from
+	// concurrent writers. WAL still helps durability and write patterns vs rollback journal;
+	// SQLite's concurrent-reader behavior with WAL is not leveraged while MaxOpenConns(1).
 	conn.SetMaxOpenConns(1)
 	conn.SetMaxIdleConns(1)
 
