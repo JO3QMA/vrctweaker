@@ -11,9 +11,6 @@ updates:
       go:
         patterns:
           - "*"
-    labels:
-      - dependencies
-      - go
 
   - package-ecosystem: npm
     directory: /frontend
@@ -26,9 +23,6 @@ updates:
       frontend:
         patterns:
           - "*"
-    labels:
-      - dependencies
-      - frontend
 
   - package-ecosystem: github-actions
     directory: /
@@ -40,6 +34,3 @@ updates:
       actions:
         patterns:
           - "*"
-    labels:
-      - dependencies
-      - ci
