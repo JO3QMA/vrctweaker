@@ -1,6 +1,6 @@
 module vrchat-tweaker
 
-go 1.22.0
+go 1.25.0
 
 require (
 	github.com/fsnotify/fsnotify v1.9.0
@@ -11,7 +11,7 @@ require (
 	github.com/wailsapp/wails/v2 v2.12.0
 	github.com/zalando/go-keyring v0.2.8
 	golang.org/x/image v0.24.0
-	golang.org/x/sys v0.30.0
+	golang.org/x/sys v0.42.0
 	modernc.org/sqlite v1.29.6
 )
 
