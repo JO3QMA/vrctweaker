@@ -46,7 +46,8 @@ withDefaults(
 
 const expanded = defineModel<boolean>({ default: true });
 
-const panelId = `collapsible-section-${++nextCollapsibleSectionId}`;
+nextCollapsibleSectionId += 1;
+const panelId = `collapsible-section-${nextCollapsibleSectionId}`;
 
 function toggle(): void {
   expanded.value = !expanded.value;

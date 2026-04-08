@@ -11,6 +11,7 @@ frontend/dist/
 frontend/coverage/
 frontend/.pnpm-store/
 frontend/wailsjs/
+frontend/tsconfig.tsbuildinfo
 
 # Go
 *.test

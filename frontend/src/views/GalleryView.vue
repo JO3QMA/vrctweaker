@@ -380,12 +380,12 @@ const rowVirtualizer = useVirtualizer(
 );
 
 const virtualRows = computed(() => {
-  scrollSync.value;
+  void scrollSync.value;
   return rowVirtualizer.value.getVirtualItems();
 });
 
 const totalVirtualHeight = computed(() => {
-  scrollSync.value;
+  void scrollSync.value;
   return rowVirtualizer.value.getTotalSize();
 });
 
