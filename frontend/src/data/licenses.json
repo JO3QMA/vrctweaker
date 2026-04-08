@@ -5,7 +5,13 @@
     "path": "/workspaces/vrctweaker/frontend/node_modules/@element-plus/icons-vue",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@element-plus/icons-vue/LICENSE"
   },
-  "@playwright/test@1.58.2": {
+  "@eslint/js@10.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/eslint/eslint",
+    "path": "/workspaces/vrctweaker/frontend/node_modules/@eslint/js",
+    "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@eslint/js/LICENSE"
+  },
+  "@playwright/test@1.59.1": {
     "licenses": "Apache-2.0",
     "repository": "https://github.com/microsoft/playwright",
     "publisher": "Microsoft Corporation",
@@ -13,19 +19,19 @@
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@playwright/test/LICENSE",
     "noticeFile": "/workspaces/vrctweaker/frontend/node_modules/@playwright/test/NOTICE"
   },
-  "@storybook/addon-a11y@10.3.3": {
+  "@storybook/addon-a11y@10.3.5": {
     "licenses": "MIT",
     "repository": "https://github.com/storybookjs/storybook",
     "path": "/workspaces/vrctweaker/frontend/node_modules/@storybook/addon-a11y",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@storybook/addon-a11y/README.md"
   },
-  "@storybook/addon-docs@10.3.3": {
+  "@storybook/addon-docs@10.3.5": {
     "licenses": "MIT",
     "repository": "https://github.com/storybookjs/storybook",
     "path": "/workspaces/vrctweaker/frontend/node_modules/@storybook/addon-docs",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@storybook/addon-docs/README.md"
   },
-  "@storybook/vue3-vite@10.3.3": {
+  "@storybook/vue3-vite@10.3.5": {
     "licenses": "MIT",
     "repository": "https://github.com/storybookjs/storybook",
     "path": "/workspaces/vrctweaker/frontend/node_modules/@storybook/vue3-vite",
@@ -38,32 +44,20 @@
     "path": "/workspaces/vrctweaker/frontend/node_modules/@tanstack/vue-virtual",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@tanstack/vue-virtual/LICENSE"
   },
-  "@types/node@20.19.37": {
+  "@types/node@25.5.2": {
     "licenses": "MIT",
     "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
     "path": "/workspaces/vrctweaker/frontend/node_modules/@types/node",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@types/node/LICENSE"
   },
-  "@typescript-eslint/eslint-plugin@7.18.0": {
-    "licenses": "MIT",
-    "repository": "https://github.com/typescript-eslint/typescript-eslint",
-    "path": "/workspaces/vrctweaker/frontend/node_modules/@typescript-eslint/eslint-plugin",
-    "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@typescript-eslint/eslint-plugin/LICENSE"
-  },
-  "@typescript-eslint/parser@7.18.0": {
-    "licenses": "BSD-2-Clause",
-    "repository": "https://github.com/typescript-eslint/typescript-eslint",
-    "path": "/workspaces/vrctweaker/frontend/node_modules/@typescript-eslint/parser",
-    "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@typescript-eslint/parser/LICENSE"
-  },
-  "@vitejs/plugin-vue@5.2.4": {
+  "@vitejs/plugin-vue@6.0.5": {
     "licenses": "MIT",
     "repository": "https://github.com/vitejs/vite-plugin-vue",
     "publisher": "Evan You",
     "path": "/workspaces/vrctweaker/frontend/node_modules/@vitejs/plugin-vue",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/@vitejs/plugin-vue/LICENSE"
   },
-  "@vitest/coverage-v8@1.6.1": {
+  "@vitest/coverage-v8@4.1.3": {
     "licenses": "MIT",
     "repository": "https://github.com/vitest-dev/vitest",
     "publisher": "Anthony Fu",
@@ -98,7 +92,7 @@
     "path": "/workspaces/vrctweaker/frontend/node_modules/eslint-config-prettier",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/eslint-config-prettier/LICENSE"
   },
-  "eslint-plugin-vue@9.33.0": {
+  "eslint-plugin-vue@10.8.0": {
     "licenses": "MIT",
     "repository": "https://github.com/vuejs/eslint-plugin-vue",
     "publisher": "Toru Nagashima",
@@ -106,7 +100,7 @@
     "path": "/workspaces/vrctweaker/frontend/node_modules/eslint-plugin-vue",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/eslint-plugin-vue/LICENSE"
   },
-  "eslint@8.57.1": {
+  "eslint@10.2.0": {
     "licenses": "MIT",
     "repository": "https://github.com/eslint/eslint",
     "publisher": "Nicholas C. Zakas",
@@ -123,7 +117,16 @@
     "path": "/workspaces/vrctweaker/frontend/node_modules/fake-indexeddb",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/fake-indexeddb/LICENSE"
   },
-  "jsdom@24.1.3": {
+  "globals@17.4.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/sindresorhus/globals",
+    "publisher": "Sindre Sorhus",
+    "email": "sindresorhus@gmail.com",
+    "url": "https://sindresorhus.com",
+    "path": "/workspaces/vrctweaker/frontend/node_modules/globals",
+    "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/globals/license"
+  },
+  "jsdom@29.0.2": {
     "licenses": "MIT",
     "repository": "https://github.com/jsdom/jsdom",
     "path": "/workspaces/vrctweaker/frontend/node_modules/jsdom",
@@ -144,27 +147,33 @@
     "path": "/workspaces/vrctweaker/frontend/node_modules/prettier",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/prettier/LICENSE"
   },
-  "storybook@10.3.3": {
+  "storybook@10.3.5": {
     "licenses": "MIT",
     "repository": "https://github.com/storybookjs/storybook",
     "path": "/workspaces/vrctweaker/frontend/node_modules/storybook",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/storybook/README.md"
   },
-  "typescript@5.4.5": {
+  "typescript-eslint@8.58.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/typescript-eslint/typescript-eslint",
+    "path": "/workspaces/vrctweaker/frontend/node_modules/typescript-eslint",
+    "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/typescript-eslint/LICENSE"
+  },
+  "typescript@6.0.2": {
     "licenses": "Apache-2.0",
-    "repository": "https://github.com/Microsoft/TypeScript",
+    "repository": "https://github.com/microsoft/TypeScript",
     "publisher": "Microsoft Corp.",
     "path": "/workspaces/vrctweaker/frontend/node_modules/typescript",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/typescript/LICENSE.txt"
   },
-  "vite@5.4.21": {
+  "vite@8.0.7": {
     "licenses": "MIT",
     "repository": "https://github.com/vitejs/vite",
     "publisher": "Evan You",
     "path": "/workspaces/vrctweaker/frontend/node_modules/vite",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/vite/LICENSE.md"
   },
-  "vitest@1.6.1": {
+  "vitest@4.1.3": {
     "licenses": "MIT",
     "repository": "https://github.com/vitest-dev/vitest",
     "publisher": "Anthony Fu",
@@ -177,14 +186,14 @@
     "private": true,
     "path": "/workspaces/vrctweaker/frontend"
   },
-  "vue-eslint-parser@9.4.3": {
+  "vue-eslint-parser@10.4.0": {
     "licenses": "MIT",
     "repository": "https://github.com/vuejs/vue-eslint-parser",
     "publisher": "Toru Nagashima",
     "path": "/workspaces/vrctweaker/frontend/node_modules/vue-eslint-parser",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/vue-eslint-parser/LICENSE"
   },
-  "vue-router@4.6.4": {
+  "vue-router@5.0.4": {
     "licenses": "MIT",
     "repository": "https://github.com/vuejs/router",
     "publisher": "Eduardo San Martin Morote",
@@ -192,13 +201,13 @@
     "path": "/workspaces/vrctweaker/frontend/node_modules/vue-router",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/vue-router/LICENSE"
   },
-  "vue-tsc@2.2.12": {
+  "vue-tsc@3.2.6": {
     "licenses": "MIT",
     "repository": "https://github.com/vuejs/language-tools",
     "path": "/workspaces/vrctweaker/frontend/node_modules/vue-tsc",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/vue-tsc/LICENSE"
   },
-  "vue@3.5.30": {
+  "vue@3.5.32": {
     "licenses": "MIT",
     "repository": "https://github.com/vuejs/core",
     "publisher": "Evan You",
