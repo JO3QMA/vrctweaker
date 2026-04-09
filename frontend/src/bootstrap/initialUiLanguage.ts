@@ -20,10 +20,13 @@ export async function getInitialUILanguageCode(
   });
   try {
     const code = await Promise.race([
-      fetchFn().then((c) => {
-        if (timeoutId !== undefined) clearTimeout(timeoutId);
-        return c;
-      }),
+      fetchFn().then(
+        (c) => {
+          if (timeoutId !== undefined) clearTimeout(timeoutId);
+          return c;
+        },
+        () => FALLBACK_UI_LANGUAGE_CODE,
+      ),
       timeoutPromise,
     ]);
     const trimmed = typeof code === "string" ? code.trim() : "";
