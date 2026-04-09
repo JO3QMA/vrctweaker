@@ -1,15 +1,15 @@
 <template>
   <div class="activity-view">
-    <h1 class="page-title">アクティビティ</h1>
+    <h1 class="page-title">{{ t("activity.title") }}</h1>
 
     <!-- 統計セクション（直近14日） -->
     <CollapsibleSectionCard
       class="section-card--playtime"
-      title="プレイ時間（直近14日）"
+      :title="t('activity.playtimeSection')"
     >
-      <div v-if="statsLoading" class="loading">読み込み中…</div>
+      <div v-if="statsLoading" class="loading">{{ t("common.loading") }}</div>
       <div v-else-if="!statsRangeFrom" class="empty-stats">
-        データがありません
+        {{ t("activity.noData") }}
       </div>
       <PlayTimeChart v-else :series="dailyPlayChartSeries" />
     </CollapsibleSectionCard>
@@ -17,13 +17,13 @@
     <!-- タイムラインセクション -->
     <CollapsibleSectionCard
       class="section-card--encounters"
-      title="遭遇ログ（滞在区間）"
+      :title="t('activity.encounterSection')"
     >
       <!-- フィルタ -->
       <div class="filters">
         <el-input
           v-model="displayNameFilter"
-          placeholder="表示名で検索"
+          :placeholder="t('activity.searchDisplayName')"
           clearable
           style="max-width: 220px"
         >
@@ -31,13 +31,15 @@
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
-        <el-button @click="loadEncounters">更新</el-button>
+        <el-button @click="loadEncounters">{{ t("common.refresh") }}</el-button>
       </div>
 
       <div class="encounter-log-scroll">
-        <div v-if="encountersLoading" class="loading">読み込み中…</div>
+        <div v-if="encountersLoading" class="loading">
+          {{ t("common.loading") }}
+        </div>
         <div v-else-if="filteredEncounters.length === 0" class="empty">
-          遭遇ログがありません。
+          {{ t("activity.noEncounters") }}
         </div>
         <el-table
           v-else
@@ -47,21 +49,24 @@
           :border="false"
           stripe
         >
-          <el-table-column label="入室" width="150">
+          <el-table-column :label="t('activity.colJoin')" width="150">
             <template #default="{ row }">
               <span class="timeline-time">{{
-                formatEncounteredAt(row.joinedAt)
+                formatEncounterLocal(row.joinedAt)
               }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="退室" width="150">
+          <el-table-column :label="t('activity.colLeave')" width="150">
             <template #default="{ row }">
               <span class="timeline-time">{{
-                row.leftAt ? formatEncounteredAt(row.leftAt) : "—"
+                row.leftAt ? formatEncounterLocal(row.leftAt) : t("common.dash")
               }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="表示名" min-width="120">
+          <el-table-column
+            :label="t('activity.colDisplayName')"
+            min-width="120"
+          >
             <template #default="{ row }">
               <el-button
                 v-if="row.vrcUserId"
@@ -77,7 +82,7 @@
               }}</span>
             </template>
           </el-table-column>
-          <el-table-column label="ワールド名" min-width="120">
+          <el-table-column :label="t('activity.colWorldName')" min-width="120">
             <template #default="{ row }">
               <el-button
                 v-if="row.worldId"
@@ -89,7 +94,7 @@
               >
                 {{ row.worldDisplayName || row.worldId }}
               </el-button>
-              <span v-else>—</span>
+              <span v-else>{{ t("common.dash") }}</span>
             </template>
           </el-table-column>
         </el-table>
@@ -101,6 +106,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import CollapsibleSectionCard from "../components/CollapsibleSectionCard.vue";
 import {
   App,
@@ -112,11 +118,18 @@ import PlayTimeChart, {
   type PlayTimeDayPoint,
 } from "../components/PlayTimeChart.vue";
 import { openEncounterHistoryWindow } from "../utils/openEncounterHistoryWindow";
+import { formatEncounteredAt } from "../utils/formatEncounteredAt";
+import { appLocaleToBcp47 } from "../i18n";
 
 const PLAYTIME_CHART_MAX_DAYS = 14;
 const ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS = 400;
 
 const router = useRouter();
+const { t, locale } = useI18n();
+
+function formatEncounterLocal(iso: string): string {
+  return formatEncounteredAt(iso, appLocaleToBcp47(String(locale.value)));
+}
 
 const encounters = ref<UserEncounterDTO[]>([]);
 const encountersLoading = ref(false);
@@ -167,15 +180,6 @@ function formatDateShort(dateStr: string): string {
     return `${m}/${day}`;
   } catch {
     return dateStr;
-  }
-}
-
-function formatEncounteredAt(iso: string): string {
-  try {
-    const d = new Date(iso);
-    return d.toLocaleString("ja-JP");
-  } catch {
-    return iso;
   }
 }
 

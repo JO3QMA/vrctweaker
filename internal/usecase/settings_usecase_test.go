@@ -166,3 +166,30 @@ func TestSettingsUseCase_GetSuppressSleepWhileVRChat_defaultFalse(t *testing.T) 
 		t.Fatal("want default false")
 	}
 }
+
+func TestSettingsUseCase_Language_roundtripAndValidation(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	v, err := uc.GetLanguage(ctx)
+	if err != nil {
+		t.Fatalf("GetLanguage: %v", err)
+	}
+	if v != "" {
+		t.Fatalf("want empty unset, got %q", v)
+	}
+	if err = uc.SetLanguage(ctx, "ja"); err != nil {
+		t.Fatalf("SetLanguage: %v", err)
+	}
+	v, err = uc.GetLanguage(ctx)
+	if err != nil {
+		t.Fatalf("GetLanguage: %v", err)
+	}
+	if v != "ja" {
+		t.Fatalf("got %q, want ja", v)
+	}
+	if err := uc.SetLanguage(ctx, "xx"); err == nil {
+		t.Fatal("expected error for unsupported language")
+	}
+}

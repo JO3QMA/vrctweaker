@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -70,7 +71,30 @@ const (
 	keyOutputLogPath            = "output_log_path"
 	keyGalleryLastExitAt        = "gallery_last_exit_at"
 	keySuppressSleepWhileVRChat = "suppress_sleep_while_vrchat"
+	keyLanguage                 = "language"
 )
+
+// SupportedAppLanguages are UI locale codes persisted in app_settings.
+var SupportedAppLanguages = map[string]struct{}{
+	"ja":    {},
+	"en":    {},
+	"ko":    {},
+	"zh-TW": {},
+	"zh-CN": {},
+}
+
+// GetLanguage returns the saved UI language code, or empty when unset.
+func (uc *SettingsUseCase) GetLanguage(ctx context.Context) (string, error) {
+	return uc.repo.Get(ctx, keyLanguage)
+}
+
+// SetLanguage persists the UI language; lang must be a supported code.
+func (uc *SettingsUseCase) SetLanguage(ctx context.Context, lang string) error {
+	if _, ok := SupportedAppLanguages[lang]; !ok {
+		return fmt.Errorf("unsupported language: %q", lang)
+	}
+	return uc.repo.Set(ctx, keyLanguage, lang)
+}
 
 // GetGalleryLastExitAt returns the last app shutdown time used for incremental gallery sync.
 // The second return is false when unset or not parseable.

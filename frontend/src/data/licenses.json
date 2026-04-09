@@ -193,6 +193,14 @@
     "path": "/workspaces/vrctweaker/frontend/node_modules/vue-eslint-parser",
     "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/vue-eslint-parser/LICENSE"
   },
+  "vue-i18n@11.3.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/intlify/vue-i18n",
+    "publisher": "kazuya kawaguchi",
+    "email": "kawakazu80@gmail.com",
+    "path": "/workspaces/vrctweaker/frontend/node_modules/vue-i18n",
+    "licenseFile": "/workspaces/vrctweaker/frontend/node_modules/vue-i18n/LICENSE"
+  },
   "vue-router@5.0.4": {
     "licenses": "MIT",
     "repository": "https://github.com/vuejs/router",

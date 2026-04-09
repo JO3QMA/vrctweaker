@@ -64,12 +64,43 @@ function pad2(n: number): string {
   return String(n).padStart(2, "0");
 }
 
-function galleryMonthLabel(year: number, month: number): string {
-  return `${year}年${pad2(month)}月`;
+/** Labels for gallery date group headers; default matches legacy Japanese formatting. */
+export interface GalleryDateLabels {
+  formatYear: (year: number) => string;
+  formatMonth: (year: number, month: number) => string;
+  formatDay: (year: number, month: number, day: number) => string;
+  unknownDate: string;
 }
 
-function galleryDayLabel(year: number, month: number, day: number): string {
-  return `${year}年${pad2(month)}月${pad2(day)}日`;
+export const galleryLabelsJapanese: GalleryDateLabels = {
+  formatYear: (y) => `${y}年`,
+  formatMonth: (y, m) => `${y}年${pad2(m)}月`,
+  formatDay: (y, m, d) => `${y}年${pad2(m)}月${pad2(d)}日`,
+  unknownDate: "日付不明",
+};
+
+export function galleryLabelsFromLocale(
+  calendarLocale: string,
+  unknownDate: string,
+): GalleryDateLabels {
+  return {
+    formatYear: (y) =>
+      new Intl.DateTimeFormat(calendarLocale, { year: "numeric" }).format(
+        new Date(y, 5, 15),
+      ),
+    formatMonth: (y, m) =>
+      new Intl.DateTimeFormat(calendarLocale, {
+        year: "numeric",
+        month: "long",
+      }).format(new Date(y, m - 1, 1)),
+    formatDay: (y, m, d) =>
+      new Intl.DateTimeFormat(calendarLocale, {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }).format(new Date(y, m - 1, d)),
+    unknownDate,
+  };
 }
 
 function compareDayKeysDesc(a: string, b: string): number {
@@ -193,6 +224,7 @@ export function buildGalleryVirtualRows(
   list: ScreenshotDTO[],
   cols: number,
   collapsed: ReadonlySet<string>,
+  labels: GalleryDateLabels = galleryLabelsJapanese,
 ): GalleryVirtualRow[] {
   if (list.length === 0 || cols < 1) {
     return [];
@@ -209,7 +241,7 @@ export function buildGalleryVirtualRows(
     rows.push({
       type: "yearHeader",
       collapseKey: yKey,
-      label: `${y}年`,
+      label: labels.formatYear(y),
       rowKey: `hdr-y-${y}`,
       expanded: !yCollapsed,
     });
@@ -228,7 +260,7 @@ export function buildGalleryVirtualRows(
       rows.push({
         type: "monthHeader",
         collapseKey: mKey,
-        label: galleryMonthLabel(y, m),
+        label: labels.formatMonth(y, m),
         rowKey: `hdr-m-${y}-${m}`,
         expanded: !mCollapsed,
       });
@@ -247,7 +279,7 @@ export function buildGalleryVirtualRows(
         rows.push({
           type: "dayHeader",
           collapseKey: dKey,
-          label: galleryDayLabel(y, m, day),
+          label: labels.formatDay(y, m, day),
           rowKey: `hdr-d-${dayKey}`,
           expanded: !dCollapsed,
         });
@@ -265,7 +297,7 @@ export function buildGalleryVirtualRows(
     rows.push({
       type: "yearHeader",
       collapseKey: uk,
-      label: "日付不明",
+      label: labels.unknownDate,
       rowKey: "hdr-y-unknown",
       expanded: !uCollapsed,
     });

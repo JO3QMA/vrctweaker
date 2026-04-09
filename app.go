@@ -25,6 +25,7 @@ import (
 	"vrchat-tweaker/internal/infrastructure/sqlite"
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
 	"vrchat-tweaker/internal/infrastructure/vrchatpipeline"
+	"vrchat-tweaker/internal/locale"
 	"vrchat-tweaker/internal/usecase"
 )
 
@@ -641,6 +642,21 @@ func (a *App) GetSuppressSleepWhileVRChat() (bool, error) {
 // SetSuppressSleepWhileVRChat enables or disables sleep suppression while VRChat.exe runs.
 func (a *App) SetSuppressSleepWhileVRChat(on bool) error {
 	return a.settings.SetSuppressSleepWhileVRChat(a.ctx, on)
+}
+
+// GetLanguage returns the saved UI language code (ja, en, ko, zh-TW, zh-CN), or empty if unset.
+func (a *App) GetLanguage() (string, error) {
+	return a.settings.GetLanguage(a.ctx)
+}
+
+// SetLanguage persists the UI language code.
+func (a *App) SetLanguage(lang string) error {
+	return a.settings.SetLanguage(a.ctx, lang)
+}
+
+// GetSystemLocale returns the OS-preferred UI language mapped to a supported app code.
+func (a *App) GetSystemLocale() string {
+	return locale.Detect()
 }
 
 // ValidatePath checks if the path exists and is accessible.

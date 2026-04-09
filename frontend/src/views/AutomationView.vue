@@ -1,17 +1,19 @@
 <template>
   <div class="automation-view">
-    <h1 class="page-title">オートメーション</h1>
+    <h1 class="page-title">{{ t("automation.title") }}</h1>
     <el-text
       type="info"
       size="small"
       style="display: block; margin-bottom: 1rem"
     >
-      IF-THEN 形式のルールで、トリガー発生時にアクションを実行します。
+      {{ t("automation.intro") }}
     </el-text>
     <div class="rules-section">
       <!-- ルールリスト -->
       <div class="rules-list">
-        <el-button class="btn-add" @click="addNew">+ 新規ルール</el-button>
+        <el-button class="btn-add" @click="addNew">{{
+          t("automation.addRule")
+        }}</el-button>
         <div
           v-for="r in rules"
           :key="r.id"
@@ -31,7 +33,9 @@
           </div>
           <div class="rule-summary">
             <span
-              >IF {{ triggerLabel(r.triggerType) }} → THEN
+              >{{ t("automation.summaryIf") }}
+              {{ triggerLabel(r.triggerType) }} →
+              {{ t("automation.summaryThen") }}
               {{ actionLabel(r.actionType, r.actionPayload) }}</span
             >
           </div>
@@ -41,19 +45,19 @@
       <!-- ルールエディタ -->
       <el-card v-if="selected" class="rule-editor" shadow="never">
         <template #header>
-          {{ selected.id ? "ルールを編集" : "新規ルール" }}
+          {{ selected.id ? t("automation.editRule") : t("automation.newRule") }}
         </template>
         <el-form label-position="top" @submit.prevent="save">
-          <el-form-item label="ルール名">
+          <el-form-item :label="t('automation.ruleName')">
             <el-input
               v-model="selected.name"
-              placeholder="例: AFK時にステータスをbusyに"
+              :placeholder="t('automation.ruleNamePh')"
               required
             />
           </el-form-item>
 
-          <el-divider>IF（トリガー）</el-divider>
-          <el-form-item label="条件">
+          <el-divider>{{ t("automation.ifTrigger") }}</el-divider>
+          <el-form-item :label="t('automation.condition')">
             <el-select
               v-model="selected.triggerType"
               required
@@ -68,8 +72,8 @@
             </el-select>
           </el-form-item>
 
-          <el-divider>THEN（アクション）</el-divider>
-          <el-form-item label="アクション">
+          <el-divider>{{ t("automation.thenAction") }}</el-divider>
+          <el-form-item :label="t('automation.action')">
             <el-select
               v-model="selected.actionType"
               required
@@ -85,7 +89,7 @@
           </el-form-item>
           <el-form-item
             v-if="selected.actionType === 'change_status'"
-            label="ステータス"
+            :label="t('automation.status')"
           >
             <el-select
               v-model="statusValue"
@@ -101,16 +105,20 @@
           </el-form-item>
 
           <div class="editor-actions">
-            <el-button type="primary" @click="save">保存</el-button>
+            <el-button type="primary" @click="save">{{
+              t("automation.save")
+            }}</el-button>
             <el-button
               v-if="selected.id"
               type="danger"
               plain
               @click="confirmDelete"
             >
-              削除
+              {{ t("automation.delete") }}
             </el-button>
-            <el-button @click="cancelEdit">キャンセル</el-button>
+            <el-button @click="cancelEdit">{{
+              t("automation.cancel")
+            }}</el-button>
           </div>
         </el-form>
       </el-card>
@@ -119,49 +127,50 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
 import { App, type AutomationRuleDTO } from "../wails/app";
 
-const TRIGGER_OPTIONS = [
-  { value: "afk_detected", label: "AFK検出時" },
-  { value: "friend_joined", label: "フレンド参加時" },
-] as const;
-
-const ACTION_OPTIONS = [
-  { value: "change_status", label: "ステータスを変更" },
-] as const;
-
-const STATUS_OPTIONS = [
-  { value: "busy", label: "Busy" },
-  { value: "ask me", label: "Ask Me" },
-  { value: "join me", label: "Join Me" },
-] as const;
+const { t } = useI18n();
 
 const rules = ref<AutomationRuleDTO[]>([]);
 const selected = ref<AutomationRuleDTO | null>(null);
 
-const triggerOptions = TRIGGER_OPTIONS;
-const actionOptions = ACTION_OPTIONS;
-const statusOptions = STATUS_OPTIONS;
+const triggerOptions = computed(() => [
+  { value: "afk_detected", label: t("automation.triggerAfk") },
+  { value: "friend_joined", label: t("automation.triggerFriendJoined") },
+]);
+
+const actionOptions = computed(() => [
+  { value: "change_status", label: t("automation.actionChangeStatus") },
+]);
+
+const statusOptions = computed(() => [
+  { value: "busy", label: t("automation.statusBusy") },
+  { value: "ask me", label: t("automation.statusAskMe") },
+  { value: "join me", label: t("automation.statusJoinMe") },
+]);
 
 const statusValue = ref<string>("busy");
 
 function triggerLabel(triggerType: string): string {
   return (
-    triggerOptions.find((o) => o.value === triggerType)?.label ?? triggerType
+    triggerOptions.value.find((o) => o.value === triggerType)?.label ??
+    triggerType
   );
 }
 
 function actionLabel(actionType: string, actionPayload?: string): string {
   const base =
-    actionOptions.find((o) => o.value === actionType)?.label ?? actionType;
+    actionOptions.value.find((o) => o.value === actionType)?.label ??
+    actionType;
   if (actionType === "change_status" && actionPayload) {
     try {
       const p = JSON.parse(actionPayload) as { status?: string };
       const s = p?.status ?? "";
       if (s) {
-        const lbl = statusOptions.find((o) => o.value === s)?.label ?? s;
+        const lbl = statusOptions.value.find((o) => o.value === s)?.label ?? s;
         return `${base} → ${lbl}`;
       }
     } catch {
@@ -259,11 +268,11 @@ async function confirmDelete() {
   if (!selected.value?.id) return;
   try {
     await ElMessageBox.confirm(
-      `「${selected.value.name}」を削除しますか？`,
-      "確認",
+      t("automation.deleteConfirm", { name: selected.value.name }),
+      t("common.confirm"),
       {
-        confirmButtonText: "削除",
-        cancelButtonText: "キャンセル",
+        confirmButtonText: t("common.delete"),
+        cancelButtonText: t("common.cancel"),
         type: "warning",
         confirmButtonClass: "el-button--danger",
       },

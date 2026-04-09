@@ -1,12 +1,12 @@
 <template>
   <div class="launcher-view">
-    <h1 class="page-title">ランチャー</h1>
+    <h1 class="page-title">{{ t("routes.launcher") }}</h1>
     <div class="profiles-section">
       <!-- プロファイルリスト -->
       <div class="profiles-list">
-        <el-button class="btn-add" @click="addNew"
-          >+ 新規プロファイル</el-button
-        >
+        <el-button class="btn-add" @click="addNew">{{
+          t("launcher.newProfile")
+        }}</el-button>
         <div
           v-for="p in profiles"
           :key="p.id"
@@ -15,56 +15,64 @@
           @click="select(p)"
         >
           <span class="profile-name">{{ p.name }}</span>
-          <el-tag v-if="p.isDefault" size="small" type="primary">既定</el-tag>
+          <el-tag v-if="p.isDefault" size="small" type="primary">{{
+            t("launcher.defaultTag")
+          }}</el-tag>
         </div>
       </div>
 
       <!-- プロファイルエディタ -->
       <div v-if="selected" class="profile-editor">
         <el-form label-position="top" size="default">
-          <el-form-item label="プロファイル名">
+          <el-form-item :label="t('launcher.profileName')">
             <el-input v-model="selected.name" />
           </el-form-item>
 
-          <el-form-item label="起動引数">
+          <el-form-item :label="t('launcher.launchArgs')">
             <div class="launch-args-gui">
               <div class="arg-row">
                 <el-checkbox
                   v-model="launchArgs.noVr"
                   data-testid="no-vr-checkbox"
                 >
-                  デスクトップモードで起動（-no-vr）
+                  {{ t("launcher.desktopMode") }}
                 </el-checkbox>
               </div>
 
               <!-- 表示モード -->
-              <el-form-item label="表示モード" class="nested-form-item">
+              <el-form-item
+                :label="t('launcher.screenMode')"
+                class="nested-form-item"
+              >
                 <el-radio-group
                   v-model="launchArgs.screenMode"
-                  aria-label="表示モード"
+                  :aria-label="t('launcher.screenMode')"
                   size="default"
                 >
                   <el-radio-button
                     value="fullscreen"
                     data-testid="screen-mode-fullscreen"
-                    >フルスクリーン</el-radio-button
+                    >{{ t("launcher.screenModeFullscreen") }}</el-radio-button
                   >
                   <el-radio-button
                     value="windowed"
                     data-testid="screen-mode-windowed"
-                    >ウィンドウ</el-radio-button
+                    >{{ t("launcher.screenModeWindowed") }}</el-radio-button
                   >
                   <el-radio-button
                     value="popupwindow"
                     data-testid="screen-mode-popupwindow"
-                    >仮想フルスクリーン</el-radio-button
+                    >{{ t("launcher.screenModePopup") }}</el-radio-button
                   >
                 </el-radio-group>
               </el-form-item>
 
               <!-- 詳細設定 -->
               <el-collapse class="args-collapse">
-                <el-collapse-item title="詳細設定" name="advanced">
+                <el-collapse-item
+                  :title="t('launcher.advancedSettings')"
+                  name="advanced"
+                >
                   <div class="launch-args-advanced">
                     <div class="arg-row">
                       <el-checkbox
@@ -72,17 +80,20 @@
                         data-testid="resolution-enabled-checkbox"
                         @change="onResolutionEnabledChange"
                       >
-                        解像度を指定（-screen-width, -screen-height）
+                        {{ t("launcher.resolutionHint") }}
                       </el-checkbox>
                     </div>
                     <div
                       v-if="valueOptionsEnabled.resolution"
                       class="sub-options"
                     >
-                      <el-form-item label="プリセット" class="nested-form-item">
+                      <el-form-item
+                        :label="t('launcher.preset')"
+                        class="nested-form-item"
+                      >
                         <el-radio-group
                           v-model="resolutionPreset"
-                          aria-label="起動時解像度プリセット"
+                          :aria-label="t('launcher.preset')"
                           size="small"
                           @change="applyResolutionPreset"
                         >
@@ -109,7 +120,7 @@
                           <el-radio-button
                             value="custom"
                             data-testid="resolution-preset-custom"
-                            >手動設定</el-radio-button
+                            >{{ t("launcher.manual") }}</el-radio-button
                           >
                         </el-radio-group>
                       </el-form-item>
@@ -121,7 +132,7 @@
                           :disabled="resolutionPreset !== 'custom'"
                           data-testid="screen-width-input"
                           size="small"
-                          placeholder="幅"
+                          :placeholder="t('launcher.widthPh')"
                           style="width: 120px"
                         />
                         <span class="resolution-sep">×</span>
@@ -132,7 +143,7 @@
                           :disabled="resolutionPreset !== 'custom'"
                           data-testid="screen-height-input"
                           size="small"
-                          placeholder="高さ"
+                          :placeholder="t('launcher.heightPh')"
                           style="width: 120px"
                         />
                       </div>
@@ -144,7 +155,7 @@
                         data-testid="monitor-enabled-checkbox"
                         @change="onMonitorEnabledChange"
                       >
-                        モニター指定（-monitor N）
+                        {{ t("launcher.monitorHint") }}
                       </el-checkbox>
                     </div>
                     <div v-if="valueOptionsEnabled.monitor" class="sub-options">
@@ -153,7 +164,7 @@
                         :min="1"
                         data-testid="monitor-input"
                         size="small"
-                        placeholder="1=1番目"
+                        :placeholder="t('launcher.monitorPh')"
                         style="width: 120px"
                       />
                     </div>
@@ -164,7 +175,7 @@
                         data-testid="fps-enabled-checkbox"
                         @change="onFpsEnabledChange"
                       >
-                        FPS制限（--fps=N）
+                        {{ t("launcher.fpsHint") }}
                       </el-checkbox>
                     </div>
                     <div v-if="valueOptionsEnabled.fps" class="sub-options">
@@ -183,7 +194,7 @@
                         v-model="launchArgs.skipRegistry"
                         data-testid="skip-registry-checkbox"
                       >
-                        レジストリ登録スキップ（--skip-registry-install）
+                        {{ t("launcher.skipRegistry") }}
                       </el-checkbox>
                     </div>
 
@@ -193,7 +204,7 @@
                         data-testid="process-priority-enabled-checkbox"
                         @change="onProcessPriorityEnabledChange"
                       >
-                        プロセス優先度（--process-priority=N）
+                        {{ t("launcher.processPriority") }}
                       </el-checkbox>
                     </div>
                     <div
@@ -217,7 +228,7 @@
                         data-testid="main-thread-priority-enabled-checkbox"
                         @change="onMainThreadPriorityEnabledChange"
                       >
-                        メインスレッド優先度（--main-thread-priority=N）
+                        {{ t("launcher.mainThreadPriority") }}
                       </el-checkbox>
                     </div>
                     <div
@@ -241,7 +252,7 @@
                         data-testid="profile-enabled-checkbox"
                         @change="onProfileEnabledChange"
                       >
-                        プロファイル（--profile=N）
+                        {{ t("launcher.profileHint") }}
                       </el-checkbox>
                     </div>
                     <div v-if="valueOptionsEnabled.profile" class="sub-options">
@@ -250,14 +261,14 @@
                         :min="0"
                         data-testid="profile-input"
                         size="small"
-                        placeholder="0=既定"
+                        :placeholder="t('launcher.profilePh')"
                         style="width: 120px"
                       />
                     </div>
                   </div>
                 </el-collapse-item>
                 <el-collapse-item
-                  title="クリエイター・デバッグ向け"
+                  :title="t('launcher.creatorDebug')"
                   name="debug"
                 >
                   <div class="launch-args-advanced">
@@ -266,7 +277,7 @@
                         v-model="launchArgs.enableDebugGui"
                         data-testid="enable-debug-gui-checkbox"
                       >
-                        デバッグGUI（--enable-debug-gui）
+                        {{ t("launcher.debugGui") }}
                       </el-checkbox>
                     </div>
                     <div class="arg-row">
@@ -274,7 +285,7 @@
                         v-model="launchArgs.enableSDKLogLevels"
                         data-testid="enable-sdk-log-levels-checkbox"
                       >
-                        SDKログ拡張（--enable-sdk-log-levels）
+                        {{ t("launcher.sdkLog") }}
                       </el-checkbox>
                     </div>
                     <div class="arg-row">
@@ -282,7 +293,7 @@
                         v-model="launchArgs.enableUdonDebugLogging"
                         data-testid="enable-udon-debug-logging-checkbox"
                       >
-                        Udonデバッグログ（--enable-udon-debug-logging）
+                        {{ t("launcher.udonDebug") }}
                       </el-checkbox>
                     </div>
                     <div class="arg-row">
@@ -290,7 +301,7 @@
                         v-model="launchArgs.watchWorlds"
                         data-testid="watch-worlds-checkbox"
                       >
-                        ワールド監視（--watch-worlds）
+                        {{ t("launcher.watchWorlds") }}
                       </el-checkbox>
                     </div>
                     <div class="arg-row">
@@ -298,7 +309,7 @@
                         v-model="launchArgs.watchAvatars"
                         data-testid="watch-avatars-checkbox"
                       >
-                        アバター監視（--watch-avatars）
+                        {{ t("launcher.watchAvatars") }}
                       </el-checkbox>
                     </div>
                     <div class="arg-row">
@@ -306,7 +317,7 @@
                         v-model="launchArgs.enforceWorldServerChecks"
                         data-testid="enforce-world-server-checks-checkbox"
                       >
-                        ワールドサーバーチェック強制（--enforce-world-server-checks）
+                        {{ t("launcher.enforceWorldServer") }}
                       </el-checkbox>
                     </div>
 
@@ -316,13 +327,13 @@
                         data-testid="midi-enabled-checkbox"
                         @change="onMidiEnabledChange"
                       >
-                        MIDIデバイス（--midi=deviceName）
+                        {{ t("launcher.midi") }}
                       </el-checkbox>
                     </div>
                     <div v-if="valueOptionsEnabled.midi" class="sub-options">
                       <el-input
                         v-model="launchArgs.midi"
-                        placeholder="デバイス名"
+                        :placeholder="t('launcher.midiPh')"
                         data-testid="midi-input"
                         size="small"
                         style="max-width: 240px"
@@ -335,7 +346,7 @@
                         data-testid="ignore-trackers-enabled-checkbox"
                         @change="onIgnoreTrackersEnabledChange"
                       >
-                        無視トラッカー（--ignore-trackers=serial1,serial2）
+                        {{ t("launcher.ignoreTrackers") }}
                       </el-checkbox>
                     </div>
                     <div
@@ -352,28 +363,28 @@
                     </div>
 
                     <el-form-item
-                      label="動画デコーディング"
+                      :label="t('launcher.videoDecoding')"
                       class="nested-form-item"
                     >
                       <el-radio-group
                         v-model="launchArgs.videoDecoding"
-                        aria-label="動画デコーディング"
+                        :aria-label="t('launcher.videoDecoding')"
                         size="small"
                       >
                         <el-radio-button
                           value=""
                           data-testid="video-decoding-default"
-                          >既定</el-radio-button
+                          >{{ t("launcher.videoDecDefault") }}</el-radio-button
                         >
                         <el-radio-button
                           value="software"
                           data-testid="video-decoding-software"
-                          >ソフトウェア</el-radio-button
+                          >{{ t("launcher.videoDecSoftware") }}</el-radio-button
                         >
                         <el-radio-button
                           value="hardware"
                           data-testid="video-decoding-hardware"
-                          >ハードウェア</el-radio-button
+                          >{{ t("launcher.videoDecHardware") }}</el-radio-button
                         >
                       </el-radio-group>
                     </el-form-item>
@@ -383,7 +394,7 @@
                         v-model="launchArgs.disableAMDStutterWorkaround"
                         data-testid="disable-amd-stutter-workaround-checkbox"
                       >
-                        AMDスタッター回避無効（--disable-amd-stutter-workaround）
+                        {{ t("launcher.disableAmdStutter") }}
                       </el-checkbox>
                     </div>
 
@@ -393,13 +404,13 @@
                         data-testid="osc-enabled-checkbox"
                         @change="onOscEnabledChange"
                       >
-                        OSC（--osc=inPort:outIP:outPort）
+                        {{ t("launcher.osc") }}
                       </el-checkbox>
                     </div>
                     <div v-if="valueOptionsEnabled.osc" class="sub-options">
                       <el-input
                         v-model="launchArgs.osc"
-                        placeholder="例: 9000:127.0.0.1:9001"
+                        :placeholder="t('launcher.oscPh')"
                         data-testid="osc-input"
                         size="small"
                         style="max-width: 240px"
@@ -412,7 +423,7 @@
                         data-testid="affinity-enabled-checkbox"
                         @change="onAffinityEnabledChange"
                       >
-                        スレッドアフィニティ（--affinity=FFFF）
+                        {{ t("launcher.affinity") }}
                       </el-checkbox>
                     </div>
                     <div
@@ -421,7 +432,7 @@
                     >
                       <el-input
                         v-model="launchArgs.affinity"
-                        placeholder="16進ビットマスク"
+                        :placeholder="t('launcher.affinityPh')"
                         data-testid="affinity-input"
                         size="small"
                         style="max-width: 200px"
@@ -431,7 +442,7 @@
                 </el-collapse-item>
               </el-collapse>
 
-              <el-form-item label="カスタム引数（上級者向け）">
+              <el-form-item :label="t('launcher.customArgs')">
                 <el-input
                   v-model="launchArgs.custom"
                   placeholder="-batchmode"
@@ -443,17 +454,17 @@
 
           <el-form-item>
             <el-checkbox v-model="selected.isDefault">
-              デフォルトに設定
+              {{ t("launcher.setAsDefault") }}
             </el-checkbox>
           </el-form-item>
 
           <div class="editor-actions">
-            <el-button class="btn-save" type="primary" @click="save"
-              >保存</el-button
-            >
-            <el-button class="btn-launch" type="success" @click="launch"
-              >この設定で起動</el-button
-            >
+            <el-button class="btn-save" type="primary" @click="save">{{
+              t("launcher.save")
+            }}</el-button>
+            <el-button class="btn-launch" type="success" @click="launch">{{
+              t("launcher.launchWithThis")
+            }}</el-button>
             <el-button
               v-if="selected.id"
               type="danger"
@@ -462,7 +473,7 @@
               style="margin-left: auto"
               @click="confirmDelete"
             >
-              削除
+              {{ t("launcher.delete") }}
             </el-button>
           </div>
         </el-form>
@@ -473,6 +484,7 @@
 
 <script setup lang="ts">
 import { ref, reactive, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
 import {
   App,
@@ -480,6 +492,8 @@ import {
   type LaunchArgsParsedDTO,
   PRIORITY_OMIT,
 } from "../wails/app";
+
+const { t } = useI18n();
 
 type ResolutionPreset = "HD" | "FHD" | "WQHD" | "4K" | "custom";
 
@@ -691,7 +705,7 @@ async function select(p: LaunchProfileDTO) {
 function addNew() {
   selected.value = {
     id: "",
-    name: "新しいプロファイル",
+    name: t("launcher.newProfileDefaultName"),
     arguments: "",
     isDefault: profiles.value.length === 0,
   };
@@ -756,11 +770,11 @@ async function confirmDelete() {
   if (!selected.value?.id) return;
   try {
     await ElMessageBox.confirm(
-      `「${selected.value.name}」を削除しますか？`,
-      "確認",
+      t("launcher.deleteConfirm", { name: selected.value.name }),
+      t("common.confirm"),
       {
-        confirmButtonText: "削除",
-        cancelButtonText: "キャンセル",
+        confirmButtonText: t("launcher.deleteOk"),
+        cancelButtonText: t("common.cancel"),
         type: "warning",
         confirmButtonClass: "el-button--danger",
       },
