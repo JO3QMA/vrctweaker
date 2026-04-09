@@ -5,7 +5,7 @@ import "element-plus/dist/index.css";
 import "element-plus/theme-chalk/dark/css-vars.css";
 import * as ElementPlusIconsVue from "@element-plus/icons-vue";
 import AppRoot from "./App.vue";
-import { App } from "./wails/app";
+import { getInitialUILanguageCode } from "./bootstrap/initialUiLanguage";
 import { createAppI18n } from "./i18n";
 import "./assets/style.css";
 import type { RouteRecordRaw } from "vue-router";
@@ -80,12 +80,7 @@ const routes: RouteRecordRaw[] = [
 ];
 
 async function bootstrap() {
-  let code = "ja";
-  try {
-    code = await App.getUILanguage();
-  } catch {
-    // DB or IPC error – fall back to Japanese so the app still renders.
-  }
+  const code = await getInitialUILanguageCode();
   const i18n = createAppI18n(code);
   const router = createRouter({
     history: createWebHashHistory(),
@@ -109,4 +104,11 @@ async function bootstrap() {
   app.mount("#app");
 }
 
-void bootstrap();
+void bootstrap().catch((e: unknown) => {
+  console.error("[VRChat Tweaker] bootstrap failed", e);
+  const root = document.getElementById("app");
+  const msg = e instanceof Error ? e.message : String(e);
+  if (root) {
+    root.textContent = `起動に失敗しました: ${msg}`;
+  }
+});
