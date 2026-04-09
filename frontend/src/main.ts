@@ -1,4 +1,4 @@
-import { createApp } from "vue";
+import { createApp, watch } from "vue";
 import { createRouter, createWebHashHistory } from "vue-router";
 import ElementPlus from "element-plus";
 import "element-plus/dist/index.css";
@@ -6,6 +6,7 @@ import "element-plus/theme-chalk/dark/css-vars.css";
 import * as ElementPlusIconsVue from "@element-plus/icons-vue";
 import AppRoot from "./App.vue";
 import { getInitialUILanguageCode } from "./bootstrap/initialUiLanguage";
+import { syncDocumentTitle } from "./bootstrap/syncDocumentTitle";
 import { createAppI18n } from "./i18n";
 import "./assets/style.css";
 import type { RouteRecordRaw } from "vue-router";
@@ -88,15 +89,18 @@ async function bootstrap() {
   });
 
   router.afterEach((to) => {
-    const titleKey = to.meta.titleKey;
-    if (typeof titleKey === "string" && titleKey.length > 0) {
-      document.title = `${i18n.global.t(titleKey)} - ${i18n.global.t("appTitle")}`;
-    }
+    syncDocumentTitle((key) => i18n.global.t(key), to.meta);
   });
 
   const app = createApp(AppRoot);
   app.use(i18n);
   app.use(router);
+  watch(i18n.global.locale, () => {
+    syncDocumentTitle(
+      (key) => i18n.global.t(key),
+      router.currentRoute.value.meta,
+    );
+  });
   app.use(ElementPlus);
   for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
     app.component(key, component);

@@ -122,7 +122,7 @@
   "settings": {
     "title": "設定",
     "language": "語言",
-    "languageHint": "立即套用，無需重新啟動。",
+    "languageHint": "立即套用，無需重新啟動。部分畫面仍以英文顯示。",
     "langJa": "日本語",
     "langEn": "English",
     "langZhCN": "简体中文",

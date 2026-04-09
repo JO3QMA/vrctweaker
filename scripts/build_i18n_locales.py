@@ -760,10 +760,9 @@ ZH_CN_PATCH: dict = {
     "settings": {
         "title": "设置",
         "language": "语言",
-        "languageHint": "立即生效，无需重启。",
+        "languageHint": "立即生效，无需重启。部分界面仍以英文显示。",
         "loginTitle": "VRChat 登录",
         "pathTitle": "路径",
-        "save": "保存",
     },
     "gallery": {"title": "图库", "scanFolder": "扫描文件夹"},
     "activity": {"title": "活动"},
@@ -809,7 +808,7 @@ ZH_TW_PATCH: dict = {
     "settings": {
         "title": "設定",
         "language": "語言",
-        "languageHint": "立即套用，無需重新啟動。",
+        "languageHint": "立即套用，無需重新啟動。部分畫面仍以英文顯示。",
         "loginTitle": "VRChat 登入",
         "pathTitle": "路徑",
     },
@@ -857,7 +856,7 @@ KO_PATCH: dict = {
     "settings": {
         "title": "설정",
         "language": "언어",
-        "languageHint": "즉시 적용됩니다(재시작 불필요).",
+        "languageHint": "즉시 적용됩니다(재시작 불필요). 일부 화면은 영어로 표시될 수 있습니다.",
         "loginTitle": "VRChat 로그인",
         "pathTitle": "경로",
     },

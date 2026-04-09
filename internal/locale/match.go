@@ -81,6 +81,8 @@ func CanonicalUILanguage(s string) string {
 		}
 		tags = []language.Tag{t}
 	}
+	// Best match among supportedTags; never empty for parseable tags. Depends on
+	// golang.org/x/text CLDR distance data (may shift with library updates).
 	matched, _, _ := uiMatcher.Match(tags...)
 	return tagToUICode(matched)
 }

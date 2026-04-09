@@ -122,7 +122,7 @@
   "settings": {
     "title": "설정",
     "language": "언어",
-    "languageHint": "즉시 적용됩니다(재시작 불필요).",
+    "languageHint": "즉시 적용됩니다(재시작 불필요). 일부 화면은 영어로 표시될 수 있습니다.",
     "langJa": "日本語",
     "langEn": "English",
     "langZhCN": "简体中文",

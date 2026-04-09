@@ -9,11 +9,9 @@
           :class="{ 'main-content--bare': bareLayout }"
         >
           <div class="router-outlet-host">
-            <router-view v-slot="{ Component }">
-              <transition name="fade" mode="out-in">
-                <component :is="Component" :key="route.fullPath" />
-              </transition>
-            </router-view>
+            <!-- デフォルト描画: v-slot + <transition mode="out-in"> は WebView で遅延ルートが
+                 真っ白になることがあるため使わない（Vue Router が渡す Component は VNode 扱い）。 -->
+            <router-view />
           </div>
         </main>
       </div>
@@ -89,20 +87,10 @@ onMounted(() => {
 }
 
 /* `> *` matches the routed SFC root: Vue 3 applies this parent’s scope attribute to child
-   component roots, so the combinator resolves to one element. `<Transition>` adds no wrapper
-   DOM node. Gallery manages its own scroll, so its root `.gallery-view` is excluded here. */
+   component roots, so the combinator resolves to one element. Gallery manages its own scroll,
+   so its root `.gallery-view` is excluded here. */
 /* アクティビティは遭遇ログカード内でスクロールするためルートははみ出し抑制 */
 .router-outlet-host > *:not(.gallery-view):not(.activity-view) {
   overflow-y: auto;
-}
-
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.15s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
 }
 </style>
