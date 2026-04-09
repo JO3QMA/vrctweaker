@@ -53,7 +53,7 @@
               :model-value="selected.isFavorite"
               @update:model-value="onFavoriteUpdate"
             >
-              お気に入り
+              {{ t("vrcDetail.favorite") }}
             </el-checkbox>
           </div>
         </div>
@@ -65,8 +65,8 @@
           <el-button
             link
             type="primary"
-            title="表示名をコピー"
-            aria-label="表示名をコピー"
+            :title="t('vrcDetail.copyDisplayName')"
+            :aria-label="t('vrcDetail.copyDisplayName')"
             data-testid="friend-copy-display-name"
             class="profile-copy-name"
             @click="copyDisplayName(selected.displayName)"
@@ -98,23 +98,29 @@
 
       <div class="profile-details-wrap">
         <el-tabs v-model="detailTab" class="profile-detail-tabs">
-          <el-tab-pane label="詳細" name="detail">
+          <el-tab-pane :label="t('vrcDetail.detailTab')" name="detail">
             <el-descriptions :column="1" border size="small">
-              <el-descriptions-item v-if="selected.state" label="状態 (state)">
+              <el-descriptions-item
+                v-if="selected.state"
+                :label="t('vrcDetail.state')"
+              >
                 {{ selected.state }}
               </el-descriptions-item>
-              <el-descriptions-item v-if="locationLabel" label="ロケーション">
+              <el-descriptions-item
+                v-if="locationLabel"
+                :label="t('vrcDetail.location')"
+              >
                 <span class="mono wrap">{{ locationLabel }}</span>
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.developerType"
-                label="開発者種別"
+                :label="t('vrcDetail.developerType')"
               >
                 {{ selected.developerType }}
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.lastPlatform || selected.platform"
-                label="プラットフォーム"
+                :label="t('vrcDetail.platform')"
               >
                 {{
                   [selected.platform, selected.lastPlatform]
@@ -124,25 +130,25 @@
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.lastLogin"
-                label="最終ログイン"
+                :label="t('vrcDetail.lastLogin')"
               >
                 {{ selected.lastLogin }}
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.lastActivity"
-                label="最終アクティビティ"
+                :label="t('vrcDetail.lastActivity')"
               >
                 {{ selected.lastActivity }}
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.lastMobile"
-                label="最終モバイル"
+                :label="t('vrcDetail.lastMobile')"
               >
                 {{ selected.lastMobile }}
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="jsonStringArray(selected.tagsJson).length"
-                label="タグ"
+                :label="t('vrcDetail.tags')"
               >
                 <el-tag
                   v-for="tag in jsonStringArray(selected.tagsJson)"
@@ -155,7 +161,7 @@
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="jsonStringArray(selected.currentAvatarTagsJson).length"
-                label="アバタータグ"
+                :label="t('vrcDetail.avatarTags')"
               >
                 <el-tag
                   v-for="tag in jsonStringArray(selected.currentAvatarTagsJson)"
@@ -168,7 +174,7 @@
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.currentAvatarImageUrl"
-                label="アバター画像 URL"
+                :label="t('vrcDetail.avatarImageUrl')"
               >
                 <a
                   :href="selected.currentAvatarImageUrl"
@@ -180,7 +186,7 @@
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.userIcon"
-                label="ユーザーアイコン URL"
+                :label="t('vrcDetail.userIconUrl')"
               >
                 <a
                   :href="selected.userIcon"
@@ -190,7 +196,10 @@
                   >{{ selected.userIcon }}</a
                 >
               </el-descriptions-item>
-              <el-descriptions-item v-if="selected.imageUrl" label="imageUrl">
+              <el-descriptions-item
+                v-if="selected.imageUrl"
+                :label="t('vrcDetail.imageUrl')"
+              >
                 <a
                   :href="selected.imageUrl"
                   target="_blank"
@@ -201,7 +210,7 @@
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.profilePicOverride"
-                label="プロフィール画像 (上書き)"
+                :label="t('vrcDetail.profilePicOverride')"
               >
                 <a
                   :href="selected.profilePicOverride"
@@ -213,7 +222,7 @@
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.profilePicOverrideThumbnail"
-                label="プロフィール画像サムネ"
+                :label="t('vrcDetail.profilePicThumb')"
               >
                 <a
                   :href="selected.profilePicOverrideThumbnail"
@@ -223,15 +232,22 @@
                   >{{ selected.profilePicOverrideThumbnail }}</a
                 >
               </el-descriptions-item>
-              <el-descriptions-item v-if="selected.friendKey" label="friendKey">
+              <el-descriptions-item
+                v-if="selected.friendKey"
+                :label="t('vrcDetail.friendKey')"
+              >
                 <span class="mono wrap">{{ selected.friendKey }}</span>
               </el-descriptions-item>
-              <el-descriptions-item label="キャッシュ更新">
+              <el-descriptions-item :label="t('vrcDetail.cacheUpdated')">
                 {{ selected.lastUpdated }}
               </el-descriptions-item>
             </el-descriptions>
           </el-tab-pane>
-          <el-tab-pane label="遭遇履歴" name="encounters" lazy>
+          <el-tab-pane
+            :label="t('vrcDetail.encountersTab')"
+            name="encounters"
+            lazy
+          >
             <EncounterHistoryList
               mode="user"
               :user-id="selected.vrcUserId"
@@ -246,6 +262,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import EncounterHistoryList from "./EncounterHistoryList.vue";
 import VrcStatusTag from "./VrcStatusTag.vue";
 import type { UserCacheDTO } from "../wails/app";
@@ -261,6 +278,8 @@ import {
 const props = defineProps<{
   selected: UserCacheDTO | null;
 }>();
+
+const { t } = useI18n();
 
 const detailTab = ref<"detail" | "encounters">("detail");
 

@@ -1,30 +1,39 @@
 <template>
-  <div class="app-layout">
-    <TitleBar />
-    <div class="app-body">
-      <Sidebar v-if="!bareLayout" />
-      <main class="main-content" :class="{ 'main-content--bare': bareLayout }">
-        <div class="router-outlet-host">
-          <router-view v-slot="{ Component }">
-            <transition name="fade" mode="out-in">
-              <component :is="Component" />
-            </transition>
-          </router-view>
-        </div>
-      </main>
+  <el-config-provider :locale="elementLocale">
+    <div class="app-layout">
+      <TitleBar />
+      <div class="app-body">
+        <Sidebar v-if="!bareLayout" />
+        <main
+          class="main-content"
+          :class="{ 'main-content--bare': bareLayout }"
+        >
+          <div class="router-outlet-host">
+            <router-view v-slot="{ Component }">
+              <transition name="fade" mode="out-in">
+                <component :is="Component" />
+              </transition>
+            </router-view>
+          </div>
+        </main>
+      </div>
     </div>
-  </div>
+  </el-config-provider>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted } from "vue";
 import { useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 import TitleBar from "./components/TitleBar.vue";
 import Sidebar from "./components/Sidebar.vue";
 import { useSessionUnlock } from "./composables/useSessionUnlock";
+import { elementPlusLocaleFor } from "./i18n/elementPlusLocale";
 
 const route = useRoute();
 const bareLayout = computed(() => route.meta.bare === true);
+const { locale } = useI18n();
+const elementLocale = computed(() => elementPlusLocaleFor(locale.value));
 
 const { beginStartupUnlock } = useSessionUnlock();
 

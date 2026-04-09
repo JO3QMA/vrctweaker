@@ -643,6 +643,16 @@ func (a *App) SetSuppressSleepWhileVRChat(on bool) error {
 	return a.settings.SetSuppressSleepWhileVRChat(a.ctx, on)
 }
 
+// GetUILanguage returns the persisted UI language (ja, en, zh-CN, zh-TW, ko), resolving from OS on first use.
+func (a *App) GetUILanguage() (string, error) {
+	return a.settings.GetUILanguage(a.ctx)
+}
+
+// SetUILanguage saves the UI language code shown in the app.
+func (a *App) SetUILanguage(code string) error {
+	return a.settings.SetUILanguage(a.ctx, code)
+}
+
 // ValidatePath checks if the path exists and is accessible.
 func (a *App) ValidatePath(path string) bool {
 	return a.settings.ValidatePath(path)

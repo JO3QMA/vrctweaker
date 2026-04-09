@@ -166,3 +166,95 @@ func TestSettingsUseCase_GetSuppressSleepWhileVRChat_defaultFalse(t *testing.T) 
 		t.Fatal("want default false")
 	}
 }
+
+func TestSettingsUseCase_GetUILanguage_stored(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: map[string]string{keyUILocale: "ko"}}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	got, err := uc.GetUILanguage(ctx)
+	if err != nil {
+		t.Fatalf("GetUILanguage: %v", err)
+	}
+	if got != "ko" {
+		t.Fatalf("got %q, want ko", got)
+	}
+}
+
+func TestSettingsUseCase_GetUILanguage_trimsAndFixesStored(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: map[string]string{keyUILocale: " ja "}}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	got, err := uc.GetUILanguage(ctx)
+	if err != nil {
+		t.Fatalf("GetUILanguage: %v", err)
+	}
+	if got != "ja" {
+		t.Fatalf("got %q, want ja", got)
+	}
+	if repo.m[keyUILocale] != "ja" {
+		t.Fatalf("persisted %q, want ja", repo.m[keyUILocale])
+	}
+}
+
+func TestSettingsUseCase_GetUILanguage_corruptStored(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: map[string]string{keyUILocale: "fr-FR"}}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	got, err := uc.GetUILanguage(ctx)
+	if err != nil {
+		t.Fatalf("GetUILanguage: %v", err)
+	}
+	if got != "en" {
+		t.Fatalf("got %q, want en", got)
+	}
+}
+
+func TestSettingsUseCase_GetUILanguage_firstRun_LANG(t *testing.T) {
+	t.Setenv("LC_ALL", "")
+	t.Setenv("LC_MESSAGES", "")
+	t.Setenv("LANG", "ja_JP.UTF-8")
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	got, err := uc.GetUILanguage(ctx)
+	if err != nil {
+		t.Fatalf("GetUILanguage: %v", err)
+	}
+	if got != "ja" {
+		t.Fatalf("got %q, want ja", got)
+	}
+	if repo.m[keyUILocale] != "ja" {
+		t.Fatalf("persisted %q, want ja", repo.m[keyUILocale])
+	}
+}
+
+func TestSettingsUseCase_SetUILanguage_roundtrip(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	if err := uc.SetUILanguage(ctx, "zh-CN"); err != nil {
+		t.Fatalf("SetUILanguage: %v", err)
+	}
+	got, err := uc.GetUILanguage(ctx)
+	if err != nil {
+		t.Fatalf("GetUILanguage: %v", err)
+	}
+	if got != "zh-CN" {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestSettingsUseCase_SetUILanguage_invalid(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	if err := uc.SetUILanguage(ctx, "fr"); err == nil {
+		t.Fatal("want error for unsupported language")
+	}
+}

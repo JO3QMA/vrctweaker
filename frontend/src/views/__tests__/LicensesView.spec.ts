@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createRouter, createWebHashHistory } from "vue-router";
+import { createAppI18n } from "../../i18n";
 import LicensesView from "../LicensesView.vue";
+
+const i18n = createAppI18n("ja");
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -14,7 +17,7 @@ describe("LicensesView", () => {
     await router.isReady();
     const wrapper = mount(LicensesView, {
       global: {
-        plugins: [router],
+        plugins: [i18n, router],
       },
     });
     expect(wrapper.find(".page-title").text()).toBe("OSS ライセンス");
@@ -28,7 +31,7 @@ describe("LicensesView", () => {
     await router.isReady();
     const wrapper = mount(LicensesView, {
       global: {
-        plugins: [router],
+        plugins: [i18n, router],
       },
     });
     const section = wrapper.find(".licenses-section");
@@ -42,7 +45,7 @@ describe("LicensesView", () => {
     await router.isReady();
     const wrapper = mount(LicensesView, {
       global: {
-        plugins: [router],
+        plugins: [i18n, router],
       },
     });
     const sections = wrapper.findAll(".licenses-section");
@@ -59,7 +62,7 @@ describe("LicensesView", () => {
     await router.isReady();
     const wrapper = mount(LicensesView, {
       global: {
-        plugins: [router],
+        plugins: [i18n, router],
       },
     });
     const packageNames = wrapper

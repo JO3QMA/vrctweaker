@@ -4,36 +4,42 @@
       <div
         class="filter-mode"
         role="group"
-        aria-label="フレンド一覧: Online または Offline"
+        :aria-label="t('friendsToolbar.filterGroupAria')"
       >
-        <span :class="['mode-label', { active: !showOfflineList }]"
-          >Online</span
-        >
+        <span :class="['mode-label', { active: !showOfflineList }]">{{
+          t("friendsToolbar.online")
+        }}</span>
         <el-switch
           v-model="showOfflineList"
           data-testid="friends-filter-mode"
-          aria-label="Offline 一覧を表示する（オフのときは Online）"
+          :aria-label="t('friendsToolbar.offlineSwitchAria')"
         />
-        <span :class="['mode-label', { active: showOfflineList }]"
-          >Offline</span
-        >
+        <span :class="['mode-label', { active: showOfflineList }]">{{
+          t("friendsToolbar.offline")
+        }}</span>
       </div>
       <el-button
         type="primary"
         :disabled="!isLoggedIn || refreshLoading"
         :loading="refreshLoading"
         :title="
-          isLoggedIn ? 'フレンド一覧をAPIから再取得' : 'ログインが必要です'
+          isLoggedIn
+            ? t('friendsToolbar.refreshTooltipOk')
+            : t('friendsToolbar.refreshTooltipNeedLogin')
         "
         @click="emit('refresh')"
       >
-        {{ refreshLoading ? "更新中..." : "更新" }}
+        {{
+          refreshLoading
+            ? t("friendsToolbar.refreshing")
+            : t("friendsToolbar.refresh")
+        }}
       </el-button>
     </div>
     <el-input
       v-model.trim="displayNameQuery"
       type="search"
-      placeholder="表示名で検索"
+      :placeholder="t('friendsToolbar.searchPh')"
       data-testid="friends-search-display-name"
       clearable
       class="friends-search-input"
@@ -47,6 +53,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
+
 defineProps<{
   isLoggedIn: boolean;
   refreshLoading: boolean;

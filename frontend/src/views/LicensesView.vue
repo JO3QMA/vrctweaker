@@ -1,12 +1,12 @@
 <template>
   <div class="licenses-view">
-    <h1 class="page-title">OSS ライセンス</h1>
+    <h1 class="page-title">{{ t("licenses.title") }}</h1>
     <el-text type="info" size="default" class="intro">
-      本アプリケーションで使用しているオープンソースソフトウェア（OSS）のライセンス一覧です。
+      {{ t("licenses.intro") }}
     </el-text>
 
     <section class="licenses-section">
-      <h2 class="section-title">フロントエンド（npm）</h2>
+      <h2 class="section-title">{{ t("licenses.frontend") }}</h2>
       <el-table
         :data="npmLicensesArray"
         class="licenses-table"
@@ -14,18 +14,26 @@
         size="small"
         stripe
       >
-        <el-table-column prop="name" label="パッケージ名" min-width="200">
+        <el-table-column
+          prop="name"
+          :label="t('licenses.pkgName')"
+          min-width="200"
+        >
           <template #default="{ row }">
             <span class="package-name">{{ row.name }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="version" label="バージョン" width="100" />
-        <el-table-column label="ライセンス" width="120">
+        <el-table-column
+          prop="version"
+          :label="t('licenses.version')"
+          width="100"
+        />
+        <el-table-column :label="t('licenses.license')" width="120">
           <template #default="{ row }">
             <el-tag size="small">{{ row.licenses }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="リポジトリ" min-width="200">
+        <el-table-column :label="t('licenses.repository')" min-width="200">
           <template #default="{ row }">
             <a
               v-if="row.repository"
@@ -43,19 +51,23 @@
     </section>
 
     <section class="licenses-section">
-      <h2 class="section-title">バックエンド（Go）</h2>
+      <h2 class="section-title">{{ t("licenses.backend") }}</h2>
       <el-table :data="goLicenses" style="width: 100%" size="small" stripe>
-        <el-table-column prop="path" label="パッケージ" min-width="220">
+        <el-table-column
+          prop="path"
+          :label="t('licenses.goPkg')"
+          min-width="220"
+        >
           <template #default="{ row }">
             <span class="package-name">{{ row.path }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="ライセンス" width="120">
+        <el-table-column :label="t('licenses.license')" width="120">
           <template #default="{ row }">
             <el-tag size="small">{{ row.license }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="リポジトリ" min-width="200">
+        <el-table-column :label="t('licenses.repository')" min-width="200">
           <template #default="{ row }">
             <a
               v-if="row.repository"
@@ -76,8 +88,11 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import npmLicensesData from "../data/licenses.json";
 import { goLicenses } from "../data/go-licenses";
+
+const { t } = useI18n();
 
 interface NpmLicenseEntry {
   licenses: string;

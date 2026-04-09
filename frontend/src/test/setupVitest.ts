@@ -1,9 +1,10 @@
 import { config } from "@vue/test-utils";
 import ElementPlus from "element-plus";
 import * as ElementPlusIconsVue from "@element-plus/icons-vue";
+import { createAppI18n } from "../i18n";
 
-// テスト環境で Element Plus とアイコンをグローバル登録
-config.global.plugins = [ElementPlus];
+// テスト環境で vue-i18n・Element Plus とアイコンをグローバル登録
+config.global.plugins = [createAppI18n("ja"), ElementPlus];
 config.global.components = Object.fromEntries(
   Object.entries(ElementPlusIconsVue),
 );

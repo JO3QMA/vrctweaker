@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,6 +11,7 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/domain/settings"
+	"vrchat-tweaker/internal/locale"
 )
 
 // SettingsUseCase handles app settings.
@@ -70,6 +72,7 @@ const (
 	keyOutputLogPath            = "output_log_path"
 	keyGalleryLastExitAt        = "gallery_last_exit_at"
 	keySuppressSleepWhileVRChat = "suppress_sleep_while_vrchat"
+	keyUILocale                 = "ui_locale"
 )
 
 // GetGalleryLastExitAt returns the last app shutdown time used for incremental gallery sync.
@@ -104,6 +107,53 @@ func (uc *SettingsUseCase) GetSuppressSleepWhileVRChat(ctx context.Context) (boo
 // SetSuppressSleepWhileVRChat persists the sleep-suppression toggle.
 func (uc *SettingsUseCase) SetSuppressSleepWhileVRChat(ctx context.Context, on bool) error {
 	return uc.repo.Set(ctx, keySuppressSleepWhileVRChat, strconv.FormatBool(on))
+}
+
+// GetUILanguage returns a supported UI language code (ja, en, zh-CN, zh-TW, ko).
+// When unset, resolves from the OS locale, persists it, and returns that value.
+func (uc *SettingsUseCase) GetUILanguage(ctx context.Context) (string, error) {
+	raw, err := uc.repo.Get(ctx, keyUILocale)
+	if err != nil {
+		return locale.UILangEN, err
+	}
+	trimmed := strings.TrimSpace(raw)
+	if n := locale.NormalizeUILocale(trimmed); n != "" {
+		if raw != n {
+			if err := uc.repo.Set(ctx, keyUILocale, n); err != nil {
+				return n, err
+			}
+		}
+		return n, nil
+	}
+	if trimmed != "" {
+		if c := locale.CanonicalUILanguage(trimmed); c != "" {
+			if raw != c {
+				if err := uc.repo.Set(ctx, keyUILocale, c); err != nil {
+					return c, err
+				}
+			}
+			return c, nil
+		}
+		if err := uc.repo.Set(ctx, keyUILocale, locale.UILangEN); err != nil {
+			return locale.UILangEN, err
+		}
+		return locale.UILangEN, nil
+	}
+	resolved := locale.ResolveFromOS()
+	if err := uc.repo.Set(ctx, keyUILocale, resolved); err != nil {
+		return resolved, err
+	}
+	return resolved, nil
+}
+
+// SetUILanguage persists the UI language; code must resolve to a supported UI language
+// (canonical codes or BCP47 variants such as ja-JP → ja). Unsupported bases (e.g. fr) error.
+func (uc *SettingsUseCase) SetUILanguage(ctx context.Context, code string) error {
+	n, ok := locale.CanonicalUILanguageForSet(code)
+	if !ok {
+		return fmt.Errorf("unsupported ui language: %q", code)
+	}
+	return uc.repo.Set(ctx, keyUILocale, n)
 }
 
 func parseBoolSetting(v string) bool {

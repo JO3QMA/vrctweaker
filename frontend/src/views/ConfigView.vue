@@ -1,13 +1,13 @@
 <template>
   <div class="config-view">
-    <h1 class="page-title">その他の設定</h1>
+    <h1 class="page-title">{{ t("config.title") }}</h1>
     <el-text
       type="info"
       size="small"
       style="display: block; margin-bottom: 1.5rem"
     >
-      VRChat の config.json を編集します。 パス:
-      <code>%LocalAppData%Low\VRChat\VRChat\config.json</code>
+      {{ t("config.pathIntro") }}
+      <code>{{ t("config.configJsonPathWin") }}</code>
     </el-text>
 
     <el-card
@@ -17,7 +17,7 @@
     >
       <div class="config-not-found">
         <el-text type="info">
-          config.json が見つかりません。新規作成して設定を始めることができます。
+          {{ t("config.missing") }}
         </el-text>
         <el-button
           type="primary"
@@ -25,7 +25,7 @@
           style="margin-top: 1rem"
           @click="createConfig"
         >
-          config.json を作成
+          {{ t("config.create") }}
         </el-button>
       </div>
     </el-card>
@@ -41,7 +41,7 @@
       />
       <el-alert
         v-if="saveSuccess"
-        title="保存しました"
+        :title="t('config.saved')"
         type="success"
         :closable="false"
         show-icon
@@ -50,19 +50,18 @@
 
       <!-- Camera Resolution -->
       <el-card shadow="never" class="config-card">
-        <template #header>カメラ解像度</template>
+        <template #header>{{ t("config.cameraHeader") }}</template>
         <el-text
           type="info"
           size="small"
           style="display: block; margin-bottom: 0.75rem"
         >
-          VRカメラで撮影した画像の解像度を設定します（1280px × 720px ～ 7680px ×
-          4320px）。VRChat内でカスタム解像度を選択すると反映されます。
+          {{ t("config.cameraHint") }}
         </el-text>
         <div class="resolution-section">
           <el-radio-group
             v-model="cameraPreset"
-            aria-label="カメラ解像度プリセット"
+            :aria-label="t('config.cameraPresetAria')"
             size="small"
             style="flex-wrap: wrap; gap: 4px"
             @change="applyCameraPreset"
@@ -82,8 +81,10 @@
             <el-radio-button value="8K" data-testid="camera-preset-8k"
               >8K</el-radio-button
             >
-            <el-radio-button value="custom" data-testid="camera-preset-custom"
-              >手動設定</el-radio-button
+            <el-radio-button
+              value="custom"
+              data-testid="camera-preset-custom"
+              >{{ t("common.custom") }}</el-radio-button
             >
           </el-radio-group>
           <div class="resolution-fields">
@@ -94,7 +95,7 @@
               :disabled="cameraPreset !== 'custom'"
               data-testid="camera-width-input"
               size="small"
-              placeholder="幅"
+              :placeholder="t('common.width')"
               style="width: 130px"
             />
             <span class="resolution-sep">×</span>
@@ -105,7 +106,7 @@
               :disabled="cameraPreset !== 'custom'"
               data-testid="camera-height-input"
               size="small"
-              placeholder="高さ"
+              :placeholder="t('common.height')"
               style="width: 130px"
             />
           </div>
@@ -114,19 +115,18 @@
 
       <!-- Screenshot Resolution -->
       <el-card shadow="never" class="config-card">
-        <template #header>スクリーンショット解像度</template>
+        <template #header>{{ t("config.screenshotHeader") }}</template>
         <el-text
           type="info"
           size="small"
           style="display: block; margin-bottom: 0.75rem"
         >
-          F12キーで撮影するスクリーンショットの解像度を設定します（1280px ×
-          720px ～ 3840px × 2160px）。
+          {{ t("config.screenshotHint") }}
         </el-text>
         <div class="resolution-section">
           <el-radio-group
             v-model="screenshotPreset"
-            aria-label="スクリーンショット解像度プリセット"
+            :aria-label="t('config.screenshotPresetAria')"
             size="small"
             style="flex-wrap: wrap; gap: 4px"
             @change="applyScreenshotPreset"
@@ -146,7 +146,7 @@
             <el-radio-button
               value="custom"
               data-testid="screenshot-preset-custom"
-              >手動設定</el-radio-button
+              >{{ t("common.custom") }}</el-radio-button
             >
           </el-radio-group>
           <div class="resolution-fields">
@@ -157,7 +157,7 @@
               :disabled="screenshotPreset !== 'custom'"
               data-testid="screenshot-width-input"
               size="small"
-              placeholder="幅"
+              :placeholder="t('common.width')"
               style="width: 130px"
             />
             <span class="resolution-sep">×</span>
@@ -168,7 +168,7 @@
               :disabled="screenshotPreset !== 'custom'"
               data-testid="screenshot-height-input"
               size="small"
-              placeholder="高さ"
+              :placeholder="t('common.height')"
               style="width: 130px"
             />
           </div>
@@ -177,21 +177,21 @@
 
       <!-- Picture Output -->
       <el-card shadow="never" class="config-card">
-        <template #header>写真出力</template>
+        <template #header>{{ t("config.photoHeader") }}</template>
         <el-form label-position="top" size="default">
-          <el-form-item label="出力フォルダ">
+          <el-form-item :label="t('config.outputFolder')">
             <div class="path-row">
               <el-input
                 id="picture-output-folder"
                 v-model="config.pictureOutputFolder"
-                placeholder="デフォルト（空欄で既定パス）"
+                :placeholder="t('config.outputFolderPh')"
                 data-testid="picture-output-folder-input"
               />
               <el-button
                 data-testid="picture-output-folder-browse"
                 @click="browsePictureOutputFolder"
               >
-                参照
+                {{ t("common.browse") }}
               </el-button>
             </div>
           </el-form-item>
@@ -200,7 +200,7 @@
               v-model="pictureOutputSplitByDate"
               data-testid="picture-split-by-date-checkbox"
             >
-              日付別フォルダに分割（YYYY-MM）
+              {{ t("config.splitByDate") }}
             </el-checkbox>
           </el-form-item>
         </el-form>
@@ -208,13 +208,13 @@
 
       <!-- Steadycam FOV -->
       <el-card shadow="never" class="config-card">
-        <template #header>Steadycam FOV</template>
+        <template #header>{{ t("config.steadycamHeader") }}</template>
         <el-text
           type="info"
           size="small"
           style="display: block; margin-bottom: 0.75rem"
         >
-          一人称視点 Steadycam の垂直 FOV を設定します（30〜100）。
+          {{ t("config.steadycamHint") }}
         </el-text>
         <div class="fov-row">
           <el-slider
@@ -242,32 +242,32 @@
 
       <!-- Cache -->
       <el-card shadow="never" class="config-card">
-        <template #header>キャッシュ設定</template>
+        <template #header>{{ t("config.cacheHeader") }}</template>
         <el-text
           type="info"
           size="small"
           style="display: block; margin-bottom: 0.75rem"
         >
-          キャッシュサイズと有効期限は30以上を指定してください。
+          {{ t("config.cacheHint") }}
         </el-text>
         <el-form label-position="top" size="default">
-          <el-form-item label="キャッシュディレクトリ">
+          <el-form-item :label="t('config.cacheDir')">
             <div class="path-row">
               <el-input
                 id="cache-directory"
                 v-model="config.cacheDirectory"
-                placeholder="デフォルト（空欄で既定パス）"
+                :placeholder="t('config.cacheDirPh')"
                 data-testid="cache-directory-input"
               />
               <el-button
                 data-testid="cache-directory-browse"
                 @click="browseCacheDirectory"
               >
-                参照
+                {{ t("common.browse") }}
               </el-button>
             </div>
           </el-form-item>
-          <el-form-item label="キャッシュサイズ上限（GB）">
+          <el-form-item :label="t('config.cacheSizeGb')">
             <el-input-number
               id="cache-size"
               v-model="config.cacheSize"
@@ -278,7 +278,7 @@
               @blur="clampCacheSize"
             />
           </el-form-item>
-          <el-form-item label="キャッシュ有効期限（日）">
+          <el-form-item :label="t('config.cacheExpiryDays')">
             <el-input-number
               id="cache-expiry"
               v-model="config.cacheExpiryDelay"
@@ -294,12 +294,12 @@
 
       <!-- Rich Presence -->
       <el-card shadow="never" class="config-card">
-        <template #header>その他</template>
+        <template #header>{{ t("config.otherHeader") }}</template>
         <el-checkbox
           v-model="disableRichPresence"
           data-testid="disable-rich-presence-checkbox"
         >
-          Discord / Steam Rich Presence を無効にする
+          {{ t("config.disableRichPresence") }}
         </el-checkbox>
       </el-card>
 
@@ -310,7 +310,7 @@
           data-testid="save-config-btn"
           @click="saveConfig"
         >
-          保存
+          {{ t("config.save") }}
         </el-button>
         <el-button
           type="danger"
@@ -318,7 +318,7 @@
           data-testid="delete-config-btn"
           @click="deleteConfig"
         >
-          config.json を削除
+          {{ t("config.deleteConfig") }}
         </el-button>
       </div>
     </div>
@@ -327,10 +327,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
 import { App } from "../wails/app";
 import type { VRChatConfigDTO } from "../wails/app";
 import { clampCacheNumeric } from "../utils/cacheNormalize";
+
+const { t } = useI18n();
 
 type ResolutionPreset = "HD" | "FHD" | "WQHD" | "4K" | "8K" | "custom";
 
@@ -502,8 +505,7 @@ async function createConfig() {
     configExists.value = true;
     editing.value = true;
   } catch (e) {
-    saveError.value =
-      e instanceof Error ? e.message : "config.json の作成に失敗しました";
+    saveError.value = e instanceof Error ? e.message : t("config.createFailed");
   }
 }
 
@@ -529,13 +531,13 @@ async function saveConfig() {
       saveSuccess.value = false;
     }, 3000);
   } catch (e) {
-    saveError.value = e instanceof Error ? e.message : "保存に失敗しました";
+    saveError.value = e instanceof Error ? e.message : t("config.saveFailed");
   }
 }
 
 async function browsePictureOutputFolder() {
   const dir = await App.openDirectoryDialog(
-    "写真の出力フォルダを選択",
+    t("config.pickPictureFolder"),
     config.value.pictureOutputFolder || "",
   );
   if (dir) {
@@ -545,7 +547,7 @@ async function browsePictureOutputFolder() {
 
 async function browseCacheDirectory() {
   const dir = await App.openDirectoryDialog(
-    "キャッシュディレクトリを選択",
+    t("config.pickCacheDir"),
     config.value.cacheDirectory || "",
   );
   if (dir) {
@@ -555,16 +557,12 @@ async function browseCacheDirectory() {
 
 async function deleteConfig() {
   try {
-    await ElMessageBox.confirm(
-      "config.json を削除します。よろしいですか？",
-      "確認",
-      {
-        confirmButtonText: "削除",
-        cancelButtonText: "キャンセル",
-        type: "warning",
-        confirmButtonClass: "el-button--danger",
-      },
-    );
+    await ElMessageBox.confirm(t("config.deleteConfirm"), t("common.confirm"), {
+      confirmButtonText: t("common.delete"),
+      cancelButtonText: t("common.cancel"),
+      type: "warning",
+      confirmButtonClass: "el-button--danger",
+    });
   } catch {
     return;
   }
@@ -588,7 +586,7 @@ async function deleteConfig() {
       disableRichPresence: null,
     };
   } catch (e) {
-    saveError.value = e instanceof Error ? e.message : "削除に失敗しました";
+    saveError.value = e instanceof Error ? e.message : t("config.deleteFailed");
   }
 }
 </script>

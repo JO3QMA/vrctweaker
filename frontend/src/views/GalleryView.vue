@@ -1,13 +1,13 @@
 <template>
   <div class="gallery-view">
-    <h1 class="page-title">ギャラリー</h1>
+    <h1 class="page-title">{{ t("gallery.title") }}</h1>
 
     <div class="filters">
       <el-input
         v-model="filterWorldId"
         data-testid="gallery-world-filter"
         type="search"
-        placeholder="World ID で検索（入力で自動検索 / Enter）"
+        :placeholder="t('gallery.searchPh')"
         clearable
         style="flex: 1; max-width: 400px"
         @keyup.enter="onFilterEnter"
@@ -17,7 +17,7 @@
         </template>
       </el-input>
       <el-button :disabled="loading || scanning" @click="onRefreshClick">
-        更新
+        {{ t("common.refresh") }}
       </el-button>
       <el-button
         data-testid="gallery-scan-folder"
@@ -25,7 +25,7 @@
         :loading="scanning"
         @click="scanFolder"
       >
-        {{ scanning ? "スキャン中…" : "Scan Folder" }}
+        {{ scanning ? t("gallery.scanning") : t("gallery.scanFolder") }}
       </el-button>
     </div>
 
@@ -73,10 +73,9 @@
             :duration="10"
           />
         </div>
-        <div v-else-if="loading" class="loading">読み込み中…</div>
+        <div v-else-if="loading" class="loading">{{ t("common.loading") }}</div>
         <div v-else-if="list.length === 0" class="empty">
-          スクリーンショットがありません。Scan Folder
-          か設定の出力フォルダを確認してください。
+          {{ t("gallery.noScreenshots") }}
         </div>
         <div
           v-else
@@ -139,7 +138,7 @@
 
       <!-- 詳細プレビュー -->
       <el-card v-if="selected" class="detail-panel" shadow="never">
-        <template #header>詳細</template>
+        <template #header>{{ t("common.detail") }}</template>
         <div class="detail-preview">
           <img
             data-testid="gallery-detail-preview"
@@ -150,27 +149,27 @@
           />
         </div>
         <el-descriptions :column="1" border size="small">
-          <el-descriptions-item label="ファイル名">
+          <el-descriptions-item :label="t('common.filename')">
             {{ fileNameFromPath(selected.filePath) }}
           </el-descriptions-item>
-          <el-descriptions-item label="ファイルサイズ">
+          <el-descriptions-item :label="t('common.fileSize')">
             {{ formatFileSize(selected.fileSizeBytes) }}
           </el-descriptions-item>
-          <el-descriptions-item label="撮影日時">
+          <el-descriptions-item :label="t('common.takenAt')">
             {{ formatTakenAt(selected.takenAt) }}
           </el-descriptions-item>
-          <el-descriptions-item label="ワールド名">
+          <el-descriptions-item :label="t('common.worldName')">
             {{ selected.worldName || "—" }}
           </el-descriptions-item>
-          <el-descriptions-item label="作者表示名">
+          <el-descriptions-item :label="t('common.authorDisplayName')">
             {{ selected.authorDisplayName || "—" }}
           </el-descriptions-item>
-          <el-descriptions-item label="ファイルパス">
+          <el-descriptions-item :label="t('common.filePath')">
             <el-button
               link
               type="primary"
               data-testid="gallery-detail-open-file"
-              title="既定のアプリで画像を開く"
+              :title="t('gallery.openImage')"
               class="file-path-btn"
               @click="openSelectedFileExternally"
             >
@@ -192,7 +191,7 @@
           :title="openFolderButtonTitle"
           @click="revealSelectedInFolder"
         >
-          フォルダを開く
+          {{ t("common.openFolder") }}
         </el-button>
         <el-alert
           v-if="joinError"
@@ -209,7 +208,7 @@
           :title="joinButtonTitle"
           @click="onJoin"
         >
-          このワールドへJoin
+          {{ t("common.join") }}
         </el-button>
       </el-card>
     </div>
@@ -227,6 +226,7 @@ import {
   watchEffect,
   nextTick,
 } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   App,
   type ScreenshotDTO,
@@ -249,11 +249,21 @@ const THUMBNAIL_FETCH_CONCURRENCY = 4;
 const GRID_GAP_PX = 12;
 const MIN_CELL_WIDTH = 140;
 
-const missingThumbDataUrl =
-  "data:image/svg+xml," +
-  encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90" viewBox="0 0 120 90"><rect fill="#333" width="120" height="90"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12">画像なし</text></svg>',
+const { t, locale } = useI18n();
+
+function escapeForSvgText(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+const missingThumbDataUrl = computed(() => {
+  const label = escapeForSvgText(t("gallery.noImage"));
+  return (
+    "data:image/svg+xml," +
+    encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90" viewBox="0 0 120 90"><rect fill="#333" width="120" height="90"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12">${label}</text></svg>`,
+    )
   );
+});
 
 const transparentPixelDataUrl =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
@@ -288,16 +298,22 @@ const scanProgressDeterminate = computed(() => {
 
 const scanStatusText = computed(() => {
   const p = scanProgress.value;
-  if (!p) return "フォルダをスキャンしています…";
+  if (!p) return t("gallery.scanPhaseInit");
   if (p.phase === "listing")
-    return `画像ファイルを検索しています…（${p.current} 件）`;
+    return t("gallery.scanPhaseSearch", { n: p.current });
   if (p.phase === "importing") {
-    if (p.total === 0) return "画像ファイルは見つかりませんでした";
-    if (p.current === 0) return `画像 ${p.total} 件を取り込みます…`;
-    if (p.item) return `取り込み中: ${p.item}（${p.current} / ${p.total}）`;
-    return `取り込み中（${p.current} / ${p.total}）`;
+    if (p.total === 0) return t("gallery.scanPhaseNone");
+    if (p.current === 0)
+      return t("gallery.scanPhaseImportTotal", { n: p.total });
+    if (p.item)
+      return t("gallery.scanPhaseItem", {
+        item: p.item,
+        cur: p.current,
+        total: p.total,
+      });
+    return t("gallery.scanPhaseImport", { cur: p.current, total: p.total });
   }
-  return "フォルダをスキャンしています…";
+  return t("gallery.scanPhaseInit");
 });
 
 function applyScanProgressPayload(data: unknown): void {
@@ -526,13 +542,12 @@ watch(
 
 const joinButtonTitle = computed(() => {
   if (!selected.value?.worldId || selected.value.worldId.trim() === "") {
-    return "World ID がありません";
+    return t("gallery.noWorldId");
   }
-  return "このワールドへJoin";
+  return t("common.join");
 });
 
-const openFolderButtonTitle =
-  "画像があるフォルダをファイルマネージャで開きます（環境によってはフォルダのみの場合があります）";
+const openFolderButtonTitle = computed(() => t("gallery.openFolderTitle"));
 
 const detailActionError = ref<string | null>(null);
 
@@ -564,7 +579,7 @@ function thumbnailSrc(item: ScreenshotDTO): string {
 
 function onThumbnailError(e: Event): void {
   const img = e.target as HTMLImageElement;
-  img.src = missingThumbDataUrl;
+  img.src = missingThumbDataUrl.value;
 }
 
 function onGridScroll(): void {
@@ -625,13 +640,13 @@ async function syncThumbnailsForVisible(): Promise<void> {
         if (gen !== thumbnailFetchGeneration) return;
         thumbnailUrls.value = {
           ...thumbnailUrls.value,
-          [id]: url && url.length > 0 ? url : missingThumbDataUrl,
+          [id]: url && url.length > 0 ? url : missingThumbDataUrl.value,
         };
       } catch {
         if (gen !== thumbnailFetchGeneration) return;
         thumbnailUrls.value = {
           ...thumbnailUrls.value,
-          [id]: missingThumbDataUrl,
+          [id]: missingThumbDataUrl.value,
         };
       }
     }
@@ -664,7 +679,7 @@ function formatTakenAt(takenAt?: string): string {
   if (!takenAt) return "—";
   try {
     const d = new Date(takenAt);
-    return d.toLocaleString("ja-JP");
+    return d.toLocaleString(locale.value);
   } catch {
     return takenAt;
   }
@@ -793,8 +808,7 @@ async function scanFolder(): Promise<void> {
         path = "";
       }
       if (!path) {
-        scanError.value =
-          "デフォルトの保存先（ユーザーフォルダー内の「ピクチャ」／「マイ ピクチャ」にある VRChat フォルダ）を解決できませんでした。";
+        scanError.value = t("gallery.defaultPictureError");
         return;
       }
     }

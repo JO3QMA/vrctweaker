@@ -1,10 +1,12 @@
 import type { Preview } from "@storybook/vue3-vite";
 import { setup } from "@storybook/vue3-vite";
+import { h } from "vue";
 import { createMemoryHistory, createRouter } from "vue-router";
-import ElementPlus from "element-plus";
+import ElementPlus, { ElConfigProvider } from "element-plus";
 import "element-plus/dist/index.css";
 import "element-plus/theme-chalk/dark/css-vars.css";
 import * as ElementPlusIconsVue from "@element-plus/icons-vue";
+import { createAppI18n, elementPlusLocaleFor } from "../src/i18n";
 import "../src/assets/style.css";
 
 const router = createRouter({
@@ -37,6 +39,8 @@ const router = createRouter({
 });
 
 setup((app) => {
+  const i18n = createAppI18n("ja-JP");
+  app.use(i18n);
   app.use(router);
   app.use(ElementPlus);
   for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
@@ -45,6 +49,14 @@ setup((app) => {
 });
 
 const preview: Preview = {
+  decorators: [
+    (story) => ({
+      setup() {
+        const locale = elementPlusLocaleFor("ja-JP");
+        return () => h(ElConfigProvider, { locale }, () => h(story()));
+      },
+    }),
+  ],
   parameters: {
     controls: {
       matchers: {

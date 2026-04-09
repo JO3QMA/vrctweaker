@@ -103,8 +103,8 @@ describe("FriendsView", () => {
     expect(wrapper.find('[data-testid="friends-filter-mode"]').exists()).toBe(
       true,
     );
-    expect(wrapper.text()).toMatch(/Online/);
-    expect(wrapper.text()).toMatch(/Offline/);
+    expect(wrapper.text()).toMatch(/オンライン/);
+    expect(wrapper.text()).toMatch(/オフライン/);
   });
 
   it("defaults to Online: shows online friends, hides offline", async () => {

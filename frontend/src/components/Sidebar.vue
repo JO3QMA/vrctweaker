@@ -14,7 +14,7 @@
       <el-menu :default-active="route.path" router class="sidebar-nav">
         <el-menu-item index="/settings">
           <span class="sidebar-icon">⚙️</span>
-          <template #title>設定</template>
+          <template #title>{{ t("sidebar.settings") }}</template>
         </el-menu-item>
       </el-menu>
     </div>
@@ -22,19 +22,22 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
 import { useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 
 const route = useRoute();
+const { t } = useI18n();
 
-const menuItems = [
-  { path: "/", icon: "🏠", label: "ダッシュボード" },
-  { path: "/launcher", icon: "🚀", label: "ランチャー" },
-  { path: "/gallery", icon: "🖼️", label: "ギャラリー" },
-  { path: "/activity", icon: "📊", label: "アクティビティ" },
-  { path: "/friends", icon: "👥", label: "フレンド" },
-  { path: "/automation", icon: "🤖", label: "オートメーション" },
-  { path: "/config", icon: "📝", label: "その他の設定" },
-];
+const menuItems = computed(() => [
+  { path: "/", icon: "🏠", label: t("sidebar.dashboard") },
+  { path: "/launcher", icon: "🚀", label: t("sidebar.launcher") },
+  { path: "/gallery", icon: "🖼️", label: t("sidebar.gallery") },
+  { path: "/activity", icon: "📊", label: t("sidebar.activity") },
+  { path: "/friends", icon: "👥", label: t("sidebar.friends") },
+  { path: "/automation", icon: "🤖", label: t("sidebar.automation") },
+  { path: "/config", icon: "📝", label: t("sidebar.config") },
+]);
 </script>
 
 <style scoped>

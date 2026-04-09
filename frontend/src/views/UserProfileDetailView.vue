@@ -1,10 +1,10 @@
 <template>
   <div class="user-profile-detail-view">
-    <h1 class="page-title">ユーザー</h1>
-    <div v-if="loading" class="msg">読み込み中…</div>
+    <h1 class="page-title">{{ t("userProfile.title") }}</h1>
+    <div v-if="loading" class="msg">{{ t("common.loading") }}</div>
     <el-alert
-      v-else-if="loadError && !selected"
-      :title="loadError"
+      v-else-if="loadErrorKind && !selected"
+      :title="loadErrorTitle"
       type="warning"
       :closable="false"
       show-icon
@@ -19,16 +19,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
+import { ref, watch, computed } from "vue";
 import { useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 import VrcUserCacheDetail from "../components/VrcUserCacheDetail.vue";
 import { App } from "../wails/app";
 import type { UserCacheDTO } from "../wails/app";
 
 const route = useRoute();
+const { t } = useI18n();
 
 const loading = ref(true);
-const loadError = ref<string | null>(null);
+const loadErrorKind = ref<"noUserId" | "loadFailed" | null>(null);
+const loadErrorTitle = computed(() => {
+  if (loadErrorKind.value === "noUserId") return t("userProfile.noUserId");
+  if (loadErrorKind.value === "loadFailed") return t("userProfile.loadFailed");
+  return "";
+});
 const selected = ref<UserCacheDTO | null>(null);
 
 function firstQueryString(v: unknown): string {
@@ -59,10 +66,10 @@ async function load(): Promise<void> {
   const vrcUserId = firstQueryString(route.query.vrcUserId).trim();
   const hint = firstQueryString(route.query.displayName);
   loading.value = true;
-  loadError.value = null;
+  loadErrorKind.value = null;
   selected.value = null;
   if (!vrcUserId) {
-    loadError.value = "ユーザー ID が指定されていません。";
+    loadErrorKind.value = "noUserId";
     loading.value = false;
     return;
   }
@@ -73,8 +80,7 @@ async function load(): Promise<void> {
       selected.value = minimalFromQuery(vrcUserId, hint);
     }
   } catch {
-    loadError.value =
-      "プロフィールを取得できませんでした。キャッシュまたはログイン状態を確認してください。";
+    loadErrorKind.value = "loadFailed";
     selected.value = minimalFromQuery(vrcUserId, hint);
   } finally {
     loading.value = false;

@@ -82,6 +82,8 @@ export function getMockWailsInitScript(): string {
         SetPathSettings: () => Promise.resolve(),
         GetSuppressSleepWhileVRChat: () => Promise.resolve(false),
         SetSuppressSleepWhileVRChat: () => Promise.resolve(),
+        GetUILanguage: () => Promise.resolve('ja'),
+        SetUILanguage: () => Promise.resolve(),
         ValidatePath: () => Promise.resolve(true),
         ValidateOutputLogPath: () => Promise.resolve(true),
         OpenVRChatLogFolder: () => Promise.resolve(),

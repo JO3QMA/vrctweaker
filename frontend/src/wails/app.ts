@@ -208,6 +208,8 @@ interface AppBindings {
   SetPathSettings(dto: PathSettingsDTO): Promise<void>;
   GetSuppressSleepWhileVRChat(): Promise<boolean>;
   SetSuppressSleepWhileVRChat(on: boolean): Promise<void>;
+  GetUILanguage(): Promise<string>;
+  SetUILanguage(code: string): Promise<void>;
   ValidatePath(path: string): Promise<boolean>;
   ValidateOutputLogPath(path: string): Promise<boolean>;
   OpenVRChatLogFolder(): Promise<void>;
@@ -485,6 +487,12 @@ export const App = {
   },
   async setSuppressSleepWhileVRChat(on: boolean): Promise<void> {
     return callApp((a) => a.SetSuppressSleepWhileVRChat(on), undefined);
+  },
+  async getUILanguage(): Promise<string> {
+    return callApp((a) => a.GetUILanguage(), "ja");
+  },
+  async setUILanguage(code: string): Promise<void> {
+    return callApp((a) => a.SetUILanguage(code), undefined);
   },
   async validatePath(path: string): Promise<boolean> {
     return callApp((a) => a.ValidatePath(path), false);

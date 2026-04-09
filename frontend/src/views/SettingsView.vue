@@ -1,15 +1,42 @@
 <template>
   <div class="settings-view">
-    <h1 class="page-title">設定</h1>
+    <h1 class="page-title">{{ t("settings.title") }}</h1>
 
-    <!-- VRChat ログイン -->
+    <!-- UI language -->
+    <el-card
+      class="settings-card"
+      shadow="never"
+      data-testid="settings-language-card"
+    >
+      <template #header>
+        <span>{{ t("settings.language") }}</span>
+      </template>
+      <el-select
+        :model-value="locale"
+        class="language-select"
+        data-testid="settings-ui-language"
+        @change="onUILanguageChange"
+      >
+        <el-option
+          v-for="opt in languageSelectOptions"
+          :key="opt.value"
+          :label="opt.label"
+          :value="opt.value"
+        />
+      </el-select>
+      <el-text type="info" size="small" class="hint">
+        {{ t("settings.languageHint") }}
+      </el-text>
+    </el-card>
+
+    <!-- VRChat login -->
     <el-card class="settings-card" shadow="never">
       <template #header>
-        <span>VRChat ログイン</span>
+        <span>{{ t("settings.loginTitle") }}</span>
       </template>
       <div v-if="isLoggedIn" class="login-status">
         <div v-if="profileLoading && !currentUser" class="profile-loading">
-          プロフィールを読み込み中…
+          {{ t("settings.profileLoading") }}
         </div>
         <div v-else-if="currentUser" class="current-user-card">
           <img
@@ -22,7 +49,7 @@
           />
           <div class="current-user-details">
             <p class="current-user-display-name">
-              {{ currentUser.displayName || "（表示名なし）" }}
+              {{ currentUser.displayName || t("settings.noDisplayName") }}
             </p>
             <p v-if="currentUser.username" class="current-user-line">
               @{{ currentUser.username }}
@@ -31,7 +58,7 @@
               {{ currentUser.id }}
             </p>
             <p class="current-user-line">
-              ステータス: {{ currentUser.status || "—" }} /
+              {{ t("common.status") }}: {{ currentUser.status || "—" }} /
               {{ currentUser.state || "—" }}
             </p>
             <p
@@ -49,20 +76,20 @@
           :closable="false"
           show-icon
         />
-        <el-tag type="success" size="large">ログイン済み</el-tag>
+        <el-tag type="success" size="large">{{ t("common.loggedIn") }}</el-tag>
         <div class="login-actions">
           <el-button
             type="primary"
             :loading="profileLoading"
             @click="loadCurrentUser(true)"
           >
-            プロフィール再取得
+            {{ t("settings.refreshProfile") }}
           </el-button>
           <el-button type="primary" @click="refreshFriends">
-            フレンド一覧を更新
+            {{ t("settings.refreshFriends") }}
           </el-button>
           <el-button type="danger" plain @click="logout">
-            ログアウト
+            {{ t("settings.logout") }}
           </el-button>
         </div>
       </div>
@@ -76,29 +103,29 @@
           class="login-error"
         />
         <el-form label-position="top" size="default">
-          <el-form-item label="ユーザー名">
+          <el-form-item :label="t('settings.username')">
             <el-input
               id="login-username"
               v-model="loginForm.username"
-              placeholder="VRChat ユーザー名"
+              :placeholder="t('settings.usernamePh')"
               autocomplete="username"
             />
           </el-form-item>
-          <el-form-item label="パスワード">
+          <el-form-item :label="t('settings.password')">
             <el-input
               id="login-password"
               v-model="loginForm.password"
               type="password"
-              placeholder="パスワード"
+              :placeholder="t('settings.passwordPh')"
               autocomplete="current-password"
               show-password
             />
           </el-form-item>
-          <el-form-item label="2FAコード（オプション）">
+          <el-form-item :label="t('settings.twoFactor')">
             <el-input
               id="login-2fa"
               v-model="loginForm.twoFactorCode"
-              placeholder="6桁の認証コード"
+              :placeholder="t('settings.twoFactorPh')"
               autocomplete="one-time-code"
             />
           </el-form-item>
@@ -118,16 +145,16 @@
             "
             @click="login"
           >
-            {{ loginLoading ? "ログイン中..." : "ログイン" }}
+            {{ loginLoading ? t("settings.loggingIn") : t("settings.login") }}
           </el-button>
         </el-form>
       </div>
     </el-card>
 
-    <!-- パス設定 -->
+    <!-- Paths -->
     <el-card class="settings-card" shadow="never">
       <template #header>
-        <span>パス設定</span>
+        <span>{{ t("settings.pathTitle") }}</span>
       </template>
       <div class="path-settings">
         <div v-for="field in pathFields" :key="field.key" class="path-row">
@@ -152,7 +179,7 @@
               :disabled="!pathSettings[field.key]"
               @click="validatePathField(field.key)"
             >
-              存在確認
+              {{ t("settings.validate") }}
             </el-button>
           </div>
           <el-text
@@ -160,32 +187,32 @@
             :type="validateResult[field.key] ? 'success' : 'danger'"
             size="small"
           >
-            {{ validateResult[field.key] ? "存在します" : "存在しません" }}
+            {{
+              validateResult[field.key]
+                ? t("settings.existsYes")
+                : t("settings.existsNo")
+            }}
           </el-text>
         </div>
       </div>
       <el-text type="info" size="small" class="hint">
-        VRChatの起動とログ監視で使用します。launch.exeを指定してください（VRChat.exe直接起動はオフラインモードになります）。空の場合はデフォルトパスを使用します。
-        output_log は<strong>1ファイル</strong>を指定するか、<code
-          >...\VRChat\VRChat</code
-        >
-        の<strong>フォルダ</strong>を指定してください。フォルダのときは更新日時が最新の
-        <code>output_log*.txt</code>
-        を自動で選び、VRChat再起動で新しいログファイルができても追従します。
+        {{ t("settings.pathHint") }}
+      </el-text>
+      <el-text type="info" size="small" class="hint">
+        {{ t("settings.pathHintOutput") }}
       </el-text>
     </el-card>
 
-    <!-- 電源（Windows） -->
+    <!-- Power (Windows) -->
     <el-card class="settings-card" shadow="never">
       <template #header>
-        <span>電源</span>
+        <span>{{ t("settings.powerTitle") }}</span>
       </template>
       <div class="setting-row power-setting-row">
         <div class="power-toggle-label">
-          <span>VRChat 起動中はスリープを抑制</span>
+          <span>{{ t("settings.suppressSleep") }}</span>
           <el-text type="info" size="small" class="hint block-hint">
-            VRChat.exe
-            が動いている間だけ、PCのアイドルスリープとディスプレイの電源オフを抑えます（Windows・Tweaker起動中のみ有効）。初期状態はオフです。
+            {{ t("settings.suppressSleepHint") }}
           </el-text>
         </div>
         <el-switch
@@ -196,13 +223,13 @@
       </div>
     </el-card>
 
-    <!-- ログ・データ管理 -->
+    <!-- Logs & data -->
     <el-card class="settings-card" shadow="never">
       <template #header>
-        <span>ログ・データ管理</span>
+        <span>{{ t("settings.dataTitle") }}</span>
       </template>
       <div class="setting-row">
-        <label>遭遇記録の保存期間（日）</label>
+        <label>{{ t("settings.retentionLabel") }}</label>
         <el-input-number
           v-model="logRetentionDays"
           :min="1"
@@ -211,29 +238,29 @@
         />
       </div>
       <el-text type="info" size="small" class="hint">
-        この日数を過ぎたuser_encountersは自動削除されます
+        {{ t("settings.retentionHint") }}
       </el-text>
     </el-card>
 
-    <!-- OSS ライセンス -->
+    <!-- OSS licenses -->
     <el-card class="settings-card" shadow="never">
       <template #header>
-        <span>OSS ライセンス</span>
+        <span>{{ t("settings.ossTitle") }}</span>
       </template>
       <el-text type="info" size="small" class="hint">
-        本アプリケーションで使用しているオープンソースソフトウェアのライセンス一覧を確認できます。
+        {{ t("settings.ossHint") }}
       </el-text>
       <div style="margin-top: 0.75rem">
         <router-link class="btn-licenses" to="/licenses">
-          <el-button type="primary">OSS ライセンス一覧を表示</el-button>
+          <el-button type="primary">{{ t("settings.ossButton") }}</el-button>
         </router-link>
       </div>
     </el-card>
 
-    <!-- DB メンテナンス -->
+    <!-- DB maintenance -->
     <el-card class="settings-card" shadow="never">
       <template #header>
-        <span>DBメンテナンス</span>
+        <span>{{ t("settings.dbTitle") }}</span>
       </template>
       <el-text
         type="info"
@@ -241,7 +268,7 @@
         class="hint"
         style="display: block; margin-bottom: 1rem"
       >
-        データベースの最適化と、各テーブルのクリア操作を行います。操作前に確認ダイアログが表示されます。
+        {{ t("settings.dbHint") }}
       </el-text>
       <el-alert
         v-if="maintenanceError"
@@ -253,7 +280,11 @@
       />
       <div class="maintenance-actions">
         <el-button :loading="maintenanceLoading" @click="doVacuumDb">
-          {{ maintenanceLoading ? "実行中..." : "DB最適化 (VACUUM)" }}
+          {{
+            maintenanceLoading
+              ? t("settings.vacuumRunning")
+              : t("settings.vacuum")
+          }}
         </el-button>
         <el-button
           type="danger"
@@ -261,7 +292,7 @@
           :loading="maintenanceLoading"
           @click="doClearEncounters"
         >
-          遭遇ログをクリア
+          {{ t("settings.clearEncounters") }}
         </el-button>
         <el-button
           type="danger"
@@ -269,7 +300,7 @@
           :loading="maintenanceLoading"
           @click="doClearScreenshots"
         >
-          スクショインデックスをクリア
+          {{ t("settings.clearScreenshots") }}
         </el-button>
         <el-button
           type="danger"
@@ -277,7 +308,7 @@
           :loading="maintenanceLoading"
           @click="doClearFriendsCache"
         >
-          フレンドキャッシュをクリア
+          {{ t("settings.clearFriends") }}
         </el-button>
       </div>
     </el-card>
@@ -286,10 +317,40 @@
 
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import { ElMessageBox, ElMessage } from "element-plus";
 import { App } from "../wails/app";
 import type { PathSettingsDTO, VRChatCurrentUserDTO } from "../wails/app";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
+import { isAppLocale, type AppLocale } from "../i18n";
+
+const { t, locale } = useI18n();
+
+const LANGUAGE_OPTIONS: { value: AppLocale; labelKey: string }[] = [
+  { value: "ja-JP", labelKey: "settings.langJa" },
+  { value: "en", labelKey: "settings.langEn" },
+  { value: "zh-CN", labelKey: "settings.langZhCN" },
+  { value: "zh-TW", labelKey: "settings.langZhTW" },
+  { value: "ko", labelKey: "settings.langKo" },
+];
+
+const languageSelectOptions = computed(() =>
+  LANGUAGE_OPTIONS.map((o) => ({
+    value: o.value,
+    label: t(o.labelKey),
+  })),
+);
+
+async function onUILanguageChange(code: string | number | boolean) {
+  const s = String(code);
+  if (!isAppLocale(s)) return;
+  try {
+    await App.setUILanguage(s);
+    locale.value = s;
+  } catch (e) {
+    ElMessage.error(formatBackendError(e, t("settings.opFailed")));
+  }
+}
 
 const {
   state: unlockState,
@@ -352,53 +413,51 @@ const validateResult = reactive<Record<keyof PathSettingsDTO, boolean | null>>({
 const pathFields = computed(() => [
   {
     key: "vrchatPathWindows" as keyof PathSettingsDTO,
-    label: "VRChat実行ファイル（Windows）",
-    placeholder:
-      "例: C:\\Program Files (x86)\\Steam\\steamapps\\common\\VRChat\\launch.exe",
+    label: t("settings.pathVrchatWin"),
+    placeholder: t("settings.pathVrchatWinPh"),
     buttons: [
       {
-        label: "参照",
+        label: t("common.browse"),
         testid: "vrchat-path-browse",
-        title: "ファイルを選択",
+        title: t("settings.pickFile"),
         handler: browseVrchatPath,
       },
     ],
   },
   {
     key: "steamPathLinux" as keyof PathSettingsDTO,
-    label: "Steamコマンド（Linux）",
-    placeholder: "例: steam または /usr/bin/steam",
+    label: t("settings.pathSteamLinux"),
+    placeholder: t("settings.pathSteamLinuxPh"),
     buttons: [
       {
-        label: "参照",
+        label: t("common.browse"),
         testid: "steam-path-browse",
-        title: "ファイルを選択",
+        title: t("settings.pickFile"),
         handler: browseSteamPath,
       },
     ],
   },
   {
     key: "outputLogPath" as keyof PathSettingsDTO,
-    label: "output_log（ファイルまたはフォルダ）",
-    placeholder:
-      "例: ...\\VRChat\\VRChat\\output_log_....txt または ...\\VRChat\\VRChat フォルダ",
+    label: t("settings.pathOutputLog"),
+    placeholder: t("settings.pathOutputLogPh"),
     buttons: [
       {
-        label: "ファイル",
+        label: t("settings.btnFile"),
         testid: "output-log-path-browse",
-        title: "ログファイルを選択",
+        title: t("settings.pickLogFile"),
         handler: browseOutputLogPath,
       },
       {
-        label: "フォルダ",
+        label: t("settings.btnFolder"),
         testid: "output-log-dir-browse",
-        title: "VRChat ログフォルダを選択（最新 output_log*.txt に追従）",
+        title: t("settings.pickLogDir"),
         handler: browseOutputLogDirectory,
       },
       {
-        label: "ログフォルダを開く",
+        label: t("settings.openLogFolder"),
         testid: "",
-        title: "VRChat のログフォルダをファイルマネージャで開く",
+        title: t("settings.openLogFolderTitle"),
         handler: openVRChatLogFolder,
       },
     ],
@@ -432,7 +491,7 @@ async function loadCurrentUser(forceRefresh = false) {
     currentUser.value = null;
     profileError.value = formatBackendError(
       e,
-      "プロフィールの取得に失敗しました",
+      t("settings.profileFetchFailed"),
     );
   } finally {
     profileLoading.value = false;
@@ -453,14 +512,12 @@ async function login() {
       loginForm.username = "";
       loginForm.password = "";
       loginForm.twoFactorCode = "";
-      // Wrap the one-time token with Web Crypto and persist the encrypted blob.
-      // This must be done immediately before the token reference is dropped.
       if (result.plaintextToken) {
         await persistAfterLogin(result.plaintextToken);
       }
       await loadCurrentUser();
     } else {
-      loginError.value = result.error || "ログインに失敗しました";
+      loginError.value = result.error || t("settings.loginFailed");
     }
   } finally {
     loginLoading.value = false;
@@ -474,11 +531,8 @@ async function logout() {
   try {
     await App.logout();
   } catch (e) {
-    loginError.value =
-      e instanceof Error ? e.message : "ログアウトに失敗しました";
+    loginError.value = formatBackendError(e, t("settings.logoutFailed"));
   }
-  // Always clean up frontend-side state (IDB wrapping key + blob)
-  // even if the backend logout partially failed.
   await handleLogout();
   isLoggedIn.value = false;
 }
@@ -488,8 +542,10 @@ async function refreshFriends() {
   try {
     await App.refreshFriends();
   } catch (e) {
-    loginError.value =
-      e instanceof Error ? e.message : "フレンド一覧の更新に失敗しました";
+    loginError.value = formatBackendError(
+      e,
+      t("settings.friendsRefreshFailed"),
+    );
   }
 }
 
@@ -514,7 +570,7 @@ function dirOfPath(p: string): string {
 
 async function browseVrchatPath() {
   const path = await App.openFileDialog(
-    "VRChat実行ファイルを選択",
+    t("settings.dlgPickVrchat"),
     dirOfPath(pathSettings.vrchatPathWindows),
     "*.exe",
   );
@@ -526,7 +582,7 @@ async function browseVrchatPath() {
 
 async function browseSteamPath() {
   const path = await App.openFileDialog(
-    "Steam実行ファイルを選択",
+    t("settings.dlgPickSteam"),
     dirOfPath(pathSettings.steamPathLinux),
     "",
   );
@@ -538,7 +594,7 @@ async function browseSteamPath() {
 
 async function browseOutputLogPath() {
   const path = await App.openFileDialog(
-    "output_log.txt を選択",
+    t("settings.dlgPickOutputLog"),
     dirOfPath(pathSettings.outputLogPath),
     "*.txt",
   );
@@ -550,7 +606,7 @@ async function browseOutputLogPath() {
 
 async function browseOutputLogDirectory() {
   const dir = await App.openDirectoryDialog(
-    "VRChat ログフォルダを選択（output_log*.txt があるフォルダ）",
+    t("settings.dlgPickOutputDir"),
     dirOfPath(pathSettings.outputLogPath),
   );
   if (dir) {
@@ -586,9 +642,9 @@ async function runWithConfirm(
   successMessage?: (result?: number) => string,
 ) {
   try {
-    await ElMessageBox.confirm(message, "確認", {
-      confirmButtonText: "実行",
-      cancelButtonText: "キャンセル",
+    await ElMessageBox.confirm(message, t("common.confirm"), {
+      confirmButtonText: t("common.execute"),
+      cancelButtonText: t("common.cancel"),
       type: "warning",
     });
   } catch {
@@ -600,13 +656,12 @@ async function runWithConfirm(
     const result = await fn();
     const msg = successMessage
       ? successMessage(typeof result === "number" ? result : undefined)
-      : "完了しました";
+      : t("common.done");
     if (msg) {
       ElMessage.success(msg);
     }
   } catch (e) {
-    maintenanceError.value =
-      e instanceof Error ? e.message : "操作に失敗しました";
+    maintenanceError.value = formatBackendError(e, t("settings.opFailed"));
   } finally {
     maintenanceLoading.value = false;
   }
@@ -614,38 +669,38 @@ async function runWithConfirm(
 
 function doVacuumDb() {
   void runWithConfirm(
-    "データベースを最適化（VACUUM）します。よろしいですか？",
+    t("settings.vacuumConfirm"),
     async () => {
       await App.vacuumDb();
     },
-    () => "DBの最適化が完了しました",
+    () => t("settings.vacuumDone"),
   );
 }
 
 function doClearEncounters() {
   void runWithConfirm(
-    "遭遇ログ（user_encounters）をすべて削除します。よろしいですか？",
+    t("settings.clearEncountersConfirm"),
     async () => App.clearEncounters(),
-    (n) => `${n}件の遭遇ログを削除しました`,
+    (n) => t("settings.clearEncountersDone", { n: n ?? 0 }),
   );
 }
 
 function doClearScreenshots() {
   void runWithConfirm(
-    "スクリーンショットインデックス（screenshots）をすべて削除します。よろしいですか？",
+    t("settings.clearScreenshotsConfirm"),
     async () => App.clearScreenshots(),
-    (n) => `${n}件のスクショインデックスを削除しました`,
+    (n) => t("settings.clearScreenshotsDone", { n: n ?? 0 }),
   );
 }
 
 function doClearFriendsCache() {
   void runWithConfirm(
-    "ユーザーキャッシュ（users_cache）の全行（自分・フレンド・遭遇ログ由来のユーザー）を削除します。よろしいですか？",
+    t("settings.clearFriendsConfirm"),
     async () => App.clearFriendsCache(),
     (n) => {
       currentUser.value = null;
       profileError.value = "";
-      return `${n}件のフレンドキャッシュを削除しました`;
+      return t("settings.clearFriendsDone", { n: n ?? 0 });
     },
   );
 }
@@ -656,6 +711,10 @@ function doClearFriendsCache() {
   margin-bottom: 1.5rem;
   background: var(--bg-secondary) !important;
   border-color: var(--border) !important;
+}
+
+.language-select {
+  min-width: 12rem;
 }
 
 .settings-card :deep(.el-card__header) {

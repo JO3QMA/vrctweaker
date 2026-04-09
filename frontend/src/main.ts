@@ -4,7 +4,9 @@ import ElementPlus from "element-plus";
 import "element-plus/dist/index.css";
 import "element-plus/theme-chalk/dark/css-vars.css";
 import * as ElementPlusIconsVue from "@element-plus/icons-vue";
-import App from "./App.vue";
+import AppRoot from "./App.vue";
+import { App } from "./wails/app";
+import { createAppI18n } from "./i18n";
 import "./assets/style.css";
 import type { RouteRecordRaw } from "vue-router";
 
@@ -13,79 +15,93 @@ const routes: RouteRecordRaw[] = [
     path: "/",
     name: "dashboard",
     component: () => import("./views/DashboardView.vue"),
-    meta: { title: "ダッシュボード" },
+    meta: { titleKey: "meta.dashboard" },
   },
   {
     path: "/launcher",
     name: "launcher",
     component: () => import("./views/LauncherView.vue"),
-    meta: { title: "ランチャー" },
+    meta: { titleKey: "meta.launcher" },
   },
   {
     path: "/gallery",
     name: "gallery",
     component: () => import("./views/GalleryView.vue"),
-    meta: { title: "ギャラリー" },
+    meta: { titleKey: "meta.gallery" },
   },
   {
     path: "/activity",
     name: "activity",
     component: () => import("./views/ActivityView.vue"),
-    meta: { title: "アクティビティ" },
+    meta: { titleKey: "meta.activity" },
   },
   {
     path: "/activity/encounter-history",
     name: "encounter-history",
     component: () => import("./views/EncounterHistoryDetailView.vue"),
-    meta: { title: "遭遇履歴", bare: true },
+    meta: { titleKey: "meta.encounterHistory", bare: true },
   },
   {
     path: "/friends",
     name: "friends",
     component: () => import("./views/FriendsView.vue"),
-    meta: { title: "フレンド" },
+    meta: { titleKey: "meta.friends" },
   },
   {
     path: "/user-profile",
     name: "user-profile",
     component: () => import("./views/UserProfileDetailView.vue"),
-    meta: { title: "ユーザー" },
+    meta: { titleKey: "meta.userProfile" },
   },
   {
     path: "/automation",
     name: "automation",
     component: () => import("./views/AutomationView.vue"),
-    meta: { title: "オートメーション" },
+    meta: { titleKey: "meta.automation" },
   },
   {
     path: "/config",
     name: "config",
     component: () => import("./views/ConfigView.vue"),
-    meta: { title: "その他の設定" },
+    meta: { titleKey: "meta.config" },
   },
   {
     path: "/settings",
     name: "settings",
     component: () => import("./views/SettingsView.vue"),
-    meta: { title: "設定" },
+    meta: { titleKey: "meta.settings" },
   },
   {
     path: "/licenses",
     name: "licenses",
     component: () => import("./views/LicensesView.vue"),
-    meta: { title: "OSSライセンス" },
+    meta: { titleKey: "meta.licenses" },
   },
 ];
 
-const router = createRouter({
-  history: createWebHashHistory(),
-  routes,
-});
+async function bootstrap() {
+  const code = await App.getUILanguage();
+  const i18n = createAppI18n(code);
+  const router = createRouter({
+    history: createWebHashHistory(),
+    routes,
+  });
 
-const app = createApp(App);
-app.use(router);
-app.use(ElementPlus);
-for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
-  app.component(key, component);
+  router.afterEach((to) => {
+    const titleKey = to.meta.titleKey;
+    if (typeof titleKey === "string" && titleKey.length > 0) {
+      document.title = `${i18n.global.t(titleKey)} - ${i18n.global.t("appTitle")}`;
+    }
+  });
+
+  const app = createApp(AppRoot);
+  app.use(i18n);
+  app.use(router);
+  app.use(ElementPlus);
+  for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+    app.component(key, component);
+  }
+  app.mount("#app");
 }
-app.mount("#app");
+
+void bootstrap();

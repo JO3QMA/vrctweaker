@@ -5,7 +5,7 @@
 
     <el-alert
       v-if="invalidQuery"
-      title="表示できません。URL の kind / vrcUserId / worldId を確認してください。"
+      :title="t('encounterHistory.badUrl')"
       type="warning"
       :closable="false"
       show-icon
@@ -23,9 +23,11 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 import EncounterHistoryList from "../components/EncounterHistoryList.vue";
 
 const route = useRoute();
+const { t } = useI18n();
 
 function firstQueryString(v: unknown): string {
   if (v == null) return "";
@@ -54,9 +56,9 @@ const listMode = computed<"user" | "world">(() =>
 );
 
 const pageTitle = computed(() => {
-  if (kind.value === "user") return "ユーザー別 遭遇履歴";
-  if (kind.value === "world") return "ワールド別 遭遇履歴";
-  return "遭遇履歴";
+  if (kind.value === "user") return t("encounterHistory.byUser");
+  if (kind.value === "world") return t("encounterHistory.byWorld");
+  return t("encounterHistory.generic");
 });
 
 const idLine = computed(() => {

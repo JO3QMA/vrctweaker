@@ -1,6 +1,6 @@
 <template>
   <div class="dashboard">
-    <h1 class="page-title">ダッシュボード</h1>
+    <h1 class="page-title">{{ t("dashboard.title") }}</h1>
     <div class="quick-actions">
       <el-button
         type="primary"
@@ -11,13 +11,15 @@
       >
         {{
           defaultProfile
-            ? `VRChat 起動 (${defaultProfile.name})`
-            : "VRChat 起動"
+            ? t("dashboard.launchWithProfile", {
+                name: defaultProfile.name,
+              })
+            : t("dashboard.launchVRChat")
         }}
       </el-button>
       <el-card class="status-panel" shadow="never">
         <template #header>
-          <span class="status-label">クイックステータス</span>
+          <span class="status-label">{{ t("dashboard.quickStatus") }}</span>
         </template>
         <div class="status-buttons">
           <el-button
@@ -34,16 +36,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
+import { useI18n } from "vue-i18n";
 import { App, type LaunchProfileDTO } from "../wails/app";
 
+const { t } = useI18n();
+
 const defaultProfile = ref<LaunchProfileDTO | null>(null);
-const statusOptions = [
-  { label: "Active", value: "active" },
-  { label: "Join Me", value: "join me" },
-  { label: "Ask Me", value: "ask me" },
-  { label: "Busy", value: "busy" },
-];
+
+const statusOptions = computed(() => [
+  { label: t("dashboard.statusActive"), value: "active" },
+  { label: t("dashboard.statusJoinMe"), value: "join me" },
+  { label: t("dashboard.statusAskMe"), value: "ask me" },
+  { label: t("dashboard.statusBusy"), value: "busy" },
+]);
 
 onMounted(async () => {
   const profiles = await App.launchProfiles();
