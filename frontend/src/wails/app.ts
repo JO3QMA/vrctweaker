@@ -204,6 +204,9 @@ interface AppBindings {
   DeleteLaunchProfile(id: string): Promise<void>;
   GetLogRetentionDays(): Promise<number>;
   SetLogRetentionDays(days: number): Promise<void>;
+  GetLanguage(): Promise<string>;
+  SetLanguage(lang: string): Promise<void>;
+  GetSystemLocale(): Promise<string>;
   GetPathSettings(): Promise<PathSettingsDTO>;
   SetPathSettings(dto: PathSettingsDTO): Promise<void>;
   GetSuppressSleepWhileVRChat(): Promise<boolean>;
@@ -469,6 +472,15 @@ export const App = {
   },
   async setLogRetentionDays(days: number): Promise<void> {
     return callApp((a) => a.SetLogRetentionDays(days), undefined);
+  },
+  async getLanguage(): Promise<string> {
+    return callApp((a) => a.GetLanguage(), "");
+  },
+  async setLanguage(lang: string): Promise<void> {
+    return callApp((a) => a.SetLanguage(lang), undefined);
+  },
+  async getSystemLocale(): Promise<string> {
+    return callApp((a) => a.GetSystemLocale(), "en");
   },
   async getPathSettings(): Promise<PathSettingsDTO> {
     return callApp((a) => a.GetPathSettings(), {

@@ -6,6 +6,7 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onBeforeUnmount, nextTick } from "vue";
+import { useI18n } from "vue-i18n";
 import Chart from "chart.js/auto";
 import type { Chart as ChartType } from "chart.js";
 import { formatPlayDurationHMS } from "../utils/formatPlayDuration";
@@ -20,6 +21,8 @@ const props = defineProps<{
   series: PlayTimeDayPoint[];
 }>();
 
+const { t, locale } = useI18n();
+
 const canvasRef = ref<HTMLCanvasElement | null>(null);
 let chart: ChartType<"line"> | null = null;
 
@@ -32,12 +35,12 @@ function readCssVar(name: string, fallback: string): string {
 
 function formatYAxisTickSeconds(sec: number): string {
   if (sec >= 3600) {
-    return `${Math.floor(sec / 3600)}時間`;
+    return `${Math.floor(sec / 3600)}${t("chart.hour")}`;
   }
   if (sec >= 60) {
-    return `${Math.floor(sec / 60)}分`;
+    return `${Math.floor(sec / 60)}${t("chart.minute")}`;
   }
-  return `${sec}秒`;
+  return `${sec}${t("chart.second")}`;
 }
 
 function buildChartOptions() {
@@ -98,7 +101,11 @@ function buildChartOptions() {
           label: (ctx: { parsed: { y: number | null } }) => {
             const y = ctx.parsed.y;
             if (y == null) return "";
-            return formatPlayDurationHMS(y);
+            return formatPlayDurationHMS(y, {
+              hour: t("chart.hour"),
+              minute: t("chart.minute"),
+              second: t("chart.second"),
+            });
           },
         },
       },
@@ -158,7 +165,7 @@ function createOrUpdateChart(): void {
 }
 
 watch(
-  () => props.series,
+  () => [props.series, locale.value] as const,
   () => {
     void nextTick(() => createOrUpdateChart());
   },

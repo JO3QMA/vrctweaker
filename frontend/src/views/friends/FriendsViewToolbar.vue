@@ -4,7 +4,7 @@
       <div
         class="filter-mode"
         role="group"
-        aria-label="フレンド一覧: Online または Offline"
+        :aria-label="t('friends.toolbarOnlineOffline')"
       >
         <span :class="['mode-label', { active: !showOfflineList }]"
           >Online</span
@@ -12,7 +12,7 @@
         <el-switch
           v-model="showOfflineList"
           data-testid="friends-filter-mode"
-          aria-label="Offline 一覧を表示する（オフのときは Online）"
+          :aria-label="t('friends.toolbarOfflineSwitch')"
         />
         <span :class="['mode-label', { active: showOfflineList }]"
           >Offline</span
@@ -23,17 +23,19 @@
         :disabled="!isLoggedIn || refreshLoading"
         :loading="refreshLoading"
         :title="
-          isLoggedIn ? 'フレンド一覧をAPIから再取得' : 'ログインが必要です'
+          isLoggedIn
+            ? t('friends.refreshTitleOk')
+            : t('friends.refreshTitleNeedLogin')
         "
         @click="emit('refresh')"
       >
-        {{ refreshLoading ? "更新中..." : "更新" }}
+        {{ refreshLoading ? t("common.updating") : t("common.refresh") }}
       </el-button>
     </div>
     <el-input
       v-model.trim="displayNameQuery"
       type="search"
-      placeholder="表示名で検索"
+      :placeholder="t('friends.searchPlaceholder')"
       data-testid="friends-search-display-name"
       clearable
       class="friends-search-input"
@@ -47,6 +49,10 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
+
+const { t } = useI18n();
+
 defineProps<{
   isLoggedIn: boolean;
   refreshLoading: boolean;

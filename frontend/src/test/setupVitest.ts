@@ -1,9 +1,23 @@
 import { config } from "@vue/test-utils";
 import ElementPlus from "element-plus";
 import * as ElementPlusIconsVue from "@element-plus/icons-vue";
+import { createI18n } from "vue-i18n";
+import en from "../i18n/locales/en.json";
+import ja from "../i18n/locales/ja.json";
+import ko from "../i18n/locales/ko.json";
+import zhTW from "../i18n/locales/zh-TW.json";
+import zhCN from "../i18n/locales/zh-CN.json";
 
-// テスト環境で Element Plus とアイコンをグローバル登録
-config.global.plugins = [ElementPlus];
+const testI18n = createI18n({
+  legacy: false,
+  locale: "ja",
+  fallbackLocale: "en",
+  messages: { en, ja, ko, "zh-TW": zhTW, "zh-CN": zhCN },
+  globalInjection: true,
+});
+
+// テスト環境で Element Plus・vue-i18n・アイコンをグローバル登録
+config.global.plugins = [ElementPlus, testI18n];
 config.global.components = Object.fromEntries(
   Object.entries(ElementPlusIconsVue),
 );

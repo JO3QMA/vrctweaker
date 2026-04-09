@@ -2,7 +2,7 @@
   <div class="friends-view">
     <div class="friends-section">
       <section class="friends-pane friends-pane--left">
-        <h1 class="page-title">フレンド</h1>
+        <h1 class="page-title">{{ t("friends.title") }}</h1>
         <FriendsViewToolbar
           v-model:show-offline-list="showOfflineList"
           v-model:display-name-query="displayNameQuery"
@@ -12,7 +12,7 @@
         />
         <el-alert
           v-if="!isLoggedIn"
-          title="フレンド一覧の更新にはログインが必要です。設定画面でログインしてください。"
+          :title="t('friends.loginRequired')"
           type="info"
           :closable="false"
           show-icon
@@ -40,6 +40,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useI18n } from "vue-i18n";
 import { ElMessage } from "element-plus";
 import FriendsDetailPane from "./friends/FriendsDetailPane.vue";
 import FriendsListPanel from "./friends/FriendsListPanel.vue";
@@ -52,6 +53,7 @@ import { getRuntime } from "../wails/runtime";
 
 const route = useRoute();
 const router = useRouter();
+const { t } = useI18n();
 const { beginStartupUnlock } = useSessionUnlock();
 
 function firstQueryString(v: unknown): string {
@@ -111,16 +113,16 @@ const filteredFriends = computed(() => {
 const emptyListMessage = computed(() => {
   if (friendsByStatus.value.length === 0) {
     return showOfflineList.value
-      ? "オフラインのフレンドはいません"
-      : "オンラインのフレンドはいません";
+      ? t("friends.offlineNone")
+      : t("friends.onlineNone");
   }
   if (
     displayNameQuery.value.trim() !== "" &&
     filteredFriends.value.length === 0
   ) {
-    return "検索に一致するフレンドはいません";
+    return t("friends.searchNoMatch");
   }
-  return "該当するフレンドはいません";
+  return t("friends.emptyDefault");
 });
 
 async function stripVrcUserIdFromQuery(): Promise<void> {
@@ -139,9 +141,7 @@ async function applyVrcUserIdFromQuery(): Promise<void> {
     f = friends.value.find((x) => x.vrcUserId === id);
   }
   if (!f) {
-    ElMessage.warning(
-      "指定されたユーザーはフレンド一覧に見つかりませんでした。",
-    );
+    ElMessage.warning(t("friends.userNotFound"));
     await stripVrcUserIdFromQuery();
     return;
   }

@@ -21,7 +21,11 @@
       <el-button
         link
         :type="f.isFavorite ? 'primary' : 'info'"
-        :title="f.isFavorite ? 'お気に入り解除' : 'お気に入り登録'"
+        :title="
+          f.isFavorite
+            ? t('friendsList.favoriteRemove')
+            : t('friendsList.favoriteAdd')
+        "
         class="btn-favorite"
         @click.stop="emit('toggleFavorite', f)"
       >
@@ -35,9 +39,12 @@
 </template>
 
 <script setup lang="ts">
+import { useI18n } from "vue-i18n";
 import VrcStatusTag from "../../components/VrcStatusTag.vue";
 import type { UserCacheDTO } from "../../wails/app";
 import { friendThumbUrl } from "./friendsViewUtils";
+
+const { t } = useI18n();
 
 defineProps<{
   friends: UserCacheDTO[];

@@ -1,7 +1,7 @@
 <template>
   <div class="encounter-history-list">
     <template v-if="canLoad">
-      <div v-if="loading" class="message">読み込み中…</div>
+      <div v-if="loading" class="message">{{ t("common.loading") }}</div>
       <el-alert
         v-else-if="error"
         :title="error"
@@ -10,35 +10,43 @@
         show-icon
       />
       <div v-else-if="rows.length === 0" class="message">
-        該当する遭遇ログがありません。
+        {{ t("encounterHistory.empty") }}
       </div>
       <el-table v-else :data="rows" style="width: 100%" size="small" stripe>
-        <el-table-column label="入室" width="155">
+        <el-table-column :label="t('encounterHistory.colJoin')" width="155">
           <template #default="{ row }">
-            {{ formatEncounteredAt(row.joinedAt) }}
+            {{ formatEncounterLocal(row.joinedAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="退室" width="155">
+        <el-table-column :label="t('encounterHistory.colLeave')" width="155">
           <template #default="{ row }">
-            {{ row.leftAt ? formatEncounteredAt(row.leftAt) : "—" }}
+            {{
+              row.leftAt ? formatEncounterLocal(row.leftAt) : t("common.dash")
+            }}
           </template>
         </el-table-column>
         <el-table-column
           v-if="!hideDisplayNameColumn"
-          label="表示名"
+          :label="t('encounterHistory.colDisplayName')"
           min-width="120"
           prop="displayName"
         />
-        <el-table-column label="ワールド名" min-width="120">
+        <el-table-column
+          :label="t('encounterHistory.colWorldName')"
+          min-width="120"
+        >
           <template #default="{ row }">
             <span :title="row.worldId || ''">
-              {{ row.worldDisplayName || row.worldId || "—" }}
+              {{ row.worldDisplayName || row.worldId || t("common.dash") }}
             </span>
           </template>
         </el-table-column>
-        <el-table-column label="インスタンス" min-width="120">
+        <el-table-column
+          :label="t('encounterHistory.colInstance')"
+          min-width="120"
+        >
           <template #default="{ row }">
-            <span class="mono">{{ row.instanceId || "—" }}</span>
+            <span class="mono">{{ row.instanceId || t("common.dash") }}</span>
           </template>
         </el-table-column>
       </el-table>
@@ -48,8 +56,16 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { useI18n } from "vue-i18n";
 import { App, type UserEncounterDTO } from "../wails/app";
 import { formatEncounteredAt } from "../utils/formatEncounteredAt";
+import { appLocaleToBcp47 } from "../i18n";
+
+const { t, locale } = useI18n();
+
+function formatEncounterLocal(iso: string): string {
+  return formatEncounteredAt(iso, appLocaleToBcp47(String(locale.value)));
+}
 
 const props = withDefaults(
   defineProps<{
@@ -93,7 +109,7 @@ async function load(): Promise<void> {
   } catch (e) {
     rows.value = [];
     error.value =
-      e instanceof Error ? e.message : "データの取得に失敗しました。";
+      e instanceof Error ? e.message : t("encounterHistory.fetchFailedGeneric");
   } finally {
     loading.value = false;
   }

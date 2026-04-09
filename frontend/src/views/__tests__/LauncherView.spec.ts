@@ -469,7 +469,7 @@ describe("LauncherView", () => {
     const resRg = wrapper
       .get("[data-testid='resolution-preset-hd']")
       .element.closest("[role='radiogroup']");
-    expect(resRg?.getAttribute("aria-label")).toBe("起動時解像度プリセット");
+    expect(resRg?.getAttribute("aria-label")).toBe("プリセット");
 
     const debugHeaders = wrapper.findAll(".el-collapse-item__header");
     const debugHeader = debugHeaders.find((h) =>

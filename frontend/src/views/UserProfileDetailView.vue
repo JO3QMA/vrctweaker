@@ -1,7 +1,7 @@
 <template>
   <div class="user-profile-detail-view">
-    <h1 class="page-title">ユーザー</h1>
-    <div v-if="loading" class="msg">読み込み中…</div>
+    <h1 class="page-title">{{ t("userProfile.title") }}</h1>
+    <div v-if="loading" class="msg">{{ t("userProfile.loading") }}</div>
     <el-alert
       v-else-if="loadError && !selected"
       :title="loadError"
@@ -21,11 +21,13 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { useRoute } from "vue-router";
+import { useI18n } from "vue-i18n";
 import VrcUserCacheDetail from "../components/VrcUserCacheDetail.vue";
 import { App } from "../wails/app";
 import type { UserCacheDTO } from "../wails/app";
 
 const route = useRoute();
+const { t } = useI18n();
 
 const loading = ref(true);
 const loadError = ref<string | null>(null);
@@ -62,7 +64,7 @@ async function load(): Promise<void> {
   loadError.value = null;
   selected.value = null;
   if (!vrcUserId) {
-    loadError.value = "ユーザー ID が指定されていません。";
+    loadError.value = t("userProfile.idMissing");
     loading.value = false;
     return;
   }
@@ -73,8 +75,7 @@ async function load(): Promise<void> {
       selected.value = minimalFromQuery(vrcUserId, hint);
     }
   } catch {
-    loadError.value =
-      "プロフィールを取得できませんでした。キャッシュまたはログイン状態を確認してください。";
+    loadError.value = t("userProfile.loadFailed");
     selected.value = minimalFromQuery(vrcUserId, hint);
   } finally {
     loading.value = false;

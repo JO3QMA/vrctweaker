@@ -1,13 +1,13 @@
 <template>
   <div class="gallery-view">
-    <h1 class="page-title">ギャラリー</h1>
+    <h1 class="page-title">{{ t("routes.gallery") }}</h1>
 
     <div class="filters">
       <el-input
         v-model="filterWorldId"
         data-testid="gallery-world-filter"
         type="search"
-        placeholder="World ID で検索（入力で自動検索 / Enter）"
+        :placeholder="t('gallery.searchPlaceholder')"
         clearable
         style="flex: 1; max-width: 400px"
         @keyup.enter="onFilterEnter"
@@ -17,7 +17,7 @@
         </template>
       </el-input>
       <el-button :disabled="loading || scanning" @click="onRefreshClick">
-        更新
+        {{ t("common.refresh") }}
       </el-button>
       <el-button
         data-testid="gallery-scan-folder"
@@ -25,7 +25,7 @@
         :loading="scanning"
         @click="scanFolder"
       >
-        {{ scanning ? "スキャン中…" : "Scan Folder" }}
+        {{ scanning ? t("gallery.scanning") : t("gallery.scanFolder") }}
       </el-button>
     </div>
 
@@ -73,10 +73,9 @@
             :duration="10"
           />
         </div>
-        <div v-else-if="loading" class="loading">読み込み中…</div>
+        <div v-else-if="loading" class="loading">{{ t("common.loading") }}</div>
         <div v-else-if="list.length === 0" class="empty">
-          スクリーンショットがありません。Scan Folder
-          か設定の出力フォルダを確認してください。
+          {{ t("gallery.empty") }}
         </div>
         <div
           v-else
@@ -139,7 +138,7 @@
 
       <!-- 詳細プレビュー -->
       <el-card v-if="selected" class="detail-panel" shadow="never">
-        <template #header>詳細</template>
+        <template #header>{{ t("gallery.detail") }}</template>
         <div class="detail-preview">
           <img
             data-testid="gallery-detail-preview"
@@ -150,27 +149,27 @@
           />
         </div>
         <el-descriptions :column="1" border size="small">
-          <el-descriptions-item label="ファイル名">
+          <el-descriptions-item :label="t('gallery.fileName')">
             {{ fileNameFromPath(selected.filePath) }}
           </el-descriptions-item>
-          <el-descriptions-item label="ファイルサイズ">
+          <el-descriptions-item :label="t('gallery.fileSize')">
             {{ formatFileSize(selected.fileSizeBytes) }}
           </el-descriptions-item>
-          <el-descriptions-item label="撮影日時">
+          <el-descriptions-item :label="t('gallery.takenAt')">
             {{ formatTakenAt(selected.takenAt) }}
           </el-descriptions-item>
-          <el-descriptions-item label="ワールド名">
-            {{ selected.worldName || "—" }}
+          <el-descriptions-item :label="t('gallery.worldName')">
+            {{ selected.worldName || t("common.dash") }}
           </el-descriptions-item>
-          <el-descriptions-item label="作者表示名">
-            {{ selected.authorDisplayName || "—" }}
+          <el-descriptions-item :label="t('gallery.authorDisplayName')">
+            {{ selected.authorDisplayName || t("common.dash") }}
           </el-descriptions-item>
-          <el-descriptions-item label="ファイルパス">
+          <el-descriptions-item :label="t('gallery.filePath')">
             <el-button
               link
               type="primary"
               data-testid="gallery-detail-open-file"
-              title="既定のアプリで画像を開く"
+              :title="t('gallery.openWithDefaultApp')"
               class="file-path-btn"
               @click="openSelectedFileExternally"
             >
@@ -192,7 +191,7 @@
           :title="openFolderButtonTitle"
           @click="revealSelectedInFolder"
         >
-          フォルダを開く
+          {{ t("gallery.openFolder") }}
         </el-button>
         <el-alert
           v-if="joinError"
@@ -209,7 +208,7 @@
           :title="joinButtonTitle"
           @click="onJoin"
         >
-          このワールドへJoin
+          {{ t("gallery.joinWorld") }}
         </el-button>
       </el-card>
     </div>
@@ -227,6 +226,7 @@ import {
   watchEffect,
   nextTick,
 } from "vue";
+import { useI18n } from "vue-i18n";
 import {
   App,
   type ScreenshotDTO,
@@ -237,10 +237,15 @@ import {
 import { getRuntime } from "../wails/runtime";
 import {
   buildGalleryVirtualRows,
+  galleryLabelsFromLocale,
   galleryRowHeight,
   type GalleryVirtualRow,
 } from "./galleryDateGroups";
 import { pruneThumbnailUrlMap } from "./galleryThumbnailCache";
+import { formatEncounteredAt } from "../utils/formatEncounteredAt";
+import { appLocaleToBcp47 } from "../i18n";
+
+const { t, locale } = useI18n();
 
 const FILTER_DEBOUNCE_MS = 400;
 const GALLERY_SCREENSHOTS_CHANGED_DEBOUNCE_MS = 400;
@@ -249,11 +254,19 @@ const THUMBNAIL_FETCH_CONCURRENCY = 4;
 const GRID_GAP_PX = 12;
 const MIN_CELL_WIDTH = 140;
 
-const missingThumbDataUrl =
-  "data:image/svg+xml," +
-  encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90" viewBox="0 0 120 90"><rect fill="#333" width="120" height="90"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12">画像なし</text></svg>',
+function escapeSvgText(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+const missingThumbDataUrl = computed(() => {
+  const label = escapeSvgText(t("gallery.noImage"));
+  return (
+    "data:image/svg+xml," +
+    encodeURIComponent(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90" viewBox="0 0 120 90"><rect fill="#333" width="120" height="90"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12">${label}</text></svg>`,
+    )
   );
+});
 
 const transparentPixelDataUrl =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
@@ -288,16 +301,25 @@ const scanProgressDeterminate = computed(() => {
 
 const scanStatusText = computed(() => {
   const p = scanProgress.value;
-  if (!p) return "フォルダをスキャンしています…";
+  if (!p) return t("gallery.scanDefault");
   if (p.phase === "listing")
-    return `画像ファイルを検索しています…（${p.current} 件）`;
+    return t("gallery.scanListing", { n: String(p.current) });
   if (p.phase === "importing") {
-    if (p.total === 0) return "画像ファイルは見つかりませんでした";
-    if (p.current === 0) return `画像 ${p.total} 件を取り込みます…`;
-    if (p.item) return `取り込み中: ${p.item}（${p.current} / ${p.total}）`;
-    return `取り込み中（${p.current} / ${p.total}）`;
+    if (p.total === 0) return t("gallery.scanNoFiles");
+    if (p.current === 0)
+      return t("gallery.scanImportPrepare", { n: String(p.total) });
+    if (p.item)
+      return t("gallery.scanImportItem", {
+        item: p.item,
+        current: String(p.current),
+        total: String(p.total),
+      });
+    return t("gallery.scanImporting", {
+      current: String(p.current),
+      total: String(p.total),
+    });
   }
-  return "フォルダをスキャンしています…";
+  return t("gallery.scanDefault");
 });
 
 function applyScanProgressPayload(data: unknown): void {
@@ -362,8 +384,20 @@ const cellWidthPx = computed(() => {
 const cellHeightPx = computed(() => (cellWidthPx.value * 3) / 4);
 const rowHeightPx = computed(() => cellHeightPx.value + GRID_GAP_PX);
 
+const galleryDateLabels = computed(() =>
+  galleryLabelsFromLocale(
+    appLocaleToBcp47(String(locale.value)),
+    t("gallery.unknownDate"),
+  ),
+);
+
 const flatGalleryRows = computed(() =>
-  buildGalleryVirtualRows(list.value, columnCount.value, collapsed.value),
+  buildGalleryVirtualRows(
+    list.value,
+    columnCount.value,
+    collapsed.value,
+    galleryDateLabels.value,
+  ),
 );
 
 const rowVirtualizer = useVirtualizer(
@@ -526,13 +560,12 @@ watch(
 
 const joinButtonTitle = computed(() => {
   if (!selected.value?.worldId || selected.value.worldId.trim() === "") {
-    return "World ID がありません";
+    return t("gallery.joinNoWorldId");
   }
-  return "このワールドへJoin";
+  return t("gallery.joinWorld");
 });
 
-const openFolderButtonTitle =
-  "画像があるフォルダをファイルマネージャで開きます（環境によってはフォルダのみの場合があります）";
+const openFolderButtonTitle = computed(() => t("gallery.openFolderHint"));
 
 const detailActionError = ref<string | null>(null);
 
@@ -564,7 +597,7 @@ function thumbnailSrc(item: ScreenshotDTO): string {
 
 function onThumbnailError(e: Event): void {
   const img = e.target as HTMLImageElement;
-  img.src = missingThumbDataUrl;
+  img.src = missingThumbDataUrl.value;
 }
 
 function onGridScroll(): void {
@@ -625,13 +658,13 @@ async function syncThumbnailsForVisible(): Promise<void> {
         if (gen !== thumbnailFetchGeneration) return;
         thumbnailUrls.value = {
           ...thumbnailUrls.value,
-          [id]: url && url.length > 0 ? url : missingThumbDataUrl,
+          [id]: url && url.length > 0 ? url : missingThumbDataUrl.value,
         };
       } catch {
         if (gen !== thumbnailFetchGeneration) return;
         thumbnailUrls.value = {
           ...thumbnailUrls.value,
-          [id]: missingThumbDataUrl,
+          [id]: missingThumbDataUrl.value,
         };
       }
     }
@@ -661,17 +694,13 @@ watch(list, () => {
 });
 
 function formatTakenAt(takenAt?: string): string {
-  if (!takenAt) return "—";
-  try {
-    const d = new Date(takenAt);
-    return d.toLocaleString("ja-JP");
-  } catch {
-    return takenAt;
-  }
+  if (!takenAt) return t("common.dash");
+  return formatEncounteredAt(takenAt, appLocaleToBcp47(String(locale.value)));
 }
 
 function formatFileSize(bytes?: number): string {
-  if (bytes == null || bytes < 0 || !Number.isFinite(bytes)) return "—";
+  if (bytes == null || bytes < 0 || !Number.isFinite(bytes))
+    return t("common.dash");
   if (bytes === 0) return "0 B";
   const units = ["B", "KB", "MB", "GB", "TB"];
   let v = bytes;

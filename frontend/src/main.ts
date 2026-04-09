@@ -7,73 +7,82 @@ import * as ElementPlusIconsVue from "@element-plus/icons-vue";
 import App from "./App.vue";
 import "./assets/style.css";
 import type { RouteRecordRaw } from "vue-router";
+import { i18n } from "./i18n";
+
+declare module "vue-router" {
+  interface RouteMeta {
+    /** vue-i18n key under `routes.*` */
+    titleKey?: string;
+    bare?: boolean;
+  }
+}
 
 const routes: RouteRecordRaw[] = [
   {
     path: "/",
     name: "dashboard",
     component: () => import("./views/DashboardView.vue"),
-    meta: { title: "ダッシュボード" },
+    meta: { titleKey: "routes.dashboard" },
   },
   {
     path: "/launcher",
     name: "launcher",
     component: () => import("./views/LauncherView.vue"),
-    meta: { title: "ランチャー" },
+    meta: { titleKey: "routes.launcher" },
   },
   {
     path: "/gallery",
     name: "gallery",
     component: () => import("./views/GalleryView.vue"),
-    meta: { title: "ギャラリー" },
+    meta: { titleKey: "routes.gallery" },
   },
   {
     path: "/activity",
     name: "activity",
     component: () => import("./views/ActivityView.vue"),
-    meta: { title: "アクティビティ" },
+    meta: { titleKey: "routes.activity" },
   },
   {
     path: "/activity/encounter-history",
     name: "encounter-history",
     component: () => import("./views/EncounterHistoryDetailView.vue"),
-    meta: { title: "遭遇履歴", bare: true },
+    meta: { titleKey: "routes.encounterHistory", bare: true },
   },
   {
     path: "/friends",
     name: "friends",
     component: () => import("./views/FriendsView.vue"),
-    meta: { title: "フレンド" },
+    meta: { titleKey: "routes.friends" },
   },
   {
     path: "/user-profile",
     name: "user-profile",
     component: () => import("./views/UserProfileDetailView.vue"),
-    meta: { title: "ユーザー" },
+    meta: { titleKey: "routes.user" },
   },
   {
     path: "/automation",
     name: "automation",
     component: () => import("./views/AutomationView.vue"),
-    meta: { title: "オートメーション" },
+    meta: { titleKey: "routes.automation" },
   },
   {
     path: "/config",
     name: "config",
     component: () => import("./views/ConfigView.vue"),
-    meta: { title: "その他の設定" },
+    meta: { titleKey: "routes.configOther" },
   },
   {
     path: "/settings",
     name: "settings",
     component: () => import("./views/SettingsView.vue"),
-    meta: { title: "設定" },
+    meta: { titleKey: "routes.settings" },
   },
   {
     path: "/licenses",
     name: "licenses",
     component: () => import("./views/LicensesView.vue"),
-    meta: { title: "OSSライセンス" },
+    meta: { titleKey: "routes.licenses" },
   },
 ];
 
@@ -84,6 +93,7 @@ const router = createRouter({
 
 const app = createApp(App);
 app.use(router);
+app.use(i18n);
 app.use(ElementPlus);
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component);
