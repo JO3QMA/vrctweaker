@@ -12,6 +12,8 @@ frontend/coverage/
 frontend/.pnpm-store/
 frontend/wailsjs/
 frontend/tsconfig.tsbuildinfo
+# vue-tsc / tsc が同ディレクトリに出すことがある重複設定（vite は *.ts を使用）
+frontend/vite.config.js
 
 # Go
 *.test

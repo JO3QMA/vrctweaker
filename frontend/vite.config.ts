@@ -38,6 +38,9 @@ export default defineConfig(({ command, mode }) => ({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    // ルートは同期 import（src/router/routes.ts）。遅延チャンクは Wails 本番 WebView で
+    // 相対 URL が壊れやすいため、意図的に巨大な単一バンドルになる。
+    chunkSizeWarningLimit: 2048,
   },
   resolve: {
     alias: {
