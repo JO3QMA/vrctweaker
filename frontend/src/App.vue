@@ -9,9 +9,12 @@
           :class="{ 'main-content--bare': bareLayout }"
         >
           <div class="router-outlet-host">
-            <!-- デフォルト描画: v-slot + <transition mode="out-in"> は WebView で遅延ルートが
-                 真っ白になることがあるため使わない（Vue Router が渡す Component は VNode 扱い）。 -->
-            <router-view :key="route.fullPath" />
+            <!-- 遅延ルート時代は <transition mode="out-in"> が WebView で真っ白になり得たため付けない。
+                 :key は RouterView 本体ではなく内側の <component> に付与する（RouterView に key を付けると
+                 Wails WebView で遷移先が描画されないことがある）。 -->
+            <router-view v-slot="{ Component }">
+              <component :is="Component" :key="route.fullPath" />
+            </router-view>
           </div>
         </main>
       </div>
