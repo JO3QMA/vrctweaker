@@ -3,11 +3,18 @@ import { mount } from "@vue/test-utils";
 import { createRouter, createWebHashHistory } from "vue-router";
 import Sidebar from "../Sidebar.vue";
 
+const stub = { template: "<div />" };
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
-    { path: "/", component: { template: "<div />" } },
-    { path: "/settings", component: { template: "<div />" } },
+    { path: "/", component: stub },
+    { path: "/launcher", component: stub },
+    { path: "/gallery", component: stub },
+    { path: "/activity", component: stub },
+    { path: "/friends", component: stub },
+    { path: "/automation", component: stub },
+    { path: "/config", component: stub },
+    { path: "/settings", component: stub },
   ],
 });
 

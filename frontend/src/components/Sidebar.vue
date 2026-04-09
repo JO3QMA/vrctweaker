@@ -1,6 +1,10 @@
 <template>
   <nav class="sidebar">
-    <el-menu :default-active="route.path" router class="sidebar-nav">
+    <el-menu
+      :default-active="mainMenuActive"
+      class="sidebar-nav"
+      @select="navigateFromMenu"
+    >
       <el-menu-item
         v-for="item in menuItems"
         :key="item.path"
@@ -11,7 +15,11 @@
       </el-menu-item>
     </el-menu>
     <div class="sidebar-footer">
-      <el-menu :default-active="route.path" router class="sidebar-nav">
+      <el-menu
+        :default-active="footerMenuActive"
+        class="sidebar-nav"
+        @select="navigateFromMenu"
+      >
         <el-menu-item index="/settings">
           <span class="sidebar-icon">⚙️</span>
           <template #title>{{ t("sidebar.settings") }}</template>
@@ -23,10 +31,11 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { useRoute } from "vue-router";
+import { isNavigationFailure, useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 
 const route = useRoute();
+const router = useRouter();
 const { t } = useI18n();
 
 const menuItems = computed(() => [
@@ -38,6 +47,23 @@ const menuItems = computed(() => [
   { path: "/automation", icon: "🤖", label: t("sidebar.automation") },
   { path: "/config", icon: "📝", label: t("sidebar.config") },
 ]);
+
+/** メイン項目に無いパス（設定・ユーザー詳細等）を default-active に渡すと ElMenu 内部が壊れる */
+const mainMenuActive = computed(() => {
+  const p = route.path;
+  return menuItems.value.some((item) => item.path === p) ? p : "";
+});
+
+const footerMenuActive = computed(() =>
+  route.path === "/settings" ? "/settings" : "",
+);
+
+function navigateFromMenu(index: string) {
+  if (!index) return;
+  void router.push(index).catch((err) => {
+    if (!isNavigationFailure(err)) console.error(err);
+  });
+}
 </script>
 
 <style scoped>
