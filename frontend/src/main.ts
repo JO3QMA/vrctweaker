@@ -80,7 +80,12 @@ const routes: RouteRecordRaw[] = [
 ];
 
 async function bootstrap() {
-  const code = await App.getUILanguage();
+  let code = "ja";
+  try {
+    code = await App.getUILanguage();
+  } catch {
+    // DB or IPC error – fall back to Japanese so the app still renders.
+  }
   const i18n = createAppI18n(code);
   const router = createRouter({
     history: createWebHashHistory(),
