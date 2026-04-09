@@ -1,11 +1,25 @@
 import type { Preview } from "@storybook/vue3-vite";
 import { setup } from "@storybook/vue3-vite";
 import { createMemoryHistory, createRouter } from "vue-router";
+import { createI18n } from "vue-i18n";
 import ElementPlus from "element-plus";
 import "element-plus/dist/index.css";
 import "element-plus/theme-chalk/dark/css-vars.css";
 import * as ElementPlusIconsVue from "@element-plus/icons-vue";
 import "../src/assets/style.css";
+import en from "../src/i18n/locales/en.json";
+import ja from "../src/i18n/locales/ja.json";
+import ko from "../src/i18n/locales/ko.json";
+import zhTW from "../src/i18n/locales/zh-TW.json";
+import zhCN from "../src/i18n/locales/zh-CN.json";
+
+const storybookI18n = createI18n({
+  legacy: false,
+  locale: "ja",
+  fallbackLocale: "en",
+  messages: { en, ja, ko, "zh-TW": zhTW, "zh-CN": zhCN },
+  globalInjection: true,
+});
 
 const router = createRouter({
   history: createMemoryHistory(),
@@ -38,6 +52,7 @@ const router = createRouter({
 
 setup((app) => {
   app.use(router);
+  app.use(storybookI18n);
   app.use(ElementPlus);
   for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
     app.component(key, component);

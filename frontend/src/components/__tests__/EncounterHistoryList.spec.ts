@@ -97,4 +97,17 @@ describe("EncounterHistoryList", () => {
     expect(wrapper.find(".el-alert--error").exists()).toBe(true);
     expect(wrapper.text()).toContain("network down");
   });
+
+  it("shows translated fallback when fetch rejects with non-Error", async () => {
+    vi.mocked(wailsApp.App.encountersByVRCUserID).mockRejectedValue("boom");
+
+    const wrapper = mount(EncounterHistoryList, {
+      props: { mode: "user", userId: "u1" },
+    });
+    await flushPromises();
+
+    expect(wrapper.find(".el-alert--error").exists()).toBe(true);
+    expect(wrapper.text()).toContain("データの取得に失敗しました。");
+    expect(wrapper.text()).not.toContain("encounterHistory.fetchFailedGeneric");
+  });
 });

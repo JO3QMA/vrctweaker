@@ -109,7 +109,7 @@ async function load(): Promise<void> {
   } catch (e) {
     rows.value = [];
     error.value =
-      e instanceof Error ? e.message : "データの取得に失敗しました。";
+      e instanceof Error ? e.message : t("encounterHistory.fetchFailedGeneric");
   } finally {
     loading.value = false;
   }
