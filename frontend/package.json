@@ -28,6 +28,11 @@
     "vue-i18n": "^11.3.2",
     "vue-router": "^5.0.4"
   },
+  "pnpm": {
+    "overrides": {
+      "typescript": "$typescript"
+    }
+  },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.45.0",

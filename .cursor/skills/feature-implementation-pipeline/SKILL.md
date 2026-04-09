@@ -78,8 +78,9 @@ docs/features の機能仕様を読み、実装計画→実装→レビュー→
   1. `cd /workspaces/vrctweaker && make fmt`
   2. `cd /workspaces/vrctweaker && make test`
   3. `cd /workspaces/vrctweaker && make lint`
+  4. 当該実装で `frontend/src` を変更していたら `cd /workspaces/vrctweaker && make test-e2e` も実行せよ。
 
-（fmt を最初に実行。golangci-lint を必ず含める。CI と同等）
+（fmt を最初に実行。golangci-lint を必ず含める。フロント変更時は Playwright E2E まで含めて CI に近づける）
 
 もしくは `generalPurpose` で `.cursor/agents/qa.md` の本文 + 上記コマンド実行指示を渡す。
 

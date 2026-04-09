@@ -34,9 +34,9 @@ description: >-
 実装完了後、以下を**順に**実行する：
 
 ```
-1. fmt   → 2. test  → 3. lint
-     ↑                    |
-     |____ エラー時、修正して 1 へ ____|
+1. fmt → 2. test → 3. lint → 4. test-e2e（frontend/src 等を変更したとき）
+     ↑                              |
+     |______ エラー時、修正して 1 へ __|
 ```
 
 **コマンド**（プロジェクトルートは `/workspaces/vrctweaker`）:
@@ -53,6 +53,10 @@ make test
 # 3. Linter
 make lint
 # または個別: golangci-lint run ./... && cd frontend && pnpm run lint && pnpm exec vue-tsc --noEmit
+
+# 4. E2E（フロントのアプリ本体を変更したセッションでは可能な範囲で必須）
+make test-e2e
+# 初回のみ: make test-e2e-install
 ```
 
 **エラー時**: 原因を修正し、**1 から再実行**。全パスまで繰り返す。
@@ -63,12 +67,13 @@ make lint
 
 ```yaml
 subagent_type: shell
-description: Run fmt, tests, and linter
+description: Run fmt, tests, linter, and E2E when frontend changed
 prompt: |
   cd /workspaces/vrctweaker で以下を順に実行せよ。
   1. make fmt
   2. make test
   3. make lint
+  4. 当セッションで frontend/src（Vue/TS アプリ本体）を変更していたら make test-e2e も実行せよ。
   エラーがあればその内容を報告せよ。
 ```
 

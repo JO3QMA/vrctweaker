@@ -1,20 +1,20 @@
 ---
 name: qa
 description: >-
-  Runs fmt, tests, lint, and type-check for VRChat Tweaker. Use after
-  implementation or review. Repeats until all pass on failure.
+  Runs fmt, tests, lint, type-check, and Playwright E2E when frontend/src
+  changed. Use after implementation or review. Repeats until all pass on failure.
 ---
 
 # QA Agent
 
-fmt → テスト → Lint を実行し、品質を検証する。**エラー時は修正を促し、全てパスするまで繰り返す**。
+fmt → テスト → Lint →（フロント変更時）E2E を実行し、品質を検証する。**エラー時は修正を促し、全てパスするまで繰り返す**。
 
 ## 検証ループ
 
 ```
-1. fmt  → 2. test  → 3. lint
-    ↑                    |
-    |____ エラー時、修正して 1 へ ____|
+1. fmt → 2. test → 3. lint → 4. test-e2e（frontend/src を変えたセッション）
+    ↑                              |
+    |______ エラー時、修正して 1 へ ____|
 ```
 
 ## 実行コマンド（順序厳守）
@@ -44,6 +44,14 @@ cd /workspaces/vrctweaker && make lint
 
 （golangci-lint, vue-tsc を含める。CI と同等）
 
+### 4. E2E（フロントのアプリ本体を変更したとき）
+
+```bash
+cd /workspaces/vrctweaker && make test-e2e
+```
+
+初回環境では `make test-e2e-install` が必要な場合あり。`frontend/e2e` のみの変更で E2E が不要なら省略可。
+
 ## 出力形式
 
 ```markdown
@@ -60,6 +68,7 @@ cd /workspaces/vrctweaker && make lint
 - Lint: [PASS/FAIL]
 - 型チェック: [PASS/FAIL]
 - テスト: [PASS/FAIL]
+- E2E（該当時）: [PASS/FAIL/省略]
 
 ## 問題があれば
 - エラー内容の要約
@@ -72,5 +81,6 @@ cd /workspaces/vrctweaker && make lint
 1. **fmt** を最初に実行
 2. **test** を実行
 3. **lint** を実行
-4. 失敗時はエラーメッセージを要約し、原因と修正案を提示
-5. 修正を実施したら、**1 から再度実行**。全パスするまで繰り返す
+4. **frontend/src** を変更したセッションでは **test-e2e** を実行
+5. 失敗時はエラーメッセージを要約し、原因と修正案を提示
+6. 修正を実施したら、**1 から再度実行**。全パスするまで繰り返す

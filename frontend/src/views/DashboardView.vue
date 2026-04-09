@@ -27,6 +27,7 @@
           <el-button
             v-for="s in statusOptions"
             :key="s.value"
+            :data-testid="s.testId"
             :class="['status-btn', s.colorClass]"
             @click="setStatusOnly(s.value)"
           >
@@ -92,21 +93,25 @@ const statusOptions = computed(() => [
     label: t("dashboard.statusJoinMe"),
     value: "join me",
     colorClass: "status-btn--join-me",
+    testId: "dashboard-quick-status-join-me",
   },
   {
     label: t("dashboard.statusActive"),
     value: "active",
     colorClass: "status-btn--active",
+    testId: "dashboard-quick-status-active",
   },
   {
     label: t("dashboard.statusAskMe"),
     value: "ask me",
     colorClass: "status-btn--ask-me",
+    testId: "dashboard-quick-status-ask-me",
   },
   {
     label: t("dashboard.statusBusy"),
     value: "busy",
     colorClass: "status-btn--busy",
+    testId: "dashboard-quick-status-busy",
   },
 ]);
 

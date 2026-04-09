@@ -32,15 +32,24 @@ test.describe("VRChat Tweaker", () => {
       await expect(
         page.getByRole("button", { name: /VRChat 起動/ }),
       ).toBeVisible();
-      await expect(page.getByRole("button", { name: "Active" })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Join Me" })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Ask Me" })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Busy" })).toBeVisible();
+      // ラベルは i18n 依存のため data-testid でクイックステータス4種を検証する
+      await expect(
+        page.getByTestId("dashboard-quick-status-join-me"),
+      ).toBeVisible();
+      await expect(
+        page.getByTestId("dashboard-quick-status-active"),
+      ).toBeVisible();
+      await expect(
+        page.getByTestId("dashboard-quick-status-ask-me"),
+      ).toBeVisible();
+      await expect(
+        page.getByTestId("dashboard-quick-status-busy"),
+      ).toBeVisible();
     });
 
     test("can click status button", async ({ page }) => {
       await page.goto("/");
-      await page.getByRole("button", { name: "Ask Me" }).click();
+      await page.getByTestId("dashboard-quick-status-ask-me").click();
       // クリック後も画面が正常であることを確認
       await expect(page.locator("h1")).toContainText("ダッシュボード");
     });
