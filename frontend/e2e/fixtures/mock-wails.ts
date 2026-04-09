@@ -121,6 +121,8 @@ export function getMockWailsInitScript(): string {
           }),
         SetFavorite: () => Promise.resolve(),
         SetStatus: () => Promise.resolve(),
+        SetStatusDescription: () => Promise.resolve(),
+        SetStatusAndDescription: () => Promise.resolve(),
         Login: () => Promise.resolve({ ok: false, error: 'E2E mock' }),
         Logout: () => Promise.resolve(),
         IsLoggedIn: () => Promise.resolve(false),

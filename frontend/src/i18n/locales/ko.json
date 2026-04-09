@@ -52,10 +52,19 @@
     "launch": "VRChat 실행",
     "launchWithProfile": "VRChat 실행 ({name})",
     "quickStatus": "빠른 상태",
-    "statusActive": "Active",
-    "statusJoinMe": "Join Me",
-    "statusAskMe": "Ask Me",
-    "statusBusy": "Busy"
+    "statusActive": "온라인",
+    "statusJoinMe": "누구나 참여",
+    "statusAskMe": "먼저 물어봐 주세요",
+    "statusBusy": "다른 일 중",
+    "customStatus": "사용자 지정 상태",
+    "customStatusPlaceholder": "상태에 표시할 짧은 문구 (비우면 지움)",
+    "applyDescription": "적용",
+    "templatesTitle": "템플릿",
+    "templateBusyWorking": "작업 중",
+    "templateJoinOpen": "자유 참가",
+    "templateAskWelcome": "참가 전 문의",
+    "statusUpdateSuccess": "상태를 업데이트했습니다",
+    "statusUpdateError": "상태 업데이트에 실패했습니다"
   },
   "launcher": {
     "title": "런처",

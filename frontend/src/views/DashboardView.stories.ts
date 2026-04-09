@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
 import DashboardView from "./DashboardView.vue";
+import { dashboardViewWailsDecorator } from "./dashboardViewStoryDecorator";
 
 const meta = {
   title: "Views/DashboardView",
@@ -8,6 +9,7 @@ const meta = {
   parameters: {
     layout: "fullscreen",
   },
+  decorators: [dashboardViewWailsDecorator()],
 } satisfies Meta<typeof DashboardView>;
 
 export default meta;

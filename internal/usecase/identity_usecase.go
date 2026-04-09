@@ -361,6 +361,16 @@ func (uc *IdentityUseCase) SetStatus(ctx context.Context, status string) error {
 	return uc.handleSessionError(uc.apiClient.SetUserStatus(ctx, vrchatapi.UserStatus(status)))
 }
 
+// SetStatusDescription updates the current user's status description (VRChat statusDescription).
+func (uc *IdentityUseCase) SetStatusDescription(ctx context.Context, description string) error {
+	return uc.handleSessionError(uc.apiClient.SetUserStatusDescription(ctx, description))
+}
+
+// SetStatusAndDescription updates status and description in a single API request.
+func (uc *IdentityUseCase) SetStatusAndDescription(ctx context.Context, status, description string) error {
+	return uc.handleSessionError(uc.apiClient.SetUserStatusAndDescription(ctx, vrchatapi.UserStatus(status), description))
+}
+
 // ErrProfileNotInCache is returned when the user is not in users_cache and the client is not logged in.
 var ErrProfileNotInCache = errors.New("user not in cache; log in to load profile from VRChat")
 

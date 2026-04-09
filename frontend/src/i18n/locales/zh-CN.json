@@ -52,10 +52,19 @@
     "launch": "启动 VRChat",
     "launchWithProfile": "启动 VRChat（{name}）",
     "quickStatus": "快速状态",
-    "statusActive": "Active",
-    "statusJoinMe": "Join Me",
-    "statusAskMe": "Ask Me",
-    "statusBusy": "Busy"
+    "statusActive": "在线",
+    "statusJoinMe": "欢迎加入",
+    "statusAskMe": "请先询问",
+    "statusBusy": "忙碌",
+    "customStatus": "自定义状态",
+    "customStatusPlaceholder": "状态显示的短句（留空则清除）",
+    "applyDescription": "应用",
+    "templatesTitle": "模板",
+    "templateBusyWorking": "工作中",
+    "templateJoinOpen": "欢迎加入",
+    "templateAskWelcome": "加入前请先联系",
+    "statusUpdateSuccess": "状态已更新",
+    "statusUpdateError": "状态更新失败"
   },
   "launcher": {
     "title": "启动器",

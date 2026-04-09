@@ -52,10 +52,19 @@
     "launch": "Launch VRChat",
     "launchWithProfile": "Launch VRChat ({name})",
     "quickStatus": "Quick status",
-    "statusActive": "Active",
+    "statusActive": "Online",
     "statusJoinMe": "Join Me",
     "statusAskMe": "Ask Me",
-    "statusBusy": "Busy"
+    "statusBusy": "Busy",
+    "customStatus": "Custom status",
+    "customStatusPlaceholder": "Short text for your status (empty to clear)",
+    "applyDescription": "Apply",
+    "templatesTitle": "Templates",
+    "templateBusyWorking": "Working",
+    "templateJoinOpen": "Open to join",
+    "templateAskWelcome": "Ask before joining",
+    "statusUpdateSuccess": "Status updated",
+    "statusUpdateError": "Failed to update status"
   },
   "launcher": {
     "title": "Launcher",

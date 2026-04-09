@@ -52,10 +52,19 @@
     "launch": "VRChat 起動",
     "launchWithProfile": "VRChat 起動 ({name})",
     "quickStatus": "クイックステータス",
-    "statusActive": "Active",
-    "statusJoinMe": "Join Me",
-    "statusAskMe": "Ask Me",
-    "statusBusy": "Busy"
+    "statusActive": "オンライン",
+    "statusJoinMe": "だれでもおいで",
+    "statusAskMe": "きいてみてね",
+    "statusBusy": "取り込み中",
+    "customStatus": "カスタムステータス",
+    "customStatusPlaceholder": "ステータスに表示する短文（空でクリア）",
+    "applyDescription": "反映",
+    "templatesTitle": "テンプレート",
+    "templateBusyWorking": "作業中",
+    "templateJoinOpen": "だれでもどうぞ",
+    "templateAskWelcome": "声かけ歓迎",
+    "statusUpdateSuccess": "ステータスを更新しました",
+    "statusUpdateError": "ステータスの更新に失敗しました"
   },
   "launcher": {
     "title": "ランチャー",

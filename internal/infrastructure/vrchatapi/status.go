@@ -37,3 +37,17 @@ func (c *Client) SetUserStatusDescription(ctx context.Context, description strin
 	defer func() { _ = resp.Body.Close() }()
 	return nil
 }
+
+// SetUserStatusAndDescription updates status and status description in a single request.
+func (c *Client) SetUserStatusAndDescription(ctx context.Context, status UserStatus, description string) error {
+	body := map[string]string{
+		"status":            string(status),
+		"statusDescription": description,
+	}
+	resp, err := c.do(ctx, http.MethodPut, "/users/me", body)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = resp.Body.Close() }()
+	return nil
+}

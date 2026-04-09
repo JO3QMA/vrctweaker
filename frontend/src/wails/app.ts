@@ -240,6 +240,8 @@ interface AppBindings {
   ): Promise<UserProfileNavigationDTO>;
   SetFavorite(vrcUserId: string, favorite: boolean): Promise<void>;
   SetStatus(status: string): Promise<void>;
+  SetStatusDescription(description: string): Promise<void>;
+  SetStatusAndDescription(status: string, description: string): Promise<void>;
   Login(
     username: string,
     password: string,
@@ -579,6 +581,18 @@ export const App = {
   },
   async setStatus(status: string): Promise<void> {
     return callApp((a) => a.SetStatus(status), undefined);
+  },
+  async setStatusDescription(description: string): Promise<void> {
+    return callApp((a) => a.SetStatusDescription(description), undefined);
+  },
+  async setStatusAndDescription(
+    status: string,
+    description: string,
+  ): Promise<void> {
+    return callApp(
+      (a) => a.SetStatusAndDescription(status, description),
+      undefined,
+    );
   },
   async login(
     username: string,
