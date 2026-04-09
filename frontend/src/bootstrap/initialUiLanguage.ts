@@ -25,7 +25,10 @@ export async function getInitialUILanguageCode(
           if (timeoutId !== undefined) clearTimeout(timeoutId);
           return c;
         },
-        () => FALLBACK_UI_LANGUAGE_CODE,
+        () => {
+          if (timeoutId !== undefined) clearTimeout(timeoutId);
+          return FALLBACK_UI_LANGUAGE_CODE;
+        },
       ),
       timeoutPromise,
     ]);
