@@ -32,15 +32,23 @@ test.describe("VRChat Tweaker", () => {
       await expect(
         page.getByRole("button", { name: /VRChat 起動/ }),
       ).toBeVisible();
-      await expect(page.getByRole("button", { name: "Active" })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Join Me" })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Ask Me" })).toBeVisible();
-      await expect(page.getByRole("button", { name: "Busy" })).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "アクティブ" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "参加歓迎" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "相談して" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "取り込み中" }),
+      ).toBeVisible();
     });
 
     test("can click status button", async ({ page }) => {
       await page.goto("/");
-      await page.getByRole("button", { name: "Ask Me" }).click();
+      await page.getByRole("button", { name: "相談して" }).click();
       // クリック後も画面が正常であることを確認
       await expect(page.locator("h1")).toContainText("ダッシュボード");
     });
