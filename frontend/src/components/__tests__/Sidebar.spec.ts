@@ -27,8 +27,8 @@ describe("Sidebar", () => {
         plugins: [router],
       },
     });
-    const links = wrapper.findAll(".el-menu-item");
-    expect(links.length).toBeGreaterThanOrEqual(7); // 7 main + settings
+    const links = wrapper.findAll(".sidebar-item");
+    expect(links.length).toBe(8); // 7 main + settings
   });
 
   it("has dashboard link", () => {

@@ -48,6 +48,7 @@
     "playDurationJoin": " "
   },
   "sidebar": {
+    "a11yLabel": "主导航",
     "dashboard": "仪表板",
     "launcher": "启动器",
     "gallery": "图库",

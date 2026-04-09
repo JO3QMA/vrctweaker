@@ -1,41 +1,48 @@
 <template>
-  <nav class="sidebar">
-    <el-menu
-      :default-active="mainMenuActive"
-      class="sidebar-nav"
-      @select="navigateFromMenu"
-    >
-      <el-menu-item
+  <nav class="sidebar" :aria-label="t('sidebar.a11yLabel')">
+    <div class="sidebar-main" role="menubar">
+      <router-link
         v-for="item in menuItems"
         :key="item.path"
-        :index="item.path"
+        v-slot="{ href, navigate, isActive }"
+        :to="item.path"
+        custom
       >
-        <span class="sidebar-icon">{{ item.icon }}</span>
-        <template #title>{{ item.label }}</template>
-      </el-menu-item>
-    </el-menu>
-    <div class="sidebar-footer">
-      <el-menu
-        :default-active="footerMenuActive"
-        class="sidebar-nav"
-        @select="navigateFromMenu"
-      >
-        <el-menu-item index="/settings">
-          <span class="sidebar-icon">⚙️</span>
-          <template #title>{{ t("sidebar.settings") }}</template>
-        </el-menu-item>
-      </el-menu>
+        <a
+          :href="href"
+          role="menuitem"
+          class="sidebar-item"
+          :class="{ 'sidebar-item--active': isActive }"
+          :aria-current="isActive ? 'page' : undefined"
+          @click="(e) => navigate(e)"
+        >
+          <span class="sidebar-icon" aria-hidden="true">{{ item.icon }}</span>
+          <span class="sidebar-label">{{ item.label }}</span>
+        </a>
+      </router-link>
+    </div>
+    <div class="sidebar-footer" role="menubar">
+      <router-link v-slot="{ href, navigate, isActive }" to="/settings" custom>
+        <a
+          :href="href"
+          role="menuitem"
+          class="sidebar-item"
+          :class="{ 'sidebar-item--active': isActive }"
+          :aria-current="isActive ? 'page' : undefined"
+          @click="(e) => navigate(e)"
+        >
+          <span class="sidebar-icon" aria-hidden="true">⚙️</span>
+          <span class="sidebar-label">{{ t("sidebar.settings") }}</span>
+        </a>
+      </router-link>
     </div>
   </nav>
 </template>
 
 <script setup lang="ts">
 import { computed } from "vue";
-import { isNavigationFailure, useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 
-const route = useRoute();
-const router = useRouter();
 const { t } = useI18n();
 
 const menuItems = computed(() => [
@@ -47,23 +54,6 @@ const menuItems = computed(() => [
   { path: "/automation", icon: "🤖", label: t("sidebar.automation") },
   { path: "/config", icon: "📝", label: t("sidebar.config") },
 ]);
-
-/** メイン項目に無いパス（設定・ユーザー詳細等）を default-active に渡すと ElMenu 内部が壊れる */
-const mainMenuActive = computed(() => {
-  const p = route.path;
-  return menuItems.value.some((item) => item.path === p) ? p : "";
-});
-
-const footerMenuActive = computed(() =>
-  route.path === "/settings" ? "/settings" : "",
-);
-
-function navigateFromMenu(index: string) {
-  if (!index) return;
-  void router.push(index).catch((err) => {
-    if (!isNavigationFailure(err)) console.error(err);
-  });
-}
 </script>
 
 <style scoped>
@@ -76,34 +66,51 @@ function navigateFromMenu(index: string) {
   flex-shrink: 0;
 }
 
-.sidebar-nav {
-  background: transparent;
-  border-right: none !important;
+.sidebar-main {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
-.sidebar-nav :deep(.el-menu-item) {
-  color: var(--text-secondary);
+.sidebar-item {
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
   height: 42px;
+  padding: 0 1rem 0 calc(1rem - 3px);
+  margin: 0;
+  color: var(--text-secondary);
+  text-decoration: none;
+  cursor: pointer;
+  border-left: 3px solid transparent;
   line-height: 42px;
 }
 
-.sidebar-nav :deep(.el-menu-item:hover),
-.sidebar-nav :deep(.el-menu-item.is-active) {
+.sidebar-item:hover,
+.sidebar-item--active {
   background: var(--bg-tertiary) !important;
   color: var(--text-primary) !important;
 }
 
-.sidebar-nav :deep(.el-menu-item.is-active) {
-  border-left: 3px solid var(--accent);
+.sidebar-item--active {
+  border-left-color: var(--accent);
 }
 
 .sidebar-footer {
   margin-top: auto;
   border-top: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .sidebar-icon {
   margin-right: 0.5rem;
   font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.sidebar-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

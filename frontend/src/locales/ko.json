@@ -48,6 +48,7 @@
     "playDurationJoin": " "
   },
   "sidebar": {
+    "a11yLabel": "주 탐색",
     "dashboard": "대시보드",
     "launcher": "런처",
     "gallery": "갤러리",

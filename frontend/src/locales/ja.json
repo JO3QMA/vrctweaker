@@ -48,6 +48,7 @@
     "playDurationJoin": ""
   },
   "sidebar": {
+    "a11yLabel": "メインナビゲーション",
     "dashboard": "ダッシュボード",
     "launcher": "ランチャー",
     "gallery": "ギャラリー",

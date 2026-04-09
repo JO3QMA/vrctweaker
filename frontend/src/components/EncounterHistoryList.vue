@@ -50,9 +50,16 @@
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { App, type UserEncounterDTO } from "../wails/app";
-import { formatEncounteredAt } from "../utils/formatEncounteredAt";
 
-const { t } = useI18n();
+const { locale, t } = useI18n();
+
+function formatEncounteredAt(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString(locale.value);
+  } catch {
+    return iso;
+  }
+}
 
 const props = withDefaults(
   defineProps<{

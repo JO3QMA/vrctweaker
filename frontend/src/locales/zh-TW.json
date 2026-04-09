@@ -48,6 +48,7 @@
     "playDurationJoin": " "
   },
   "sidebar": {
+    "a11yLabel": "主要導覽",
     "dashboard": "儀表板",
     "launcher": "啟動器",
     "gallery": "圖庫",

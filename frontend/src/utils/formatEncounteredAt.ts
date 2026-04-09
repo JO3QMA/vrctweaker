@@ -1,7 +1,8 @@
-/** ISO 時刻文字列を日本語ロケールの表示用文字列にする（遭遇ログ等）。 */
-export function formatEncounteredAt(iso: string): string {
+/** ISO 時刻文字列を表示用文字列にする。locale を省略すると実行環境の既定ロケールを使う。 */
+export function formatEncounteredAt(iso: string, locale?: string): string {
   try {
-    return new Date(iso).toLocaleString("ja-JP");
+    const d = new Date(iso);
+    return locale !== undefined ? d.toLocaleString(locale) : d.toLocaleString();
   } catch {
     return iso;
   }

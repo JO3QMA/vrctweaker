@@ -11,7 +11,7 @@
           <div class="router-outlet-host">
             <!-- デフォルト描画: v-slot + <transition mode="out-in"> は WebView で遅延ルートが
                  真っ白になることがあるため使わない（Vue Router が渡す Component は VNode 扱い）。 -->
-            <router-view />
+            <router-view :key="route.fullPath" />
           </div>
         </main>
       </div>

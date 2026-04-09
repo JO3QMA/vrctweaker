@@ -48,6 +48,7 @@
     "playDurationJoin": " "
   },
   "sidebar": {
+    "a11yLabel": "Main navigation",
     "dashboard": "Dashboard",
     "launcher": "Launcher",
     "gallery": "Gallery",
