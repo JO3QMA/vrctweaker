@@ -150,12 +150,17 @@ function formatError(e: unknown, fallback: string): string {
     return e.message;
   }
   return fallback;
+function formatError(e: unknown, fallback: string): string {
+  if (e instanceof Error && e.message) {
+    return e.message;
+  }
+  if (typeof e === "string" && e) return e;
+  if (e && typeof e === "object" && "message" in e) {
+    const m = (e as { message: unknown }).message;
+    if (typeof m === "string" && m) return m;
+  }
+  return fallback;
 }
-
-onMounted(async () => {
-  const profiles = await App.launchProfiles();
-  defaultProfile.value =
-    profiles.find((p) => p.isDefault) ?? profiles[0] ?? null;
 });
 
 async function launch() {
