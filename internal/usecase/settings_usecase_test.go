@@ -213,6 +213,9 @@ func TestSettingsUseCase_GetUILanguage_corruptStored(t *testing.T) {
 }
 
 func TestSettingsUseCase_GetUILanguage_firstRun_LANG(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("LANG env var is not used for locale detection on Windows")
+	}
 	t.Setenv("LC_ALL", "")
 	t.Setenv("LC_MESSAGES", "")
 	t.Setenv("LANG", "ja_JP.UTF-8")
