@@ -48,7 +48,8 @@ async function initLocaleFromBackend(): Promise<void> {
     }
     setLanguage(isAppLocale(lang) ? lang : "en");
   } catch {
-    setLanguage("ja");
+    // Match i18n fallbackLocale and invalid-language branches above.
+    setLanguage("en");
   }
 }
 
