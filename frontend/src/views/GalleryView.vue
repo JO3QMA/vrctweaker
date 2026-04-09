@@ -258,7 +258,7 @@ function escapeSvgText(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function missingThumbDataUrl(): string {
+const missingThumbDataUrl = computed(() => {
   const label = escapeSvgText(t("gallery.noImage"));
   return (
     "data:image/svg+xml," +
@@ -266,7 +266,7 @@ function missingThumbDataUrl(): string {
       `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="90" viewBox="0 0 120 90"><rect fill="#333" width="120" height="90"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#666" font-size="12">${label}</text></svg>`,
     )
   );
-}
+});
 
 const transparentPixelDataUrl =
   "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
@@ -597,7 +597,7 @@ function thumbnailSrc(item: ScreenshotDTO): string {
 
 function onThumbnailError(e: Event): void {
   const img = e.target as HTMLImageElement;
-  img.src = missingThumbDataUrl();
+  img.src = missingThumbDataUrl.value;
 }
 
 function onGridScroll(): void {
@@ -658,13 +658,13 @@ async function syncThumbnailsForVisible(): Promise<void> {
         if (gen !== thumbnailFetchGeneration) return;
         thumbnailUrls.value = {
           ...thumbnailUrls.value,
-          [id]: url && url.length > 0 ? url : missingThumbDataUrl(),
+          [id]: url && url.length > 0 ? url : missingThumbDataUrl.value,
         };
       } catch {
         if (gen !== thumbnailFetchGeneration) return;
         thumbnailUrls.value = {
           ...thumbnailUrls.value,
-          [id]: missingThumbDataUrl(),
+          [id]: missingThumbDataUrl.value,
         };
       }
     }

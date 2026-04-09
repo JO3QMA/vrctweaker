@@ -281,6 +281,7 @@
     "titlePickLogDirShort": "選擇 VRChat 日誌資料夾",
     "titleOpenLogFolder": "在檔案總管開啟日誌資料夾",
     "errProfile": "無法取得個人資料",
+    "errLanguageSave": "無法儲存顯示語言",
     "errLogin": "登入失敗",
     "errLogout": "登出失敗",
     "errFriends": "無法更新好友列表",

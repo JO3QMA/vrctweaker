@@ -281,6 +281,7 @@
     "titlePickLogDirShort": "Choose VRChat log folder (folder containing output_log*.txt)",
     "titleOpenLogFolder": "Open VRChat log folder in file manager",
     "errProfile": "Failed to load profile",
+    "errLanguageSave": "Could not save display language",
     "errLogin": "Login failed",
     "errLogout": "Logout failed",
     "errFriends": "Failed to refresh friends list",

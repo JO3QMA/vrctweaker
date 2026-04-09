@@ -281,6 +281,7 @@
     "titlePickLogDirShort": "VRChat 로그 폴더 선택",
     "titleOpenLogFolder": "파일 관리자에서 로그 폴더 열기",
     "errProfile": "프로필을 가져오지 못했습니다",
+    "errLanguageSave": "표시 언어를 저장하지 못했습니다",
     "errLogin": "로그인 실패",
     "errLogout": "로그아웃 실패",
     "errFriends": "친구 목록 새로 고침 실패",

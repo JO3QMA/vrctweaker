@@ -281,6 +281,7 @@
     "titlePickLogDirShort": "VRChat ログフォルダを選択（output_log*.txt があるフォルダ）",
     "titleOpenLogFolder": "VRChat のログフォルダをファイルマネージャで開く",
     "errProfile": "プロフィールの取得に失敗しました",
+    "errLanguageSave": "表示言語を保存できませんでした",
     "errLogin": "ログインに失敗しました",
     "errLogout": "ログアウトに失敗しました",
     "errFriends": "フレンド一覧の更新に失敗しました",

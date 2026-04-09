@@ -3,6 +3,7 @@ import type { ScreenshotDTO } from "../../wails/app";
 import {
   buildGalleryVirtualRows,
   dayCollapseKey,
+  galleryLabelsFromLocale,
   monthCollapseKey,
   partitionScreenshotsByLocalDay,
   yearCollapseKey,
@@ -18,6 +19,18 @@ function shot(id: string, takenAt?: string): ScreenshotDTO {
     fileSizeBytes: 1,
   };
 }
+
+describe("galleryLabelsFromLocale", () => {
+  it("formats year, month, and day for a fixed locale", () => {
+    const labels = galleryLabelsFromLocale("en-US", "Unknown date");
+    expect(labels.formatYear(2024)).toMatch(/2024/);
+    expect(labels.formatMonth(2024, 3)).toMatch(/2024/);
+    expect(labels.formatMonth(2024, 3)).toMatch(/March/i);
+    expect(labels.formatDay(2024, 3, 15)).toMatch(/2024/);
+    expect(labels.formatDay(2024, 3, 15)).toMatch(/15/);
+    expect(labels.unknownDate).toBe("Unknown date");
+  });
+});
 
 describe("partitionScreenshotsByLocalDay", () => {
   it("puts items without takenAt into unknown", () => {

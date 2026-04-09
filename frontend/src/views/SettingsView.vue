@@ -434,8 +434,9 @@ async function onLanguageChange(v: string) {
   if (!isAppLocale(v)) return;
   try {
     await App.setLanguage(v);
-  } catch {
-    /* ignore */
+  } catch (e) {
+    ElMessage.error(formatBackendError(e, t("settings.errLanguageSave")));
+    return;
   }
   setLanguage(v);
 }

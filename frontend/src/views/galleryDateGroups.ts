@@ -83,22 +83,20 @@ export function galleryLabelsFromLocale(
   calendarLocale: string,
   unknownDate: string,
 ): GalleryDateLabels {
+  const yearFmt = new Intl.DateTimeFormat(calendarLocale, { year: "numeric" });
+  const monthFmt = new Intl.DateTimeFormat(calendarLocale, {
+    year: "numeric",
+    month: "long",
+  });
+  const dayFmt = new Intl.DateTimeFormat(calendarLocale, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
   return {
-    formatYear: (y) =>
-      new Intl.DateTimeFormat(calendarLocale, { year: "numeric" }).format(
-        new Date(y, 5, 15),
-      ),
-    formatMonth: (y, m) =>
-      new Intl.DateTimeFormat(calendarLocale, {
-        year: "numeric",
-        month: "long",
-      }).format(new Date(y, m - 1, 1)),
-    formatDay: (y, m, d) =>
-      new Intl.DateTimeFormat(calendarLocale, {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }).format(new Date(y, m - 1, d)),
+    formatYear: (y) => yearFmt.format(new Date(y, 5, 15)),
+    formatMonth: (y, m) => monthFmt.format(new Date(y, m - 1, 1)),
+    formatDay: (y, m, d) => dayFmt.format(new Date(y, m - 1, d)),
     unknownDate,
   };
 }
