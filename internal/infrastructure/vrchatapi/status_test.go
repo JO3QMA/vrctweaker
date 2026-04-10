@@ -9,10 +9,12 @@ import (
 	"testing"
 )
 
+const testStatusUserID = "usr_status_test"
+
 func TestClient_SetUserStatus_requestBody(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPut || r.URL.Path != "/api/1/users/me" {
+		if r.Method != http.MethodPut || r.URL.Path != "/api/1/users/"+testStatusUserID {
 			http.NotFound(w, r)
 			return
 		}
@@ -34,7 +36,7 @@ func TestClient_SetUserStatus_requestBody(t *testing.T) {
 	c := NewClient("")
 	c.apiRoot = srv.URL + "/api/1"
 	c.SetAuthToken("tok")
-	if err := c.SetUserStatus(context.Background(), StatusBusy); err != nil {
+	if err := c.SetUserStatus(context.Background(), testStatusUserID, StatusBusy); err != nil {
 		t.Fatalf("SetUserStatus: %v", err)
 	}
 }
@@ -42,7 +44,7 @@ func TestClient_SetUserStatus_requestBody(t *testing.T) {
 func TestClient_SetUserStatusDescription_requestBody(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPut || r.URL.Path != "/api/1/users/me" {
+		if r.Method != http.MethodPut || r.URL.Path != "/api/1/users/"+testStatusUserID {
 			http.NotFound(w, r)
 			return
 		}
@@ -64,7 +66,7 @@ func TestClient_SetUserStatusDescription_requestBody(t *testing.T) {
 	c := NewClient("")
 	c.apiRoot = srv.URL + "/api/1"
 	c.SetAuthToken("tok")
-	if err := c.SetUserStatusDescription(context.Background(), "working"); err != nil {
+	if err := c.SetUserStatusDescription(context.Background(), testStatusUserID, "working"); err != nil {
 		t.Fatalf("SetUserStatusDescription: %v", err)
 	}
 }
@@ -72,7 +74,7 @@ func TestClient_SetUserStatusDescription_requestBody(t *testing.T) {
 func TestClient_SetUserStatusAndDescription_requestBody(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPut || r.URL.Path != "/api/1/users/me" {
+		if r.Method != http.MethodPut || r.URL.Path != "/api/1/users/"+testStatusUserID {
 			http.NotFound(w, r)
 			return
 		}
@@ -94,7 +96,7 @@ func TestClient_SetUserStatusAndDescription_requestBody(t *testing.T) {
 	c := NewClient("")
 	c.apiRoot = srv.URL + "/api/1"
 	c.SetAuthToken("tok")
-	if err := c.SetUserStatusAndDescription(context.Background(), StatusJoinMe, "イベント中"); err != nil {
+	if err := c.SetUserStatusAndDescription(context.Background(), testStatusUserID, StatusJoinMe, "イベント中"); err != nil {
 		t.Fatalf("SetUserStatusAndDescription: %v", err)
 	}
 }

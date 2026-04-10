@@ -35,6 +35,13 @@ vi.mock("../../wails/app", async (importOriginal) => {
 
 const emptyProfiles: LaunchProfileDTO[] = [];
 
+const defaultLaunchProfile: LaunchProfileDTO = {
+  id: "p-default",
+  name: "Default",
+  arguments: "",
+  isDefault: true,
+};
+
 describe("DashboardView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -43,6 +50,32 @@ describe("DashboardView", () => {
     mockSetStatus.mockResolvedValue(undefined);
     mockSetStatusDescription.mockResolvedValue(undefined);
     mockSetStatusAndDescription.mockResolvedValue(undefined);
+  });
+
+  it("calls App.launchProfiles on mount", async () => {
+    mount(DashboardView);
+    await flushPromises();
+
+    expect(mockLaunchProfiles).toHaveBeenCalledTimes(1);
+  });
+
+  it("disables the launch button when launchProfiles returns no profiles", async () => {
+    const wrapper = mount(DashboardView);
+    await flushPromises();
+
+    const launchBtn = wrapper.find(".launch-btn");
+    expect((launchBtn.element as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("enables the launch button when launchProfiles returns a default profile", async () => {
+    mockLaunchProfiles.mockResolvedValue([defaultLaunchProfile]);
+    const wrapper = mount(DashboardView);
+    await flushPromises();
+
+    expect(mockLaunchProfiles).toHaveBeenCalledTimes(1);
+    const launchBtn = wrapper.find(".launch-btn");
+    expect((launchBtn.element as HTMLButtonElement).disabled).toBe(false);
+    expect(launchBtn.text()).toContain("Default");
   });
 
   it("renders page title and quick status buttons", async () => {

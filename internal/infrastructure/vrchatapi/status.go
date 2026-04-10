@@ -2,7 +2,9 @@ package vrchatapi
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"net/url"
 )
 
 // UserStatus represents VRChat user status (Join Me, Ask Me, Busy, etc.).
@@ -16,10 +18,21 @@ const (
 	StatusOffline UserStatus = "offline"
 )
 
-// SetUserStatus updates the current user's status.
-func (c *Client) SetUserStatus(ctx context.Context, status UserStatus) error {
+func putUserPath(userID string) (string, error) {
+	if userID == "" {
+		return "", fmt.Errorf("update user: empty user id")
+	}
+	return "/users/" + url.PathEscape(userID), nil
+}
+
+// SetUserStatus updates the user's status (PUT /users/{userId}).
+func (c *Client) SetUserStatus(ctx context.Context, userID string, status UserStatus) error {
+	path, err := putUserPath(userID)
+	if err != nil {
+		return err
+	}
 	body := map[string]string{"status": string(status)}
-	resp, err := c.do(ctx, http.MethodPut, "/users/me", body)
+	resp, err := c.do(ctx, http.MethodPut, path, body)
 	if err != nil {
 		return err
 	}
@@ -27,10 +40,14 @@ func (c *Client) SetUserStatus(ctx context.Context, status UserStatus) error {
 	return nil
 }
 
-// SetUserStatusDescription updates the current user's status description (e.g., world name).
-func (c *Client) SetUserStatusDescription(ctx context.Context, description string) error {
+// SetUserStatusDescription updates the user's status description (e.g., world name).
+func (c *Client) SetUserStatusDescription(ctx context.Context, userID string, description string) error {
+	path, err := putUserPath(userID)
+	if err != nil {
+		return err
+	}
 	body := map[string]string{"statusDescription": description}
-	resp, err := c.do(ctx, http.MethodPut, "/users/me", body)
+	resp, err := c.do(ctx, http.MethodPut, path, body)
 	if err != nil {
 		return err
 	}
@@ -39,12 +56,16 @@ func (c *Client) SetUserStatusDescription(ctx context.Context, description strin
 }
 
 // SetUserStatusAndDescription updates status and status description in a single request.
-func (c *Client) SetUserStatusAndDescription(ctx context.Context, status UserStatus, description string) error {
+func (c *Client) SetUserStatusAndDescription(ctx context.Context, userID string, status UserStatus, description string) error {
+	path, err := putUserPath(userID)
+	if err != nil {
+		return err
+	}
 	body := map[string]string{
 		"status":            string(status),
 		"statusDescription": description,
 	}
-	resp, err := c.do(ctx, http.MethodPut, "/users/me", body)
+	resp, err := c.do(ctx, http.MethodPut, path, body)
 	if err != nil {
 		return err
 	}
