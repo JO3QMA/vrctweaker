@@ -10,6 +10,8 @@ description: >-
 
 docs/features の機能仕様を読み、実装計画→実装→レビュー→QA のパイプラインを自動化する。
 
+**オーケストレーションの前提**: 本パイプラインの進行・Implementer への指示・再試行の判断は **Composer** 上で行う（相談だけ Sonnet / Codex に切り出す場合は [advisor-workflow](../advisor-workflow/SKILL.md)）。
+
 ## パイプライン概要
 
 1. **Plan**: 機能ドキュメントから実装計画を作成（タスクにテスト観点を含める）
@@ -61,6 +63,14 @@ docs/features の機能仕様を読み、実装計画→実装→レビュー→
 
 **frontend の UI を変更・抽象化する場合**: `.cursor/rules/storybook-wails-ui.mdc` に従い **Storybook（`*.stories.ts` 等）も更新**する。
 
+#### Build 中のアドバイザー相談（任意・推奨条件）
+
+次に該当したら **Build を一時停止**し、[advisor-workflow](../advisor-workflow/SKILL.md) に従って **Sonnet または Codex**（Chat または `mcp_task`）で相談する。返答を **Implementer 向け `prompt` に追記**してから実装を再開する。
+
+- アーキテクチャ分岐・依存関係の解釈が割れる
+- 仕様ドキュメントと既存コードの整合が取れず方針が定まらない
+- 大規模リファクタ直前でリスク整理が必要
+
 ### Step 3: Reviewer（レビュー）
 
 1. `.cursor/agents/reviewer.md` の本文を取得
@@ -89,6 +99,8 @@ docs/features の機能仕様を読み、実装計画→実装→レビュー→
 2. Implementer に修正を依頼する（修正依頼をプロンプトに含める）
 3. 修正後、**1. make fmt から再度 QA を実行**する
 4. 全パスするまで 2→3 を繰り返す
+
+**QA が同一機能で連続失敗**し 2 回目以降の修正ループに入ったら、その前に [advisor-workflow](../advisor-workflow/SKILL.md) で **Sonnet / Codex に相談**し、Recommendation を Implementer 依頼に含めることを推奨する（相談回数は同 Skill の上限に従う）。
 
 ## 並列と順序
 

@@ -54,8 +54,13 @@ GitHub Issue の URL・番号、または `docs/ai_dlc/issues/` 等の Issue ド
 ## 手動で各 Agent を使う
 
 - **計画だけ欲しい**: 「planner サブエージェントで ui-gallery-view の実装計画を立てて」
+- **途中の判断が欲しい**: 「advisor 用に状況を要約して Sonnet または Codex で相談して」（`.cursor/agents/advisor.md` の出力形式）
 - **レビューだけ**: 「reviewer サブエージェントで変更をレビューして」
 - **QA だけ**: 「qa サブエージェントでテストとlintを実行して」
+
+## Composer と相談モデル（アドバイザー型）
+
+実装の**主戦場は Composer**。アーキテクチャ分岐・曖昧な受け入れ条件・QA の連続失敗などで詰まったときだけ、**別枠で Claude Sonnet または Codex**（Chat または SubAgent）に短く相談し、要約を Composer に戻す。手順・回数上限は **advisor-workflow** Skill（`.cursor/skills/advisor-workflow/SKILL.md`）に従う。
 
 ## プロジェクトルール
 
@@ -69,5 +74,6 @@ GitHub Issue の URL・番号、または `docs/ai_dlc/issues/` 等の Issue ド
 ## スキル
 
 - **issue-to-pr-workflow**: Issue 起点でブランチ〜実装〜検証〜レビュー〜PR までを順に制御（Commands を束ねるオーケストレーター）
+- **advisor-workflow**: Composer をメインに、詰まりどころだけ Sonnet / Codex で短い相談を挟む（`.cursor/skills/advisor-workflow/SKILL.md`）
 - **tdd-workflow**: テスト駆動開発と fmt→test→lint→（フロント時）E2E の検証ループ。コード変更時に適用。
 - **element-plus-frontend**: Element Plus による UI 実装・Vitest/Playwright セレクタ・公式ドキュメント参照（`.cursor/skills/element-plus-frontend/SKILL.md`）
