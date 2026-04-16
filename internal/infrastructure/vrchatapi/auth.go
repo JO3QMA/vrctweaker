@@ -11,7 +11,9 @@ type VRChatAPIClient interface {
 	GetCurrentUser(ctx context.Context) (*CurrentUserProfile, error)
 	GetFriends(ctx context.Context) ([]Friend, error)
 	GetUser(ctx context.Context, userID string) (*Friend, error)
-	SetUserStatus(ctx context.Context, status UserStatus) error
+	SetUserStatus(ctx context.Context, userID string, status UserStatus) error
+	SetUserStatusDescription(ctx context.Context, userID string, description string) error
+	SetUserStatusAndDescription(ctx context.Context, userID string, status UserStatus, description string) error
 }
 
 // CredentialStore defines storage for auth tokens (OS keyring integration).

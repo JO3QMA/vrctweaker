@@ -8,6 +8,7 @@ import (
 	"log"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"vrchat-tweaker/internal/domain/identity"
 	"vrchat-tweaker/internal/domain/settings"
@@ -356,9 +357,59 @@ func (uc *IdentityUseCase) RefreshFriends(ctx context.Context) error {
 	return nil
 }
 
+// maxVRChatStatusDescriptionRunes is the in-game limit for custom status text (VRChat UI / community documentation).
+const maxVRChatStatusDescriptionRunes = 32
+
+func validateVRChatStatusDescription(description string) error {
+	if utf8.RuneCountInString(description) <= maxVRChatStatusDescriptionRunes {
+		return nil
+	}
+	return fmt.Errorf("status description must be at most %d characters", maxVRChatStatusDescriptionRunes)
+}
+
 // SetStatus changes the current user's status via API.
 func (uc *IdentityUseCase) SetStatus(ctx context.Context, status string) error {
-	return uc.handleSessionError(uc.apiClient.SetUserStatus(ctx, vrchatapi.UserStatus(status)))
+	u, err := uc.GetCurrentUser(ctx, false)
+	if err != nil {
+		return err
+	}
+	id := strings.TrimSpace(u.ID)
+	if id == "" {
+		return fmt.Errorf("current user id unavailable")
+	}
+	return uc.handleSessionError(uc.apiClient.SetUserStatus(ctx, id, vrchatapi.UserStatus(status)))
+}
+
+// SetStatusDescription updates the current user's status description (VRChat statusDescription).
+func (uc *IdentityUseCase) SetStatusDescription(ctx context.Context, description string) error {
+	if err := validateVRChatStatusDescription(description); err != nil {
+		return err
+	}
+	u, err := uc.GetCurrentUser(ctx, false)
+	if err != nil {
+		return err
+	}
+	id := strings.TrimSpace(u.ID)
+	if id == "" {
+		return fmt.Errorf("current user id unavailable")
+	}
+	return uc.handleSessionError(uc.apiClient.SetUserStatusDescription(ctx, id, description))
+}
+
+// SetStatusAndDescription updates status and description in a single API request.
+func (uc *IdentityUseCase) SetStatusAndDescription(ctx context.Context, status, description string) error {
+	if err := validateVRChatStatusDescription(description); err != nil {
+		return err
+	}
+	u, err := uc.GetCurrentUser(ctx, false)
+	if err != nil {
+		return err
+	}
+	id := strings.TrimSpace(u.ID)
+	if id == "" {
+		return fmt.Errorf("current user id unavailable")
+	}
+	return uc.handleSessionError(uc.apiClient.SetUserStatusAndDescription(ctx, id, vrchatapi.UserStatus(status), description))
 }
 
 // ErrProfileNotInCache is returned when the user is not in users_cache and the client is not logged in.

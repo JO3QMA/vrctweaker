@@ -1163,6 +1163,16 @@ func (a *App) SetStatus(status string) error {
 	return a.identity.SetStatus(a.ctx, status)
 }
 
+// SetStatusDescription updates the current user's VRChat status description text.
+func (a *App) SetStatusDescription(description string) error {
+	return a.identity.SetStatusDescription(a.ctx, description)
+}
+
+// SetStatusAndDescription updates VRChat status and description in one request.
+func (a *App) SetStatusAndDescription(status, description string) error {
+	return a.identity.SetStatusAndDescription(a.ctx, status, description)
+}
+
 // --- Automation bindings ---
 
 // ListAutomationRules returns all automation rules.

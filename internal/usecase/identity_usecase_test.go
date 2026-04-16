@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -146,6 +147,13 @@ type mockAPIClient struct {
 	getUserErr          error
 	getUserCalls        int
 	setStatusErr        error
+	setStatusDescErr    error
+	setStatusDescCalls  int
+	lastStatusDesc      string
+	setBothErr          error
+	setBothCalls        int
+	lastBothStatus      vrchatapi.UserStatus
+	lastBothDescription string
 }
 
 func (m *mockAPIClient) Login(_ context.Context, _, _, _ string) (string, error) {
@@ -181,8 +189,21 @@ func (m *mockAPIClient) GetUser(_ context.Context, _ string) (*vrchatapi.Friend,
 	return m.getUser, nil
 }
 
-func (m *mockAPIClient) SetUserStatus(_ context.Context, _ vrchatapi.UserStatus) error {
+func (m *mockAPIClient) SetUserStatus(_ context.Context, _ string, _ vrchatapi.UserStatus) error {
 	return m.setStatusErr
+}
+
+func (m *mockAPIClient) SetUserStatusDescription(_ context.Context, _ string, description string) error {
+	m.setStatusDescCalls++
+	m.lastStatusDesc = description
+	return m.setStatusDescErr
+}
+
+func (m *mockAPIClient) SetUserStatusAndDescription(_ context.Context, _ string, status vrchatapi.UserStatus, description string) error {
+	m.setBothCalls++
+	m.lastBothStatus = status
+	m.lastBothDescription = description
+	return m.setBothErr
 }
 
 func TestIdentityUseCase_IsLoggedIn(t *testing.T) {
@@ -643,11 +664,20 @@ func TestIdentityUseCase_SetStatus(t *testing.T) {
 		if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, blob); err != nil {
 			t.Fatal(err)
 		}
+		token := "t-status"
+		repo := &mockUserCacheRepo{
+			getSelfRow: &identity.UserCache{
+				VRCUserID:          "usr_status",
+				SessionFingerprint: identity.AuthTokenFingerprint(token),
+				LastUpdated:        time.Now(),
+				UserKind:           identity.UserKindSelf,
+			},
+		}
 		apiClient := &mockAPIClient{
-			token:        "t-status",
+			token:        token,
 			setStatusErr: fmt.Errorf("%w: PUT /status", vrchatapi.ErrSessionExpired),
 		}
-		uc := NewIdentityUseCase(&mockUserCacheRepo{}, apiClient, credStore, settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
 		err := uc.SetStatus(ctx, "busy")
 		if !errors.Is(err, vrchatapi.ErrSessionExpired) {
 			t.Fatalf("SetStatus: want ErrSessionExpired, got %v", err)
@@ -658,6 +688,168 @@ func TestIdentityUseCase_SetStatus(t *testing.T) {
 		_, gerr := credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
 		if gerr == nil {
 			t.Error("cred store should be empty after session expired")
+		}
+	})
+}
+
+func TestIdentityUseCase_SetStatusDescription(t *testing.T) {
+	ctx := context.Background()
+	settingsRepo := newMockSettingsRepo()
+	blob := vrchatapi.WrappedBlobMagic + "blob"
+
+	t.Run("session_expired_clears_token_and_cred_store", func(t *testing.T) {
+		credStore := vrchatapi.NewStubCredentialStore()
+		if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, blob); err != nil {
+			t.Fatal(err)
+		}
+		token := "t-desc"
+		repo := &mockUserCacheRepo{
+			getSelfRow: &identity.UserCache{
+				VRCUserID:          "usr_desc",
+				SessionFingerprint: identity.AuthTokenFingerprint(token),
+				LastUpdated:        time.Now(),
+				UserKind:           identity.UserKindSelf,
+			},
+		}
+		apiClient := &mockAPIClient{
+			token:            token,
+			setStatusDescErr: fmt.Errorf("%w: PUT /users/usr_desc", vrchatapi.ErrSessionExpired),
+		}
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		err := uc.SetStatusDescription(ctx, "hello")
+		if !errors.Is(err, vrchatapi.ErrSessionExpired) {
+			t.Fatalf("SetStatusDescription: want ErrSessionExpired, got %v", err)
+		}
+		if apiClient.token != "" {
+			t.Errorf("token cleared want empty, got %q", apiClient.token)
+		}
+		_, gerr := credStore.Get(vrchatapi.CredentialService, vrchatapi.CredentialUser)
+		if gerr == nil {
+			t.Error("cred store should be empty after session expired")
+		}
+	})
+
+	t.Run("success_calls_api", func(t *testing.T) {
+		token := "tok"
+		repo := &mockUserCacheRepo{
+			getSelfRow: &identity.UserCache{
+				VRCUserID:          "usr_ok",
+				SessionFingerprint: identity.AuthTokenFingerprint(token),
+				LastUpdated:        time.Now(),
+				UserKind:           identity.UserKindSelf,
+			},
+		}
+		apiClient := &mockAPIClient{token: token}
+		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+		if err := uc.SetStatusDescription(ctx, "作業中"); err != nil {
+			t.Fatalf("SetStatusDescription: %v", err)
+		}
+		if apiClient.setStatusDescCalls != 1 || apiClient.lastStatusDesc != "作業中" {
+			t.Fatalf("calls=%d last=%q", apiClient.setStatusDescCalls, apiClient.lastStatusDesc)
+		}
+	})
+
+	t.Run("description_too_long_skips_api", func(t *testing.T) {
+		token := "tok"
+		repo := &mockUserCacheRepo{
+			getSelfRow: &identity.UserCache{
+				VRCUserID:          "usr_ok",
+				SessionFingerprint: identity.AuthTokenFingerprint(token),
+				LastUpdated:        time.Now(),
+				UserKind:           identity.UserKindSelf,
+			},
+		}
+		apiClient := &mockAPIClient{token: token}
+		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+		long := strings.Repeat("a", 33)
+		err := uc.SetStatusDescription(ctx, long)
+		if err == nil {
+			t.Fatal("SetStatusDescription: want error for long description")
+		}
+		if apiClient.setStatusDescCalls != 0 {
+			t.Fatalf("SetUserStatusDescription calls=%d want 0", apiClient.setStatusDescCalls)
+		}
+		if apiClient.getCurrentUserCalls != 0 {
+			t.Fatalf("GetCurrentUser calls=%d want 0", apiClient.getCurrentUserCalls)
+		}
+	})
+}
+
+func TestIdentityUseCase_SetStatusAndDescription(t *testing.T) {
+	ctx := context.Background()
+	settingsRepo := newMockSettingsRepo()
+	blob := vrchatapi.WrappedBlobMagic + "blob"
+
+	t.Run("session_expired_clears_token_and_cred_store", func(t *testing.T) {
+		credStore := vrchatapi.NewStubCredentialStore()
+		if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, blob); err != nil {
+			t.Fatal(err)
+		}
+		token := "t-both"
+		repo := &mockUserCacheRepo{
+			getSelfRow: &identity.UserCache{
+				VRCUserID:          "usr_both",
+				SessionFingerprint: identity.AuthTokenFingerprint(token),
+				LastUpdated:        time.Now(),
+				UserKind:           identity.UserKindSelf,
+			},
+		}
+		apiClient := &mockAPIClient{
+			token:      token,
+			setBothErr: fmt.Errorf("%w: PUT /users/usr_both", vrchatapi.ErrSessionExpired),
+		}
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		err := uc.SetStatusAndDescription(ctx, "join me", "イベント")
+		if !errors.Is(err, vrchatapi.ErrSessionExpired) {
+			t.Fatalf("SetStatusAndDescription: want ErrSessionExpired, got %v", err)
+		}
+		if apiClient.token != "" {
+			t.Errorf("token cleared want empty, got %q", apiClient.token)
+		}
+	})
+
+	t.Run("success_calls_api", func(t *testing.T) {
+		token := "tok2"
+		repo := &mockUserCacheRepo{
+			getSelfRow: &identity.UserCache{
+				VRCUserID:          "usr_both_ok",
+				SessionFingerprint: identity.AuthTokenFingerprint(token),
+				LastUpdated:        time.Now(),
+				UserKind:           identity.UserKindSelf,
+			},
+		}
+		apiClient := &mockAPIClient{token: token}
+		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+		if err := uc.SetStatusAndDescription(ctx, "busy", "集中"); err != nil {
+			t.Fatalf("SetStatusAndDescription: %v", err)
+		}
+		if apiClient.setBothCalls != 1 || apiClient.lastBothStatus != "busy" || apiClient.lastBothDescription != "集中" {
+			t.Fatalf("both calls=%d status=%q desc=%q", apiClient.setBothCalls, apiClient.lastBothStatus, apiClient.lastBothDescription)
+		}
+	})
+
+	t.Run("description_too_long_skips_api", func(t *testing.T) {
+		token := "tok2"
+		repo := &mockUserCacheRepo{
+			getSelfRow: &identity.UserCache{
+				VRCUserID:          "usr_both_ok",
+				SessionFingerprint: identity.AuthTokenFingerprint(token),
+				LastUpdated:        time.Now(),
+				UserKind:           identity.UserKindSelf,
+			},
+		}
+		apiClient := &mockAPIClient{token: token}
+		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+		long := strings.Repeat("b", 33)
+		err := uc.SetStatusAndDescription(ctx, "busy", long)
+		if err == nil {
+			t.Fatal("SetStatusAndDescription: want error for long description")
+		}
+		if apiClient.setBothCalls != 0 {
+			t.Fatalf("SetUserStatusAndDescription calls=%d want 0", apiClient.setBothCalls)
+		}
+		if apiClient.getCurrentUserCalls != 0 {
+			t.Fatalf("GetCurrentUser calls=%d want 0", apiClient.getCurrentUserCalls)
 		}
 	})
 }

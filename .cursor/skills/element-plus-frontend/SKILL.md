@@ -36,4 +36,4 @@ description: >-
 
 - Vue 一般: `.cursor/rules/vue-conventions.mdc`
 - Storybook と Wails WebView: `.cursor/rules/storybook-wails-ui.mdc`
-- 変更後検証: `.cursor/rules/tdd-workflow.mdc`（`make fmt` / `make test` / `make lint`、`frontend` で `pnpm run test:e2e` が必要なら別途）
+- 変更後検証: `.cursor/rules/tdd-workflow.mdc`（`make fmt` / `make test` / `make lint` に加え、`frontend/src` を変えたら **`make test-e2e`**。インタラクション検証は可能なら **`data-testid`** で i18n に依存させない）

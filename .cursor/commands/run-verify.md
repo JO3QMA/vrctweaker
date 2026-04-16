@@ -1,4 +1,4 @@
-# 検証ループ（fmt / test / lint）
+# 検証ループ（fmt / test / lint / E2E）
 
 実装後の品質検証。プロジェクトの **TDD ワークフロー**と CI 相当のチェックに従う。
 
@@ -24,6 +24,12 @@ cd /workspaces/vrctweaker && make test
 cd /workspaces/vrctweaker && make lint
 ```
 
+4. **E2E**（`frontend/src` の Vue/TS を変更したセッションでは追加）
+
+   ```bash
+cd /workspaces/vrctweaker && make test-e2e
+```
+
 ## 失敗時
 
 - エラーを修正し、**1 から再度**実行する
@@ -31,4 +37,4 @@ cd /workspaces/vrctweaker && make lint
 
 ## 完了条件
 
-- 上記 3 ステップがすべて成功するまで繰り返す
+- 上記をフロント変更時は **4 ステップ**まで、それ以外は **3 ステップ**まで成功するまで繰り返す

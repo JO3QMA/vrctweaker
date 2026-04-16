@@ -26,8 +26,9 @@ alwaysApply: true
 1. **fmt（フォーマット）**: `make fmt` または `go fmt ./...` と `cd frontend && pnpm run format`
 2. **テスト**: `make test` または `go test -v -race -cover ./internal/...` と `cd frontend && pnpm run test`
 3. **Linter**: `make lint` または `golangci-lint run ./...` と `cd frontend && pnpm run lint && pnpm exec vue-tsc --noEmit`
+4. **E2E（フロント変更時）**: `frontend/` 配下の **アプリ本体**（`src/**/*.vue`、`src/**/*.ts` など）を変更したセッションでは、可能なら **`make test-e2e`**（`cd frontend && pnpm run test:e2e`）も実行する。E2E 専用の変更のみ、または Playwright 未導入環境では省略可。
 
 **エラーが発生した場合**:
 - 原因を特定し修正する
-- 修正後、再度 **1→2→3** を実行する
+- 修正後、再度 **1 から**（フロント変更時は **4 まで**）実行する
 - 全てパスするまで繰り返す

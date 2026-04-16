@@ -4,7 +4,7 @@
 
 GitHub Issue の URL・番号、または `docs/ai_dlc/issues/` 等の Issue ドキュメントを渡して「実装して」「PR まで」と依頼する場合は、**issue-to-pr-workflow** Skill がオーケストレーターになる。
 
-流れは **ブランチ作成 → TDD 実装 → `make fmt/test/lint` → レビュー → PR**（各所でユーザー確認）。手順の本体は `.cursor/commands/` の Markdown（`/create-branch` 等で単体実行も可）。
+流れは **ブランチ作成 → TDD 実装 → `make fmt/test/lint`（フロントの `src` 変更時は `make test-e2e` も）→ レビュー → PR**（各所でユーザー確認）。手順の本体は `.cursor/commands/` の Markdown（`/create-branch` 等で単体実行も可）。
 
 | 段階 | 参照 |
 |------|------|
@@ -19,7 +19,7 @@ GitHub Issue の URL・番号、または `docs/ai_dlc/issues/` 等の Issue ド
 
 `docs/features` の機能を実装する際は、**feature-implementation-pipeline** Skill を使用する。
 
-パイプラインは **TDD**（テスト駆動開発）に則り、**テストを先に書く**。実装完了後は **fmt → テスト → Lint** の検証ループを、全パスするまで繰り返す。
+パイプラインは **TDD**（テスト駆動開発）に則り、**テストを先に書く**。実装完了後は **fmt → テスト → Lint**（フロント変更時は **E2E** まで）の検証ループを、全パスするまで繰り返す。
 
 ### 使い方
 
@@ -46,7 +46,7 @@ GitHub Issue の URL・番号、または `docs/ai_dlc/issues/` 等の Issue ド
 | 1. Plan | planner | 仕様から実装計画を作成（テスト観点含む） |
 | 2. Build | implementer | TDD で実装（テスト先、単体テスト必須） |
 | 3. Review | reviewer | 変更のコードレビュー |
-| 4. QA | qa | fmt → テスト → Lint、失敗時は修正して再実行 |
+| 4. QA | qa | fmt → テスト → Lint →（フロント `src` 変更時）E2E、失敗時は修正して再実行 |
 
 各 Agent は `.cursor/agents/` に定義され、`mcp_task` で起動される。  
 依存関係は `.cursor/skills/feature-implementation-pipeline/reference-dependencies.md` に明示。
@@ -54,8 +54,13 @@ GitHub Issue の URL・番号、または `docs/ai_dlc/issues/` 等の Issue ド
 ## 手動で各 Agent を使う
 
 - **計画だけ欲しい**: 「planner サブエージェントで ui-gallery-view の実装計画を立てて」
+- **途中の判断が欲しい**: 「advisor 用に状況を要約して Sonnet または Codex で相談して」（`.cursor/agents/advisor.md` の出力形式）
 - **レビューだけ**: 「reviewer サブエージェントで変更をレビューして」
 - **QA だけ**: 「qa サブエージェントでテストとlintを実行して」
+
+## Composer と相談モデル（アドバイザー型）
+
+実装の**主戦場は Composer**。アーキテクチャ分岐・曖昧な受け入れ条件・QA の連続失敗などで詰まったときだけ、**別枠で Claude Sonnet または Codex**（Chat または SubAgent）に短く相談し、要約を Composer に戻す。手順・回数上限は **advisor-workflow** Skill（`.cursor/skills/advisor-workflow/SKILL.md`）に従う。
 
 ## プロジェクトルール
 
@@ -69,5 +74,6 @@ GitHub Issue の URL・番号、または `docs/ai_dlc/issues/` 等の Issue ド
 ## スキル
 
 - **issue-to-pr-workflow**: Issue 起点でブランチ〜実装〜検証〜レビュー〜PR までを順に制御（Commands を束ねるオーケストレーター）
-- **tdd-workflow**: テスト駆動開発と fmt→test→lint の検証ループ。コード変更時に適用。
+- **advisor-workflow**: Composer をメインに、詰まりどころだけ Sonnet / Codex で短い相談を挟む（`.cursor/skills/advisor-workflow/SKILL.md`）
+- **tdd-workflow**: テスト駆動開発と fmt→test→lint→（フロント時）E2E の検証ループ。コード変更時に適用。
 - **element-plus-frontend**: Element Plus による UI 実装・Vitest/Playwright セレクタ・公式ドキュメント参照（`.cursor/skills/element-plus-frontend/SKILL.md`）
