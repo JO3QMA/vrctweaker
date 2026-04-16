@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -747,6 +748,31 @@ func TestIdentityUseCase_SetStatusDescription(t *testing.T) {
 			t.Fatalf("calls=%d last=%q", apiClient.setStatusDescCalls, apiClient.lastStatusDesc)
 		}
 	})
+
+	t.Run("description_too_long_skips_api", func(t *testing.T) {
+		token := "tok"
+		repo := &mockUserCacheRepo{
+			getSelfRow: &identity.UserCache{
+				VRCUserID:          "usr_ok",
+				SessionFingerprint: identity.AuthTokenFingerprint(token),
+				LastUpdated:        time.Now(),
+				UserKind:           identity.UserKindSelf,
+			},
+		}
+		apiClient := &mockAPIClient{token: token}
+		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+		long := strings.Repeat("a", 33)
+		err := uc.SetStatusDescription(ctx, long)
+		if err == nil {
+			t.Fatal("SetStatusDescription: want error for long description")
+		}
+		if apiClient.setStatusDescCalls != 0 {
+			t.Fatalf("SetUserStatusDescription calls=%d want 0", apiClient.setStatusDescCalls)
+		}
+		if apiClient.getCurrentUserCalls != 0 {
+			t.Fatalf("GetCurrentUser calls=%d want 0", apiClient.getCurrentUserCalls)
+		}
+	})
 }
 
 func TestIdentityUseCase_SetStatusAndDescription(t *testing.T) {
@@ -799,6 +825,31 @@ func TestIdentityUseCase_SetStatusAndDescription(t *testing.T) {
 		}
 		if apiClient.setBothCalls != 1 || apiClient.lastBothStatus != "busy" || apiClient.lastBothDescription != "集中" {
 			t.Fatalf("both calls=%d status=%q desc=%q", apiClient.setBothCalls, apiClient.lastBothStatus, apiClient.lastBothDescription)
+		}
+	})
+
+	t.Run("description_too_long_skips_api", func(t *testing.T) {
+		token := "tok2"
+		repo := &mockUserCacheRepo{
+			getSelfRow: &identity.UserCache{
+				VRCUserID:          "usr_both_ok",
+				SessionFingerprint: identity.AuthTokenFingerprint(token),
+				LastUpdated:        time.Now(),
+				UserKind:           identity.UserKindSelf,
+			},
+		}
+		apiClient := &mockAPIClient{token: token}
+		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+		long := strings.Repeat("b", 33)
+		err := uc.SetStatusAndDescription(ctx, "busy", long)
+		if err == nil {
+			t.Fatal("SetStatusAndDescription: want error for long description")
+		}
+		if apiClient.setBothCalls != 0 {
+			t.Fatalf("SetUserStatusAndDescription calls=%d want 0", apiClient.setBothCalls)
+		}
+		if apiClient.getCurrentUserCalls != 0 {
+			t.Fatalf("GetCurrentUser calls=%d want 0", apiClient.getCurrentUserCalls)
 		}
 	})
 }

@@ -43,7 +43,7 @@
           <el-input
             v-model="customDescription"
             :placeholder="t('dashboard.customStatusPlaceholder')"
-            maxlength="64"
+            maxlength="32"
             show-word-limit
             clearable
             class="custom-status-input"
