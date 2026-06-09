@@ -15,6 +15,25 @@ function minimalUser(): UserCacheDTO {
 }
 
 describe("VrcUserCacheDetail", () => {
+  it("renders localized user tags instead of raw tag ids", async () => {
+    const user = {
+      ...minimalUser(),
+      tagsJson: '["language_jpn","system_world_access","system_trust_basic"]',
+    } as UserCacheDTO;
+    const wrapper = mount(VrcUserCacheDetail, {
+      props: { selected: user },
+      global: {
+        stubs: { EncounterHistoryList: true },
+      },
+    });
+    await flushPromises();
+    await nextTick();
+
+    expect(wrapper.text()).toContain("日本語");
+    expect(wrapper.text()).toContain("新規ユーザー（青）");
+    expect(wrapper.text()).not.toContain("system_trust_basic");
+  });
+
   it("renders profile content inside Element Plus card body", async () => {
     const wrapper = mount(VrcUserCacheDetail, {
       props: { selected: minimalUser() },

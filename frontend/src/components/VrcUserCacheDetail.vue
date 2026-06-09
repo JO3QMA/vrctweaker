@@ -150,14 +150,12 @@
                 v-if="jsonStringArray(selected.tagsJson).length"
                 :label="t('userDetail.tags')"
               >
-                <el-tag
+                <VrcUserTagChip
                   v-for="tag in jsonStringArray(selected.tagsJson)"
                   :key="tag"
-                  size="small"
+                  :tag="tag"
                   class="tag-chip"
-                >
-                  {{ tag }}
-                </el-tag>
+                />
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="jsonStringArray(selected.currentAvatarTagsJson).length"
@@ -265,6 +263,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import EncounterHistoryList from "./EncounterHistoryList.vue";
 import VrcStatusTag from "./VrcStatusTag.vue";
+import VrcUserTagChip from "./VrcUserTagChip.vue";
 import type { UserCacheDTO } from "../wails/app";
 import {
   copyDisplayName,
