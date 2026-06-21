@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -197,5 +198,38 @@ func TestScreenshotRepository_GetByID_GetByFilePath_ListFilters(t *testing.T) {
 	missThumb, err := repo.GetThumbnail(ctx, "s_b")
 	if err != nil || missThumb != nil {
 		t.Fatalf("GetThumbnail missing: %#v err=%v", missThumb, err)
+	}
+}
+
+func TestScreenshotRepository_List_FilePathPrefix_excludesSiblingFolder(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+	ctx := context.Background()
+	repo := NewScreenshotRepository(db)
+
+	inRoot := filepath.Join(dir, "VRChat", "in.png")
+	outRoot := filepath.Join(dir, "VRChat_old", "out.png")
+	for _, p := range []string{inRoot, outRoot} {
+		if mkdirErr := os.MkdirAll(filepath.Dir(p), 0o755); mkdirErr != nil {
+			t.Fatal(mkdirErr)
+		}
+	}
+	_ = repo.Save(ctx, &media.Screenshot{ID: "in", FilePath: inRoot})
+	_ = repo.Save(ctx, &media.Screenshot{ID: "out", FilePath: outRoot})
+
+	prefix := media.PictureFolderPathPrefix(filepath.Join(dir, "VRChat"))
+	list, err := repo.List(ctx, &media.ScreenshotFilter{FilePathPrefix: prefix})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].ID != "in" {
+		t.Fatalf("List with prefix %q: %#v", prefix, list)
 	}
 }

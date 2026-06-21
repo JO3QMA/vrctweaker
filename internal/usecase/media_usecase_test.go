@@ -77,9 +77,16 @@ func (m *mockScreenshotRepo) List(ctx context.Context, filter *media.ScreenshotF
 }
 
 func hasPathPrefix(path, prefix string) bool {
+	if prefix == "" {
+		return true
+	}
 	normPath := filepath.ToSlash(path)
 	normPrefix := filepath.ToSlash(prefix)
-	return normPath == normPrefix || strings.HasPrefix(normPath, normPrefix)
+	likePrefix := normPrefix
+	if !strings.HasSuffix(likePrefix, "/") {
+		likePrefix += "/"
+	}
+	return normPath == strings.TrimSuffix(normPrefix, "/") || strings.HasPrefix(normPath, likePrefix)
 }
 
 func (m *mockScreenshotRepo) GetByID(ctx context.Context, id string) (*media.Screenshot, error) {
@@ -641,6 +648,88 @@ func TestMediaUseCase_ScanDirectory_ContextCancelDuringImport(t *testing.T) {
 	})
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("ScanDirectory: err = %v, want context.Canceled", err)
+	}
+}
+
+func TestMediaUseCase_ListScreenshotsInGalleryScope_emptyRoot(t *testing.T) {
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "s1", FilePath: "/any.png"})
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+
+	list, err := uc.ListScreenshotsInGalleryScope(context.Background(), "", nil)
+	if err != nil {
+		t.Fatalf("ListScreenshotsInGalleryScope: %v", err)
+	}
+	if len(list) != 0 {
+		t.Fatalf("want empty list, got %d", len(list))
+	}
+}
+
+func TestMediaUseCase_ListScreenshotsInGalleryScope_excludesOutOfScopePaths(t *testing.T) {
+	base := t.TempDir()
+	inScope := filepath.Join(base, "shot.png")
+	if err := os.WriteFile(inScope, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	outScope := filepath.Join(filepath.Dir(base), "other-root", "other.png")
+
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "in", FilePath: inScope})
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "out", FilePath: outScope})
+
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+	list, err := uc.ListScreenshotsInGalleryScope(context.Background(), base, nil)
+	if err != nil {
+		t.Fatalf("ListScreenshotsInGalleryScope: %v", err)
+	}
+	if len(list) != 1 || list[0].ID != "in" {
+		t.Fatalf("list = %#v, want only in-scope row", list)
+	}
+	if repo.listFilter == nil || repo.listFilter.FilePathPrefix != media.PictureFolderPathPrefix(base) {
+		t.Fatalf("FilePathPrefix = %q, want %q", repo.listFilter.FilePathPrefix, media.PictureFolderPathPrefix(base))
+	}
+}
+
+func TestMediaUseCase_ListScreenshotsInGalleryScope_excludesMissingFiles(t *testing.T) {
+	base := t.TempDir()
+	existing := filepath.Join(base, "here.png")
+	if err := os.WriteFile(existing, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	missing := filepath.Join(base, "gone.png")
+
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "here", FilePath: existing})
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "gone", FilePath: missing})
+
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+	list, err := uc.ListScreenshotsInGalleryScope(context.Background(), base, nil)
+	if err != nil {
+		t.Fatalf("ListScreenshotsInGalleryScope: %v", err)
+	}
+	if len(list) != 1 || list[0].ID != "here" {
+		t.Fatalf("list = %#v, want only existing file", list)
+	}
+	if repo.screenshots["gone"] == nil {
+		t.Fatal("missing-file row should remain in DB")
+	}
+}
+
+func TestMediaUseCase_ListScreenshotsInGalleryScope_preservesWorldFilter(t *testing.T) {
+	base := t.TempDir()
+	path := filepath.Join(base, "a.png")
+	_ = os.WriteFile(path, []byte("x"), 0o644)
+
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "a", FilePath: path, WorldID: "wrld_a"})
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+
+	_, err := uc.ListScreenshotsInGalleryScope(context.Background(), base, &media.ScreenshotFilter{WorldID: "wrld_a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if repo.listFilter == nil || repo.listFilter.WorldID != "wrld_a" {
+		t.Fatalf("WorldID filter not passed: %#v", repo.listFilter)
 	}
 }
 
