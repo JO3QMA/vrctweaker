@@ -70,6 +70,25 @@ function isDisabled(wrapper: ReturnType<typeof mount>, testId: string) {
   return (inputInner(wrapper, testId).element as HTMLInputElement).disabled;
 }
 
+async function openAdvancedCollapse(wrapper: ReturnType<typeof mount>) {
+  const collapse = wrapper.find(".args-collapse");
+  if (!collapse.find(".el-collapse-item.is-active").exists()) {
+    await collapse.find(".el-collapse-item__header").trigger("click");
+    await flushPromises();
+  }
+}
+
+async function clickDeleteFromOverflow(wrapper: ReturnType<typeof mount>) {
+  await wrapper.find('[data-testid="profile-overflow-btn"]').trigger("click");
+  await flushPromises();
+  const deleteItem = document.querySelector(
+    '[data-testid="delete-profile-btn"]',
+  );
+  expect(deleteItem).toBeTruthy();
+  await (deleteItem as HTMLElement).click();
+  await flushPromises();
+}
+
 describe("LauncherView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -264,7 +283,7 @@ describe("LauncherView", () => {
 
     // el-collapse-item のヘッダーをクリックして展開
     const header = collapse.find(".el-collapse-item__header");
-    expect(header.text()).toContain("詳細設定");
+    expect(header.text()).toContain("すべてのオプション");
     await header.trigger("click");
     await flushPromises();
 
@@ -286,9 +305,7 @@ describe("LauncherView", () => {
     await card?.trigger("click");
     await flushPromises();
 
-    const collapse = wrapper.find(".args-collapse");
-    await collapse.find(".el-collapse-item__header").trigger("click");
-    await flushPromises();
+    await openAdvancedCollapse(wrapper);
 
     // ElCheckbox 内の input で setValue
     await checkInput(wrapper, "resolution-enabled-checkbox").setValue(true);
@@ -315,9 +332,7 @@ describe("LauncherView", () => {
     await card?.trigger("click");
     await flushPromises();
 
-    const collapse = wrapper.find(".args-collapse");
-    await collapse.find(".el-collapse-item__header").trigger("click");
-    await flushPromises();
+    await openAdvancedCollapse(wrapper);
 
     await checkInput(wrapper, "resolution-enabled-checkbox").setValue(true);
     await flushPromises();
@@ -334,9 +349,7 @@ describe("LauncherView", () => {
     await card?.trigger("click");
     await flushPromises();
 
-    const collapse = wrapper.find(".args-collapse");
-    await collapse.find(".el-collapse-item__header").trigger("click");
-    await flushPromises();
+    await openAdvancedCollapse(wrapper);
 
     await checkInput(wrapper, "resolution-enabled-checkbox").setValue(true);
     await flushPromises();
@@ -380,7 +393,7 @@ describe("LauncherView", () => {
     );
   });
 
-  it("shows delete button only for saved profiles and deletes on confirm", async () => {
+  it("shows delete in overflow menu for saved profiles and deletes on confirm", async () => {
     const wrapper = mount(LauncherView);
     await flushPromises();
 
@@ -388,20 +401,17 @@ describe("LauncherView", () => {
     await card?.trigger("click");
     await flushPromises();
 
-    expect(wrapper.find('[data-testid="delete-profile-btn"]').exists()).toBe(
+    expect(wrapper.find('[data-testid="profile-overflow-btn"]').exists()).toBe(
       true,
     );
 
     mockDeleteLaunchProfile.mockResolvedValue(undefined);
-    // ElMessageBox.confirm をモック（resolve = 削除確定）
     const confirmSpy = vi
       .spyOn(ElMessageBox, "confirm")
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .mockResolvedValue("confirm" as any);
 
-    const deleteBtn = wrapper.find('[data-testid="delete-profile-btn"]');
-    await deleteBtn.trigger("click");
-    await flushPromises();
+    await clickDeleteFromOverflow(wrapper);
 
     expect(confirmSpy).toHaveBeenCalledWith(
       "「Default」を削除しますか？",
@@ -427,15 +437,13 @@ describe("LauncherView", () => {
       .spyOn(ElMessageBox, "confirm")
       .mockRejectedValue("cancel");
 
-    const deleteBtn = wrapper.find('[data-testid="delete-profile-btn"]');
-    await deleteBtn.trigger("click");
-    await flushPromises();
+    await clickDeleteFromOverflow(wrapper);
 
     expect(mockDeleteLaunchProfile).not.toHaveBeenCalled();
     confirmSpy.mockRestore();
   });
 
-  it("does not show delete button for new unsaved profile", async () => {
+  it("does not show overflow menu for new unsaved profile", async () => {
     const wrapper = mount(LauncherView);
     await flushPromises();
 
@@ -443,7 +451,7 @@ describe("LauncherView", () => {
     await addBtn.trigger("click");
     await flushPromises();
 
-    expect(wrapper.find('[data-testid="delete-profile-btn"]').exists()).toBe(
+    expect(wrapper.find('[data-testid="profile-overflow-btn"]').exists()).toBe(
       false,
     );
   });
@@ -498,9 +506,7 @@ describe("LauncherView", () => {
     await wrapper.findAll(".profile-card")[0]?.trigger("click");
     await flushPromises();
 
-    const collapse = wrapper.find(".args-collapse");
-    await collapse.find(".el-collapse-item__header").trigger("click");
-    await flushPromises();
+    await openAdvancedCollapse(wrapper);
 
     await checkInput(wrapper, "resolution-enabled-checkbox").setValue(true);
     await flushPromises();
@@ -547,9 +553,7 @@ describe("LauncherView", () => {
     await wrapper.findAll(".profile-card")[0]?.trigger("click");
     await flushPromises();
 
-    const collapse = wrapper.find(".args-collapse");
-    await collapse.find(".el-collapse-item__header").trigger("click");
-    await flushPromises();
+    await openAdvancedCollapse(wrapper);
 
     await checkInput(wrapper, "resolution-enabled-checkbox").setValue(false);
     await flushPromises();
@@ -599,9 +603,7 @@ describe("LauncherView", () => {
     await wrapper.findAll(".profile-card")[1]?.trigger("click");
     await flushPromises();
 
-    const collapse = wrapper.find(".args-collapse");
-    await collapse.find(".el-collapse-item__header").trigger("click");
-    await flushPromises();
+    await openAdvancedCollapse(wrapper);
 
     expect(
       (
@@ -625,13 +627,6 @@ describe("LauncherView", () => {
           .element as HTMLInputElement
       ).checked,
     ).toBe(true);
-
-    const debugHeaders = wrapper.findAll(".el-collapse-item__header");
-    const debugHeader = debugHeaders.find((h) =>
-      h.text().includes("クリエイター・デバッグ向け"),
-    );
-    await debugHeader!.trigger("click");
-    await flushPromises();
 
     expect(
       (checkInput(wrapper, "midi-enabled-checkbox").element as HTMLInputElement)
@@ -680,19 +675,10 @@ describe("LauncherView", () => {
     await wrapper.findAll(".profile-card")[0]?.trigger("click");
     await flushPromises();
 
-    const collapse = wrapper.find(".args-collapse");
-    await collapse.find(".el-collapse-item__header").trigger("click");
-    await flushPromises();
+    await openAdvancedCollapse(wrapper);
 
     await checkInput(wrapper, "monitor-enabled-checkbox").setValue(false);
     await checkInput(wrapper, "fps-enabled-checkbox").setValue(false);
-    await flushPromises();
-
-    const debugHeaders = wrapper.findAll(".el-collapse-item__header");
-    const debugHeader = debugHeaders.find((h) =>
-      h.text().includes("クリエイター・デバッグ向け"),
-    );
-    await debugHeader!.trigger("click");
     await flushPromises();
 
     await checkInput(wrapper, "midi-enabled-checkbox").setValue(false);
@@ -726,9 +712,7 @@ describe("LauncherView", () => {
     await wrapper.findAll(".profile-card")[0]?.trigger("click");
     await flushPromises();
 
-    const collapse = wrapper.find(".args-collapse");
-    await collapse.find(".el-collapse-item__header").trigger("click");
-    await flushPromises();
+    await openAdvancedCollapse(wrapper);
 
     await checkInput(wrapper, "main-thread-priority-enabled-checkbox").setValue(
       true,
@@ -769,12 +753,10 @@ describe("LauncherView", () => {
       custom: "",
     } as LaunchArgsParsedDTO);
 
-    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await wrapper.findAll(".profile-card")[1]?.trigger("click");
     await flushPromises();
 
-    const collapse = wrapper.find(".args-collapse");
-    await collapse.find(".el-collapse-item__header").trigger("click");
-    await flushPromises();
+    await openAdvancedCollapse(wrapper);
 
     expect(
       (
@@ -841,9 +823,7 @@ describe("LauncherView", () => {
     await wrapper.findAll(".profile-card")[0]?.trigger("click");
     await flushPromises();
 
-    const collapse = wrapper.find(".args-collapse");
-    await collapse.find(".el-collapse-item__header").trigger("click");
-    await flushPromises();
+    await openAdvancedCollapse(wrapper);
 
     await checkInput(wrapper, "resolution-enabled-checkbox").setValue(true);
     await flushPromises();
@@ -869,9 +849,7 @@ describe("LauncherView", () => {
     await wrapper.findAll(".profile-card")[0]?.trigger("click");
     await flushPromises();
 
-    const collapse = wrapper.find(".args-collapse");
-    await collapse.find(".el-collapse-item__header").trigger("click");
-    await flushPromises();
+    await openAdvancedCollapse(wrapper);
 
     await checkInput(wrapper, "monitor-enabled-checkbox").setValue(true);
     await checkInput(wrapper, "fps-enabled-checkbox").setValue(true);
@@ -884,13 +862,6 @@ describe("LauncherView", () => {
     await inputInner(wrapper, "monitor-input").setValue(2);
     await inputInner(wrapper, "fps-input").setValue(144);
     await inputInner(wrapper, "process-priority-input").setValue(1);
-
-    const debugHeaders = wrapper.findAll(".el-collapse-item__header");
-    const debugHeader = debugHeaders.find((h) =>
-      h.text().includes("クリエイター・デバッグ向け"),
-    );
-    await debugHeader!.trigger("click");
-    await flushPromises();
 
     await checkInput(wrapper, "enable-debug-gui-checkbox").setValue(true);
     await checkInput(wrapper, "watch-worlds-checkbox").setValue(true);
@@ -959,7 +930,7 @@ describe("LauncherView", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .mockResolvedValue("confirm" as any);
 
-    await wrapper.find('[data-testid="delete-profile-btn"]').trigger("click");
+    await clickDeleteFromOverflow(wrapper);
     await flushPromises();
 
     expect(mockDeleteLaunchProfile).toHaveBeenCalledWith("1");
@@ -980,9 +951,7 @@ describe("LauncherView", () => {
       .element.closest("[role='radiogroup']");
     expect(screenRg?.getAttribute("aria-label")).toBe("表示モード");
 
-    const collapse = wrapper.find(".args-collapse");
-    await collapse.find(".el-collapse-item__header").trigger("click");
-    await flushPromises();
+    await openAdvancedCollapse(wrapper);
     await checkInput(wrapper, "resolution-enabled-checkbox").setValue(true);
     await flushPromises();
 
@@ -991,17 +960,72 @@ describe("LauncherView", () => {
       .element.closest("[role='radiogroup']");
     expect(resRg?.getAttribute("aria-label")).toBe("プリセット");
 
-    const debugHeaders = wrapper.findAll(".el-collapse-item__header");
-    const debugHeader = debugHeaders.find((h) =>
-      h.text().includes("クリエイター・デバッグ向け"),
-    );
-    expect(debugHeader?.exists()).toBe(true);
-    await debugHeader!.trigger("click");
-    await flushPromises();
+    expect(
+      wrapper.find('[data-testid="advanced-debug-section"]').exists(),
+    ).toBe(true);
 
     const vdRg = wrapper
       .get('[data-testid="video-decoding-default"]')
       .element.closest("[role='radiogroup']");
     expect(vdRg?.getAttribute("aria-label")).toBe("動画デコーディング");
+  });
+
+  it("shows unsaved banner after editing launch args", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="unsaved-banner"]').exists()).toBe(false);
+
+    await checkInput(wrapper, "no-vr-checkbox").setValue(true);
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="unsaved-banner"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="unsaved-dot"]').exists()).toBe(true);
+  });
+
+  it("prompts before switching profiles when edits are unsaved", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+
+    await checkInput(wrapper, "no-vr-checkbox").setValue(true);
+    await flushPromises();
+
+    const confirmSpy = vi
+      .spyOn(ElMessageBox, "confirm")
+      .mockRejectedValue("close");
+
+    await wrapper.findAll(".profile-card")[1]?.trigger("click");
+    await flushPromises();
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(mockParseLaunchArgsForGUI).toHaveBeenCalledTimes(1);
+
+    confirmSpy.mockRestore();
+  });
+
+  it("discards unsaved edits when user chooses discard on switch", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+
+    await checkInput(wrapper, "no-vr-checkbox").setValue(true);
+    await flushPromises();
+
+    const confirmSpy = vi
+      .spyOn(ElMessageBox, "confirm")
+      .mockRejectedValue("cancel");
+
+    await wrapper.findAll(".profile-card")[1]?.trigger("click");
+    await flushPromises();
+
+    expect(mockParseLaunchArgsForGUI).toHaveBeenCalledTimes(2);
+    expect(wrapper.find('[data-testid="unsaved-banner"]').exists()).toBe(false);
+
+    confirmSpy.mockRestore();
   });
 });

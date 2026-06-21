@@ -117,7 +117,17 @@
     "delete": "Delete",
     "newProfileDefaultName": "New profile",
     "deleteConfirm": "Delete “{name}”?",
-    "deleteOk": "Delete"
+    "deleteOk": "Delete",
+    "allOptions": "All launch options",
+    "advancedDisplayPerformance": "Display and performance",
+    "advancedDebugExpert": "Debug and expert",
+    "unsavedBanner": "You have unsaved changes",
+    "unsavedSwitchTitle": "Unsaved changes",
+    "unsavedSwitchMessage": "Save changes before continuing?",
+    "saveAndContinue": "Save and continue",
+    "discardAndContinue": "Discard",
+    "toggleSidebar": "Toggle profile list",
+    "moreActions": "More actions"
   },
   "gallery": {
     "title": "Gallery",

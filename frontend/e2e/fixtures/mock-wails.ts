@@ -42,6 +42,7 @@ export function getMockWailsInitScript(): string {
     (function() {
       if (typeof window === 'undefined') return;
       const profiles = ${profilesJson};
+      let launchProfiles = profiles.slice();
       const pathSettings = ${pathSettingsJson};
       const screenshots = ${screenshotsJson};
       const encounters = ${encountersJson};
@@ -133,9 +134,17 @@ export function getMockWailsInitScript(): string {
       window.go.main = window.go.main || {};
       window.go.main.App = {
         Greet: () => Promise.resolve('Hello, Welcome!'),
-        LaunchProfiles: () => Promise.resolve(profiles),
-        SaveLaunchProfile: () => Promise.resolve(),
-        DeleteLaunchProfile: () => Promise.resolve(),
+        LaunchProfiles: () => Promise.resolve(launchProfiles),
+        SaveLaunchProfile: (p) => {
+          const idx = launchProfiles.findIndex(function(x) { return x.id === p.id; });
+          if (idx >= 0) launchProfiles[idx] = p;
+          else launchProfiles.push(p);
+          return Promise.resolve();
+        },
+        DeleteLaunchProfile: (id) => {
+          launchProfiles = launchProfiles.filter(function(x) { return x.id !== id; });
+          return Promise.resolve();
+        },
         LaunchVRChat: () => Promise.resolve(),
         LaunchVRChatWithArgs: () => Promise.resolve(),
         ParseLaunchArgsForGUI: () =>

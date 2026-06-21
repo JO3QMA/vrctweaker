@@ -117,7 +117,17 @@
     "delete": "刪除",
     "newProfileDefaultName": "新設定檔",
     "deleteConfirm": "要刪除「{name}」嗎？",
-    "deleteOk": "刪除"
+    "deleteOk": "刪除",
+    "allOptions": "所有啟動選項",
+    "advancedDisplayPerformance": "顯示與效能",
+    "advancedDebugExpert": "偵錯與進階",
+    "unsavedBanner": "有未儲存的變更",
+    "unsavedSwitchTitle": "未儲存的變更",
+    "unsavedSwitchMessage": "要在繼續前儲存變更嗎？",
+    "saveAndContinue": "儲存並繼續",
+    "discardAndContinue": "捨棄",
+    "toggleSidebar": "切換設定檔清單",
+    "moreActions": "其他操作"
   },
   "gallery": {
     "title": "相簿",

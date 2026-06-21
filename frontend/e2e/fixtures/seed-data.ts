@@ -97,6 +97,14 @@ export const SEED_LAUNCH_PROFILES: SeedLaunchProfile[] = [
     createdAt: "2025-01-01T00:00:00Z",
     updatedAt: "2025-01-01T00:00:00Z",
   },
+  {
+    id: "profile-2",
+    name: "デスクトップ用",
+    arguments: "-no-vr",
+    isDefault: false,
+    createdAt: "2025-01-02T00:00:00Z",
+    updatedAt: "2025-01-02T00:00:00Z",
+  },
 ];
 
 export const SEED_PATH_SETTINGS: SeedPathSettings = {
