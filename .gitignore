@@ -31,6 +31,9 @@ frontend/tsconfig.tsbuildinfo
 .DS_Store
 Thumbs.db
 
+# direnv (Discord Client ID / Secret などローカル秘密情報)
+.envrc
+
 # Test
 coverage.txt
 *.cover

@@ -3,6 +3,21 @@
 
 .PHONY: all build build-native build-windows build-front build-back dev-wails lint fmt test test-e2e clean help
 
+# Ubuntu 24.04+ は webkit2gtk 4.1 のみ。Linux ネイティブビルドでは Wails のタグが必要。
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+WAILS_LINUX_TAGS := -tags webkit2_41
+endif
+
+# direnv / 環境変数から Discord 認証情報をリンク時に埋め込む（Release CI と同様）
+ifneq ($(VRCTWEAKER_DISCORD_CLIENT_ID),)
+WAILS_LDFLAGS += -X vrchat-tweaker/internal/infrastructure/discordrpc.ClientID=$(VRCTWEAKER_DISCORD_CLIENT_ID)
+endif
+ifneq ($(VRCTWEAKER_DISCORD_CLIENT_SECRET),)
+WAILS_LDFLAGS += -X vrchat-tweaker/internal/infrastructure/discordrpc.clientSecret=$(VRCTWEAKER_DISCORD_CLIENT_SECRET)
+endif
+WAILS_LDFLAGS_ARG := $(if $(WAILS_LDFLAGS),-ldflags "$(WAILS_LDFLAGS)",)
+
 # デフォルトターゲット
 all: build
 
@@ -14,11 +29,11 @@ build: build-native build-windows
 
 ## ネイティブプラットフォームのみビルド
 build-native:
-	wails build
+	wails build $(WAILS_LINUX_TAGS) $(WAILS_LDFLAGS_ARG)
 
 ## Windows 版のみビルド（linux/WSL からは mingw-w64 が必要）
 build-windows:
-	wails build -platform windows/amd64
+	wails build -platform windows/amd64 $(WAILS_LDFLAGS_ARG)
 
 ## フロントエンドのみビルド
 build-front:
@@ -31,7 +46,7 @@ build-back:
 ## Wails 開発サーバ（DISPLAY 無し環境向け: DevContainer 等では xvfb で仮想 X を用意）
 ## ブラウザは VSCode のポート転送で http://localhost:34115 を開く
 dev-wails:
-	xvfb-run -a wails dev
+	xvfb-run -a wails dev $(WAILS_LINUX_TAGS)
 
 # --- Lint ---
 

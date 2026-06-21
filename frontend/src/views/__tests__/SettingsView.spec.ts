@@ -15,6 +15,33 @@ const router = createRouter({
 });
 
 describe("SettingsView", () => {
+  beforeEach(() => {
+    vi.spyOn(App, "getMicMuteSyncSettings").mockResolvedValue({
+      enabled: false,
+      oscEndpoint: "",
+    });
+    vi.spyOn(App, "getMicMuteSyncStatus").mockResolvedValue({
+      available: true,
+      enabled: false,
+      oscEndpoint: "9000:127.0.0.1:9001",
+      vrchatOscListening: true,
+      vrchatOscConnected: false,
+      vrchatMuteKnown: false,
+      vrchatMuted: false,
+      syncEngineState: "off",
+      discordRpcConnected: false,
+      discordMuteKnown: false,
+      discordMuted: false,
+      toggleVoiceKnown: false,
+      toggleVoiceOk: false,
+    });
+    vi.spyOn(App, "saveMicMuteSyncSettings").mockResolvedValue(undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("renders settings title", async () => {
     await router.push("/settings");
     await router.isReady();
@@ -38,6 +65,20 @@ describe("SettingsView", () => {
     expect(licensesLink.exists()).toBe(true);
     expect(licensesLink.attributes("href")).toContain("/licenses");
     expect(licensesLink.text()).toContain("OSS ライセンス一覧");
+  });
+
+  it("shows Mic Mute Sync section when available", async () => {
+    await router.push("/settings");
+    await router.isReady();
+    const wrapper = mount(SettingsView, {
+      global: {
+        plugins: [router],
+      },
+    });
+    await flushPromises();
+    expect(wrapper.find('[data-testid="mic-mute-sync-card"]').exists()).toBe(
+      true,
+    );
   });
 });
 

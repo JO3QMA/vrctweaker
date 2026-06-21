@@ -197,6 +197,95 @@
       }}</el-text>
     </el-card>
 
+    <!-- Mic Mute Sync（Windows） -->
+    <el-card
+      v-if="micMuteSyncStatus?.available"
+      class="settings-card"
+      shadow="never"
+      data-testid="mic-mute-sync-card"
+    >
+      <template #header>
+        <span>{{ t("settings.micMuteSyncSection") }}</span>
+      </template>
+      <el-text type="info" size="small" class="hint block-hint">{{
+        t("settings.micMuteSyncHint")
+      }}</el-text>
+      <div class="setting-row power-setting-row">
+        <div class="power-toggle-label">
+          <span>{{ t("settings.micMuteSyncEnabled") }}</span>
+        </div>
+        <el-switch
+          v-model="micMuteSyncEnabled"
+          class="power-switch"
+          data-testid="mic-mute-sync-enabled"
+          @change="saveMicMuteSyncSettings"
+        />
+      </div>
+      <el-form label-position="top" size="default" class="mic-mute-sync-form">
+        <el-form-item :label="t('settings.micMuteSyncOscEndpoint')">
+          <el-input
+            v-model="micMuteSyncOscEndpoint"
+            :placeholder="t('settings.micMuteSyncOscPh')"
+            data-testid="mic-mute-sync-osc-endpoint"
+            @change="saveMicMuteSyncSettings"
+          />
+        </el-form-item>
+      </el-form>
+      <div class="mic-mute-sync-discord-row">
+        <el-button
+          type="primary"
+          plain
+          size="small"
+          :loading="micMuteSyncDiscordConnecting"
+          data-testid="mic-mute-sync-discord-connect"
+          @click="connectMicMuteSyncDiscord"
+        >
+          {{ t("settings.micMuteSyncDiscordConnect") }}
+        </el-button>
+      </div>
+      <div v-if="micMuteSyncStatus" class="mic-mute-sync-status">
+        <p class="status-title">{{ t("settings.micMuteSyncStatusTitle") }}</p>
+        <ul class="status-list">
+          <li>
+            <span>{{ t("settings.micMuteSyncPlatform") }}</span>
+            <span>{{ micMuteSyncPlatformLabel }}</span>
+          </li>
+          <li>
+            <span>{{ t("settings.micMuteSyncVrchatOsc") }}</span>
+            <span>{{ micMuteSyncVrchatOscLabel }}</span>
+          </li>
+          <li>
+            <span>{{ t("settings.micMuteSyncVrchatMute") }}</span>
+            <span>{{ micMuteSyncVrchatMuteLabel }}</span>
+          </li>
+          <li>
+            <span>{{ t("settings.micMuteSyncDiscordRpc") }}</span>
+            <span>{{ micMuteSyncDiscordRpcLabel }}</span>
+          </li>
+          <li>
+            <span>{{ t("settings.micMuteSyncDiscordMute") }}</span>
+            <span>{{ micMuteSyncDiscordMuteLabel }}</span>
+          </li>
+          <li>
+            <span>{{ t("settings.micMuteSyncToggleVoice") }}</span>
+            <span>{{ micMuteSyncToggleVoiceLabel }}</span>
+          </li>
+          <li>
+            <span>{{ t("settings.micMuteSyncEngine") }}</span>
+            <span>{{ micMuteSyncEngineLabel }}</span>
+          </li>
+        </ul>
+        <el-text
+          v-if="micMuteSyncPauseDetail"
+          type="warning"
+          size="small"
+          class="hint block-hint"
+        >
+          {{ micMuteSyncPauseDetail }}
+        </el-text>
+      </div>
+    </el-card>
+
     <!-- 電源（Windows） -->
     <el-card class="settings-card" shadow="never">
       <template #header>
@@ -308,11 +397,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, reactive, computed, onMounted, onUnmounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessageBox, ElMessage } from "element-plus";
 import { App } from "../wails/app";
-import type { PathSettingsDTO, VRChatCurrentUserDTO } from "../wails/app";
+import type {
+  PathSettingsDTO,
+  VRChatCurrentUserDTO,
+  MicMuteSyncStatusDTO,
+} from "../wails/app";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
 import { isAppLocale, setLanguage } from "../i18n";
 
@@ -362,6 +455,11 @@ const loginLoading = ref(false);
 
 const logRetentionDays = ref(30);
 const suppressSleepWhileVRChat = ref(false);
+const micMuteSyncEnabled = ref(false);
+const micMuteSyncOscEndpoint = ref("");
+const micMuteSyncStatus = ref<MicMuteSyncStatusDTO | null>(null);
+const micMuteSyncDiscordConnecting = ref(false);
+let micMuteSyncPollTimer: ReturnType<typeof setInterval> | undefined;
 const maintenanceError = ref("");
 const maintenanceLoading = ref(false);
 const pathSettings = reactive<PathSettingsDTO>({
@@ -430,6 +528,130 @@ const pathFields = computed(() => [
   },
 ]);
 
+const micMuteSyncPlatformLabel = computed(() => {
+  if (!micMuteSyncStatus.value?.available) {
+    return t("settings.micMuteSyncPlatformNg");
+  }
+  return t("settings.micMuteSyncPlatformOk");
+});
+
+const micMuteSyncVrchatOscLabel = computed(() => {
+  const st = micMuteSyncStatus.value;
+  if (!st) return t("settings.micMuteSyncUnknown");
+  if (st.vrchatOscError) return st.vrchatOscError;
+  if (st.vrchatOscConnected) return t("settings.micMuteSyncConnected");
+  if (st.vrchatOscListening) return t("settings.micMuteSyncListening");
+  return t("settings.micMuteSyncDisconnected");
+});
+
+const micMuteSyncVrchatMuteLabel = computed(() => {
+  const st = micMuteSyncStatus.value;
+  if (!st?.vrchatMuteKnown) return t("settings.micMuteSyncUnknown");
+  return st.vrchatMuted
+    ? t("settings.micMuteSyncMuted")
+    : t("settings.micMuteSyncUnmuted");
+});
+
+const micMuteSyncDiscordRpcLabel = computed(() => {
+  const st = micMuteSyncStatus.value;
+  if (!st) return t("settings.micMuteSyncUnknown");
+  if (st.discordRpcError) return st.discordRpcError;
+  if (st.discordRpcConnected) return t("settings.micMuteSyncConnected");
+  return t("settings.micMuteSyncDisconnected");
+});
+
+const micMuteSyncDiscordMuteLabel = computed(() => {
+  const st = micMuteSyncStatus.value;
+  if (!st?.discordMuteKnown) return t("settings.micMuteSyncUnknown");
+  return st.discordMuted
+    ? t("settings.micMuteSyncMuted")
+    : t("settings.micMuteSyncUnmuted");
+});
+
+const micMuteSyncToggleVoiceLabel = computed(() => {
+  const st = micMuteSyncStatus.value;
+  if (!st?.toggleVoiceKnown) {
+    return t("settings.micMuteSyncToggleVoiceCheck");
+  }
+  return st.toggleVoiceOk
+    ? t("settings.micMuteSyncConnected")
+    : t("settings.micMuteSyncToggleVoiceCheck");
+});
+
+const micMuteSyncEngineLabel = computed(() => {
+  const st = micMuteSyncStatus.value;
+  if (!st) return t("settings.micMuteSyncUnknown");
+  switch (st.syncEngineState) {
+    case "off":
+      return t("settings.micMuteSyncStateOff");
+    case "monitoring":
+      return t("settings.micMuteSyncStateMonitoring");
+    case "syncing":
+      return t("settings.micMuteSyncStateSyncing");
+    case "paused":
+      return t("settings.micMuteSyncStatePaused");
+    case "unavailable":
+      return t("settings.micMuteSyncStateUnavailable");
+    default:
+      return st.syncEngineState;
+  }
+});
+
+const micMuteSyncPauseDetail = computed(() => {
+  const st = micMuteSyncStatus.value;
+  if (!st?.syncPauseReason || st.syncEngineState !== "paused") return "";
+  if (st.syncPauseReason === "vrchat_osc_waiting") {
+    return t("settings.micMuteSyncPauseVrchatOsc");
+  }
+  if (st.syncPauseReason === "discord_not_authorized") {
+    return t("settings.micMuteSyncPauseDiscordAuth");
+  }
+  if (st.syncPauseReason === "discord_client_id_missing") {
+    return t("settings.micMuteSyncPauseDiscordClientId");
+  }
+  if (st.syncPauseReason === "discord_rpc_timeout") {
+    return t("settings.micMuteSyncPauseDiscordTimeout");
+  }
+  if (st.syncPauseReason === "platform_unavailable") {
+    return t("settings.micMuteSyncPausePlatform");
+  }
+  return st.syncPauseReason;
+});
+
+async function loadMicMuteSync() {
+  const [settings, status] = await Promise.all([
+    App.getMicMuteSyncSettings(),
+    App.getMicMuteSyncStatus(),
+  ]);
+  micMuteSyncEnabled.value = settings.enabled;
+  micMuteSyncOscEndpoint.value = settings.oscEndpoint;
+  micMuteSyncStatus.value = status;
+}
+
+async function saveMicMuteSyncSettings() {
+  try {
+    await App.saveMicMuteSyncSettings({
+      enabled: micMuteSyncEnabled.value,
+      oscEndpoint: micMuteSyncOscEndpoint.value,
+    });
+    await loadMicMuteSync();
+  } catch (e) {
+    ElMessage.error(formatBackendError(e, t("settings.errMicMuteSyncSave")));
+  }
+}
+
+async function connectMicMuteSyncDiscord() {
+  micMuteSyncDiscordConnecting.value = true;
+  try {
+    await App.connectMicMuteSyncDiscord();
+    await loadMicMuteSync();
+  } catch (e) {
+    ElMessage.error(formatBackendError(e, t("settings.errMicMuteSyncDiscord")));
+  } finally {
+    micMuteSyncDiscordConnecting.value = false;
+  }
+}
+
 async function onLanguageChange(v: string) {
   if (!isAppLocale(v)) return;
   try {
@@ -457,6 +679,20 @@ onMounted(async () => {
   pathSettings.vrchatPathWindows = ps.vrchatPathWindows;
   pathSettings.steamPathLinux = ps.steamPathLinux;
   pathSettings.outputLogPath = ps.outputLogPath;
+  await loadMicMuteSync();
+  if (micMuteSyncStatus.value?.available) {
+    micMuteSyncPollTimer = setInterval(() => {
+      void App.getMicMuteSyncStatus()
+        .then((status) => {
+          micMuteSyncStatus.value = status;
+        })
+        .catch(() => undefined);
+    }, 2000);
+  }
+});
+
+onUnmounted(() => {
+  if (micMuteSyncPollTimer) clearInterval(micMuteSyncPollTimer);
 });
 
 async function loadCurrentUser(forceRefresh = false) {
@@ -832,5 +1068,38 @@ function doClearFriendsCache() {
   margin-top: 0.65rem;
   max-width: 22rem;
   width: 100%;
+}
+
+.mic-mute-sync-form {
+  margin-top: 0.75rem;
+}
+
+.mic-mute-sync-discord-row {
+  margin-top: 0.5rem;
+}
+
+.mic-mute-sync-status {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.status-title {
+  margin: 0 0 0.5rem;
+  font-weight: 600;
+}
+
+.status-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.status-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.25rem 0;
+  font-size: 0.9rem;
 }
 </style>

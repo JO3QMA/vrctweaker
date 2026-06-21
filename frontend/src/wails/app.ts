@@ -191,6 +191,30 @@ export interface VRChatConfigDTO {
   disableRichPresence: boolean | null;
 }
 
+export interface MicMuteSyncSettingsDTO {
+  enabled: boolean;
+  oscEndpoint: string;
+}
+
+export interface MicMuteSyncStatusDTO {
+  available: boolean;
+  enabled: boolean;
+  oscEndpoint: string;
+  vrchatOscListening: boolean;
+  vrchatOscConnected: boolean;
+  vrchatMuteKnown: boolean;
+  vrchatMuted: boolean;
+  vrchatOscError?: string;
+  syncEngineState: string;
+  syncPauseReason?: string;
+  discordRpcConnected: boolean;
+  discordMuteKnown: boolean;
+  discordMuted: boolean;
+  discordRpcError?: string;
+  toggleVoiceKnown: boolean;
+  toggleVoiceOk: boolean;
+}
+
 interface AppBindings {
   Greet(name: string): Promise<string>;
   LaunchProfiles(): Promise<LaunchProfileDTO[]>;
@@ -211,6 +235,10 @@ interface AppBindings {
   SetPathSettings(dto: PathSettingsDTO): Promise<void>;
   GetSuppressSleepWhileVRChat(): Promise<boolean>;
   SetSuppressSleepWhileVRChat(on: boolean): Promise<void>;
+  GetMicMuteSyncSettings(): Promise<MicMuteSyncSettingsDTO>;
+  SaveMicMuteSyncSettings(dto: MicMuteSyncSettingsDTO): Promise<void>;
+  GetMicMuteSyncStatus(): Promise<MicMuteSyncStatusDTO>;
+  ConnectMicMuteSyncDiscord(): Promise<void>;
   ValidatePath(path: string): Promise<boolean>;
   ValidateOutputLogPath(path: string): Promise<boolean>;
   OpenVRChatLogFolder(): Promise<void>;
@@ -499,6 +527,35 @@ export const App = {
   },
   async setSuppressSleepWhileVRChat(on: boolean): Promise<void> {
     return callApp((a) => a.SetSuppressSleepWhileVRChat(on), undefined);
+  },
+  async getMicMuteSyncSettings(): Promise<MicMuteSyncSettingsDTO> {
+    return callApp((a) => a.GetMicMuteSyncSettings(), {
+      enabled: false,
+      oscEndpoint: "",
+    });
+  },
+  async saveMicMuteSyncSettings(dto: MicMuteSyncSettingsDTO): Promise<void> {
+    return callApp((a) => a.SaveMicMuteSyncSettings(dto), undefined);
+  },
+  async getMicMuteSyncStatus(): Promise<MicMuteSyncStatusDTO> {
+    return callApp((a) => a.GetMicMuteSyncStatus(), {
+      available: false,
+      enabled: false,
+      oscEndpoint: "",
+      vrchatOscListening: false,
+      vrchatOscConnected: false,
+      vrchatMuteKnown: false,
+      vrchatMuted: false,
+      syncEngineState: "unavailable",
+      discordRpcConnected: false,
+      discordMuteKnown: false,
+      discordMuted: false,
+      toggleVoiceKnown: false,
+      toggleVoiceOk: false,
+    });
+  },
+  async connectMicMuteSyncDiscord(): Promise<void> {
+    return callApp((a) => a.ConnectMicMuteSyncDiscord(), undefined);
   },
   async validatePath(path: string): Promise<boolean> {
     return callApp((a) => a.ValidatePath(path), false);
