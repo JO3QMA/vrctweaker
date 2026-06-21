@@ -122,8 +122,8 @@
   "gallery": {
     "title": "Gallery",
     "searchPlaceholder": "Search by World ID (auto / Enter)",
-    "scanFolder": "Scan folder",
-    "scanning": "Scanning…",
+    "scanFolder": "Sync folder",
+    "scanning": "Syncing…",
     "detail": "Details",
     "fileName": "File name",
     "fileSize": "File size",
