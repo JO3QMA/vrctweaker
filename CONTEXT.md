@@ -1,8 +1,12 @@
-# VRChat Tweaker — Media (Gallery)
+# VRChat Tweaker — Domain Language
 
-VRChat のスクリーンショットを閲覧・検索するためのドメイン用語。
+アプリ横断のドメイン用語。実装詳細はここに書かない。
 
-## Language
+## Gallery
+
+VRChat のスクリーンショットを閲覧・検索するための用語。
+
+### Language
 
 **Gallery**:
 スクリーンショットを一覧・詳細表示する画面体験。主に「いつ撮ったか」で写真を思い出す。
@@ -45,7 +49,7 @@ _Avoid_: 削除済み, アーカイブ（自動削除を連想させるため）
 _Avoid_: 壊れたサムネ, 欠損ファイル（ユーザー向け用語として曖昧なため）
 
 **World join**:
-Gallery の詳細から、Screenshot に紐づくワールドへ VRChat を起動して入る操作。`world_id` が無い Screenshot では行えない。起動はデフォルトの Launch profile を用いる。
+Gallery の詳細から、Screenshot に紐づくワールドへ VRChat を起動して入る操作。`world_id` が無い Screenshot では行えない。起動は Default launch profile を用いる。
 _Avoid_: Join ボタン, ワールド起動（Launcher 全般と混同しやすいため）
 
 **Picture folder sync**:
@@ -59,3 +63,53 @@ _Avoid_: 自動スキャン, リアルタイム同期（フル同期と混同し
 **Manual sync**:
 ユーザーが Gallery 上の操作で Picture folder sync を明示的に開始すること。
 _Avoid_: 手動スキャン, 更新ボタン（一覧再取得だけを指す場合があるため）
+
+## Launcher
+
+VRChat の起動引数を名前付きで保存し、起動に使うための用語。
+
+### Language
+
+**Launcher**:
+Launch profile を一覧・作成・編集・保存する画面体験。主目的は起動引数の編集と保存であり、VRChat の起動（Profile launch）は副次の導線。
+_Avoid_: ランチャー画面, 起動画面（Quick launch / Profile launch と混同しやすいため）
+
+**Launch profile**:
+Tweaker が保存する起動設定のまとまり。表示名、起動引数の文字列、既定かどうか（`isDefault`）を持つ。Launcher 画面で編集し、Dashboard の Quick launch や World join のベース引数になる。
+_Avoid_: プロファイル（VRChat profile slot と混同するため）, preset 単体
+
+**Draft launch profile**:
+Launcher で新規作成し、まだ DB に保存していない Launch profile（`id` が空）。サイドバー一覧には行が無く、Unsaved launch profile edits がある間はエディタ上部バナーで示す。別 Launch profile への切り替えやルート離脱時は確認ダイアログを出し、破棄すればドラフトは消える。
+_Avoid_: 新規プロファイル, 仮プロファイル（保存済みとの境界が曖昧なため）
+
+**Default launch profile**:
+`isDefault` が真の Launch profile。Dashboard の Quick launch と、profile を指定しない World join が使う引数の出所。同時に存在できるのは高々 1 件。削除や既定フラグの解除後、どの Launch profile も `isDefault` でない状態があり得る（その間 Quick launch は利用できない）。
+_Avoid_: 既定プロファイル（UI 表示は可。ドメイン文脈では Launch profile とセットで書く）
+
+**VRChat profile slot**:
+VRChat 起動引数 `--profile=N` で指定する、Unity 側のプロファイル番号（0 始まりのスロット）。Launch profile とは無関係。
+_Avoid_: プロファイル, profile（Launch profile と混同するため）
+
+**Primary launch options**:
+Launcher エディタで常時表示する起動引数のまとまり。デスクトップモード、表示モード、カスタム引数文字列。Launch profile の名前や既定フラグは含まない。
+_Avoid_: 基本設定, 日常設定（Launch profile 属性と混同しやすいため）
+
+**Advanced launch options**:
+Launcher エディタの折りたたみ内にまとめる起動引数。解像度、モニター、FPS、優先度、VRChat profile slot、デバッグ・MIDI など。Primary に含まれないものはすべてここに属する。
+_Avoid_: 詳細設定, すべてのオプション（UI ラベルは可。ドメインでは Advanced と書く）
+
+**Unsaved launch profile edits**:
+Launcher エディタで、最後の保存または読み込み以降に加えた Launch profile の変更（名前、既定フラグ、Primary / Advanced の各引数）。保存前はサイドバーの未保存表示とエディタ上部バナーで示す。
+_Avoid_: dirty 状態, 未保存（他画面の編集と混同しやすいため）
+
+**Discard launch profile edits**:
+Unsaved launch profile edits を保存せず、直前に保存または読み込みした内容に戻すこと。別 Launch profile への切り替え、新規作成、Launcher 以外の画面への移動の前に確認できる。
+_Avoid_: リセット, クリア（カスタム引数フィールドの空欄化と混同しやすいため）
+
+**Quick launch**:
+Dashboard から Default launch profile の引数で VRChat を起動する操作。主な起動導線。常に DB に保存済みの Default launch profile を参照し、Launcher 上の Unsaved launch profile edits は反映しない。
+_Avoid_: 起動, Launch（Profile launch と区別できないため）
+
+**Profile launch**:
+Launcher から、選択中 Launch profile の引数で VRChat を起動する操作。Unsaved launch profile edits があっても保存を強制せず、その編集中の引数で起動してよい。セカンダリ導線。
+_Avoid_: このプロファイルで起動（UI 文言は可）, Quick launch（Default 固定ではないため）

@@ -117,7 +117,17 @@
     "delete": "削除",
     "newProfileDefaultName": "新しいプロファイル",
     "deleteConfirm": "「{name}」を削除しますか？",
-    "deleteOk": "削除"
+    "deleteOk": "削除",
+    "allOptions": "すべてのオプション",
+    "advancedDisplayPerformance": "表示・性能",
+    "advancedDebugExpert": "デバッグ・上級",
+    "unsavedBanner": "未保存の変更があります",
+    "unsavedSwitchTitle": "未保存の変更",
+    "unsavedSwitchMessage": "続行する前に変更を保存しますか？",
+    "saveAndContinue": "保存して続行",
+    "discardAndContinue": "破棄",
+    "toggleSidebar": "プロファイル一覧の表示切替",
+    "moreActions": "その他の操作"
   },
   "gallery": {
     "title": "ギャラリー",

@@ -117,7 +117,17 @@
     "delete": "删除",
     "newProfileDefaultName": "新配置",
     "deleteConfirm": "要删除「{name}」吗？",
-    "deleteOk": "删除"
+    "deleteOk": "删除",
+    "allOptions": "所有启动选项",
+    "advancedDisplayPerformance": "显示与性能",
+    "advancedDebugExpert": "调试与高级",
+    "unsavedBanner": "有未保存的更改",
+    "unsavedSwitchTitle": "未保存的更改",
+    "unsavedSwitchMessage": "继续前是否保存更改？",
+    "saveAndContinue": "保存并继续",
+    "discardAndContinue": "放弃",
+    "toggleSidebar": "切换配置列表",
+    "moreActions": "更多操作"
   },
   "gallery": {
     "title": "相册",
