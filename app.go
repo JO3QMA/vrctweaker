@@ -691,23 +691,24 @@ func (a *App) OpenDirectoryDialog(title, defaultDir string) (string, error) {
 
 // --- Media bindings ---
 
-// Screenshots returns screenshots (optional worldId filter).
+// Screenshots returns screenshots (optional worldId filter) within the current picture folder.
 func (a *App) Screenshots(worldId string) ([]ScreenshotDTO, error) {
 	filter := &media.ScreenshotFilter{}
 	if worldId != "" {
 		filter.WorldID = worldId
 	}
-	list, err := a.media.ListScreenshots(a.ctx, filter)
-	if err != nil {
-		return nil, err
-	}
-	return toScreenshotDTOs(list), nil
+	return a.listGalleryScreenshotDTOs(filter)
 }
 
 // SearchScreenshots returns screenshots matching the filter (worldId, worldName, dateFrom, dateTo).
 func (a *App) SearchScreenshots(filter ScreenshotSearchDTO) ([]ScreenshotDTO, error) {
 	f := toScreenshotFilter(filter)
-	list, err := a.media.ListScreenshots(a.ctx, f)
+	return a.listGalleryScreenshotDTOs(f)
+}
+
+func (a *App) listGalleryScreenshotDTOs(filter *media.ScreenshotFilter) ([]ScreenshotDTO, error) {
+	root := a.resolveVRChatPictureWatchRoot()
+	list, err := a.media.ListScreenshotsInGalleryScope(a.ctx, root, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -809,7 +810,7 @@ func (e *scanProgressEmitter) flush() {
 	e.hasPending = false
 }
 
-// ScanScreenshotDir scans a directory for screenshots.
+// ScanScreenshotDir synchronizes a picture folder (ingest new files + selective reindex).
 func (a *App) ScanScreenshotDir(path string) (int, error) {
 	a.galleryScanMu.Lock()
 	for a.galleryScanCancel != nil {
@@ -847,7 +848,7 @@ func (a *App) ScanScreenshotDir(path string) (int, error) {
 		runtime.EventsEmit(a.ctx, galleryScanDoneEvent, dto)
 	}()
 
-	count, err = a.media.ScanDirectory(scanCtx, path, em.emit)
+	count, err = a.media.SyncPictureFolder(scanCtx, path, em.emit)
 	return count, err
 }
 
