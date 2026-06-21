@@ -25,9 +25,10 @@ test.describe("Activity", () => {
       playtimeCard.getByText("プレイ時間（直近14日）"),
     ).toBeVisible();
     await expect(playtimeCard).toHaveClass(/section-card--collapsed/);
-    await expect(
-      playtimeCard.locator(".section-card__toggle"),
-    ).toHaveAttribute("aria-expanded", "false");
+    await expect(playtimeCard.locator(".section-card__toggle")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
 
     const encounterTable = encounterCard.locator(".el-table");
     await expect(encounterTable).toBeVisible();
