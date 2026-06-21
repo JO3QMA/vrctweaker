@@ -12,14 +12,10 @@
           >
             <el-icon><component :is="sidebarOpen ? Fold : Expand" /></el-icon>
           </el-button>
-          <el-button
-            v-show="sidebarOpen"
-            class="btn-add"
-            @click="requestAddNew"
-          >
-            {{ t("launcher.newProfile") }}
-          </el-button>
         </div>
+        <el-button v-show="sidebarOpen" class="btn-add" @click="requestAddNew">
+          {{ t("launcher.newProfile") }}
+        </el-button>
         <div v-show="sidebarOpen" class="profiles-list">
           <div
             v-for="p in profiles"
@@ -559,7 +555,7 @@ import {
 import {
   defaultValueOptionsEnabled,
   hasAdvancedLaunchOptionsEnabled,
-  launchProfileEditsEqual,
+  isLaunchProfileEditDirty,
   readSidebarOpenPreference,
   syncValueOptionsEnabled,
   writeSidebarOpenPreference,
@@ -631,10 +627,9 @@ const currentSnapshot = computed((): LaunchProfileEditSnapshot | null => {
   };
 });
 
-const isDirty = computed(() => {
-  if (!savedSnapshot.value || !currentSnapshot.value) return false;
-  return !launchProfileEditsEqual(savedSnapshot.value, currentSnapshot.value);
-});
+const isDirty = computed(() =>
+  isLaunchProfileEditDirty(savedSnapshot.value, currentSnapshot.value),
+);
 
 function isProfileDirtyInSidebar(p: LaunchProfileDTO): boolean {
   if (!isDirty.value || !selected.value) return false;
@@ -796,6 +791,7 @@ async function syncLaunchArgsFromProfile(p: LaunchProfileDTO) {
 }
 
 async function openProfile(p: LaunchProfileDTO) {
+  savedSnapshot.value = null;
   selected.value = { ...p };
   await syncLaunchArgsFromProfile(p);
   captureSnapshot();
@@ -964,7 +960,6 @@ onBeforeRouteLeave(async (_to, _from, next) => {
 
 .sidebar-toolbar {
   display: flex;
-  gap: 0.5rem;
   margin-bottom: 0.5rem;
   align-items: center;
 }
@@ -978,7 +973,8 @@ onBeforeRouteLeave(async (_to, _from, next) => {
 }
 
 .btn-add {
-  flex: 1;
+  width: 100%;
+  margin-bottom: 0.5rem;
   border-style: dashed !important;
   color: var(--text-secondary) !important;
 }

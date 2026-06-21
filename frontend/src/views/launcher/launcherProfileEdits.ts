@@ -128,6 +128,16 @@ export function launchProfileEditsEqual(
   );
 }
 
+/** True only when the current editor state diverges from the saved snapshot for the same profile. */
+export function isLaunchProfileEditDirty(
+  saved: LaunchProfileEditSnapshot | null,
+  current: LaunchProfileEditSnapshot | null,
+): boolean {
+  if (!saved || !current) return false;
+  if (saved.profileId !== current.profileId) return false;
+  return !launchProfileEditsEqual(saved, current);
+}
+
 export function readSidebarOpenPreference(): boolean {
   if (typeof localStorage === "undefined") return true;
   const raw = localStorage.getItem(LAUNCHER_SIDEBAR_OPEN_KEY);
