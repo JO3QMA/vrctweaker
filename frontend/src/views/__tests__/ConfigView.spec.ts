@@ -1,8 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { mount } from "@vue/test-utils";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { mount, flushPromises } from "@vue/test-utils";
 import { createRouter, createWebHashHistory } from "vue-router";
-import { ElSlider } from "element-plus";
+import { ElMessageBox, ElSlider } from "element-plus";
 import ConfigView from "../ConfigView.vue";
+import { App } from "../../wails/app";
+import type { VRChatConfigDTO } from "../../wails/app";
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -22,6 +24,51 @@ function radioInput(wrapper: ReturnType<typeof mount>, testId: string) {
 /** ElInputNumber 内の native input を返す（value / disabled / setValue 用） */
 function numInput(wrapper: ReturnType<typeof mount>, testId: string) {
   return wrapper.find(`[data-testid="${testId}"] input`);
+}
+
+/** ElInput の内側 input を返す */
+function textInput(wrapper: ReturnType<typeof mount>, testId: string) {
+  const root = wrapper.find(`[data-testid="${testId}"]`);
+  if (root.exists()) {
+    const inner = root.find("input");
+    return inner.exists() ? inner : root;
+  }
+  const idMap: Record<string, string> = {
+    "picture-output-folder-input": "picture-output-folder",
+    "cache-directory-input": "cache-directory",
+  };
+  const byId = wrapper.find(`#${idMap[testId] ?? testId}`);
+  if (byId.exists()) {
+    const inner = byId.find("input");
+    return inner.exists() ? inner : byId;
+  }
+  return root;
+}
+
+const sampleConfig: VRChatConfigDTO = {
+  cameraResWidth: 1920,
+  cameraResHeight: 1080,
+  screenshotResWidth: 1920,
+  screenshotResHeight: 1080,
+  pictureOutputFolder: "C:\\Pictures\\VRChat",
+  pictureOutputSplitByDate: true,
+  fpvSteadycamFov: 55,
+  cacheDirectory: "C:\\VRChat\\Cache",
+  cacheSize: 30,
+  cacheExpiryDelay: 30,
+  disableRichPresence: false,
+};
+
+async function mountEditor() {
+  vi.spyOn(App, "vrchatConfigExists").mockResolvedValue(false);
+  vi.spyOn(App, "saveVRChatConfig").mockResolvedValue(undefined);
+  await router.push("/config");
+  await router.isReady();
+  const wrapper = mount(ConfigView, { global: { plugins: [router] } });
+  await flushPromises();
+  await wrapper.find("[data-testid='create-config-btn']").trigger("click");
+  await flushPromises();
+  return wrapper;
 }
 
 describe("ConfigView", () => {
@@ -316,6 +363,254 @@ describe("ConfigView", () => {
       .element.closest("[role='radiogroup']");
     expect(shot?.getAttribute("aria-label")).toBe(
       "スクリーンショット解像度プリセット",
+    );
+  });
+});
+
+describe("ConfigView save and delete", () => {
+  beforeEach(() => {
+    vi.spyOn(App, "openDirectoryDialog").mockResolvedValue(null);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("saves config and shows success alert", async () => {
+    const wrapper = await mountEditor();
+
+    await wrapper.find("[data-testid='save-config-btn']").trigger("click");
+    await flushPromises();
+
+    expect(App.saveVRChatConfig).toHaveBeenCalled();
+    expect(wrapper.text()).toContain("保存しました");
+  });
+
+  it("shows save error when App.saveVRChatConfig fails", async () => {
+    vi.spyOn(App, "vrchatConfigExists").mockResolvedValue(false);
+    vi.spyOn(App, "saveVRChatConfig")
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("disk full"));
+    await router.push("/config");
+    await router.isReady();
+    const wrapper = mount(ConfigView, { global: { plugins: [router] } });
+    await flushPromises();
+    await wrapper.find("[data-testid='create-config-btn']").trigger("click");
+    await flushPromises();
+
+    await wrapper.find("[data-testid='save-config-btn']").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find(".el-alert--error").text()).toContain("disk full");
+  });
+
+  it("includes rich presence and split-by-date flags in save payload", async () => {
+    const wrapper = await mountEditor();
+    vi.mocked(App.saveVRChatConfig).mockClear();
+
+    const richPresence = wrapper.find(
+      "[data-testid='disable-rich-presence-checkbox'] input",
+    );
+    await richPresence.setValue(true);
+    await wrapper.vm.$nextTick();
+
+    const splitByDate = wrapper.find(
+      "[data-testid='picture-split-by-date-checkbox'] input",
+    );
+    await splitByDate.setValue(false);
+    await wrapper.vm.$nextTick();
+
+    await wrapper.find("[data-testid='save-config-btn']").trigger("click");
+    await flushPromises();
+
+    expect(App.saveVRChatConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        disableRichPresence: true,
+        pictureOutputSplitByDate: false,
+      }),
+    );
+  });
+
+  it("deletes config after confirmation", async () => {
+    vi.spyOn(ElMessageBox, "confirm").mockResolvedValue(undefined as never);
+    vi.spyOn(App, "deleteVRChatConfig").mockResolvedValue(undefined);
+    const wrapper = await mountEditor();
+
+    await wrapper.find("[data-testid='delete-config-btn']").trigger("click");
+    await flushPromises();
+
+    expect(App.deleteVRChatConfig).toHaveBeenCalled();
+    expect(wrapper.find("[data-testid='create-config-btn']").exists()).toBe(
+      true,
+    );
+    expect(wrapper.find("[data-testid='save-config-btn']").exists()).toBe(
+      false,
+    );
+  });
+
+  it("does not delete config when confirmation is cancelled", async () => {
+    vi.spyOn(ElMessageBox, "confirm").mockRejectedValue(new Error("cancel"));
+    vi.spyOn(App, "deleteVRChatConfig").mockResolvedValue(undefined);
+    const wrapper = await mountEditor();
+
+    await wrapper.find("[data-testid='delete-config-btn']").trigger("click");
+    await flushPromises();
+
+    expect(App.deleteVRChatConfig).not.toHaveBeenCalled();
+    expect(wrapper.find("[data-testid='save-config-btn']").exists()).toBe(true);
+  });
+
+  it("shows delete error when App.deleteVRChatConfig fails", async () => {
+    vi.spyOn(ElMessageBox, "confirm").mockResolvedValue(undefined as never);
+    vi.spyOn(App, "deleteVRChatConfig").mockRejectedValueOnce(
+      new Error("permission denied"),
+    );
+    const wrapper = await mountEditor();
+
+    await wrapper.find("[data-testid='delete-config-btn']").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find(".el-alert--error").text()).toContain(
+      "permission denied",
+    );
+    expect(wrapper.find("[data-testid='save-config-btn']").exists()).toBe(true);
+  });
+});
+
+describe("ConfigView browse and load", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("browse picture output folder sets input value", async () => {
+    vi.spyOn(App, "vrchatConfigExists").mockResolvedValue(false);
+    vi.spyOn(App, "saveVRChatConfig").mockResolvedValue(undefined);
+    vi.spyOn(App, "openDirectoryDialog").mockResolvedValue(
+      "D:\\VRChat\\Pictures",
+    );
+    const wrapper = await mountEditor();
+
+    await wrapper
+      .find("[data-testid='picture-output-folder-browse']")
+      .trigger("click");
+    await flushPromises();
+
+    expect(
+      (
+        textInput(wrapper, "picture-output-folder-input")
+          .element as HTMLInputElement
+      ).value,
+    ).toBe("D:\\VRChat\\Pictures");
+  });
+
+  it("browse cache directory sets input value", async () => {
+    vi.spyOn(App, "vrchatConfigExists").mockResolvedValue(false);
+    vi.spyOn(App, "saveVRChatConfig").mockResolvedValue(undefined);
+    vi.spyOn(App, "openDirectoryDialog").mockResolvedValue("D:\\VRChat\\Cache");
+    const wrapper = await mountEditor();
+
+    await wrapper
+      .find("[data-testid='cache-directory-browse']")
+      .trigger("click");
+    await flushPromises();
+
+    expect(
+      (textInput(wrapper, "cache-directory-input").element as HTMLInputElement)
+        .value,
+    ).toBe("D:\\VRChat\\Cache");
+  });
+
+  it("loads existing config into editor on mount", async () => {
+    vi.spyOn(App, "vrchatConfigExists").mockResolvedValue(true);
+    vi.spyOn(App, "getVRChatConfig").mockResolvedValue(sampleConfig);
+    await router.push("/config");
+    await router.isReady();
+
+    const wrapper = mount(ConfigView, { global: { plugins: [router] } });
+    await flushPromises();
+
+    expect(App.getVRChatConfig).toHaveBeenCalled();
+    expect(wrapper.find("[data-testid='save-config-btn']").exists()).toBe(true);
+    expect(wrapper.find("[data-testid='create-config-btn']").exists()).toBe(
+      false,
+    );
+    expect(
+      (numInput(wrapper, "camera-width-input").element as HTMLInputElement)
+        .value,
+    ).toBe("1920");
+    expect(
+      (numInput(wrapper, "camera-height-input").element as HTMLInputElement)
+        .value,
+    ).toBe("1080");
+    expect(
+      (
+        textInput(wrapper, "picture-output-folder-input")
+          .element as HTMLInputElement
+      ).value,
+    ).toBe(sampleConfig.pictureOutputFolder);
+  });
+
+  it("shows create button when getVRChatConfig fails on mount", async () => {
+    vi.spyOn(App, "vrchatConfigExists").mockResolvedValue(true);
+    vi.spyOn(App, "getVRChatConfig").mockRejectedValue(
+      new Error("read failed"),
+    );
+    await router.push("/config");
+    await router.isReady();
+
+    const wrapper = mount(ConfigView, { global: { plugins: [router] } });
+    await flushPromises();
+
+    expect(wrapper.find("[data-testid='create-config-btn']").exists()).toBe(
+      true,
+    );
+    expect(wrapper.find("[data-testid='save-config-btn']").exists()).toBe(
+      false,
+    );
+  });
+
+  it("shows create error message when initial create fails", async () => {
+    vi.spyOn(App, "vrchatConfigExists").mockResolvedValue(false);
+    vi.spyOn(App, "saveVRChatConfig").mockRejectedValueOnce(
+      new Error("create failed"),
+    );
+    await router.push("/config");
+    await router.isReady();
+
+    const wrapper = mount(ConfigView, { global: { plugins: [router] } });
+    await flushPromises();
+    await wrapper.find("[data-testid='create-config-btn']").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find("[data-testid='create-config-btn']").exists()).toBe(
+      true,
+    );
+    expect(wrapper.find("[data-testid='save-config-btn']").exists()).toBe(
+      false,
+    );
+  });
+
+  it("clamps cache values below minimum when saving", async () => {
+    vi.spyOn(App, "vrchatConfigExists").mockResolvedValue(false);
+    vi.spyOn(App, "saveVRChatConfig").mockResolvedValue(undefined);
+    await router.push("/config");
+    await router.isReady();
+    const wrapper = mount(ConfigView, { global: { plugins: [router] } });
+    await flushPromises();
+    await wrapper.find("[data-testid='create-config-btn']").trigger("click");
+    await flushPromises();
+    vi.mocked(App.saveVRChatConfig).mockClear();
+
+    const cacheInner = numInput(wrapper, "cache-size-input");
+    await cacheInner.setValue(10);
+    await cacheInner.trigger("blur");
+    await wrapper.vm.$nextTick();
+
+    await wrapper.find("[data-testid='save-config-btn']").trigger("click");
+    await flushPromises();
+
+    expect(App.saveVRChatConfig).toHaveBeenCalledWith(
+      expect.objectContaining({ cacheSize: 30 }),
     );
   });
 });

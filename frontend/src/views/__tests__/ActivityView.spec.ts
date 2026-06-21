@@ -25,6 +25,14 @@ const {
   }),
 }));
 
+const runtimeHooks = vi.hoisted(() => ({
+  encountersChangedHandler: null as (() => void) | null,
+}));
+
+vi.mock("../../utils/openEncounterHistoryWindow", () => ({
+  openEncounterHistoryWindow: vi.fn(),
+}));
+
 vi.mock("../../components/PlayTimeChart.vue", () => ({
   default: {
     name: "PlayTimeChartStub",
@@ -45,10 +53,56 @@ vi.mock("../../wails/app", async (importOriginal) => {
   };
 });
 
+vi.mock("../../wails/runtime", () => ({
+  getRuntime: () => ({
+    EventsOn: (event: string, handler: () => void) => {
+      if (event === "activity:encounters-changed") {
+        runtimeHooks.encountersChangedHandler = handler;
+      }
+      return () => {};
+    },
+  }),
+}));
+
+import { openEncounterHistoryWindow } from "../../utils/openEncounterHistoryWindow";
+
 describe("ActivityView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    runtimeHooks.encountersChangedHandler = null;
+    mockEncounters.mockResolvedValue([]);
+    mockGetActivityStats.mockResolvedValue({
+      dailyPlaySeconds: [],
+      topWorlds: [],
+    });
   });
+
+  async function mountActivity() {
+    const router = createRouter({
+      history: createWebHashHistory(),
+      routes: [
+        { path: "/activity", component: ActivityView },
+        {
+          path: "/friends",
+          name: "friends",
+          component: { template: "<div/>" },
+        },
+        {
+          path: "/user-profile",
+          name: "user-profile",
+          component: { template: "<div/>" },
+        },
+      ],
+    });
+    await router.push("/activity");
+    await router.isReady();
+    const wrapper = mount(ActivityView, {
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+    await wrapper.vm.$nextTick();
+    return { wrapper, router };
+  }
 
   it("uses layout classes for playtime card and encounter log scroll region", async () => {
     const router = createRouter({
@@ -255,5 +309,142 @@ describe("ActivityView", () => {
       name: "user-profile",
       query: { vrcUserId: "u3", displayName: "FailUser" },
     });
+  });
+
+  it("loads encounters and stats on mount", async () => {
+    await mountActivity();
+    expect(mockEncounters).toHaveBeenCalled();
+    expect(mockGetActivityStats).toHaveBeenCalled();
+  });
+
+  it("shows playtime chart when stats are available", async () => {
+    mockGetActivityStats.mockResolvedValue({
+      dailyPlaySeconds: [{ date: "2026-06-01", seconds: 3600 }],
+      topWorlds: [],
+    });
+    const { wrapper } = await mountActivity();
+    expect(wrapper.find(".playtime-chart-stub").exists()).toBe(true);
+  });
+
+  it("filters encounters by display name", async () => {
+    mockEncounters.mockResolvedValue([
+      {
+        id: "1",
+        vrcUserId: "u1",
+        displayName: "Alpha",
+        instanceId: "inst",
+        joinedAt: "2024-01-01T12:00:00.000Z",
+      },
+      {
+        id: "2",
+        vrcUserId: "u2",
+        displayName: "Beta",
+        instanceId: "inst",
+        joinedAt: "2024-01-02T12:00:00.000Z",
+      },
+    ]);
+    const { wrapper } = await mountActivity();
+
+    const input = wrapper.find(".filters .el-input input");
+    await input.setValue("beta");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("Beta");
+    expect(wrapper.text()).not.toContain("Alpha");
+  });
+
+  it("reloads encounters when refresh button is clicked", async () => {
+    const { wrapper } = await mountActivity();
+    mockEncounters.mockClear();
+
+    const buttons = wrapper.findAll(".filters .el-button");
+    await buttons[0]!.trigger("click");
+    await flushPromises();
+
+    expect(mockEncounters).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders muted display name when encounter has no vrcUserId", async () => {
+    mockEncounters.mockResolvedValue([
+      {
+        id: "1",
+        vrcUserId: "",
+        displayName: "Anonymous",
+        instanceId: "inst",
+        joinedAt: "2024-01-01T12:00:00.000Z",
+      },
+    ]);
+    const { wrapper } = await mountActivity();
+
+    expect(wrapper.find(".timeline-name-muted").text()).toBe("Anonymous");
+    expect(wrapper.find(".timeline-link").exists()).toBe(false);
+  });
+
+  it("shows dash for missing leave time", async () => {
+    mockEncounters.mockResolvedValue([
+      {
+        id: "1",
+        vrcUserId: "u1",
+        displayName: "StillHere",
+        instanceId: "inst",
+        joinedAt: "2024-01-01T12:00:00.000Z",
+        leftAt: "",
+      },
+    ]);
+    const { wrapper } = await mountActivity();
+    expect(wrapper.text()).toContain("—");
+  });
+
+  it("opens world encounter history when world link is clicked", async () => {
+    mockEncounters.mockResolvedValue([
+      {
+        id: "1",
+        vrcUserId: "u1",
+        displayName: "User",
+        worldId: "wrld_abc",
+        worldDisplayName: "Test World",
+        instanceId: "inst",
+        joinedAt: "2024-01-01T12:00:00.000Z",
+      },
+    ]);
+    const { wrapper, router } = await mountActivity();
+
+    const worldLinks = wrapper.findAll(".timeline-link");
+    await worldLinks[worldLinks.length - 1]!.trigger("click");
+
+    expect(openEncounterHistoryWindow).toHaveBeenCalledWith(
+      router,
+      "world",
+      "wrld_abc",
+    );
+  });
+
+  it("debounces encounter reload on activity:encounters-changed event", async () => {
+    vi.useFakeTimers();
+    await mountActivity();
+    mockEncounters.mockClear();
+
+    runtimeHooks.encountersChangedHandler?.();
+    runtimeHooks.encountersChangedHandler?.();
+    expect(mockEncounters).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(400);
+    expect(mockEncounters).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it("shows empty encounters message when list is empty", async () => {
+    mockEncounters.mockResolvedValue([]);
+    const { wrapper } = await mountActivity();
+    expect(wrapper.find(".empty").text()).toContain("遭遇");
+  });
+
+  it("collapses encounter section when header toggle is clicked", async () => {
+    const { wrapper } = await mountActivity();
+    const encountersCard = wrapper.find(".section-card--encounters");
+    const toggle = encountersCard.find(".section-card__toggle");
+
+    await toggle.trigger("click");
+    expect(encountersCard.classes()).toContain("section-card--collapsed");
   });
 });

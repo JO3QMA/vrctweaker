@@ -448,6 +448,526 @@ describe("LauncherView", () => {
     );
   });
 
+  it("addNew creates first profile as default when list is empty", async () => {
+    mockLaunchProfiles.mockResolvedValue([]);
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    await wrapper.find(".btn-add").trigger("click");
+    await flushPromises();
+
+    const defaultLabel = wrapper
+      .findAll(".el-checkbox")
+      .find((c) => c.text().includes("デフォルトに設定"));
+    const defaultInput = defaultLabel?.find("input");
+    expect((defaultInput?.element as HTMLInputElement).checked).toBe(true);
+  });
+
+  it("saves a new profile via merge and saveLaunchProfile", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    await wrapper.find(".btn-add").trigger("click");
+    await flushPromises();
+
+    await wrapper
+      .find(".profile-editor .el-input input")
+      .setValue("My Custom Profile");
+    await checkInput(wrapper, "no-vr-checkbox").setValue(true);
+    mockMergeLaunchArgsForGUI.mockResolvedValue("-no-vr");
+    await wrapper.find(".btn-save").trigger("click");
+    await flushPromises();
+
+    expect(mockMergeLaunchArgsForGUI).toHaveBeenCalledWith(
+      expect.objectContaining({ noVr: true }),
+    );
+    expect(mockSaveLaunchProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "",
+        name: "My Custom Profile",
+        arguments: "-no-vr",
+      }),
+    );
+    expect(mockLaunchProfiles).toHaveBeenCalled();
+  });
+
+  it("applies resolution preset dimensions on save", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+
+    const collapse = wrapper.find(".args-collapse");
+    await collapse.find(".el-collapse-item__header").trigger("click");
+    await flushPromises();
+
+    await checkInput(wrapper, "resolution-enabled-checkbox").setValue(true);
+    await flushPromises();
+    await wrapper
+      .find("[data-testid='resolution-preset-4k'] input")
+      .setValue(true);
+    await flushPromises();
+
+    mockMergeLaunchArgsForGUI.mockResolvedValue(
+      "-screen-width 3840 -screen-height 2160",
+    );
+    await wrapper.find(".btn-save").trigger("click");
+    await flushPromises();
+
+    expect(mockMergeLaunchArgsForGUI).toHaveBeenCalledWith(
+      expect.objectContaining({
+        screenWidth: 3840,
+        screenHeight: 2160,
+      }),
+    );
+  });
+
+  it("clears resolution when disabled before save", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    mockParseLaunchArgsForGUI.mockResolvedValue({
+      noVr: false,
+      screenMode: "",
+      screenWidth: 1920,
+      screenHeight: 1080,
+      fps: 0,
+      processPriority: -999,
+      mainThreadPriority: -999,
+      monitor: 0,
+      profile: -1,
+      midi: "",
+      ignoreTrackers: "",
+      osc: "",
+      affinity: "",
+      custom: "",
+    } as LaunchArgsParsedDTO);
+
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+
+    const collapse = wrapper.find(".args-collapse");
+    await collapse.find(".el-collapse-item__header").trigger("click");
+    await flushPromises();
+
+    await checkInput(wrapper, "resolution-enabled-checkbox").setValue(false);
+    await flushPromises();
+
+    mockMergeLaunchArgsForGUI.mockResolvedValue("");
+    await wrapper.find(".btn-save").trigger("click");
+    await flushPromises();
+
+    expect(mockMergeLaunchArgsForGUI).toHaveBeenCalledWith(
+      expect.objectContaining({
+        screenWidth: 0,
+        screenHeight: 0,
+      }),
+    );
+  });
+
+  it("syncs advanced option toggles from parsed args", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    mockParseLaunchArgsForGUI.mockResolvedValue({
+      noVr: false,
+      screenMode: "",
+      screenWidth: 0,
+      screenHeight: 0,
+      fps: 90,
+      skipRegistry: false,
+      processPriority: 1,
+      mainThreadPriority: -999,
+      monitor: 2,
+      profile: 0,
+      enableDebugGui: false,
+      enableSDKLogLevels: false,
+      enableUdonDebugLogging: false,
+      midi: "device1",
+      watchWorlds: false,
+      watchAvatars: false,
+      ignoreTrackers: "serial1",
+      videoDecoding: "",
+      disableAMDStutterWorkaround: false,
+      osc: "9000",
+      affinity: "0,1",
+      enforceWorldServerChecks: false,
+      custom: "",
+    } as LaunchArgsParsedDTO);
+
+    await wrapper.findAll(".profile-card")[1]?.trigger("click");
+    await flushPromises();
+
+    const collapse = wrapper.find(".args-collapse");
+    await collapse.find(".el-collapse-item__header").trigger("click");
+    await flushPromises();
+
+    expect(
+      (
+        checkInput(wrapper, "monitor-enabled-checkbox")
+          .element as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+    expect(
+      (checkInput(wrapper, "fps-enabled-checkbox").element as HTMLInputElement)
+        .checked,
+    ).toBe(true);
+    expect(
+      (
+        checkInput(wrapper, "process-priority-enabled-checkbox")
+          .element as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+    expect(
+      (
+        checkInput(wrapper, "profile-enabled-checkbox")
+          .element as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+
+    const debugHeaders = wrapper.findAll(".el-collapse-item__header");
+    const debugHeader = debugHeaders.find((h) =>
+      h.text().includes("クリエイター・デバッグ向け"),
+    );
+    await debugHeader!.trigger("click");
+    await flushPromises();
+
+    expect(
+      (checkInput(wrapper, "midi-enabled-checkbox").element as HTMLInputElement)
+        .checked,
+    ).toBe(true);
+    expect(wrapper.find('[data-testid="midi-input"]').exists()).toBe(true);
+    expect(
+      (
+        checkInput(wrapper, "ignore-trackers-enabled-checkbox")
+          .element as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+    expect(
+      (checkInput(wrapper, "osc-enabled-checkbox").element as HTMLInputElement)
+        .checked,
+    ).toBe(true);
+    expect(
+      (
+        checkInput(wrapper, "affinity-enabled-checkbox")
+          .element as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+  });
+
+  it("clears optional fields when their enable toggles are turned off", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    mockParseLaunchArgsForGUI.mockResolvedValue({
+      noVr: false,
+      screenMode: "",
+      screenWidth: 0,
+      screenHeight: 0,
+      fps: 90,
+      processPriority: -999,
+      mainThreadPriority: -999,
+      monitor: 2,
+      profile: -1,
+      midi: "device1",
+      ignoreTrackers: "serial1",
+      osc: "9000",
+      affinity: "0,1",
+      custom: "",
+    } as LaunchArgsParsedDTO);
+
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+
+    const collapse = wrapper.find(".args-collapse");
+    await collapse.find(".el-collapse-item__header").trigger("click");
+    await flushPromises();
+
+    await checkInput(wrapper, "monitor-enabled-checkbox").setValue(false);
+    await checkInput(wrapper, "fps-enabled-checkbox").setValue(false);
+    await flushPromises();
+
+    const debugHeaders = wrapper.findAll(".el-collapse-item__header");
+    const debugHeader = debugHeaders.find((h) =>
+      h.text().includes("クリエイター・デバッグ向け"),
+    );
+    await debugHeader!.trigger("click");
+    await flushPromises();
+
+    await checkInput(wrapper, "midi-enabled-checkbox").setValue(false);
+    await checkInput(wrapper, "osc-enabled-checkbox").setValue(false);
+    await checkInput(wrapper, "ignore-trackers-enabled-checkbox").setValue(
+      false,
+    );
+    await checkInput(wrapper, "affinity-enabled-checkbox").setValue(false);
+    await flushPromises();
+
+    mockMergeLaunchArgsForGUI.mockResolvedValue("");
+    await wrapper.find(".btn-save").trigger("click");
+    await flushPromises();
+
+    expect(mockMergeLaunchArgsForGUI).toHaveBeenCalledWith(
+      expect.objectContaining({
+        monitor: 0,
+        fps: 0,
+        midi: "",
+        osc: "",
+        ignoreTrackers: "",
+        affinity: "",
+      }),
+    );
+  });
+
+  it("enables main thread priority and profile index when toggled on", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+
+    const collapse = wrapper.find(".args-collapse");
+    await collapse.find(".el-collapse-item__header").trigger("click");
+    await flushPromises();
+
+    await checkInput(wrapper, "main-thread-priority-enabled-checkbox").setValue(
+      true,
+    );
+    await checkInput(wrapper, "profile-enabled-checkbox").setValue(true);
+    await flushPromises();
+
+    mockMergeLaunchArgsForGUI.mockResolvedValue("");
+    await wrapper.find(".btn-save").trigger("click");
+    await flushPromises();
+
+    expect(mockMergeLaunchArgsForGUI).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mainThreadPriority: 0,
+        profile: 0,
+      }),
+    );
+  });
+
+  it("detects custom resolution preset from parsed args", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    mockParseLaunchArgsForGUI.mockResolvedValue({
+      noVr: false,
+      screenMode: "",
+      screenWidth: 1600,
+      screenHeight: 900,
+      fps: 0,
+      processPriority: -999,
+      mainThreadPriority: -999,
+      monitor: 0,
+      profile: -1,
+      midi: "",
+      ignoreTrackers: "",
+      osc: "",
+      affinity: "",
+      custom: "",
+    } as LaunchArgsParsedDTO);
+
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+
+    const collapse = wrapper.find(".args-collapse");
+    await collapse.find(".el-collapse-item__header").trigger("click");
+    await flushPromises();
+
+    expect(
+      (
+        checkInput(wrapper, "resolution-enabled-checkbox")
+          .element as HTMLInputElement
+      ).checked,
+    ).toBe(true);
+    expect(isDisabled(wrapper, "screen-width-input")).toBe(false);
+    expect(isDisabled(wrapper, "screen-height-input")).toBe(false);
+  });
+
+  it("launches with popupwindow screen mode", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+
+    await wrapper
+      .find('[data-testid="screen-mode-popupwindow"] input')
+      .setValue(true);
+    mockMergeLaunchArgsForGUI.mockResolvedValue("-popupwindow");
+    await wrapper.find(".btn-launch").trigger("click");
+    await flushPromises();
+
+    expect(mockMergeLaunchArgsForGUI).toHaveBeenCalledWith(
+      expect.objectContaining({ screenMode: "popupwindow" }),
+    );
+    expect(mockLaunchVRChatWithArgs).toHaveBeenCalledWith("-popupwindow");
+  });
+
+  it("mounts without profiles and opens editor only after add", async () => {
+    mockLaunchProfiles.mockResolvedValue([]);
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    expect(wrapper.find(".profile-editor").exists()).toBe(false);
+    await wrapper.find(".btn-add").trigger("click");
+    await flushPromises();
+    expect(wrapper.find(".profile-editor").exists()).toBe(true);
+  });
+
+  it("defaults resolution to FHD when enabling empty resolution fields", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    mockParseLaunchArgsForGUI.mockResolvedValue({
+      noVr: false,
+      screenMode: "",
+      screenWidth: 0,
+      screenHeight: 0,
+      fps: 0,
+      processPriority: -999,
+      mainThreadPriority: -999,
+      monitor: 0,
+      profile: -1,
+      midi: "",
+      ignoreTrackers: "",
+      osc: "",
+      affinity: "",
+      custom: "",
+    } as LaunchArgsParsedDTO);
+
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+
+    const collapse = wrapper.find(".args-collapse");
+    await collapse.find(".el-collapse-item__header").trigger("click");
+    await flushPromises();
+
+    await checkInput(wrapper, "resolution-enabled-checkbox").setValue(true);
+    await flushPromises();
+
+    mockMergeLaunchArgsForGUI.mockResolvedValue(
+      "-screen-width 1920 -screen-height 1080",
+    );
+    await wrapper.find(".btn-save").trigger("click");
+    await flushPromises();
+
+    expect(mockMergeLaunchArgsForGUI).toHaveBeenCalledWith(
+      expect.objectContaining({
+        screenWidth: 1920,
+        screenHeight: 1080,
+      }),
+    );
+  });
+
+  it("merges monitor, fps, process priority, and debug flags on launch", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+
+    const collapse = wrapper.find(".args-collapse");
+    await collapse.find(".el-collapse-item__header").trigger("click");
+    await flushPromises();
+
+    await checkInput(wrapper, "monitor-enabled-checkbox").setValue(true);
+    await checkInput(wrapper, "fps-enabled-checkbox").setValue(true);
+    await checkInput(wrapper, "process-priority-enabled-checkbox").setValue(
+      true,
+    );
+    await checkInput(wrapper, "skip-registry-checkbox").setValue(true);
+    await flushPromises();
+
+    await inputInner(wrapper, "monitor-input").setValue(2);
+    await inputInner(wrapper, "fps-input").setValue(144);
+    await inputInner(wrapper, "process-priority-input").setValue(1);
+
+    const debugHeaders = wrapper.findAll(".el-collapse-item__header");
+    const debugHeader = debugHeaders.find((h) =>
+      h.text().includes("クリエイター・デバッグ向け"),
+    );
+    await debugHeader!.trigger("click");
+    await flushPromises();
+
+    await checkInput(wrapper, "enable-debug-gui-checkbox").setValue(true);
+    await checkInput(wrapper, "watch-worlds-checkbox").setValue(true);
+    await checkInput(wrapper, "watch-avatars-checkbox").setValue(true);
+    await checkInput(wrapper, "enforce-world-server-checks-checkbox").setValue(
+      true,
+    );
+    await checkInput(
+      wrapper,
+      "disable-amd-stutter-workaround-checkbox",
+    ).setValue(true);
+    await wrapper
+      .find('[data-testid="video-decoding-software"] input')
+      .setValue(true);
+    await flushPromises();
+
+    mockMergeLaunchArgsForGUI.mockResolvedValue("merged-args");
+    await wrapper.find(".btn-launch").trigger("click");
+    await flushPromises();
+
+    expect(mockMergeLaunchArgsForGUI).toHaveBeenCalledWith(
+      expect.objectContaining({
+        monitor: 2,
+        fps: 144,
+        processPriority: 1,
+        skipRegistry: true,
+        enableDebugGui: true,
+        watchWorlds: true,
+        watchAvatars: true,
+        enforceWorldServerChecks: true,
+        disableAMDStutterWorkaround: true,
+        videoDecoding: "software",
+      }),
+    );
+    expect(mockLaunchVRChatWithArgs).toHaveBeenCalledWith("merged-args");
+  });
+
+  it("selects remaining profile after delete succeeds", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+
+    mockDeleteLaunchProfile.mockResolvedValue(undefined);
+    mockLaunchProfiles.mockResolvedValue([sampleProfiles[1]!]);
+    mockParseLaunchArgsForGUI.mockResolvedValue({
+      noVr: false,
+      screenMode: "windowed",
+      screenWidth: 0,
+      screenHeight: 0,
+      fps: 0,
+      processPriority: -999,
+      mainThreadPriority: -999,
+      monitor: 0,
+      profile: -1,
+      midi: "",
+      ignoreTrackers: "",
+      osc: "",
+      affinity: "",
+      custom: "",
+    } as LaunchArgsParsedDTO);
+
+    const confirmSpy = vi
+      .spyOn(ElMessageBox, "confirm")
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .mockResolvedValue("confirm" as any);
+
+    await wrapper.find('[data-testid="delete-profile-btn"]').trigger("click");
+    await flushPromises();
+
+    expect(mockDeleteLaunchProfile).toHaveBeenCalledWith("1");
+    expect(wrapper.text()).toContain("With fullscreen");
+
+    confirmSpy.mockRestore();
+  });
+
   it("sets aria-label on screen mode, resolution preset, and video decoding radio groups", async () => {
     const wrapper = mount(LauncherView);
     await flushPromises();

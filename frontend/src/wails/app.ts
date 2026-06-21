@@ -191,7 +191,7 @@ export interface VRChatConfigDTO {
   disableRichPresence: boolean | null;
 }
 
-interface AppBindings {
+export interface AppBindings {
   Greet(name: string): Promise<string>;
   LaunchProfiles(): Promise<LaunchProfileDTO[]>;
   LaunchVRChat(profileID: string): Promise<void>;
