@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
-import { ElProgress } from "element-plus";
+import { ElDatePicker, ElProgress } from "element-plus";
 import { ref } from "vue";
 import GalleryView from "../GalleryView.vue";
 import * as galleryThumbnailCache from "../galleryThumbnailCache";
@@ -271,6 +271,67 @@ describe("GalleryView", () => {
     expect(mockSearchScreenshots).toHaveBeenCalledWith({
       worldId: "wrld_test",
     });
+  });
+
+  it("searches by world name when input does not start with wrld_", async () => {
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    mockSearchScreenshots.mockClear();
+
+    const filterInput = wrapper.find("[data-testid='gallery-world-filter']");
+    await filterInput.setValue("Test World");
+    await filterInput.trigger("keyup.enter");
+    await flushPromises();
+
+    expect(mockSearchScreenshots).toHaveBeenCalledWith({
+      worldName: "Test World",
+    });
+  });
+
+  it("debounces date range filter and calls searchScreenshots", async () => {
+    vi.useFakeTimers();
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    mockSearchScreenshots.mockClear();
+
+    const datePicker = wrapper.findComponent(ElDatePicker);
+    await datePicker.setValue(["2025-06-01", "2025-06-02"]);
+    await vi.advanceTimersByTimeAsync(450);
+    await flushPromises();
+
+    expect(mockSearchScreenshots).toHaveBeenCalledWith({
+      dateFrom: "2025-06-01",
+      dateTo: "2025-06-02",
+    });
+  });
+
+  it("keeps date group headers when date range filter is active", async () => {
+    vi.useFakeTimers();
+    mockSearchScreenshots.mockResolvedValue([
+      {
+        ...sampleShot,
+        id: "ss-a",
+        takenAt: "2025-06-01T12:00:00Z",
+      },
+      {
+        ...sampleShot,
+        id: "ss-b",
+        takenAt: "2025-06-02T18:30:00Z",
+      },
+    ]);
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    mockSearchScreenshots.mockClear();
+
+    const datePicker = wrapper.findComponent(ElDatePicker);
+    await datePicker.setValue(["2025-06-01", "2025-06-02"]);
+    await vi.advanceTimersByTimeAsync(450);
+    await flushPromises();
+    await flushPromises();
+
+    expect(
+      wrapper.findAll("[data-testid='gallery-group-header']").length,
+    ).toBeGreaterThan(0);
   });
 
   it("debounces realtime filter and calls searchScreenshots", async () => {

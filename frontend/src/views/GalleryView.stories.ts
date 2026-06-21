@@ -7,6 +7,12 @@ const meta = {
   tags: ["autodocs"],
   parameters: {
     layout: "fullscreen",
+    docs: {
+      description: {
+        component:
+          "Filter bar: world search (wrld_ prefix → ID, else world name) and date range picker.",
+      },
+    },
   },
 } satisfies Meta<typeof GalleryView>;
 

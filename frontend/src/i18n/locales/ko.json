@@ -121,7 +121,9 @@
   },
   "gallery": {
     "title": "갤러리",
-    "searchPlaceholder": "World ID로 검색 (자동 / Enter)",
+    "searchPlaceholder": "World ID / 이름 검색 (wrld_ = ID)",
+    "dateRangeStart": "시작일",
+    "dateRangeEnd": "종료일",
     "scanFolder": "폴더 스캔",
     "scanning": "스캔 중…",
     "detail": "상세",

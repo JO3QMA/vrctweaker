@@ -121,7 +121,9 @@
   },
   "gallery": {
     "title": "相簿",
-    "searchPlaceholder": "以 World ID 搜尋（自動 / Enter）",
+    "searchPlaceholder": "以世界 ID / 名稱搜尋（wrld_ 為 ID）",
+    "dateRangeStart": "開始日期",
+    "dateRangeEnd": "結束日期",
     "scanFolder": "掃描資料夾",
     "scanning": "掃描中…",
     "detail": "詳細",

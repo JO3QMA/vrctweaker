@@ -121,7 +121,9 @@
   },
   "gallery": {
     "title": "ギャラリー",
-    "searchPlaceholder": "World ID で検索（入力で自動検索 / Enter）",
+    "searchPlaceholder": "ワールド ID / 名前で検索（wrld_ で ID）",
+    "dateRangeStart": "開始日",
+    "dateRangeEnd": "終了日",
     "scanFolder": "フォルダを同期",
     "scanning": "同期中…",
     "detail": "詳細",

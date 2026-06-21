@@ -121,7 +121,9 @@
   },
   "gallery": {
     "title": "相册",
-    "searchPlaceholder": "按 World ID 搜索（自动 / Enter）",
+    "searchPlaceholder": "按世界 ID / 名称搜索（wrld_ 为 ID）",
+    "dateRangeStart": "开始日期",
+    "dateRangeEnd": "结束日期",
     "scanFolder": "扫描文件夹",
     "scanning": "扫描中…",
     "detail": "详情",

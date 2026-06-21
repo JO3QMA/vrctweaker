@@ -121,7 +121,9 @@
   },
   "gallery": {
     "title": "Gallery",
-    "searchPlaceholder": "Search by World ID (auto / Enter)",
+    "searchPlaceholder": "Search by world ID or name (wrld_ = ID)",
+    "dateRangeStart": "Start date",
+    "dateRangeEnd": "End date",
     "scanFolder": "Sync folder",
     "scanning": "Syncing…",
     "detail": "Details",
