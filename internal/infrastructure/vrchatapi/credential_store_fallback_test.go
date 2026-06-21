@@ -41,7 +41,10 @@ func (v *variablePrimary) Set(_, _, password string) error {
 	return nil
 }
 
-func (*variablePrimary) Delete(string, string) error { return nil }
+func (v *variablePrimary) Delete(string, string) error {
+	v.secret = ""
+	return nil
+}
 
 // memoryFileCredentialStore is an in-memory CredentialStore for tests (injectable Delete errors).
 type memoryFileCredentialStore struct {
@@ -139,5 +142,44 @@ func TestCredentialStoreWithFileFallback_SetUsesFileWhenPrimaryFails(t *testing.
 	}
 	if got != "tok123" {
 		t.Fatalf("Get: want tok123, got %q", got)
+	}
+}
+
+func TestNewCredentialStoreWithFileFallback_nilWarnUsesNoop(t *testing.T) {
+	dir := t.TempDir()
+	s := newCredentialStoreWithFileFallback(stubFailingSet{}, NewFileCredentialStore(filepath.Join(dir, "tok")), nil)
+	if err := s.Set(CredentialService, CredentialUser, "tok"); err != nil {
+		t.Fatalf("Set: %v", err)
+	}
+}
+
+func TestCredentialStoreWithFileFallback_GetPrefersPrimary(t *testing.T) {
+	p := &variablePrimary{secret: "primary-tok"}
+	fileMem := &memoryFileCredentialStore{secret: "file-tok"}
+	s := newCredentialStoreWithFileFallback(p, fileMem, func(string) {})
+
+	got, err := s.Get(CredentialService, CredentialUser)
+	if err != nil {
+		t.Fatalf("Get: %v", err)
+	}
+	if got != "primary-tok" {
+		t.Fatalf("Get = %q, want primary-tok", got)
+	}
+}
+
+func TestCredentialStoreWithFileFallback_DeleteClearsBoth(t *testing.T) {
+	dir := t.TempDir()
+	fileStore := NewFileCredentialStore(filepath.Join(dir, "tok"))
+	p := &variablePrimary{}
+	s := newCredentialStoreWithFileFallback(p, fileStore, func(string) {})
+
+	if err := s.Set(CredentialService, CredentialUser, "tok"); err != nil {
+		t.Fatalf("Set: %v", err)
+	}
+	if err := s.Delete(CredentialService, CredentialUser); err != nil {
+		t.Fatalf("Delete: %v", err)
+	}
+	if _, err := s.Get(CredentialService, CredentialUser); err == nil {
+		t.Fatal("Get after Delete: want error")
 	}
 }

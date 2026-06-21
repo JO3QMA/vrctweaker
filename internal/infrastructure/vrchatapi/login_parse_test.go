@@ -17,7 +17,7 @@ func TestParseAuthUserBodyThenCookie_prefersJSONToken(t *testing.T) {
 	jar.SetCookies(u, []*http.Cookie{{Name: "auth", Value: "cookie-session"}})
 
 	body := strings.NewReader(`{"authToken":"jwt-like","id":"usr_1"}`)
-	got, err := parseAuthUserBodyThenCookie(body, jar)
+	got, err := parseAuthUserBodyThenCookie(body, jar, baseURL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -35,7 +35,7 @@ func TestParseAuthUserBodyThenCookie_fallsBackToCookie(t *testing.T) {
 	jar.SetCookies(u, []*http.Cookie{{Name: "auth", Value: "cookie-session"}})
 
 	body := strings.NewReader(`{"id":"usr_1","displayName":"X"}`)
-	got, err := parseAuthUserBodyThenCookie(body, jar)
+	got, err := parseAuthUserBodyThenCookie(body, jar, baseURL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,8 +46,31 @@ func TestParseAuthUserBodyThenCookie_fallsBackToCookie(t *testing.T) {
 
 func TestParseAuthUserBodyThenCookie_nilJarErrors(t *testing.T) {
 	body := strings.NewReader(`{"id":"usr_1"}`)
-	_, err := parseAuthUserBodyThenCookie(body, nil)
+	_, err := parseAuthUserBodyThenCookie(body, nil, baseURL)
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestParseAuthUserBodyThenCookie_missingCookieErrors(t *testing.T) {
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	body := strings.NewReader(`{"id":"usr_1"}`)
+	_, err = parseAuthUserBodyThenCookie(body, jar, baseURL)
+	if err == nil {
+		t.Fatal("expected error when auth cookie missing")
+	}
+}
+
+func TestParseAuthUserBodyThenCookie_invalidJSON(t *testing.T) {
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = parseAuthUserBodyThenCookie(strings.NewReader("{"), jar, baseURL)
+	if err == nil || !strings.Contains(err.Error(), "parse response") {
+		t.Fatalf("err = %v, want parse error", err)
 	}
 }

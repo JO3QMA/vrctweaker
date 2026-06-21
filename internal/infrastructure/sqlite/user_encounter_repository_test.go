@@ -10,6 +10,7 @@ import (
 	_ "modernc.org/sqlite"
 
 	"vrchat-tweaker/internal/domain/activity"
+	"vrchat-tweaker/internal/domain/identity"
 )
 
 func TestUserEncounterRepository_List_FilterVRCUserID(t *testing.T) {
@@ -206,6 +207,337 @@ func TestUserEncounterRepository_CloseEncounterLeave(t *testing.T) {
 	list, _ := repo.List(ctx, nil)
 	if len(list) != 1 || list[0].LeftAt == nil || !list[0].LeftAt.Equal(left) {
 		t.Fatalf("after close: %+v", list)
+	}
+}
+
+func TestUserEncounterRepository_List_AllFilters(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+
+	repo := NewUserEncounterRepository(db)
+	t0 := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	t1 := t0.Add(time.Hour)
+	rows := []activity.UserEncounter{
+		{ID: "e1", VRCUserID: "usr_a", DisplayName: "Alice", InstanceID: "inst_1", WorldID: "wrld_x", JoinedAt: t0, LeftAt: nil},
+		{ID: "e2", VRCUserID: "usr_b", DisplayName: "Bob", InstanceID: "inst_2", WorldID: "wrld_y", JoinedAt: t1, LeftAt: nil},
+		{ID: "e3", VRCUserID: "usr_c", DisplayName: "Alice2", InstanceID: "inst_1", WorldID: "wrld_x", JoinedAt: t1.Add(15 * time.Minute), LeftAt: nil},
+	}
+	for i := range rows {
+		if saveErr := repo.Save(ctx, &rows[i]); saveErr != nil {
+			t.Fatal(saveErr)
+		}
+	}
+
+	from := t0.Add(30 * time.Minute)
+	to := t1.Add(30 * time.Minute)
+	list, err := repo.List(ctx, &activity.EncounterFilter{
+		DisplayName: "Ali",
+		InstanceID:  "inst_1",
+		From:        &from,
+		To:          &to,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].ID != "e3" {
+		t.Fatalf("filtered list: %#v", list)
+	}
+}
+
+func TestUserEncounterRepository_ListWithContext_joinsWorldAndUserCache(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+
+	worldRepo := NewWorldInfoRepository(db)
+	userRepo := NewUserCacheRepository(db)
+	encRepo := NewUserEncounterRepository(db)
+
+	t0 := time.Date(2024, 5, 1, 12, 0, 0, 0, time.UTC)
+	if dnErr := worldRepo.UpsertDisplayName(ctx, "wrld_ctx", "Context World", t0); dnErr != nil {
+		t.Fatal(dnErr)
+	}
+	if saveErr := userRepo.Save(ctx, &identity.UserCache{
+		VRCUserID:     "usr_ctx",
+		DisplayName:   "CtxUser",
+		Status:        "active",
+		UserKind:      identity.UserKindFriend,
+		LastUpdated:   t0,
+		FirstSeenAt:   &t0,
+		LastContactAt: &t0,
+	}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+	left := t0.Add(time.Hour)
+	if encErr := encRepo.Save(ctx, &activity.UserEncounter{
+		ID: "enc_ctx", VRCUserID: "usr_ctx", DisplayName: "CtxUser",
+		InstanceID: "inst_ctx", WorldID: "wrld_ctx", JoinedAt: t0, LeftAt: &left,
+	}); encErr != nil {
+		t.Fatal(encErr)
+	}
+
+	list, err := encRepo.ListWithContext(ctx, &activity.EncounterFilter{
+		VRCUserID:   "usr_ctx",
+		DisplayName: "Ctx",
+		InstanceID:  "inst_ctx",
+		WorldID:     "wrld_ctx",
+		From:        &t0,
+		To:          &t0,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("len=%d", len(list))
+	}
+	row := list[0]
+	if row.WorldDisplayName != "Context World" {
+		t.Fatalf("WorldDisplayName=%q", row.WorldDisplayName)
+	}
+	if row.UserFirstSeenAt == nil || !row.UserFirstSeenAt.Equal(t0) {
+		t.Fatalf("UserFirstSeenAt=%v", row.UserFirstSeenAt)
+	}
+	if row.UserLastContactAt == nil || !row.UserLastContactAt.Equal(t0) {
+		t.Fatalf("UserLastContactAt=%v", row.UserLastContactAt)
+	}
+	if !row.IsFirstEncounter {
+		t.Fatal("expected IsFirstEncounter")
+	}
+}
+
+func TestUserEncounterRepository_ListWithContext_firstEncounterWithinOneSecond(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+
+	userRepo := NewUserCacheRepository(db)
+	encRepo := NewUserEncounterRepository(db)
+	t0 := time.Date(2024, 5, 1, 12, 0, 0, 0, time.UTC)
+	firstSeen := t0
+	joinedAt := t0.Add(500 * time.Millisecond)
+	if saveErr := userRepo.Save(ctx, &identity.UserCache{
+		VRCUserID: "usr_edge", DisplayName: "Edge", Status: "active",
+		UserKind: identity.UserKindFriend, LastUpdated: t0,
+		FirstSeenAt: &firstSeen, LastContactAt: &t0,
+	}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+	if encErr := encRepo.Save(ctx, &activity.UserEncounter{
+		ID: "enc_edge", VRCUserID: "usr_edge", DisplayName: "Edge",
+		InstanceID: "i", WorldID: "w", JoinedAt: joinedAt,
+	}); encErr != nil {
+		t.Fatal(encErr)
+	}
+
+	list, err := encRepo.ListWithContext(ctx, nil)
+	if err != nil || len(list) != 1 {
+		t.Fatalf("ListWithContext: len=%d err=%v", len(list), err)
+	}
+	if !list[0].IsFirstEncounter {
+		t.Fatal("expected IsFirstEncounter within one second")
+	}
+}
+
+func TestUserEncounterRepository_List_nilFilter(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+	repo := NewUserEncounterRepository(db)
+	t0 := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	if saveErr := repo.Save(ctx, &activity.UserEncounter{
+		ID: "only", VRCUserID: "u", DisplayName: "U", InstanceID: "i", WorldID: "w", JoinedAt: t0,
+	}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+	list, err := repo.List(ctx, nil)
+	if err != nil || len(list) != 1 {
+		t.Fatalf("List nil filter: len=%d err=%v", len(list), err)
+	}
+}
+
+func TestUserEncounterRepository_DeleteOlderThan_and_Count(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+
+	repo := NewUserEncounterRepository(db)
+	old := time.Date(2023, 1, 1, 12, 0, 0, 0, time.UTC)
+	newT := time.Date(2024, 6, 1, 12, 0, 0, 0, time.UTC)
+	for _, spec := range []struct {
+		id string
+		at time.Time
+	}{
+		{"old", old},
+		{"new", newT},
+	} {
+		if saveErr := repo.Save(ctx, &activity.UserEncounter{
+			ID: spec.id, VRCUserID: "u", DisplayName: "U", InstanceID: "i", WorldID: "w",
+			JoinedAt: spec.at,
+		}); saveErr != nil {
+			t.Fatal(saveErr)
+		}
+	}
+
+	n, err := repo.Count(ctx)
+	if err != nil || n != 2 {
+		t.Fatalf("Count: n=%d err=%v", n, err)
+	}
+
+	cutoff := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
+	deleted, err := repo.DeleteOlderThan(ctx, cutoff)
+	if err != nil || deleted != 1 {
+		t.Fatalf("DeleteOlderThan: deleted=%d err=%v", deleted, err)
+	}
+
+	n, err = repo.Count(ctx)
+	if err != nil || n != 1 {
+		t.Fatalf("Count after delete: n=%d err=%v", n, err)
+	}
+
+	allDeleted, err := repo.DeleteAll(ctx)
+	if err != nil || allDeleted != 1 {
+		t.Fatalf("DeleteAll: n=%d err=%v", allDeleted, err)
+	}
+}
+
+func TestUserEncounterRepository_BackfillMissingWorldContext_noAnchor(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+
+	repo := NewUserEncounterRepository(db)
+	t0 := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	if saveErr := repo.Save(ctx, &activity.UserEncounter{
+		ID: "orphan", VRCUserID: "u", DisplayName: "U", JoinedAt: t0,
+	}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+
+	n, err := repo.BackfillMissingWorldContext(ctx)
+	if err != nil || n != 0 {
+		t.Fatalf("Backfill with no anchor: n=%d err=%v", n, err)
+	}
+}
+
+func TestUserEncounterRepository_BackfillMissingWorldContext_preservesRowInstance(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+
+	repo := NewUserEncounterRepository(db)
+	t0 := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	rows := []activity.UserEncounter{
+		{ID: "e1", VRCUserID: "a", DisplayName: "A", InstanceID: "inst_anchor", WorldID: "wrld_anchor", JoinedAt: t0},
+		{ID: "e2", VRCUserID: "b", DisplayName: "B", InstanceID: "inst_own", WorldID: "", JoinedAt: t0.Add(time.Minute)},
+	}
+	for i := range rows {
+		if saveErr := repo.Save(ctx, &rows[i]); saveErr != nil {
+			t.Fatal(saveErr)
+		}
+	}
+
+	n, err := repo.BackfillMissingWorldContext(ctx)
+	if err != nil || n != 1 {
+		t.Fatalf("Backfill: n=%d err=%v", n, err)
+	}
+	list, err := repo.List(ctx, &activity.EncounterFilter{VRCUserID: "b"})
+	if err != nil || len(list) != 1 {
+		t.Fatalf("List: %#v err=%v", list, err)
+	}
+	if list[0].WorldID != "wrld_anchor" || list[0].InstanceID != "inst_own" {
+		t.Fatalf("backfill row: world=%q inst=%q", list[0].WorldID, list[0].InstanceID)
+	}
+}
+
+func TestUserEncounterRepository_CloseEncounterLeave_noMatch(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+	repo := NewUserEncounterRepository(db)
+	n, err := repo.CloseEncounterLeave(ctx, "nobody", time.Now().UTC())
+	if err != nil || n != 0 {
+		t.Fatalf("CloseEncounterLeave no match: n=%d err=%v", n, err)
+	}
+}
+
+func TestUserEncounterRepository_DeleteOlderThan_noneRemoved(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+	repo := NewUserEncounterRepository(db)
+	t0 := time.Date(2024, 6, 1, 12, 0, 0, 0, time.UTC)
+	if saveErr := repo.Save(ctx, &activity.UserEncounter{
+		ID: "keep", VRCUserID: "u", DisplayName: "U", InstanceID: "i", WorldID: "w", JoinedAt: t0,
+	}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+	n, err := repo.DeleteOlderThan(ctx, t0.Add(-time.Hour))
+	if err != nil || n != 0 {
+		t.Fatalf("DeleteOlderThan none: n=%d err=%v", n, err)
 	}
 }
 

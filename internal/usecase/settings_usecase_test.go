@@ -2,6 +2,9 @@ package usecase
 
 import (
 	"context"
+	"errors"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 )
@@ -191,5 +194,115 @@ func TestSettingsUseCase_Language_roundtripAndValidation(t *testing.T) {
 	}
 	if err := uc.SetLanguage(ctx, "xx"); err == nil {
 		t.Fatal("expected error for unsupported language")
+	}
+}
+
+func TestSettingsUseCase_GetSet_andLogRetention(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	if err := uc.Set(ctx, "custom_key", "value"); err != nil {
+		t.Fatal(err)
+	}
+	v, err := uc.Get(ctx, "custom_key")
+	if err != nil || v != "value" {
+		t.Fatalf("Get = %q err=%v", v, err)
+	}
+
+	days, err := uc.GetLogRetentionDays(ctx)
+	if err != nil || days != 30 {
+		t.Fatalf("default retention = %d err=%v", days, err)
+	}
+	repo.m["log_retention_days"] = "14"
+	days, err = uc.GetLogRetentionDays(ctx)
+	if err != nil || days != 14 {
+		t.Fatalf("retention = %d err=%v", days, err)
+	}
+	repo.m["log_retention_days"] = "bad"
+	days, err = uc.GetLogRetentionDays(ctx)
+	if err != nil || days != 30 {
+		t.Fatalf("invalid retention default = %d err=%v", days, err)
+	}
+	if err := uc.SetLogRetentionDays(ctx, 45); err != nil {
+		t.Fatal(err)
+	}
+	if repo.m["log_retention_days"] != "45" {
+		t.Fatalf("stored = %q", repo.m["log_retention_days"])
+	}
+}
+
+func TestSettingsUseCase_OutputLogPath_roundtrip(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	path := "/tmp/output_log.txt"
+	if err := uc.SaveOutputLogPath(ctx, path); err != nil {
+		t.Fatal(err)
+	}
+	got, err := uc.GetOutputLogPath(ctx)
+	if err != nil || got != path {
+		t.Fatalf("GetOutputLogPath = %q err=%v", got, err)
+	}
+}
+
+func TestSettingsUseCase_ValidatePath_existingFile(t *testing.T) {
+	dir := t.TempDir()
+	f := filepath.Join(dir, "launch.exe")
+	if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	uc := NewSettingsUseCase(&fakeAppSettingsRepo{})
+	if !uc.ValidatePath(f) {
+		t.Fatal("ValidatePath should accept regular file")
+	}
+	if uc.ValidatePath(filepath.Join(dir, "missing.exe")) {
+		t.Fatal("ValidatePath should reject missing file")
+	}
+}
+
+type errOnGetSettingsRepo struct {
+	fakeAppSettingsRepo
+	getErr error
+}
+
+func (e *errOnGetSettingsRepo) Get(ctx context.Context, key string) (string, error) {
+	if e.getErr != nil {
+		return "", e.getErr
+	}
+	return e.fakeAppSettingsRepo.Get(ctx, key)
+}
+
+func TestSettingsUseCase_GetSuppressSleepWhileVRChat_repoError(t *testing.T) {
+	repo := &errOnGetSettingsRepo{fakeAppSettingsRepo: fakeAppSettingsRepo{m: make(map[string]string)}, getErr: errors.New("read fail")}
+	uc := NewSettingsUseCase(repo)
+	_, err := uc.GetSuppressSleepWhileVRChat(context.Background())
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+type errOnSetSettingsRepo struct {
+	fakeAppSettingsRepo
+	failKey string
+}
+
+func (e *errOnSetSettingsRepo) Set(ctx context.Context, key, value string) error {
+	if key == e.failKey {
+		return errors.New("set failed")
+	}
+	return e.fakeAppSettingsRepo.Set(ctx, key, value)
+}
+
+func TestSettingsUseCase_SetPathSettings_propagatesError(t *testing.T) {
+	repo := &errOnSetSettingsRepo{
+		fakeAppSettingsRepo: fakeAppSettingsRepo{m: make(map[string]string)},
+		failKey:             keySteamPathLinux,
+	}
+	uc := NewSettingsUseCase(repo)
+	err := uc.SetPathSettings(context.Background(), &PathSettings{VRChatPathWindows: "a", SteamPathLinux: "b"})
+	if err == nil {
+		t.Fatal("expected error")
 	}
 }

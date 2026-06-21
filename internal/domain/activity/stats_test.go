@@ -159,6 +159,114 @@ func TestAggregatePlaySessions(t *testing.T) {
 				{WorldID: "_total", WorldName: "全セッション", Seconds: 3600, Sessions: 1},
 			},
 		},
+		{
+			name: "duration only without end time",
+			sessions: []*PlaySession{
+				{
+					ID:          "dur1",
+					StartTime:   mustParse(time.RFC3339, "2024-01-02T10:00:00Z"),
+					EndTime:     nil,
+					DurationSec: ptrInt(1800),
+				},
+			},
+			from: from,
+			to:   to,
+			wantDaily: []DailyPlaySeconds{
+				{Date: "2024-01-02", Seconds: 1800},
+			},
+			wantTop: []TopWorldSummary{
+				{WorldID: "_total", WorldName: "全セッション", Seconds: 1800, Sessions: 1},
+			},
+		},
+		{
+			name: "zero duration session excluded",
+			sessions: []*PlaySession{
+				{
+					ID:          "zero",
+					StartTime:   mustParse(time.RFC3339, "2024-01-02T10:00:00Z"),
+					EndTime:     ptrTime(mustParse(time.RFC3339, "2024-01-02T10:00:00Z")),
+					DurationSec: ptrInt(0),
+				},
+			},
+			from:      from,
+			to:        to,
+			wantDaily: []DailyPlaySeconds{},
+			wantTop:   nil,
+		},
+		{
+			name: "session clipped at range start",
+			sessions: []*PlaySession{
+				{
+					ID:          "clip-start",
+					StartTime:   mustParse(time.RFC3339, "2023-12-31T22:00:00Z"),
+					EndTime:     ptrTime(mustParse(time.RFC3339, "2024-01-01T02:00:00Z")),
+					DurationSec: ptrInt(14400),
+				},
+			},
+			from: from,
+			to:   to,
+			wantDaily: []DailyPlaySeconds{
+				{Date: "2024-01-01", Seconds: 7200},
+			},
+			wantTop: []TopWorldSummary{
+				{WorldID: "_total", WorldName: "全セッション", Seconds: 7200, Sessions: 1},
+			},
+		},
+		{
+			name: "session clipped at range end",
+			sessions: []*PlaySession{
+				{
+					ID:          "clip-end",
+					StartTime:   mustParse(time.RFC3339, "2024-01-03T22:00:00Z"),
+					EndTime:     ptrTime(mustParse(time.RFC3339, "2024-01-04T02:00:00Z")),
+					DurationSec: ptrInt(14400),
+				},
+			},
+			from: from,
+			to:   to,
+			wantDaily: []DailyPlaySeconds{
+				{Date: "2024-01-03", Seconds: 7199}, // clipped to to (23:59:59 UTC on Jan 3)
+			},
+			wantTop: []TopWorldSummary{
+				{WorldID: "_total", WorldName: "全セッション", Seconds: 7199, Sessions: 1},
+			},
+		},
+		{
+			name: "session spanning three days",
+			sessions: []*PlaySession{
+				{
+					ID:          "three-day",
+					StartTime:   mustParse(time.RFC3339, "2024-01-01T22:00:00Z"),
+					EndTime:     ptrTime(mustParse(time.RFC3339, "2024-01-03T02:00:00Z")),
+					DurationSec: ptrInt(100800),
+				},
+			},
+			from: from,
+			to:   to,
+			wantDaily: []DailyPlaySeconds{
+				{Date: "2024-01-01", Seconds: 7200},
+				{Date: "2024-01-02", Seconds: 86400},
+				{Date: "2024-01-03", Seconds: 7200},
+			},
+			wantTop: []TopWorldSummary{
+				{WorldID: "_total", WorldName: "全セッション", Seconds: 100800, Sessions: 1},
+			},
+		},
+		{
+			name: "zero duration sec pointer excluded",
+			sessions: []*PlaySession{
+				{
+					ID:          "dur-zero",
+					StartTime:   mustParse(time.RFC3339, "2024-01-02T10:00:00Z"),
+					EndTime:     nil,
+					DurationSec: ptrInt(0),
+				},
+			},
+			from:      from,
+			to:        to,
+			wantDaily: []DailyPlaySeconds{},
+			wantTop:   nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

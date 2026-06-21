@@ -2,6 +2,7 @@ package sleepsuppress
 
 import (
 	"context"
+	"errors"
 	"sync"
 	"testing"
 	"time"
@@ -38,9 +39,10 @@ func (f *fakeProc) set(v bool) {
 }
 
 type fakeExec struct {
-	mu    sync.Mutex
-	calls []bool
-	err   error
+	mu        sync.Mutex
+	calls     []bool
+	err       error
+	errOnTrue bool
 }
 
 func (f *fakeExec) SetSuppress(on bool) error {
@@ -49,9 +51,14 @@ func (f *fakeExec) SetSuppress(on bool) error {
 	if f.err != nil {
 		return f.err
 	}
+	if f.errOnTrue && on {
+		return errSetSuppressTrue
+	}
 	f.calls = append(f.calls, on)
 	return nil
 }
+
+var errSetSuppressTrue = errors.New("SetSuppress(true) failed")
 
 func (f *fakeExec) snapshot() []bool {
 	f.mu.Lock()
@@ -145,6 +152,103 @@ func TestRun_vrchatStops_clearsSuppress(t *testing.T) {
 	last := calls[len(calls)-1]
 	if last {
 		t.Fatalf("expected final SetSuppress to be false, calls=%v", calls)
+	}
+}
+
+func TestRun_settingsError_continuesWithoutSuppress(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	s := &fakeSettings{err: errors.New("settings unavailable")}
+	p := &fakeProc{val: true}
+	e := &fakeExec{}
+
+	done := make(chan struct{})
+	go func() {
+		_ = Run(ctx, 15*time.Millisecond, s, p, e)
+		close(done)
+	}()
+
+	time.Sleep(40 * time.Millisecond)
+	cancel()
+	<-done
+
+	for _, c := range e.snapshot() {
+		if c {
+			t.Fatalf("expected no SetSuppress(true) on settings error, calls=%v", e.snapshot())
+		}
+	}
+}
+
+func TestRun_procError_continuesWithoutSuppress(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	s := &fakeSettings{val: true}
+	p := &fakeProc{err: errors.New("proc check failed")}
+	e := &fakeExec{}
+
+	done := make(chan struct{})
+	go func() {
+		_ = Run(ctx, 15*time.Millisecond, s, p, e)
+		close(done)
+	}()
+
+	time.Sleep(40 * time.Millisecond)
+	cancel()
+	<-done
+
+	for _, c := range e.snapshot() {
+		if c {
+			t.Fatalf("expected no SetSuppress(true) on proc error, calls=%v", e.snapshot())
+		}
+	}
+}
+
+func TestRun_setSuppressTrueError_doesNotMarkSuppressing(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	s := &fakeSettings{val: true}
+	p := &fakeProc{val: true}
+	e := &fakeExec{errOnTrue: true}
+
+	done := make(chan struct{})
+	go func() {
+		_ = Run(ctx, 15*time.Millisecond, s, p, e)
+		close(done)
+	}()
+
+	time.Sleep(40 * time.Millisecond)
+	cancel()
+	<-done
+
+	calls := e.snapshot()
+	for _, c := range calls {
+		if c {
+			t.Fatalf("SetSuppress(true) should fail and not be recorded, calls=%v", calls)
+		}
+	}
+}
+
+func TestNewExecutionState_stub(t *testing.T) {
+	es := NewExecutionState()
+	if err := es.SetSuppress(true); err != nil {
+		t.Fatalf("SetSuppress(true): %v", err)
+	}
+	if err := es.SetSuppress(false); err != nil {
+		t.Fatalf("SetSuppress(false): %v", err)
+	}
+}
+
+func TestNewVRChatProcessChecker_stub(t *testing.T) {
+	pc := NewVRChatProcessChecker()
+	running, err := pc.VRChatRunning()
+	if err != nil {
+		t.Fatalf("VRChatRunning: %v", err)
+	}
+	if running {
+		t.Fatal("stub checker should report VRChat as not running")
 	}
 }
 

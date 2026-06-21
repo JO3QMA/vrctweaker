@@ -115,3 +115,51 @@ func TestDefaultActionRunner_Run_ChangeStatus_PropagatesError(t *testing.T) {
 		t.Errorf("Run err = %v, want %v", err, wantErr)
 	}
 }
+
+func TestDefaultActionRunner_Run_ChangeStatus_nilPayloadNoOp(t *testing.T) {
+	m := &mockStatusSetter{}
+	r := NewDefaultActionRunner(m)
+	err := r.Run(context.Background(), &automation.EvalResult{
+		ShouldFire:    true,
+		ActionType:    automation.ActionChangeStatus,
+		ActionPayload: nil,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m.getCalled()) != 0 {
+		t.Fatal("nil payload should not call SetStatus")
+	}
+}
+
+func TestDefaultActionRunner_Run_UnknownActionNoOp(t *testing.T) {
+	m := &mockStatusSetter{}
+	r := NewDefaultActionRunner(m)
+	err := r.Run(context.Background(), &automation.EvalResult{
+		ShouldFire:    true,
+		ActionType:    "notify",
+		ActionPayload: map[string]interface{}{"x": 1},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m.getCalled()) != 0 {
+		t.Fatal("unknown action should not call SetStatus")
+	}
+}
+
+func TestDefaultActionRunner_Run_ChangeStatus_emptyStatusNoOp(t *testing.T) {
+	m := &mockStatusSetter{}
+	r := NewDefaultActionRunner(m)
+	err := r.Run(context.Background(), &automation.EvalResult{
+		ShouldFire:    true,
+		ActionType:    automation.ActionChangeStatus,
+		ActionPayload: map[string]interface{}{"status": ""},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(m.getCalled()) != 0 {
+		t.Fatal("empty status should not call SetStatus")
+	}
+}

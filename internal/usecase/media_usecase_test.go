@@ -1,9 +1,12 @@
 package usecase
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"os"
 	"path/filepath"
 	"slices"
@@ -638,5 +641,165 @@ func TestMediaUseCase_ScanDirectory_ContextCancelDuringImport(t *testing.T) {
 	})
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("ScanDirectory: err = %v, want context.Canceled", err)
+	}
+}
+
+func TestMediaUseCase_ListGetDeleteScreenshot(t *testing.T) {
+	repo := newMockScreenshotRepo()
+	s := &media.Screenshot{ID: "s-del", FilePath: "/tmp/x.png"}
+	_ = repo.Save(context.Background(), s)
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+	ctx := context.Background()
+
+	list, err := uc.ListScreenshots(ctx, nil)
+	if err != nil || len(list) != 1 {
+		t.Fatalf("ListScreenshots = %d err=%v", len(list), err)
+	}
+	got, err := uc.GetScreenshot(ctx, "s-del")
+	if err != nil || got == nil || got.ID != "s-del" {
+		t.Fatalf("GetScreenshot = %+v err=%v", got, err)
+	}
+	if err := uc.DeleteScreenshot(ctx, "s-del"); err != nil {
+		t.Fatal(err)
+	}
+	if repo.screenshots["s-del"] != nil {
+		t.Fatal("expected deleted")
+	}
+}
+
+func TestMediaUseCase_ReindexScreenshots_updatesStaleFileSize(t *testing.T) {
+	dir := t.TempDir()
+	basePath := filepath.Join(dir, "shots")
+	_ = os.MkdirAll(basePath, 0755)
+	path := filepath.Join(basePath, "size.png")
+	_ = os.WriteFile(path, []byte("12345678"), 0644)
+
+	oldSize := int64(1)
+	repo := newMockScreenshotRepo()
+	s := &media.Screenshot{ID: "sz1", FilePath: path, FileSizeBytes: &oldSize}
+	_ = repo.Save(context.Background(), s)
+
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+	updated, err := uc.ReindexScreenshots(context.Background(), basePath)
+	if err != nil || updated != 1 {
+		t.Fatalf("updated = %d err=%v", updated, err)
+	}
+	got, _ := repo.GetByID(context.Background(), "sz1")
+	if got.FileSizeBytes == nil || *got.FileSizeBytes != 8 {
+		t.Fatalf("FileSizeBytes = %v", got.FileSizeBytes)
+	}
+}
+
+func TestMediaUseCase_ReindexScreenshots_regeneratesStaleThumbnail(t *testing.T) {
+	dir := t.TempDir()
+	basePath := filepath.Join(dir, "shots")
+	_ = os.MkdirAll(basePath, 0755)
+	path := filepath.Join(basePath, "thumb.png")
+	if err := writeTestPNG(path, 64, 64); err != nil {
+		t.Fatal(err)
+	}
+	info, _ := os.Stat(path)
+	size := info.Size()
+
+	repo := newMockScreenshotRepo()
+	s := &media.Screenshot{ID: "stale", FilePath: path, FileSizeBytes: &size}
+	_ = repo.Save(context.Background(), s)
+	_ = repo.UpsertThumbnail(context.Background(), "stale", &media.ScreenshotThumbnail{
+		JpegBlob:      []byte{0xff, 0xd8, 0xff, 0x00},
+		SourceSize:    size + 999,
+		SourceModUnix: info.ModTime().Unix(),
+	})
+
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+	updated, err := uc.ReindexScreenshots(context.Background(), basePath)
+	if err != nil || updated != 1 {
+		t.Fatalf("updated = %d err=%v", updated, err)
+	}
+	if repo.thumbs["stale"] == nil || repo.thumbs["stale"].SourceSize != size {
+		t.Fatalf("thumb = %+v", repo.thumbs["stale"])
+	}
+}
+
+func TestMediaUseCase_prepareScreenshotThumbnailJPEG_usesJpegSource(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "photo.jpg")
+	if err := writeTestJPEG(path, 120, 90); err != nil {
+		t.Fatal(err)
+	}
+	repo := newMockScreenshotRepo()
+	s := &media.Screenshot{ID: "jpg1", FilePath: path}
+	_ = repo.Save(context.Background(), s)
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+	if err := uc.EnsureScreenshotThumbnail(context.Background(), "jpg1"); err != nil {
+		t.Fatalf("EnsureScreenshotThumbnail: %v", err)
+	}
+	if repo.thumbs["jpg1"] == nil || len(repo.thumbs["jpg1"].JpegBlob) == 0 {
+		t.Fatal("expected thumbnail bytes")
+	}
+}
+
+func TestMediaUseCase_prepareScreenshotThumbnailJPEG_invalidCachedBlobRegenerates(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "shot.png")
+	if err := writeTestPNG(path, 32, 32); err != nil {
+		t.Fatal(err)
+	}
+	info, _ := os.Stat(path)
+	repo := newMockScreenshotRepo()
+	s := &media.Screenshot{ID: "badcache", FilePath: path}
+	_ = repo.Save(context.Background(), s)
+	_ = repo.UpsertThumbnail(context.Background(), "badcache", &media.ScreenshotThumbnail{
+		JpegBlob:      []byte("not-a-jpeg"),
+		SourceSize:    info.Size(),
+		SourceModUnix: info.ModTime().Unix(),
+	})
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+	if err := uc.EnsureScreenshotThumbnail(context.Background(), "badcache"); err != nil {
+		t.Fatal(err)
+	}
+	if !isJpegBlob(repo.thumbs["badcache"].JpegBlob) {
+		t.Fatal("expected regenerated jpeg blob")
+	}
+}
+
+func TestMediaUseCase_IngestScreenshotFile_skipsDirectory(t *testing.T) {
+	dir := t.TempDir()
+	uc := NewMediaUseCase(newMockScreenshotRepo(), nil, nil, nil)
+	s, created, err := uc.IngestScreenshotFile(context.Background(), dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created || s != nil {
+		t.Fatalf("want skip directory, got s=%v created=%v", s, created)
+	}
+}
+
+func writeTestJPEG(path string, w, h int) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	var buf bytes.Buffer
+	if encErr := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 80}); encErr != nil {
+		return encErr
+	}
+	_, err = f.Write(buf.Bytes())
+	return err
+}
+
+func TestMediaUseCase_ReindexScreenshots_skipsMissingFileOnDisk(t *testing.T) {
+	dir := t.TempDir()
+	basePath := filepath.Join(dir, "shots")
+	_ = os.MkdirAll(basePath, 0755)
+	missing := filepath.Join(basePath, "gone.png")
+	repo := newMockScreenshotRepo()
+	sz := int64(1)
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "gone", FilePath: missing, FileSizeBytes: &sz})
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+	updated, err := uc.ReindexScreenshots(context.Background(), basePath)
+	if err != nil || updated != 0 {
+		t.Fatalf("updated = %d err=%v", updated, err)
 	}
 }

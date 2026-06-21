@@ -107,3 +107,21 @@ func TestWorldInfoRepository_UpsertDisplayName(t *testing.T) {
 		t.Fatalf("LastVisitedAt: got %v want %v", got.LastVisitedAt, at1)
 	}
 }
+
+func TestWorldInfoRepository_UpsertDisplayName_emptyWorldID(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+	repo := NewWorldInfoRepository(db)
+	at := time.Date(2024, 3, 1, 12, 0, 0, 0, time.UTC)
+	if emptyErr := repo.UpsertDisplayName(ctx, "", "Ignored", at); emptyErr != nil {
+		t.Fatal(emptyErr)
+	}
+}

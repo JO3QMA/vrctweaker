@@ -83,3 +83,46 @@ func TestPlaySessionRepository_FindLatestWithoutEndTime(t *testing.T) {
 		t.Fatalf("FindLatestWithoutEndTime: %#v", got)
 	}
 }
+
+func TestPlaySessionRepository_List_emptyRange(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+	repo := NewPlaySessionRepository(db)
+	t0 := time.Date(2024, 6, 1, 10, 0, 0, 0, time.UTC)
+	if saveErr := repo.Save(ctx, &activity.PlaySession{ID: "ps", StartTime: t0}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+	list, err := repo.List(ctx, t0.Add(-48*time.Hour), t0.Add(-24*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 0 {
+		t.Fatalf("List empty range: len=%d", len(list))
+	}
+}
+
+func TestPlaySessionRepository_GetByID_missing(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+	repo := NewPlaySessionRepository(db)
+	got, err := repo.GetByID(ctx, "missing")
+	if err != nil || got != nil {
+		t.Fatalf("GetByID missing: %#v err=%v", got, err)
+	}
+}
