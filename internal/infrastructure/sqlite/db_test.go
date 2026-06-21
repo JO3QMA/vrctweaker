@@ -157,3 +157,49 @@ func TestOpen_foreignKeysCascadeDeletesThumbnails(t *testing.T) {
 		t.Fatalf("expected CASCADE to remove thumbnail row, got count %d", n)
 	}
 }
+
+func TestOpen_seedsDefaults(t *testing.T) {
+	dir := t.TempDir()
+	db, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	ctx := context.Background()
+
+	var retention string
+	if scanErr := db.QueryRowContext(ctx, `SELECT value FROM app_settings WHERE key = 'log_retention_days'`).Scan(&retention); scanErr != nil {
+		t.Fatal(scanErr)
+	}
+	if retention != "30" {
+		t.Fatalf("log_retention_days=%q", retention)
+	}
+
+	launcherRepo := NewLauncherProfileRepository(db)
+	def, err := launcherRepo.GetDefault(ctx)
+	if err != nil || def == nil || def.Name != "Desktop" {
+		t.Fatalf("seed profile: %#v err=%v", def, err)
+	}
+}
+
+func TestApplySchema_idempotent(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if err := applySchema(db); err != nil {
+		t.Fatal(err)
+	}
+	if err := applySchema(db); err != nil {
+		t.Fatalf("second applySchema: %v", err)
+	}
+}
+
+func TestOpen_rejectsInvalidDataDir(t *testing.T) {
+	_, err := Open("/proc/self/mem/not-a-directory")
+	if err == nil {
+		t.Fatal("expected Open to fail for invalid data dir")
+	}
+}

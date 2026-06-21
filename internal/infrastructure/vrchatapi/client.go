@@ -75,6 +75,13 @@ func (c *Client) GetAuthToken() string {
 	return c.authToken
 }
 
+func (c *Client) apiBase() string {
+	if c.apiRoot != "" {
+		return c.apiRoot
+	}
+	return baseURL
+}
+
 // do performs an HTTP request; the CookieJar sends the `auth` cookie set by SetAuthToken.
 func (c *Client) do(ctx context.Context, method, path string, body interface{}) (*http.Response, error) {
 	var bodyReader io.Reader

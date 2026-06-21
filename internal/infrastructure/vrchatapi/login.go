@@ -80,7 +80,7 @@ func (c *Client) Login(ctx context.Context, username, password, twoFactorCode st
 }
 
 func (c *Client) loginWithBasicAuth(ctx context.Context, client *http.Client, username, password string) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/auth/user", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.apiBase()+"/auth/user", nil)
 	if err != nil {
 		return "", err
 	}
@@ -117,7 +117,7 @@ func (c *Client) parseAuthUserResponse(body io.Reader) (string, error) {
 
 // parseAuthUserBodyThenCookie returns authToken from JSON, or if empty the auth
 // cookie from jar (VRChat often omits authToken when the session is cookie-only).
-func parseAuthUserBodyThenCookie(body io.Reader, jar http.CookieJar) (string, error) {
+func parseAuthUserBodyThenCookie(body io.Reader, jar http.CookieJar, apiBase string) (string, error) {
 	data, err := io.ReadAll(body)
 	if err != nil {
 		return "", err
@@ -132,7 +132,7 @@ func parseAuthUserBodyThenCookie(body io.Reader, jar http.CookieJar) (string, er
 	if jar == nil {
 		return "", errors.New("no authToken in JSON and no cookie jar")
 	}
-	u, err := url.Parse(baseURL)
+	u, err := url.Parse(apiBase)
 	if err != nil {
 		return "", err
 	}
@@ -145,7 +145,7 @@ func parseAuthUserBodyThenCookie(body io.Reader, jar http.CookieJar) (string, er
 }
 
 func (c *Client) getAuthCookieFromJar(jar http.CookieJar) (string, error) {
-	u, _ := url.Parse(baseURL)
+	u, _ := url.Parse(c.apiBase())
 	cookies := jar.Cookies(u)
 	for _, cookie := range cookies {
 		if cookie.Name == "auth" {
@@ -162,7 +162,7 @@ func (c *Client) verifyTwoFactor(ctx context.Context, client *http.Client, code 
 		return err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, baseURL+"/auth/twofactorauth/totp/verify", bytes.NewReader(jsonBody))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.apiBase()+"/auth/twofactorauth/totp/verify", bytes.NewReader(jsonBody))
 	if err != nil {
 		return err
 	}
@@ -189,7 +189,7 @@ func (c *Client) verifyTwoFactor(ctx context.Context, client *http.Client, code 
 // (no manually injected cookies). Returns authToken from JSON, or if empty the
 // auth cookie value (VRChat may omit authToken after cookie-based session).
 func (c *Client) getAuthUserWithJar(ctx context.Context, client *http.Client) (string, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, baseURL+"/auth/user", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.apiBase()+"/auth/user", nil)
 	if err != nil {
 		return "", err
 	}
@@ -204,7 +204,7 @@ func (c *Client) getAuthUserWithJar(ctx context.Context, client *http.Client) (s
 	if resp.StatusCode >= 400 {
 		return "", fmt.Errorf("get user after 2FA: %d", resp.StatusCode)
 	}
-	token, err := parseAuthUserBodyThenCookie(resp.Body, client.Jar)
+	token, err := parseAuthUserBodyThenCookie(resp.Body, client.Jar, c.apiBase())
 	if err != nil {
 		return "", err
 	}

@@ -174,3 +174,49 @@ func TestClient_GetFriends_errorsWhenPagesNeverShrink(t *testing.T) {
 		t.Fatalf("HTTP calls = %d, want %d (one pass of full pages before guard)", nCalls, friendsListMaxPagesPerOfflinePass)
 	}
 }
+
+func TestClient_SetFavorite_putAndDelete(t *testing.T) {
+	t.Parallel()
+	var lastMethod string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		lastMethod = r.Method
+		if r.URL.Path != "/api/1/users/usr_fav/favorite" {
+			http.NotFound(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient("tok")
+	c.apiRoot = srv.URL + "/api/1"
+
+	if err := c.SetFavorite(context.Background(), "usr_fav", true); err != nil {
+		t.Fatalf("SetFavorite true: %v", err)
+	}
+	if lastMethod != http.MethodPut {
+		t.Fatalf("method = %q, want PUT", lastMethod)
+	}
+
+	if err := c.SetFavorite(context.Background(), "usr_fav", false); err != nil {
+		t.Fatalf("SetFavorite false: %v", err)
+	}
+	if lastMethod != http.MethodDelete {
+		t.Fatalf("method = %q, want DELETE", lastMethod)
+	}
+}
+
+func TestClient_getFriendsPage_decodeError(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("not-json"))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient("tok")
+	c.apiRoot = srv.URL + "/api/1"
+	_, err := c.getFriendsPage(context.Background(), 0, 10, false)
+	if err == nil || !strings.Contains(err.Error(), "decode friends page") {
+		t.Fatalf("err = %v, want decode error", err)
+	}
+}
