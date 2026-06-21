@@ -24,6 +24,7 @@ import (
 	"vrchat-tweaker/internal/infrastructure/sleepsuppress"
 	"vrchat-tweaker/internal/infrastructure/sqlite"
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
+	"vrchat-tweaker/internal/infrastructure/vrchatosc"
 	"vrchat-tweaker/internal/infrastructure/vrchatpipeline"
 	"vrchat-tweaker/internal/locale"
 	"vrchat-tweaker/internal/usecase"
@@ -40,6 +41,7 @@ type App struct {
 	settings      *usecase.SettingsUseCase
 	dbMaintenance *usecase.DBMaintenanceUseCase
 	vrchatConfig  *usecase.VRChatConfigUseCase
+	micMuteSync   *usecase.MicMuteSyncUseCase
 
 	galleryScanMu     sync.Mutex
 	galleryScanCancel context.CancelFunc
@@ -112,6 +114,8 @@ func (a *App) startup(ctx context.Context) {
 	configPath := getVRChatConfigPath()
 	configRepo := filesystem.NewVRChatConfigFileRepository(configPath)
 	a.vrchatConfig = usecase.NewVRChatConfigUseCase(configRepo)
+	a.micMuteSync = usecase.NewMicMuteSyncUseCase(settingsRepo, vrchatosc.NewListener(), vrchatosc.NewSender())
+	a.micMuteSync.Start(ctx)
 
 	a.subscribeAutomationEvents(ctx, eventBus)
 
@@ -126,6 +130,9 @@ func (a *App) startup(ctx context.Context) {
 // onShutdown persists state before the process exits (Wails lifecycle).
 func (a *App) onShutdown(ctx context.Context) {
 	a.stopSleepSuppressLoop()
+	if a.micMuteSync != nil {
+		a.micMuteSync.Stop()
+	}
 	if a.settings == nil {
 		return
 	}
@@ -514,6 +521,10 @@ func (a *App) LaunchVRChatWithArgs(args string) error {
 	if err != nil {
 		return err
 	}
+	args, err = a.micMuteSync.EnsureOSCLaunchArgs(a.ctx, args)
+	if err != nil {
+		return err
+	}
 	vrchatPath := ""
 	steamPath := ""
 	outputLogPath := ""
@@ -532,6 +543,18 @@ func (a *App) LaunchVRChat(profileID string) error {
 	if err != nil {
 		return err
 	}
+	profile, err := a.launcher.GetProfile(a.ctx, profileID)
+	if err != nil {
+		return err
+	}
+	if profile == nil {
+		return fmt.Errorf("profile not found: %s", profileID)
+	}
+	args := profile.Arguments
+	args, err = a.micMuteSync.EnsureOSCLaunchArgs(a.ctx, args)
+	if err != nil {
+		return err
+	}
 	vrchatPath := ""
 	steamPath := ""
 	outputLogPath := ""
@@ -540,7 +563,7 @@ func (a *App) LaunchVRChat(profileID string) error {
 		steamPath = ps.SteamPathLinux
 		outputLogPath = ps.OutputLogPath
 	}
-	return a.launcher.LaunchVRChat(a.ctx, profileID, vrchatPath, steamPath, outputLogPath)
+	return a.launcher.LaunchWithArgs(a.ctx, args, vrchatPath, steamPath, outputLogPath)
 }
 
 // JoinWorld launches VRChat into the specified world using default profile.
@@ -652,6 +675,37 @@ func (a *App) GetLanguage() (string, error) {
 // SetLanguage persists the UI language code.
 func (a *App) SetLanguage(lang string) error {
 	return a.settings.SetLanguage(a.ctx, lang)
+}
+
+// GetMicMuteSyncSettings returns Mic Mute Sync settings.
+func (a *App) GetMicMuteSyncSettings() (MicMuteSyncSettingsDTO, error) {
+	s, err := a.micMuteSync.GetSettings(a.ctx)
+	if err != nil {
+		return MicMuteSyncSettingsDTO{}, err
+	}
+	return MicMuteSyncSettingsDTO{Enabled: s.Enabled, OSCEndpoint: s.OSCEndpoint}, nil
+}
+
+// SaveMicMuteSyncSettings persists Mic Mute Sync settings.
+func (a *App) SaveMicMuteSyncSettings(dto MicMuteSyncSettingsDTO) error {
+	return a.micMuteSync.SaveSettings(a.ctx, usecase.MicMuteSyncSettings{
+		Enabled:     dto.Enabled,
+		OSCEndpoint: dto.OSCEndpoint,
+	})
+}
+
+// GetMicMuteSyncStatus returns the Sync Status checklist.
+func (a *App) GetMicMuteSyncStatus() (MicMuteSyncStatusDTO, error) {
+	st, err := a.micMuteSync.GetStatus(a.ctx)
+	if err != nil {
+		return MicMuteSyncStatusDTO{}, err
+	}
+	return toMicMuteSyncStatusDTO(st), nil
+}
+
+// ConnectMicMuteSyncDiscord opens Discord authorization for Mic Mute Sync.
+func (a *App) ConnectMicMuteSyncDiscord() error {
+	return a.micMuteSync.ConnectDiscord(a.ctx)
 }
 
 // GetSystemLocale returns the OS-preferred UI language mapped to a supported app code.

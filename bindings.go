@@ -553,3 +553,33 @@ func fromVRChatConfigDTO(d VRChatConfigDTO) *vrchatconfig.VRChatConfig {
 		DisableRichPresence:      d.DisableRichPresence,
 	}
 }
+
+// MicMuteSyncSettingsDTO is the frontend-facing Mic Mute Sync settings.
+type MicMuteSyncSettingsDTO struct {
+	Enabled     bool   `json:"enabled"`
+	OSCEndpoint string `json:"oscEndpoint"`
+}
+
+// MicMuteSyncStatusDTO is the Sync Status checklist for Settings UI.
+type MicMuteSyncStatusDTO struct {
+	Available           bool   `json:"available"`
+	Enabled             bool   `json:"enabled"`
+	OSCEndpoint         string `json:"oscEndpoint"`
+	VRChatOSCListening  bool   `json:"vrchatOscListening"`
+	VRChatOSCConnected  bool   `json:"vrchatOscConnected"`
+	VRChatMuteKnown     bool   `json:"vrchatMuteKnown"`
+	VRChatMuted         bool   `json:"vrchatMuted"`
+	VRChatOSCError      string `json:"vrchatOscError,omitempty"`
+	SyncEngineState     string `json:"syncEngineState"`
+	SyncPauseReason     string `json:"syncPauseReason,omitempty"`
+	DiscordRPCConnected bool   `json:"discordRpcConnected"`
+	DiscordMuteKnown    bool   `json:"discordMuteKnown"`
+	DiscordMuted        bool   `json:"discordMuted"`
+	DiscordRPCError     string `json:"discordRpcError,omitempty"`
+	ToggleVoiceKnown    bool   `json:"toggleVoiceKnown"`
+	ToggleVoiceOK       bool   `json:"toggleVoiceOk"`
+}
+
+func toMicMuteSyncStatusDTO(st usecase.MicMuteSyncStatus) MicMuteSyncStatusDTO {
+	return MicMuteSyncStatusDTO(st)
+}

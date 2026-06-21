@@ -18,6 +18,9 @@ jobs:
   go:
     name: Go Backend
     runs-on: ubuntu-latest
+    env:
+      VRCTWEAKER_DISCORD_CLIENT_ID: ${{ secrets.VRCTWEAKER_DISCORD_CLIENT_ID }}
+      VRCTWEAKER_DISCORD_CLIENT_SECRET: ${{ secrets.VRCTWEAKER_DISCORD_CLIENT_SECRET }}
     steps:
       - uses: actions/checkout@v6
 
