@@ -810,7 +810,7 @@ func (e *scanProgressEmitter) flush() {
 	e.hasPending = false
 }
 
-// ScanScreenshotDir scans a directory for screenshots.
+// ScanScreenshotDir synchronizes a picture folder (ingest new files + selective reindex).
 func (a *App) ScanScreenshotDir(path string) (int, error) {
 	a.galleryScanMu.Lock()
 	for a.galleryScanCancel != nil {
@@ -848,7 +848,7 @@ func (a *App) ScanScreenshotDir(path string) (int, error) {
 		runtime.EventsEmit(a.ctx, galleryScanDoneEvent, dto)
 	}()
 
-	count, err = a.media.ScanDirectory(scanCtx, path, em.emit)
+	count, err = a.media.SyncPictureFolder(scanCtx, path, em.emit)
 	return count, err
 }
 

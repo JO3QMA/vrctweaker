@@ -137,6 +137,19 @@ func (m *mockMetadataExtractor) Extract(path string) (media.ScreenshotMetadata, 
 	}, nil
 }
 
+type countingMetadataExtractor struct {
+	inner   *mockMetadataExtractor
+	extract []string
+}
+
+func (c *countingMetadataExtractor) Extract(path string) (media.ScreenshotMetadata, error) {
+	c.extract = append(c.extract, path)
+	if c.inner != nil {
+		return c.inner.Extract(path)
+	}
+	return media.ScreenshotMetadata{}, nil
+}
+
 // mockWorldInfoRepo records WorldInfoRepository calls for tests.
 type mockWorldInfoRepo struct {
 	upsertDisplayCalls []struct {
@@ -890,5 +903,85 @@ func TestMediaUseCase_ReindexScreenshots_skipsMissingFileOnDisk(t *testing.T) {
 	updated, err := uc.ReindexScreenshots(context.Background(), basePath)
 	if err != nil || updated != 0 {
 		t.Fatalf("updated = %d err=%v", updated, err)
+	}
+}
+
+func TestMediaUseCase_ReindexScreenshots_skipsExtractWhenMetadataCurrent(t *testing.T) {
+	dir := t.TempDir()
+	basePath := filepath.Join(dir, "shots")
+	_ = os.MkdirAll(basePath, 0755)
+	path := filepath.Join(basePath, "ok.png")
+	_ = os.WriteFile(path, []byte("same"), 0o644)
+	info, _ := os.Stat(path)
+	size := info.Size()
+
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{
+		ID: "ok", FilePath: path, WorldID: "wrld_ok", FileSizeBytes: &size,
+	})
+	_ = repo.UpsertThumbnail(context.Background(), "ok", &media.ScreenshotThumbnail{
+		JpegBlob:      []byte{0xff, 0xd8},
+		SourceSize:    size,
+		SourceModUnix: info.ModTime().Unix(),
+	})
+
+	counter := &countingMetadataExtractor{inner: &mockMetadataExtractor{worldID: "wrld_other"}}
+	uc := NewMediaUseCase(repo, counter, nil, nil)
+	updated, err := uc.ReindexScreenshots(context.Background(), basePath)
+	if err != nil {
+		t.Fatalf("ReindexScreenshots: %v", err)
+	}
+	if updated != 0 {
+		t.Fatalf("updated = %d, want 0", updated)
+	}
+	if len(counter.extract) != 0 {
+		t.Fatalf("Extract calls = %d, want 0", len(counter.extract))
+	}
+}
+
+func TestMediaUseCase_SyncPictureFolder_ingestsAndReindexesEmptyWorldID(t *testing.T) {
+	dir := t.TempDir()
+	basePath := filepath.Join(dir, "shots")
+	_ = os.MkdirAll(basePath, 0755)
+
+	existingPath := filepath.Join(basePath, "old.png")
+	_ = os.WriteFile(existingPath, []byte("old"), 0o644)
+	newPath := filepath.Join(basePath, "new.png")
+	_ = os.WriteFile(newPath, []byte("new"), 0o644)
+
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{
+		ID: "old", FilePath: existingPath, WorldID: "",
+	})
+
+	counter := &countingMetadataExtractor{
+		inner: &mockMetadataExtractor{worldID: "wrld_sync", worldName: "Sync World"},
+	}
+	uc := NewMediaUseCase(repo, counter, nil, nil)
+
+	total, err := uc.SyncPictureFolder(context.Background(), basePath, nil)
+	if err != nil {
+		t.Fatalf("SyncPictureFolder: %v", err)
+	}
+	if total < 2 {
+		t.Fatalf("total = %d, want at least 2 (1 ingest + 1 reindex)", total)
+	}
+
+	gotOld, _ := repo.GetByID(context.Background(), "old")
+	if gotOld.WorldID != "wrld_sync" {
+		t.Errorf("old WorldID = %q", gotOld.WorldID)
+	}
+	if _, ok := repo.byPath[newPath]; !ok {
+		t.Fatal("expected new file ingested")
+	}
+	// New file: extract once on ingest only, not again on reindex skip list.
+	newExtracts := 0
+	for _, p := range counter.extract {
+		if p == filepath.Clean(newPath) {
+			newExtracts++
+		}
+	}
+	if newExtracts != 1 {
+		t.Fatalf("Extract on new file = %d, want 1", newExtracts)
 	}
 }

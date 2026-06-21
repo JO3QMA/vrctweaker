@@ -122,8 +122,8 @@
   "gallery": {
     "title": "ギャラリー",
     "searchPlaceholder": "World ID で検索（入力で自動検索 / Enter）",
-    "scanFolder": "Scan Folder",
-    "scanning": "スキャン中…",
+    "scanFolder": "フォルダを同期",
+    "scanning": "同期中…",
     "detail": "詳細",
     "fileName": "ファイル名",
     "fileSize": "ファイルサイズ",

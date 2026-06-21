@@ -155,8 +155,8 @@ const en = {
   gallery: {
     title: "Gallery",
     searchPlaceholder: "Search by World ID (auto / Enter)",
-    scanFolder: "Scan folder",
-    scanning: "Scanning…",
+    scanFolder: "Sync folder",
+    scanning: "Syncing…",
     detail: "Details",
     fileName: "File name",
     fileSize: "File size",
@@ -542,8 +542,8 @@ const ja = deepMerge(en, {
   gallery: {
     title: "ギャラリー",
     searchPlaceholder: "World ID で検索（入力で自動検索 / Enter）",
-    scanFolder: "Scan Folder",
-    scanning: "スキャン中…",
+    scanFolder: "フォルダを同期",
+    scanning: "同期中…",
     detail: "詳細",
     fileName: "ファイル名",
     fileSize: "ファイルサイズ",
