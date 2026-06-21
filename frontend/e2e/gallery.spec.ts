@@ -43,6 +43,19 @@ test.describe("Gallery", () => {
     await expect(page.getByTestId("gallery-grid-scroll")).toBeVisible();
   });
 
+  test("world name filter reduces grid items", async ({ page }) => {
+    await page.goto("/#/gallery");
+    const grid = page.getByTestId("gallery-grid-scroll");
+    await expect(grid).toBeVisible({ timeout: 15_000 });
+    await expect(grid.locator(".grid-item")).toHaveCount(2);
+
+    const filter = page.getByTestId("gallery-world-filter");
+    await filter.fill("E2E Gallery");
+    await filter.press("Enter");
+
+    await expect(grid.locator(".grid-item")).toHaveCount(1);
+  });
+
   test("selecting first screenshot shows detail preview", async ({ page }) => {
     await page.goto("/#/gallery");
     const grid = page.getByTestId("gallery-grid-scroll");
