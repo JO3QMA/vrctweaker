@@ -1028,4 +1028,85 @@ describe("LauncherView", () => {
 
     confirmSpy.mockRestore();
   });
+
+  it("does not flash unsaved banner while loading another profile", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    let resolveSecondParse: ((value: LaunchArgsParsedDTO) => void) | undefined;
+    mockParseLaunchArgsForGUI.mockImplementation(
+      async (args: string): Promise<LaunchArgsParsedDTO> => {
+        const parsed = {
+          noVr: false,
+          screenMode: args.includes("-windowed")
+            ? ("windowed" as const)
+            : ("" as const),
+          screenWidth: 0,
+          screenHeight: 0,
+          fps: 0,
+          skipRegistry: false,
+          processPriority: -999,
+          mainThreadPriority: -999,
+          monitor: 0,
+          profile: -1,
+          enableDebugGui: false,
+          enableSDKLogLevels: false,
+          enableUdonDebugLogging: false,
+          midi: "",
+          watchWorlds: false,
+          watchAvatars: false,
+          ignoreTrackers: "",
+          videoDecoding: "" as const,
+          disableAMDStutterWorkaround: false,
+          osc: "",
+          affinity: "",
+          enforceWorldServerChecks: false,
+          custom: "",
+        };
+        if (args.includes("-windowed")) {
+          return new Promise<LaunchArgsParsedDTO>((resolve) => {
+            resolveSecondParse = resolve;
+          });
+        }
+        return parsed;
+      },
+    );
+
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+
+    void wrapper.findAll(".profile-card")[1]?.trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="unsaved-banner"]').exists()).toBe(false);
+
+    resolveSecondParse?.({
+      noVr: false,
+      screenMode: "windowed",
+      screenWidth: 0,
+      screenHeight: 0,
+      fps: 0,
+      skipRegistry: false,
+      processPriority: -999,
+      mainThreadPriority: -999,
+      monitor: 0,
+      profile: -1,
+      enableDebugGui: false,
+      enableSDKLogLevels: false,
+      enableUdonDebugLogging: false,
+      midi: "",
+      watchWorlds: false,
+      watchAvatars: false,
+      ignoreTrackers: "",
+      videoDecoding: "",
+      disableAMDStutterWorkaround: false,
+      osc: "",
+      affinity: "",
+      enforceWorldServerChecks: false,
+      custom: "",
+    });
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="unsaved-banner"]').exists()).toBe(false);
+  });
 });

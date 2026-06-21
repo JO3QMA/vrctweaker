@@ -4,6 +4,7 @@ import { PRIORITY_OMIT } from "../../wails/app";
 import {
   defaultValueOptionsEnabled,
   hasAdvancedLaunchOptionsEnabled,
+  isLaunchProfileEditDirty,
   launchProfileEditsEqual,
   syncValueOptionsEnabled,
   type LaunchProfileEditSnapshot,
@@ -71,5 +72,17 @@ describe("launcherProfileEdits", () => {
     const a = snapshot();
     const b = snapshot();
     expect(launchProfileEditsEqual(a, b)).toBe(true);
+  });
+
+  it("is not dirty when profile ids differ during profile switch", () => {
+    const saved = snapshot({ profileId: "1" });
+    const current = snapshot({ profileId: "2", name: "Other" });
+    expect(isLaunchProfileEditDirty(saved, current)).toBe(false);
+  });
+
+  it("is dirty when the same profile has unsaved edits", () => {
+    const saved = snapshot();
+    const current = snapshot({ name: "Renamed" });
+    expect(isLaunchProfileEditDirty(saved, current)).toBe(true);
   });
 });
