@@ -113,3 +113,57 @@ _Avoid_: 起動, Launch（Profile launch と区別できないため）
 **Profile launch**:
 Launcher から、選択中 Launch profile の引数で VRChat を起動する操作。Unsaved launch profile edits があっても保存を強制せず、その編集中の引数で起動してよい。セカンダリ導線。
 _Avoid_: このプロファイルで起動（UI 文言は可）, Quick launch（Default 固定ではないため）
+
+## Activity
+
+output_log から得た「誰と・どのワールドで会ったか」を振り返るための用語。
+
+### Language
+
+**Activity**:
+遭遇ログを一覧・絞り込み・深掘りする画面体験。主目的は、同一インスタンスで重なった他ユーザーの滞在区間を追うこと。Encounter log を画面上部に置き、Play time chart はその下に副次セクションとして置く（既定は折りたたみ）。
+_Avoid_: アクティビティ画面, ログ画面（output_log 生データやプレイ時間だけを指す語と混同しやすいため）
+
+**User encounter**:
+他ユーザーが同一インスタンスにいたひと区間の記録。入室時刻（joined-at）から退室時刻（left-at）まで。退室が未観測のとき left-at は空（滞在中）。
+_Avoid_: 遭遇, 出会い（単発イベントの印象を与えるため）, タイムライン行
+
+**Open encounter**:
+left-at が未確定の User encounter。ログ上まだ退室が取れていない滞在。Encounter log では退室列に「滞在中」ラベルで示す（欠損の `—` とは区別する）。
+_Avoid_: 未完了, アクティブ遭遇（実装状態と混同しやすいため）
+
+**Unidentified encounter**:
+VRC user ID が取れなかった User encounter。表示名は Encounter log に載せるが、プロフィールや Encounter history へのリンクは出さない（薄色テキスト）。
+_Avoid_: 匿名ユーザー, 不明ユーザー（VRChat の匿名インスタンス設定と混同しやすいため）
+
+**Encounter log**:
+Activity に並べる User encounter の時系列一覧。画面上の見出しは「遭遇ログ」。入室・退室・表示名・ワールド名の4列（インスタンス ID は含めない）。入室時刻の新しい順が既定。表示名での絞り込みと、ユーザー・ワールド別の深掘りへの導線を持つ。
+_Avoid_: 遭遇履歴（ユーザー／ワールド別の絞り込み画面全体を指す場合があるため）, ログ, タイムライン
+
+**Display name filter**:
+Encounter log 上の唯一の絞り込み。表示名の部分一致のみ（クライアント側）。ワールドや期間での絞り込みは Encounter history 側に任せる。
+_Avoid_: 検索, フィルタ（Gallery の World search や Date range filter と混同しやすいため）
+
+**Encounter retention**:
+遭遇ログの保存上限。設定の保存期間（日）を過ぎた User encounter は自動削除される。Activity ではフィルタ付近のヒント文で期間を示し、空状態だけに頼らない。
+_Avoid_: ログ保持, データ削除（プレイ時間やスクリーンショットと混同しやすいため）
+
+**Encounter log refresh**:
+遭遇ログ一覧の再取得。output_log 取り込み後は自動で行う。手動の更新操作も残し、取り込み漏れや不整合時にユーザーが再取得できる。
+_Avoid_: 同期, リロード（画面全体の再読み込みと混同しやすいため）
+
+**Encounter user navigation**:
+Encounter log で識別済みユーザー（VRC user ID あり）の表示名を選んだときの遷移。フレンドは Friends 画面へ、それ以外はユーザープロフィールへ。遭遇の深掘りはプロフィール内や Encounter history から行う。
+_Avoid_: プロフィール遷移, ユーザー詳細（Friends と区別できないため）
+
+**Encounter world navigation**:
+Encounter log でワールド名を選んだときの遷移。Encounter history（ワールド別）へ進み、そのワールドでの User encounter 一覧を見せる。VRChat への Join は行わない。
+_Avoid_: ワールド Join, ワールド起動（Gallery や Launcher の導線と混同しやすいため）
+
+**Encounter history**:
+特定のユーザーまたはワールドに絞った User encounter の一覧。Activity の表から遷移するか、ユーザープロフィールなど別導線から開く。Activity 本体とは画面を分ける。
+_Avoid_: 遭遇ログ（Activity 上の全体一覧と混同しやすいため）, 履歴画面
+
+**Play time chart**:
+Activity 上の副次セクション。ローカルユーザーの日別プレイ時間を直近 14 日分で示す。遭遇ログの補助情報であり、Activity の主目的ではない。既定では折りたたみ、遭遇ログより下に置く。
+_Avoid_: プレイ時間画面, アクティビティ統計（遭遇ログ全体を指す語と混同しやすいため）

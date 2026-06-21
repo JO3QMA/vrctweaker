@@ -37,6 +37,7 @@
     "refresh": "更新",
     "updating": "更新中...",
     "dash": "—",
+    "stillPresent": "滞在中",
     "yes": "Yes",
     "no": "No"
   },
@@ -161,8 +162,9 @@
   "activity": {
     "title": "アクティビティ",
     "playtimeSection": "プレイ時間（直近14日）",
-    "encounterSection": "遭遇ログ（滞在区間）",
+    "encounterSection": "遭遇ログ",
     "searchDisplayName": "表示名で検索",
+    "retentionHint": "保存期間 {days} 日を超えた記録は自動削除されます",
     "noData": "データがありません",
     "noEncounters": "遭遇ログがありません。",
     "colJoin": "入室",

@@ -2,20 +2,9 @@
   <div class="activity-view">
     <h1 class="page-title">{{ t("activity.title") }}</h1>
 
-    <!-- 統計セクション（直近14日） -->
+    <!-- 遭遇ログ（主セクション） -->
     <CollapsibleSectionCard
-      class="section-card--playtime"
-      :title="t('activity.playtimeSection')"
-    >
-      <div v-if="statsLoading" class="loading">{{ t("common.loading") }}</div>
-      <div v-else-if="!statsRangeFrom" class="empty-stats">
-        {{ t("activity.noData") }}
-      </div>
-      <PlayTimeChart v-else :series="dailyPlayChartSeries" />
-    </CollapsibleSectionCard>
-
-    <!-- タイムラインセクション -->
-    <CollapsibleSectionCard
+      v-model="encountersExpanded"
       class="section-card--encounters"
       :title="t('activity.encounterSection')"
     >
@@ -33,6 +22,9 @@
         </el-input>
         <el-button @click="loadEncounters">{{ t("common.refresh") }}</el-button>
       </div>
+      <p class="retention-hint">
+        {{ t("activity.retentionHint", { days: logRetentionDays }) }}
+      </p>
 
       <div class="encounter-log-scroll">
         <div v-if="encountersLoading" class="loading">
@@ -59,7 +51,9 @@
           <el-table-column :label="t('activity.colLeave')" width="150">
             <template #default="{ row }">
               <span class="timeline-time">{{
-                row.leftAt ? formatEncounterLocal(row.leftAt) : t("common.dash")
+                row.leftAt
+                  ? formatEncounterLocal(row.leftAt)
+                  : t("common.stillPresent")
               }}</span>
             </template>
           </el-table-column>
@@ -100,6 +94,19 @@
         </el-table>
       </div>
     </CollapsibleSectionCard>
+
+    <!-- プレイ時間（副次・既定折りたたみ） -->
+    <CollapsibleSectionCard
+      v-model="playtimeExpanded"
+      class="section-card--playtime"
+      :title="t('activity.playtimeSection')"
+    >
+      <div v-if="statsLoading" class="loading">{{ t("common.loading") }}</div>
+      <div v-else-if="!statsRangeFrom" class="empty-stats">
+        {{ t("activity.noData") }}
+      </div>
+      <PlayTimeChart v-else :series="dailyPlayChartSeries" />
+    </CollapsibleSectionCard>
   </div>
 </template>
 
@@ -130,6 +137,10 @@ const { t, locale } = useI18n();
 function formatEncounterLocal(iso: string): string {
   return formatEncounteredAt(iso, appLocaleToBcp47(String(locale.value)));
 }
+
+const encountersExpanded = ref(true);
+const playtimeExpanded = ref(false);
+const logRetentionDays = ref(30);
 
 const encounters = ref<UserEncounterDTO[]>([]);
 const encountersLoading = ref(false);
@@ -257,6 +268,9 @@ onMounted(() => {
   }
   void loadEncounters();
   void loadStats();
+  void App.getLogRetentionDays().then((days) => {
+    logRetentionDays.value = days;
+  });
 });
 
 onUnmounted(() => {
@@ -384,8 +398,15 @@ onUnmounted(() => {
   display: flex;
   gap: 0.5rem;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
   flex-wrap: wrap;
+  flex-shrink: 0;
+}
+
+.retention-hint {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 

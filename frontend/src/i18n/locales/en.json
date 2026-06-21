@@ -37,6 +37,7 @@
     "refresh": "Refresh",
     "updating": "Updating…",
     "dash": "—",
+    "stillPresent": "Present",
     "yes": "Yes",
     "no": "No"
   },
@@ -161,8 +162,9 @@
   "activity": {
     "title": "Activity",
     "playtimeSection": "Play time (last 14 days)",
-    "encounterSection": "Encounter log (stays)",
+    "encounterSection": "Encounter log",
     "searchDisplayName": "Search by display name",
+    "retentionHint": "Records older than {days} days are deleted automatically",
     "noData": "No data",
     "noEncounters": "No encounter logs.",
     "colJoin": "Joined",
