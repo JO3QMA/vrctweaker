@@ -48,6 +48,20 @@ func (f *fakePlaySessionRepo) Count(context.Context) (int64, error) {
 	return int64(len(f.sessions)), nil
 }
 
+func (f *fakePlaySessionRepo) DeleteOlderThan(_ context.Context, before time.Time) (int64, error) {
+	var kept []*activity.PlaySession
+	var deleted int64
+	for _, s := range f.sessions {
+		if s.StartTime.Before(before) {
+			deleted++
+			continue
+		}
+		kept = append(kept, s)
+	}
+	f.sessions = kept
+	return deleted, nil
+}
+
 type stubEncounterRepo struct{}
 
 func (stubEncounterRepo) List(context.Context, *activity.EncounterFilter) ([]*activity.UserEncounter, error) {
@@ -536,7 +550,7 @@ func TestActivityUseCase_PlaySessionLifecycle(t *testing.T) {
 func TestActivityUseCase_GetActivityStats_and_parseDateRangeError(t *testing.T) {
 	ctx := context.Background()
 	play := &fakePlaySessionRepo{}
-	start := time.Date(2025, 3, 1, 22, 0, 0, 0, time.UTC)
+	start := time.Date(2025, 3, 1, 22, 0, 0, 0, time.Local)
 	end := start.Add(3 * time.Hour)
 	_ = play.Save(ctx, &activity.PlaySession{ID: "s", StartTime: start, EndTime: &end, DurationSec: intPtr(10800)})
 	uc := NewActivityUseCase(play, &memEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
@@ -554,6 +568,26 @@ func TestActivityUseCase_GetActivityStats_and_parseDateRangeError(t *testing.T) 
 	}
 	if _, err := uc.GetActivityStats(ctx, "2025-03-01", "bad"); err == nil {
 		t.Fatal("expected parse error for toISO")
+	}
+}
+
+func TestActivityUseCase_GetActivityStats_openSessionUsesCheckpoint(t *testing.T) {
+	ctx := context.Background()
+	play := &fakePlaySessionRepo{}
+	start := time.Date(2025, 3, 2, 10, 0, 0, 0, time.Local)
+	observed := time.Date(2025, 3, 2, 11, 0, 0, 0, time.Local)
+	_ = play.Save(ctx, &activity.PlaySession{ID: "open", StartTime: start})
+	settings := &fakeAppSettingsRepo{m: map[string]string{
+		"activity_log_checkpoint": `{"watchPath":"/l","file":"output_log.txt","byteOffset":1,"vrChatLineTime":"` + observed.Format(time.RFC3339) + `"}`,
+	}}
+	uc := NewActivityUseCase(play, &memEncounterRepo{}, settings, nil, nil)
+
+	stats, err := uc.GetActivityStats(ctx, "2025-03-02", "2025-03-02")
+	if err != nil {
+		t.Fatalf("GetActivityStats: %v", err)
+	}
+	if len(stats.DailyPlaySeconds) != 1 || stats.DailyPlaySeconds[0].Seconds != 3600 {
+		t.Fatalf("daily = %+v", stats.DailyPlaySeconds)
 	}
 }
 
@@ -646,10 +680,16 @@ func TestActivityUseCase_RotateEncounters_respectsRetentionSetting(t *testing.T)
 			{VRCUserID: "new", JoinedAt: time.Now().UTC()},
 		},
 	}
-	uc := NewActivityUseCase(&fakePlaySessionRepo{}, enc, settings, nil, nil)
+	play := &fakePlaySessionRepo{
+		sessions: []*activity.PlaySession{
+			{ID: "old", StartTime: time.Now().UTC().AddDate(0, 0, -30)},
+			{ID: "new", StartTime: time.Now().UTC()},
+		},
+	}
+	uc := NewActivityUseCase(play, enc, settings, nil, nil)
 	n, err := uc.RotateEncounters(ctx)
-	if err != nil || n != 1 || len(enc.encounters) != 1 {
-		t.Fatalf("RotateEncounters n=%d len=%d err=%v", n, len(enc.encounters), err)
+	if err != nil || n != 2 || len(enc.encounters) != 1 || len(play.sessions) != 1 {
+		t.Fatalf("RotateEncounters n=%d enc=%d play=%d err=%v", n, len(enc.encounters), len(play.sessions), err)
 	}
 }
 

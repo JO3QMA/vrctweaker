@@ -318,9 +318,10 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 				endOff = st.Size()
 			}
 			_ = a.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
-				WatchPath:  absWatch,
-				File:       pathCopy,
-				ByteOffset: endOff,
+				WatchPath:      absWatch,
+				File:           pathCopy,
+				ByteOffset:     endOff,
+				VRChatLineTime: formatActivityCheckpointLineTime(lastVRLineTime),
 			})
 		}
 		return
@@ -371,10 +372,18 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 		endOff = st.Size()
 	}
 	_ = a.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
-		WatchPath:  absWatch,
-		File:       pathCopy,
-		ByteOffset: endOff,
+		WatchPath:      absWatch,
+		File:           pathCopy,
+		ByteOffset:     endOff,
+		VRChatLineTime: formatActivityCheckpointLineTime(lastVRLineTime),
 	})
+}
+
+func formatActivityCheckpointLineTime(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.Format(time.RFC3339)
 }
 
 func (a *App) startOutputLogWatcher(ctx context.Context, eventBus event.EventBus) {

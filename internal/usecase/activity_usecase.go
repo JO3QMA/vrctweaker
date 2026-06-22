@@ -23,16 +23,17 @@ type ActivityLogCheckpoint struct {
 }
 
 func parseDateRange(fromISO, toISO string) (from, to time.Time, err error) {
-	from, err = time.ParseInLocation("2006-01-02", fromISO, time.UTC)
+	from, err = time.ParseInLocation("2006-01-02", fromISO, time.Local)
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
-	to, err = time.ParseInLocation("2006-01-02", toISO, time.UTC)
+	to, err = time.ParseInLocation("2006-01-02", toISO, time.Local)
 	if err != nil {
 		return time.Time{}, time.Time{}, err
 	}
-	from = time.Date(from.Year(), from.Month(), from.Day(), 0, 0, 0, 0, time.UTC)
-	to = time.Date(to.Year(), to.Month(), to.Day(), 23, 59, 59, 999999999, time.UTC)
+	from = activity.StartOfLocalCalendarDay(from)
+	// Inclusive toISO: range ends at the start of the next local calendar day (exclusive).
+	to = activity.StartOfNextLocalCalendarDay(activity.StartOfLocalCalendarDay(to))
 	return from, to, nil
 }
 
@@ -300,7 +301,7 @@ func (uc *ActivityUseCase) CloseOpenPlaySessionAtLastLogLine(ctx context.Context
 }
 
 // GetActivityStats returns aggregated play stats for the date range [fromISO, toISO].
-// fromISO, toISO are date strings in YYYY-MM-DD format.
+// fromISO, toISO are date strings in YYYY-MM-DD format (local calendar).
 func (uc *ActivityUseCase) GetActivityStats(ctx context.Context, fromISO, toISO string) (*activity.ActivityStats, error) {
 	from, to, err := parseDateRange(fromISO, toISO)
 	if err != nil {
@@ -311,11 +312,52 @@ func (uc *ActivityUseCase) GetActivityStats(ctx context.Context, fromISO, toISO 
 	if err != nil {
 		return nil, err
 	}
-	daily, topWorlds := activity.AggregatePlaySessions(sessions, from, to)
+	if open, err := uc.playRepo.FindLatestWithoutEndTime(ctx); err != nil {
+		return nil, err
+	} else if open != nil {
+		found := false
+		for _, s := range sessions {
+			if s.ID == open.ID {
+				found = true
+				break
+			}
+		}
+		if !found {
+			sessions = append(sessions, open)
+		}
+	}
+	lastObserved := uc.lastObservedLogTime(ctx)
+	daily, topWorlds := activity.AggregatePlaySessions(sessions, from, to, lastObserved)
 	return &activity.ActivityStats{
 		DailyPlaySeconds: daily,
 		TopWorlds:        topWorlds,
 	}, nil
+}
+
+func (uc *ActivityUseCase) lastObservedLogTime(ctx context.Context) *time.Time {
+	cp, err := uc.GetActivityLogCheckpoint(ctx)
+	if err != nil || cp == nil || cp.VRChatLineTime == "" {
+		return nil
+	}
+	t, err := time.Parse(time.RFC3339, cp.VRChatLineTime)
+	if err != nil || t.IsZero() {
+		return nil
+	}
+	return &t
+}
+
+func (uc *ActivityUseCase) activityRetentionCutoff(ctx context.Context) (time.Time, error) {
+	daysStr, err := uc.settingsRepo.Get(ctx, "log_retention_days")
+	if err != nil {
+		return time.Time{}, err
+	}
+	days := 30
+	if daysStr != "" {
+		if d, err := strconv.Atoi(daysStr); err == nil && d > 0 {
+			days = d
+		}
+	}
+	return time.Now().UTC().AddDate(0, 0, -days), nil
 }
 
 // IsActivityDatastoreEmpty reports whether both play sessions and encounters are absent.
@@ -353,18 +395,19 @@ func (uc *ActivityUseCase) BackfillEncounterWorldContext(ctx context.Context) (i
 	return uc.encounterRepo.BackfillMissingWorldContext(ctx)
 }
 
-// RotateEncounters deletes encounters older than retention days.
+// RotateEncounters deletes encounters and play sessions older than Activity retention days.
 func (uc *ActivityUseCase) RotateEncounters(ctx context.Context) (int64, error) {
-	daysStr, err := uc.settingsRepo.Get(ctx, "log_retention_days")
+	before, err := uc.activityRetentionCutoff(ctx)
 	if err != nil {
 		return 0, err
 	}
-	days := 30
-	if daysStr != "" {
-		if d, err := strconv.Atoi(daysStr); err == nil && d > 0 {
-			days = d
-		}
+	encDeleted, err := uc.encounterRepo.DeleteOlderThan(ctx, before)
+	if err != nil {
+		return 0, err
 	}
-	before := time.Now().UTC().AddDate(0, 0, -days)
-	return uc.encounterRepo.DeleteOlderThan(ctx, before)
+	playDeleted, err := uc.playRepo.DeleteOlderThan(ctx, before)
+	if err != nil {
+		return 0, err
+	}
+	return encDeleted + playDeleted, nil
 }

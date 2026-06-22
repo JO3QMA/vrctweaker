@@ -71,6 +71,9 @@ func TestRepositories_returnErrorWhenDBClosed(t *testing.T) {
 		if _, err := repo.List(ctx, now, now); err == nil {
 			t.Fatal("List expected error")
 		}
+		if _, err := repo.DeleteOlderThan(ctx, now); err == nil {
+			t.Fatal("DeleteOlderThan expected error")
+		}
 	})
 
 	t.Run("UserCache", func(t *testing.T) {

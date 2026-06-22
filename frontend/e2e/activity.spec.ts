@@ -18,7 +18,7 @@ test.describe("Activity", () => {
       timeout: 15_000,
     });
     await expect(encounterCard.getByText("遭遇ログ")).toBeVisible();
-    await expect(encounterCard.locator(".retention-hint")).toContainText("30");
+    await expect(page.locator(".page-retention-hint")).toContainText("30");
 
     const playtimeCard = page.locator(".section-card--playtime");
     await expect(

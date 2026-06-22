@@ -126,3 +126,35 @@ func TestPlaySessionRepository_GetByID_missing(t *testing.T) {
 		t.Fatalf("GetByID missing: %#v err=%v", got, err)
 	}
 }
+
+func TestPlaySessionRepository_DeleteOlderThan(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+
+	repo := NewPlaySessionRepository(db)
+	old := time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC)
+	recent := time.Date(2024, 6, 1, 10, 0, 0, 0, time.UTC)
+	if saveErr := repo.Save(ctx, &activity.PlaySession{ID: "old", StartTime: old}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+	if saveErr := repo.Save(ctx, &activity.PlaySession{ID: "recent", StartTime: recent}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+
+	deleted, err := repo.DeleteOlderThan(ctx, time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC))
+	if err != nil || deleted != 1 {
+		t.Fatalf("DeleteOlderThan: deleted=%d err=%v", deleted, err)
+	}
+	n, err := repo.Count(ctx)
+	if err != nil || n != 1 {
+		t.Fatalf("Count after delete: n=%d err=%v", n, err)
+	}
+}

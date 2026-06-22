@@ -196,7 +196,7 @@ const en = {
   },
   activity: {
     title: "Activity",
-    playtimeSection: "Play time (last 14 days)",
+    playtimeSection: "Play time (last {days} days)",
     encounterSection: "Encounter log",
     searchDisplayName: "Search by display name",
     retentionHint: "Records older than {days} days are deleted automatically",
@@ -315,8 +315,9 @@ const en = {
     suppressSleepHint:
       "While VRChat.exe is running, reduces idle sleep and display power-off (Windows only, while Tweaker is running). Default off.",
     dataSection: "Log & data",
-    retentionLabel: "Encounter retention (days)",
-    retentionHint: "user_encounters older than this are deleted automatically.",
+    retentionLabel: "Activity data retention (days)",
+    retentionHint:
+      "User encounters and play sessions older than this are deleted automatically.",
     ossSection: "OSS licenses",
     ossHint: "View licenses for open-source components used by this app.",
     ossButton: "Show OSS license list",
@@ -597,7 +598,7 @@ const ja = deepMerge(en, {
   },
   activity: {
     title: "アクティビティ",
-    playtimeSection: "プレイ時間（直近14日）",
+    playtimeSection: "プレイ時間（直近{days}日）",
     encounterSection: "遭遇ログ",
     searchDisplayName: "表示名で検索",
     retentionHint: "保存期間 {days} 日を超えた記録は自動削除されます",
@@ -715,8 +716,8 @@ const ja = deepMerge(en, {
     suppressSleepHint:
       "VRChat.exe が動いている間だけ、PCのアイドルスリープとディスプレイの電源オフを抑えます（Windows・Tweaker起動中のみ有効）。初期状態はオフです。",
     dataSection: "ログ・データ管理",
-    retentionLabel: "遭遇記録の保存期間（日）",
-    retentionHint: "この日数を過ぎたuser_encountersは自動削除されます",
+    retentionLabel: "Activity データの保存期間（日）",
+    retentionHint: "この日数を過ぎた遭遇記録とプレイ時間は自動削除されます。",
     ossSection: "OSS ライセンス",
     ossHint:
       "本アプリケーションで使用しているオープンソースソフトウェアのライセンス一覧を確認できます。",
@@ -988,7 +989,7 @@ const ko = deepMerge(en, {
   },
   activity: {
     title: "활동",
-    playtimeSection: "플레이 시간 (최근 14일)",
+    playtimeSection: "플레이 시간 (최근 {days}일)",
     encounterSection: "조우 로그",
     searchDisplayName: "표시 이름으로 검색",
     retentionHint: "보관 기간 {days}일이 지난 기록은 자동으로 삭제됩니다",
@@ -1105,8 +1106,9 @@ const ko = deepMerge(en, {
     suppressSleepHint:
       "VRChat.exe 실행 중 유휴 절전·디스플레이 끄기를 줄입니다 (Windows, Tweaker 실행 중만). 기본값 끔.",
     dataSection: "로그·데이터",
-    retentionLabel: "조우 기록 보관(일)",
-    retentionHint: "지정 일수가 지난 user_encounters는 자동 삭제됩니다.",
+    retentionLabel: "Activity 데이터 보관(일)",
+    retentionHint:
+      "지정 일수가 지난 조우 기록과 플레이 시간은 자동 삭제됩니다.",
     ossSection: "OSS 라이선스",
     ossHint: "사용 중인 오픈소스 라이선스를 확인할 수 있습니다.",
     ossButton: "OSS 라이선스 목록",
@@ -1360,7 +1362,7 @@ const zhTW = deepMerge(en, {
   },
   activity: {
     title: "活動",
-    playtimeSection: "遊玩時間（近 14 天）",
+    playtimeSection: "遊玩時間（近 {days} 天）",
     encounterSection: "相遇紀錄",
     searchDisplayName: "以顯示名稱搜尋",
     retentionHint: "超過保存期 {days} 天的紀錄將自動刪除",
@@ -1474,8 +1476,8 @@ const zhTW = deepMerge(en, {
     suppressSleepHint:
       "VRChat.exe 執行時減少閒置睡眠與關閉螢幕（僅 Windows，Tweaker 執行中）。預設關閉。",
     dataSection: "日誌與資料",
-    retentionLabel: "相遇紀錄保留（天）",
-    retentionHint: "超過此天數的 user_encounters 將自動刪除。",
+    retentionLabel: "Activity 資料保留（天）",
+    retentionHint: "超過此天數的相遇紀錄與遊玩時間將自動刪除。",
     ossSection: "OSS 授權",
     ossHint: "可檢視本應用程式使用的開放原始碼授權。",
     ossButton: "顯示 OSS 授權清單",
@@ -1728,7 +1730,7 @@ const zhCN = deepMerge(en, {
   },
   activity: {
     title: "活动",
-    playtimeSection: "游玩时间（近 14 天）",
+    playtimeSection: "游玩时间（近 {days} 天）",
     encounterSection: "相遇记录",
     searchDisplayName: "按显示名称搜索",
     retentionHint: "超过保存期 {days} 天的记录将自动删除",
@@ -1842,8 +1844,8 @@ const zhCN = deepMerge(en, {
     suppressSleepHint:
       "VRChat.exe 运行时减少空闲睡眠与关闭显示器（仅 Windows，Tweaker 运行中）。默认关闭。",
     dataSection: "日志与数据",
-    retentionLabel: "相遇记录保留（天）",
-    retentionHint: "超过此天数的 user_encounters 将自动删除。",
+    retentionLabel: "Activity 数据保留（天）",
+    retentionHint: "超过此天数的相遇记录与游玩时间将自动删除。",
     ossSection: "OSS 许可",
     ossHint: "可查看本应用使用的开源许可。",
     ossButton: "显示 OSS 许可列表",

@@ -54,6 +54,15 @@ func (r *PlaySessionRepository) Count(ctx context.Context) (int64, error) {
 	return n, err
 }
 
+// DeleteOlderThan removes play sessions older than before (by start_time).
+func (r *PlaySessionRepository) DeleteOlderThan(ctx context.Context, before time.Time) (int64, error) {
+	res, err := r.db.ExecContext(ctx, `DELETE FROM play_sessions WHERE start_time < ?`, before.Format(time.RFC3339))
+	if err != nil {
+		return 0, err
+	}
+	return res.RowsAffected()
+}
+
 // GetByID returns a play session by ID.
 func (r *PlaySessionRepository) GetByID(ctx context.Context, id string) (*activity.PlaySession, error) {
 	row := r.db.QueryRowContext(ctx, `SELECT id, start_time, end_time, duration_sec FROM play_sessions WHERE id = ?`, id)
