@@ -448,6 +448,21 @@ func TestActivityUseCase_RecordEncounter_delegatesToAt(t *testing.T) {
 	}
 }
 
+func TestActivityUseCase_ApplyCommand_recordEncounterJoin(t *testing.T) {
+	enc := &memEncounterRepo{}
+	uc := NewActivityUseCase(&fakePlaySessionRepo{}, enc, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
+	at := time.Date(2026, 3, 22, 12, 0, 0, 0, time.UTC)
+	cmd := activity.RecordEncounterJoinCmd{
+		VRCUserID: "usr_x", DisplayName: "X", InstanceID: "wrld_a:1", WorldID: "wrld_a", At: at,
+	}
+	if err := uc.ApplyCommand(context.Background(), cmd); err != nil {
+		t.Fatal(err)
+	}
+	if len(enc.encounters) != 1 || enc.encounters[0].VRCUserID != "usr_x" {
+		t.Fatalf("encounters = %+v", enc.encounters)
+	}
+}
+
 func TestActivityUseCase_Checkpoint_roundtripAndClear(t *testing.T) {
 	ctx := context.Background()
 	uc, _, _, settings := newActivityUC(t)

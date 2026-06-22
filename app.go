@@ -230,7 +230,7 @@ func (a *App) resolveEffectiveOutputLogWatchPath(ctx context.Context) (string, e
 	return absDir, nil
 }
 
-func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, parser *activity.LogParser, activityHandler *logwatcher.ActivityEventHandler, logger logwatcher.Logger) {
+func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, parser *activity.LogParser, ingestAdapter *logwatcher.ActivityIngestAdapter, logger logwatcher.Logger) {
 	info, err := os.Stat(absWatch)
 	if err != nil {
 		return
@@ -282,9 +282,9 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 			checkpointLines := 0
 			var lastVRLineTime time.Time
 			if off == 0 {
-				activityHandler.ResetSessionContextForNewLogFile()
+				ingestAdapter.ResetSessionContextForNewLogFile()
 			}
-			_, procErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, activityHandler, logger, func(pos int64, line string) {
+			_, procErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, ingestAdapter, logger, func(pos int64, line string) {
 				if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
 					lastVRLineTime = ts
 				}
@@ -334,9 +334,9 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 	checkpointLines := 0
 	var lastVRLineTime time.Time
 	if off == 0 {
-		activityHandler.ResetSessionContextForNewLogFile()
+		ingestAdapter.ResetSessionContextForNewLogFile()
 	}
-	_, fileProcErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, activityHandler, logger, func(pos int64, line string) {
+	_, fileProcErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, ingestAdapter, logger, func(pos int64, line string) {
 		if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
 			lastVRLineTime = ts
 		}
@@ -400,16 +400,16 @@ func (a *App) startOutputLogWatcher(ctx context.Context, eventBus event.EventBus
 	emitEncounters := func() {
 		runtime.EventsEmit(a.ctx, activityEncountersChangedEvent, struct{}{})
 	}
-	activityHandler := logwatcher.NewActivityEventHandler(a.activity, ctx, logger, emitEncounters)
+	ingestAdapter := logwatcher.NewActivityIngestAdapter(a.activity, ctx, logger, emitEncounters)
 	publishHandler := logwatcher.NewEventPublishingHandler(eventBus, ctx, logger)
-	handler := logwatcher.NewMultiHandler(activityHandler, publishHandler)
+	handler := logwatcher.NewMultiHandler(ingestAdapter, publishHandler)
 
-	activityHandler.SetSuppressEncounterNotify(true)
-	a.ingestActivityLogsBootstrap(ctx, watchPath, parser, activityHandler, logger)
-	activityHandler.SetSuppressEncounterNotify(false)
+	ingestAdapter.SetSuppressEncounterNotify(true)
+	a.ingestActivityLogsBootstrap(ctx, watchPath, parser, ingestAdapter, logger)
+	ingestAdapter.SetSuppressEncounterNotify(false)
 
 	watcher := logwatcher.NewOutputLogWatcher(watchPath, parser, handler, logger)
-	watcher.SetOnActiveLogPathChange(activityHandler.ResetSessionContextForNewLogFile)
+	watcher.SetOnActiveLogPathChange(ingestAdapter.ResetSessionContextForNewLogFile)
 	if startErr := watcher.Start(ctx); startErr != nil {
 		runtime.LogError(ctx, "failed to start output_log watcher: "+startErr.Error())
 		return
