@@ -17,6 +17,8 @@ type PlaySessionRepository interface {
 	FindLatestWithoutEndTime(ctx context.Context) (*PlaySession, error)
 	// Count returns the number of stored play sessions.
 	Count(ctx context.Context) (int64, error)
+	// DeleteOlderThan removes play sessions that started before the given time (for rotation).
+	DeleteOlderThan(ctx context.Context, before time.Time) (int64, error)
 }
 
 // UserEncounterRepository defines persistence operations for user encounters.

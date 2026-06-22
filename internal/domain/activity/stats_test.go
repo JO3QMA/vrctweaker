@@ -6,27 +6,24 @@ import (
 	"time"
 )
 
-func mustParse(layout, value string) time.Time {
-	t, err := time.ParseInLocation(layout, value, time.UTC)
-	if err != nil {
-		panic(err)
-	}
-	return t
+func localTime(y, m, d, h, min, sec int) time.Time {
+	return time.Date(y, time.Month(m), d, h, min, sec, 0, time.Local)
 }
 
 func TestAggregatePlaySessions(t *testing.T) {
-	from := mustParse("2006-01-02", "2024-01-01")
-	to := mustParse("2006-01-02", "2024-01-03")
-	from = time.Date(from.Year(), from.Month(), from.Day(), 0, 0, 0, 0, time.UTC)
-	to = time.Date(to.Year(), to.Month(), to.Day(), 23, 59, 59, 999999999, time.UTC)
+	from := StartOfLocalCalendarDay(localTime(2024, 1, 1, 0, 0, 0))
+	to := StartOfNextLocalCalendarDay(
+		StartOfLocalCalendarDay(localTime(2024, 1, 3, 0, 0, 0)),
+	)
 
 	tests := []struct {
-		name      string
-		sessions  []*PlaySession
-		from      time.Time
-		to        time.Time
-		wantDaily []DailyPlaySeconds
-		wantTop   []TopWorldSummary
+		name         string
+		sessions     []*PlaySession
+		from         time.Time
+		to           time.Time
+		lastObserved *time.Time
+		wantDaily    []DailyPlaySeconds
+		wantTop      []TopWorldSummary
 	}{
 		{
 			name:      "empty sessions returns empty arrays",
@@ -41,8 +38,8 @@ func TestAggregatePlaySessions(t *testing.T) {
 			sessions: []*PlaySession{
 				{
 					ID:          "1",
-					StartTime:   mustParse(time.RFC3339, "2024-01-02T10:00:00Z"),
-					EndTime:     ptrTime(mustParse(time.RFC3339, "2024-01-02T11:00:00Z")),
+					StartTime:   localTime(2024, 1, 2, 10, 0, 0),
+					EndTime:     ptrTime(localTime(2024, 1, 2, 11, 0, 0)),
 					DurationSec: ptrInt(3600),
 				},
 			},
@@ -56,20 +53,20 @@ func TestAggregatePlaySessions(t *testing.T) {
 			},
 		},
 		{
-			name: "session spanning two days",
+			name: "session spanning two local days",
 			sessions: []*PlaySession{
 				{
 					ID:          "1",
-					StartTime:   mustParse(time.RFC3339, "2024-01-01T22:00:00Z"),
-					EndTime:     ptrTime(mustParse(time.RFC3339, "2024-01-02T02:00:00Z")),
-					DurationSec: ptrInt(14400), // 4 hours
+					StartTime:   localTime(2024, 1, 1, 22, 0, 0),
+					EndTime:     ptrTime(localTime(2024, 1, 2, 2, 0, 0)),
+					DurationSec: ptrInt(14400),
 				},
 			},
 			from: from,
 			to:   to,
 			wantDaily: []DailyPlaySeconds{
-				{Date: "2024-01-01", Seconds: 7200}, // 22:00-24:00
-				{Date: "2024-01-02", Seconds: 7200}, // 00:00-02:00
+				{Date: "2024-01-01", Seconds: 7200},
+				{Date: "2024-01-02", Seconds: 7200},
 			},
 			wantTop: []TopWorldSummary{
 				{WorldID: "_total", WorldName: "全セッション", Seconds: 14400, Sessions: 1},
@@ -80,21 +77,21 @@ func TestAggregatePlaySessions(t *testing.T) {
 			sessions: []*PlaySession{
 				{
 					ID:          "1",
-					StartTime:   mustParse(time.RFC3339, "2024-01-02T09:00:00Z"),
-					EndTime:     ptrTime(mustParse(time.RFC3339, "2024-01-02T10:00:00Z")),
+					StartTime:   localTime(2024, 1, 2, 9, 0, 0),
+					EndTime:     ptrTime(localTime(2024, 1, 2, 10, 0, 0)),
 					DurationSec: ptrInt(3600),
 				},
 				{
 					ID:          "2",
-					StartTime:   mustParse(time.RFC3339, "2024-01-02T14:00:00Z"),
-					EndTime:     ptrTime(mustParse(time.RFC3339, "2024-01-02T15:30:00Z")),
+					StartTime:   localTime(2024, 1, 2, 14, 0, 0),
+					EndTime:     ptrTime(localTime(2024, 1, 2, 15, 30, 0)),
 					DurationSec: ptrInt(5400),
 				},
 			},
 			from: from,
 			to:   to,
 			wantDaily: []DailyPlaySeconds{
-				{Date: "2024-01-02", Seconds: 9000}, // 3600 + 5400
+				{Date: "2024-01-02", Seconds: 9000},
 			},
 			wantTop: []TopWorldSummary{
 				{WorldID: "_total", WorldName: "全セッション", Seconds: 9000, Sessions: 2},
@@ -105,8 +102,8 @@ func TestAggregatePlaySessions(t *testing.T) {
 			sessions: []*PlaySession{
 				{
 					ID:          "1",
-					StartTime:   mustParse(time.RFC3339, "2024-01-01T22:00:00Z"),
-					EndTime:     ptrTime(mustParse(time.RFC3339, "2024-01-01T22:30:00Z")),
+					StartTime:   localTime(2024, 1, 1, 22, 0, 0),
+					EndTime:     ptrTime(localTime(2024, 1, 1, 22, 30, 0)),
 					DurationSec: ptrInt(1800),
 				},
 			},
@@ -120,13 +117,11 @@ func TestAggregatePlaySessions(t *testing.T) {
 			},
 		},
 		{
-			name: "open session without end is excluded from daily and totals",
+			name: "open session without lastObserved is excluded",
 			sessions: []*PlaySession{
 				{
-					ID:          "open1",
-					StartTime:   mustParse(time.RFC3339, "2024-01-02T10:00:00Z"),
-					EndTime:     nil,
-					DurationSec: nil,
+					ID:        "open1",
+					StartTime: localTime(2024, 1, 2, 10, 0, 0),
 				},
 			},
 			from:      from,
@@ -135,18 +130,34 @@ func TestAggregatePlaySessions(t *testing.T) {
 			wantTop:   nil,
 		},
 		{
+			name: "open session with lastObserved is included",
+			sessions: []*PlaySession{
+				{
+					ID:        "open1",
+					StartTime: localTime(2024, 1, 2, 10, 0, 0),
+				},
+			},
+			from:         from,
+			to:           to,
+			lastObserved: ptrTime(localTime(2024, 1, 2, 11, 0, 0)),
+			wantDaily: []DailyPlaySeconds{
+				{Date: "2024-01-02", Seconds: 3600},
+			},
+			wantTop: []TopWorldSummary{
+				{WorldID: "_total", WorldName: "全セッション", Seconds: 3600, Sessions: 1},
+			},
+		},
+		{
 			name: "closed session counted when mixed with open session",
 			sessions: []*PlaySession{
 				{
-					ID:          "open1",
-					StartTime:   mustParse(time.RFC3339, "2024-01-02T08:00:00Z"),
-					EndTime:     nil,
-					DurationSec: nil,
+					ID:        "open1",
+					StartTime: localTime(2024, 1, 2, 8, 0, 0),
 				},
 				{
 					ID:          "closed1",
-					StartTime:   mustParse(time.RFC3339, "2024-01-02T12:00:00Z"),
-					EndTime:     ptrTime(mustParse(time.RFC3339, "2024-01-02T13:00:00Z")),
+					StartTime:   localTime(2024, 1, 2, 12, 0, 0),
+					EndTime:     ptrTime(localTime(2024, 1, 2, 13, 0, 0)),
 					DurationSec: ptrInt(3600),
 				},
 			},
@@ -164,7 +175,7 @@ func TestAggregatePlaySessions(t *testing.T) {
 			sessions: []*PlaySession{
 				{
 					ID:          "dur1",
-					StartTime:   mustParse(time.RFC3339, "2024-01-02T10:00:00Z"),
+					StartTime:   localTime(2024, 1, 2, 10, 0, 0),
 					EndTime:     nil,
 					DurationSec: ptrInt(1800),
 				},
@@ -183,8 +194,8 @@ func TestAggregatePlaySessions(t *testing.T) {
 			sessions: []*PlaySession{
 				{
 					ID:          "zero",
-					StartTime:   mustParse(time.RFC3339, "2024-01-02T10:00:00Z"),
-					EndTime:     ptrTime(mustParse(time.RFC3339, "2024-01-02T10:00:00Z")),
+					StartTime:   localTime(2024, 1, 2, 10, 0, 0),
+					EndTime:     ptrTime(localTime(2024, 1, 2, 10, 0, 0)),
 					DurationSec: ptrInt(0),
 				},
 			},
@@ -198,8 +209,8 @@ func TestAggregatePlaySessions(t *testing.T) {
 			sessions: []*PlaySession{
 				{
 					ID:          "clip-start",
-					StartTime:   mustParse(time.RFC3339, "2023-12-31T22:00:00Z"),
-					EndTime:     ptrTime(mustParse(time.RFC3339, "2024-01-01T02:00:00Z")),
+					StartTime:   localTime(2023, 12, 31, 22, 0, 0),
+					EndTime:     ptrTime(localTime(2024, 1, 1, 2, 0, 0)),
 					DurationSec: ptrInt(14400),
 				},
 			},
@@ -217,27 +228,27 @@ func TestAggregatePlaySessions(t *testing.T) {
 			sessions: []*PlaySession{
 				{
 					ID:          "clip-end",
-					StartTime:   mustParse(time.RFC3339, "2024-01-03T22:00:00Z"),
-					EndTime:     ptrTime(mustParse(time.RFC3339, "2024-01-04T02:00:00Z")),
+					StartTime:   localTime(2024, 1, 3, 22, 0, 0),
+					EndTime:     ptrTime(localTime(2024, 1, 4, 2, 0, 0)),
 					DurationSec: ptrInt(14400),
 				},
 			},
 			from: from,
 			to:   to,
 			wantDaily: []DailyPlaySeconds{
-				{Date: "2024-01-03", Seconds: 7199}, // clipped to to (23:59:59 UTC on Jan 3)
+				{Date: "2024-01-03", Seconds: 7200},
 			},
 			wantTop: []TopWorldSummary{
-				{WorldID: "_total", WorldName: "全セッション", Seconds: 7199, Sessions: 1},
+				{WorldID: "_total", WorldName: "全セッション", Seconds: 7200, Sessions: 1},
 			},
 		},
 		{
-			name: "session spanning three days",
+			name: "session spanning three local days",
 			sessions: []*PlaySession{
 				{
 					ID:          "three-day",
-					StartTime:   mustParse(time.RFC3339, "2024-01-01T22:00:00Z"),
-					EndTime:     ptrTime(mustParse(time.RFC3339, "2024-01-03T02:00:00Z")),
+					StartTime:   localTime(2024, 1, 1, 22, 0, 0),
+					EndTime:     ptrTime(localTime(2024, 1, 3, 2, 0, 0)),
 					DurationSec: ptrInt(100800),
 				},
 			},
@@ -257,7 +268,7 @@ func TestAggregatePlaySessions(t *testing.T) {
 			sessions: []*PlaySession{
 				{
 					ID:          "dur-zero",
-					StartTime:   mustParse(time.RFC3339, "2024-01-02T10:00:00Z"),
+					StartTime:   localTime(2024, 1, 2, 10, 0, 0),
 					EndTime:     nil,
 					DurationSec: ptrInt(0),
 				},
@@ -270,7 +281,7 @@ func TestAggregatePlaySessions(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotDaily, gotTop := AggregatePlaySessions(tt.sessions, tt.from, tt.to)
+			gotDaily, gotTop := AggregatePlaySessions(tt.sessions, tt.from, tt.to, tt.lastObserved)
 			if !reflect.DeepEqual(gotDaily, tt.wantDaily) {
 				t.Errorf("AggregatePlaySessions() dailyPlaySeconds = %v, want %v", gotDaily, tt.wantDaily)
 			}

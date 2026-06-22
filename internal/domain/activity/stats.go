@@ -7,7 +7,7 @@ import (
 
 // DailyPlaySeconds represents play time for a single date.
 type DailyPlaySeconds struct {
-	Date    string // YYYY-MM-DD
+	Date    string // YYYY-MM-DD (local calendar)
 	Seconds int
 }
 
@@ -27,17 +27,18 @@ type ActivityStats struct {
 
 // AggregatePlaySessions computes daily play seconds and top-world-like summary from sessions.
 // Pure function for testability. Sessions are assumed to overlap [from, to] (caller fetches accordingly).
+// lastObserved extends open sessions (no end time) through that instant for daily totals.
 // For topWorlds: without world_id, returns a single "_total" entry with total seconds and session count.
-func AggregatePlaySessions(sessions []*PlaySession, from, to time.Time) ([]DailyPlaySeconds, []TopWorldSummary) {
+func AggregatePlaySessions(sessions []*PlaySession, from, to time.Time, lastObserved *time.Time) ([]DailyPlaySeconds, []TopWorldSummary) {
 	dailyMap := make(map[string]int)
 	var totalSeconds int
 	var includedSessions int
 
-	fromDate := truncateToDate(from)
-	toDate := truncateToDate(to)
+	fromDate := StartOfLocalCalendarDay(from)
+	toDate := StartOfLocalCalendarDay(to)
 
 	for _, s := range sessions {
-		start, end := effectiveTimeRange(s)
+		start, end := effectiveTimeRange(s, lastObserved)
 		if end == nil {
 			continue
 		}
@@ -60,24 +61,27 @@ func AggregatePlaySessions(sessions []*PlaySession, from, to time.Time) ([]Daily
 		totalSeconds += int(end.Sub(start).Seconds())
 		includedSessions++
 
-		cur := truncateToDate(start)
-		curTime := start
-		for !curTime.After(*end) && (cur.Before(toDate) || cur.Equal(toDate)) {
-			if cur.Before(fromDate) {
-				cur = nextDate(cur)
-				curTime = time.Date(cur.Year(), cur.Month(), cur.Day(), 0, 0, 0, 0, time.UTC)
-				continue
+		curDay := StartOfLocalCalendarDay(start)
+		for !curDay.After(toDate) {
+			dayEnd := StartOfNextLocalCalendarDay(curDay)
+			segStart := start
+			if curDay.After(segStart) {
+				segStart = curDay
 			}
-			dayEnd := truncateToDate(cur).Add(24 * time.Hour) // midnight next day
-			if dayEnd.After(*end) {
-				dayEnd = *end
+			segEnd := *end
+			if dayEnd.Before(segEnd) {
+				segEnd = dayEnd
 			}
-			daySec := int(dayEnd.Sub(curTime).Seconds())
-			if daySec > 0 {
-				dailyMap[cur.Format("2006-01-02")] += daySec
+			if !curDay.Before(fromDate) && segStart.Before(segEnd) {
+				daySec := int(segEnd.Sub(segStart).Seconds())
+				if daySec > 0 {
+					dailyMap[LocalDateISO(curDay)] += daySec
+				}
 			}
-			cur = nextDate(cur)
-			curTime = time.Date(cur.Year(), cur.Month(), cur.Day(), 0, 0, 0, 0, time.UTC)
+			if !dayEnd.Before(*end) {
+				break
+			}
+			curDay = dayEnd
 		}
 	}
 
@@ -103,18 +107,8 @@ func AggregatePlaySessions(sessions []*PlaySession, from, to time.Time) ([]Daily
 	return daily, topWorlds
 }
 
-func truncateToDate(t time.Time) time.Time {
-	y, m, d := t.Date()
-	return time.Date(y, m, d, 0, 0, 0, 0, time.UTC)
-}
-
-func nextDate(t time.Time) time.Time {
-	return t.AddDate(0, 0, 1)
-}
-
-// effectiveTimeRange returns start and end for aggregation. Returns nil end if the session is still
-// open (no end time and no positive duration) so callers exclude it from historical totals.
-func effectiveTimeRange(s *PlaySession) (time.Time, *time.Time) {
+// effectiveTimeRange returns start and end for aggregation. Open sessions use lastObserved when set.
+func effectiveTimeRange(s *PlaySession, lastObserved *time.Time) (time.Time, *time.Time) {
 	start := s.StartTime
 	if s.EndTime != nil {
 		return start, s.EndTime
@@ -122,6 +116,10 @@ func effectiveTimeRange(s *PlaySession) (time.Time, *time.Time) {
 	if s.DurationSec != nil && *s.DurationSec > 0 {
 		e := start.Add(time.Duration(*s.DurationSec) * time.Second)
 		return start, &e
+	}
+	if lastObserved != nil && !lastObserved.Before(start) {
+		end := *lastObserved
+		return start, &end
 	}
 	return start, nil
 }

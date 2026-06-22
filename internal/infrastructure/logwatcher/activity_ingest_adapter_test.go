@@ -53,6 +53,10 @@ func (stubPlaySessionRepo) FindLatestWithoutEndTime(context.Context) (*activity.
 
 func (stubPlaySessionRepo) Count(context.Context) (int64, error) { return 0, nil }
 
+func (stubPlaySessionRepo) DeleteOlderThan(context.Context, time.Time) (int64, error) {
+	return 0, nil
+}
+
 type stubEncounterRepo struct{}
 
 func (stubEncounterRepo) List(context.Context, *activity.EncounterFilter) ([]*activity.UserEncounter, error) {

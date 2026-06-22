@@ -339,10 +339,21 @@ describe("ActivityView", () => {
     expect(mockGetLogRetentionDays).toHaveBeenCalled();
   });
 
-  it("shows retention hint with configured days", async () => {
+  it("shows retention hint at page level with configured days", async () => {
     mockGetLogRetentionDays.mockResolvedValue(45);
     const { wrapper } = await mountActivity();
-    expect(wrapper.find(".retention-hint").text()).toContain("45");
+    const hint = wrapper.find(".page-retention-hint");
+    expect(hint.exists()).toBe(true);
+    expect(hint.text()).toContain("45");
+    expect(
+      wrapper.find(".section-card--encounters .retention-hint").exists(),
+    ).toBe(false);
+  });
+
+  it("shows dynamic playtime section title from retention cap", async () => {
+    mockGetLogRetentionDays.mockResolvedValue(7);
+    const { wrapper } = await mountActivity();
+    expect(wrapper.find(".section-card--playtime").text()).toContain("7");
   });
 
   it("shows playtime chart when stats are available and section is expanded", async () => {
@@ -385,15 +396,17 @@ describe("ActivityView", () => {
     expect(wrapper.text()).not.toContain("Alpha");
   });
 
-  it("reloads encounters when refresh button is clicked", async () => {
+  it("reloads encounters and stats when refresh button is clicked", async () => {
     const { wrapper } = await mountActivity();
     mockEncounters.mockClear();
+    mockGetActivityStats.mockClear();
 
     const buttons = wrapper.findAll(".filters .el-button");
     await buttons[0]!.trigger("click");
     await flushPromises();
 
     expect(mockEncounters).toHaveBeenCalledTimes(1);
+    expect(mockGetActivityStats).toHaveBeenCalledTimes(1);
   });
 
   it("renders muted display name when encounter has no vrcUserId", async () => {
@@ -451,17 +464,20 @@ describe("ActivityView", () => {
     );
   });
 
-  it("debounces encounter reload on activity:encounters-changed event", async () => {
+  it("debounces activity refresh on activity:encounters-changed event", async () => {
     vi.useFakeTimers();
     await mountActivity();
     mockEncounters.mockClear();
+    mockGetActivityStats.mockClear();
 
     runtimeHooks.encountersChangedHandler?.();
     runtimeHooks.encountersChangedHandler?.();
     expect(mockEncounters).not.toHaveBeenCalled();
+    expect(mockGetActivityStats).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(400);
     expect(mockEncounters).toHaveBeenCalledTimes(1);
+    expect(mockGetActivityStats).toHaveBeenCalledTimes(1);
     vi.useRealTimers();
   });
 

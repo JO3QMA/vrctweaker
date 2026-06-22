@@ -1,6 +1,9 @@
 <template>
   <div class="activity-view">
     <h1 class="page-title">{{ t("activity.title") }}</h1>
+    <p class="retention-hint page-retention-hint">
+      {{ t("activity.retentionHint", { days: logRetentionDays }) }}
+    </p>
 
     <!-- 遭遇ログ（主セクション） -->
     <CollapsibleSectionCard
@@ -20,11 +23,10 @@
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
-        <el-button @click="loadEncounters">{{ t("common.refresh") }}</el-button>
+        <el-button @click="refreshActivity">{{
+          t("common.refresh")
+        }}</el-button>
       </div>
-      <p class="retention-hint">
-        {{ t("activity.retentionHint", { days: logRetentionDays }) }}
-      </p>
 
       <div class="encounter-log-scroll">
         <div v-if="encountersLoading" class="loading">
@@ -99,7 +101,7 @@
     <CollapsibleSectionCard
       v-model="playtimeExpanded"
       class="section-card--playtime"
-      :title="t('activity.playtimeSection')"
+      :title="playtimeSectionTitle"
     >
       <div v-if="statsLoading" class="loading">{{ t("common.loading") }}</div>
       <div v-else-if="!statsRangeFrom" class="empty-stats">
@@ -125,6 +127,11 @@ import PlayTimeChart, {
   type PlayTimeDayPoint,
 } from "../components/PlayTimeChart.vue";
 import { openEncounterHistoryWindow } from "../utils/openEncounterHistoryWindow";
+import {
+  addLocalDays,
+  eachLocalDateISO,
+  localDateISO,
+} from "../utils/localDate";
 import { formatEncounteredAt } from "../utils/formatEncounteredAt";
 import { appLocaleToBcp47 } from "../i18n";
 
@@ -141,6 +148,17 @@ function formatEncounterLocal(iso: string): string {
 const encountersExpanded = ref(true);
 const playtimeExpanded = ref(false);
 const logRetentionDays = ref(30);
+
+const playtimeChartDays = computed(() =>
+  Math.min(
+    PLAYTIME_CHART_MAX_DAYS,
+    Math.max(1, logRetentionDays.value || PLAYTIME_CHART_MAX_DAYS),
+  ),
+);
+
+const playtimeSectionTitle = computed(() =>
+  t("activity.playtimeSection", { days: playtimeChartDays.value }),
+);
 
 const encounters = ref<UserEncounterDTO[]>([]);
 const encountersLoading = ref(false);
@@ -159,14 +177,7 @@ const dailyPlayChartSeries = computed((): PlayTimeDayPoint[] => {
     stats.value.dailyPlaySeconds.map((d) => [d.date, d.seconds]),
   );
   const out: PlayTimeDayPoint[] = [];
-  const start = new Date(from + "T00:00:00.000Z");
-  const end = new Date(to + "T00:00:00.000Z");
-  for (
-    let cur = new Date(start);
-    cur <= end;
-    cur.setUTCDate(cur.getUTCDate() + 1)
-  ) {
-    const iso = cur.toISOString().slice(0, 10);
+  for (const iso of eachLocalDateISO(from, to)) {
     out.push({
       date: iso,
       label: formatDateShort(iso),
@@ -223,13 +234,13 @@ function openWorldHistory(worldId: string): void {
 let encountersChangedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let unsubscribeEncountersChanged: (() => void) | undefined;
 
-function scheduleLoadEncounters(): void {
+function scheduleActivityRefresh(): void {
   if (encountersChangedDebounceTimer !== null) {
     clearTimeout(encountersChangedDebounceTimer);
   }
   encountersChangedDebounceTimer = setTimeout(() => {
     encountersChangedDebounceTimer = null;
-    void loadEncounters();
+    void refreshActivity();
   }, ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS);
 }
 
@@ -245,11 +256,11 @@ async function loadEncounters(): Promise<void> {
 async function loadStats(): Promise<void> {
   statsLoading.value = true;
   try {
+    const days = playtimeChartDays.value;
     const to = new Date();
-    const from = new Date();
-    from.setDate(from.getDate() - (PLAYTIME_CHART_MAX_DAYS - 1));
-    const fromStr = from.toISOString().slice(0, 10);
-    const toStr = to.toISOString().slice(0, 10);
+    const from = addLocalDays(to, -(days - 1));
+    const fromStr = localDateISO(from);
+    const toStr = localDateISO(to);
     statsRangeFrom.value = fromStr;
     statsRangeTo.value = toStr;
     stats.value = await App.getActivityStats(fromStr, toStr);
@@ -258,10 +269,14 @@ async function loadStats(): Promise<void> {
   }
 }
 
+async function refreshActivity(): Promise<void> {
+  await Promise.all([loadEncounters(), loadStats()]);
+}
+
 onMounted(() => {
   const rt = getRuntime();
   const off = rt?.EventsOn?.("activity:encounters-changed", () => {
-    scheduleLoadEncounters();
+    scheduleActivityRefresh();
   });
   if (typeof off === "function") {
     unsubscribeEncountersChanged = off;
@@ -408,6 +423,10 @@ onUnmounted(() => {
   font-size: 0.8rem;
   color: var(--text-secondary);
   flex-shrink: 0;
+}
+
+.page-retention-hint {
+  margin-top: -0.75rem;
 }
 
 /* セクションカードの残り高さに合わせてスクロール（親チェーンに flex + min-height:0 あり） */
