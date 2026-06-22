@@ -46,7 +46,7 @@ type OutputLogWatcher struct {
 	logger         Logger
 	// onActiveLogPathChange is optional; in directory mode, called after a successful open+seek
 	// when the tailed file path differs from the previous one (not called on the first file).
-	// Used to clear ActivityEventHandler session state so lines before Joining in the new file
+	// Used to clear ActivityIngestAdapter correlator state so lines before Joining in the new file
 	// do not inherit the previous log file's world/instance context.
 	onActiveLogPathChange func()
 

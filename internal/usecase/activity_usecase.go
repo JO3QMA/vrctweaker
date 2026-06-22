@@ -97,6 +97,31 @@ func (uc *ActivityUseCase) ListEncountersWithContext(ctx context.Context, filter
 	return rows, nil
 }
 
+// ApplyCommand executes a fine-grained activity ingest command from SessionCorrelator.
+func (uc *ActivityUseCase) ApplyCommand(ctx context.Context, cmd activity.ActivityCommand) error {
+	if cmd == nil {
+		return nil
+	}
+	switch c := cmd.(type) {
+	case activity.EndPlaySessionCmd:
+		return uc.EndPlaySession(ctx, c.At)
+	case activity.StartPlaySessionCmd:
+		return uc.StartPlaySession(ctx, c.InstanceID, c.At)
+	case activity.CloseOpenEncountersAtCmd:
+		return uc.CloseOpenEncountersAt(ctx, c.At)
+	case activity.RecordEncounterJoinCmd:
+		return uc.RecordEncounterAt(ctx, c.VRCUserID, c.DisplayName, activity.EncounterActionJoin, c.InstanceID, c.WorldID, c.At)
+	case activity.RecordEncounterLeaveCmd:
+		return uc.RecordEncounterAt(ctx, c.VRCUserID, c.DisplayName, activity.EncounterActionLeave, c.InstanceID, c.WorldID, c.At)
+	case activity.UpsertWorldVisitCmd:
+		return uc.UpsertWorldVisit(ctx, c.WorldID, c.At)
+	case activity.UpsertWorldRoomNameCmd:
+		return uc.UpsertWorldRoomName(ctx, c.WorldID, c.RoomName, c.At)
+	default:
+		return nil
+	}
+}
+
 // RecordEncounter saves a join/leave event (uses current time).
 func (uc *ActivityUseCase) RecordEncounter(ctx context.Context, vrcUserID, displayName, action, instanceID string) error {
 	return uc.RecordEncounterAt(ctx, vrcUserID, displayName, action, instanceID, "", time.Now().UTC())

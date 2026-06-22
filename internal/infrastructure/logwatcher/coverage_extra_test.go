@@ -31,7 +31,7 @@ func (e *errWorldInfoRepo) UpsertDisplayName(context.Context, string, string, ti
 	return e.displayErr
 }
 
-func TestActivityEventHandler_LogsUpsertErrors(t *testing.T) {
+func TestActivityIngestAdapter_LogsUpsertErrors(t *testing.T) {
 	ctx := context.Background()
 	base := time.Now()
 
@@ -41,7 +41,7 @@ func TestActivityEventHandler_LogsUpsertErrors(t *testing.T) {
 	}
 	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, stubEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, worldRepo)
 	buf := &raceSafeLogBuffer{}
-	h := NewActivityEventHandler(uc, ctx, buf.logger(), nil)
+	h := NewActivityIngestAdapter(uc, ctx, buf.logger(), nil)
 
 	h.Handle(nil)
 	h.Handle(&activity.DestinationSetEvent{WorldID: testWorldID, OccurredAt: base})
@@ -52,9 +52,9 @@ func TestActivityEventHandler_LogsUpsertErrors(t *testing.T) {
 	}
 }
 
-func TestActivityEventHandler_SessionStartEmptyInstanceIgnored(t *testing.T) {
+func TestActivityIngestAdapter_SessionStartEmptyInstanceIgnored(t *testing.T) {
 	ctx := context.Background()
-	h := NewActivityEventHandler(
+	h := NewActivityIngestAdapter(
 		usecase.NewActivityUseCase(stubPlaySessionRepo{}, stubEncounterRepo{}, &fakeAppSettingsRepo{m: map[string]string{}}, nil, nil),
 		ctx, nil, nil,
 	)
@@ -212,12 +212,12 @@ func TestLogWriterLogger_Printf(t *testing.T) {
 	logWriterLogger{log.New(io.Discard, "", 0)}.Printf("ignored %d", 1)
 }
 
-func TestActivityEventHandler_EncounterRecordErrorLogged(t *testing.T) {
+func TestActivityIngestAdapter_EncounterRecordErrorLogged(t *testing.T) {
 	ctx := context.Background()
 	buf := &raceSafeLogBuffer{}
 	encRepo := &errEncounterRepo{}
 	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, encRepo, &fakeAppSettingsRepo{m: map[string]string{}}, nil, nil)
-	h := NewActivityEventHandler(uc, ctx, buf.logger(), nil)
+	h := NewActivityIngestAdapter(uc, ctx, buf.logger(), nil)
 	h.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: testFullInstance, OccurredAt: time.Now()})
 	h.Handle(&activity.EncounterEvent{
 		VRCUserID: "usr_x", DisplayName: "X", Action: activity.EncounterActionJoin, EncounteredAt: time.Now(),
@@ -247,13 +247,13 @@ func TestProcessOutputLogFileFromOffset_readError(t *testing.T) {
 	}
 }
 
-func TestActivityEventHandler_SessionErrorsLogged(t *testing.T) {
+func TestActivityIngestAdapter_SessionErrorsLogged(t *testing.T) {
 	ctx := context.Background()
 	buf := &raceSafeLogBuffer{}
 	playRepo := &errPlaySessionRepo{}
 	encRepo := &errEncounterRepo{}
 	uc := usecase.NewActivityUseCase(playRepo, encRepo, &fakeAppSettingsRepo{m: map[string]string{}}, nil, nil)
-	h := NewActivityEventHandler(uc, ctx, buf.logger(), nil)
+	h := NewActivityIngestAdapter(uc, ctx, buf.logger(), nil)
 	h.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: testFullInstance, OccurredAt: time.Now()})
 	h.Handle(&activity.SessionEvent{Type: activity.SessionEventEnd, OccurredAt: time.Now()})
 	if buf.len() < 2 {
@@ -353,11 +353,11 @@ func TestResolveLatestOutputLogFile_onlyBrokenSymlink(t *testing.T) {
 	}
 }
 
-func TestActivityEventHandler_DefaultLoggerOnUpsertError(t *testing.T) {
+func TestActivityIngestAdapter_DefaultLoggerOnUpsertError(t *testing.T) {
 	ctx := context.Background()
 	worldRepo := &errWorldInfoRepo{visitErr: errors.New("visit fail")}
 	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, stubEncounterRepo{}, &fakeAppSettingsRepo{m: map[string]string{}}, nil, worldRepo)
-	h := NewActivityEventHandler(uc, ctx, nil, nil)
+	h := NewActivityIngestAdapter(uc, ctx, nil, nil)
 	h.Handle(&activity.DestinationSetEvent{WorldID: testWorldID, OccurredAt: time.Now()})
 }
 
