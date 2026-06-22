@@ -6,6 +6,7 @@ import ActivityView from "../ActivityView.vue";
 const {
   mockEncounters,
   mockGetActivityStats,
+  mockGetLogRetentionDays,
   mockResolveUserProfileNavigation,
 } = vi.hoisted(() => ({
   mockEncounters: vi.fn().mockResolvedValue([]),
@@ -13,6 +14,7 @@ const {
     dailyPlaySeconds: [],
     topWorlds: [],
   }),
+  mockGetLogRetentionDays: vi.fn().mockResolvedValue(30),
   mockResolveUserProfileNavigation: vi.fn().mockResolvedValue({
     openInFriendsView: false,
     user: {
@@ -48,6 +50,7 @@ vi.mock("../../wails/app", async (importOriginal) => {
       ...actual.App,
       encounters: mockEncounters,
       getActivityStats: mockGetActivityStats,
+      getLogRetentionDays: mockGetLogRetentionDays,
       resolveUserProfileNavigation: mockResolveUserProfileNavigation,
     },
   };
@@ -75,6 +78,7 @@ describe("ActivityView", () => {
       dailyPlaySeconds: [],
       topWorlds: [],
     });
+    mockGetLogRetentionDays.mockResolvedValue(30);
   });
 
   async function mountActivity() {
@@ -126,9 +130,26 @@ describe("ActivityView", () => {
 
     const encountersCard = wrapper.find(".section-card--encounters");
     expect(encountersCard.exists()).toBe(true);
+
+    const cards = wrapper.findAll(".collapsible-section-card");
+    expect(cards[0]!.classes()).toContain("section-card--encounters");
+    expect(cards[1]!.classes()).toContain("section-card--playtime");
   });
 
-  it("collapses playtime section when header toggle is clicked", async () => {
+  it("starts with playtime section collapsed and encounters expanded", async () => {
+    const { wrapper } = await mountActivity();
+    const playtimeCard = wrapper.find(".section-card--playtime");
+    const encountersCard = wrapper.find(".section-card--encounters");
+
+    expect(
+      playtimeCard.find(".section-card__toggle").attributes("aria-expanded"),
+    ).toBe("false");
+    expect(
+      encountersCard.find(".section-card__toggle").attributes("aria-expanded"),
+    ).toBe("true");
+  });
+
+  it("expands playtime section when header toggle is clicked", async () => {
     const router = createRouter({
       history: createWebHashHistory(),
       routes: [{ path: "/activity", component: ActivityView }],
@@ -144,11 +165,11 @@ describe("ActivityView", () => {
 
     const playtimeCard = wrapper.find(".section-card--playtime");
     const toggle = playtimeCard.find(".section-card__toggle");
-    expect(toggle.attributes("aria-expanded")).toBe("true");
+    expect(toggle.attributes("aria-expanded")).toBe("false");
 
     await toggle.trigger("click");
-    expect(playtimeCard.classes()).toContain("section-card--collapsed");
-    expect(toggle.attributes("aria-expanded")).toBe("false");
+    expect(playtimeCard.classes()).not.toContain("section-card--collapsed");
+    expect(toggle.attributes("aria-expanded")).toBe("true");
   });
 
   it("display name click pushes friends route when resolve says friend", async () => {
@@ -311,18 +332,29 @@ describe("ActivityView", () => {
     });
   });
 
-  it("loads encounters and stats on mount", async () => {
+  it("loads encounters, stats, and retention days on mount", async () => {
     await mountActivity();
     expect(mockEncounters).toHaveBeenCalled();
     expect(mockGetActivityStats).toHaveBeenCalled();
+    expect(mockGetLogRetentionDays).toHaveBeenCalled();
   });
 
-  it("shows playtime chart when stats are available", async () => {
+  it("shows retention hint with configured days", async () => {
+    mockGetLogRetentionDays.mockResolvedValue(45);
+    const { wrapper } = await mountActivity();
+    expect(wrapper.find(".retention-hint").text()).toContain("45");
+  });
+
+  it("shows playtime chart when stats are available and section is expanded", async () => {
     mockGetActivityStats.mockResolvedValue({
       dailyPlaySeconds: [{ date: "2026-06-01", seconds: 3600 }],
       topWorlds: [],
     });
     const { wrapper } = await mountActivity();
+    await wrapper
+      .find(".section-card--playtime .section-card__toggle")
+      .trigger("click");
+    await wrapper.vm.$nextTick();
     expect(wrapper.find(".playtime-chart-stub").exists()).toBe(true);
   });
 
@@ -380,7 +412,7 @@ describe("ActivityView", () => {
     expect(wrapper.find(".timeline-link").exists()).toBe(false);
   });
 
-  it("shows dash for missing leave time", async () => {
+  it("shows still-present label for open encounter", async () => {
     mockEncounters.mockResolvedValue([
       {
         id: "1",
@@ -392,7 +424,7 @@ describe("ActivityView", () => {
       },
     ]);
     const { wrapper } = await mountActivity();
-    expect(wrapper.text()).toContain("—");
+    expect(wrapper.text()).toContain("滞在中");
   });
 
   it("opens world encounter history when world link is clicked", async () => {

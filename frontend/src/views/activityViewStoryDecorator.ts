@@ -20,6 +20,7 @@ export function activityViewWailsDecorator(
               Encounters: () => Promise.resolve(encounters),
               GetActivityStats: (_from: string, _to: string) =>
                 Promise.resolve(stats),
+              GetLogRetentionDays: () => Promise.resolve(30),
               ResolveUserProfileNavigation: (id: string) =>
                 Promise.resolve({
                   user: {

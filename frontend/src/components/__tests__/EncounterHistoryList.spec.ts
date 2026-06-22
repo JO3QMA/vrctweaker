@@ -84,6 +84,22 @@ describe("EncounterHistoryList", () => {
     expect(headerTexts.some((t) => t.includes("ワールド名"))).toBe(true);
   });
 
+  it("shows still-present label when leftAt is empty", async () => {
+    vi.mocked(wailsApp.App.encountersByVRCUserID).mockResolvedValue([
+      {
+        ...sampleEncounter,
+        leftAt: "",
+      },
+    ]);
+
+    const wrapper = mount(EncounterHistoryList, {
+      props: { mode: "user", userId: "u1" },
+    });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("滞在中");
+  });
+
   it("shows error alert when fetch fails", async () => {
     vi.mocked(wailsApp.App.encountersByVRCUserID).mockRejectedValue(
       new Error("network down"),

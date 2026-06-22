@@ -68,6 +68,7 @@ const en = {
     refresh: "Refresh",
     updating: "Updating…",
     dash: "—",
+    stillPresent: "Present",
     yes: "Yes",
     no: "No",
   },
@@ -196,8 +197,9 @@ const en = {
   activity: {
     title: "Activity",
     playtimeSection: "Play time (last 14 days)",
-    encounterSection: "Encounter log (stays)",
+    encounterSection: "Encounter log",
     searchDisplayName: "Search by display name",
+    retentionHint: "Records older than {days} days are deleted automatically",
     noData: "No data",
     noEncounters: "No encounter logs.",
     colJoin: "Joined",
@@ -469,6 +471,7 @@ const ja = deepMerge(en, {
     refresh: "更新",
     updating: "更新中...",
     dash: "—",
+    stillPresent: "滞在中",
   },
   chart: {
     hour: "時間",
@@ -595,8 +598,9 @@ const ja = deepMerge(en, {
   activity: {
     title: "アクティビティ",
     playtimeSection: "プレイ時間（直近14日）",
-    encounterSection: "遭遇ログ（滞在区間）",
+    encounterSection: "遭遇ログ",
     searchDisplayName: "表示名で検索",
+    retentionHint: "保存期間 {days} 日を超えた記録は自動削除されます",
     noData: "データがありません",
     noEncounters: "遭遇ログがありません。",
     colJoin: "入室",
@@ -862,6 +866,8 @@ const ko = deepMerge(en, {
     done: "완료했습니다",
     refresh: "새로 고침",
     updating: "업데이트 중...",
+    dash: "—",
+    stillPresent: "체류 중",
   },
   chart: {
     hour: "시간",
@@ -983,8 +989,9 @@ const ko = deepMerge(en, {
   activity: {
     title: "활동",
     playtimeSection: "플레이 시간 (최근 14일)",
-    encounterSection: "조우 로그 (체류 구간)",
+    encounterSection: "조우 로그",
     searchDisplayName: "표시 이름으로 검색",
+    retentionHint: "보관 기간 {days}일이 지난 기록은 자동으로 삭제됩니다",
     noData: "데이터가 없습니다",
     noEncounters: "조우 로그가 없습니다.",
     colJoin: "입장",
@@ -1231,6 +1238,8 @@ const zhTW = deepMerge(en, {
     done: "完成",
     refresh: "重新整理",
     updating: "更新中...",
+    dash: "—",
+    stillPresent: "停留中",
   },
   chart: {
     hour: "小時",
@@ -1352,8 +1361,9 @@ const zhTW = deepMerge(en, {
   activity: {
     title: "活動",
     playtimeSection: "遊玩時間（近 14 天）",
-    encounterSection: "相遇紀錄（停留區間）",
+    encounterSection: "相遇紀錄",
     searchDisplayName: "以顯示名稱搜尋",
+    retentionHint: "超過保存期 {days} 天的紀錄將自動刪除",
     noData: "沒有資料",
     noEncounters: "沒有相遇紀錄。",
     colJoin: "進入",
@@ -1597,6 +1607,8 @@ const zhCN = deepMerge(en, {
     done: "完成",
     refresh: "刷新",
     updating: "更新中...",
+    dash: "—",
+    stillPresent: "停留中",
   },
   chart: {
     hour: "小时",
@@ -1717,8 +1729,9 @@ const zhCN = deepMerge(en, {
   activity: {
     title: "活动",
     playtimeSection: "游玩时间（近 14 天）",
-    encounterSection: "相遇记录（停留区间）",
+    encounterSection: "相遇记录",
     searchDisplayName: "按显示名称搜索",
+    retentionHint: "超过保存期 {days} 天的记录将自动删除",
     noData: "没有数据",
     noEncounters: "没有相遇记录。",
     colJoin: "进入",

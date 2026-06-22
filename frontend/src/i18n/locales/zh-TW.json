@@ -37,6 +37,7 @@
     "refresh": "重新整理",
     "updating": "更新中...",
     "dash": "—",
+    "stillPresent": "停留中",
     "yes": "Yes",
     "no": "No"
   },
@@ -161,8 +162,9 @@
   "activity": {
     "title": "活動",
     "playtimeSection": "遊玩時間（近 14 天）",
-    "encounterSection": "相遇紀錄（停留區間）",
+    "encounterSection": "相遇紀錄",
     "searchDisplayName": "以顯示名稱搜尋",
+    "retentionHint": "超過保存期 {days} 天的紀錄將自動刪除",
     "noData": "沒有資料",
     "noEncounters": "沒有相遇紀錄。",
     "colJoin": "進入",

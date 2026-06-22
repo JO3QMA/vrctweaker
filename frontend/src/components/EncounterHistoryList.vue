@@ -21,7 +21,9 @@
         <el-table-column :label="t('encounterHistory.colLeave')" width="155">
           <template #default="{ row }">
             {{
-              row.leftAt ? formatEncounterLocal(row.leftAt) : t("common.dash")
+              row.leftAt
+                ? formatEncounterLocal(row.leftAt)
+                : t("common.stillPresent")
             }}
           </template>
         </el-table-column>

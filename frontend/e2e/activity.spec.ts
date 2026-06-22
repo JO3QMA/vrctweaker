@@ -13,23 +13,22 @@ test.describe("Activity", () => {
     await page.goto("/#/activity");
     await expect(page.locator("h1")).toContainText("アクティビティ");
 
-    const playtimeCard = page.locator(".section-card--playtime");
-    await expect(playtimeCard.getByText("読み込み中")).toBeHidden({
-      timeout: 15_000,
-    });
-
-    await expect(
-      playtimeCard.getByText("プレイ時間（直近14日）"),
-    ).toBeVisible();
-    await expect(
-      playtimeCard.locator(".playtime-chart-wrap canvas"),
-    ).toBeVisible();
-
     const encounterCard = page.locator(".section-card--encounters");
     await expect(encounterCard.getByText("読み込み中")).toBeHidden({
       timeout: 15_000,
     });
-    await expect(encounterCard.getByText("遭遇ログ（滞在区間）")).toBeVisible();
+    await expect(encounterCard.getByText("遭遇ログ")).toBeVisible();
+    await expect(encounterCard.locator(".retention-hint")).toContainText("30");
+
+    const playtimeCard = page.locator(".section-card--playtime");
+    await expect(
+      playtimeCard.getByText("プレイ時間（直近14日）"),
+    ).toBeVisible();
+    await expect(playtimeCard).toHaveClass(/section-card--collapsed/);
+    await expect(playtimeCard.locator(".section-card__toggle")).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
 
     const encounterTable = encounterCard.locator(".el-table");
     await expect(encounterTable).toBeVisible();
