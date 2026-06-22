@@ -84,10 +84,15 @@ export interface SeedUserProfileNavigation {
 /** ResolveUserProfileNavigation / user-profile ルート用の代表ユーザー ID */
 export const E2E_TEST_USER_ID = "usr_e2e_test";
 
+/** Self profile（/me）・ログイン済みモック用の自分ユーザー ID */
+export const E2E_SELF_USER_ID = "usr_e2e_self";
+
 /** ギャラリー・遭遇履歴（ワールド別）で共有するワールド ID */
 export const E2E_WORLD_ID = "wrld_e2e_gallery";
 
 export const E2E_TEST_USER_DISPLAY_NAME = "E2E Test User";
+
+export const E2E_SELF_DISPLAY_NAME = "E2E Self User";
 
 export const SEED_LAUNCH_PROFILES: SeedLaunchProfile[] = [
   {
@@ -213,6 +218,23 @@ export const SEED_ACTIVITY_STATS: SeedActivityStats = {
   ],
 };
 
+/** GetSelfProfile / Self profile 画面用（ログイン済み E2E モック） */
+export const SEED_SELF_PROFILE: SeedFriend & {
+  username: string;
+  state: string;
+  bio: string;
+} = {
+  vrcUserId: E2E_SELF_USER_ID,
+  displayName: E2E_SELF_DISPLAY_NAME,
+  username: "e2e_self",
+  status: "active",
+  state: "online",
+  isFavorite: false,
+  lastUpdated: "2025-06-01T09:00:00Z",
+  statusDescription: "E2E 自己プロフィール",
+  bio: "E2E ログイン中ユーザーです。",
+};
+
 export const SEED_AUTOMATION_RULES: SeedAutomationRule[] = [
   {
     id: "rule_e2e_001",
@@ -239,10 +261,17 @@ export const SEED_VRCHAT_CONFIG = {
   disableRichPresence: null,
 };
 
-/** usr_e2e_test 向け ResolveUserProfileNavigation の戻り値 */
+/** usr_e2e_test / usr_e2e_self 向け ResolveUserProfileNavigation の戻り値 */
 export function seedUserProfileNavigation(
   vrcUserId: string,
 ): SeedUserProfileNavigation {
+  if (vrcUserId === E2E_SELF_USER_ID) {
+    return {
+      user: { ...SEED_SELF_PROFILE },
+      openInFriendsView: false,
+      openInSelfProfile: true,
+    };
+  }
   if (vrcUserId === E2E_TEST_USER_ID) {
     return {
       user: {

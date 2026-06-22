@@ -14,7 +14,7 @@ const encounterHistoryUserQuery = new URLSearchParams({
   vrcUserId: E2E_TEST_USER_ID,
 }).toString();
 
-/** frontend/src/main.ts の全 11 ルート（hash ルーター。Playwright では /#/path 形式で遷移） */
+/** frontend/src/main.ts の全 12 ルート（hash ルーター。Playwright では /#/path 形式で遷移） */
 export const APP_ROUTES = [
   { path: "/", name: "dashboard", titleJa: "ダッシュボード" },
   { path: "/launcher", name: "launcher", titleJa: "ランチャー" },
@@ -25,6 +25,7 @@ export const APP_ROUTES = [
     name: "encounter-history",
     titleJa: "遭遇履歴",
   },
+  { path: "/me", name: "me", titleJa: "自分" },
   { path: "/friends", name: "friends", titleJa: "フレンド" },
   {
     path: `/user-profile?${userProfileQuery}`,

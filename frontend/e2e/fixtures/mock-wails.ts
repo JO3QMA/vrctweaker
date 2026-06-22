@@ -11,6 +11,7 @@
  */
 
 import {
+  E2E_SELF_USER_ID,
   E2E_TEST_USER_ID,
   SEED_ACTIVITY_STATS,
   SEED_AUTOMATION_RULES,
@@ -19,12 +20,19 @@ import {
   SEED_LAUNCH_PROFILES,
   SEED_PATH_SETTINGS,
   SEED_SCREENSHOTS,
+  SEED_SELF_PROFILE,
   SEED_VRCHAT_CONFIG,
   seedUserProfileNavigation,
 } from "./seed-data";
 
+export interface MockWailsOptions {
+  /** true のとき IsLoggedIn / GetSelfProfile がログイン済みを返す */
+  loggedIn?: boolean;
+}
+
 /** ページ読み込み前に注入する window.go スタブの初期化スクリプトを返す（中身はブラウザでそのまま実行されるため TypeScript 構文不可） */
-export function getMockWailsInitScript(): string {
+export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
+  const loggedIn = options.loggedIn ?? false;
   const profilesJson = JSON.stringify(SEED_LAUNCH_PROFILES);
   const pathSettingsJson = JSON.stringify(SEED_PATH_SETTINGS);
   const screenshotsJson = JSON.stringify(SEED_SCREENSHOTS);
@@ -34,9 +42,15 @@ export function getMockWailsInitScript(): string {
   const automationRulesJson = JSON.stringify(SEED_AUTOMATION_RULES);
   const vrchatConfigJson = JSON.stringify(SEED_VRCHAT_CONFIG);
   const e2eTestUserIdJson = JSON.stringify(E2E_TEST_USER_ID);
+  const e2eSelfUserIdJson = JSON.stringify(E2E_SELF_USER_ID);
+  const selfProfileJson = JSON.stringify(SEED_SELF_PROFILE);
   const resolveUserProfileSeedJson = JSON.stringify(
     seedUserProfileNavigation(E2E_TEST_USER_ID),
   );
+  const resolveSelfProfileSeedJson = JSON.stringify(
+    seedUserProfileNavigation(E2E_SELF_USER_ID),
+  );
+  const loggedInJson = JSON.stringify(loggedIn);
 
   return `
     (function() {
@@ -51,7 +65,13 @@ export function getMockWailsInitScript(): string {
       const automationRules = ${automationRulesJson};
       const vrchatConfig = ${vrchatConfigJson};
       const e2eTestUserId = ${e2eTestUserIdJson};
+      const e2eSelfUserId = ${e2eSelfUserIdJson};
+      const selfProfileSeed = ${selfProfileJson};
       const resolveUserProfileSeed = ${resolveUserProfileSeedJson};
+      const resolveSelfProfileSeed = ${resolveSelfProfileSeedJson};
+      const loggedIn = ${loggedInJson};
+      var selfProfile = Object.assign({}, selfProfileSeed);
+      var selfProfileRefreshCount = 0;
 
       function filterScreenshotsByWorldId(list, worldId) {
         if (!worldId || !String(worldId).trim()) return list;
@@ -94,6 +114,13 @@ export function getMockWailsInitScript(): string {
       }
 
       function resolveUserProfileNavigation(vrcUserId) {
+        if (vrcUserId === e2eSelfUserId) {
+          return {
+            user: resolveSelfProfileSeed.user,
+            openInFriendsView: resolveSelfProfileSeed.openInFriendsView,
+            openInSelfProfile: resolveSelfProfileSeed.openInSelfProfile,
+          };
+        }
         if (vrcUserId === e2eTestUserId) {
           return {
             user: resolveUserProfileSeed.user,
@@ -232,16 +259,39 @@ export function getMockWailsInitScript(): string {
         SetStatusAndDescription: () => Promise.resolve(),
         Login: () => Promise.resolve({ ok: false, error: 'E2E mock' }),
         Logout: () => Promise.resolve(),
-        IsLoggedIn: () => Promise.resolve(false),
-        HasStoredCredential: () => Promise.resolve(false),
+        IsLoggedIn: () => Promise.resolve(loggedIn),
+        HasStoredCredential: () => Promise.resolve(loggedIn),
         GetCredentialBlob: () => Promise.resolve(''),
         UnlockVRChatSession: (_token) => Promise.resolve(),
         PersistWrappedCredential: (_blob) => Promise.resolve(),
         ClearStoredCredential: () => Promise.resolve(),
         GetVRChatCurrentUser: (_forceRefresh) =>
-          Promise.reject(new Error('E2E mock: not logged in')),
-        GetSelfProfile: (_forceRefresh) =>
-          Promise.reject(new Error('E2E mock: not logged in')),
+          loggedIn
+            ? Promise.resolve({
+                id: selfProfile.vrcUserId,
+                displayName: selfProfile.displayName,
+                username: selfProfile.username || '',
+                status: selfProfile.status || '',
+                statusDescription: selfProfile.statusDescription || '',
+                state: selfProfile.state || '',
+                currentAvatarThumbnailImageUrl: '',
+                userIcon: '',
+                profilePicOverrideThumbnail: '',
+              })
+            : Promise.reject(new Error('E2E mock: not logged in')),
+        GetSelfProfile: (forceRefresh) => {
+          if (!loggedIn) {
+            return Promise.reject(new Error('E2E mock: not logged in'));
+          }
+          if (forceRefresh) {
+            selfProfileRefreshCount += 1;
+            selfProfile = Object.assign({}, selfProfileSeed, {
+              statusDescription:
+                'E2E refreshed ' + String(selfProfileRefreshCount),
+            });
+          }
+          return Promise.resolve(selfProfile);
+        },
         RefreshFriends: () => Promise.resolve(),
         ReconcileVRChatSocialCache: () => Promise.resolve(),
         VacuumDb: () => Promise.resolve(),
