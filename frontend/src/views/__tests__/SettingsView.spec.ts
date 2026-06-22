@@ -11,6 +11,7 @@ const router = createRouter({
   history: createWebHashHistory(),
   routes: [
     { path: "/settings", component: SettingsView },
+    { path: "/me", name: "me", component: { template: "<div>Me</div>" } },
     { path: "/licenses", component: { template: "<div>Licenses</div>" } },
   ],
 });
@@ -417,12 +418,14 @@ describe("SettingsView", () => {
 
 describe("SettingsView login and profile", () => {
   const sampleUser = {
-    id: "usr_abc",
+    vrcUserId: "usr_abc",
     displayName: "Test User",
     username: "testuser",
     status: "active",
     statusDescription: "Hello",
     state: "online",
+    isFavorite: false,
+    lastUpdated: "2025-01-01T00:00:00Z",
     currentAvatarThumbnailImageUrl: "https://example.com/avatar.png",
     userIcon: "",
     profilePicOverrideThumbnail: "",
@@ -445,7 +448,7 @@ describe("SettingsView login and profile", () => {
 
   function mountLoggedIn(user = sampleUser) {
     vi.mocked(App.isLoggedIn).mockResolvedValue(true);
-    vi.spyOn(App, "getVRChatCurrentUser").mockResolvedValue(user);
+    vi.spyOn(App, "getSelfProfile").mockResolvedValue(user);
     return mountSettings();
   }
 
@@ -459,11 +462,14 @@ describe("SettingsView login and profile", () => {
     expect(wrapper.find(".current-user-avatar").attributes("src")).toBe(
       "https://example.com/avatar.png",
     );
+    expect(
+      wrapper.find('[data-testid="settings-view-self-profile"]').text(),
+    ).toBe("詳細を見る");
   });
 
-  it("shows profile error when getVRChatCurrentUser fails", async () => {
+  it("shows profile error when getSelfProfile fails", async () => {
     vi.mocked(App.isLoggedIn).mockResolvedValue(true);
-    vi.spyOn(App, "getVRChatCurrentUser").mockRejectedValue(
+    vi.spyOn(App, "getSelfProfile").mockRejectedValue(
       new Error("profile unavailable"),
     );
     const wrapper = mountSettings();
@@ -476,7 +482,7 @@ describe("SettingsView login and profile", () => {
 
   it("refreshes profile when refresh button is clicked", async () => {
     const getUser = vi
-      .spyOn(App, "getVRChatCurrentUser")
+      .spyOn(App, "getSelfProfile")
       .mockResolvedValue(sampleUser);
     const wrapper = mountLoggedIn();
     await flushPromises();
@@ -493,7 +499,7 @@ describe("SettingsView login and profile", () => {
 
   it("logs in successfully and loads profile", async () => {
     vi.mocked(App.login).mockResolvedValue({ ok: true });
-    vi.spyOn(App, "getVRChatCurrentUser").mockResolvedValue(sampleUser);
+    vi.spyOn(App, "getSelfProfile").mockResolvedValue(sampleUser);
     const wrapper = mountSettings();
     await flushPromises();
 

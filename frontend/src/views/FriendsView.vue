@@ -135,6 +135,16 @@ async function stripVrcUserIdFromQuery(): Promise<void> {
 async function applyVrcUserIdFromQuery(): Promise<void> {
   const id = firstQueryString(route.query.vrcUserId).trim();
   if (!id) return;
+  try {
+    const nav = await App.resolveUserProfileNavigation(id);
+    if (nav.openInSelfProfile) {
+      await router.push({ name: "me" });
+      await stripVrcUserIdFromQuery();
+      return;
+    }
+  } catch {
+    /* fall through to friends list lookup */
+  }
   let f = friends.value.find((x) => x.vrcUserId === id);
   if (!f) {
     await loadFriends();

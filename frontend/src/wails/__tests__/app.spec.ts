@@ -78,6 +78,7 @@ function createMockBindings(): MockAppBindings {
     GetActivityStats: vi.fn(),
     Friends: vi.fn(),
     ResolveUserProfileNavigation: vi.fn(),
+    GetSelfProfile: vi.fn(),
     SetFavorite: vi.fn(),
     SetStatus: vi.fn(),
     SetStatusDescription: vi.fn(),
@@ -174,6 +175,7 @@ const sampleUser: UserCacheDTO = {
 const sampleNavigation: UserProfileNavigationDTO = {
   user: sampleUser,
   openInFriendsView: true,
+  openInSelfProfile: false,
 };
 
 const sampleLoginResult: LoginResultDTO = {
@@ -625,6 +627,18 @@ describe("App bindings", () => {
       expect(mockBindings.ResolveUserProfileNavigation).toHaveBeenCalledWith(
         "usr_abc",
       );
+    });
+
+    it("getSelfProfile delegates to GetSelfProfile", async () => {
+      mockBindings.GetSelfProfile.mockResolvedValue(sampleUser);
+      await expect(App.getSelfProfile()).resolves.toEqual(sampleUser);
+      expect(mockBindings.GetSelfProfile).toHaveBeenCalledWith(false);
+    });
+
+    it("getSelfProfile passes forceRefresh when provided", async () => {
+      mockBindings.GetSelfProfile.mockResolvedValue(sampleUser);
+      await App.getSelfProfile(true);
+      expect(mockBindings.GetSelfProfile).toHaveBeenCalledWith(true);
     });
 
     it("setFavorite delegates to SetFavorite", async () => {

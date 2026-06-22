@@ -26,6 +26,7 @@ describe("UserProfileDetailView", () => {
     vi.clearAllMocks();
     mockResolve.mockResolvedValue({
       openInFriendsView: false,
+      openInSelfProfile: false,
       user: {
         vrcUserId: "u1",
         displayName: "Resolved",
@@ -67,6 +68,41 @@ describe("UserProfileDetailView", () => {
     expect(detail.props("selected")?.displayName).toBe("Resolved");
   });
 
+  it("redirects to me when resolve says self profile", async () => {
+    mockResolve.mockResolvedValue({
+      openInFriendsView: false,
+      openInSelfProfile: true,
+      user: {
+        vrcUserId: "usr_me",
+        displayName: "Me",
+        status: "",
+        isFavorite: false,
+        lastUpdated: "",
+      },
+    });
+    const router = createRouter({
+      history: createWebHashHistory(),
+      routes: [
+        {
+          path: "/user-profile",
+          name: "user-profile",
+          component: UserProfileDetailView,
+        },
+        { path: "/me", name: "me", component: { template: "<div/>" } },
+      ],
+    });
+    const replaceSpy = vi.spyOn(router, "replace");
+    await router.push({
+      path: "/user-profile",
+      query: { vrcUserId: "usr_me" },
+    });
+    await router.isReady();
+    mount(UserProfileDetailView, { global: { plugins: [router] } });
+    await flushPromises();
+
+    expect(replaceSpy).toHaveBeenCalledWith({ name: "me" });
+  });
+
   it("uses query displayName as fallback detail when resolve fails", async () => {
     mockResolve.mockRejectedValue(new Error("network"));
     const wrapper = await mountWithQuery({
@@ -89,6 +125,7 @@ describe("UserProfileDetailView", () => {
   it("uses vrcUserId as display name when resolve omits user id", async () => {
     mockResolve.mockResolvedValue({
       openInFriendsView: false,
+      openInSelfProfile: false,
       user: {
         vrcUserId: "",
         displayName: "",
@@ -156,6 +193,7 @@ describe("UserProfileDetailView", () => {
     mockResolve.mockClear();
     mockResolve.mockResolvedValue({
       openInFriendsView: false,
+      openInSelfProfile: false,
       user: {
         vrcUserId: "second-id",
         displayName: "Second",

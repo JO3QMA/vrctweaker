@@ -31,6 +31,7 @@ export function activityViewWailsDecorator(
                     lastUpdated: "",
                   },
                   openInFriendsView: false,
+                  openInSelfProfile: false,
                 }),
             } as unknown as NonNullable<
               NonNullable<typeof window.go>["main"]

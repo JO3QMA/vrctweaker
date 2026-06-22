@@ -98,6 +98,7 @@ export function getMockWailsInitScript(): string {
           return {
             user: resolveUserProfileSeed.user,
             openInFriendsView: resolveUserProfileSeed.openInFriendsView,
+            openInSelfProfile: resolveUserProfileSeed.openInSelfProfile,
           };
         }
         return {
@@ -109,6 +110,7 @@ export function getMockWailsInitScript(): string {
             lastUpdated: '',
           },
           openInFriendsView: false,
+          openInSelfProfile: false,
         };
       }
 
@@ -237,6 +239,8 @@ export function getMockWailsInitScript(): string {
         PersistWrappedCredential: (_blob) => Promise.resolve(),
         ClearStoredCredential: () => Promise.resolve(),
         GetVRChatCurrentUser: (_forceRefresh) =>
+          Promise.reject(new Error('E2E mock: not logged in')),
+        GetSelfProfile: (_forceRefresh) =>
           Promise.reject(new Error('E2E mock: not logged in')),
         RefreshFriends: () => Promise.resolve(),
         ReconcileVRChatSocialCache: () => Promise.resolve(),

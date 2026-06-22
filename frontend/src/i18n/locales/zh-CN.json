@@ -9,6 +9,7 @@
     "activity": "活动",
     "encounterHistory": "相遇记录",
     "friends": "好友",
+    "me": "我",
     "user": "用户",
     "automation": "自动化",
     "configOther": "其他设置",
@@ -21,6 +22,7 @@
     "gallery": "相册",
     "activity": "活动",
     "friends": "好友",
+    "me": "我",
     "automation": "自动化",
     "configOther": "其他设置",
     "settings": "设置"
@@ -210,6 +212,14 @@
     "idMissing": "未指定用户 ID。",
     "loadFailed": "无法加载个人资料。请检查缓存或登录状态。"
   },
+  "selfProfile": {
+    "title": "我",
+    "loading": "加载中…",
+    "loginRequired": "查看个人资料需要先登录。",
+    "openSettings": "前往设置登录",
+    "loadFailed": "无法加载个人资料。",
+    "refresh": "重新获取个人资料"
+  },
   "automation": {
     "title": "自动化",
     "intro": "使用 IF–THEN 规则在触发时执行操作。",
@@ -257,6 +267,7 @@
     "statusLine": "状态：",
     "loggedInTag": "已登录",
     "refreshProfile": "重新获取个人资料",
+    "viewSelfProfile": "查看详情",
     "refreshFriends": "更新好友列表",
     "logout": "退出登录",
     "username": "用户名",

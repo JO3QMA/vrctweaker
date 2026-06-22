@@ -9,6 +9,7 @@
     "activity": "アクティビティ",
     "encounterHistory": "遭遇履歴",
     "friends": "フレンド",
+    "me": "自分",
     "user": "ユーザー",
     "automation": "オートメーション",
     "configOther": "その他の設定",
@@ -21,6 +22,7 @@
     "gallery": "ギャラリー",
     "activity": "アクティビティ",
     "friends": "フレンド",
+    "me": "自分",
     "automation": "オートメーション",
     "configOther": "その他の設定",
     "settings": "設定"
@@ -210,6 +212,14 @@
     "idMissing": "ユーザー ID が指定されていません。",
     "loadFailed": "プロフィールを取得できませんでした。キャッシュまたはログイン状態を確認してください。"
   },
+  "selfProfile": {
+    "title": "自分",
+    "loading": "読み込み中…",
+    "loginRequired": "プロフィールを表示するにはログインが必要です。",
+    "openSettings": "設定画面でログイン",
+    "loadFailed": "プロフィールを取得できませんでした。",
+    "refresh": "プロフィール再取得"
+  },
   "automation": {
     "title": "オートメーション",
     "intro": "IF-THEN 形式のルールで、トリガー発生時にアクションを実行します。",
@@ -257,6 +267,7 @@
     "statusLine": "ステータス:",
     "loggedInTag": "ログイン済み",
     "refreshProfile": "プロフィール再取得",
+    "viewSelfProfile": "詳細を見る",
     "refreshFriends": "フレンド一覧を更新",
     "logout": "ログアウト",
     "username": "ユーザー名",

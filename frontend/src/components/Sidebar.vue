@@ -34,6 +34,7 @@ const menuItems = computed(() => [
   { path: "/launcher", icon: "🚀", label: t("nav.launcher") },
   { path: "/gallery", icon: "🖼️", label: t("nav.gallery") },
   { path: "/activity", icon: "📊", label: t("nav.activity") },
+  { path: "/me", icon: "👤", label: t("nav.me") },
   { path: "/friends", icon: "👥", label: t("nav.friends") },
   { path: "/automation", icon: "🤖", label: t("nav.automation") },
   { path: "/config", icon: "📝", label: t("nav.configOther") },

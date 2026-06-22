@@ -78,6 +78,7 @@ export interface SeedAutomationRule {
 export interface SeedUserProfileNavigation {
   user: SeedFriend;
   openInFriendsView: boolean;
+  openInSelfProfile: boolean;
 }
 
 /** ResolveUserProfileNavigation / user-profile ルート用の代表ユーザー ID */
@@ -254,6 +255,7 @@ export function seedUserProfileNavigation(
         bio: "E2E テスト用ユーザーです。",
       },
       openInFriendsView: false,
+      openInSelfProfile: false,
     };
   }
   return {
@@ -265,6 +267,7 @@ export function seedUserProfileNavigation(
       lastUpdated: "",
     },
     openInFriendsView: false,
+    openInSelfProfile: false,
   };
 }
 

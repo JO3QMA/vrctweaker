@@ -20,13 +20,14 @@
 
 <script setup lang="ts">
 import { ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import VrcUserCacheDetail from "../components/VrcUserCacheDetail.vue";
 import { App } from "../wails/app";
 import type { UserCacheDTO } from "../wails/app";
 
 const route = useRoute();
+const router = useRouter();
 const { t } = useI18n();
 
 const loading = ref(true);
@@ -70,6 +71,10 @@ async function load(): Promise<void> {
   }
   try {
     const nav = await App.resolveUserProfileNavigation(vrcUserId);
+    if (nav.openInSelfProfile) {
+      await router.replace({ name: "me" });
+      return;
+    }
     selected.value = nav.user;
     if (!selected.value?.vrcUserId) {
       selected.value = minimalFromQuery(vrcUserId, hint);

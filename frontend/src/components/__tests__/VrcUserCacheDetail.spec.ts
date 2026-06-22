@@ -260,4 +260,29 @@ describe("VrcUserCacheDetail", () => {
     expect(wrapper.find(".profile-avatar--placeholder").exists()).toBe(true);
     expect(wrapper.find(".profile-banner-fallback").exists()).toBe(true);
   });
+
+  it("self variant hides favorite and encounters tab", async () => {
+    const wrapper = mount(VrcUserCacheDetail, {
+      props: { selected: minimalUser(), variant: "self" },
+      global: { stubs: { EncounterHistoryList: true } },
+    });
+    await flushPromises();
+
+    expect(wrapper.find(".profile-toolbar-actions").exists()).toBe(false);
+    expect(wrapper.text()).not.toContain("遭遇履歴");
+    expect(wrapper.find('[data-testid="self-profile-refresh"]').exists()).toBe(
+      true,
+    );
+  });
+
+  it("self variant emits refresh when refresh button clicked", async () => {
+    const wrapper = mount(VrcUserCacheDetail, {
+      props: { selected: minimalUser(), variant: "self" },
+      global: { stubs: { EncounterHistoryList: true } },
+    });
+    await flushPromises();
+
+    await wrapper.find('[data-testid="self-profile-refresh"]').trigger("click");
+    expect(wrapper.emitted("refresh")).toHaveLength(1);
+  });
 });

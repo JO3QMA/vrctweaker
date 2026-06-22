@@ -118,10 +118,11 @@ export interface UserCacheDTO {
   tagsJson?: string;
 }
 
-/** ResolveUserProfileNavigation の戻り値（フレンド画面 vs ユーザープロフィール画面）。 */
+/** ResolveUserProfileNavigation の戻り値（フレンド画面 vs ユーザープロフィール画面 vs Self profile）。 */
 export interface UserProfileNavigationDTO {
   user: UserCacheDTO;
   openInFriendsView: boolean;
+  openInSelfProfile: boolean;
 }
 
 export interface PathSettingsDTO {
@@ -238,6 +239,7 @@ export interface AppBindings {
   ResolveUserProfileNavigation(
     vrcUserID: string,
   ): Promise<UserProfileNavigationDTO>;
+  GetSelfProfile(forceRefresh?: boolean): Promise<UserCacheDTO>;
   SetFavorite(vrcUserId: string, favorite: boolean): Promise<void>;
   SetStatus(status: string): Promise<void>;
   SetStatusDescription(description: string): Promise<void>;
@@ -574,6 +576,16 @@ export const App = {
         lastUpdated: "",
       },
       openInFriendsView: false,
+      openInSelfProfile: false,
+    });
+  },
+  async getSelfProfile(forceRefresh?: boolean): Promise<UserCacheDTO> {
+    return callApp((a) => a.GetSelfProfile(forceRefresh ?? false), {
+      vrcUserId: "",
+      displayName: "",
+      status: "",
+      isFavorite: false,
+      lastUpdated: "",
     });
   },
   async setFavorite(vrcUserId: string, favorite: boolean): Promise<void> {

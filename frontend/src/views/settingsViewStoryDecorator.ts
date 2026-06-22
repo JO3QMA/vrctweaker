@@ -1,4 +1,4 @@
-import type { PathSettingsDTO, VRChatCurrentUserDTO } from "../wails/app";
+import type { PathSettingsDTO, UserCacheDTO } from "../wails/app";
 import { resetSessionUnlockForStorybook } from "../composables/useSessionUnlock";
 
 export type SettingsViewWailsPreset =
@@ -15,28 +15,26 @@ const emptyPaths: PathSettingsDTO = {
   outputLogPath: "",
 };
 
-const sampleCurrentUser: VRChatCurrentUserDTO = {
-  id: "usr_storybook_vrc",
+const sampleSelfProfile: UserCacheDTO = {
+  vrcUserId: "usr_storybook_vrc",
   displayName: "ストーリー花子",
   username: "story_hanako",
   status: "join me",
   statusDescription: "Storybook 用の表示です",
   state: "active",
+  isFavorite: false,
+  lastUpdated: "2025-01-01T00:00:00Z",
   currentAvatarThumbnailImageUrl: "",
   userIcon: "",
   profilePicOverrideThumbnail: "",
 };
 
-const emptyCurrentUser: VRChatCurrentUserDTO = {
-  id: "",
+const emptySelfProfile: UserCacheDTO = {
+  vrcUserId: "",
   displayName: "",
-  username: "",
   status: "",
-  statusDescription: "",
-  state: "",
-  currentAvatarThumbnailImageUrl: "",
-  userIcon: "",
-  profilePicOverrideThumbnail: "",
+  isFavorite: false,
+  lastUpdated: "",
 };
 
 /**
@@ -77,9 +75,9 @@ export function settingsViewWailsDecorator(preset: SettingsViewWailsPreset) {
               PersistWrappedCredential: () => Promise.resolve(),
               ClearStoredCredential: () => Promise.resolve(),
               IsLoggedIn: () => Promise.resolve(loggedIn),
-              GetVRChatCurrentUser: (_force?: boolean) =>
+              GetSelfProfile: (_force?: boolean) =>
                 Promise.resolve(
-                  loggedIn ? sampleCurrentUser : emptyCurrentUser,
+                  loggedIn ? sampleSelfProfile : emptySelfProfile,
                 ),
               GetLogRetentionDays: () => Promise.resolve(30),
               SetLogRetentionDays: (_days: number) => Promise.resolve(),
