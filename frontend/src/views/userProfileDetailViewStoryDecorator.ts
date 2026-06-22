@@ -53,6 +53,7 @@ export function userProfileDetailWailsDecorator(
           lastUpdated: "",
         },
         openInFriendsView: false,
+        openInSelfProfile: false,
       }));
 
   return (story: () => unknown) => {

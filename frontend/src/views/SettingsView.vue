@@ -29,10 +29,10 @@
         <span>{{ t("settings.loginSection") }}</span>
       </template>
       <div v-if="isLoggedIn" class="login-status">
-        <div v-if="profileLoading && !currentUser" class="profile-loading">
+        <div v-if="profileLoading && !selfProfile" class="profile-loading">
           {{ t("settings.profileLoading") }}
         </div>
-        <div v-else-if="currentUser" class="current-user-card">
+        <div v-else-if="selfProfile" class="current-user-card">
           <img
             v-if="avatarDisplayUrl"
             :src="avatarDisplayUrl"
@@ -43,25 +43,32 @@
           />
           <div class="current-user-details">
             <p class="current-user-display-name">
-              {{ currentUser.displayName || t("settings.noDisplayName") }}
+              {{ selfProfile.displayName || t("settings.noDisplayName") }}
             </p>
-            <p v-if="currentUser.username" class="current-user-line">
-              @{{ currentUser.username }}
+            <p v-if="selfProfile.username" class="current-user-line">
+              @{{ selfProfile.username }}
             </p>
-            <p v-if="currentUser.id" class="current-user-line muted">
-              {{ currentUser.id }}
+            <p v-if="selfProfile.vrcUserId" class="current-user-line muted">
+              {{ selfProfile.vrcUserId }}
             </p>
             <p class="current-user-line">
               {{ t("settings.statusLine") }}
-              {{ currentUser.status || t("common.dash") }} /
-              {{ currentUser.state || t("common.dash") }}
+              {{ selfProfile.status || t("common.dash") }} /
+              {{ selfProfile.state || t("common.dash") }}
             </p>
             <p
-              v-if="currentUser.statusDescription"
+              v-if="selfProfile.statusDescription"
               class="current-user-line muted"
             >
-              {{ currentUser.statusDescription }}
+              {{ selfProfile.statusDescription }}
             </p>
+            <router-link
+              :to="{ name: 'me' }"
+              class="self-profile-link"
+              data-testid="settings-view-self-profile"
+            >
+              {{ t("settings.viewSelfProfile") }}
+            </router-link>
           </div>
         </div>
         <el-alert
@@ -78,7 +85,7 @@
           <el-button
             type="primary"
             :loading="profileLoading"
-            @click="loadCurrentUser(true)"
+            @click="loadSelfProfileSummary(true)"
           >
             {{ t("settings.refreshProfile") }}
           </el-button>
@@ -312,7 +319,8 @@ import { ref, reactive, computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessageBox, ElMessage } from "element-plus";
 import { App } from "../wails/app";
-import type { PathSettingsDTO, VRChatCurrentUserDTO } from "../wails/app";
+import type { PathSettingsDTO, UserCacheDTO } from "../wails/app";
+import { friendThumbUrl } from "../utils/vrcUserCacheDisplay";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
 import { isAppLocale, setLanguage } from "../i18n";
 
@@ -327,19 +335,14 @@ const {
 const { t, locale } = useI18n();
 
 const isLoggedIn = ref(false);
-const currentUser = ref<VRChatCurrentUserDTO | null>(null);
+const selfProfile = ref<UserCacheDTO | null>(null);
 const profileLoading = ref(false);
 const profileError = ref("");
 
 const avatarDisplayUrl = computed(() => {
-  const u = currentUser.value;
+  const u = selfProfile.value;
   if (!u) return "";
-  return (
-    u.profilePicOverrideThumbnail ||
-    u.currentAvatarThumbnailImageUrl ||
-    u.userIcon ||
-    ""
-  );
+  return friendThumbUrl(u) ?? "";
 });
 
 function formatBackendError(e: unknown, fallback: string): string {
@@ -449,7 +452,7 @@ onMounted(async () => {
     isLoggedIn.value = false;
   }
   if (isLoggedIn.value) {
-    await loadCurrentUser();
+    await loadSelfProfileSummary();
   }
   logRetentionDays.value = await App.getLogRetentionDays();
   suppressSleepWhileVRChat.value = await App.getSuppressSleepWhileVRChat();
@@ -459,13 +462,13 @@ onMounted(async () => {
   pathSettings.outputLogPath = ps.outputLogPath;
 });
 
-async function loadCurrentUser(forceRefresh = false) {
+async function loadSelfProfileSummary(forceRefresh = false) {
   profileError.value = "";
   profileLoading.value = true;
   try {
-    currentUser.value = await App.getVRChatCurrentUser(forceRefresh);
+    selfProfile.value = await App.getSelfProfile(forceRefresh);
   } catch (e) {
-    currentUser.value = null;
+    selfProfile.value = null;
     profileError.value = formatBackendError(e, t("settings.errProfile"));
   } finally {
     profileLoading.value = false;
@@ -491,7 +494,7 @@ async function login() {
       if (result.plaintextToken) {
         await persistAfterLogin(result.plaintextToken);
       }
-      await loadCurrentUser();
+      await loadSelfProfileSummary();
     } else {
       loginError.value = result.error || t("settings.errLogin");
     }
@@ -503,7 +506,7 @@ async function login() {
 async function logout() {
   loginError.value = "";
   profileError.value = "";
-  currentUser.value = null;
+  selfProfile.value = null;
   try {
     await App.logout();
   } catch (e) {
@@ -675,7 +678,7 @@ function doClearFriendsCache() {
     t("settings.clearFriendsConfirm"),
     async () => App.clearFriendsCache(),
     (n) => {
-      currentUser.value = null;
+      selfProfile.value = null;
       profileError.value = "";
       return t("settings.clearFriendsDone", { n: String(n ?? 0) });
     },
@@ -745,6 +748,18 @@ function doClearFriendsCache() {
 
 .current-user-line.muted {
   color: var(--text-secondary);
+}
+
+.self-profile-link {
+  display: inline-block;
+  margin-top: 0.65rem;
+  color: var(--el-color-primary);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.self-profile-link:hover {
+  text-decoration: underline;
 }
 
 .login-actions {

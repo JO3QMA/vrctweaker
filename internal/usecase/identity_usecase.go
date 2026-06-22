@@ -417,33 +417,47 @@ var ErrProfileNotInCache = errors.New("user not in cache; log in to load profile
 
 // ResolveUserProfileForNavigation loads or refreshes a user row via cache and GET /users/{id} when logged in.
 // The second return value is true when the row should be shown in the friends list view (user_kind friend).
-func (uc *IdentityUseCase) ResolveUserProfileForNavigation(ctx context.Context, vrcUserID string) (*identity.UserCache, bool, error) {
+// The third is true when the row is the logged-in user (Self profile /me).
+func (uc *IdentityUseCase) ResolveUserProfileForNavigation(ctx context.Context, vrcUserID string) (*identity.UserCache, bool, bool, error) {
 	id := strings.TrimSpace(vrcUserID)
 	if id == "" {
-		return nil, false, fmt.Errorf("empty vrc user id")
-	}
-	row, err := uc.userCacheRepo.GetByVRCUserID(ctx, id)
-	if err != nil {
-		return nil, false, err
+		return nil, false, false, fmt.Errorf("empty vrc user id")
 	}
 	loggedIn, err := uc.IsLoggedIn(ctx)
 	if err != nil {
-		return nil, false, err
+		return nil, false, false, err
+	}
+	if loggedIn {
+		isSelf, selfErr := uc.isLoggedInSelfID(ctx, id)
+		if selfErr != nil {
+			return nil, false, false, selfErr
+		}
+		if isSelf {
+			row, profileErr := uc.GetSelfProfile(ctx, false)
+			if profileErr != nil {
+				return nil, false, false, profileErr
+			}
+			return row, false, true, nil
+		}
+	}
+	row, err := uc.userCacheRepo.GetByVRCUserID(ctx, id)
+	if err != nil {
+		return nil, false, false, err
 	}
 	if !loggedIn {
 		if row == nil {
-			return nil, false, ErrProfileNotInCache
+			return nil, false, false, ErrProfileNotInCache
 		}
-		return row, row.UserKind == identity.UserKindFriend, nil
+		return row, row.UserKind == identity.UserKindFriend, false, nil
 	}
 	// Token is already in memory via UnlockSession – no credStore read needed.
 	f, err := uc.apiClient.GetUser(ctx, id)
 	if err != nil {
 		err = uc.handleSessionError(err)
 		if row == nil {
-			return nil, false, err
+			return nil, false, false, err
 		}
-		return row, row.UserKind == identity.UserKindFriend, nil
+		return row, row.UserKind == identity.UserKindFriend, false, nil
 	}
 	now := time.Now()
 	if row == nil {
@@ -452,9 +466,45 @@ func (uc *IdentityUseCase) ResolveUserProfileForNavigation(ctx context.Context, 
 	snap := userCacheFromFriend(*f, row.IsFavorite, now)
 	row.MergeFromGetUserAPI(f.IsFriend, snap, now)
 	if err := uc.userCacheRepo.Save(ctx, row); err != nil {
-		return nil, false, err
+		return nil, false, false, err
 	}
-	return row, row.UserKind == identity.UserKindFriend, nil
+	return row, row.UserKind == identity.UserKindFriend, false, nil
+}
+
+func (uc *IdentityUseCase) isLoggedInSelfID(ctx context.Context, vrcUserID string) (bool, error) {
+	token := uc.apiClient.GetAuthToken()
+	if token == "" {
+		return false, nil
+	}
+	fp := identity.AuthTokenFingerprint(token)
+	if fp == "" {
+		return false, nil
+	}
+	row, err := uc.userCacheRepo.GetSelfBySessionFingerprint(ctx, fp)
+	if err != nil {
+		return false, err
+	}
+	if row == nil {
+		return false, nil
+	}
+	return row.VRCUserID == vrcUserID, nil
+}
+
+// GetSelfProfile returns the cached self row for the active session, refreshing from the API when forceRefresh is true.
+func (uc *IdentityUseCase) GetSelfProfile(ctx context.Context, forceRefresh bool) (*identity.UserCache, error) {
+	if _, err := uc.GetCurrentUser(ctx, forceRefresh); err != nil {
+		return nil, err
+	}
+	token := uc.apiClient.GetAuthToken()
+	fp := identity.AuthTokenFingerprint(token)
+	row, err := uc.userCacheRepo.GetSelfBySessionFingerprint(ctx, fp)
+	if err != nil {
+		return nil, err
+	}
+	if row == nil {
+		return nil, errors.New("self profile not in cache")
+	}
+	return row, nil
 }
 
 func jsonStringSlice(s []string) string {

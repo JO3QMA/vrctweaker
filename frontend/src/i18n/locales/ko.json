@@ -9,6 +9,7 @@
     "activity": "활동",
     "encounterHistory": "조우 기록",
     "friends": "친구",
+    "me": "나",
     "user": "사용자",
     "automation": "자동화",
     "configOther": "기타 설정",
@@ -21,6 +22,7 @@
     "gallery": "갤러리",
     "activity": "활동",
     "friends": "친구",
+    "me": "나",
     "automation": "자동화",
     "configOther": "기타 설정",
     "settings": "설정"
@@ -210,6 +212,14 @@
     "idMissing": "사용자 ID가 지정되지 않았습니다.",
     "loadFailed": "프로필을 가져올 수 없습니다. 캐시 또는 로그인 상태를 확인하세요."
   },
+  "selfProfile": {
+    "title": "나",
+    "loading": "불러오는 중…",
+    "loginRequired": "프로필을 보려면 로그인이 필요합니다.",
+    "openSettings": "설정에서 로그인",
+    "loadFailed": "프로필을 가져올 수 없습니다.",
+    "refresh": "프로필 새로고침"
+  },
   "automation": {
     "title": "자동화",
     "intro": "IF–THEN 규칙으로 트리거 시 동작을 실행합니다.",
@@ -257,6 +267,7 @@
     "statusLine": "상태:",
     "loggedInTag": "로그인됨",
     "refreshProfile": "프로필 다시 가져오기",
+    "viewSelfProfile": "자세히 보기",
     "refreshFriends": "친구 목록 새로 고침",
     "logout": "로그아웃",
     "username": "사용자 이름",

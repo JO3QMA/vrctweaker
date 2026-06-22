@@ -9,6 +9,7 @@
     "activity": "活動",
     "encounterHistory": "相遇紀錄",
     "friends": "好友",
+    "me": "我",
     "user": "使用者",
     "automation": "自動化",
     "configOther": "其他設定",
@@ -21,6 +22,7 @@
     "gallery": "相簿",
     "activity": "活動",
     "friends": "好友",
+    "me": "我",
     "automation": "自動化",
     "configOther": "其他設定",
     "settings": "設定"
@@ -210,6 +212,14 @@
     "idMissing": "未指定使用者 ID。",
     "loadFailed": "無法載入個人資料。請檢查快取或登入狀態。"
   },
+  "selfProfile": {
+    "title": "我",
+    "loading": "載入中…",
+    "loginRequired": "檢視個人資料需要先登入。",
+    "openSettings": "前往設定登入",
+    "loadFailed": "無法載入個人資料。",
+    "refresh": "重新取得個人資料"
+  },
   "automation": {
     "title": "自動化",
     "intro": "使用 IF–THEN 規則在觸發時執行動作。",
@@ -257,6 +267,7 @@
     "statusLine": "狀態：",
     "loggedInTag": "已登入",
     "refreshProfile": "重新取得個人資料",
+    "viewSelfProfile": "查看詳情",
     "refreshFriends": "更新好友列表",
     "logout": "登出",
     "username": "使用者名稱",

@@ -17,6 +17,7 @@ const {
   mockGetLogRetentionDays: vi.fn().mockResolvedValue(30),
   mockResolveUserProfileNavigation: vi.fn().mockResolvedValue({
     openInFriendsView: false,
+    openInSelfProfile: false,
     user: {
       vrcUserId: "stub",
       displayName: "Stub",
@@ -184,6 +185,7 @@ describe("ActivityView", () => {
     ]);
     mockResolveUserProfileNavigation.mockResolvedValue({
       openInFriendsView: true,
+      openInSelfProfile: false,
       user: {
         vrcUserId: "u1",
         displayName: "EncUser",
@@ -241,6 +243,7 @@ describe("ActivityView", () => {
     ]);
     mockResolveUserProfileNavigation.mockResolvedValue({
       openInFriendsView: false,
+      openInSelfProfile: false,
       user: {
         vrcUserId: "u2",
         displayName: "Stranger",
@@ -283,6 +286,50 @@ describe("ActivityView", () => {
       name: "user-profile",
       query: { vrcUserId: "u2", displayName: "Stranger" },
     });
+  });
+
+  it("display name click pushes me route when resolve says self", async () => {
+    mockEncounters.mockResolvedValue([
+      {
+        id: "1",
+        vrcUserId: "usr_self",
+        displayName: "Me",
+        instanceId: "inst",
+        joinedAt: "2024-01-01T12:00:00.000Z",
+      },
+    ]);
+    mockResolveUserProfileNavigation.mockResolvedValue({
+      openInFriendsView: false,
+      openInSelfProfile: true,
+      user: {
+        vrcUserId: "usr_self",
+        displayName: "Me",
+        status: "active",
+        isFavorite: false,
+        lastUpdated: "",
+      },
+    });
+
+    const router = createRouter({
+      history: createWebHashHistory(),
+      routes: [
+        { path: "/activity", component: ActivityView },
+        { path: "/me", name: "me", component: { template: "<div/>" } },
+      ],
+    });
+    await router.push("/activity");
+    await router.isReady();
+    const pushSpy = vi.spyOn(router, "push");
+
+    const wrapper = mount(ActivityView, {
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+
+    await wrapper.find(".timeline-link").trigger("click");
+    await flushPromises();
+
+    expect(pushSpy).toHaveBeenCalledWith({ name: "me" });
   });
 
   it("display name click falls back to user-profile when resolve rejects", async () => {

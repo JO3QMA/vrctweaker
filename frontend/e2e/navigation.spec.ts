@@ -13,13 +13,14 @@ const MAIN_SIDEBAR_PATHS = [
   "/gallery",
   "/activity",
   "/friends",
+  "/me",
   "/automation",
   "/config",
 ] as const;
 
 /**
- * navigation.spec.ts + gallery.spec.ts で専用のナビ／ロードテストを持つルート名。
- * APP_ROUTES 11 件のうち 10 件以上（90%）を E2E でカバーする目標。
+ * navigation.spec.ts + gallery.spec.ts + self-profile.spec.ts で専用のナビ／ロードテストを持つルート名。
+ * APP_ROUTES 12 件のうち 10 件以上（90%）を E2E でカバーする目標。
  */
 const ROUTES_WITH_DEDICATED_E2E_TESTS = new Set([
   "dashboard",
@@ -27,6 +28,7 @@ const ROUTES_WITH_DEDICATED_E2E_TESTS = new Set([
   "gallery",
   "activity",
   "friends",
+  "me",
   "automation",
   "config",
   "settings",
@@ -109,6 +111,6 @@ test.describe("Navigation", () => {
       covered.length,
       `expected >= ${minCovered}/${total} routes covered, got ${covered.length}: ${covered.map((r) => r.name).join(", ")}`,
     ).toBeGreaterThanOrEqual(minCovered);
-    expect(covered.length).toBeGreaterThanOrEqual(10);
+    expect(covered.length).toBeGreaterThanOrEqual(11);
   });
 });

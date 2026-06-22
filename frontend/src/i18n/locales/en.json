@@ -9,6 +9,7 @@
     "activity": "Activity",
     "encounterHistory": "Encounter history",
     "friends": "Friends",
+    "me": "Me",
     "user": "User",
     "automation": "Automation",
     "configOther": "Other settings",
@@ -21,6 +22,7 @@
     "gallery": "Gallery",
     "activity": "Activity",
     "friends": "Friends",
+    "me": "Me",
     "automation": "Automation",
     "configOther": "Other settings",
     "settings": "Settings"
@@ -210,6 +212,14 @@
     "idMissing": "No user ID specified.",
     "loadFailed": "Could not load profile. Check cache or login state."
   },
+  "selfProfile": {
+    "title": "Me",
+    "loading": "Loading…",
+    "loginRequired": "Log in to view your profile.",
+    "openSettings": "Log in in Settings",
+    "loadFailed": "Could not load profile.",
+    "refresh": "Refresh profile"
+  },
   "automation": {
     "title": "Automation",
     "intro": "IF–THEN rules run actions when a trigger fires.",
@@ -257,6 +267,7 @@
     "statusLine": "Status:",
     "loggedInTag": "Logged in",
     "refreshProfile": "Refresh profile",
+    "viewSelfProfile": "View details",
     "refreshFriends": "Refresh friends list",
     "logout": "Log out",
     "username": "Username",

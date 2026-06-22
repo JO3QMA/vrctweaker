@@ -127,6 +127,7 @@ import PlayTimeChart, {
   type PlayTimeDayPoint,
 } from "../components/PlayTimeChart.vue";
 import { openEncounterHistoryWindow } from "../utils/openEncounterHistoryWindow";
+import { navigateToUserProfile } from "../utils/userProfileNavigation";
 import {
   addLocalDays,
   eachLocalDateISO,
@@ -208,23 +209,7 @@ function formatDateShort(dateStr: string): string {
 async function openUserFromEncounter(row: UserEncounterDTO): Promise<void> {
   const vrcUserId = row.vrcUserId;
   if (!vrcUserId) return;
-  const displayName = row.displayName ?? "";
-  try {
-    const nav = await App.resolveUserProfileNavigation(vrcUserId);
-    if (nav.openInFriendsView) {
-      await router.push({ name: "friends", query: { vrcUserId } });
-    } else {
-      await router.push({
-        name: "user-profile",
-        query: { vrcUserId, displayName },
-      });
-    }
-  } catch {
-    await router.push({
-      name: "user-profile",
-      query: { vrcUserId, displayName },
-    });
-  }
+  await navigateToUserProfile(router, vrcUserId, row.displayName ?? "");
 }
 
 function openWorldHistory(worldId: string): void {

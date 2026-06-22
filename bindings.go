@@ -324,6 +324,7 @@ type UserCacheDTO struct {
 type UserProfileNavigationDTO struct {
 	User              UserCacheDTO `json:"user"`
 	OpenInFriendsView bool         `json:"openInFriendsView"`
+	OpenInSelfProfile bool         `json:"openInSelfProfile"`
 }
 
 func toUserCacheDTO(f *identity.UserCache) UserCacheDTO {

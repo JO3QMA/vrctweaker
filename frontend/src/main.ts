@@ -49,6 +49,12 @@ const routes: RouteRecordRaw[] = [
     meta: { titleKey: "routes.encounterHistory", bare: true },
   },
   {
+    path: "/me",
+    name: "me",
+    component: () => import("./views/SelfProfileView.vue"),
+    meta: { titleKey: "routes.me" },
+  },
+  {
     path: "/friends",
     name: "friends",
     component: () => import("./views/FriendsView.vue"),
