@@ -74,7 +74,13 @@ func (stubEncounterRepo) ListWithContext(context.Context, *activity.EncounterFil
 
 func (stubEncounterRepo) Save(context.Context, *activity.UserEncounter) error { return nil }
 
-func (stubEncounterRepo) CloseEncounterLeave(context.Context, string, time.Time) (int64, error) {
+func (stubEncounterRepo) FindByVRCUserIDAndJoinedAt(context.Context, string, time.Time) (*activity.UserEncounter, error) {
+	return nil, nil
+}
+
+func (stubEncounterRepo) UpdateEncounter(context.Context, *activity.UserEncounter) error { return nil }
+
+func (stubEncounterRepo) CloseEncounterLeave(context.Context, string, string, time.Time) (int64, error) {
 	return 0, nil
 }
 
@@ -89,6 +95,8 @@ func (stubEncounterRepo) DeleteAll(context.Context) (int64, error) { return 0, n
 func (stubEncounterRepo) Count(context.Context) (int64, error) { return 0, nil }
 
 func (stubEncounterRepo) BackfillMissingWorldContext(context.Context) (int64, error) { return 0, nil }
+
+func (stubEncounterRepo) DeduplicateEncounters(context.Context) (int64, error) { return 0, nil }
 
 type recordingEncounterRepo struct {
 	stubEncounterRepo
@@ -257,22 +265,58 @@ func (m *memEncounterRepo) Save(_ context.Context, e *activity.UserEncounter) er
 	return nil
 }
 
-func (m *memEncounterRepo) CloseEncounterLeave(_ context.Context, vrcUserID string, leftAt time.Time) (int64, error) {
-	var n int64
+func (m *memEncounterRepo) FindByVRCUserIDAndJoinedAt(_ context.Context, vrcUserID string, joinedAt time.Time) (*activity.UserEncounter, error) {
 	for _, e := range m.encounters {
-		if e.VRCUserID == vrcUserID && e.LeftAt == nil {
-			t := leftAt
-			e.LeftAt = &t
-			n++
+		if e.VRCUserID == vrcUserID && e.JoinedAt.Equal(joinedAt) {
+			cp := *e
+			return &cp, nil
 		}
 	}
-	return n, nil
+	return nil, nil
+}
+
+func (m *memEncounterRepo) UpdateEncounter(_ context.Context, e *activity.UserEncounter) error {
+	for _, ex := range m.encounters {
+		if ex.ID != e.ID {
+			continue
+		}
+		ex.DisplayName = e.DisplayName
+		if ex.InstanceID == "" && e.InstanceID != "" {
+			ex.InstanceID = e.InstanceID
+		}
+		if ex.WorldID == "" && e.WorldID != "" {
+			ex.WorldID = e.WorldID
+		}
+		return nil
+	}
+	return nil
+}
+
+func (m *memEncounterRepo) CloseEncounterLeave(_ context.Context, vrcUserID, instanceID string, leftAt time.Time) (int64, error) {
+	var target *activity.UserEncounter
+	for _, e := range m.encounters {
+		if e.VRCUserID != vrcUserID || e.LeftAt != nil || e.JoinedAt.After(leftAt) {
+			continue
+		}
+		if instanceID != "" && e.InstanceID != "" && e.InstanceID != instanceID {
+			continue
+		}
+		if target == nil || e.JoinedAt.After(target.JoinedAt) {
+			target = e
+		}
+	}
+	if target == nil {
+		return 0, nil
+	}
+	t := leftAt
+	target.LeftAt = &t
+	return 1, nil
 }
 
 func (m *memEncounterRepo) CloseOpenEncountersAt(_ context.Context, at time.Time) (int64, error) {
 	var n int64
 	for _, e := range m.encounters {
-		if e.LeftAt == nil {
+		if e.LeftAt == nil && !e.JoinedAt.After(at) {
 			t := at
 			e.LeftAt = &t
 			n++
@@ -307,6 +351,10 @@ func (m *memEncounterRepo) Count(_ context.Context) (int64, error) {
 
 func (m *memEncounterRepo) BackfillMissingWorldContext(_ context.Context) (int64, error) {
 	return m.backfillN, nil
+}
+
+func (m *memEncounterRepo) DeduplicateEncounters(context.Context) (int64, error) {
+	return 0, nil
 }
 
 type activityUserCacheRepo struct {
@@ -824,5 +872,41 @@ func TestActivityUseCase_IsActivityDatastoreEmpty_countError(t *testing.T) {
 	_, err := uc.IsActivityDatastoreEmpty(context.Background())
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestActivityUseCase_RecordEncounterAt_idempotentJoin(t *testing.T) {
+	ctx := context.Background()
+	enc := &memEncounterRepo{}
+	uc := NewActivityUseCase(&fakePlaySessionRepo{}, enc, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
+	at := time.Date(2026, 6, 22, 22, 51, 17, 0, time.UTC)
+	inst := "wrld_a:1~region(jp)"
+	for i := 0; i < 2; i++ {
+		if err := uc.RecordEncounterAt(ctx, "usr_a", "User A", activity.EncounterActionJoin, inst, "wrld_a", at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if len(enc.encounters) != 1 {
+		t.Fatalf("encounters = %d, want 1", len(enc.encounters))
+	}
+	if enc.encounters[0].InstanceID != inst {
+		t.Fatalf("instance_id = %q, want %q", enc.encounters[0].InstanceID, inst)
+	}
+}
+
+func TestActivityUseCase_CloseOpenEncountersAt_skipsFutureJoins(t *testing.T) {
+	ctx := context.Background()
+	enc := &memEncounterRepo{}
+	uc := NewActivityUseCase(&fakePlaySessionRepo{}, enc, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
+	early := time.Date(2026, 6, 22, 18, 45, 54, 0, time.UTC)
+	lateJoin := time.Date(2026, 6, 22, 22, 51, 17, 0, time.UTC)
+	if err := uc.RecordEncounterAt(ctx, "usr_a", "User A", activity.EncounterActionJoin, "wrld_b:1", "wrld_b", lateJoin); err != nil {
+		t.Fatal(err)
+	}
+	if err := uc.CloseOpenEncountersAt(ctx, early); err != nil {
+		t.Fatal(err)
+	}
+	if enc.encounters[0].LeftAt != nil {
+		t.Fatalf("future join should stay open, left_at=%v", enc.encounters[0].LeftAt)
 	}
 }

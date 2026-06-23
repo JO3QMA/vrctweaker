@@ -26,7 +26,15 @@ func (m *maintEncounterRepo) ListWithContext(context.Context, *activity.Encounte
 
 func (m *maintEncounterRepo) Save(context.Context, *activity.UserEncounter) error { return nil }
 
-func (m *maintEncounterRepo) CloseEncounterLeave(context.Context, string, time.Time) (int64, error) {
+func (m *maintEncounterRepo) FindByVRCUserIDAndJoinedAt(context.Context, string, time.Time) (*activity.UserEncounter, error) {
+	return nil, nil
+}
+
+func (m *maintEncounterRepo) UpdateEncounter(context.Context, *activity.UserEncounter) error {
+	return nil
+}
+
+func (m *maintEncounterRepo) CloseEncounterLeave(context.Context, string, string, time.Time) (int64, error) {
 	return 0, nil
 }
 
@@ -45,6 +53,10 @@ func (m *maintEncounterRepo) DeleteAll(context.Context) (int64, error) {
 func (m *maintEncounterRepo) Count(context.Context) (int64, error) { return 0, nil }
 
 func (m *maintEncounterRepo) BackfillMissingWorldContext(context.Context) (int64, error) {
+	return 0, nil
+}
+
+func (m *maintEncounterRepo) DeduplicateEncounters(context.Context) (int64, error) {
 	return 0, nil
 }
 

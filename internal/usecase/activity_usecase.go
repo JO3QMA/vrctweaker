@@ -136,20 +136,39 @@ func (uc *ActivityUseCase) RecordEncounterAt(ctx context.Context, vrcUserID, dis
 	}
 	switch action {
 	case activity.EncounterActionJoin:
-		e := &activity.UserEncounter{
-			ID:          uuid.New().String(),
-			VRCUserID:   vrcUserID,
-			DisplayName: displayName,
-			InstanceID:  instanceID,
-			WorldID:     wid,
-			JoinedAt:    at,
-			LeftAt:      nil,
-		}
-		if err := uc.encounterRepo.Save(ctx, e); err != nil {
+		existing, err := uc.encounterRepo.FindByVRCUserIDAndJoinedAt(ctx, vrcUserID, at)
+		if err != nil {
 			return err
 		}
+		if existing != nil {
+			patch := &activity.UserEncounter{
+				ID:          existing.ID,
+				VRCUserID:   existing.VRCUserID,
+				DisplayName: displayName,
+				InstanceID:  instanceID,
+				WorldID:     wid,
+				JoinedAt:    existing.JoinedAt,
+				LeftAt:      existing.LeftAt,
+			}
+			if patchErr := uc.encounterRepo.UpdateEncounter(ctx, patch); patchErr != nil {
+				return patchErr
+			}
+		} else {
+			e := &activity.UserEncounter{
+				ID:          uuid.New().String(),
+				VRCUserID:   vrcUserID,
+				DisplayName: displayName,
+				InstanceID:  instanceID,
+				WorldID:     wid,
+				JoinedAt:    at,
+				LeftAt:      nil,
+			}
+			if err := uc.encounterRepo.Save(ctx, e); err != nil {
+				return err
+			}
+		}
 	case activity.EncounterActionLeave:
-		if _, err := uc.encounterRepo.CloseEncounterLeave(ctx, vrcUserID, at); err != nil {
+		if _, err := uc.encounterRepo.CloseEncounterLeave(ctx, vrcUserID, instanceID, at); err != nil {
 			return err
 		}
 	default:
@@ -393,6 +412,11 @@ func (uc *ActivityUseCase) UpsertWorldRoomName(ctx context.Context, worldID, roo
 // encounters by propagating the previous row's context in time order.
 func (uc *ActivityUseCase) BackfillEncounterWorldContext(ctx context.Context) (int64, error) {
 	return uc.encounterRepo.BackfillMissingWorldContext(ctx)
+}
+
+// DeduplicateEncounters merges duplicate encounter rows and fixes invalid leave times.
+func (uc *ActivityUseCase) DeduplicateEncounters(ctx context.Context) (int64, error) {
+	return uc.encounterRepo.DeduplicateEncounters(ctx)
 }
 
 // RotateEncounters deletes encounters and play sessions older than Activity retention days.
