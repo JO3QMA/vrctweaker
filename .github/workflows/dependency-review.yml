@@ -3,6 +3,11 @@ name: Dependency Review
 
 on:
   pull_request:
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.cursor/**'
+      - '.github/ISSUE_TEMPLATE/**'
 
 permissions:
   contents: read

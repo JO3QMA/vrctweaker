@@ -3,8 +3,19 @@ name: CI
 on:
   pull_request:
     branches: [main]
+    paths-ignore:
+      # ドキュメント・エージェント設定のみの変更では Lint / テストを走らせない
+      - '**.md'
+      - 'docs/**'
+      - '.cursor/**'
+      - '.github/ISSUE_TEMPLATE/**'
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.cursor/**'
+      - '.github/ISSUE_TEMPLATE/**'
   workflow_dispatch:
 
 permissions:
