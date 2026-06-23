@@ -310,8 +310,10 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 				runtime.LogWarning(ctx, "activity log ingest: "+procErr.Error())
 				return
 			}
-			_ = a.activity.CloseOpenPlaySessionAtLastLogLine(ctx, lastVRLineTime)
-			_ = a.activity.CloseOpenEncountersAtLastLogLine(ctx, lastVRLineTime)
+			if shouldFinalizeOpenActivityAtLogFileEnd(true, i, len(files)) {
+				_ = a.activity.CloseOpenPlaySessionAtLastLogLine(ctx, lastVRLineTime)
+				_ = a.activity.CloseOpenEncountersAtLastLogLine(ctx, lastVRLineTime)
+			}
 			st, statErr := os.Stat(pathCopy)
 			endOff := int64(0)
 			if statErr == nil && st != nil {
@@ -364,8 +366,7 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 		// context.Canceled: preserve last progress-callback checkpoint (same as directory mode)
 		return
 	}
-	_ = a.activity.CloseOpenPlaySessionAtLastLogLine(ctx, lastVRLineTime)
-	_ = a.activity.CloseOpenEncountersAtLastLogLine(ctx, lastVRLineTime)
+	// Single-file watch tails the active output_log; do not close open rows at EOF on bootstrap.
 	st, statErr := os.Stat(pathCopy)
 	endOff := int64(0)
 	if statErr == nil && st != nil {
@@ -384,6 +385,17 @@ func formatActivityCheckpointLineTime(t time.Time) string {
 		return ""
 	}
 	return t.Format(time.RFC3339)
+}
+
+// shouldFinalizeOpenActivityAtLogFileEnd reports whether bootstrap ingest should close open
+// play sessions and encounters at the end of processing a log file. Only completed historical
+// files in directory mode are finalized; the active tail file may still be written by VRChat
+// while VRCTweaker restarts, so open rows must stay open until real leave events arrive.
+func shouldFinalizeOpenActivityAtLogFileEnd(isDirectoryMode bool, fileIndex, fileCount int) bool {
+	if !isDirectoryMode || fileCount <= 0 {
+		return false
+	}
+	return fileIndex < fileCount-1
 }
 
 func (a *App) startOutputLogWatcher(ctx context.Context, eventBus event.EventBus) {
