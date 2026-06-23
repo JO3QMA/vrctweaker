@@ -34,6 +34,13 @@ Thumbs.db
 # Local environment (direnv)
 .envrc
 
+# Local runtime data (logs, DB, credentials — see var/README.md)
+var/local.env
+var/data/*
+!var/data/.gitkeep
+var/logs/*
+!var/logs/.gitkeep
+
 # Test
 coverage.txt
 *.cover

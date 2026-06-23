@@ -44,6 +44,11 @@ func (a *ActivityIngestAdapter) ResetSessionContextForNewLogFile() {
 	a.correlator.Reset()
 }
 
+// WarmFromParsedEvent implements SessionCorrelatorWarmer for log replay before checkpoint resume.
+func (a *ActivityIngestAdapter) WarmFromParsedEvent(event activity.ParsedEvent) {
+	_ = a.correlator.Apply(event)
+}
+
 // Handle implements EventHandler.
 func (a *ActivityIngestAdapter) Handle(event activity.ParsedEvent) {
 	for _, cmd := range a.correlator.Apply(event) {

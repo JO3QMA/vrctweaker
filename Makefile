@@ -1,7 +1,7 @@
 # vrchat-tweaker Makefile
 # フルビルド、front/backendビルド、lint、fmt、test、e2e を実行
 
-.PHONY: all build build-native build-windows build-front build-back dev-wails lint fmt test test-e2e setup-e2e clean help
+.PHONY: all build build-native build-windows build-front build-back dev-wails lint fmt test test-e2e setup-e2e link-var clean help
 
 # デフォルトターゲット
 all: build
@@ -91,6 +91,10 @@ test-e2e-install:
 
 # --- ユーティリティ ---
 
+## WSL: Windows 側の DB・VRChat ログを var/ に symlink（var/local.env が必要）
+link-var:
+	bash scripts/link-windows-var.sh
+
 ## フロントエンド依存関係のインストール
 install-front:
 	cd frontend && pnpm install --frozen-lockfile
@@ -131,6 +135,7 @@ help:
 	@echo "  make test-e2e-install - Playwright ブラウザのインストール"
 	@echo ""
 	@echo "その他:"
+	@echo "  make link-var      - WSL: Windows の DB/ログを var/ に symlink"
 	@echo "  make install-front - フロントエンド依存関係のインストール"
 	@echo "  make clean        - ビルド成果物の削除"
 	@echo "  make help         - このヘルプを表示"

@@ -283,6 +283,8 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 			var lastVRLineTime time.Time
 			if off == 0 {
 				ingestAdapter.ResetSessionContextForNewLogFile()
+			} else if warmErr := logwatcher.WarmSessionCorrelatorFromLogFile(ctx, pathCopy, off, parser, ingestAdapter, logger); warmErr != nil {
+				runtime.LogWarning(ctx, "activity log correlator warm: "+warmErr.Error())
 			}
 			_, procErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, ingestAdapter, logger, func(pos int64, line string) {
 				if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
@@ -338,6 +340,8 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 	var lastVRLineTime time.Time
 	if off == 0 {
 		ingestAdapter.ResetSessionContextForNewLogFile()
+	} else if warmErr := logwatcher.WarmSessionCorrelatorFromLogFile(ctx, pathCopy, off, parser, ingestAdapter, logger); warmErr != nil {
+		runtime.LogWarning(ctx, "activity log correlator warm: "+warmErr.Error())
 	}
 	_, fileProcErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, ingestAdapter, logger, func(pos int64, line string) {
 		if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
