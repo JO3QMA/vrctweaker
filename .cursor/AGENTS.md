@@ -77,3 +77,17 @@ GitHub Issue の URL・番号、または `docs/ai_dlc/issues/` 等の Issue ド
 - **advisor-workflow**: Composer をメインに、詰まりどころだけ Sonnet / Codex で短い相談を挟む（`.cursor/skills/advisor-workflow/SKILL.md`）
 - **tdd-workflow**: テスト駆動開発と fmt→test→lint→（フロント時）E2E の検証ループ。コード変更時に適用。
 - **element-plus-frontend**: Element Plus による UI 実装・Vitest/Playwright セレクタ・公式ドキュメント参照（`.cursor/skills/element-plus-frontend/SKILL.md`）
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `JO3QMA/vrctweaker` (`gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical triage roles use default label names (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: root `CONTEXT.md` and `docs/adr/`. See `docs/agents/domain.md`.
