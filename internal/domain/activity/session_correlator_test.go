@@ -80,6 +80,31 @@ func TestSessionCorrelator_RoomNameWithoutOnLeftRoom_unchanged(t *testing.T) {
 	}
 }
 
+func TestSessionCorrelator_RoomName_prefersPendingOverActiveSession(t *testing.T) {
+	base := time.Date(2026, 6, 24, 8, 26, 44, 0, time.UTC)
+	const oldWorld = "wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b"
+	oldInst := oldWorld + ":95147~private(usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)~region(jp)"
+	const newWorld = "wrld_6041ba53-0ac0-4b5b-9ecb-890ea2b0aefa"
+	newInst := newWorld + ":48580~friends(usr_b4cb47f9-ca01-43db-baa3-ce3fb98ff0d4)~region(jp)"
+
+	c := &SessionCorrelator{}
+	c.Apply(&SessionEvent{Type: SessionEventStart, InstanceID: oldInst, OccurredAt: base})
+	c.Apply(&DestinationSetEvent{
+		WorldID:      newWorld,
+		FullInstance: newInst,
+		OccurredAt:   base,
+	})
+	cmds := c.Apply(&RoomNameEvent{RoomName: "Cozy with.", OccurredAt: base})
+
+	if len(cmds) != 1 {
+		t.Fatalf("commands = %d, want 1: %+v", len(cmds), cmds)
+	}
+	room := cmds[0].(UpsertWorldRoomNameCmd)
+	if room.WorldID != newWorld || room.RoomName != "Cozy with." {
+		t.Errorf("UpsertWorldRoomName = %+v, want world %q name %q", room, newWorld, "Cozy with.")
+	}
+}
+
 func TestSessionCorrelator_OtherPlayerLeave_afterJoining_keepsWorldContext(t *testing.T) {
 	base := time.Date(2026, 3, 18, 0, 1, 0, 0, time.UTC)
 	const minasocoWorld = "wrld_c03f8195-3c64-46d8-b5ae-242f214c9404"
@@ -189,5 +214,57 @@ func TestSessionCorrelator_UnhandledParsedEventsReturnNil(t *testing.T) {
 	}
 	if cmds := c.Apply(&VideoPlaybackEvent{URL: "https://example.com", OccurredAt: base}); cmds != nil {
 		t.Fatalf("VideoPlayback commands = %+v, want nil", cmds)
+	}
+}
+
+// Regression for GitHub bug report (2026-06-24): log-replayed home→cozy transition must not
+// write Cozy with. onto the home world_id.
+func TestSessionCorrelator_logReplay_homeToCozyTransition_roomNamesNotCrossAssigned(t *testing.T) {
+	t.Setenv("TZ", "UTC")
+	parser := NewLogParser()
+	c := &SessionCorrelator{}
+
+	const (
+		homeWorld = "wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b"
+		cozyWorld = "wrld_6041ba53-0ac0-4b5b-9ecb-890ea2b0aefa"
+	)
+	homeInst := homeWorld + ":95147~private(usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)~region(jp)"
+	cozyInst := cozyWorld + ":48580~friends(usr_b4cb47f9-ca01-43db-baa3-ce3fb98ff0d4)~region(jp)"
+
+	lines := []string{
+		"2026.06.24 08:25:00 Debug      -  [Behaviour] Destination set: " + homeInst,
+		"2026.06.24 08:25:01 Debug      -  [Behaviour] OnLeftRoom",
+		"2026.06.24 08:25:03 Debug      -  [Behaviour] Entering Room: ホームチェックv6․0",
+		"2026.06.24 08:25:03 Debug      -  [Behaviour] Joining " + homeInst,
+		"2026.06.24 08:26:40 Debug      -  [Behaviour] Destination set: " + cozyInst,
+		"2026.06.24 08:26:41 Debug      -  [Behaviour] OnLeftRoom",
+		"2026.06.24 08:26:44 Debug      -  [Behaviour] Entering Room: Cozy with․",
+		"2026.06.24 08:26:44 Debug      -  [Behaviour] Joining " + cozyInst,
+	}
+
+	var roomUpserts []UpsertWorldRoomNameCmd
+	for _, line := range lines {
+		base := ParseVRChatTimestamp(line, time.Time{})
+		events, err := parser.ParseLine(line, base)
+		if err != nil {
+			t.Fatalf("ParseLine: %v", err)
+		}
+		for _, ev := range events {
+			for _, cmd := range c.Apply(ev) {
+				if room, ok := cmd.(UpsertWorldRoomNameCmd); ok {
+					roomUpserts = append(roomUpserts, room)
+				}
+			}
+		}
+	}
+
+	if len(roomUpserts) != 2 {
+		t.Fatalf("room upserts = %d, want 2: %+v", len(roomUpserts), roomUpserts)
+	}
+	if roomUpserts[0].WorldID != homeWorld || roomUpserts[0].RoomName != "ホームチェックv6․0" {
+		t.Fatalf("first room upsert = %+v, want home world name", roomUpserts[0])
+	}
+	if roomUpserts[1].WorldID != cozyWorld || roomUpserts[1].RoomName != "Cozy with․" {
+		t.Fatalf("second room upsert = %+v, want cozy world name (must not target %s)", roomUpserts[1], homeWorld)
 	}
 }

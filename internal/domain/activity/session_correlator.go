@@ -33,9 +33,11 @@ func (c *SessionCorrelator) Apply(event ParsedEvent) []ActivityCommand {
 		c.pendingDestinationWorldID = e.WorldID
 		return []ActivityCommand{UpsertWorldVisitCmd{WorldID: e.WorldID, At: e.OccurredAt}}
 	case *RoomNameEvent:
-		wid := c.sessionWorldID
+		// Entering Room names the destination world. During a transition the old session may still
+		// be active until OnLeftRoom; prefer pending Destination set over sessionWorldID.
+		wid := c.pendingDestinationWorldID
 		if wid == "" {
-			wid = c.pendingDestinationWorldID
+			wid = c.sessionWorldID
 		}
 		return []ActivityCommand{UpsertWorldRoomNameCmd{
 			WorldID:  wid,
