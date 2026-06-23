@@ -56,7 +56,7 @@ func TestRepositories_returnErrorWhenDBClosed(t *testing.T) {
 		if _, err := repo.DeleteOlderThan(ctx, now); err == nil {
 			t.Fatal("DeleteOlderThan expected error")
 		}
-		if _, err := repo.CloseEncounterLeave(ctx, "u", now); err == nil {
+		if _, err := repo.CloseEncounterLeave(ctx, "u", "", now); err == nil {
 			t.Fatal("CloseEncounterLeave expected error")
 		}
 		if _, err := repo.CloseOpenEncountersAt(ctx, now); err == nil {

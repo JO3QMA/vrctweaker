@@ -241,20 +241,70 @@ func (r *UserEncounterRepository) Save(ctx context.Context, e *activity.UserEnco
 	return err
 }
 
-// CloseEncounterLeave sets left_at for open rows for the user.
-func (r *UserEncounterRepository) CloseEncounterLeave(ctx context.Context, vrcUserID string, leftAt time.Time) (int64, error) {
-	res, err := r.db.ExecContext(ctx, `UPDATE user_encounters SET left_at = ? WHERE vrc_user_id = ? AND (left_at IS NULL OR left_at = '')`,
-		leftAt.Format(time.RFC3339), vrcUserID)
+// FindByVRCUserIDAndJoinedAt returns an encounter for the user at the exact join time.
+func (r *UserEncounterRepository) FindByVRCUserIDAndJoinedAt(ctx context.Context, vrcUserID string, joinedAt time.Time) (*activity.UserEncounter, error) {
+	row := r.db.QueryRowContext(ctx, `SELECT id, vrc_user_id, display_name, instance_id, world_id, joined_at, left_at
+		FROM user_encounters WHERE vrc_user_id = ? AND joined_at = ? LIMIT 1`,
+		vrcUserID, joinedAt.Format(time.RFC3339))
+	return scanUserEncounterRow(row)
+}
+
+// UpdateEncounter patches display name and fills empty instance/world on an existing row.
+func (r *UserEncounterRepository) UpdateEncounter(ctx context.Context, e *activity.UserEncounter) error {
+	var wid interface{}
+	if e.WorldID != "" {
+		wid = e.WorldID
+	}
+	_, err := r.db.ExecContext(ctx, `UPDATE user_encounters SET
+		display_name = ?,
+		instance_id = CASE WHEN (instance_id IS NULL OR instance_id = '') AND ? != '' THEN ? ELSE instance_id END,
+		world_id = CASE WHEN (world_id IS NULL OR world_id = '') AND ? IS NOT NULL THEN ? ELSE world_id END
+		WHERE id = ?`,
+		e.DisplayName, e.InstanceID, e.InstanceID, wid, wid, e.ID)
+	return err
+}
+
+// CloseEncounterLeave sets left_at on the latest eligible open stay for the user.
+func (r *UserEncounterRepository) CloseEncounterLeave(ctx context.Context, vrcUserID, instanceID string, leftAt time.Time) (int64, error) {
+	leftStr := leftAt.Format(time.RFC3339)
+	joinedCutoff := leftStr
+	var id string
+	if instanceID != "" {
+		err := r.db.QueryRowContext(ctx, `SELECT id FROM user_encounters
+			WHERE vrc_user_id = ? AND (left_at IS NULL OR left_at = '') AND joined_at <= ?
+			AND instance_id = ?
+			ORDER BY joined_at DESC LIMIT 1`,
+			vrcUserID, joinedCutoff, instanceID).Scan(&id)
+		if err != nil && err != sql.ErrNoRows {
+			return 0, err
+		}
+	}
+	if id == "" {
+		err := r.db.QueryRowContext(ctx, `SELECT id FROM user_encounters
+			WHERE vrc_user_id = ? AND (left_at IS NULL OR left_at = '') AND joined_at <= ?
+			ORDER BY joined_at DESC LIMIT 1`,
+			vrcUserID, joinedCutoff).Scan(&id)
+		if err == sql.ErrNoRows {
+			return 0, nil
+		}
+		if err != nil {
+			return 0, err
+		}
+	}
+	res, err := r.db.ExecContext(ctx, `UPDATE user_encounters SET left_at = ? WHERE id = ?`,
+		leftStr, id)
 	if err != nil {
 		return 0, err
 	}
 	return res.RowsAffected()
 }
 
-// CloseOpenEncountersAt sets left_at on every row still open.
+// CloseOpenEncountersAt sets left_at on every row still open with joined_at <= at.
 func (r *UserEncounterRepository) CloseOpenEncountersAt(ctx context.Context, at time.Time) (int64, error) {
-	res, err := r.db.ExecContext(ctx, `UPDATE user_encounters SET left_at = ? WHERE left_at IS NULL OR left_at = ''`,
-		at.Format(time.RFC3339))
+	atStr := at.Format(time.RFC3339)
+	res, err := r.db.ExecContext(ctx, `UPDATE user_encounters SET left_at = ?
+		WHERE (left_at IS NULL OR left_at = '') AND joined_at <= ?`,
+		atStr, atStr)
 	if err != nil {
 		return 0, err
 	}
@@ -355,6 +405,118 @@ func (r *UserEncounterRepository) BackfillMissingWorldContext(ctx context.Contex
 		return 0, err
 	}
 	return n, nil
+}
+
+// DeduplicateEncounters merges rows sharing vrc_user_id and joined_at and fixes invalid left_at.
+func (r *UserEncounterRepository) DeduplicateEncounters(ctx context.Context) (int64, error) {
+	list, err := r.List(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+	type key struct {
+		vrcUserID string
+		join      string
+	}
+	groups := make(map[key][]*activity.UserEncounter)
+	for _, e := range list {
+		k := key{vrcUserID: e.VRCUserID, join: e.JoinedAt.Format(time.RFC3339)}
+		groups[k] = append(groups[k], e)
+	}
+
+	var affected int64
+	for _, rows := range groups {
+		if len(rows) <= 1 {
+			e := rows[0]
+			if e.LeftAt != nil && e.LeftAt.Before(e.JoinedAt) {
+				if _, err := r.db.ExecContext(ctx, `UPDATE user_encounters SET left_at = NULL WHERE id = ?`, e.ID); err != nil {
+					return affected, err
+				}
+				affected++
+			}
+			continue
+		}
+		keep := pickEncounterToKeep(rows)
+		for _, e := range rows {
+			if e.ID == keep.ID {
+				if keep.LeftAt != nil && keep.LeftAt.Before(keep.JoinedAt) {
+					if _, err := r.db.ExecContext(ctx, `UPDATE user_encounters SET left_at = NULL WHERE id = ?`, keep.ID); err != nil {
+						return affected, err
+					}
+					affected++
+				}
+				continue
+			}
+			if _, err := r.db.ExecContext(ctx, `DELETE FROM user_encounters WHERE id = ?`, e.ID); err != nil {
+				return affected, err
+			}
+			affected++
+		}
+	}
+	return affected, nil
+}
+
+func pickEncounterToKeep(rows []*activity.UserEncounter) *activity.UserEncounter {
+	best := rows[0]
+	bestScore := encounterKeepScore(best)
+	for _, e := range rows[1:] {
+		if s := encounterKeepScore(e); s > bestScore {
+			best = e
+			bestScore = s
+		}
+	}
+	return best
+}
+
+func encounterKeepScore(e *activity.UserEncounter) int {
+	score := 0
+	if e.InstanceID != "" {
+		score += 4
+	}
+	if e.WorldID != "" {
+		score += 2
+	}
+	if e.LeftAt != nil {
+		if !e.LeftAt.Before(e.JoinedAt) {
+			score += 8
+			score += int(e.LeftAt.Sub(e.JoinedAt).Seconds())
+		}
+	}
+	return score
+}
+
+func scanUserEncounterRow(row *sql.Row) (*activity.UserEncounter, error) {
+	var id, vrcUserID, displayName, joinedAtStr string
+	var instanceID, worldID, leftAt sql.NullString
+	err := row.Scan(&id, &vrcUserID, &displayName, &instanceID, &worldID, &joinedAtStr, &leftAt)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	jt, _ := time.Parse(time.RFC3339, joinedAtStr)
+	inst := ""
+	if instanceID.Valid {
+		inst = instanceID.String
+	}
+	wid := ""
+	if worldID.Valid {
+		wid = worldID.String
+	}
+	var lt *time.Time
+	if leftAt.Valid && leftAt.String != "" {
+		t, _ := time.Parse(time.RFC3339, leftAt.String)
+		lt = &t
+	}
+	return &activity.UserEncounter{
+		ID:          id,
+		VRCUserID:   vrcUserID,
+		DisplayName: displayName,
+		InstanceID:  inst,
+		WorldID:     wid,
+		JoinedAt:    jt,
+		LeftAt:      lt,
+	}, nil
 }
 
 func scanUserEncounter(rows *sql.Rows) (*activity.UserEncounter, error) {

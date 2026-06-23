@@ -200,7 +200,7 @@ func TestUserEncounterRepository_CloseEncounterLeave(t *testing.T) {
 		t.Fatal(saveErr)
 	}
 	left := t0.Add(time.Hour)
-	n, err := repo.CloseEncounterLeave(ctx, "usr_x", left)
+	n, err := repo.CloseEncounterLeave(ctx, "usr_x", "", left)
 	if err != nil || n != 1 {
 		t.Fatalf("CloseEncounterLeave: n=%d err=%v", n, err)
 	}
@@ -511,7 +511,7 @@ func TestUserEncounterRepository_CloseEncounterLeave_noMatch(t *testing.T) {
 		t.Fatal(schemaErr)
 	}
 	repo := NewUserEncounterRepository(db)
-	n, err := repo.CloseEncounterLeave(ctx, "nobody", time.Now().UTC())
+	n, err := repo.CloseEncounterLeave(ctx, "nobody", "", time.Now().UTC())
 	if err != nil || n != 0 {
 		t.Fatalf("CloseEncounterLeave no match: n=%d err=%v", n, err)
 	}
@@ -572,5 +572,129 @@ func TestUserEncounterRepository_CloseOpenEncountersAt(t *testing.T) {
 		if e.LeftAt == nil || !e.LeftAt.Equal(at) {
 			t.Fatalf("row %s not closed: %+v", e.ID, e.LeftAt)
 		}
+	}
+}
+
+func TestUserEncounterRepository_CloseEncounterLeave_closesLatestOpenOnly(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+	repo := NewUserEncounterRepository(db)
+	t0 := time.Date(2024, 6, 1, 10, 0, 0, 0, time.UTC)
+	t1 := t0.Add(time.Hour)
+	for _, spec := range []struct {
+		id, inst string
+		join     time.Time
+	}{
+		{"old", "inst_a", t0},
+		{"new", "inst_b", t1},
+	} {
+		if saveErr := repo.Save(ctx, &activity.UserEncounter{
+			ID: spec.id, VRCUserID: "usr_x", DisplayName: "X", InstanceID: spec.inst, WorldID: "w",
+			JoinedAt: spec.join, LeftAt: nil,
+		}); saveErr != nil {
+			t.Fatal(saveErr)
+		}
+	}
+	left := t1.Add(30 * time.Minute)
+	n, err := repo.CloseEncounterLeave(ctx, "usr_x", "inst_b", left)
+	if err != nil || n != 1 {
+		t.Fatalf("CloseEncounterLeave: n=%d err=%v", n, err)
+	}
+	list, _ := repo.List(ctx, &activity.EncounterFilter{VRCUserID: "usr_x"})
+	for _, e := range list {
+		switch e.ID {
+		case "new":
+			if e.LeftAt == nil || !e.LeftAt.Equal(left) {
+				t.Fatalf("new row left_at = %v, want %v", e.LeftAt, left)
+			}
+		case "old":
+			if e.LeftAt != nil {
+				t.Fatalf("old row should stay open, left_at=%v", e.LeftAt)
+			}
+		}
+	}
+}
+
+func TestUserEncounterRepository_CloseOpenEncountersAt_skipsFutureJoins(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+	repo := NewUserEncounterRepository(db)
+	early := time.Date(2024, 6, 1, 10, 0, 0, 0, time.UTC)
+	late := early.Add(2 * time.Hour)
+	if saveErr := repo.Save(ctx, &activity.UserEncounter{
+		ID: "late", VRCUserID: "usr_late", DisplayName: "Late", InstanceID: "i", WorldID: "w",
+		JoinedAt: late, LeftAt: nil,
+	}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+	n, err := repo.CloseOpenEncountersAt(ctx, early.Add(time.Hour))
+	if err != nil || n != 0 {
+		t.Fatalf("CloseOpenEncountersAt: n=%d err=%v, want 0", n, err)
+	}
+	list, _ := repo.List(ctx, nil)
+	if list[0].LeftAt != nil {
+		t.Fatalf("future join should remain open, left_at=%v", list[0].LeftAt)
+	}
+}
+
+func TestUserEncounterRepository_DeduplicateEncounters(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+	repo := NewUserEncounterRepository(db)
+	join := time.Date(2026, 6, 22, 22, 51, 17, 0, time.FixedZone("JST", 9*3600))
+	validLeave := join.Add(17 * time.Minute)
+	invalidLeave := join.Add(-4 * time.Hour)
+	for _, spec := range []struct {
+		id, inst string
+		left     *time.Time
+	}{
+		{"dup_a", "", &invalidLeave},
+		{"dup_b", "wrld_x:1~region(jp)", &validLeave},
+	} {
+		if saveErr := repo.Save(ctx, &activity.UserEncounter{
+			ID: spec.id, VRCUserID: "usr_dup", DisplayName: "User A", InstanceID: spec.inst, WorldID: "wrld_x",
+			JoinedAt: join, LeftAt: spec.left,
+		}); saveErr != nil {
+			t.Fatal(saveErr)
+		}
+	}
+	n, err := repo.DeduplicateEncounters(ctx)
+	if err != nil || n < 1 {
+		t.Fatalf("DeduplicateEncounters: n=%d err=%v", n, err)
+	}
+	list, _ := repo.List(ctx, &activity.EncounterFilter{VRCUserID: "usr_dup"})
+	if len(list) != 1 {
+		t.Fatalf("want 1 row after dedupe, got %d", len(list))
+	}
+	kept := list[0]
+	if kept.InstanceID == "" {
+		t.Fatalf("kept row should prefer filled instance_id, got %+v", kept)
+	}
+	if kept.LeftAt == nil || !kept.LeftAt.Equal(validLeave) {
+		t.Fatalf("kept left_at = %v, want %v", kept.LeftAt, validLeave)
 	}
 }

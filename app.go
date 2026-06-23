@@ -415,6 +415,9 @@ func (a *App) startOutputLogWatcher(ctx context.Context, eventBus event.EventBus
 
 	ingestAdapter.SetSuppressEncounterNotify(true)
 	a.ingestActivityLogsBootstrap(ctx, watchPath, parser, ingestAdapter, logger)
+	if _, dedupeErr := a.activity.DeduplicateEncounters(ctx); dedupeErr != nil {
+		runtime.LogWarning(ctx, "activity encounter dedupe: "+dedupeErr.Error())
+	}
 	ingestAdapter.SetSuppressEncounterNotify(false)
 
 	watcher := logwatcher.NewOutputLogWatcher(watchPath, parser, handler, logger)

@@ -69,7 +69,13 @@ func (stubEncounterRepo) ListWithContext(context.Context, *activity.EncounterFil
 
 func (stubEncounterRepo) Save(context.Context, *activity.UserEncounter) error { return nil }
 
-func (stubEncounterRepo) CloseEncounterLeave(context.Context, string, time.Time) (int64, error) {
+func (stubEncounterRepo) FindByVRCUserIDAndJoinedAt(context.Context, string, time.Time) (*activity.UserEncounter, error) {
+	return nil, nil
+}
+
+func (stubEncounterRepo) UpdateEncounter(context.Context, *activity.UserEncounter) error { return nil }
+
+func (stubEncounterRepo) CloseEncounterLeave(context.Context, string, string, time.Time) (int64, error) {
 	return 0, nil
 }
 
@@ -85,22 +91,63 @@ func (stubEncounterRepo) Count(context.Context) (int64, error) { return 0, nil }
 
 func (stubEncounterRepo) BackfillMissingWorldContext(context.Context) (int64, error) { return 0, nil }
 
+func (stubEncounterRepo) DeduplicateEncounters(context.Context) (int64, error) { return 0, nil }
+
 type spyEncounterRepo struct {
 	stubEncounterRepo
 	saves       []*activity.UserEncounter
+	byJoin      map[string]*activity.UserEncounter
 	closeLeaves []struct {
 		VRCUserID string
 		At        time.Time
 	}
 }
 
+func joinKey(vrcUserID string, joinedAt time.Time) string {
+	return vrcUserID + "|" + joinedAt.Format(time.RFC3339)
+}
+
 func (s *spyEncounterRepo) Save(_ context.Context, e *activity.UserEncounter) error {
 	c := *e
 	s.saves = append(s.saves, &c)
+	if s.byJoin == nil {
+		s.byJoin = make(map[string]*activity.UserEncounter)
+	}
+	cp := c
+	s.byJoin[joinKey(e.VRCUserID, e.JoinedAt)] = &cp
 	return nil
 }
 
-func (s *spyEncounterRepo) CloseEncounterLeave(_ context.Context, vrcUserID string, leftAt time.Time) (int64, error) {
+func (s *spyEncounterRepo) FindByVRCUserIDAndJoinedAt(_ context.Context, vrcUserID string, joinedAt time.Time) (*activity.UserEncounter, error) {
+	if s.byJoin == nil {
+		return nil, nil
+	}
+	if e, ok := s.byJoin[joinKey(vrcUserID, joinedAt)]; ok {
+		cp := *e
+		return &cp, nil
+	}
+	return nil, nil
+}
+
+func (s *spyEncounterRepo) UpdateEncounter(_ context.Context, e *activity.UserEncounter) error {
+	if s.byJoin == nil {
+		return nil
+	}
+	cur, ok := s.byJoin[joinKey(e.VRCUserID, e.JoinedAt)]
+	if !ok {
+		return nil
+	}
+	cur.DisplayName = e.DisplayName
+	if cur.InstanceID == "" && e.InstanceID != "" {
+		cur.InstanceID = e.InstanceID
+	}
+	if cur.WorldID == "" && e.WorldID != "" {
+		cur.WorldID = e.WorldID
+	}
+	return nil
+}
+
+func (s *spyEncounterRepo) CloseEncounterLeave(_ context.Context, vrcUserID, instanceID string, leftAt time.Time) (int64, error) {
 	s.closeLeaves = append(s.closeLeaves, struct {
 		VRCUserID string
 		At        time.Time
@@ -206,5 +253,31 @@ func TestActivityIngestAdapter_EndToEndEncounterPersistence(t *testing.T) {
 	}
 	if len(spy.closeLeaves) != 1 || spy.closeLeaves[0].VRCUserID != otherUser {
 		t.Fatalf("closeLeaves = %+v, want one leave for %s", spy.closeLeaves, otherUser)
+	}
+}
+
+func TestActivityIngestAdapter_ReingestDoesNotDuplicateJoin(t *testing.T) {
+	ctx := context.Background()
+	base := time.Date(2026, 3, 18, 0, 1, 0, 0, time.UTC)
+	const world = "wrld_c03f8195-3c64-46d8-b5ae-242f214c9404"
+	inst := world + ":98225~hidden(usr_83ba5dc2-2912-4a21-a514-8b954e60a79b)~region(jp)"
+	const otherUser = "usr_1564b5c1-888a-4d08-b7f4-dcedcf702a90"
+
+	spy := &spyEncounterRepo{}
+	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, spy, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
+	a := NewActivityIngestAdapter(uc, ctx, nil, nil)
+
+	play := func() {
+		a.Handle(&activity.DestinationSetEvent{WorldID: world, FullInstance: inst, OccurredAt: base})
+		a.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: inst, OccurredAt: base})
+		a.Handle(&activity.EncounterEvent{
+			VRCUserID: otherUser, DisplayName: "Nau_UoxoU", Action: activity.EncounterActionJoin, EncounteredAt: base,
+		})
+	}
+
+	play()
+	play()
+	if len(spy.saves) != 1 {
+		t.Fatalf("Save calls = %d, want 1 after re-ingest", len(spy.saves))
 	}
 }
