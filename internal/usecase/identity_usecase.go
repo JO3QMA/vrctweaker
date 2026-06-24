@@ -25,17 +25,8 @@ type IdentityUseCase struct {
 }
 
 // NewIdentityUseCase creates a new IdentityUseCase.
+// notifier is optional; pass nil to skip favorite-online notifications.
 func NewIdentityUseCase(
-	userCacheRepo identity.UserCacheRepository,
-	apiClient vrchatapi.VRChatAPIClient,
-	credStore vrchatapi.CredentialStore,
-	settingsRepo settings.AppSettingsRepository,
-) *IdentityUseCase {
-	return NewIdentityUseCaseWithNotifier(userCacheRepo, apiClient, credStore, settingsRepo, nil)
-}
-
-// NewIdentityUseCaseWithNotifier creates a new IdentityUseCase with optional Notifier for favorite-online notifications.
-func NewIdentityUseCaseWithNotifier(
 	userCacheRepo identity.UserCacheRepository,
 	apiClient vrchatapi.VRChatAPIClient,
 	credStore vrchatapi.CredentialStore,

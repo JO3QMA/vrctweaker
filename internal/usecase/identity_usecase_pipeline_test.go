@@ -23,7 +23,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendOnline_envelopeLocation
 			},
 		},
 	}
-	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 	payload, err := json.Marshal(map[string]any{
 		"userId":   "usr_f1",
 		"platform": "standalonewindows",
@@ -61,7 +61,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_preservesLocatio
 			},
 		},
 	}
-	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 	payload, err := json.Marshal(map[string]string{
 		"userId":   "usr_f1",
 		"platform": "web",
@@ -97,7 +97,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendOffline(t *testing.T) {
 			},
 		},
 	}
-	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 	payload, err := json.Marshal(map[string]string{"userId": "usr_f1"})
 	if err != nil {
 		t.Fatal(err)
@@ -121,7 +121,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendDelete_demotes(t *testi
 			"usr_f2": {VRCUserID: "usr_f2", UserKind: identity.UserKindFriend, IsFavorite: true},
 		},
 	}
-	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 	payload, err := json.Marshal(map[string]string{"userId": "usr_f2"})
 	if err != nil {
 		t.Fatal(err)
@@ -144,7 +144,7 @@ func TestIdentityUseCase_PipelineReconnectRestSync_transientErrorReturnsNil(t *t
 		getCurrentUserErr: errors.New("temporary API failure"),
 	}
 	repo := &mockUserCacheRepo{}
-	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 	if err := uc.PipelineReconnectRestSync(ctx); err != nil {
 		t.Fatalf("transient error should not be returned: %v", err)
 	}
@@ -153,7 +153,7 @@ func TestIdentityUseCase_PipelineReconnectRestSync_transientErrorReturnsNil(t *t
 func TestIdentityUseCase_CurrentAuthToken(t *testing.T) {
 	t.Parallel()
 	apiClient := &mockAPIClient{token: "secret-token"}
-	uc := NewIdentityUseCase(&mockUserCacheRepo{}, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	if got := uc.CurrentAuthToken(); got != "secret-token" {
 		t.Fatalf("token = %q", got)
 	}
@@ -161,7 +161,7 @@ func TestIdentityUseCase_CurrentAuthToken(t *testing.T) {
 
 func TestIdentityUseCase_HandleVRChatPipelineEvent_noTokenNoOp(t *testing.T) {
 	t.Parallel()
-	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	if err := uc.HandleVRChatPipelineEvent(context.Background(), "friend-online", []byte(`{"userId":"u"}`)); err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +175,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendLocation(t *testing.T) 
 			"usr_f1": {VRCUserID: "usr_f1", UserKind: identity.UserKindFriend, Location: "old"},
 		},
 	}
-	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	payload := []byte(`{"userId":"usr_f1","location":"wrld_new:1~x","travelingToLocation":"wrld_dest","worldId":"wrld_new"}`)
 	if err := uc.HandleVRChatPipelineEvent(ctx, "friend-location", payload); err != nil {
 		t.Fatal(err)
@@ -189,7 +189,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendAdd(t *testing.T) {
 	t.Parallel()
 	ctx := context.Background()
 	repo := &mockUserCacheRepo{getByID: make(map[string]*identity.UserCache)}
-	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	payload := []byte(`{"userId":"usr_new","user":{"id":"usr_new","displayName":"New Friend","status":"active"}}`)
 	if err := uc.HandleVRChatPipelineEvent(ctx, "friend-add", payload); err != nil {
 		t.Fatal(err)
@@ -212,7 +212,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_userUpdate_selfOnly(t *testin
 			DisplayName:        "Old",
 		},
 	}
-	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok-self"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok-self"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	payload := []byte(`{"userId":"usr_self","user":{"displayName":"New Name","status":"join me","statusDescription":"hi","username":"selfuser"}}`)
 	if err := uc.HandleVRChatPipelineEvent(ctx, "user-update", payload); err != nil {
 		t.Fatal(err)
@@ -233,7 +233,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_userLocation_selfOnly(t *test
 			SessionFingerprint: fp,
 		},
 	}
-	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok-loc"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok-loc"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	payload := []byte(`{"userId":"usr_self","location":"wrld_here:1","travelingToLocation":"wrld_there"}`)
 	if err := uc.HandleVRChatPipelineEvent(ctx, "user-location", payload); err != nil {
 		t.Fatal(err)
@@ -255,7 +255,7 @@ func TestIdentityUseCase_ReconcileSocialCacheFromAPI_successAndFriendErrorLogged
 		getFriendsErr: errors.New("friends API down"),
 	}
 	repo := &mockUserCacheRepo{}
-	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 	if err := uc.ReconcileSocialCacheFromAPI(ctx); err != nil {
 		t.Fatalf("self fetch ok should not fail: %v", err)
 	}
@@ -273,7 +273,7 @@ func TestIdentityUseCase_ReconcileSocialCacheFromAPIHandled_sessionExpired(t *te
 		token:             "tok",
 		getCurrentUserErr: vrchatapi.ErrSessionExpired,
 	}
-	uc := NewIdentityUseCase(&mockUserCacheRepo{}, apiClient, credStore, newMockSettingsRepo())
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, apiClient, credStore, newMockSettingsRepo(), nil)
 	err := uc.ReconcileSocialCacheFromAPIHandled(ctx)
 	if !errors.Is(err, vrchatapi.ErrSessionExpired) {
 		t.Fatalf("err = %v", err)
@@ -290,7 +290,7 @@ func TestIdentityUseCase_PipelineReconnectRestSync_authErrorPropagates(t *testin
 		token:             "tok",
 		getCurrentUserErr: vrchatapi.ErrNotAuthenticated,
 	}
-	uc := NewIdentityUseCase(&mockUserCacheRepo{}, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	if err := uc.PipelineReconnectRestSync(ctx); !errors.Is(err, vrchatapi.ErrNotAuthenticated) {
 		t.Fatalf("err = %v", err)
 	}
@@ -298,7 +298,7 @@ func TestIdentityUseCase_PipelineReconnectRestSync_authErrorPropagates(t *testin
 
 func TestIdentityUseCase_HandleVRChatPipelineEvent_malformedPayloadNoError(t *testing.T) {
 	t.Parallel()
-	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	for _, typ := range []string{"friend-delete", "friend-offline", "friend-active", "friend-location", "user-update"} {
 		if err := uc.HandleVRChatPipelineEvent(context.Background(), typ, []byte(`{`)); err != nil {
 			t.Fatalf("%s: %v", typ, err)
@@ -314,7 +314,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_userUpdate_ignoresOtherUser(t
 			VRCUserID: "usr_self", UserKind: identity.UserKindSelf, SessionFingerprint: fp,
 		},
 	}
-	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok-self"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok-self"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	payload := []byte(`{"userId":"someone_else","user":{"displayName":"X"}}`)
 	if err := uc.HandleVRChatPipelineEvent(context.Background(), "user-update", payload); err != nil {
 		t.Fatal(err)
@@ -326,7 +326,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_userUpdate_ignoresOtherUser(t
 
 func TestIdentityUseCase_ReconcileSocialCacheFromAPI_notAuthenticatedSkips(t *testing.T) {
 	t.Parallel()
-	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	if err := uc.ReconcileSocialCacheFromAPI(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -334,7 +334,7 @@ func TestIdentityUseCase_ReconcileSocialCacheFromAPI_notAuthenticatedSkips(t *te
 
 func TestIdentityUseCase_HandleVRChatPipelineEvent_friendUpdate_badUserJSON(t *testing.T) {
 	t.Parallel()
-	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	err := uc.HandleVRChatPipelineEvent(context.Background(), "friend-update", []byte(`{"userId":"u1","user":"not-json-object"}`))
 	if err != nil {
 		t.Fatal(err)
@@ -344,7 +344,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendUpdate_badUserJSON(t *t
 func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_createsUnresolvedContact(t *testing.T) {
 	t.Parallel()
 	repo := &mockUserCacheRepo{getByID: make(map[string]*identity.UserCache)}
-	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	payload := []byte(`{"userId":"usr_new","platform":"web"}`)
 	if err := uc.HandleVRChatPipelineEvent(context.Background(), "friend-active", payload); err != nil {
 		t.Fatal(err)
@@ -373,7 +373,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_resolvesListable
 			ID: "usr_new", DisplayName: "Resolved", Status: "active", IsFriend: true,
 		},
 	}
-	uc := NewIdentityUseCase(repo, api, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, api, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	payload := []byte(`{"userId":"usr_new","platform":"web"}`)
 	if err := uc.HandleVRChatPipelineEvent(context.Background(), "friend-active", payload); err != nil {
 		t.Fatal(err)
@@ -397,7 +397,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_skipsSelf(t *tes
 			"usr_self": {VRCUserID: "usr_self", UserKind: identity.UserKindSelf},
 		},
 	}
-	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	payload := []byte(`{"userId":"usr_self","platform":"web"}`)
 	if err := uc.HandleVRChatPipelineEvent(context.Background(), "friend-active", payload); err != nil {
 		t.Fatal(err)
@@ -409,7 +409,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_skipsSelf(t *tes
 
 func TestIdentityUseCase_HandleVRChatPipelineEvent_friendUpdate_emptyUserBody(t *testing.T) {
 	t.Parallel()
-	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	if err := uc.HandleVRChatPipelineEvent(context.Background(), "friend-update", []byte(`{"userId":"u1","user":""}`)); err != nil {
 		t.Fatal(err)
 	}
@@ -423,7 +423,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_userLocation_ignoresOtherUser
 			VRCUserID: "usr_self", UserKind: identity.UserKindSelf, SessionFingerprint: fp,
 		},
 	}
-	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok-loc2"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok-loc2"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	payload := []byte(`{"userId":"other","location":"wrld_x"}`)
 	if err := uc.HandleVRChatPipelineEvent(context.Background(), "user-location", payload); err != nil {
 		t.Fatal(err)
@@ -436,7 +436,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_userLocation_ignoresOtherUser
 func TestIdentityUseCase_HandleVRChatPipelineEvent_friendOnline_invalidEmbeddedUser(t *testing.T) {
 	t.Parallel()
 	repo := &mockUserCacheRepo{getByID: make(map[string]*identity.UserCache)}
-	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	payload := []byte(`{"userId":"usr_f3","location":"wrld:1","user":"not-json"}`)
 	if err := uc.HandleVRChatPipelineEvent(context.Background(), "friend-online", payload); err != nil {
 		t.Fatal(err)
@@ -451,7 +451,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendOnline_invalidEmbeddedU
 
 func TestIdentityUseCase_HandleVRChatPipelineEvent_unknownTypeNoOp(t *testing.T) {
 	t.Parallel()
-	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	if err := uc.HandleVRChatPipelineEvent(context.Background(), "ping", []byte(`{}`)); err != nil {
 		t.Fatal(err)
 	}
@@ -460,7 +460,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_unknownTypeNoOp(t *testing.T)
 func TestIdentityUseCase_HandleVRChatPipelineEvent_friendUpdate_userIDFromEnvelope(t *testing.T) {
 	t.Parallel()
 	repo := &mockUserCacheRepo{getByID: make(map[string]*identity.UserCache)}
-	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	payload := []byte(`{"userId":"usr_env","user":{"displayName":"From Env","status":"active"}}`)
 	if err := uc.HandleVRChatPipelineEvent(context.Background(), "friend-update", payload); err != nil {
 		t.Fatal(err)
@@ -473,7 +473,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendUpdate_userIDFromEnvelo
 func TestIdentityUseCase_HandleVRChatPipelineEvent_saveErrorPropagates(t *testing.T) {
 	t.Parallel()
 	repo := &mockUserCacheRepo{getByID: make(map[string]*identity.UserCache), saveErr: errors.New("save failed")}
-	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	payload := []byte(`{"userId":"usr_fail","platform":"web"}`)
 	err := uc.HandleVRChatPipelineEvent(context.Background(), "friend-active", payload)
 	if err == nil {
@@ -483,7 +483,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_saveErrorPropagates(t *testin
 
 func TestIdentityUseCase_HandleVRChatPipelineEvent_friendDelete_missingUserNoError(t *testing.T) {
 	t.Parallel()
-	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	if err := uc.HandleVRChatPipelineEvent(context.Background(), "friend-delete", []byte(`{"userId":"missing"}`)); err != nil {
 		t.Fatal(err)
 	}
@@ -492,7 +492,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendDelete_missingUserNoErr
 func TestIdentityUseCase_HandleVRChatPipelineEvent_userUpdate_selfLookupError(t *testing.T) {
 	t.Parallel()
 	repo := &mockUserCacheRepo{getSelfErr: errors.New("self lookup failed")}
-	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	err := uc.HandleVRChatPipelineEvent(context.Background(), "user-update", []byte(`{"userId":"usr_self","user":{"displayName":"X"}}`))
 	if err == nil {
 		t.Fatal("expected error")
@@ -506,7 +506,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_userLocation_upsertError(t *t
 		getSelfRow:    &identity.UserCache{VRCUserID: "usr_self", UserKind: identity.UserKindSelf, SessionFingerprint: fp},
 		upsertSelfErr: errors.New("upsert failed"),
 	}
-	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok-up"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok-up"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	err := uc.HandleVRChatPipelineEvent(context.Background(), "user-location", []byte(`{"userId":"usr_self","location":"wrld:1"}`))
 	if err == nil {
 		t.Fatal("expected error")
@@ -529,7 +529,7 @@ func TestIdentityUseCase_backfillUnresolvedFriendPresence_promotesListableFriend
 			ID: "usr_u", DisplayName: "Backfilled", Status: "active", IsFriend: true,
 		},
 	}
-	uc := NewIdentityUseCase(repo, api, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, api, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	if err := uc.backfillUnresolvedFriendPresence(context.Background()); err != nil {
 		t.Fatal(err)
 	}
