@@ -464,8 +464,8 @@ func newTestAppWithActivity(t *testing.T) (*App, *sqlite.UserEncounterRepository
 func runActivityBootstrap(t *testing.T, app *App, ctx context.Context, watchPath string) {
 	t.Helper()
 	parser := activity.NewLogParser()
-	adapter := logwatcher.NewActivityIngestAdapter(app.activity, ctx, logLogger{}, nil)
-	app.ingestActivityLogsBootstrap(ctx, watchPath, parser, adapter, logLogger{})
+	adapter := logwatcher.NewActivityIngestAdapter(app.activity, ctx, appDiagLogger(), nil)
+	app.ingestActivityLogsBootstrap(ctx, watchPath, parser, adapter, appDiagLogger())
 }
 
 func assertEncounterStillOpen(t *testing.T, app *App, ctx context.Context, vrcUserID string) {

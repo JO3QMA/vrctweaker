@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"path/filepath"
@@ -8,6 +9,13 @@ import (
 
 	_ "modernc.org/sqlite"
 )
+
+// Vacuum runs SQLite VACUUM to reclaim space and optimize the database.
+// Note: VACUUM cannot run inside a transaction; it runs in autocommit mode.
+func Vacuum(ctx context.Context, db *sql.DB) error {
+	_, err := db.ExecContext(ctx, `VACUUM`)
+	return err
+}
 
 const defaultLogRetentionDays = 30
 

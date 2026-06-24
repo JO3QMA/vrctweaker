@@ -180,10 +180,8 @@ func TestMaintenance_Vacuum_Integration(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	maintenanceRepo := NewMaintenanceRepository(db)
 	ctx := context.Background()
-
-	if err := maintenanceRepo.Vacuum(ctx); err != nil {
+	if err := Vacuum(ctx, db); err != nil {
 		t.Fatal(err)
 	}
 }

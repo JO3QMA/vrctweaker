@@ -13,12 +13,11 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"vrchat-tweaker/internal/domain/activity"
-	"vrchat-tweaker/internal/domain/automation"
-	"vrchat-tweaker/internal/domain/event"
 	"vrchat-tweaker/internal/domain/launcher"
 	"vrchat-tweaker/internal/domain/media"
 	"vrchat-tweaker/internal/domain/vrchatconfig"
 	"vrchat-tweaker/internal/infrastructure/desktop"
+	"vrchat-tweaker/internal/infrastructure/diag"
 	"vrchat-tweaker/internal/infrastructure/filesystem"
 	"vrchat-tweaker/internal/infrastructure/logwatcher"
 	"vrchat-tweaker/internal/infrastructure/picturewatcher"
@@ -84,8 +83,6 @@ func (a *App) startup(ctx context.Context) {
 		return
 	}
 
-	eventBus := event.NewChannelEventBus()
-
 	launcherRepo := sqlite.NewLauncherProfileRepository(db)
 	mediaRepo := sqlite.NewScreenshotRepository(db)
 	playRepo := sqlite.NewPlaySessionRepository(db)
@@ -103,25 +100,21 @@ func (a *App) startup(ctx context.Context) {
 	apiClient := vrchatapi.NewClient("")
 
 	extractor := media.NewDefaultMetadataExtractor()
-	maintenanceRepo := sqlite.NewMaintenanceRepository(db)
 	notifier := desktop.NewBeeepNotifier("VRChat Tweaker")
 	a.launcher = usecase.NewLauncherUseCase(launcherRepo)
 	a.media = usecase.NewMediaUseCase(mediaRepo, extractor, worldRepo, userCacheRepo)
 	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo)
 	a.identity = usecase.NewIdentityUseCase(userCacheRepo, apiClient, credStore, settingsRepo, notifier)
-	actionRunner := usecase.NewDefaultActionRunner(a.identity)
-	a.automation = usecase.NewAutomationUseCase(automationRepo, eventBus, actionRunner)
+	a.automation = usecase.NewAutomationUseCase(automationRepo, a.identity)
 	a.settings = usecase.NewSettingsUseCase(settingsRepo)
-	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(encounterRepo, mediaRepo, userCacheRepo, maintenanceRepo, settingsRepo)
+	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(db, encounterRepo, mediaRepo, userCacheRepo, settingsRepo)
 
 	configPath := getVRChatConfigPath()
 	configRepo := filesystem.NewVRChatConfigFileRepository(configPath)
 	a.vrchatConfigRepo = configRepo
 
-	a.subscribeAutomationEvents(ctx, eventBus)
-
 	// Start output_log watcher if path is configured
-	a.startOutputLogWatcher(ctx, eventBus)
+	a.startOutputLogWatcher(ctx)
 
 	a.startPictureFolderWatcher(ctx)
 	go a.startupGalleryIncremental()
@@ -180,17 +173,6 @@ func (a *App) startupGalleryIncremental() {
 	if count > 0 {
 		runtime.EventsEmit(a.ctx, galleryScreenshotsChangedEvent, struct{}{})
 	}
-}
-
-func (a *App) subscribeAutomationEvents(ctx context.Context, eventBus event.EventBus) {
-	handler := func(topic string) func(context.Context, *event.Event) error {
-		return func(c context.Context, ev *event.Event) error {
-			payload, _ := ev.Payload.(map[string]interface{})
-			return a.automation.EvalAndRun(c, topic, payload)
-		}
-	}
-	eventBus.Subscribe(automation.TriggerAFKDetected, handler(automation.TriggerAFKDetected))
-	eventBus.Subscribe(automation.TriggerFriendJoined, handler(automation.TriggerFriendJoined))
 }
 
 func defaultVRChatOutputLogDir() string {
@@ -408,7 +390,7 @@ func shouldFinalizeOpenActivityAtLogFileEnd(isDirectoryMode bool, fileIndex, fil
 	return fileIndex < fileCount-1
 }
 
-func (a *App) startOutputLogWatcher(ctx context.Context, eventBus event.EventBus) {
+func (a *App) startOutputLogWatcher(ctx context.Context) {
 	watchPath, err := a.resolveEffectiveOutputLogWatchPath(ctx)
 	if err != nil || watchPath == "" {
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -427,13 +409,13 @@ func (a *App) startOutputLogWatcher(ctx context.Context, eventBus event.EventBus
 	}
 
 	parser := activity.NewLogParser()
-	logger := &logLogger{}
+	logger := appDiagLogger()
 	emitEncounters := func() {
 		runtime.EventsEmit(a.ctx, activityEncountersChangedEvent, struct{}{})
 	}
 	ingestAdapter := logwatcher.NewActivityIngestAdapter(a.activity, ctx, logger, emitEncounters)
-	publishHandler := logwatcher.NewEventPublishingHandler(eventBus, ctx, logger)
-	handler := logwatcher.NewMultiHandler(ingestAdapter, publishHandler)
+	triggerHandler := logwatcher.NewAutomationTriggerHandler(a.automation, ctx, logger)
+	handler := logwatcher.NewMultiHandler(ingestAdapter, triggerHandler)
 
 	ingestAdapter.SetSuppressEncounterNotify(true)
 	a.ingestActivityLogsBootstrap(ctx, watchPath, parser, ingestAdapter, logger)
@@ -508,7 +490,7 @@ func (a *App) startPictureFolderWatcher(ctx context.Context) {
 		return nil
 	}
 	log := pictureWatchLogger{ctx: ctx}
-	if err := picturewatcher.Start(ctx, root, ingest, log); err != nil {
+	if err := picturewatcher.Start(ctx, root, ingest, diag.Logger(log.Printf)); err != nil {
 		runtime.LogError(ctx, "failed to start picture folder watcher: "+err.Error())
 		return
 	}
@@ -527,6 +509,11 @@ type logLogger struct{}
 
 func (logLogger) Printf(format string, args ...interface{}) {
 	log.Printf(format, args...)
+}
+
+func appDiagLogger() diag.Logger {
+	ll := logLogger{}
+	return diag.Logger(ll.Printf)
 }
 
 func getDataDir() (string, error) {

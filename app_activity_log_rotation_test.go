@@ -59,14 +59,14 @@ func Test_handleActivityLogFileSwitch_finalizesOldSessionAndRecordsWorldName(t *
 		t.Fatal(err)
 	}
 	parser := activity.NewLogParser()
-	adapter := logwatcher.NewActivityIngestAdapter(app.activity, ctx, logLogger{}, nil)
+	adapter := logwatcher.NewActivityIngestAdapter(app.activity, ctx, appDiagLogger(), nil)
 	handler := logwatcher.NewMultiHandler(adapter, logwatcher.EventHandlerFunc(func(activity.ParsedEvent) {}))
 	deps := activityLogWatchDeps{
 		watchPath:     absDir,
 		parser:        parser,
 		ingestAdapter: adapter,
 		handler:       handler,
-		logger:        logLogger{},
+		logger:        appDiagLogger(),
 	}
 
 	if switchErr := app.handleActivityLogFileSwitch(ctx, deps, oldPath, newPath); switchErr != nil {
