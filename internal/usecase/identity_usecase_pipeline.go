@@ -48,6 +48,31 @@ func (uc *IdentityUseCase) ReconcileSocialCacheFromAPI(ctx context.Context) erro
 	if err := uc.RefreshFriends(ctx); err != nil {
 		log.Printf("identity: ReconcileSocialCacheFromAPI: RefreshFriends: %v", err)
 	}
+	if err := uc.backfillUnresolvedFriendPresence(ctx); err != nil {
+		log.Printf("identity: ReconcileSocialCacheFromAPI: backfill: %v", err)
+	}
+	return nil
+}
+
+func (uc *IdentityUseCase) backfillUnresolvedFriendPresence(ctx context.Context) error {
+	if uc.apiClient.GetAuthToken() == "" {
+		return nil
+	}
+	rows, err := uc.userCacheRepo.ListContactsNeedingProfileResolution(ctx)
+	if err != nil {
+		return err
+	}
+	now := time.Now()
+	for _, row := range rows {
+		if row == nil {
+			continue
+		}
+		uc.pipelineTryResolveUserProfile(ctx, row, now)
+		uc.normalizeAfterPipelinePresence(row)
+		if err := uc.userCacheRepo.Save(ctx, row); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -287,6 +312,37 @@ func (uc *IdentityUseCase) pipelineSaveFriendMerge(ctx context.Context, userID s
 	if row.UserKind == identity.UserKindSelf {
 		return nil
 	}
+	if !identity.IsListableFriend(row) {
+		uc.pipelineTryResolveUserProfile(ctx, row, now)
+	}
 	fn(row)
+	uc.normalizeAfterPipelinePresence(row)
 	return uc.userCacheRepo.Save(ctx, row)
+}
+
+func (uc *IdentityUseCase) pipelineTryResolveUserProfile(ctx context.Context, row *identity.UserCache, now time.Time) {
+	if row == nil || strings.TrimSpace(row.VRCUserID) == "" {
+		return
+	}
+	f, err := uc.apiClient.GetUser(ctx, row.VRCUserID)
+	if err != nil {
+		log.Printf("identity: pipeline profile resolution: %v", err)
+		return
+	}
+	if f == nil || strings.TrimSpace(f.ID) == "" {
+		return
+	}
+	snap := userCacheFromFriend(*f, row.IsFavorite, now)
+	row.MergeFromGetUserAPI(f.IsFriend, snap, now)
+}
+
+func (uc *IdentityUseCase) normalizeAfterPipelinePresence(row *identity.UserCache) {
+	if row == nil || row.UserKind == identity.UserKindSelf {
+		return
+	}
+	if identity.IsListableFriend(row) {
+		return
+	}
+	row.UserKind = identity.UserKindContact
+	row.IsFavorite = false
 }

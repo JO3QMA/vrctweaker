@@ -48,18 +48,19 @@ func (m *mockSettingsRepo) GetAll(context.Context) (map[string]string, error) {
 
 // mockUserCacheRepo implements identity.UserCacheRepository for tests.
 type mockUserCacheRepo struct {
-	list            []*identity.UserCache
-	getByID         map[string]*identity.UserCache
-	listFavorites   []*identity.UserCache
-	saveErr         error
-	saveBatchErr    error
-	lastSaveBatch   []*identity.UserCache
-	getSelfRow      *identity.UserCache
-	getSelfErr      error
-	upsertSelfErr   error
-	deleteSelfCount int
-	deleteSelfErr   error
-	lastUpsertSelf  *identity.UserCache
+	list                             []*identity.UserCache
+	getByID                          map[string]*identity.UserCache
+	listFavorites                    []*identity.UserCache
+	saveErr                          error
+	saveBatchErr                     error
+	lastSaveBatch                    []*identity.UserCache
+	getSelfRow                       *identity.UserCache
+	getSelfErr                       error
+	upsertSelfErr                    error
+	deleteSelfCount                  int
+	deleteSelfErr                    error
+	lastUpsertSelf                   *identity.UserCache
+	contactsNeedingProfileResolution []*identity.UserCache
 }
 
 func (m *mockUserCacheRepo) List(_ context.Context) ([]*identity.UserCache, error) {
@@ -138,6 +139,13 @@ func (m *mockUserCacheRepo) UpsertSelf(_ context.Context, u *identity.UserCache)
 func (m *mockUserCacheRepo) DeleteSelfRows(context.Context) error {
 	m.deleteSelfCount++
 	return m.deleteSelfErr
+}
+
+func (m *mockUserCacheRepo) ListContactsNeedingProfileResolution(_ context.Context) ([]*identity.UserCache, error) {
+	if m.contactsNeedingProfileResolution != nil {
+		return m.contactsNeedingProfileResolution, nil
+	}
+	return nil, nil
 }
 
 // mockAPIClient implements vrchatapi.VRChatAPIClient for tests.

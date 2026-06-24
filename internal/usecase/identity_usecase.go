@@ -100,6 +100,9 @@ func (uc *IdentityUseCase) UnlockSession(ctx context.Context, token string) erro
 		}
 		return err
 	}
+	if err := uc.backfillUnresolvedFriendPresence(ctx); err != nil {
+		log.Printf("identity: UnlockSession: backfill: %v", err)
+	}
 	return nil
 }
 

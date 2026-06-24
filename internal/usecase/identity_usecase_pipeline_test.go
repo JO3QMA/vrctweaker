@@ -341,7 +341,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendUpdate_badUserJSON(t *t
 	}
 }
 
-func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_createsNewRow(t *testing.T) {
+func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_createsUnresolvedContact(t *testing.T) {
 	t.Parallel()
 	repo := &mockUserCacheRepo{getByID: make(map[string]*identity.UserCache)}
 	uc := NewIdentityUseCase(repo, &mockAPIClient{token: "tok"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
@@ -349,8 +349,44 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_createsNewRow(t 
 	if err := uc.HandleVRChatPipelineEvent(context.Background(), "friend-active", payload); err != nil {
 		t.Fatal(err)
 	}
-	if repo.getByID["usr_new"] == nil {
+	saved := repo.getByID["usr_new"]
+	if saved == nil {
 		t.Fatal("expected new row")
+	}
+	if saved.UserKind != identity.UserKindContact {
+		t.Fatalf("user_kind = %q, want contact", saved.UserKind)
+	}
+	if saved.DisplayName != "" {
+		t.Fatalf("display_name = %q, want empty", saved.DisplayName)
+	}
+	if saved.Status != "active" || saved.Platform != "web" {
+		t.Fatalf("presence: status=%q platform=%q", saved.Status, saved.Platform)
+	}
+}
+
+func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_resolvesListableFriend(t *testing.T) {
+	t.Parallel()
+	repo := &mockUserCacheRepo{getByID: make(map[string]*identity.UserCache)}
+	api := &mockAPIClient{
+		token: "tok",
+		getUser: &vrchatapi.Friend{
+			ID: "usr_new", DisplayName: "Resolved", Status: "active", IsFriend: true,
+		},
+	}
+	uc := NewIdentityUseCase(repo, api, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	payload := []byte(`{"userId":"usr_new","platform":"web"}`)
+	if err := uc.HandleVRChatPipelineEvent(context.Background(), "friend-active", payload); err != nil {
+		t.Fatal(err)
+	}
+	saved := repo.getByID["usr_new"]
+	if saved == nil {
+		t.Fatal("expected row")
+	}
+	if saved.UserKind != identity.UserKindFriend || saved.DisplayName != "Resolved" {
+		t.Fatalf("saved = %+v", saved)
+	}
+	if api.getUserCalls != 1 {
+		t.Fatalf("GetUser calls = %d, want 1", api.getUserCalls)
 	}
 }
 
@@ -407,6 +443,9 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendOnline_invalidEmbeddedU
 	}
 	if repo.getByID["usr_f3"] == nil || repo.getByID["usr_f3"].Location != "wrld:1" {
 		t.Fatalf("saved = %+v", repo.getByID["usr_f3"])
+	}
+	if repo.getByID["usr_f3"].UserKind != identity.UserKindContact {
+		t.Fatalf("user_kind = %q, want contact without profile", repo.getByID["usr_f3"].UserKind)
 	}
 }
 
@@ -471,5 +510,31 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_userLocation_upsertError(t *t
 	err := uc.HandleVRChatPipelineEvent(context.Background(), "user-location", []byte(`{"userId":"usr_self","location":"wrld:1"}`))
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestIdentityUseCase_backfillUnresolvedFriendPresence_promotesListableFriend(t *testing.T) {
+	t.Parallel()
+	pending := &identity.UserCache{
+		VRCUserID: "usr_u", UserKind: identity.UserKindContact,
+		Status: "active", Platform: "web",
+	}
+	repo := &mockUserCacheRepo{
+		contactsNeedingProfileResolution: []*identity.UserCache{pending},
+		getByID:                          map[string]*identity.UserCache{"usr_u": pending},
+	}
+	api := &mockAPIClient{
+		token: "tok",
+		getUser: &vrchatapi.Friend{
+			ID: "usr_u", DisplayName: "Backfilled", Status: "active", IsFriend: true,
+		},
+	}
+	uc := NewIdentityUseCase(repo, api, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	if err := uc.backfillUnresolvedFriendPresence(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	saved := repo.getByID["usr_u"]
+	if saved == nil || saved.UserKind != identity.UserKindFriend || saved.DisplayName != "Backfilled" {
+		t.Fatalf("saved = %+v", saved)
 	}
 }

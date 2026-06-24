@@ -72,6 +72,16 @@ func applySchema(db *sql.DB) error {
 		}
 	}
 
+	return applyDataMigrations(db)
+}
+
+func applyDataMigrations(db *sql.DB) error {
+	// ADR 0004: unnamed friend rows are not Listable friends; demote to contact.
+	if _, err := db.Exec(`UPDATE users_cache
+		SET user_kind = 'contact', is_favorite = 0
+		WHERE user_kind = 'friend' AND (display_name IS NULL OR TRIM(display_name) = '')`); err != nil {
+		return fmt.Errorf("data migration unnamed friends: %w", err)
+	}
 	return nil
 }
 

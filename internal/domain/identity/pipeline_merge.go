@@ -28,7 +28,6 @@ func (u *UserCache) MergeFromPipelineFriendOnline(now time.Time, platform, locat
 	if u == nil || u.UserKind == UserKindSelf {
 		return
 	}
-	u.UserKind = UserKindFriend
 	u.LastUpdated = now
 	if p := strings.TrimSpace(platform); p != "" {
 		u.Platform = p
@@ -48,7 +47,6 @@ func (u *UserCache) MergeFromPipelineFriendLocation(now time.Time, location, tra
 	if u == nil || u.UserKind == UserKindSelf {
 		return
 	}
-	u.UserKind = UserKindFriend
 	u.LastUpdated = now
 	if PipelineLocationIsHidden(worldID, location) {
 		u.Location = PipelineLocationUnknown
@@ -73,7 +71,6 @@ func (u *UserCache) MergeFromPipelineFriendActive(now time.Time, platform string
 	if u == nil || u.UserKind == UserKindSelf {
 		return
 	}
-	u.UserKind = UserKindFriend
 	u.LastUpdated = now
 	if p := strings.TrimSpace(platform); p != "" {
 		u.Platform = p
@@ -89,7 +86,6 @@ func (u *UserCache) MergeFromPipelineFriendOffline(now time.Time) {
 	if u == nil || u.UserKind == UserKindSelf {
 		return
 	}
-	u.UserKind = UserKindFriend
 	u.LastUpdated = now
 	u.Status = "offline"
 	u.Platform = ""

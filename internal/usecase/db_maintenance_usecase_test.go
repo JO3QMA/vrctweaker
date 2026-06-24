@@ -128,6 +128,10 @@ func (m *maintUserCacheRepo) UpsertSelf(context.Context, *identity.UserCache) er
 
 func (m *maintUserCacheRepo) DeleteSelfRows(context.Context) error { return nil }
 
+func (m *maintUserCacheRepo) ListContactsNeedingProfileResolution(context.Context) ([]*identity.UserCache, error) {
+	return nil, nil
+}
+
 type maintMaintenanceRepo struct {
 	vacuumErr error
 }
