@@ -17,6 +17,7 @@ import (
 	"vrchat-tweaker/internal/domain/event"
 	"vrchat-tweaker/internal/domain/launcher"
 	"vrchat-tweaker/internal/domain/media"
+	"vrchat-tweaker/internal/domain/vrchatconfig"
 	"vrchat-tweaker/internal/infrastructure/desktop"
 	"vrchat-tweaker/internal/infrastructure/filesystem"
 	"vrchat-tweaker/internal/infrastructure/logwatcher"
@@ -31,15 +32,15 @@ import (
 
 // App struct holds the application state and use cases.
 type App struct {
-	ctx           context.Context
-	launcher      *usecase.LauncherUseCase
-	media         *usecase.MediaUseCase
-	activity      *usecase.ActivityUseCase
-	identity      *usecase.IdentityUseCase
-	automation    *usecase.AutomationUseCase
-	settings      *usecase.SettingsUseCase
-	dbMaintenance *usecase.DBMaintenanceUseCase
-	vrchatConfig  *usecase.VRChatConfigUseCase
+	ctx              context.Context
+	launcher         *usecase.LauncherUseCase
+	media            *usecase.MediaUseCase
+	activity         *usecase.ActivityUseCase
+	identity         *usecase.IdentityUseCase
+	automation       *usecase.AutomationUseCase
+	settings         *usecase.SettingsUseCase
+	dbMaintenance    *usecase.DBMaintenanceUseCase
+	vrchatConfigRepo vrchatconfig.ConfigRepository
 
 	galleryScanMu     sync.Mutex
 	galleryScanCancel context.CancelFunc
@@ -107,7 +108,7 @@ func (a *App) startup(ctx context.Context) {
 	a.launcher = usecase.NewLauncherUseCase(launcherRepo)
 	a.media = usecase.NewMediaUseCase(mediaRepo, extractor, worldRepo, userCacheRepo)
 	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo)
-	a.identity = usecase.NewIdentityUseCaseWithNotifier(userCacheRepo, apiClient, credStore, settingsRepo, notifier)
+	a.identity = usecase.NewIdentityUseCase(userCacheRepo, apiClient, credStore, settingsRepo, notifier)
 	actionRunner := usecase.NewDefaultActionRunner(a.identity)
 	a.automation = usecase.NewAutomationUseCase(automationRepo, eventBus, actionRunner)
 	a.settings = usecase.NewSettingsUseCase(settingsRepo)
@@ -115,7 +116,7 @@ func (a *App) startup(ctx context.Context) {
 
 	configPath := getVRChatConfigPath()
 	configRepo := filesystem.NewVRChatConfigFileRepository(configPath)
-	a.vrchatConfig = usecase.NewVRChatConfigUseCase(configRepo)
+	a.vrchatConfigRepo = configRepo
 
 	a.subscribeAutomationEvents(ctx, eventBus)
 
@@ -468,7 +469,7 @@ func (a *App) ValidateOutputLogPath(path string) bool {
 }
 
 func (a *App) resolveVRChatPictureWatchRoot() string {
-	cfg, err := a.vrchatConfig.Get()
+	cfg, err := a.vrchatConfigRepo.Read()
 	if err == nil {
 		if p := strings.TrimSpace(cfg.PictureOutputFolder); p != "" {
 			return filepath.Clean(p)
@@ -1282,12 +1283,12 @@ func (a *App) ClearFriendsCache() (int64, error) {
 
 // VRChatConfigExists checks if config.json exists.
 func (a *App) VRChatConfigExists() (bool, error) {
-	return a.vrchatConfig.Exists()
+	return a.vrchatConfigRepo.Exists()
 }
 
 // GetVRChatConfig reads the current config.json.
 func (a *App) GetVRChatConfig() (VRChatConfigDTO, error) {
-	cfg, err := a.vrchatConfig.Get()
+	cfg, err := a.vrchatConfigRepo.Read()
 	if err != nil {
 		return VRChatConfigDTO{}, err
 	}
@@ -1296,12 +1297,12 @@ func (a *App) GetVRChatConfig() (VRChatConfigDTO, error) {
 
 // SaveVRChatConfig writes config.json.
 func (a *App) SaveVRChatConfig(dto VRChatConfigDTO) error {
-	return a.vrchatConfig.Save(fromVRChatConfigDTO(dto))
+	return a.vrchatConfigRepo.Write(fromVRChatConfigDTO(dto))
 }
 
 // DeleteVRChatConfig removes config.json.
 func (a *App) DeleteVRChatConfig() error {
-	return a.vrchatConfig.Delete()
+	return a.vrchatConfigRepo.Delete()
 }
 
 // DefaultVRChatPictureFolder returns the folder VRChat uses when picture_output_folder

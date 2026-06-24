@@ -331,7 +331,6 @@ import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
 import { App } from "../wails/app";
 import type { VRChatConfigDTO } from "../wails/app";
-import { clampCacheNumeric } from "../utils/cacheNormalize";
 
 const { t } = useI18n();
 
@@ -441,6 +440,13 @@ function applyScreenshotPreset() {
     config.value.screenshotResWidth = preset.width;
     config.value.screenshotResHeight = preset.height;
   }
+}
+
+function clampCacheNumeric(n: number | undefined, min: number): number {
+  if (typeof n !== "number" || !Number.isFinite(n)) {
+    return min;
+  }
+  return Math.max(min, n);
 }
 
 function clampCacheSize() {

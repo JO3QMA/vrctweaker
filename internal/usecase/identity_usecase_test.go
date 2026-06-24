@@ -228,7 +228,7 @@ func TestIdentityUseCase_IsLoggedIn(t *testing.T) {
 	apiClient := &mockAPIClient{}
 	userRepo := &mockUserCacheRepo{}
 	settingsRepo := newMockSettingsRepo()
-	uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo)
+	uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo, nil)
 
 	// No token in apiClient -> not logged in
 	ok, err := uc.IsLoggedIn(ctx)
@@ -254,7 +254,7 @@ func TestIdentityUseCase_HasStoredCredential(t *testing.T) {
 	ctx := context.Background()
 	credStore := vrchatapi.NewStubCredentialStore()
 	apiClient := &mockAPIClient{}
-	uc := NewIdentityUseCase(&mockUserCacheRepo{}, apiClient, credStore, newMockSettingsRepo())
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, apiClient, credStore, newMockSettingsRepo(), nil)
 
 	ok, err := uc.HasStoredCredential(ctx)
 	if err != nil || ok {
@@ -271,7 +271,7 @@ func TestIdentityUseCase_HasStoredCredential(t *testing.T) {
 func TestIdentityUseCase_PersistAndClearWrappedCredential(t *testing.T) {
 	ctx := context.Background()
 	credStore := vrchatapi.NewStubCredentialStore()
-	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{}, credStore, newMockSettingsRepo())
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{}, credStore, newMockSettingsRepo(), nil)
 
 	// Invalid blob is rejected
 	if err := uc.PersistWrappedCredential(ctx, "plaintext"); err == nil {
@@ -304,7 +304,7 @@ func TestIdentityUseCase_Logout(t *testing.T) {
 	apiClient := &mockAPIClient{token: "old-token"}
 	userRepo := &mockUserCacheRepo{}
 	settingsRepo := newMockSettingsRepo()
-	uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo)
+	uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo, nil)
 
 	if err := credStore.Set(vrchatapi.CredentialService, vrchatapi.CredentialUser, "token"); err != nil {
 		t.Fatalf("credStore.Set: %v", err)
@@ -338,7 +338,7 @@ func TestIdentityUseCase_Login(t *testing.T) {
 
 	t.Run("empty_credentials_returns_error", func(t *testing.T) {
 		apiClient := &mockAPIClient{}
-		uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo)
+		uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo, nil)
 		_, err := uc.Login(ctx, "", "password", "")
 		if err != vrchatapi.ErrInvalidCredentials {
 			t.Errorf("Login(empty user): want ErrInvalidCredentials, got %v", err)
@@ -351,7 +351,7 @@ func TestIdentityUseCase_Login(t *testing.T) {
 
 	t.Run("api_login_error_propagates", func(t *testing.T) {
 		apiClient := &mockAPIClient{loginErr: vrchatapi.ErrInvalidCredentials}
-		uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo)
+		uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo, nil)
 		_, err := uc.Login(ctx, "user", "pass", "")
 		if err != vrchatapi.ErrInvalidCredentials {
 			t.Errorf("Login: want ErrInvalidCredentials, got %v", err)
@@ -365,7 +365,7 @@ func TestIdentityUseCase_Login(t *testing.T) {
 			loginToken:     "auth-token-123",
 			getCurrentUser: &vrchatapi.CurrentUserProfile{ID: "usr_login", DisplayName: "LoginUser"},
 		}
-		uc := NewIdentityUseCase(repo, apiClient, cs, settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, cs, settingsRepo, nil)
 		token, err := uc.Login(ctx, "user", "pass", "")
 		if err != nil {
 			t.Fatalf("Login: %v", err)
@@ -396,7 +396,7 @@ func TestIdentityUseCase_Login(t *testing.T) {
 			getCurrentUserErr: errors.New("api unavailable"),
 		}
 		repo := &mockUserCacheRepo{}
-		uc := NewIdentityUseCase(repo, apiClient, cs, settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, cs, settingsRepo, nil)
 		token, err := uc.Login(ctx, "user", "pass", "")
 		if err != nil {
 			t.Fatalf("Login: want nil when profile fetch fails, got %v", err)
@@ -419,7 +419,7 @@ func TestIdentityUseCase_Login(t *testing.T) {
 			getCurrentUserErr: fmt.Errorf("%w: GET /auth/user", vrchatapi.ErrSessionExpired),
 		}
 		repo := &mockUserCacheRepo{}
-		uc := NewIdentityUseCase(repo, apiClient, cs, settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, cs, settingsRepo, nil)
 		_, err := uc.Login(ctx, "user", "pass", "")
 		if err == nil || !errors.Is(err, vrchatapi.ErrSessionExpired) {
 			t.Fatalf("Login: want ErrSessionExpired, got %v", err)
@@ -442,7 +442,7 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 	t.Run("not_logged_in", func(t *testing.T) {
 		credStore := vrchatapi.NewStubCredentialStore()
 		apiClient := &mockAPIClient{}
-		uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo)
+		uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo, nil)
 		_, err := uc.GetCurrentUser(ctx, false)
 		if err != vrchatapi.ErrNotAuthenticated {
 			t.Fatalf("err = %v, want ErrNotAuthenticated", err)
@@ -453,7 +453,7 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 		prof := &vrchatapi.CurrentUserProfile{ID: "usr_x", DisplayName: "Test"}
 		apiClient := &mockAPIClient{token: "tok", getCurrentUser: prof}
 		repo := &mockUserCacheRepo{}
-		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 		got, err := uc.GetCurrentUser(ctx, false)
 		if err != nil {
 			t.Fatalf("GetCurrentUser: %v", err)
@@ -495,7 +495,7 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 			},
 		}
 		apiClient := &mockAPIClient{token: "tok", getCurrentUser: &vrchatapi.CurrentUserProfile{ID: "wrong"}}
-		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 		got, err := uc.GetCurrentUser(ctx, false)
 		if err != nil {
 			t.Fatalf("GetCurrentUser: %v", err)
@@ -511,7 +511,7 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 	t.Run("upsert_error_propagates", func(t *testing.T) {
 		repo := &mockUserCacheRepo{upsertSelfErr: errors.New("disk full")}
 		apiClient := &mockAPIClient{token: "tok", getCurrentUser: &vrchatapi.CurrentUserProfile{ID: "u1"}}
-		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 		_, err := uc.GetCurrentUser(ctx, false)
 		if err == nil {
 			t.Fatal("want error from UpsertSelf")
@@ -531,7 +531,7 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 			},
 		}
 		apiClient := &mockAPIClient{token: "tok", getCurrentUser: fresh}
-		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 		got, err := uc.GetCurrentUser(ctx, true)
 		if err != nil {
 			t.Fatalf("GetCurrentUser: %v", err)
@@ -558,7 +558,7 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 			getCurrentUserErr: fmt.Errorf("%w: GET", vrchatapi.ErrSessionExpired),
 		}
 		repo := &mockUserCacheRepo{}
-		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo, nil)
 		_, err := uc.GetCurrentUser(ctx, true)
 		if !errors.Is(err, vrchatapi.ErrSessionExpired) {
 			t.Fatalf("want ErrSessionExpired, got %v", err)
@@ -587,7 +587,7 @@ func TestIdentityUseCase_UnlockSession(t *testing.T) {
 			getCurrentUserErr: vrchatapi.ErrNotAuthenticated,
 		}
 		repo := &mockUserCacheRepo{}
-		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo, nil)
 		err := uc.UnlockSession(ctx, "tok-na")
 		if !errors.Is(err, vrchatapi.ErrNotAuthenticated) {
 			t.Fatalf("UnlockSession: want ErrNotAuthenticated, got %v", err)
@@ -613,7 +613,7 @@ func TestIdentityUseCase_UnlockSession(t *testing.T) {
 			getCurrentUserErr: fmt.Errorf("%w: GET /auth/user", vrchatapi.ErrSessionExpired),
 		}
 		repo := &mockUserCacheRepo{}
-		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo, nil)
 		err := uc.UnlockSession(ctx, "tok-unlock")
 		if !errors.Is(err, vrchatapi.ErrSessionExpired) {
 			t.Fatalf("UnlockSession: want ErrSessionExpired, got %v", err)
@@ -638,7 +638,7 @@ func TestIdentityUseCase_UnlockSession(t *testing.T) {
 		wantErr := errors.New("api unavailable")
 		apiClient := &mockAPIClient{getCurrentUserErr: wantErr}
 		repo := &mockUserCacheRepo{}
-		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo, nil)
 		err := uc.UnlockSession(ctx, "tok-unlock")
 		if !errors.Is(err, wantErr) {
 			t.Fatalf("UnlockSession: want %v, got %v", wantErr, err)
@@ -657,7 +657,7 @@ func TestIdentityUseCase_UnlockSession(t *testing.T) {
 		prof := &vrchatapi.CurrentUserProfile{ID: "usr_unlock", DisplayName: "Unlocked"}
 		apiClient := &mockAPIClient{getCurrentUser: prof}
 		repo := &mockUserCacheRepo{}
-		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo, nil)
 		if err := uc.UnlockSession(ctx, "my-token"); err != nil {
 			t.Fatalf("UnlockSession: %v", err)
 		}
@@ -693,7 +693,7 @@ func TestIdentityUseCase_SetStatus(t *testing.T) {
 			token:        token,
 			setStatusErr: fmt.Errorf("%w: PUT /status", vrchatapi.ErrSessionExpired),
 		}
-		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo, nil)
 		err := uc.SetStatus(ctx, "busy")
 		if !errors.Is(err, vrchatapi.ErrSessionExpired) {
 			t.Fatalf("SetStatus: want ErrSessionExpired, got %v", err)
@@ -720,7 +720,7 @@ func TestIdentityUseCase_SetStatus_successAndEmptyUserID(t *testing.T) {
 		},
 	}
 	apiClient := &mockAPIClient{token: token}
-	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	if err := uc.SetStatus(ctx, "busy"); err != nil {
 		t.Fatalf("SetStatus: %v", err)
 	}
@@ -733,7 +733,7 @@ func TestIdentityUseCase_SetStatus_successAndEmptyUserID(t *testing.T) {
 			UserKind:           identity.UserKindSelf,
 		},
 	}
-	uc2 := NewIdentityUseCase(repo2, &mockAPIClient{token: token}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc2 := NewIdentityUseCase(repo2, &mockAPIClient{token: token}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	if err := uc2.SetStatus(ctx, "busy"); err == nil {
 		t.Fatal("expected error for empty user id")
 	}
@@ -751,7 +751,7 @@ func TestIdentityUseCase_SetStatusAndDescription_success(t *testing.T) {
 		},
 	}
 	apiClient := &mockAPIClient{token: token}
-	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	if err := uc.SetStatusAndDescription(ctx, "busy", "working"); err != nil {
 		t.Fatal(err)
 	}
@@ -771,7 +771,7 @@ func TestIdentityUseCase_SetStatusDescription_emptyUserID(t *testing.T) {
 			UserKind:           identity.UserKindSelf,
 		},
 	}
-	uc := NewIdentityUseCase(repo, &mockAPIClient{token: token}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, &mockAPIClient{token: token}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	if err := uc.SetStatusDescription(ctx, "hi"); err == nil {
 		t.Fatal("expected error")
 	}
@@ -788,7 +788,7 @@ func TestIdentityUseCase_SetStatusAndDescription_validationAndEmptyUser(t *testi
 			UserKind:           identity.UserKindSelf,
 		},
 	}
-	uc := NewIdentityUseCase(repo, &mockAPIClient{token: token}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(repo, &mockAPIClient{token: token}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	long := strings.Repeat("x", 33)
 	if err := uc.SetStatusAndDescription(ctx, "busy", long); err == nil {
 		t.Fatal("expected validation error")
@@ -801,7 +801,7 @@ func TestIdentityUseCase_SetStatusAndDescription_validationAndEmptyUser(t *testi
 			UserKind:           identity.UserKindSelf,
 		},
 	}
-	uc2 := NewIdentityUseCase(repo2, &mockAPIClient{token: token}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc2 := NewIdentityUseCase(repo2, &mockAPIClient{token: token}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	if err := uc2.SetStatusAndDescription(ctx, "busy", "ok"); err == nil {
 		t.Fatal("expected empty user id error")
 	}
@@ -814,7 +814,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_saveError(t *testing.T)
 		token:   "tok",
 		getUser: &vrchatapi.Friend{ID: "u9", DisplayName: "Nine", IsFriend: true},
 	}
-	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	_, _, _, err := uc.ResolveUserProfileForNavigation(ctx, "u9")
 	if err == nil {
 		t.Fatal("expected save error")
@@ -822,7 +822,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_saveError(t *testing.T)
 }
 
 func TestIdentityUseCase_ResolveUserProfileForNavigation_emptyID(t *testing.T) {
-	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	_, _, _, err := uc.ResolveUserProfileForNavigation(context.Background(), "  ")
 	if err == nil {
 		t.Fatal("expected error")
@@ -838,7 +838,7 @@ func TestIdentityUseCase_ListFriends_staleSyncInvalidTimestamp(t *testing.T) {
 		token:      "tok",
 		getFriends: []vrchatapi.Friend{{ID: "f1", DisplayName: "F"}},
 	}
-	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 	got, err := uc.ListFriends(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -860,7 +860,7 @@ func TestIdentityUseCase_ListFriends_friendsSyncSettingsGetError(t *testing.T) {
 	settingsRepo.getErr = errors.New("settings read failed")
 	userRepo := &mockUserCacheRepo{list: []*identity.UserCache{{VRCUserID: "f1"}}}
 	apiClient := &mockAPIClient{token: "tok"}
-	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 	got, err := uc.ListFriends(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -893,7 +893,7 @@ func TestIdentityUseCase_SetStatusDescription(t *testing.T) {
 			token:            token,
 			setStatusDescErr: fmt.Errorf("%w: PUT /users/usr_desc", vrchatapi.ErrSessionExpired),
 		}
-		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo, nil)
 		err := uc.SetStatusDescription(ctx, "hello")
 		if !errors.Is(err, vrchatapi.ErrSessionExpired) {
 			t.Fatalf("SetStatusDescription: want ErrSessionExpired, got %v", err)
@@ -918,7 +918,7 @@ func TestIdentityUseCase_SetStatusDescription(t *testing.T) {
 			},
 		}
 		apiClient := &mockAPIClient{token: token}
-		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 		if err := uc.SetStatusDescription(ctx, "作業中"); err != nil {
 			t.Fatalf("SetStatusDescription: %v", err)
 		}
@@ -938,7 +938,7 @@ func TestIdentityUseCase_SetStatusDescription(t *testing.T) {
 			},
 		}
 		apiClient := &mockAPIClient{token: token}
-		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 		long := strings.Repeat("a", 33)
 		err := uc.SetStatusDescription(ctx, long)
 		if err == nil {
@@ -976,7 +976,7 @@ func TestIdentityUseCase_SetStatusAndDescription(t *testing.T) {
 			token:      token,
 			setBothErr: fmt.Errorf("%w: PUT /users/usr_both", vrchatapi.ErrSessionExpired),
 		}
-		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo, nil)
 		err := uc.SetStatusAndDescription(ctx, "join me", "イベント")
 		if !errors.Is(err, vrchatapi.ErrSessionExpired) {
 			t.Fatalf("SetStatusAndDescription: want ErrSessionExpired, got %v", err)
@@ -997,7 +997,7 @@ func TestIdentityUseCase_SetStatusAndDescription(t *testing.T) {
 			},
 		}
 		apiClient := &mockAPIClient{token: token}
-		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 		if err := uc.SetStatusAndDescription(ctx, "busy", "集中"); err != nil {
 			t.Fatalf("SetStatusAndDescription: %v", err)
 		}
@@ -1017,7 +1017,7 @@ func TestIdentityUseCase_SetStatusAndDescription(t *testing.T) {
 			},
 		}
 		apiClient := &mockAPIClient{token: token}
-		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 		long := strings.Repeat("b", 33)
 		err := uc.SetStatusAndDescription(ctx, "busy", long)
 		if err == nil {
@@ -1040,7 +1040,7 @@ func TestIdentityUseCase_ListFriends_refreshesWhenStale(t *testing.T) {
 		token:      "t",
 		getFriends: []vrchatapi.Friend{{ID: "f1", DisplayName: "F1", Status: "active"}},
 	}
-	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 
 	list, err := uc.ListFriends(ctx)
 	if err != nil {
@@ -1068,7 +1068,7 @@ func TestIdentityUseCase_ListFriends_skipsRefreshWhenFresh(t *testing.T) {
 		token:      "t",
 		getFriends: []vrchatapi.Friend{{ID: "new", DisplayName: "N", Status: "active"}},
 	}
-	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 	list, err := uc.ListFriends(ctx)
 	if err != nil {
 		t.Fatalf("ListFriends: %v", err)
@@ -1086,7 +1086,7 @@ func TestIdentityUseCase_RefreshFriends_sets_sync_timestamp(t *testing.T) {
 	settingsRepo := newMockSettingsRepo()
 	userRepo := &mockUserCacheRepo{}
 	apiClient := &mockAPIClient{token: "t", getFriends: []vrchatapi.Friend{}}
-	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 	if err := uc.RefreshFriends(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -1119,7 +1119,7 @@ func TestIdentityUseCase_RefreshFriends_preservesSelfRow(t *testing.T) {
 			Status:      "join me",
 		}},
 	}
-	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo)
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
 	if err := uc.RefreshFriends(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -1139,7 +1139,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_notLoggedIn_cacheHit(t 
 	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
 	apiClient := &mockAPIClient{}
 	settingsRepo := newMockSettingsRepo()
-	uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo)
+	uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo, nil)
 	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "u1")
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
@@ -1163,7 +1163,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_notLoggedIn_friendOpens
 	credStore := vrchatapi.NewStubCredentialStore()
 	row := &identity.UserCache{VRCUserID: "u1", DisplayName: "F", UserKind: identity.UserKindFriend}
 	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
-	uc := NewIdentityUseCase(userRepo, &mockAPIClient{}, credStore, newMockSettingsRepo())
+	uc := NewIdentityUseCase(userRepo, &mockAPIClient{}, credStore, newMockSettingsRepo(), nil)
 	_, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "u1")
 	if err != nil {
 		t.Fatal(err)
@@ -1180,7 +1180,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_notLoggedIn_miss(t *tes
 	ctx := context.Background()
 	credStore := vrchatapi.NewStubCredentialStore()
 	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{}}
-	uc := NewIdentityUseCase(userRepo, &mockAPIClient{}, credStore, newMockSettingsRepo())
+	uc := NewIdentityUseCase(userRepo, &mockAPIClient{}, credStore, newMockSettingsRepo(), nil)
 	_, _, _, err := uc.ResolveUserProfileForNavigation(ctx, "missing")
 	if !errors.Is(err, ErrProfileNotInCache) {
 		t.Fatalf("want ErrProfileNotInCache, got %v", err)
@@ -1199,7 +1199,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_newContactFrom
 			Status:      "active",
 		},
 	}
-	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "usr_new")
 	if err != nil {
 		t.Fatal(err)
@@ -1230,7 +1230,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_friendFromAPI(
 			Status:      "active",
 		},
 	}
-	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "usr_f")
 	if err != nil {
 		t.Fatal(err)
@@ -1248,7 +1248,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_apiErr_fallsBa
 	row := &identity.UserCache{VRCUserID: "u1", DisplayName: "Cached", UserKind: identity.UserKindContact}
 	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
 	apiClient := &mockAPIClient{token: "tok", getUserErr: errors.New("network")}
-	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "u1")
 	if err != nil {
 		t.Fatal(err)
@@ -1282,7 +1282,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_selfOpensSelfP
 			DisplayName: "Me",
 		},
 	}
-	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "usr_self")
 	if err != nil {
 		t.Fatal(err)
@@ -1316,7 +1316,7 @@ func TestIdentityUseCase_GetSelfProfile_ok(t *testing.T) {
 			DisplayName: "Self",
 		},
 	}
-	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	got, err := uc.GetSelfProfile(ctx, false)
 	if err != nil {
 		t.Fatal(err)
@@ -1328,7 +1328,7 @@ func TestIdentityUseCase_GetSelfProfile_ok(t *testing.T) {
 
 func TestIdentityUseCase_GetSelfProfile_notAuthenticated(t *testing.T) {
 	ctx := context.Background()
-	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	_, err := uc.GetSelfProfile(ctx, false)
 	if !errors.Is(err, vrchatapi.ErrNotAuthenticated) {
 		t.Fatalf("got %v", err)
@@ -1338,7 +1338,7 @@ func TestIdentityUseCase_GetSelfProfile_notAuthenticated(t *testing.T) {
 func TestIdentityUseCase_GetCredentialBlob(t *testing.T) {
 	ctx := context.Background()
 	credStore := vrchatapi.NewStubCredentialStore()
-	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{}, credStore, newMockSettingsRepo())
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{}, credStore, newMockSettingsRepo(), nil)
 
 	got, err := uc.GetCredentialBlob(ctx)
 	if err != nil || got != "" {
@@ -1356,7 +1356,7 @@ func TestIdentityUseCase_ListFavorites(t *testing.T) {
 	ctx := context.Background()
 	fav := &identity.UserCache{VRCUserID: "f1", IsFavorite: true}
 	userRepo := &mockUserCacheRepo{listFavorites: []*identity.UserCache{fav}}
-	uc := NewIdentityUseCase(userRepo, &mockAPIClient{}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(userRepo, &mockAPIClient{}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	got, err := uc.ListFavorites(ctx)
 	if err != nil || len(got) != 1 || got[0].VRCUserID != "f1" {
 		t.Fatalf("ListFavorites = %+v err=%v", got, err)
@@ -1370,7 +1370,7 @@ func TestIdentityUseCase_SetFavorite_existingAndNew(t *testing.T) {
 			"usr_f": {VRCUserID: "usr_f", UserKind: identity.UserKindFriend, IsFavorite: false},
 		},
 	}
-	uc := NewIdentityUseCase(userRepo, &mockAPIClient{}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(userRepo, &mockAPIClient{}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 
 	if err := uc.SetFavorite(ctx, "usr_f", true); err != nil {
 		t.Fatal(err)
@@ -1415,7 +1415,7 @@ func TestIdentityUseCase_RefreshFriends_notifiesFavoriteOnline(t *testing.T) {
 			{ID: "fav1", DisplayName: "Fav", Status: "active"},
 		},
 	}
-	uc := NewIdentityUseCaseWithNotifier(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), notifier)
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), notifier)
 	if err := uc.RefreshFriends(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -1427,7 +1427,7 @@ func TestIdentityUseCase_RefreshFriends_notifiesFavoriteOnline(t *testing.T) {
 func TestIdentityUseCase_Logout_returnsSelfDeleteError(t *testing.T) {
 	ctx := context.Background()
 	userRepo := &mockUserCacheRepo{deleteSelfErr: errors.New("self delete failed")}
-	uc := NewIdentityUseCase(userRepo, &mockAPIClient{token: "t"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo())
+	uc := NewIdentityUseCase(userRepo, &mockAPIClient{token: "t"}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
 	err := uc.Logout(ctx)
 	if err == nil || !strings.Contains(err.Error(), "self delete failed") {
 		t.Fatalf("Logout err = %v", err)
