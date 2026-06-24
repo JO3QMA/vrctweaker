@@ -238,6 +238,86 @@ func TestUserCacheRepository_List_onlyFriendsWithStatus(t *testing.T) {
 	}
 }
 
+func TestUserCacheRepository_List_omitsUnnamedFriends(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	if migErr := applySchema(db); migErr != nil {
+		t.Fatal(migErr)
+	}
+	repo := NewUserCacheRepository(db)
+	ctx := context.Background()
+	at := time.Now().UTC()
+	for _, u := range []*identity.UserCache{
+		{
+			VRCUserID: "usr_named", DisplayName: "Named", Status: "active",
+			UserKind: identity.UserKindFriend, LastUpdated: at,
+		},
+		{
+			VRCUserID: "usr_unnamed", DisplayName: "", Status: "active", Platform: "web",
+			UserKind: identity.UserKindFriend, LastUpdated: at,
+		},
+	} {
+		if saveErr := repo.Save(ctx, u); saveErr != nil {
+			t.Fatal(saveErr)
+		}
+	}
+	list, err := repo.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].VRCUserID != "usr_named" {
+		t.Fatalf("List = %+v, want only named friend", list)
+	}
+}
+
+func TestApplyDataMigrations_demotesUnnamedFriends(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	if migErr := applySchema(db); migErr != nil {
+		t.Fatal(migErr)
+	}
+	repo := NewUserCacheRepository(db)
+	ctx := context.Background()
+	at := time.Now().UTC()
+	if saveErr := repo.Save(ctx, &identity.UserCache{
+		VRCUserID: "usr_orphan", DisplayName: "", Status: "active", Platform: "web",
+		IsFavorite: true, UserKind: identity.UserKindFriend, LastUpdated: at,
+	}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+	if migErr := applyDataMigrations(db); migErr != nil {
+		t.Fatal(migErr)
+	}
+	got, err := repo.GetByVRCUserID(ctx, "usr_orphan")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.UserKind != identity.UserKindContact {
+		t.Fatalf("user_kind = %q, want contact", got.UserKind)
+	}
+	if got.IsFavorite {
+		t.Fatal("is_favorite should be cleared on demotion")
+	}
+	if got.Status != "active" || got.Platform != "web" {
+		t.Fatalf("presence should remain: %+v", got)
+	}
+	list, err := repo.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 0 {
+		t.Fatalf("List = %+v, want empty", list)
+	}
+}
+
 func TestUserCacheRepository_SaveBatch_persistsFriendExtendedFields(t *testing.T) {
 	dir := t.TempDir()
 	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db")+"?_pragma=foreign_keys(1)")

@@ -228,6 +228,10 @@ func (m *screenshotAuthorUserCacheMock) UpsertSelf(_ context.Context, _ *identit
 }
 func (m *screenshotAuthorUserCacheMock) DeleteSelfRows(_ context.Context) error { return nil }
 
+func (m *screenshotAuthorUserCacheMock) ListContactsNeedingProfileResolution(_ context.Context) ([]*identity.UserCache, error) {
+	return nil, nil
+}
+
 func TestMediaUseCase_IngestScreenshotFile_UpsertsAuthorInUserCache(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "ingest_author.png")

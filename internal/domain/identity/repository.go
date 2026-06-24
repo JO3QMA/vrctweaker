@@ -4,7 +4,7 @@ import "context"
 
 // UserCacheRepository defines persistence for users_cache.
 type UserCacheRepository interface {
-	// List returns rows that represent VRChat friends (status set by API sync), not log-only stubs.
+	// List returns Listable friends (named API friends with status), not log-only stubs or unresolved pipeline presence.
 	List(ctx context.Context) ([]*UserCache, error)
 	GetByVRCUserID(ctx context.Context, vrcUserID string) (*UserCache, error)
 	ListFavorites(ctx context.Context) ([]*UserCache, error)
@@ -18,4 +18,6 @@ type UserCacheRepository interface {
 	UpsertSelf(ctx context.Context, u *UserCache) error
 	// DeleteSelfRows removes all user_kind=self rows (e.g. on logout).
 	DeleteSelfRows(ctx context.Context) error
+	// ListContactsNeedingProfileResolution returns contact rows with pipeline presence but no display name.
+	ListContactsNeedingProfileResolution(ctx context.Context) ([]*UserCache, error)
 }

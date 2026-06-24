@@ -394,6 +394,10 @@ func (r *activityUserCacheRepo) UpsertSelf(_ context.Context, _ *identity.UserCa
 }
 func (r *activityUserCacheRepo) DeleteSelfRows(_ context.Context) error { return nil }
 
+func (r *activityUserCacheRepo) ListContactsNeedingProfileResolution(_ context.Context) ([]*identity.UserCache, error) {
+	return nil, nil
+}
+
 type worldInfoLookupRepo struct {
 	byWorld map[string]*activity.WorldInfo
 	calls   []string
