@@ -29,6 +29,23 @@ func (f EventHandlerFunc) Handle(event activity.ParsedEvent) {
 	f(event)
 }
 
+// LogFileSwitchHandler is invoked when the watcher begins tailing a different output_log file,
+// or when the current file was truncated in place. previousPath is empty on the first file.
+type LogFileSwitchHandler interface {
+	OnLogFileSwitch(ctx context.Context, previousPath, newPath string) error
+}
+
+// LogFileSwitchHandlerFunc adapts a function to LogFileSwitchHandler.
+type LogFileSwitchHandlerFunc func(ctx context.Context, previousPath, newPath string) error
+
+// OnLogFileSwitch implements LogFileSwitchHandler.
+func (f LogFileSwitchHandlerFunc) OnLogFileSwitch(ctx context.Context, previousPath, newPath string) error {
+	if f == nil {
+		return nil
+	}
+	return f(ctx, previousPath, newPath)
+}
+
 // LogParser parses a log line into events.
 type LogParser interface {
 	ParseLine(line string, baseTime time.Time) ([]activity.ParsedEvent, error)
@@ -44,11 +61,10 @@ type OutputLogWatcher struct {
 	parser         LogParser
 	handler        EventHandler
 	logger         Logger
-	// onActiveLogPathChange is optional; in directory mode, called after a successful open+seek
-	// when the tailed file path differs from the previous one (not called on the first file).
-	// Used to clear ActivityIngestAdapter correlator state so lines before Joining in the new file
-	// do not inherit the previous log file's world/instance context.
-	onActiveLogPathChange func()
+	// logFileSwitchHandler is optional; called when tailing switches to another output_log file
+	// or when the current file was truncated. Used to finalize open activity rows and ingest
+	// startup lines already written to the new file before the watcher seeks to EOF.
+	logFileSwitchHandler LogFileSwitchHandler
 
 	mu        sync.Mutex
 	status    string // "idle", "running", "stopped"
@@ -79,12 +95,12 @@ func NewOutputLogWatcher(configuredPath string, parser LogParser, handler EventH
 	return w
 }
 
-// SetOnActiveLogPathChange registers a callback invoked in directory mode when the watcher
-// begins tailing a different output_log*.txt path than before. Call before Start.
-func (w *OutputLogWatcher) SetOnActiveLogPathChange(fn func()) {
+// SetLogFileSwitchHandler registers a callback invoked when the tailed output_log path changes
+// or the current file is truncated. Call before Start.
+func (w *OutputLogWatcher) SetLogFileSwitchHandler(h LogFileSwitchHandler) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	w.onActiveLogPathChange = fn
+	w.logFileSwitchHandler = h
 }
 
 func (w *OutputLogWatcher) resolveActivePath() (string, error) {
@@ -193,12 +209,14 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 			continue
 		}
 
-		if w.watchDir != "" && activePath != w.lastTailedPath && w.lastTailedPath != "" {
+		if w.lastTailedPath != "" && activePath != w.lastTailedPath {
 			w.mu.Lock()
-			cb := w.onActiveLogPathChange
+			h := w.logFileSwitchHandler
 			w.mu.Unlock()
-			if cb != nil {
-				cb()
+			if h != nil {
+				if switchErr := h.OnLogFileSwitch(ctx, w.lastTailedPath, activePath); switchErr != nil {
+					w.logger.Printf("[logwatcher] log file switch: %v", switchErr)
+				}
 			}
 		}
 		w.lastTailedPath = activePath
@@ -228,7 +246,19 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 					_ = f.Close()
 					break readLoop
 				}
-				if curInfo.ModTime() != info.ModTime() || curInfo.Size() < initialSize {
+				if curInfo.Size() < initialSize {
+					w.mu.Lock()
+					h := w.logFileSwitchHandler
+					w.mu.Unlock()
+					if h != nil {
+						if switchErr := h.OnLogFileSwitch(ctx, activePath, activePath); switchErr != nil {
+							w.logger.Printf("[logwatcher] log file truncate: %v", switchErr)
+						}
+					}
+					_ = f.Close()
+					break readLoop
+				}
+				if curInfo.ModTime() != info.ModTime() {
 					_ = f.Close()
 					break readLoop
 				}
