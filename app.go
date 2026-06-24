@@ -52,6 +52,10 @@ type App struct {
 	sleepSuppressMu     sync.Mutex
 	sleepSuppressCancel context.CancelFunc
 	sleepSuppressWG     sync.WaitGroup
+
+	activityWatchMu     sync.Mutex
+	activityWatchCancel context.CancelFunc
+	activityWatchWG     sync.WaitGroup
 }
 
 // NewApp creates a new App application struct.
@@ -125,6 +129,7 @@ func (a *App) startup(ctx context.Context) {
 
 // onShutdown persists state before the process exits (Wails lifecycle).
 func (a *App) onShutdown(ctx context.Context) {
+	a.stopVRChatActivityMonitor()
 	a.stopSleepSuppressLoop()
 	if a.settings == nil {
 		return
@@ -436,12 +441,24 @@ func (a *App) startOutputLogWatcher(ctx context.Context, eventBus event.EventBus
 	}
 	ingestAdapter.SetSuppressEncounterNotify(false)
 
+	watchDeps := activityLogWatchDeps{
+		watchPath:      watchPath,
+		parser:         parser,
+		ingestAdapter:  ingestAdapter,
+		handler:        handler,
+		logger:         logger,
+		emitEncounters: emitEncounters,
+	}
+
 	watcher := logwatcher.NewOutputLogWatcher(watchPath, parser, handler, logger)
-	watcher.SetOnActiveLogPathChange(ingestAdapter.ResetSessionContextForNewLogFile)
+	watcher.SetLogFileSwitchHandler(logwatcher.LogFileSwitchHandlerFunc(func(c context.Context, previousPath, newPath string) error {
+		return a.handleActivityLogFileSwitch(c, watchDeps, previousPath, newPath)
+	}))
 	if startErr := watcher.Start(ctx); startErr != nil {
 		runtime.LogError(ctx, "failed to start output_log watcher: "+startErr.Error())
 		return
 	}
+	a.startVRChatActivityMonitor(ctx, watchPath)
 	runtime.LogInfo(ctx, "output_log watcher started for "+watchPath)
 }
 

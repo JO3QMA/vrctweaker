@@ -143,6 +143,72 @@ func TestOutputLogWatcher_DirectoryMode_SwitchesToNewerFile(t *testing.T) {
 	}
 }
 
+func TestOutputLogWatcher_DirectoryMode_IngestsPrefixedLinesOnSwitch(t *testing.T) {
+	dir := t.TempDir()
+	oldPath := filepath.Join(dir, "output_log_2026-01-01_00-00-00.txt")
+	newPath := filepath.Join(dir, "output_log_2026-03-22_00-47-45.txt")
+	const cozyWorld = "wrld_6041ba53-0ac0-4b5b-9ecb-890ea2b0aefa"
+	cozyInst := cozyWorld + ":48580~friends(usr_b4cb47f9-ca01-43db-baa3-ce3fb98ff0d4)~region(jp)"
+	prefixed := []byte(
+		"2026.03.22 00:47:45 Debug      -  [Behaviour] Destination set: " + cozyInst + "\n" +
+			"2026.03.22 00:47:46 Debug      -  [Behaviour] Entering Room: Cozy with․\n",
+	)
+	if err := os.WriteFile(oldPath, []byte(""), 0600); err != nil {
+		t.Fatal(err)
+	}
+	oldT := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	if err := os.Chtimes(oldPath, oldT, oldT); err != nil {
+		t.Fatal(err)
+	}
+
+	parser := activity.NewLogParser()
+	var mu sync.Mutex
+	var received []activity.ParsedEvent
+	handler := EventHandlerFunc(func(ev activity.ParsedEvent) {
+		mu.Lock()
+		received = append(received, ev)
+		mu.Unlock()
+	})
+
+	watcher := NewOutputLogWatcher(dir, parser, handler, nil)
+	watcher.SetLogFileSwitchHandler(LogFileSwitchHandlerFunc(func(ctx context.Context, _, newPath string) error {
+		_, err := ProcessOutputLogFileFromOffset(ctx, newPath, 0, parser, handler, nil, nil)
+		return err
+	}))
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := watcher.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(200 * time.Millisecond)
+
+	if err := os.WriteFile(newPath, prefixed, 0600); err != nil {
+		t.Fatal(err)
+	}
+	newT := time.Date(2026, 3, 22, 0, 47, 45, 0, time.UTC)
+	if err := os.Chtimes(newPath, newT, newT); err != nil {
+		t.Fatal(err)
+	}
+
+	deadline := time.Now().Add(4 * time.Second)
+	for time.Now().Before(deadline) {
+		mu.Lock()
+		n := len(received)
+		mu.Unlock()
+		if n >= 2 {
+			break
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+
+	mu.Lock()
+	defer mu.Unlock()
+	if len(received) < 2 {
+		t.Fatalf("handler received %d events after switch, want at least 2 (destination + room name)", len(received))
+	}
+}
+
 func TestOutputLogWatcher_DirectoryMode_OnActiveLogPathChangeOnSwitch(t *testing.T) {
 	dir := t.TempDir()
 	oldPath := filepath.Join(dir, "output_log_2026-01-01_00-00-00.txt")
@@ -160,9 +226,10 @@ func TestOutputLogWatcher_DirectoryMode_OnActiveLogPathChangeOnSwitch(t *testing
 
 	var pathChangeCalls atomic.Int32
 	watcher := NewOutputLogWatcher(dir, parser, handler, nil)
-	watcher.SetOnActiveLogPathChange(func() {
+	watcher.SetLogFileSwitchHandler(LogFileSwitchHandlerFunc(func(context.Context, string, string) error {
 		pathChangeCalls.Add(1)
-	})
+		return nil
+	}))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
