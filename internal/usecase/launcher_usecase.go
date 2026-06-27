@@ -16,13 +16,22 @@ import (
 	"vrchat-tweaker/internal/domain/launcher"
 )
 
+// ponytail:#129 domain LaunchProfileRepository removed; boundary stays usecase-local.
+type launchProfileRepo interface {
+	List(ctx context.Context) ([]*launcher.LaunchProfile, error)
+	GetByID(ctx context.Context, id string) (*launcher.LaunchProfile, error)
+	GetDefault(ctx context.Context) (*launcher.LaunchProfile, error)
+	Save(ctx context.Context, p *launcher.LaunchProfile) error
+	Delete(ctx context.Context, id string) error
+}
+
 // LauncherUseCase handles launch profile and VRChat launch logic.
 type LauncherUseCase struct {
-	repo launcher.LaunchProfileRepository
+	repo launchProfileRepo
 }
 
 // NewLauncherUseCase creates a new LauncherUseCase.
-func NewLauncherUseCase(repo launcher.LaunchProfileRepository) *LauncherUseCase {
+func NewLauncherUseCase(repo launchProfileRepo) *LauncherUseCase {
 	return &LauncherUseCase{repo: repo}
 }
 

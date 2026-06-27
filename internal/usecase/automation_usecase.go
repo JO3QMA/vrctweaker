@@ -12,6 +12,15 @@ type StatusSetter interface {
 	SetStatus(ctx context.Context, status string) error
 }
 
+// ponytail:#129 domain AutomationRuleRepository removed; boundary stays usecase-local.
+type automationRuleRepo interface {
+	List(ctx context.Context) ([]*automation.AutomationRule, error)
+	ListEnabled(ctx context.Context) ([]*automation.AutomationRule, error)
+	GetByID(ctx context.Context, id string) (*automation.AutomationRule, error)
+	Save(ctx context.Context, r *automation.AutomationRule) error
+	Delete(ctx context.Context, id string) error
+}
+
 // change_status で許可するステータス値
 var allowedStatuses = map[string]bool{
 	"busy":    true,
@@ -21,12 +30,12 @@ var allowedStatuses = map[string]bool{
 
 // AutomationUseCase handles automation rules and rule engine execution.
 type AutomationUseCase struct {
-	repo         automation.AutomationRuleRepository
+	repo         automationRuleRepo
 	statusSetter StatusSetter
 }
 
 // NewAutomationUseCase creates a new AutomationUseCase.
-func NewAutomationUseCase(repo automation.AutomationRuleRepository, statusSetter StatusSetter) *AutomationUseCase {
+func NewAutomationUseCase(repo automationRuleRepo, statusSetter StatusSetter) *AutomationUseCase {
 	return &AutomationUseCase{
 		repo:         repo,
 		statusSetter: statusSetter,

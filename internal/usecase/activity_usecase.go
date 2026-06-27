@@ -99,7 +99,7 @@ func (uc *ActivityUseCase) ListEncountersWithContext(ctx context.Context, filter
 }
 
 // ApplyCommand executes a fine-grained activity ingest command from SessionCorrelator.
-func (uc *ActivityUseCase) ApplyCommand(ctx context.Context, cmd activity.ActivityCommand) error {
+func (uc *ActivityUseCase) ApplyCommand(ctx context.Context, cmd any) error {
 	if cmd == nil {
 		return nil
 	}

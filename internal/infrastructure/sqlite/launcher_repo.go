@@ -8,10 +8,7 @@ import (
 	"vrchat-tweaker/internal/domain/launcher"
 )
 
-// Ensure LauncherProfileRepository implements launcher.LaunchProfileRepository.
-var _ launcher.LaunchProfileRepository = (*LauncherProfileRepository)(nil)
-
-// LauncherProfileRepository implements launcher.LaunchProfileRepository.
+// LauncherProfileRepository persists launch profiles in SQLite.
 type LauncherProfileRepository struct {
 	db *sql.DB
 }

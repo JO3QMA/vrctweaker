@@ -21,6 +21,7 @@ Accepted（grill-with-docs セッションで合意）
 5. **UI 通知**（遭遇ログ変更）は Wails 固有の関心とし、correlator は知らない。Adapter が encounter 系 command 適用後に `NotifyEncounterLogChanged` を実行する（bootstrap 中は抑制）
 6. **未消費の ParsedEvent**（`AvatarSwitch` / `VideoPlayback`）はパーサーに残し、correlator は空 command を返す（スコープ外）
 7. **移行**は 2 段階 PR: PR1 で correlator・command・`ApplyCommand`・domain テスト（挙動不変）、PR2 で adapter 配線と `ActivityEventHandler` 相関ロジック削除
+8. **ponytail #138（2026-06）**: sealed `ActivityCommand` interface は廃止。command は具象 struct のまま、correlator は `[]any` を返し `ApplyCommand(ctx, any)` の type switch で永続化する
 
 ### Command 型（fine-grained、想定）
 

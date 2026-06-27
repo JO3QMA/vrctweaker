@@ -24,14 +24,14 @@ func (c *SessionCorrelator) Reset() {
 
 // Apply consumes one parsed event and returns commands to persist. AvatarSwitch and VideoPlayback
 // yield nil (out of scope until a consumer exists).
-func (c *SessionCorrelator) Apply(event ParsedEvent) []ActivityCommand {
+func (c *SessionCorrelator) Apply(event ParsedEvent) []any {
 	if event == nil {
 		return nil
 	}
 	switch e := event.(type) {
 	case *DestinationSetEvent:
 		c.pendingDestinationWorldID = e.WorldID
-		return []ActivityCommand{UpsertWorldVisitCmd{WorldID: e.WorldID, At: e.OccurredAt}}
+		return []any{UpsertWorldVisitCmd{WorldID: e.WorldID, At: e.OccurredAt}}
 	case *RoomNameEvent:
 		// Entering Room names the destination world. During a transition the old session may still
 		// be active until OnLeftRoom; prefer pending Destination set over sessionWorldID.
@@ -39,7 +39,7 @@ func (c *SessionCorrelator) Apply(event ParsedEvent) []ActivityCommand {
 		if wid == "" {
 			wid = c.sessionWorldID
 		}
-		return []ActivityCommand{UpsertWorldRoomNameCmd{
+		return []any{UpsertWorldRoomNameCmd{
 			WorldID:  wid,
 			RoomName: e.RoomName,
 			At:       e.OccurredAt,
@@ -60,7 +60,7 @@ func (c *SessionCorrelator) Apply(event ParsedEvent) []ActivityCommand {
 			wid = c.pendingDestinationWorldID
 		}
 		if e.Action == EncounterActionJoin {
-			return []ActivityCommand{RecordEncounterJoinCmd{
+			return []any{RecordEncounterJoinCmd{
 				VRCUserID:   e.VRCUserID,
 				DisplayName: e.DisplayName,
 				InstanceID:  inst,
@@ -68,7 +68,7 @@ func (c *SessionCorrelator) Apply(event ParsedEvent) []ActivityCommand {
 				At:          e.EncounteredAt,
 			}}
 		}
-		return []ActivityCommand{RecordEncounterLeaveCmd{
+		return []any{RecordEncounterLeaveCmd{
 			VRCUserID:   e.VRCUserID,
 			DisplayName: e.DisplayName,
 			InstanceID:  inst,
@@ -82,7 +82,7 @@ func (c *SessionCorrelator) Apply(event ParsedEvent) []ActivityCommand {
 	}
 }
 
-func (c *SessionCorrelator) applySession(e *SessionEvent) []ActivityCommand {
+func (c *SessionCorrelator) applySession(e *SessionEvent) []any {
 	switch e.Type {
 	case SessionEventStart:
 		if e.InstanceID == "" {
@@ -97,7 +97,7 @@ func (c *SessionCorrelator) applySession(e *SessionEvent) []ActivityCommand {
 			c.sessionWorldID = ""
 		}
 		c.pendingDestinationWorldID = ""
-		return []ActivityCommand{
+		return []any{
 			EndPlaySessionCmd{At: e.OccurredAt},
 			CloseOpenEncountersAtCmd{At: e.OccurredAt},
 			StartPlaySessionCmd{InstanceID: e.InstanceID, At: e.OccurredAt},
@@ -107,7 +107,7 @@ func (c *SessionCorrelator) applySession(e *SessionEvent) []ActivityCommand {
 		c.lastLeftWorldID = c.sessionWorldID
 		c.sessionInstanceID = ""
 		c.sessionWorldID = ""
-		return []ActivityCommand{EndPlaySessionCmd{At: e.OccurredAt}}
+		return []any{EndPlaySessionCmd{At: e.OccurredAt}}
 	default:
 		return nil
 	}

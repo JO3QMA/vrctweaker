@@ -7,9 +7,7 @@ import (
 	"vrchat-tweaker/internal/domain/automation"
 )
 
-var _ automation.AutomationRuleRepository = (*AutomationRuleRepository)(nil)
-
-// AutomationRuleRepository implements automation.AutomationRuleRepository.
+// AutomationRuleRepository persists automation rules in SQLite.
 type AutomationRuleRepository struct {
 	db *sql.DB
 }
