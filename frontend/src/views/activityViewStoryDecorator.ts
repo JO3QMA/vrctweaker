@@ -56,6 +56,7 @@ export const sampleActivityEncounters: UserEncounterDTO[] = [
     worldDisplayName: "Sample World",
     joinedAt: new Date(Date.now() - 3_600_000).toISOString(),
     leftAt: new Date(Date.now() - 1_800_000).toISOString(),
+    isFirstEncounter: false,
   },
 ];
 

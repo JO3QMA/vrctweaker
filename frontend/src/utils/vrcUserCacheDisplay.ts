@@ -10,6 +10,10 @@ export function friendLocationLabel(loc: string | undefined): string {
   return loc;
 }
 
+export function friendIsOffline(status: string): boolean {
+  return !status || status.toLowerCase() === "offline";
+}
+
 export function friendThumbUrl(f: UserCacheDTO): string | undefined {
   return (
     f.currentAvatarThumbnailImageUrl ||

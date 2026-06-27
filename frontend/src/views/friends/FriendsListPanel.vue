@@ -42,7 +42,7 @@
 import { useI18n } from "vue-i18n";
 import VrcStatusTag from "../../components/VrcStatusTag.vue";
 import type { UserCacheDTO } from "../../wails/app";
-import { friendThumbUrl } from "./friendsViewUtils";
+import { friendThumbUrl } from "@/utils/vrcUserCacheDisplay";
 
 const { t } = useI18n();
 
