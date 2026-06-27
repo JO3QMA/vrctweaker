@@ -2,6 +2,7 @@ package logwatcher
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -280,4 +281,105 @@ func TestActivityIngestAdapter_ReingestDoesNotDuplicateJoin(t *testing.T) {
 	if len(spy.saves) != 1 {
 		t.Fatalf("Save calls = %d, want 1 after re-ingest", len(spy.saves))
 	}
+}
+
+type errWorldInfoRepo struct {
+	spyWorldInfoRepo
+	visitErr   error
+	displayErr error
+}
+
+func (e *errWorldInfoRepo) UpsertVisit(context.Context, string, time.Time) error {
+	return e.visitErr
+}
+
+func (e *errWorldInfoRepo) UpsertDisplayName(context.Context, string, string, time.Time) error {
+	return e.displayErr
+}
+
+type errEncounterRepo struct{ stubEncounterRepo }
+
+func (errEncounterRepo) Save(context.Context, *activity.UserEncounter) error {
+	return errors.New("save fail")
+}
+
+func (errEncounterRepo) CloseOpenEncountersAt(context.Context, time.Time) (int64, error) {
+	return 0, errors.New("close encounters fail")
+}
+
+type errPlaySessionRepo struct{ stubPlaySessionRepo }
+
+func (errPlaySessionRepo) Save(context.Context, *activity.PlaySession) error {
+	return errors.New("save fail")
+}
+
+func (errPlaySessionRepo) FindLatestWithoutEndTime(context.Context) (*activity.PlaySession, error) {
+	return &activity.PlaySession{ID: "open", StartTime: time.Now().Add(-time.Minute)}, nil
+}
+
+func TestActivityIngestAdapter_LogsUpsertErrors(t *testing.T) {
+	ctx := context.Background()
+	base := time.Now()
+
+	worldRepo := &errWorldInfoRepo{
+		visitErr:   errors.New("visit fail"),
+		displayErr: errors.New("display fail"),
+	}
+	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, stubEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, worldRepo)
+	buf := &raceSafeLogBuffer{}
+	h := NewActivityIngestAdapter(uc, ctx, buf.logger(), nil)
+
+	h.Handle(nil)
+	h.Handle(&activity.DestinationSetEvent{WorldID: testWorldID, OccurredAt: base})
+	h.Handle(&activity.RoomNameEvent{RoomName: "Room", OccurredAt: base})
+
+	if buf.len() < 2 {
+		t.Fatalf("logs = %d, want visit and display errors", buf.len())
+	}
+}
+
+func TestActivityIngestAdapter_SessionStartEmptyInstanceIgnored(t *testing.T) {
+	ctx := context.Background()
+	h := NewActivityIngestAdapter(
+		usecase.NewActivityUseCase(stubPlaySessionRepo{}, stubEncounterRepo{}, &fakeAppSettingsRepo{m: map[string]string{}}, nil, nil),
+		ctx, nil, nil,
+	)
+	h.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: "", OccurredAt: time.Now()})
+}
+
+func TestActivityIngestAdapter_EncounterRecordErrorLogged(t *testing.T) {
+	ctx := context.Background()
+	buf := &raceSafeLogBuffer{}
+	encRepo := &errEncounterRepo{}
+	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, encRepo, &fakeAppSettingsRepo{m: map[string]string{}}, nil, nil)
+	h := NewActivityIngestAdapter(uc, ctx, buf.logger(), nil)
+	h.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: testFullInstance, OccurredAt: time.Now()})
+	h.Handle(&activity.EncounterEvent{
+		VRCUserID: "usr_x", DisplayName: "X", Action: activity.EncounterActionJoin, EncounteredAt: time.Now(),
+	})
+	if buf.len() == 0 {
+		t.Fatal("expected encounter error log")
+	}
+}
+
+func TestActivityIngestAdapter_SessionErrorsLogged(t *testing.T) {
+	ctx := context.Background()
+	buf := &raceSafeLogBuffer{}
+	playRepo := &errPlaySessionRepo{}
+	encRepo := &errEncounterRepo{}
+	uc := usecase.NewActivityUseCase(playRepo, encRepo, &fakeAppSettingsRepo{m: map[string]string{}}, nil, nil)
+	h := NewActivityIngestAdapter(uc, ctx, buf.logger(), nil)
+	h.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: testFullInstance, OccurredAt: time.Now()})
+	h.Handle(&activity.SessionEvent{Type: activity.SessionEventEnd, OccurredAt: time.Now()})
+	if buf.len() < 2 {
+		t.Fatalf("expected session error logs, got %d", buf.len())
+	}
+}
+
+func TestActivityIngestAdapter_DefaultLoggerOnUpsertError(t *testing.T) {
+	ctx := context.Background()
+	worldRepo := &errWorldInfoRepo{visitErr: errors.New("visit fail")}
+	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, stubEncounterRepo{}, &fakeAppSettingsRepo{m: map[string]string{}}, nil, worldRepo)
+	h := NewActivityIngestAdapter(uc, ctx, nil, nil)
+	h.Handle(&activity.DestinationSetEvent{WorldID: testWorldID, OccurredAt: time.Now()})
 }
