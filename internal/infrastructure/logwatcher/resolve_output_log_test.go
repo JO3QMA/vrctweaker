@@ -1,6 +1,7 @@
 package logwatcher
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -168,5 +169,60 @@ func TestResolveLatestOutputLogFile_SameModTime_NameTieBreak(t *testing.T) {
 	}
 	if got != bPath {
 		t.Fatalf("same mtime: got %q, want %q (lexicographic last)", got, bPath)
+	}
+}
+
+func TestListOutputLogFiles_EmptyDirectory(t *testing.T) {
+	_, err := ListOutputLogFiles(t.TempDir())
+	if !errors.Is(err, ErrNoOutputLogFiles) {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestOutputLogPathValid_missingPath(t *testing.T) {
+	if OutputLogPathValid(filepath.Join(t.TempDir(), "nope")) {
+		t.Fatal("missing path should be invalid")
+	}
+}
+
+func TestResolveLatestOutputLogFile_skipsDirectoryNamedLikeLog(t *testing.T) {
+	dir := t.TempDir()
+	target := filepath.Join(dir, "output_log_2026-01-01_00-00-00.txt")
+	if err := os.WriteFile(target, []byte("x"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(dir, "output_log_dir.txt"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	got, err := ResolveLatestOutputLogFile(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != target {
+		t.Fatalf("got %q want %q", got, target)
+	}
+}
+
+func TestListOutputLogFiles_onlyAuxiliaryFiles(t *testing.T) {
+	dir := t.TempDir()
+	aux := filepath.Join(dir, "output_log_2026-03-18_12-52-26.parsed_lines.txt")
+	if err := os.WriteFile(aux, []byte("x"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := ListOutputLogFiles(dir)
+	if !errors.Is(err, ErrNoOutputLogFiles) {
+		t.Fatalf("err = %v", err)
+	}
+}
+
+func TestResolveLatestOutputLogFile_onlyBrokenSymlink(t *testing.T) {
+	dir := t.TempDir()
+	link := filepath.Join(dir, "output_log_broken.txt")
+	if err := os.Symlink(filepath.Join(dir, "missing-target.txt"), link); err != nil {
+		t.Skip("symlink unsupported")
+	}
+	_, err := ResolveLatestOutputLogFile(dir)
+	if !errors.Is(err, ErrNoOutputLogFiles) {
+		t.Fatalf("err = %v", err)
 	}
 }
