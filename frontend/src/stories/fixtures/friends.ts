@@ -2,11 +2,7 @@ import type { UserCacheDTO } from "../../wails/app";
 
 /**
  * Storybook / プレビュー用フレンド一覧。
- *
- * フィールド構成とステータス種別の出方は、実DB
- * `docs/ai_dlc/vrchat-tweaker.db` の `users_cache`（user_kind = friend）を
- * 集計・サンプル抽出して基準にしている（例: active / offline が多く、busy は稀、など）。
- * vrcUserId・表示名・bio・各種 URL・インスタンス表記はプライバシーと再配布のため架空値。
+ * vrcUserId・表示名・bio・各種 URL は架空値。
  */
 export function sampleFriend(
   partial: Partial<UserCacheDTO> &
@@ -19,7 +15,6 @@ export function sampleFriend(
   } as UserCacheDTO;
 }
 
-/** 実DBに近い tags_json の一例（system_* / language_* が混ざる形） */
 const tagsSampleA =
   '["language_jpn","system_world_access","system_trust_basic","system_avatar_access","system_feedback_access"]';
 

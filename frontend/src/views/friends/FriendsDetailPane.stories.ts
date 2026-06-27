@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
 import { ref } from "vue";
 import FriendsDetailPane from "./FriendsDetailPane.vue";
-import { sampleFriendsList } from "./friendsSampleData";
+import { sampleFriendsList } from "../../stories/fixtures/friends";
 
 const meta = {
   title: "Views/FriendsView/DetailPane",
