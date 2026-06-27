@@ -45,7 +45,7 @@ import { ElMessage } from "element-plus";
 import FriendsDetailPane from "./friends/FriendsDetailPane.vue";
 import FriendsListPanel from "./friends/FriendsListPanel.vue";
 import FriendsViewToolbar from "./friends/FriendsViewToolbar.vue";
-import { friendIsOffline } from "./friends/friendsViewUtils";
+import { friendIsOffline } from "@/utils/vrcUserCacheDisplay";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
 import { App } from "../wails/app";
 import type { UserCacheDTO } from "../wails/app";

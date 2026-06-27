@@ -11,6 +11,7 @@ const sampleByUser: UserEncounterDTO[] = [
     worldDisplayName: "User Story World",
     joinedAt: "2026-03-01T12:00:00+09:00",
     leftAt: "2026-03-01T13:00:00+09:00",
+    isFirstEncounter: false,
   },
 ];
 
@@ -24,6 +25,7 @@ const sampleByWorld: UserEncounterDTO[] = [
     worldDisplayName: "World Story",
     joinedAt: "2026-03-02T09:00:00+09:00",
     leftAt: "2026-03-02T10:30:00+09:00",
+    isFirstEncounter: false,
   },
 ];
 

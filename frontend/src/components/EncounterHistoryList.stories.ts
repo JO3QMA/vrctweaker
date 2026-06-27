@@ -13,6 +13,7 @@ const rows: UserEncounterDTO[] = [
     worldDisplayName: "Test World",
     joinedAt: "2026-02-01T10:00:00+09:00",
     leftAt: "2026-02-01T11:00:00+09:00",
+    isFirstEncounter: false,
   },
 ];
 

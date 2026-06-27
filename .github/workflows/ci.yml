@@ -47,6 +47,15 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
 
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      - name: Generate Wails bindings
+        run: |
+          mkdir -p frontend/dist
+          echo '<!DOCTYPE html><html></html>' > frontend/dist/index.html
+          wails generate module
+
       - name: Build frontend (for //go:embed)
         run: cd frontend && pnpm install --frozen-lockfile && pnpm run build
 
@@ -73,6 +82,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+          cache-dependency-path: go.sum
+
       - uses: pnpm/action-setup@v6
         with:
           version: 9
@@ -82,6 +96,15 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      - name: Generate Wails bindings
+        run: |
+          mkdir -p frontend/dist
+          echo '<!DOCTYPE html><html></html>' > frontend/dist/index.html
+          wails generate module
 
       - name: Install
         run: cd frontend && pnpm install --frozen-lockfile

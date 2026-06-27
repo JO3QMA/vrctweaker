@@ -15,6 +15,7 @@ const storyEncounters: UserEncounterDTO[] = [
     worldDisplayName: "Storybook 用ワールド",
     joinedAt: "2026-01-15T12:00:00+09:00",
     leftAt: "2026-01-15T13:30:00+09:00",
+    isFirstEncounter: false,
   },
 ];
 

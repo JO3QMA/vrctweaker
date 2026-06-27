@@ -95,7 +95,7 @@ const defaultConfig: VRChatConfigDTO = {
   cacheDirectory: "",
   cacheSize: 0,
   cacheExpiryDelay: 0,
-  disableRichPresence: null,
+  disableRichPresence: undefined,
 };
 
 describe("GalleryView", () => {
