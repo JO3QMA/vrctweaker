@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
 import SettingsView from "./SettingsView.vue";
 import {
-  settingsViewWailsDecorator,
+  withSettingsWails,
   type SettingsViewWailsPreset,
-} from "./settingsViewStoryDecorator";
+} from "../stories/fixtures/settingsWails";
 
 const meta = {
   title: "Views/SettingsView",
@@ -18,7 +18,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 function withPreset(preset: SettingsViewWailsPreset) {
-  return [settingsViewWailsDecorator(preset)];
+  return [withSettingsWails(preset)];
 }
 
 /**
