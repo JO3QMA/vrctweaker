@@ -2,10 +2,10 @@ package logwatcher
 
 import (
 	"context"
-	"log"
 	"sync/atomic"
 
 	"vrchat-tweaker/internal/domain/activity"
+	"vrchat-tweaker/internal/infrastructure/diag"
 	"vrchat-tweaker/internal/usecase"
 )
 
@@ -13,7 +13,7 @@ import (
 type ActivityIngestAdapter struct {
 	uc               *usecase.ActivityUseCase
 	ctx              context.Context
-	logger           Logger
+	logger           diag.Logger
 	correlator       activity.SessionCorrelator
 	onAfterEncounter func()
 	// suppressEncounterNotify skips onAfterEncounter (e.g. during historical log bootstrap).
@@ -22,9 +22,9 @@ type ActivityIngestAdapter struct {
 
 // NewActivityIngestAdapter creates an adapter that correlates and persists log-derived activity.
 // onAfterEncounter is optional (e.g. Wails EventsEmit after each encounter row).
-func NewActivityIngestAdapter(uc *usecase.ActivityUseCase, ctx context.Context, logger Logger, onAfterEncounter func()) *ActivityIngestAdapter {
+func NewActivityIngestAdapter(uc *usecase.ActivityUseCase, ctx context.Context, logger diag.Logger, onAfterEncounter func()) *ActivityIngestAdapter {
 	if logger == nil {
-		logger = logWriterLogger{log.Default()}
+		logger = diag.Std()
 	}
 	return &ActivityIngestAdapter{
 		uc:               uc,
@@ -53,7 +53,7 @@ func (a *ActivityIngestAdapter) WarmFromParsedEvent(event activity.ParsedEvent) 
 func (a *ActivityIngestAdapter) Handle(event activity.ParsedEvent) {
 	for _, cmd := range a.correlator.Apply(event) {
 		if err := a.uc.ApplyCommand(a.ctx, cmd); err != nil {
-			a.logger.Printf("[activity_ingest] %T: %v", cmd, err)
+			a.logger("[activity_ingest] %T: %v", cmd, err)
 		}
 		switch cmd.(type) {
 		case activity.RecordEncounterJoinCmd, activity.RecordEncounterLeaveCmd:

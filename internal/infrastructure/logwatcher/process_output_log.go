@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
+	"vrchat-tweaker/internal/infrastructure/diag"
 )
 
 // SessionCorrelatorWarmer rebuilds SessionCorrelator state from log lines without persisting commands.
@@ -28,7 +29,7 @@ func WarmSessionCorrelatorFromLogFile(ctx context.Context, path string, endOffse
 		return nil
 	}
 	if logger == nil {
-		logger = nopLogger{}
+		logger = diag.Nop
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -65,7 +66,7 @@ func WarmSessionCorrelatorFromLogFile(ctx context.Context, path string, endOffse
 			baseTime := activity.ParseVRChatTimestamp(lineTrimmed, time.Now().In(time.Local))
 			events, parseErr := parser.ParseLine(lineTrimmed, baseTime)
 			if parseErr != nil {
-				logger.Printf("[logwatcher] warm parse error: %v", parseErr)
+				logger("[logwatcher] warm parse error: %v", parseErr)
 			} else {
 				for _, ev := range events {
 					if ev != nil {
@@ -87,7 +88,7 @@ type ProgressCallback func(byteOffset int64, line string)
 // ProcessOutputLogFileFromOffset reads from startOffset and returns the final byte offset in the file.
 func ProcessOutputLogFileFromOffset(ctx context.Context, path string, startOffset int64, parser LogParser, handler EventHandler, logger Logger, onProgress ProgressCallback) (int64, error) {
 	if logger == nil {
-		logger = nopLogger{}
+		logger = diag.Nop
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -132,7 +133,7 @@ func ProcessOutputLogFileFromOffset(ctx context.Context, path string, startOffse
 			baseTime := activity.ParseVRChatTimestamp(lineTrimmed, time.Now().In(time.Local))
 			events, parseErr := parser.ParseLine(lineTrimmed, baseTime)
 			if parseErr != nil {
-				logger.Printf("[logwatcher] bootstrap parse error: %v", parseErr)
+				logger("[logwatcher] bootstrap parse error: %v", parseErr)
 			} else {
 				for _, ev := range events {
 					if ev != nil {

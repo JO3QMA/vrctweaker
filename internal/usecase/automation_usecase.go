@@ -5,23 +5,42 @@ import (
 
 	"github.com/google/uuid"
 	"vrchat-tweaker/internal/domain/automation"
-	"vrchat-tweaker/internal/domain/event"
 )
+
+// StatusSetter sets the user's VRChat status (for change_status action).
+type StatusSetter interface {
+	SetStatus(ctx context.Context, status string) error
+}
+
+// change_status で許可するステータス値
+var allowedStatuses = map[string]bool{
+	"busy":    true,
+	"ask me":  true,
+	"join me": true,
+}
 
 // AutomationUseCase handles automation rules and rule engine execution.
 type AutomationUseCase struct {
 	repo         automation.AutomationRuleRepository
-	eventBus     event.EventBus
-	actionRunner ActionRunner
+	statusSetter StatusSetter
 }
 
 // NewAutomationUseCase creates a new AutomationUseCase.
-func NewAutomationUseCase(repo automation.AutomationRuleRepository, eventBus event.EventBus, actionRunner ActionRunner) *AutomationUseCase {
+func NewAutomationUseCase(repo automation.AutomationRuleRepository, statusSetter StatusSetter) *AutomationUseCase {
 	return &AutomationUseCase{
 		repo:         repo,
-		eventBus:     eventBus,
-		actionRunner: actionRunner,
+		statusSetter: statusSetter,
 	}
+}
+
+// OnFriendJoined evaluates and runs automation rules for a friend join log event.
+func (uc *AutomationUseCase) OnFriendJoined(ctx context.Context, vrcUserID string) error {
+	if vrcUserID == "" {
+		return nil
+	}
+	return uc.EvalAndRun(ctx, automation.TriggerFriendJoined, map[string]interface{}{
+		"vrc_user_id": vrcUserID,
+	})
 }
 
 // ListRules returns all automation rules.
@@ -77,15 +96,38 @@ func (uc *AutomationUseCase) EvalRules(ctx context.Context, triggerType string, 
 	return results, nil
 }
 
-// RunActions executes each EvalResult via ActionRunner.
+// RunActions executes each EvalResult.
 func (uc *AutomationUseCase) RunActions(ctx context.Context, results []*automation.EvalResult) error {
-	if uc.actionRunner == nil {
-		return nil
-	}
 	for _, res := range results {
-		_ = uc.actionRunner.Run(ctx, res)
+		_ = uc.runAction(ctx, res)
 	}
 	return nil
+}
+
+func (uc *AutomationUseCase) runAction(ctx context.Context, result *automation.EvalResult) error {
+	if result == nil || !result.ShouldFire {
+		return nil
+	}
+	switch result.ActionType {
+	case automation.ActionChangeStatus:
+		return uc.runChangeStatus(ctx, result.ActionPayload)
+	default:
+		return nil
+	}
+}
+
+func (uc *AutomationUseCase) runChangeStatus(ctx context.Context, payload map[string]interface{}) error {
+	if uc.statusSetter == nil || payload == nil {
+		return nil
+	}
+	s, _ := payload["status"].(string)
+	if s == "" {
+		return nil
+	}
+	if !allowedStatuses[s] {
+		return nil
+	}
+	return uc.statusSetter.SetStatus(ctx, s)
 }
 
 // EvalAndRun evaluates rules for the trigger and runs matching actions.

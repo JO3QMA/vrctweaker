@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+	"vrchat-tweaker/internal/infrastructure/diag"
 )
 
 const defaultDebounce = 400 * time.Millisecond
@@ -18,18 +19,9 @@ const defaultDebounce = 400 * time.Millisecond
 // IngestFunc registers an image file path (e.g. into SQLite). Called after debounce.
 type IngestFunc func(ctx context.Context, path string) error
 
-// Logger receives non-fatal diagnostics (optional).
-type Logger interface {
-	Printf(format string, v ...any)
-}
-
-type nopLogger struct{}
-
-func (nopLogger) Printf(string, ...any) {}
-
 // Start watches root and its subdirectories for new or updated image files.
 // Events are debounced then passed to ingest. The caller should cancel ctx to stop the watcher.
-func Start(ctx context.Context, root string, ingest IngestFunc, log Logger) error {
+func Start(ctx context.Context, root string, ingest IngestFunc, log diag.Logger) error {
 	if ingest == nil {
 		return nil
 	}
@@ -48,7 +40,7 @@ func Start(ctx context.Context, root string, ingest IngestFunc, log Logger) erro
 	}
 
 	if log == nil {
-		log = nopLogger{}
+		log = diag.Nop
 	}
 
 	w := &run{
@@ -72,7 +64,7 @@ type run struct {
 	ctx      context.Context
 	fsw      *fsnotify.Watcher
 	ingest   IngestFunc
-	log      Logger
+	log      diag.Logger
 	debounce time.Duration
 
 	mu      sync.Mutex
@@ -89,7 +81,7 @@ func (w *run) watchDirTree(dir string) error {
 			return nil
 		}
 		if addErr := w.fsw.Add(path); addErr != nil {
-			w.log.Printf("picturewatcher: watch %s: %v", path, addErr)
+			w.log("[picturewatcher] watch %s: %v", path, addErr)
 		}
 		return nil
 	})
@@ -107,7 +99,7 @@ func (w *run) loop() {
 				return
 			}
 			if err != nil {
-				w.log.Printf("picturewatcher: %v", err)
+				w.log("[picturewatcher] %v", err)
 			}
 		case ev, ok := <-w.fsw.Events:
 			if !ok {
@@ -185,7 +177,7 @@ func (w *run) flush() {
 			return
 		}
 		if err := w.ingest(w.ctx, p); err != nil {
-			w.log.Printf("picturewatcher: ingest %s: %v", p, err)
+			w.log("[picturewatcher] ingest %s: %v", p, err)
 		}
 	}
 }

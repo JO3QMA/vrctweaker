@@ -7,15 +7,26 @@ import (
 	"testing"
 
 	"vrchat-tweaker/internal/domain/automation"
-	"vrchat-tweaker/internal/domain/event"
 )
 
-type noopEventBus struct{}
+type mockStatusSetter struct {
+	mu     sync.Mutex
+	called []string
+	err    error
+}
 
-func (noopEventBus) Publish(context.Context, string, *event.Event) error { return nil }
+func (m *mockStatusSetter) SetStatus(ctx context.Context, status string) error {
+	m.mu.Lock()
+	m.called = append(m.called, status)
+	err := m.err
+	m.mu.Unlock()
+	return err
+}
 
-func (noopEventBus) Subscribe(string, func(context.Context, *event.Event) error) func() {
-	return func() {}
+func (m *mockStatusSetter) getCalled() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return append([]string{}, m.called...)
 }
 
 type mockAutomationRuleRepo struct {
@@ -105,23 +116,10 @@ func (m *mockAutomationRuleRepo) Delete(_ context.Context, id string) error {
 	return nil
 }
 
-type recordingActionRunner struct {
-	mu     sync.Mutex
-	calls  []*automation.EvalResult
-	runErr error
-}
-
-func (r *recordingActionRunner) Run(_ context.Context, res *automation.EvalResult) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-	r.calls = append(r.calls, res)
-	return r.runErr
-}
-
 func TestAutomationUseCase_SaveRule_assignsIDWhenEmpty(t *testing.T) {
 	ctx := context.Background()
 	repo := &mockAutomationRuleRepo{}
-	uc := NewAutomationUseCase(repo, noopEventBus{}, &recordingActionRunner{})
+	uc := NewAutomationUseCase(repo, nil)
 	rule := &automation.AutomationRule{Name: "n", TriggerType: automation.TriggerAFKDetected, IsEnabled: true}
 	if err := uc.SaveRule(ctx, rule); err != nil {
 		t.Fatal(err)
@@ -134,7 +132,7 @@ func TestAutomationUseCase_SaveRule_assignsIDWhenEmpty(t *testing.T) {
 func TestAutomationUseCase_ToggleRule_getFails(t *testing.T) {
 	ctx := context.Background()
 	repo := &mockAutomationRuleRepo{getByIDErr: errors.New("no")}
-	uc := NewAutomationUseCase(repo, noopEventBus{}, &recordingActionRunner{})
+	uc := NewAutomationUseCase(repo, nil)
 	if err := uc.ToggleRule(ctx, "x", true); err == nil {
 		t.Fatal("want error")
 	}
@@ -145,7 +143,7 @@ func TestAutomationUseCase_ToggleRule_getFails(t *testing.T) {
 func TestAutomationUseCase_ToggleRule_ruleNotFound(t *testing.T) {
 	ctx := context.Background()
 	repo := &mockAutomationRuleRepo{} // GetByID yields nil, nil for unknown id
-	uc := NewAutomationUseCase(repo, noopEventBus{}, &recordingActionRunner{})
+	uc := NewAutomationUseCase(repo, nil)
 	if err := uc.ToggleRule(ctx, "missing", true); err != nil {
 		t.Fatalf("ToggleRule: got %v, want nil when rule is not found", err)
 	}
@@ -156,7 +154,7 @@ func TestAutomationUseCase_ToggleRule_updates(t *testing.T) {
 	repo := &mockAutomationRuleRepo{
 		rules: []*automation.AutomationRule{{ID: "a", IsEnabled: false}},
 	}
-	uc := NewAutomationUseCase(repo, noopEventBus{}, &recordingActionRunner{})
+	uc := NewAutomationUseCase(repo, nil)
 	if err := uc.ToggleRule(ctx, "a", true); err != nil {
 		t.Fatal(err)
 	}
@@ -189,7 +187,7 @@ func TestAutomationUseCase_EvalRules_filtersByShouldFire(t *testing.T) {
 			},
 		},
 	}
-	uc := NewAutomationUseCase(repo, noopEventBus{}, &recordingActionRunner{})
+	uc := NewAutomationUseCase(repo, nil)
 	results, err := uc.EvalRules(ctx, automation.TriggerAFKDetected, nil)
 	if err != nil {
 		t.Fatal(err)
@@ -199,31 +197,36 @@ func TestAutomationUseCase_EvalRules_filtersByShouldFire(t *testing.T) {
 	}
 }
 
-func TestAutomationUseCase_RunActions_nilRunner(t *testing.T) {
+func TestAutomationUseCase_RunActions_nilStatusSetter(t *testing.T) {
 	ctx := context.Background()
-	uc := NewAutomationUseCase(&mockAutomationRuleRepo{}, noopEventBus{}, nil)
+	uc := NewAutomationUseCase(&mockAutomationRuleRepo{}, nil)
 	if err := uc.RunActions(ctx, []*automation.EvalResult{{ShouldFire: true}}); err != nil {
 		t.Fatal(err)
 	}
 }
 
-func TestAutomationUseCase_RunActions_invokesRunner(t *testing.T) {
+func TestAutomationUseCase_RunActions_changeStatus(t *testing.T) {
 	ctx := context.Background()
-	runner := &recordingActionRunner{}
-	uc := NewAutomationUseCase(&mockAutomationRuleRepo{}, noopEventBus{}, runner)
-	res := &automation.EvalResult{ShouldFire: true, ActionType: automation.ActionChangeStatus}
+	setter := &mockStatusSetter{}
+	uc := NewAutomationUseCase(&mockAutomationRuleRepo{}, setter)
+	res := &automation.EvalResult{
+		ShouldFire:    true,
+		ActionType:    automation.ActionChangeStatus,
+		ActionPayload: map[string]interface{}{"status": "busy"},
+	}
 	if err := uc.RunActions(ctx, []*automation.EvalResult{res}); err != nil {
 		t.Fatal(err)
 	}
-	if len(runner.calls) != 1 {
-		t.Fatalf("calls: %d", len(runner.calls))
+	called := setter.getCalled()
+	if len(called) != 1 || called[0] != "busy" {
+		t.Errorf("SetStatus called %v, want [busy]", called)
 	}
 }
 
 func TestAutomationUseCase_EvalAndRun_propagatesEvalError(t *testing.T) {
 	ctx := context.Background()
 	repo := &mockAutomationRuleRepo{listEnErr: errors.New("list")}
-	uc := NewAutomationUseCase(repo, noopEventBus{}, &recordingActionRunner{})
+	uc := NewAutomationUseCase(repo, nil)
 	if err := uc.EvalAndRun(ctx, automation.TriggerAFKDetected, nil); err == nil {
 		t.Fatal("want error")
 	}
@@ -242,20 +245,79 @@ func TestAutomationUseCase_EvalAndRun_runsActions(t *testing.T) {
 			},
 		},
 	}
-	runner := &recordingActionRunner{}
-	uc := NewAutomationUseCase(repo, noopEventBus{}, runner)
+	setter := &mockStatusSetter{}
+	uc := NewAutomationUseCase(repo, setter)
 	if err := uc.EvalAndRun(ctx, automation.TriggerAFKDetected, nil); err != nil {
 		t.Fatal(err)
 	}
-	if len(runner.calls) != 1 {
-		t.Fatalf("want 1 run, got %d", len(runner.calls))
+	called := setter.getCalled()
+	if len(called) != 1 || called[0] != "busy" {
+		t.Fatalf("want [busy], got %v", called)
+	}
+}
+
+func TestAutomationUseCase_OnFriendJoined(t *testing.T) {
+	ctx := context.Background()
+	repo := &mockAutomationRuleRepo{
+		rules: []*automation.AutomationRule{
+			{
+				ID:            "1",
+				TriggerType:   automation.TriggerFriendJoined,
+				ActionType:    automation.ActionChangeStatus,
+				ActionPayload: `{"status":"join me"}`,
+				IsEnabled:     true,
+			},
+		},
+	}
+	setter := &mockStatusSetter{}
+	uc := NewAutomationUseCase(repo, setter)
+	if err := uc.OnFriendJoined(ctx, "usr_friend"); err != nil {
+		t.Fatal(err)
+	}
+	called := setter.getCalled()
+	if len(called) != 1 || called[0] != "join me" {
+		t.Fatalf("want [join me], got %v", called)
+	}
+	if err := uc.OnFriendJoined(ctx, ""); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestAutomationUseCase_runChangeStatus_edgeCases(t *testing.T) {
+	ctx := context.Background()
+	setter := &mockStatusSetter{}
+	uc := NewAutomationUseCase(&mockAutomationRuleRepo{}, setter)
+
+	for _, res := range []*automation.EvalResult{
+		nil,
+		{ShouldFire: false, ActionType: automation.ActionChangeStatus, ActionPayload: map[string]interface{}{"status": "busy"}},
+		{ShouldFire: true, ActionType: automation.ActionChangeStatus, ActionPayload: nil},
+		{ShouldFire: true, ActionType: automation.ActionChangeStatus, ActionPayload: map[string]interface{}{"status": "invalid"}},
+		{ShouldFire: true, ActionType: automation.ActionChangeStatus, ActionPayload: map[string]interface{}{"status": ""}},
+		{ShouldFire: true, ActionType: "notify", ActionPayload: map[string]interface{}{"x": 1}},
+	} {
+		_ = uc.runAction(ctx, res)
+	}
+	if len(setter.getCalled()) != 0 {
+		t.Fatalf("unexpected SetStatus calls: %v", setter.getCalled())
+	}
+
+	wantErr := errors.New("api error")
+	setter.err = wantErr
+	err := uc.runAction(ctx, &automation.EvalResult{
+		ShouldFire:    true,
+		ActionType:    automation.ActionChangeStatus,
+		ActionPayload: map[string]interface{}{"status": "ask me"},
+	})
+	if err != wantErr {
+		t.Errorf("runAction err = %v, want %v", err, wantErr)
 	}
 }
 
 func TestAutomationUseCase_ListRules_GetRule_DeleteRule(t *testing.T) {
 	ctx := context.Background()
 	repo := &mockAutomationRuleRepo{}
-	uc := NewAutomationUseCase(repo, noopEventBus{}, &recordingActionRunner{})
+	uc := NewAutomationUseCase(repo, nil)
 	r := &automation.AutomationRule{ID: "id1", Name: "n"}
 	_ = repo.Save(ctx, r)
 

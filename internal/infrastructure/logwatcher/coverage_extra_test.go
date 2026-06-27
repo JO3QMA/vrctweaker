@@ -3,17 +3,15 @@ package logwatcher
 import (
 	"context"
 	"errors"
-	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
+	"vrchat-tweaker/internal/infrastructure/diag"
 
 	"vrchat-tweaker/internal/domain/activity"
-	"vrchat-tweaker/internal/domain/event"
 	"vrchat-tweaker/internal/usecase"
 )
 
@@ -208,8 +206,8 @@ func TestOutputLogWatcher_SkipsEmptyLines(t *testing.T) {
 	}
 }
 
-func TestLogWriterLogger_Printf(t *testing.T) {
-	logWriterLogger{log.New(io.Discard, "", 0)}.Printf("ignored %d", 1)
+func TestDiagLogger_Nop(t *testing.T) {
+	diag.Nop("ignored %d", 1)
 }
 
 func TestActivityIngestAdapter_EncounterRecordErrorLogged(t *testing.T) {
@@ -322,8 +320,8 @@ func TestOutputLogWatcher_SkipsNilParsedEvents(t *testing.T) {
 	}
 }
 
-func TestNewEventPublishingHandler_defaultLogger(t *testing.T) {
-	h := NewEventPublishingHandler(event.NewChannelEventBus(), context.Background(), nil)
+func TestNewAutomationTriggerHandler_defaultLogger(t *testing.T) {
+	h := NewAutomationTriggerHandler(&stubFriendJoinedAutomation{}, context.Background(), nil)
 	if h.logger == nil {
 		t.Fatal("expected default logger")
 	}

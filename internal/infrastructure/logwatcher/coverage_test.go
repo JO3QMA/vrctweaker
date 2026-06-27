@@ -11,8 +11,6 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
-	"vrchat-tweaker/internal/domain/automation"
-	"vrchat-tweaker/internal/domain/event"
 )
 
 type stubParser struct {
@@ -39,65 +37,51 @@ func TestMultiHandler_DelegatesToAll(t *testing.T) {
 	}
 }
 
-func TestEventPublishingHandler_FriendJoined(t *testing.T) {
-	bus := event.NewChannelEventBus()
-	ctx := context.Background()
-	var published atomic.Int32
-	bus.Subscribe(automation.TriggerFriendJoined, func(_ context.Context, ev *event.Event) error {
-		published.Add(1)
-		payload, _ := ev.Payload.(map[string]interface{})
-		if payload["vrc_user_id"] != "usr_join01" {
-			t.Errorf("payload = %v", ev.Payload)
-		}
-		return nil
-	})
+type stubFriendJoinedAutomation struct {
+	called []string
+	err    error
+}
 
-	h := NewEventPublishingHandler(bus, ctx, nil)
+func (s *stubFriendJoinedAutomation) OnFriendJoined(_ context.Context, vrcUserID string) error {
+	s.called = append(s.called, vrcUserID)
+	return s.err
+}
+
+func TestAutomationTriggerHandler_FriendJoined(t *testing.T) {
+	ctx := context.Background()
+	auto := &stubFriendJoinedAutomation{}
+	h := NewAutomationTriggerHandler(auto, ctx, nil)
+
 	h.Handle(&activity.EncounterEvent{
 		Action:      activity.EncounterActionJoin,
 		VRCUserID:   "usr_join01",
 		DisplayName: "Friend",
 	})
-	if published.Load() != 1 {
-		t.Fatalf("published = %d", published.Load())
+	if len(auto.called) != 1 || auto.called[0] != "usr_join01" {
+		t.Fatalf("called = %v", auto.called)
 	}
 
 	h.Handle(&activity.EncounterEvent{Action: activity.EncounterActionLeave, VRCUserID: "usr_join01"})
 	h.Handle(nil)
-	if published.Load() != 1 {
-		t.Fatalf("leave/nil should not publish, got %d", published.Load())
+	if len(auto.called) != 1 {
+		t.Fatalf("leave/nil should not trigger, got %d calls", len(auto.called))
 	}
 }
 
-type failingEventBus struct{}
-
-func (failingEventBus) Publish(context.Context, string, *event.Event) error {
-	return errors.New("boom")
-}
-
-func (failingEventBus) Subscribe(string, func(context.Context, *event.Event) error) func() {
-	return func() {}
-}
-
-func TestEventPublishingHandler_PublishErrorLogged(t *testing.T) {
+func TestAutomationTriggerHandler_OnFriendJoinedErrorLogged(t *testing.T) {
 	var logs []string
-	h := NewEventPublishingHandler(failingEventBus{}, context.Background(), testLogger{fn: func(format string, args ...interface{}) {
+	auto := &stubFriendJoinedAutomation{err: errors.New("boom")}
+	h := NewAutomationTriggerHandler(auto, context.Background(), func(format string, args ...any) {
 		logs = append(logs, format)
-	}})
+	})
 	h.Handle(&activity.EncounterEvent{
 		Action:    activity.EncounterActionJoin,
 		VRCUserID: "usr_err",
 	})
 	if len(logs) == 0 {
-		t.Fatal("expected log on publish error")
+		t.Fatal("expected log on OnFriendJoined error")
 	}
 }
-
-type testLogger struct {
-	fn func(format string, args ...interface{})
-}
-
-func (l testLogger) Printf(format string, args ...interface{}) { l.fn(format, args...) }
 
 type raceSafeLogBuffer struct {
 	mu   sync.Mutex
@@ -105,11 +89,11 @@ type raceSafeLogBuffer struct {
 }
 
 func (b *raceSafeLogBuffer) logger() Logger {
-	return testLogger{fn: func(format string, args ...interface{}) {
+	return func(format string, args ...any) {
 		b.mu.Lock()
 		b.logs = append(b.logs, format)
 		b.mu.Unlock()
-	}}
+	}
 }
 
 func (b *raceSafeLogBuffer) len() int {
@@ -211,7 +195,7 @@ func TestOutputLogWatcher_StartAlreadyRunning(t *testing.T) {
 	if err := writeTestFile(path, ""); err != nil {
 		t.Fatal(err)
 	}
-	w := NewOutputLogWatcher(path, activity.NewLogParser(), EventHandlerFunc(func(activity.ParsedEvent) {}), testLogger{fn: func(string, ...interface{}) {}})
+	w := NewOutputLogWatcher(path, activity.NewLogParser(), EventHandlerFunc(func(activity.ParsedEvent) {}), func(string, ...any) {})
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	if err := w.Start(ctx); err != nil {
