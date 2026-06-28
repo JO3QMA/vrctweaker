@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
-	"vrchat-tweaker/internal/domain/settings"
 	"vrchat-tweaker/internal/usecase"
 )
 
@@ -179,8 +178,6 @@ func (f *fakeAppSettingsRepo) GetAll(_ context.Context) (map[string]string, erro
 	}
 	return out, nil
 }
-
-var _ settings.AppSettingsRepository = (*fakeAppSettingsRepo)(nil)
 
 func TestActivityIngestAdapter_SuppressEncounterNotify_skipsOnAfterEncounter(t *testing.T) {
 	ctx := context.Background()

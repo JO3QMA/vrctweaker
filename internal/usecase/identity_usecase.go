@@ -11,7 +11,6 @@ import (
 	"unicode/utf8"
 
 	"vrchat-tweaker/internal/domain/identity"
-	"vrchat-tweaker/internal/domain/settings"
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
 )
 
@@ -20,7 +19,7 @@ type IdentityUseCase struct {
 	userCacheRepo identity.UserCacheRepository
 	apiClient     vrchatapi.VRChatAPIClient
 	credStore     vrchatapi.CredentialStore
-	settingsRepo  settings.AppSettingsRepository
+	settingsRepo  appSettingsRepo
 	notifier      identity.Notifier // optional; nil skips online notifications
 }
 
@@ -30,7 +29,7 @@ func NewIdentityUseCase(
 	userCacheRepo identity.UserCacheRepository,
 	apiClient vrchatapi.VRChatAPIClient,
 	credStore vrchatapi.CredentialStore,
-	settingsRepo settings.AppSettingsRepository,
+	settingsRepo appSettingsRepo,
 	notifier identity.Notifier,
 ) *IdentityUseCase {
 	return &IdentityUseCase{

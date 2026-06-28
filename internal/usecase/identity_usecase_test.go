@@ -12,7 +12,7 @@ import (
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
 )
 
-// mockSettingsRepo implements settings.AppSettingsRepository for tests.
+// mockSettingsRepo is a minimal app settings store for tests.
 type mockSettingsRepo struct {
 	m      map[string]string
 	setErr error
