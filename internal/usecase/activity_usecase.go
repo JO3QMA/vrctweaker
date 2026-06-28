@@ -9,7 +9,6 @@ import (
 	"github.com/google/uuid"
 	"vrchat-tweaker/internal/domain/activity"
 	"vrchat-tweaker/internal/domain/identity"
-	"vrchat-tweaker/internal/domain/settings"
 )
 
 const activityLogCheckpointKey = "activity_log_checkpoint"
@@ -41,7 +40,7 @@ func parseDateRange(fromISO, toISO string) (from, to time.Time, err error) {
 type ActivityUseCase struct {
 	playRepo      activity.PlaySessionRepository
 	encounterRepo activity.UserEncounterRepository
-	settingsRepo  settings.AppSettingsRepository
+	settingsRepo  appSettingsRepo
 	userCacheRepo identity.UserCacheRepository
 	worldRepo     activity.WorldInfoRepository
 }
@@ -50,7 +49,7 @@ type ActivityUseCase struct {
 func NewActivityUseCase(
 	playRepo activity.PlaySessionRepository,
 	encounterRepo activity.UserEncounterRepository,
-	settingsRepo settings.AppSettingsRepository,
+	settingsRepo appSettingsRepo,
 	userCacheRepo identity.UserCacheRepository,
 	worldRepo activity.WorldInfoRepository,
 ) *ActivityUseCase {

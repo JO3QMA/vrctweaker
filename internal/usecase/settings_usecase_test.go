@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// fakeAppSettingsRepo implements settings.AppSettingsRepository for tests.
+// fakeAppSettingsRepo is a minimal app settings store for tests.
 type fakeAppSettingsRepo struct {
 	m map[string]string
 }

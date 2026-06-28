@@ -9,17 +9,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"vrchat-tweaker/internal/domain/settings"
 )
 
 // SettingsUseCase handles app settings.
 type SettingsUseCase struct {
-	repo settings.AppSettingsRepository
+	repo appSettingsRepo
 }
 
 // NewSettingsUseCase creates a new SettingsUseCase.
-func NewSettingsUseCase(repo settings.AppSettingsRepository) *SettingsUseCase {
+func NewSettingsUseCase(repo appSettingsRepo) *SettingsUseCase {
 	return &SettingsUseCase{repo: repo}
 }
 
