@@ -8,9 +8,7 @@ import (
 	"vrchat-tweaker/internal/domain/activity"
 )
 
-var _ activity.WorldInfoRepository = (*WorldInfoRepository)(nil)
-
-// WorldInfoRepository implements activity.WorldInfoRepository.
+// WorldInfoRepository persists world_info rows in SQLite.
 type WorldInfoRepository struct {
 	db *sql.DB
 }

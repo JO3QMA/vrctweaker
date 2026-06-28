@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"vrchat-tweaker/internal/domain/activity"
 	"vrchat-tweaker/internal/domain/identity"
 	"vrchat-tweaker/internal/domain/media"
 	"vrchat-tweaker/internal/infrastructure/sqlite"
@@ -15,7 +14,7 @@ import (
 // DBMaintenanceUseCase handles DB maintenance operations (Vacuum, Clear).
 type DBMaintenanceUseCase struct {
 	db             *sql.DB
-	encounterRepo  activity.UserEncounterRepository
+	encounterRepo  userEncounterRepo
 	screenshotRepo media.ScreenshotRepository
 	userCacheRepo  identity.UserCacheRepository
 	appSettings    appSettingsRepo
@@ -24,7 +23,7 @@ type DBMaintenanceUseCase struct {
 // NewDBMaintenanceUseCase creates a new DBMaintenanceUseCase.
 func NewDBMaintenanceUseCase(
 	db *sql.DB,
-	encounterRepo activity.UserEncounterRepository,
+	encounterRepo userEncounterRepo,
 	screenshotRepo media.ScreenshotRepository,
 	userCacheRepo identity.UserCacheRepository,
 	appSettings appSettingsRepo,

@@ -8,10 +8,7 @@ import (
 	"vrchat-tweaker/internal/domain/activity"
 )
 
-var _ activity.PlaySessionRepository = (*PlaySessionRepository)(nil)
-var _ activity.UserEncounterRepository = (*UserEncounterRepository)(nil)
-
-// PlaySessionRepository implements activity.PlaySessionRepository.
+// PlaySessionRepository persists play sessions in SQLite.
 type PlaySessionRepository struct {
 	db *sql.DB
 }
@@ -112,7 +109,7 @@ func scanPlaySession(rows *sql.Rows) (*activity.PlaySession, error) {
 	}, nil
 }
 
-// UserEncounterRepository implements activity.UserEncounterRepository.
+// UserEncounterRepository persists user encounters in SQLite.
 type UserEncounterRepository struct {
 	db *sql.DB
 }
@@ -336,7 +333,7 @@ func (r *UserEncounterRepository) Count(ctx context.Context) (int64, error) {
 	return n, err
 }
 
-// BackfillMissingWorldContext implements activity.UserEncounterRepository.
+// BackfillMissingWorldContext sets world_id on rows with missing context.
 func (r *UserEncounterRepository) BackfillMissingWorldContext(ctx context.Context) (int64, error) {
 	rows, err := r.db.QueryContext(ctx, `SELECT id, IFNULL(world_id, ''), IFNULL(instance_id, '') FROM user_encounters ORDER BY joined_at ASC, id ASC`)
 	if err != nil {

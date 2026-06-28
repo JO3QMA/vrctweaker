@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"vrchat-tweaker/internal/domain/activity"
 	"vrchat-tweaker/internal/domain/identity"
 	"vrchat-tweaker/internal/domain/media"
 )
@@ -35,13 +34,13 @@ type ScanProgress struct {
 type MediaUseCase struct {
 	repo          media.ScreenshotRepository
 	extractor     media.MetadataExtractor
-	worldRepo     activity.WorldInfoRepository
+	worldRepo     worldInfoRepo
 	userCacheRepo identity.UserCacheRepository
 }
 
 // NewMediaUseCase creates a new MediaUseCase.
 // worldRepo and userCacheRepo may be nil; when set, extracted metadata is upserted into world_info and users_cache.
-func NewMediaUseCase(repo media.ScreenshotRepository, extractor media.MetadataExtractor, worldRepo activity.WorldInfoRepository, userCacheRepo identity.UserCacheRepository) *MediaUseCase {
+func NewMediaUseCase(repo media.ScreenshotRepository, extractor media.MetadataExtractor, worldRepo worldInfoRepo, userCacheRepo identity.UserCacheRepository) *MediaUseCase {
 	return &MediaUseCase{repo: repo, extractor: extractor, worldRepo: worldRepo, userCacheRepo: userCacheRepo}
 }
 

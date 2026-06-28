@@ -150,7 +150,7 @@ func (c *countingMetadataExtractor) Extract(path string) (media.ScreenshotMetada
 	return media.ScreenshotMetadata{}, nil
 }
 
-// mockWorldInfoRepo records WorldInfoRepository calls for tests.
+// mockWorldInfoRepo records world info repo calls for tests.
 type mockWorldInfoRepo struct {
 	upsertDisplayCalls []struct {
 		worldID, displayName string
