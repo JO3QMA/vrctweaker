@@ -3,11 +3,7 @@
  * Element Plus el-tag の type。空や未知は info / primary で ElTag の空 type を避ける。
  */
 export type VrcStatusElementTagType =
-  | "primary"
-  | "success"
-  | "info"
-  | "warning"
-  | "danger";
+  "primary" | "success" | "info" | "warning" | "danger";
 
 export function vrcStatusElementTagType(
   status: string | undefined | null,
