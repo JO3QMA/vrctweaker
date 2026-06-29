@@ -22,3 +22,12 @@ type ScreenshotThumbnail struct {
 	SourceSize    int64
 	SourceModUnix int64
 }
+
+// ScreenshotFilter provides optional filtering for screenshot list queries.
+type ScreenshotFilter struct {
+	WorldID        string
+	FromDate       *time.Time
+	ToDate         *time.Time
+	WorldName      string
+	FilePathPrefix string // filters file_path starting with this prefix (for directory-scoped queries)
+}

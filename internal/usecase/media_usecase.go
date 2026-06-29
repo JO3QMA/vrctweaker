@@ -32,7 +32,7 @@ type ScanProgress struct {
 
 // MediaUseCase handles screenshot scanning and management.
 type MediaUseCase struct {
-	repo          media.ScreenshotRepository
+	repo          screenshotRepo
 	extractor     media.MetadataExtractor
 	worldRepo     worldInfoRepo
 	userCacheRepo identity.UserCacheRepository
@@ -40,7 +40,7 @@ type MediaUseCase struct {
 
 // NewMediaUseCase creates a new MediaUseCase.
 // worldRepo and userCacheRepo may be nil; when set, extracted metadata is upserted into world_info and users_cache.
-func NewMediaUseCase(repo media.ScreenshotRepository, extractor media.MetadataExtractor, worldRepo worldInfoRepo, userCacheRepo identity.UserCacheRepository) *MediaUseCase {
+func NewMediaUseCase(repo screenshotRepo, extractor media.MetadataExtractor, worldRepo worldInfoRepo, userCacheRepo identity.UserCacheRepository) *MediaUseCase {
 	return &MediaUseCase{repo: repo, extractor: extractor, worldRepo: worldRepo, userCacheRepo: userCacheRepo}
 }
 
