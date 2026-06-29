@@ -15,7 +15,9 @@ Applies when writing or editing:
 | Commits | Message, branch name |
 | Agent outputs | PR drafts, issue drafts, triage notes under `docs/ai_dlc/`, chat summaries intended for paste into GitHub |
 
-**Out of scope (this policy):** unit/E2E test fixtures and committed test log snippets. Prefer synthetic IDs for **new** tests (`usr_e2e_*`, `usr_a1111111-...`). Existing tests may still contain real IDs from log captures; cleaning them is a separate task.
+**Out of scope (this policy):** live bug reports in chat (redact before pasting to GitHub).
+
+**Committed tests:** use synthetic users from `internal/testvrc` — not real display names or production `usr_*` IDs from log captures.
 
 ## Forbidden in scope
 

@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	"vrchat-tweaker/internal/testvrc"
 )
 
 //go:embed testdata/minimal_exif.jpg
@@ -121,7 +123,7 @@ func TestDefaultMetadataExtractor_Extract_JPEGWithXMP(t *testing.T) {
 <rdf:Description xmlns:vrc="http://vrchat.com/ns/"
   vrc:WorldID="wrld_db637cfb-64f8-4109-977b-6b755482f133"
   vrc:WorldDisplayName="Test Room"
-  vrc:AuthorID="usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e"
+  vrc:AuthorID="` + testvrc.PlayerUserID + `"
   xmlns:xmp="http://ns.adobe.com/xap/1.0/"
   xmp:Author="Tester"
   xmp:CreateDate="2026:02:17 00:01:28+09:00"

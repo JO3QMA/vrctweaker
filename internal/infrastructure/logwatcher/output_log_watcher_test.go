@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
+	"vrchat-tweaker/internal/testvrc"
 )
 
 func TestOutputLogWatcher_EmitsEvents(t *testing.T) {
@@ -149,7 +150,7 @@ func TestOutputLogWatcher_DirectoryMode_IngestsPrefixedLinesOnSwitch(t *testing.
 	oldPath := filepath.Join(dir, "output_log_2026-01-01_00-00-00.txt")
 	newPath := filepath.Join(dir, "output_log_2026-03-22_00-47-45.txt")
 	const cozyWorld = "wrld_6041ba53-0ac0-4b5b-9ecb-890ea2b0aefa"
-	cozyInst := cozyWorld + ":48580~friends(usr_b4cb47f9-ca01-43db-baa3-ce3fb98ff0d4)~region(jp)"
+	cozyInst := cozyWorld + ":48580~friends(" + testvrc.FriendsHostUserID + ")~region(jp)"
 	prefixed := []byte(
 		"2026.03.22 00:47:45 Debug      -  [Behaviour] Destination set: " + cozyInst + "\n" +
 			"2026.03.22 00:47:46 Debug      -  [Behaviour] Entering Room: Cozy with․\n",

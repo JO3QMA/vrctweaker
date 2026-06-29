@@ -3,11 +3,13 @@ package activity
 import (
 	"testing"
 	"time"
+
+	"vrchat-tweaker/internal/testvrc"
 )
 
 const testWorldID = "wrld_beddab1e-fee1-cafe-f00d-ca7c0dd1eca7"
 
-var testFullInstance = testWorldID + ":41550~hidden(usr_aeab2f4d-40b4-4f73-acbd-608ac47b763e)~region(jp)"
+var testFullInstance = testWorldID + ":41550~hidden(" + testvrc.EmbedUserID + ")~region(jp)"
 
 func TestSessionCorrelator_RoomNameAfterOnLeftRoom_usesPendingDestinationWorld(t *testing.T) {
 	base := time.Date(2026, 3, 22, 11, 23, 51, 0, time.UTC)
@@ -37,9 +39,9 @@ func TestSessionCorrelator_RoomNameAfterOnLeftRoom_usesPendingDestinationWorld(t
 func TestSessionCorrelator_ResetBetweenLogFiles_RoomNameUsesPendingDestination(t *testing.T) {
 	base := time.Date(2026, 3, 18, 0, 30, 0, 0, time.UTC)
 	const prevWorld = "wrld_c03f8195-3c64-46d8-b5ae-242f214c9404"
-	prevInst := prevWorld + ":98225~hidden(usr_83ba5dc2-2912-4a21-a514-8b954e60a79b)~region(jp)"
+	prevInst := prevWorld + ":98225~hidden(" + testvrc.HiddenHostUserID + ")~region(jp)"
 	const nextWorld = "wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b"
-	nextInst := nextWorld + ":77788~private(usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)~region(jp)"
+	nextInst := nextWorld + ":77788~private(" + testvrc.PlayerUserID + ")~region(jp)"
 
 	c := &SessionCorrelator{}
 	c.Apply(&SessionEvent{Type: SessionEventStart, InstanceID: prevInst, OccurredAt: base})
@@ -63,7 +65,7 @@ func TestSessionCorrelator_ResetBetweenLogFiles_RoomNameUsesPendingDestination(t
 func TestSessionCorrelator_RoomNameWithoutOnLeftRoom_unchanged(t *testing.T) {
 	base := time.Date(2026, 3, 22, 11, 22, 51, 0, time.UTC)
 	const homeWorld = "wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b"
-	homeInst := homeWorld + ":04910~private(usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)~region(jp)"
+	homeInst := homeWorld + ":04910~private(" + testvrc.PlayerUserID + ")~region(jp)"
 	c := &SessionCorrelator{}
 
 	c.Apply(&DestinationSetEvent{
@@ -83,9 +85,9 @@ func TestSessionCorrelator_RoomNameWithoutOnLeftRoom_unchanged(t *testing.T) {
 func TestSessionCorrelator_RoomName_prefersPendingOverActiveSession(t *testing.T) {
 	base := time.Date(2026, 6, 24, 8, 26, 44, 0, time.UTC)
 	const oldWorld = "wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b"
-	oldInst := oldWorld + ":95147~private(usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)~region(jp)"
+	oldInst := oldWorld + ":95147~private(" + testvrc.PlayerUserID + ")~region(jp)"
 	const newWorld = "wrld_6041ba53-0ac0-4b5b-9ecb-890ea2b0aefa"
-	newInst := newWorld + ":48580~friends(usr_b4cb47f9-ca01-43db-baa3-ce3fb98ff0d4)~region(jp)"
+	newInst := newWorld + ":48580~friends(" + testvrc.FriendsHostUserID + ")~region(jp)"
 
 	c := &SessionCorrelator{}
 	c.Apply(&SessionEvent{Type: SessionEventStart, InstanceID: oldInst, OccurredAt: base})
@@ -108,8 +110,8 @@ func TestSessionCorrelator_RoomName_prefersPendingOverActiveSession(t *testing.T
 func TestSessionCorrelator_OtherPlayerLeave_afterJoining_keepsWorldContext(t *testing.T) {
 	base := time.Date(2026, 3, 18, 0, 1, 0, 0, time.UTC)
 	const minasocoWorld = "wrld_c03f8195-3c64-46d8-b5ae-242f214c9404"
-	minasocoInst := minasocoWorld + ":98225~hidden(usr_83ba5dc2-2912-4a21-a514-8b954e60a79b)~region(jp)"
-	const otherUser = "usr_1564b5c1-888a-4d08-b7f4-dcedcf702a90"
+	minasocoInst := minasocoWorld + ":98225~hidden(" + testvrc.HiddenHostUserID + ")~region(jp)"
+	otherUser := testvrc.OtherPlayerUserID
 
 	c := &SessionCorrelator{}
 	c.Apply(&DestinationSetEvent{
@@ -149,15 +151,15 @@ func TestSessionCorrelator_OtherPlayerLeave_afterJoining_keepsWorldContext(t *te
 func TestSessionCorrelator_Leave_afterDestinationBeforeJoin_usesLastSessionNotPending(t *testing.T) {
 	base := time.Date(2026, 3, 22, 14, 20, 45, 0, time.UTC)
 	const homeWorld = "wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b"
-	oldInst := homeWorld + ":85625~private(usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)~region(jp)"
-	nextInst := homeWorld + ":62566~private(usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)~region(jp)"
-	const buddy = "usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e"
+	oldInst := homeWorld + ":85625~private(" + testvrc.PlayerUserID + ")~region(jp)"
+	nextInst := homeWorld + ":62566~private(" + testvrc.PlayerUserID + ")~region(jp)"
+	buddy := testvrc.PlayerUserID
 
 	c := &SessionCorrelator{}
 	c.Apply(&SessionEvent{Type: SessionEventStart, InstanceID: oldInst, OccurredAt: base})
 	c.Apply(&EncounterEvent{
 		VRCUserID:     buddy,
-		DisplayName:   "ぶっちゃん！",
+		DisplayName:   testvrc.PlayerDisplayName,
 		Action:        EncounterActionJoin,
 		EncounteredAt: base,
 	})
@@ -169,7 +171,7 @@ func TestSessionCorrelator_Leave_afterDestinationBeforeJoin_usesLastSessionNotPe
 	c.Apply(&SessionEvent{Type: SessionEventEnd, OccurredAt: base})
 	leaveCmds := c.Apply(&EncounterEvent{
 		VRCUserID:     buddy,
-		DisplayName:   "ぶっちゃん！",
+		DisplayName:   testvrc.PlayerDisplayName,
 		Action:        EncounterActionLeave,
 		EncounteredAt: base.Add(time.Millisecond),
 	})
@@ -228,8 +230,8 @@ func TestSessionCorrelator_logReplay_homeToCozyTransition_roomNamesNotCrossAssig
 		homeWorld = "wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b"
 		cozyWorld = "wrld_6041ba53-0ac0-4b5b-9ecb-890ea2b0aefa"
 	)
-	homeInst := homeWorld + ":95147~private(usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)~region(jp)"
-	cozyInst := cozyWorld + ":48580~friends(usr_b4cb47f9-ca01-43db-baa3-ce3fb98ff0d4)~region(jp)"
+	homeInst := homeWorld + ":95147~private(" + testvrc.PlayerUserID + ")~region(jp)"
+	cozyInst := cozyWorld + ":48580~friends(" + testvrc.FriendsHostUserID + ")~region(jp)"
 
 	lines := []string{
 		"2026.06.24 08:25:00 Debug      -  [Behaviour] Destination set: " + homeInst,

@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"testing"
 	"time"
+
+	"vrchat-tweaker/internal/testvrc"
 )
 
 func TestParseVRChatXMP_sampleAttributes(t *testing.T) {
@@ -13,9 +15,9 @@ func TestParseVRChatXMP_sampleAttributes(t *testing.T) {
 <rdf:Description xmlns:vrc="http://vrchat.com/ns/"
   vrc:WorldID="wrld_db637cfb-64f8-4109-977b-6b755482f133"
   vrc:WorldDisplayName="PARA ROOM"
-  vrc:AuthorID="usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e"
+  vrc:AuthorID="` + testvrc.PlayerUserID + `"
   xmlns:xmp="http://ns.adobe.com/xap/1.0/"
-  xmp:Author="ぶっちゃん！"
+  xmp:Author="` + testvrc.PlayerDisplayName + `"
   xmp:CreateDate="2026:02:17 00:01:28.5281072+09:00"
 />
 </rdf:RDF>
@@ -27,10 +29,10 @@ func TestParseVRChatXMP_sampleAttributes(t *testing.T) {
 	if m.WorldDisplayName != "PARA ROOM" {
 		t.Errorf("WorldDisplayName = %q", m.WorldDisplayName)
 	}
-	if m.AuthorVRCUserID != "usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e" {
+	if m.AuthorVRCUserID != testvrc.PlayerUserID {
 		t.Errorf("AuthorVRCUserID = %q", m.AuthorVRCUserID)
 	}
-	if m.AuthorDisplayName != "ぶっちゃん！" {
+	if m.AuthorDisplayName != testvrc.PlayerDisplayName {
 		t.Errorf("AuthorDisplayName = %q", m.AuthorDisplayName)
 	}
 	if m.TakenAt == nil {
@@ -156,7 +158,7 @@ func TestParseVRChatXMP_elementFallbacks(t *testing.T) {
 <rdf:RDF xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#">
 <WorldID>wrld_db637cfb-64f8-4109-977b-6b755482f133</WorldID>
 <vrc:WorldDisplayName>Elem World</vrc:WorldDisplayName>
-<AuthorID>usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e</AuthorID>
+<AuthorID>` + testvrc.PlayerUserID + `</AuthorID>
 <rdf:li>Elem Author</rdf:li>
 </rdf:RDF>
 </x:xmpmeta>`
@@ -167,7 +169,7 @@ func TestParseVRChatXMP_elementFallbacks(t *testing.T) {
 	if m.WorldDisplayName != "Elem World" {
 		t.Errorf("WorldDisplayName = %q", m.WorldDisplayName)
 	}
-	if m.AuthorVRCUserID != "usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e" {
+	if m.AuthorVRCUserID != testvrc.PlayerUserID {
 		t.Errorf("AuthorVRCUserID = %q", m.AuthorVRCUserID)
 	}
 	if m.AuthorDisplayName != "Elem Author" {

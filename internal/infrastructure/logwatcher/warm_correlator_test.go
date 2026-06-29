@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"vrchat-tweaker/internal/domain/activity"
+	"vrchat-tweaker/internal/testvrc"
 	"vrchat-tweaker/internal/usecase"
 )
 
@@ -19,7 +20,7 @@ func TestWarmSessionCorrelatorFromLogFile_restoresPendingDestinationBeforeResume
 	logPath := filepath.Join(dir, "output_log.txt")
 
 	const cozyWorld = "wrld_6041ba53-0ac0-4b5b-9ecb-890ea2b0aefa"
-	cozyInst := cozyWorld + ":48580~friends(usr_b4cb47f9-ca01-43db-baa3-ce3fb98ff0d4)~region(jp)"
+	cozyInst := cozyWorld + ":48580~friends(" + testvrc.FriendsHostUserID + ")~region(jp)"
 
 	prefix := []byte(
 		"2026.06.24 08:26:40 Debug      -  [Behaviour] Destination set: " + cozyInst + "\n",

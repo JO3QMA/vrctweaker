@@ -9,6 +9,7 @@ import (
 
 	"vrchat-tweaker/internal/domain/activity"
 	"vrchat-tweaker/internal/infrastructure/logwatcher"
+	"vrchat-tweaker/internal/testvrc"
 )
 
 func Test_handleActivityLogFileSwitch_finalizesOldSessionAndRecordsWorldName(t *testing.T) {
@@ -17,7 +18,7 @@ func Test_handleActivityLogFileSwitch_finalizesOldSessionAndRecordsWorldName(t *
 	dir := t.TempDir()
 
 	const cozyWorld = "wrld_6041ba53-0ac0-4b5b-9ecb-890ea2b0aefa"
-	cozyInst := cozyWorld + ":48580~friends(usr_b4cb47f9-ca01-43db-baa3-ce3fb98ff0d4)~region(jp)"
+	cozyInst := cozyWorld + ":48580~friends(" + testvrc.FriendsHostUserID + ")~region(jp)"
 	joinedAt := time.Date(2026, 6, 24, 8, 20, 0, 0, time.UTC)
 
 	oldPath := filepath.Join(dir, "output_log_2026-06-24_08-00-00.txt")
