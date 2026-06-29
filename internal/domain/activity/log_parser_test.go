@@ -1,8 +1,11 @@
 package activity
 
 import (
+	"fmt"
 	"testing"
 	"time"
+
+	"vrchat-tweaker/internal/testvrc"
 )
 
 func TestLogParser_ParseLine_Encounter(t *testing.T) {
@@ -35,11 +38,11 @@ func TestLogParser_ParseLine_Encounter(t *testing.T) {
 		},
 		{
 			name:     "OnPlayerJoined VRChat Behaviour line",
-			line:     "2026.03.21 11:32:16 Debug      -  [Behaviour] OnPlayerJoined ぶっちゃん！ (usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)",
+			line:     fmt.Sprintf("2026.03.21 11:32:16 Debug      -  [Behaviour] OnPlayerJoined %s (%s)", testvrc.PlayerDisplayName, testvrc.PlayerUserID),
 			wantKind: EventKindEncounter,
 			wantAct:  EncounterActionJoin,
-			wantName: "ぶっちゃん！",
-			wantID:   "usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e",
+			wantName: testvrc.PlayerDisplayName,
+			wantID:   testvrc.PlayerUserID,
 		},
 		{
 			name:     "OnPlayerLeft with user ID",
@@ -221,7 +224,7 @@ func TestLogParser_ParseLine_Unparseable(t *testing.T) {
 		"Loading level",
 		"[Time: 1.0] Unrelated message",
 		"OnPlayerJoined Alice (usr_abc123)",
-		"2026.03.21 11:32:16 Debug      -  [VisitorsInformationBoard] 18.88 / OnPlayerJoined / player=ぶっちゃん！(local)",
+		"2026.03.21 11:32:16 Debug      -  [VisitorsInformationBoard] 18.88 / OnPlayerJoined / player=TestPlayerAlpha(local)",
 		"Destination set: wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b:64190~private(usr_x)~region(jp)",
 		"Entering Room: SomeWorld",
 	}
@@ -241,7 +244,7 @@ func TestLogParser_ParseLine_DestinationRoomAvatarVideo(t *testing.T) {
 	p := NewLogParser()
 
 	t.Run("Destination set", func(t *testing.T) {
-		line := "2026.03.17 23:59:56 Debug      -  [Behaviour] Destination set: wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b:64190~private(usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)~region(jp)"
+		line := fmt.Sprintf("2026.03.17 23:59:56 Debug      -  [Behaviour] Destination set: wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b:64190~private(%s)~region(jp)", testvrc.PlayerUserID)
 		events, err := p.ParseLine(line, base)
 		if err != nil {
 			t.Fatal(err)
@@ -256,7 +259,7 @@ func TestLogParser_ParseLine_DestinationRoomAvatarVideo(t *testing.T) {
 		if d.WorldID != "wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b" || d.InstanceID != "64190" || d.InstanceType != "private" {
 			t.Errorf("destination fields %+v", d)
 		}
-		if d.OwnerUserID != "usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e" || d.Region != "jp" {
+		if d.OwnerUserID != testvrc.PlayerUserID || d.Region != "jp" {
 			t.Errorf("owner/region %+v", d)
 		}
 	})
@@ -306,7 +309,7 @@ func TestLogParser_ParseLine_DestinationRoomAvatarVideo(t *testing.T) {
 	})
 
 	t.Run("Avatar switch", func(t *testing.T) {
-		line := "2026.03.18 00:00:08 Debug      -  [Behaviour] Switching ぶっちゃん！ to avatar RearAlice （SailorMaid）"
+		line := "2026.03.18 00:00:08 Debug      -  [Behaviour] Switching TestPlayerAlpha to avatar RearAlice （SailorMaid）"
 		events, err := p.ParseLine(line, base)
 		if err != nil {
 			t.Fatal(err)
@@ -318,7 +321,7 @@ func TestLogParser_ParseLine_DestinationRoomAvatarVideo(t *testing.T) {
 		if !ok {
 			t.Fatalf("type %T", events[0])
 		}
-		if a.DisplayName != "ぶっちゃん！" || a.AvatarName != "RearAlice （SailorMaid）" {
+		if a.DisplayName != "TestPlayerAlpha" || a.AvatarName != "RearAlice （SailorMaid）" {
 			t.Errorf("avatar %+v", a)
 		}
 	})

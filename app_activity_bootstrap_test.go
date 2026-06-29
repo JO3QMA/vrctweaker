@@ -10,6 +10,7 @@ import (
 	"vrchat-tweaker/internal/domain/activity"
 	"vrchat-tweaker/internal/infrastructure/logwatcher"
 	"vrchat-tweaker/internal/infrastructure/sqlite"
+	"vrchat-tweaker/internal/testvrc"
 	"vrchat-tweaker/internal/usecase"
 )
 
@@ -227,8 +228,8 @@ func Test_ingestActivityLogsBootstrap_checkpointResume_assignsWorldRoomName(t *t
 		cozyWorld = "wrld_6041ba53-0ac0-4b5b-9ecb-890ea2b0aefa"
 		buddyID   = "usr_buddy"
 	)
-	homeInst := homeWorld + ":95147~private(usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)~region(jp)"
-	cozyInst := cozyWorld + ":48580~friends(usr_b4cb47f9-ca01-43db-baa3-ce3fb98ff0d4)~region(jp)"
+	homeInst := homeWorld + ":95147~private(" + testvrc.PlayerUserID + ")~region(jp)"
+	cozyInst := cozyWorld + ":48580~friends(" + testvrc.FriendsHostUserID + ")~region(jp)"
 
 	prefix := []byte(
 		"2026.06.24 08:25:00 Debug      -  [Behaviour] Destination set: " + homeInst + "\n" +
@@ -291,7 +292,7 @@ func Test_ingestActivityLogsBootstrap_checkpointResume_homeEncounterKeepsWorldID
 
 	const (
 		homeWorld = "wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b"
-		hostID    = "usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e"
+		hostID    = testvrc.PlayerUserID
 	)
 	homeInst := homeWorld + ":95147~private(" + hostID + ")~region(jp)"
 
@@ -302,7 +303,7 @@ func Test_ingestActivityLogsBootstrap_checkpointResume_homeEncounterKeepsWorldID
 			"2026.06.24 08:25:03 Debug      -  [Behaviour] Joining " + homeInst + "\n",
 	)
 	suffix := []byte(
-		"2026.06.24 08:25:18 Debug      -  [Behaviour] OnPlayerJoined ぶっちゃん！ (" + hostID + ")\n",
+		"2026.06.24 08:25:18 Debug      -  [Behaviour] OnPlayerJoined " + testvrc.PlayerDisplayName + " (" + hostID + ")\n",
 	)
 	if writeErr := os.WriteFile(logPath, prefix, 0600); writeErr != nil {
 		t.Fatal(writeErr)
@@ -352,18 +353,18 @@ func Test_ingestActivityLogsBootstrap_checkpointResume_worldNamesNotCrossAssigne
 	const (
 		homeWorld = "wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b"
 		cozyWorld = "wrld_6041ba53-0ac0-4b5b-9ecb-890ea2b0aefa"
-		hostID    = "usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e"
+		hostID    = testvrc.PlayerUserID
 		buddyID   = "usr_buddy"
 	)
 	homeInst := homeWorld + ":95147~private(" + hostID + ")~region(jp)"
-	cozyInst := cozyWorld + ":48580~friends(usr_b4cb47f9-ca01-43db-baa3-ce3fb98ff0d4)~region(jp)"
+	cozyInst := cozyWorld + ":48580~friends(" + testvrc.FriendsHostUserID + ")~region(jp)"
 
 	prefix := []byte(
 		"2026.06.24 08:25:00 Debug      -  [Behaviour] Destination set: " + homeInst + "\n" +
 			"2026.06.24 08:25:01 Debug      -  [Behaviour] OnLeftRoom\n" +
 			"2026.06.24 08:25:03 Debug      -  [Behaviour] Entering Room: ホームチェックv6․0\n" +
 			"2026.06.24 08:25:03 Debug      -  [Behaviour] Joining " + homeInst + "\n" +
-			"2026.06.24 08:25:18 Debug      -  [Behaviour] OnPlayerJoined ぶっちゃん！ (" + hostID + ")\n",
+			"2026.06.24 08:25:18 Debug      -  [Behaviour] OnPlayerJoined " + testvrc.PlayerDisplayName + " (" + hostID + ")\n",
 	)
 	suffix := []byte(
 		"2026.06.24 08:26:40 Debug      -  [Behaviour] Destination set: " + cozyInst + "\n" +
@@ -384,7 +385,7 @@ func Test_ingestActivityLogsBootstrap_checkpointResume_worldNamesNotCrossAssigne
 	if seedErr := encounterRepo.Save(ctx, &activity.UserEncounter{
 		ID:          "enc-home-seed",
 		VRCUserID:   hostID,
-		DisplayName: "ぶっちゃん！",
+		DisplayName: testvrc.PlayerDisplayName,
 		InstanceID:  homeInst,
 		WorldID:     homeWorld,
 		JoinedAt:    homeJoinedAt,

@@ -7,12 +7,13 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
+	"vrchat-tweaker/internal/testvrc"
 	"vrchat-tweaker/internal/usecase"
 )
 
 const testWorldID = "wrld_beddab1e-fee1-cafe-f00d-ca7c0dd1eca7"
 
-var testFullInstance = testWorldID + ":41550~hidden(usr_aeab2f4d-40b4-4f73-acbd-608ac47b763e)~region(jp)"
+var testFullInstance = testWorldID + ":41550~hidden(" + testvrc.EmbedUserID + ")~region(jp)"
 
 type spyWorldInfoRepo struct {
 	displayNameCalls []struct {
@@ -215,8 +216,8 @@ func TestActivityIngestAdapter_EndToEndEncounterPersistence(t *testing.T) {
 	ctx := context.Background()
 	base := time.Date(2026, 3, 18, 0, 1, 0, 0, time.UTC)
 	const minasocoWorld = "wrld_c03f8195-3c64-46d8-b5ae-242f214c9404"
-	minasocoInst := minasocoWorld + ":98225~hidden(usr_83ba5dc2-2912-4a21-a514-8b954e60a79b)~region(jp)"
-	const otherUser = "usr_1564b5c1-888a-4d08-b7f4-dcedcf702a90"
+	minasocoInst := minasocoWorld + ":98225~hidden(" + testvrc.HiddenHostUserID + ")~region(jp)"
+	otherUser := testvrc.OtherPlayerUserID
 
 	spy := &spyEncounterRepo{}
 	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, spy, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
@@ -258,8 +259,8 @@ func TestActivityIngestAdapter_ReingestDoesNotDuplicateJoin(t *testing.T) {
 	ctx := context.Background()
 	base := time.Date(2026, 3, 18, 0, 1, 0, 0, time.UTC)
 	const world = "wrld_c03f8195-3c64-46d8-b5ae-242f214c9404"
-	inst := world + ":98225~hidden(usr_83ba5dc2-2912-4a21-a514-8b954e60a79b)~region(jp)"
-	const otherUser = "usr_1564b5c1-888a-4d08-b7f4-dcedcf702a90"
+	inst := world + ":98225~hidden(" + testvrc.HiddenHostUserID + ")~region(jp)"
+	otherUser := testvrc.OtherPlayerUserID
 
 	spy := &spyEncounterRepo{}
 	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, spy, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
