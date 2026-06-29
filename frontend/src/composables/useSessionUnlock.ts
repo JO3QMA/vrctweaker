@@ -26,11 +26,7 @@ import {
 } from "@/services/credentialCrypto";
 
 export type UnlockState =
-  | "idle"
-  | "unlocking"
-  | "unlocked"
-  | "needs-relogin"
-  | "error";
+  "idle" | "unlocking" | "unlocked" | "needs-relogin" | "error";
 
 /** Stable substring in errors from Go UnlockSession when the stored credential is invalid. */
 export const UNLOCK_NEEDS_RELOGIN_MARKER = "VRCTWK_UNLOCK_NEEDS_RELOGIN";

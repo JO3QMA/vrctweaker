@@ -4,9 +4,7 @@ import { resetSessionUnlockForStorybook } from "../../composables/useSessionUnlo
 import { withWailsApp } from "../wailsDecorator";
 
 export type SettingsViewWailsPreset =
-  | "needsReloginClean"
-  | "needsReloginUnlockError"
-  | "loggedIn";
+  "needsReloginClean" | "needsReloginUnlockError" | "loggedIn";
 
 const emptyPaths: PathSettingsDTO = {
   vrchatPathWindows: "",
