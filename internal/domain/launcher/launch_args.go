@@ -24,32 +24,33 @@ const PriorityOmit = -999
 
 // LaunchArgsParsed holds GUI-friendly parsed launch arguments.
 // Per https://docs.vrchat.com/docs/launch-options
+// JSON tags are for Wails IPC (camelCase); not used for CLI parsing.
 type LaunchArgsParsed struct {
 	// 一般設定
-	NoVR       bool   // -no-vr or --no-vr (デスクトップモード)
-	ScreenMode string // fullscreen|windowed|popupwindow (replaces Fullscreen+Windowed)
+	NoVR       bool   `json:"noVr"`       // -no-vr or --no-vr (デスクトップモード)
+	ScreenMode string `json:"screenMode"` // fullscreen|windowed|popupwindow (replaces Fullscreen+Windowed)
 	// 詳細設定
-	ScreenWidth                 int    // -screen-width N, 0=omit
-	ScreenHeight                int    // -screen-height N, 0=omit
-	FPS                         int    // --fps=N, 0=omit
-	SkipRegistry                bool   // --skip-registry-install
-	ProcessPriority             int    // --process-priority=N, -2..2, PriorityOmit=omit
-	MainThreadPriority          int    // --main-thread-priority=N, -2..2, PriorityOmit=omit
-	Monitor                     int    // -monitor N (1-based), 0=omit
-	Profile                     int    // --profile=X, -1=omit
-	EnableDebugGui              bool   // --enable-debug-gui
-	EnableSDKLogLevels          bool   // --enable-sdk-log-levels
-	EnableUdonDebugLogging      bool   // --enable-udon-debug-logging
-	Midi                        string // --midi=deviceName, empty=omit
-	WatchWorlds                 bool   // --watch-worlds
-	WatchAvatars                bool   // --watch-avatars
-	IgnoreTrackers              string // --ignore-trackers=serial1,serial2
-	VideoDecoding               string // ""|software|hardware
-	DisableAMDStutterWorkaround bool   // --disable-amd-stutter-workaround
-	OSC                         string // --osc=inPort:outIP:outPort
-	Affinity                    string // --affinity=<hex>
-	EnforceWorldServerChecks    bool   // --enforce-world-server-checks
-	Custom                      string // remaining args as-is
+	ScreenWidth                 int    `json:"screenWidth"`                 // -screen-width N, 0=omit
+	ScreenHeight                int    `json:"screenHeight"`                // -screen-height N, 0=omit
+	FPS                         int    `json:"fps"`                         // --fps=N, 0=omit
+	SkipRegistry                bool   `json:"skipRegistry"`                // --skip-registry-install
+	ProcessPriority             int    `json:"processPriority"`             // --process-priority=N, -2..2, PriorityOmit=omit
+	MainThreadPriority          int    `json:"mainThreadPriority"`          // --main-thread-priority=N, -2..2, PriorityOmit=omit
+	Monitor                     int    `json:"monitor"`                     // -monitor N (1-based), 0=omit
+	Profile                     int    `json:"profile"`                     // --profile=X, -1=omit
+	EnableDebugGui              bool   `json:"enableDebugGui"`              // --enable-debug-gui
+	EnableSDKLogLevels          bool   `json:"enableSDKLogLevels"`          // --enable-sdk-log-levels
+	EnableUdonDebugLogging      bool   `json:"enableUdonDebugLogging"`      // --enable-udon-debug-logging
+	Midi                        string `json:"midi"`                        // --midi=deviceName, empty=omit
+	WatchWorlds                 bool   `json:"watchWorlds"`                 // --watch-worlds
+	WatchAvatars                bool   `json:"watchAvatars"`                // --watch-avatars
+	IgnoreTrackers              string `json:"ignoreTrackers"`              // --ignore-trackers=serial1,serial2
+	VideoDecoding               string `json:"videoDecoding"`               // ""|software|hardware
+	DisableAMDStutterWorkaround bool   `json:"disableAMDStutterWorkaround"` // --disable-amd-stutter-workaround
+	OSC                         string `json:"osc"`                         // --osc=inPort:outIP:outPort
+	Affinity                    string `json:"affinity"`                    // --affinity=<hex>
+	EnforceWorldServerChecks    bool   `json:"enforceWorldServerChecks"`    // --enforce-world-server-checks
+	Custom                      string `json:"custom"`                      // remaining args as-is
 }
 
 var (

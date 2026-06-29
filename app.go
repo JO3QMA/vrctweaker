@@ -13,6 +13,7 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"vrchat-tweaker/internal/domain/activity"
+	"vrchat-tweaker/internal/domain/automation"
 	"vrchat-tweaker/internal/domain/launcher"
 	"vrchat-tweaker/internal/domain/media"
 	"vrchat-tweaker/internal/domain/vrchatconfig"
@@ -621,14 +622,17 @@ func (a *App) DeleteLaunchProfile(id string) error {
 }
 
 // ParseLaunchArgsForGUI parses a launch arguments string into GUI fields.
-func (a *App) ParseLaunchArgsForGUI(args string) LaunchArgsParsedDTO {
+func (a *App) ParseLaunchArgsForGUI(args string) launcher.LaunchArgsParsed {
 	p := launcher.ParseLaunchArgsForGUI(args)
-	return toLaunchArgsParsedDTO(p)
+	if p == nil {
+		return launcher.LaunchArgsParsed{}
+	}
+	return *p
 }
 
 // MergeLaunchArgsForGUI builds a launch arguments string from GUI state.
-func (a *App) MergeLaunchArgsForGUI(dto LaunchArgsParsedDTO) string {
-	return launcher.MergeLaunchArgsForGUI(fromLaunchArgsParsedDTO(dto))
+func (a *App) MergeLaunchArgsForGUI(parsed launcher.LaunchArgsParsed) string {
+	return launcher.MergeLaunchArgsForGUI(&parsed)
 }
 
 // --- Settings bindings ---
@@ -654,17 +658,20 @@ func (a *App) SaveOutputLogPath(path string) error {
 }
 
 // GetPathSettings returns VRChat/Steam/output_log path settings.
-func (a *App) GetPathSettings() (PathSettingsDTO, error) {
+func (a *App) GetPathSettings() (usecase.PathSettings, error) {
 	ps, err := a.settings.GetPathSettings(a.ctx)
 	if err != nil {
-		return PathSettingsDTO{}, err
+		return usecase.PathSettings{}, err
 	}
-	return toPathSettingsDTO(ps), nil
+	if ps == nil {
+		return usecase.PathSettings{}, nil
+	}
+	return *ps, nil
 }
 
 // SetPathSettings saves path settings.
-func (a *App) SetPathSettings(dto PathSettingsDTO) error {
-	return a.settings.SetPathSettings(a.ctx, toPathSettings(dto))
+func (a *App) SetPathSettings(ps usecase.PathSettings) error {
+	return a.settings.SetPathSettings(a.ctx, &ps)
 }
 
 // GetSuppressSleepWhileVRChat returns whether sleep is suppressed while VRChat.exe runs (Windows).
@@ -826,7 +833,7 @@ func (e *scanProgressEmitter) emit(p usecase.ScanProgress) {
 	e.pending = p
 	e.hasPending = true
 	if time.Since(e.lastEmit) >= galleryScanProgressEmitMinInterval {
-		runtime.EventsEmit(e.ctx, galleryScanProgressEvent, toScanProgressDTO(e.pending))
+		runtime.EventsEmit(e.ctx, galleryScanProgressEvent, e.pending)
 		e.lastEmit = time.Now()
 		e.hasPending = false
 	}
@@ -838,7 +845,7 @@ func (e *scanProgressEmitter) flush() {
 	if !e.hasPending {
 		return
 	}
-	runtime.EventsEmit(e.ctx, galleryScanProgressEvent, toScanProgressDTO(e.pending))
+	runtime.EventsEmit(e.ctx, galleryScanProgressEvent, e.pending)
 	e.lastEmit = time.Now()
 	e.hasPending = false
 }
@@ -871,7 +878,7 @@ func (a *App) ScanScreenshotDir(path string) (int, error) {
 	var err error
 	defer func() {
 		em.flush()
-		dto := GalleryScanDoneDTO{Count: count}
+		dto := usecase.GalleryScanDone{Count: count}
 		if err != nil {
 			dto.Error = err.Error()
 			if errors.Is(err, context.Canceled) {
@@ -911,12 +918,24 @@ func (a *App) ReindexScreenshotDir(path string) (int, error) {
 // --- Activity bindings ---
 
 // GetActivityStats returns aggregated play stats for the date range.
-func (a *App) GetActivityStats(fromISO, toISO string) (ActivityStatsDTO, error) {
+func (a *App) GetActivityStats(fromISO, toISO string) (activity.ActivityStats, error) {
 	stats, err := a.activity.GetActivityStats(a.ctx, fromISO, toISO)
 	if err != nil {
-		return ActivityStatsDTO{}, err
+		return activity.ActivityStats{}, err
 	}
-	return toActivityStatsDTO(stats), nil
+	if stats == nil {
+		return activity.ActivityStats{
+			DailyPlaySeconds: []activity.DailyPlaySeconds{},
+			TopWorlds:        []activity.TopWorldSummary{},
+		}, nil
+	}
+	if stats.DailyPlaySeconds == nil {
+		stats.DailyPlaySeconds = []activity.DailyPlaySeconds{}
+	}
+	if stats.TopWorlds == nil {
+		stats.TopWorlds = []activity.TopWorldSummary{}
+	}
+	return *stats, nil
 }
 
 // Encounters returns user encounters.
@@ -1220,17 +1239,13 @@ func (a *App) SetStatusAndDescription(status, description string) error {
 // --- Automation bindings ---
 
 // ListAutomationRules returns all automation rules.
-func (a *App) ListAutomationRules() ([]AutomationRuleDTO, error) {
-	list, err := a.automation.ListRules(a.ctx)
-	if err != nil {
-		return nil, err
-	}
-	return toAutomationRuleDTOs(list), nil
+func (a *App) ListAutomationRules() ([]*automation.AutomationRule, error) {
+	return a.automation.ListRules(a.ctx)
 }
 
 // SaveAutomationRule persists an automation rule.
-func (a *App) SaveAutomationRule(rule AutomationRuleDTO) error {
-	return a.automation.SaveRule(a.ctx, toAutomationRule(rule))
+func (a *App) SaveAutomationRule(rule automation.AutomationRule) error {
+	return a.automation.SaveRule(a.ctx, &rule)
 }
 
 // DeleteAutomationRule removes an automation rule by ID.
