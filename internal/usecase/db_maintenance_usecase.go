@@ -15,7 +15,7 @@ type DBMaintenanceUseCase struct {
 	db             *sql.DB
 	encounterRepo  userEncounterRepo
 	screenshotRepo screenshotRepo
-	userCacheRepo  identity.UserCacheRepository
+	userCacheRepo  userCacheRepo
 	appSettings    appSettingsRepo
 }
 
@@ -24,7 +24,7 @@ func NewDBMaintenanceUseCase(
 	db *sql.DB,
 	encounterRepo userEncounterRepo,
 	screenshotRepo screenshotRepo,
-	userCacheRepo identity.UserCacheRepository,
+	userCacheRepo userCacheRepo,
 	appSettings appSettingsRepo,
 ) *DBMaintenanceUseCase {
 	return &DBMaintenanceUseCase{

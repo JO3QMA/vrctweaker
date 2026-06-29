@@ -41,7 +41,7 @@ type ActivityUseCase struct {
 	playRepo      playSessionRepo
 	encounterRepo userEncounterRepo
 	settingsRepo  appSettingsRepo
-	userCacheRepo identity.UserCacheRepository
+	userCacheRepo userCacheRepo
 	worldRepo     worldInfoRepo
 }
 
@@ -50,7 +50,7 @@ func NewActivityUseCase(
 	playRepo playSessionRepo,
 	encounterRepo userEncounterRepo,
 	settingsRepo appSettingsRepo,
-	userCacheRepo identity.UserCacheRepository,
+	userCacheRepo userCacheRepo,
 	worldRepo worldInfoRepo,
 ) *ActivityUseCase {
 	return &ActivityUseCase{

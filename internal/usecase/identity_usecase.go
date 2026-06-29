@@ -16,7 +16,7 @@ import (
 
 // IdentityUseCase handles VRChat auth, friends, and status.
 type IdentityUseCase struct {
-	userCacheRepo identity.UserCacheRepository
+	userCacheRepo userCacheRepo
 	apiClient     vrchatapi.VRChatAPIClient
 	credStore     vrchatapi.CredentialStore
 	settingsRepo  appSettingsRepo
@@ -26,7 +26,7 @@ type IdentityUseCase struct {
 // NewIdentityUseCase creates a new IdentityUseCase.
 // notifier is optional; pass nil to skip favorite-online notifications.
 func NewIdentityUseCase(
-	userCacheRepo identity.UserCacheRepository,
+	userCacheRepo userCacheRepo,
 	apiClient vrchatapi.VRChatAPIClient,
 	credStore vrchatapi.CredentialStore,
 	settingsRepo appSettingsRepo,

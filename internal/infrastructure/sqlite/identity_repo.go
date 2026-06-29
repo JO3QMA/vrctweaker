@@ -10,9 +10,7 @@ import (
 	"vrchat-tweaker/internal/domain/identity"
 )
 
-var _ identity.UserCacheRepository = (*UserCacheRepository)(nil)
-
-// UserCacheRepository implements identity.UserCacheRepository.
+// UserCacheRepository persists users_cache rows.
 type UserCacheRepository struct {
 	db *sql.DB
 }
