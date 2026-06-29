@@ -30,3 +30,13 @@ type EncounterWithContext struct {
 	UserLastContactAt *time.Time
 	IsFirstEncounter  bool
 }
+
+// EncounterFilter provides optional filtering for encounter list queries.
+type EncounterFilter struct {
+	VRCUserID   string
+	DisplayName string
+	InstanceID  string
+	WorldID     string
+	From        *time.Time
+	To          *time.Time
+}
