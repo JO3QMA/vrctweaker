@@ -100,6 +100,10 @@ GitHub Issues on `JO3QMA/vrctweaker` (`gh` CLI). See `docs/agents/issue-tracker.
 
 Canonical triage roles use default label names (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
 
+### Redaction (public artifacts)
+
+PR / Issue / commit messages and agent-drafted GitHub text must not name real VRChat users or paste `usr_*` IDs. See `docs/agents/redaction.md`. Cursor rule: `.cursor/rules/redaction-public-artifacts.mdc`.
+
 ### Domain docs
 
 Single-context: root `CONTEXT.md` and `docs/adr/`. See `docs/agents/domain.md`.

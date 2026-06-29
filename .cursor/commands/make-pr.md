@@ -27,6 +27,8 @@ gh pr create --title "<タイトル>" --body "<本文>"
 
 ## PR テンプレート（本文の目安）
 
+**Redaction:** PR タイトル・本文に VRChat 表示名・`usr_*` ID・プロフィール URL・ログイン username・インスタンス内 user ID を載せない。`docs/agents/redaction.md` を参照。
+
 ```markdown
 ### 概要
 <Issue の要約と変更の目的>
@@ -45,4 +47,5 @@ close #<Issue 番号>
 ## 注意
 
 - タイトル・本文の **`gh pr create` 実行前** に必ずユーザー承認を得る
+- **Redaction:** 実在ユーザーの表示名・ID・URL を PR に書かない（`docs/agents/redaction.md`）
 - ドラフト PR にしたい場合は `gh pr create --draft ...`
