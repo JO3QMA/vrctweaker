@@ -19,7 +19,7 @@ import (
 	"vrchat-tweaker/internal/domain/media"
 )
 
-// mockScreenshotRepo implements media.ScreenshotRepository for tests.
+// mockScreenshotRepo is a minimal screenshot store for tests.
 type mockScreenshotRepo struct {
 	screenshots    map[string]*media.Screenshot
 	byPath         map[string]*media.Screenshot
