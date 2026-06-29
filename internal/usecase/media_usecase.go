@@ -35,12 +35,12 @@ type MediaUseCase struct {
 	repo          screenshotRepo
 	extractor     media.MetadataExtractor
 	worldRepo     worldInfoRepo
-	userCacheRepo identity.UserCacheRepository
+	userCacheRepo userCacheRepo
 }
 
 // NewMediaUseCase creates a new MediaUseCase.
 // worldRepo and userCacheRepo may be nil; when set, extracted metadata is upserted into world_info and users_cache.
-func NewMediaUseCase(repo screenshotRepo, extractor media.MetadataExtractor, worldRepo worldInfoRepo, userCacheRepo identity.UserCacheRepository) *MediaUseCase {
+func NewMediaUseCase(repo screenshotRepo, extractor media.MetadataExtractor, worldRepo worldInfoRepo, userCacheRepo userCacheRepo) *MediaUseCase {
 	return &MediaUseCase{repo: repo, extractor: extractor, worldRepo: worldRepo, userCacheRepo: userCacheRepo}
 }
 

@@ -46,7 +46,7 @@ func (m *mockSettingsRepo) GetAll(context.Context) (map[string]string, error) {
 	return out, nil
 }
 
-// mockUserCacheRepo implements identity.UserCacheRepository for tests.
+// mockUserCacheRepo implements userCacheRepo for tests.
 type mockUserCacheRepo struct {
 	list                             []*identity.UserCache
 	getByID                          map[string]*identity.UserCache
