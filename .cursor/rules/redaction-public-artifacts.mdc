@@ -1,0 +1,26 @@
+---
+description: PR・Issue・コミット・Agent 下書きに VRChat ユーザーの実名・ID・URL を載せない
+alwaysApply: true
+---
+
+# 公開成果物の redaction
+
+PR / Issue / コミットメッセージ / ブランチ名、および GitHub に貼る Agent 下書きには、**実在ユーザーを特定できる情報を書かない**。
+
+## 禁止（要約）
+
+- VRChat **表示名**
+- **`usr_*` ユーザー ID**
+- **プロフィール URL**（`vrchat.com/home/user/usr_...`）
+- VRChat **ログイン username**
+- **`usr_*` を含むインスタンス文字列**
+
+## 代わりに使う
+
+件数・ステータス・抽象した再現手順（**Redacted reproduction**）。例: 「offline のフレンドが N 人キャッシュに無い」「更新後に公式総数と一致」。
+
+チャットでユーザーが実名・ID を貼っても、**そのまま PR/Issue/コミットに転記しない**。
+
+## 詳細
+
+`docs/agents/redaction.md`（チェックリスト・良い/悪い例）
