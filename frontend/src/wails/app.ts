@@ -1,32 +1,38 @@
 // Wails app bindings - calls Go backend methods
 // When running in Wails, window.go.main.App is injected
 
-import { main } from "../../wailsjs/go/models";
+import {
+  activity,
+  automation,
+  launcher,
+  main,
+  usecase,
+} from "../../wailsjs/go/models";
 import type * as WailsApp from "../../wailsjs/go/main/App";
 
 /** Data fields only (wailsjs model classes may include convertValues). */
 type WailsDTO<T> = Omit<T, "convertValues">;
 
 export type LaunchProfileDTO = WailsDTO<main.LaunchProfileDTO>;
-export type LaunchArgsParsedDTO = WailsDTO<main.LaunchArgsParsedDTO>;
+export type LaunchArgsParsedDTO = WailsDTO<launcher.LaunchArgsParsed>;
 export type ScreenshotDTO = WailsDTO<main.ScreenshotDTO>;
 export type ScreenshotSearchDTO = WailsDTO<main.ScreenshotSearchDTO>;
 export type UserEncounterDTO = WailsDTO<main.UserEncounterDTO>;
 export type UserCacheDTO = WailsDTO<main.UserCacheDTO>;
 export type UserProfileNavigationDTO = WailsDTO<main.UserProfileNavigationDTO>;
-export type PathSettingsDTO = WailsDTO<main.PathSettingsDTO>;
+export type PathSettingsDTO = WailsDTO<usecase.PathSettings>;
 export type LoginResultDTO = WailsDTO<main.LoginResultDTO>;
 export type VRChatCurrentUserDTO = WailsDTO<main.VRChatCurrentUserDTO>;
-export type DailyPlaySecondsDTO = WailsDTO<main.DailyPlaySecondsDTO>;
-export type TopWorldDTO = WailsDTO<main.TopWorldDTO>;
-export type ActivityStatsDTO = WailsDTO<main.ActivityStatsDTO>;
-export type AutomationRuleDTO = WailsDTO<main.AutomationRuleDTO>;
+export type DailyPlaySecondsDTO = WailsDTO<activity.DailyPlaySeconds>;
+export type TopWorldDTO = WailsDTO<activity.TopWorldSummary>;
+export type ActivityStatsDTO = WailsDTO<activity.ActivityStats>;
+export type AutomationRuleDTO = WailsDTO<automation.AutomationRule>;
 export type VRChatConfigDTO = WailsDTO<main.VRChatConfigDTO>;
 
 /** -999 = omit for process/main thread priority */
 export const PRIORITY_OMIT = -999;
 
-/** Payload for Wails event gallery:scan-progress (matches ScanProgressDTO in Go). */
+/** Payload for Wails event gallery:scan-progress (usecase.ScanProgress). */
 export interface ScanProgressPayload {
   phase: string;
   current: number;
@@ -34,7 +40,7 @@ export interface ScanProgressPayload {
   item?: string;
 }
 
-/** Payload for Wails event gallery:scan-done (matches GalleryScanDoneDTO in Go). */
+/** Payload for Wails event gallery:scan-done (usecase.GalleryScanDone). */
 export interface GalleryScanDonePayload {
   count: number;
   error?: string;

@@ -7,22 +7,22 @@ import (
 
 // DailyPlaySeconds represents play time for a single date.
 type DailyPlaySeconds struct {
-	Date    string // YYYY-MM-DD (local calendar)
-	Seconds int
+	Date    string `json:"date"` // YYYY-MM-DD (local calendar)
+	Seconds int    `json:"seconds"`
 }
 
 // TopWorldSummary represents aggregated stats for a world (or total when world_id is absent).
 type TopWorldSummary struct {
-	WorldID   string
-	WorldName string
-	Seconds   int
-	Sessions  int
+	WorldID   string `json:"worldId"`
+	WorldName string `json:"worldName,omitempty"`
+	Seconds   int    `json:"seconds"`
+	Sessions  int    `json:"sessions"`
 }
 
 // ActivityStats holds aggregated activity statistics.
 type ActivityStats struct {
-	DailyPlaySeconds []DailyPlaySeconds
-	TopWorlds        []TopWorldSummary
+	DailyPlaySeconds []DailyPlaySeconds `json:"dailyPlaySeconds"`
+	TopWorlds        []TopWorldSummary  `json:"topWorlds"`
 }
 
 // AggregatePlaySessions computes daily play seconds and top-world-like summary from sessions.

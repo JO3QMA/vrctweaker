@@ -138,11 +138,11 @@ func parseBoolSetting(v string) bool {
 	}
 }
 
-// PathSettings holds VRChat/Steam/output_log paths.
+// PathSettings holds VRChat/Steam/output_log paths (Wails-bound; camelCase json tags).
 type PathSettings struct {
-	VRChatPathWindows string
-	SteamPathLinux    string
-	OutputLogPath     string
+	VRChatPathWindows string `json:"vrchatPathWindows"`
+	SteamPathLinux    string `json:"steamPathLinux"`
+	OutputLogPath     string `json:"outputLogPath"`
 }
 
 // GetPathSettings returns all path settings.

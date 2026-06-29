@@ -24,10 +24,17 @@ const scanListingProgressEvery = 50
 
 // ScanProgress is a snapshot for UI progress (optional callback from ScanDirectory).
 type ScanProgress struct {
-	Phase   string
-	Current int
-	Total   int
-	Item    string
+	Phase   string `json:"phase"`
+	Current int    `json:"current"`
+	Total   int    `json:"total"`
+	Item    string `json:"item,omitempty"`
+}
+
+// GalleryScanDone is emitted on Wails event gallery:scan-done when a folder scan finishes.
+type GalleryScanDone struct {
+	Count     int    `json:"count"`
+	Error     string `json:"error,omitempty"`
+	Cancelled bool   `json:"cancelled"`
 }
 
 // MediaUseCase handles screenshot scanning and management.
