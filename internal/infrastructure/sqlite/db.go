@@ -80,7 +80,51 @@ func applySchema(db *sql.DB) error {
 		}
 	}
 
+	if err := ensureActivityLogSourceColumns(db); err != nil {
+		return err
+	}
+
 	return applyDataMigrations(db)
+}
+
+func ensureActivityLogSourceColumns(db *sql.DB) error {
+	type col struct {
+		table string
+		name  string
+		decl  string
+	}
+	for _, c := range []col{
+		{"play_sessions", "instance_id", "TEXT"},
+		{"play_sessions", "log_source_path", "TEXT"},
+		{"user_encounters", "log_source_path", "TEXT"},
+	} {
+		if err := addColumnIfMissing(db, c.table, c.name, c.decl); err != nil {
+			return fmt.Errorf("%s.%s: %w", c.table, c.name, err)
+		}
+	}
+	return nil
+}
+
+func addColumnIfMissing(db *sql.DB, table, column, decl string) error {
+	rows, err := db.Query(fmt.Sprintf(`SELECT name FROM pragma_table_info('%s')`, table))
+	if err != nil {
+		return err
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var name string
+		if err := rows.Scan(&name); err != nil {
+			return err
+		}
+		if name == column {
+			return rows.Err()
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	_, err = db.Exec(fmt.Sprintf(`ALTER TABLE %s ADD COLUMN %s %s`, table, column, decl))
+	return err
 }
 
 func applyDataMigrations(db *sql.DB) error {
@@ -115,7 +159,9 @@ func schemaStatements() []string {
 			id TEXT PRIMARY KEY,
 			start_time TEXT NOT NULL,
 			end_time TEXT,
-			duration_sec INTEGER
+			duration_sec INTEGER,
+			instance_id TEXT,
+			log_source_path TEXT
 		)`,
 		`CREATE TABLE IF NOT EXISTS user_encounters (
 			id TEXT PRIMARY KEY,
@@ -123,6 +169,7 @@ func schemaStatements() []string {
 			display_name TEXT NOT NULL,
 			instance_id TEXT,
 			world_id TEXT,
+			log_source_path TEXT,
 			joined_at TEXT NOT NULL,
 			left_at TEXT
 		)`,

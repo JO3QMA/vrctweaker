@@ -8,11 +8,10 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
-	"vrchat-tweaker/internal/infrastructure/logwatcher"
 	"vrchat-tweaker/internal/testvrc"
 )
 
-func Test_handleActivityLogFileSwitch_finalizesOldSessionAndRecordsWorldName(t *testing.T) {
+func Test_handleActivityLogRotationHandoff_finalizesOldSession(t *testing.T) {
 	t.Setenv("TZ", "UTC")
 	ctx := context.Background()
 	dir := t.TempDir()
@@ -24,7 +23,8 @@ func Test_handleActivityLogFileSwitch_finalizesOldSessionAndRecordsWorldName(t *
 	oldPath := filepath.Join(dir, "output_log_2026-06-24_08-00-00.txt")
 	oldContent := []byte(
 		"2026.06.24 08:20:00 Debug      -  [Behaviour] Joining " + cozyInst + "\n" +
-			"2026.06.24 08:20:05 Debug      -  [Behaviour] OnPlayerJoined Alice (usr_abc)\n",
+			"2026.06.24 08:20:05 Debug      -  [Behaviour] OnPlayerJoined Alice (usr_abc)\n" +
+			"2026.06.24 08:25:00 Debug      -  [EOSManager] old file tail\n",
 	)
 	if err := os.WriteFile(oldPath, oldContent, 0600); err != nil {
 		t.Fatal(err)
@@ -41,17 +41,22 @@ func Test_handleActivityLogFileSwitch_finalizesOldSessionAndRecordsWorldName(t *
 	}
 
 	app, encounterRepo := newTestAppWithActivity(t)
+	absOldPath, err := filepath.Abs(oldPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if err := encounterRepo.Save(ctx, &activity.UserEncounter{
-		ID:          "enc-open",
-		VRCUserID:   "usr_abc",
-		DisplayName: "Alice",
-		InstanceID:  cozyInst,
-		WorldID:     cozyWorld,
-		JoinedAt:    joinedAt,
+		ID:            "enc-open",
+		VRCUserID:     "usr_abc",
+		DisplayName:   "Alice",
+		InstanceID:    cozyInst,
+		WorldID:       cozyWorld,
+		LogSourcePath: absOldPath,
+		JoinedAt:      joinedAt,
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := app.activity.StartPlaySession(ctx, cozyInst, joinedAt); err != nil {
+	if err := app.activity.StartPlaySession(ctx, absOldPath, cozyInst, joinedAt); err != nil {
 		t.Fatal(err)
 	}
 
@@ -60,36 +65,43 @@ func Test_handleActivityLogFileSwitch_finalizesOldSessionAndRecordsWorldName(t *
 		t.Fatal(err)
 	}
 	parser := activity.NewLogParser()
-	adapter := logwatcher.NewActivityIngestAdapter(app.activity, ctx, appDiagLogger(), nil)
-	handler := logwatcher.NewMultiHandler(adapter, logwatcher.EventHandlerFunc(func(activity.ParsedEvent) {}))
 	deps := activityLogWatchDeps{
-		watchPath:     absDir,
-		parser:        parser,
-		ingestAdapter: adapter,
-		handler:       handler,
-		logger:        appDiagLogger(),
+		watchPath: absDir,
+		parser:    parser,
+		logger:    appDiagLogger(),
 	}
 
-	if switchErr := app.handleActivityLogFileSwitch(ctx, deps, oldPath, newPath); switchErr != nil {
-		t.Fatal(switchErr)
+	if handoffErr := app.handleActivityLogRotationHandoff(ctx, deps, absOldPath); handoffErr != nil {
+		t.Fatal(handoffErr)
 	}
 
-	rows, err := app.activity.ListEncountersWithContext(ctx, nil)
+	rows, err := app.activity.ListEncounters(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(rows) != 1 {
 		t.Fatalf("encounters = %d, want 1", len(rows))
 	}
-	if rows[0].Encounter == nil || rows[0].Encounter.LeftAt == nil {
+	if rows[0].LeftAt == nil {
 		t.Fatal("encounter left_at is nil, want finalized when VRChat log rotated")
 	}
-	if rows[0].WorldDisplayName != "Cozy with․" {
-		t.Fatalf("world display = %q, want Cozy with․", rows[0].WorldDisplayName)
+	wantClose := time.Date(2026, 6, 24, 8, 25, 0, 0, time.UTC)
+	if !rows[0].LeftAt.Equal(wantClose) {
+		t.Fatalf("LeftAt = %v, want %v", rows[0].LeftAt, wantClose)
+	}
+
+	from := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)
+	sessions, err := app.activity.ListPlaySessions(ctx, from, to)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sessions) != 1 || sessions[0].EndTime == nil {
+		t.Fatalf("play session should be closed: %+v", sessions)
 	}
 }
 
-func Test_finalizeOpenActivityAtLogPath_usesLastTimestamp(t *testing.T) {
+func Test_finalizeOpenActivityForLogSource_usesLastTimestamp(t *testing.T) {
 	t.Setenv("TZ", "UTC")
 	ctx := context.Background()
 	dir := t.TempDir()
@@ -106,10 +118,14 @@ func Test_finalizeOpenActivityAtLogPath_usesLastTimestamp(t *testing.T) {
 	}
 
 	app, _ := newTestAppWithActivity(t)
-	if err := app.activity.StartPlaySession(ctx, inst, joinedAt); err != nil {
+	absLogPath, err := filepath.Abs(logPath)
+	if err != nil {
 		t.Fatal(err)
 	}
-	app.finalizeOpenActivityAtLogPath(ctx, logPath)
+	if err := app.activity.StartPlaySession(ctx, absLogPath, inst, joinedAt); err != nil {
+		t.Fatal(err)
+	}
+	app.finalizeOpenActivityForLogSource(ctx, absLogPath)
 
 	from := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)

@@ -10,19 +10,16 @@ import (
 	"vrchat-tweaker/internal/domain/activity"
 	"vrchat-tweaker/internal/infrastructure/logwatcher"
 	"vrchat-tweaker/internal/infrastructure/sleepsuppress"
-	"vrchat-tweaker/internal/usecase"
 )
 
 type activityLogWatchDeps struct {
 	watchPath      string
 	parser         *activity.LogParser
-	ingestAdapter  *logwatcher.ActivityIngestAdapter
-	handler        logwatcher.EventHandler
 	logger         logwatcher.Logger
 	emitEncounters func()
 }
 
-func (a *App) finalizeOpenActivityAtLogPath(ctx context.Context, logPath string) {
+func (a *App) finalizeOpenActivityForLogSource(ctx context.Context, logPath string) {
 	if a.activity == nil || logPath == "" {
 		return
 	}
@@ -31,54 +28,30 @@ func (a *App) finalizeOpenActivityAtLogPath(ctx context.Context, logPath string)
 		runtime.LogWarning(ctx, "activity finalize log time: "+err.Error())
 	}
 	if lastTime.IsZero() {
-		if cp, cpErr := a.activity.GetActivityLogCheckpoint(ctx); cpErr == nil && cp != nil && cp.VRChatLineTime != "" {
-			if t, parseErr := time.Parse(time.RFC3339, cp.VRChatLineTime); parseErr == nil {
-				lastTime = t
+		absPath, absErr := filepath.Abs(filepath.Clean(logPath))
+		if absErr != nil {
+			absPath = logPath
+		}
+		if cp, cpErr := a.activity.GetActivityLogCheckpoint(ctx); cpErr == nil && cp != nil {
+			if fc, ok := cp.FileCheckpoint(absPath); ok && fc.VRChatLineTime != "" {
+				if t, parseErr := time.Parse(time.RFC3339, fc.VRChatLineTime); parseErr == nil {
+					lastTime = t
+				}
 			}
 		}
 	}
 	if lastTime.IsZero() {
 		return
 	}
-	_ = a.activity.CloseOpenPlaySessionAtLastLogLine(ctx, lastTime)
-	_ = a.activity.CloseOpenEncountersAtLastLogLine(ctx, lastTime)
+	_ = a.activity.FinalizeOpenActivityForLogSource(ctx, absLogPath(logPath), lastTime)
 	if a.ctx != nil {
 		runtime.EventsEmit(a.ctx, activityEncountersChangedEvent, struct{}{})
 	}
 }
 
-func (a *App) handleActivityLogFileSwitch(ctx context.Context, deps activityLogWatchDeps, previousPath, newPath string) error {
-	if previousPath != "" {
-		a.finalizeOpenActivityAtLogPath(ctx, previousPath)
-	}
-	if deps.ingestAdapter != nil {
-		deps.ingestAdapter.ResetSessionContextForNewLogFile()
-	}
-	if newPath == "" || deps.parser == nil || deps.handler == nil {
-		return nil
-	}
-
-	var lastVRLineTime time.Time
-	endOff, err := logwatcher.ProcessOutputLogFileFromOffset(ctx, newPath, 0, deps.parser, deps.handler, deps.logger, func(_ int64, line string) {
-		if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
-			lastVRLineTime = ts
-		}
-	})
-	if err != nil {
-		return err
-	}
-
-	if a.activity != nil && deps.watchPath != "" {
-		absNew, absErr := filepath.Abs(filepath.Clean(newPath))
-		if absErr != nil {
-			absNew = newPath
-		}
-		_ = a.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
-			WatchPath:      deps.watchPath,
-			File:           absNew,
-			ByteOffset:     endOff,
-			VRChatLineTime: formatActivityCheckpointLineTime(lastVRLineTime),
-		})
+func (a *App) handleActivityLogRotationHandoff(ctx context.Context, deps activityLogWatchDeps, oldPath string) error {
+	if oldPath != "" {
+		a.finalizeOpenActivityForLogSource(ctx, oldPath)
 	}
 	if deps.emitEncounters != nil {
 		deps.emitEncounters()
@@ -101,12 +74,7 @@ func (a *App) startVRChatActivityMonitor(ctx context.Context, watchPath string) 
 		defer a.activityWatchWG.Done()
 		checker := sleepsuppress.NewVRChatProcessChecker()
 		_ = logwatcher.MonitorVRChatRunning(runCtx, 4*time.Second, checker, func() {
-			logPath, err := a.resolveActiveOutputLogFilePath(ctx, watchPath)
-			if err != nil || logPath == "" {
-				a.finalizeOpenActivityFromCheckpoint(ctx)
-				return
-			}
-			a.finalizeOpenActivityAtLogPath(ctx, logPath)
+			a.finalizeAllLogSourcesOnVRChatExit(ctx, watchPath)
 		})
 	}()
 }
@@ -123,23 +91,69 @@ func (a *App) stopVRChatActivityMonitor() {
 	}
 }
 
+func (a *App) finalizeAllLogSourcesOnVRChatExit(ctx context.Context, watchPath string) {
+	if a.activity == nil {
+		return
+	}
+	lastLine := a.latestCheckpointLineTime(ctx)
+	if lastLine.IsZero() {
+		lastLine = time.Now().UTC()
+	}
+	_ = a.activity.FinalizeAllOpenActivity(ctx, lastLine)
+
+	cp, err := a.activity.GetActivityLogCheckpoint(ctx)
+	if err == nil && cp != nil {
+		cp.NormalizeFiles()
+		for path := range cp.Files {
+			if t, tErr := logwatcher.LastVRChatLineTimeInFile(path); tErr == nil && t.After(lastLine) {
+				lastLine = t
+			}
+			_ = a.activity.FinalizeOpenActivityForLogSource(ctx, absLogPath(path), lastLine)
+		}
+	}
+
+	if watchPath != "" {
+		if info, statErr := os.Stat(watchPath); statErr == nil && info.IsDir() {
+			if files, listErr := logwatcher.ListOutputLogFiles(watchPath); listErr == nil {
+				for _, path := range files {
+					_ = a.activity.FinalizeOpenActivityForLogSource(ctx, absLogPath(path), lastLine)
+				}
+			}
+		}
+	}
+
+	if a.ctx != nil {
+		runtime.EventsEmit(a.ctx, activityEncountersChangedEvent, struct{}{})
+	}
+}
+
 func (a *App) finalizeOpenActivityFromCheckpoint(ctx context.Context) {
 	if a.activity == nil {
 		return
 	}
+	a.finalizeAllLogSourcesOnVRChatExit(ctx, "")
+}
+
+func (a *App) latestCheckpointLineTime(ctx context.Context) time.Time {
 	cp, err := a.activity.GetActivityLogCheckpoint(ctx)
-	if err != nil || cp == nil || cp.VRChatLineTime == "" {
-		return
+	if err != nil || cp == nil {
+		return time.Time{}
 	}
-	lastTime, parseErr := time.Parse(time.RFC3339, cp.VRChatLineTime)
-	if parseErr != nil || lastTime.IsZero() {
-		return
+	cp.NormalizeFiles()
+	var max time.Time
+	for _, fc := range cp.Files {
+		if fc.VRChatLineTime == "" {
+			continue
+		}
+		t, parseErr := time.Parse(time.RFC3339, fc.VRChatLineTime)
+		if parseErr != nil || t.IsZero() {
+			continue
+		}
+		if t.After(max) {
+			max = t
+		}
 	}
-	_ = a.activity.CloseOpenPlaySessionAtLastLogLine(ctx, lastTime)
-	_ = a.activity.CloseOpenEncountersAtLastLogLine(ctx, lastTime)
-	if a.ctx != nil {
-		runtime.EventsEmit(a.ctx, activityEncountersChangedEvent, struct{}{})
-	}
+	return max
 }
 
 func (a *App) resolveActiveOutputLogFilePath(ctx context.Context, watchPath string) (string, error) {
@@ -159,4 +173,27 @@ func (a *App) resolveActiveOutputLogFilePath(ctx context.Context, watchPath stri
 		return logwatcher.ResolveLatestOutputLogFile(p)
 	}
 	return filepath.Abs(filepath.Clean(p))
+}
+
+func absLogPath(p string) string {
+	abs, err := filepath.Abs(filepath.Clean(p))
+	if err != nil {
+		return p
+	}
+	return abs
+}
+
+func formatActivityCheckpointLineTime(t time.Time) string {
+	if t.IsZero() {
+		return ""
+	}
+	return t.Format(time.RFC3339)
+}
+
+// activityTailCheckpoint persists incremental ingest progress for one log file.
+func (a *App) activityTailCheckpoint(ctx context.Context, deps activityLogWatchDeps, path string, offset int64, lineTime time.Time) {
+	if a.activity == nil {
+		return
+	}
+	_ = a.activity.SetActivityLogFileCheckpoint(ctx, deps.watchPath, absLogPath(path), offset, formatActivityCheckpointLineTime(lineTime))
 }
