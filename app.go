@@ -308,18 +308,15 @@ func (a *App) ingestOneActivityLogBootstrap(
 		runtime.LogWarning(ctx, "activity log correlator warm: "+warmErr.Error())
 	}
 	_, procErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, ingestAdapter, logger, func(pos int64, line string) {
-		if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
+		ts := activity.ParseVRChatTimestamp(line, time.Time{})
+		if !ts.IsZero() {
 			lastVRLineTime = ts
 		}
 		checkpointLines++
 		if checkpointLines != 1 && checkpointLines%32 != 0 {
 			return
 		}
-		vrTime := ""
-		if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
-			vrTime = ts.Format(time.RFC3339)
-		}
-		_ = a.activity.SetActivityLogFileCheckpoint(ctx, absWatch, absLogPath(pathCopy), pos, vrTime)
+		_ = a.activity.SetActivityLogFileCheckpoint(ctx, absWatch, absLogPath(pathCopy), pos, checkpointVRTime(ts))
 	})
 	if procErr != nil {
 		if errors.Is(procErr, context.Canceled) {
@@ -336,11 +333,7 @@ func (a *App) ingestOneActivityLogBootstrap(
 	if statErr == nil && st != nil {
 		endOff = st.Size()
 	}
-	endVRTime := ""
-	if !lastVRLineTime.IsZero() {
-		endVRTime = lastVRLineTime.Format(time.RFC3339)
-	}
-	_ = a.activity.SetActivityLogFileCheckpoint(ctx, absWatch, absLogPath(pathCopy), endOff, endVRTime)
+	_ = a.activity.SetActivityLogFileCheckpoint(ctx, absWatch, absLogPath(pathCopy), endOff, checkpointVRTime(lastVRLineTime))
 }
 
 func (a *App) startOutputLogWatcher(ctx context.Context) {
@@ -392,11 +385,7 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 				if a.activity == nil {
 					return
 				}
-				vrTime := ""
-				if !lineTime.IsZero() {
-					vrTime = lineTime.Format(time.RFC3339)
-				}
-				_ = a.activity.SetActivityLogFileCheckpoint(c, watchDeps.watchPath, absLogPath(path), offset, vrTime)
+				_ = a.activity.SetActivityLogFileCheckpoint(c, watchDeps.watchPath, absLogPath(path), offset, checkpointVRTime(lineTime))
 			},
 		}, logger)
 		if startErr := watcher.Start(ctx); startErr != nil {
@@ -427,11 +416,7 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 			if err != nil {
 				return err
 			}
-			endVRTime := ""
-			if !lastVRLineTime.IsZero() {
-				endVRTime = lastVRLineTime.Format(time.RFC3339)
-			}
-			_ = a.activity.SetActivityLogFileCheckpoint(c, watchDeps.watchPath, absLogPath(newPath), endOff, endVRTime)
+			_ = a.activity.SetActivityLogFileCheckpoint(c, watchDeps.watchPath, absLogPath(newPath), endOff, checkpointVRTime(lastVRLineTime))
 			if watchDeps.emitEncounters != nil {
 				watchDeps.emitEncounters()
 			}

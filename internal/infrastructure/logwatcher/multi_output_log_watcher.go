@@ -238,15 +238,7 @@ func (w *MultiOutputLogWatcher) shouldHandoff(
 
 func (w *MultiOutputLogWatcher) startTail(ctx context.Context, path string, state *trackedLogFile, startOffset int64) {
 	if state.tailing {
-		for {
-			cur := state.readOffset.Load()
-			if startOffset <= cur {
-				return
-			}
-			if state.readOffset.CompareAndSwap(cur, startOffset) {
-				return
-			}
-		}
+		return
 	}
 	state.readOffset.Store(startOffset)
 	tailCtx, cancel := context.WithCancel(ctx)
