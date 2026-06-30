@@ -233,44 +233,42 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 		}
 		live := bootstrapLiveLogFiles(files)
 		for _, fp := range files {
-			a.ingestOneActivityLogBootstrap(ctx, absWatch, fp, parser, logger, emitEncounters, cp, live)
+			finalize := live == nil || !live[fp]
+			a.ingestOneActivityLogBootstrap(ctx, absWatch, fp, parser, logger, emitEncounters, cp, finalize, nil)
 		}
 		return
 	}
 
 	adapter := logwatcher.NewActivityIngestAdapter(a.activity, ctx, logger, emitEncounters, absLogPath(absWatch))
-	off := int64(0)
-	if cp != nil && matchAbsPaths(cp.WatchPath, absWatch) {
-		if fc, ok := cp.FileCheckpoint(absLogPath(absWatch)); ok {
-			off = fc.ByteOffset
-		}
-	}
-	a.ingestOneActivityLogBootstrapWithAdapter(ctx, absWatch, absWatch, off, parser, adapter, logger, false)
+	a.ingestOneActivityLogBootstrap(ctx, absWatch, absWatch, parser, logger, emitEncounters, cp, false, adapter)
 }
 
 func bootstrapLiveLogFiles(paths []string) map[string]bool {
+	const liveWindow = 5 * time.Second
+	type fileMod struct {
+		path string
+		mod  time.Time
+	}
+	var files []fileMod
 	var maxMod time.Time
 	for _, p := range paths {
 		info, err := os.Stat(p)
 		if err != nil {
 			continue
 		}
-		if info.ModTime().After(maxMod) {
-			maxMod = info.ModTime()
+		mod := info.ModTime()
+		files = append(files, fileMod{path: p, mod: mod})
+		if mod.After(maxMod) {
+			maxMod = mod
 		}
 	}
 	if maxMod.IsZero() {
 		return nil
 	}
-	const liveWindow = 5 * time.Second
 	live := make(map[string]bool)
-	for _, p := range paths {
-		info, err := os.Stat(p)
-		if err != nil {
-			continue
-		}
-		if maxMod.Sub(info.ModTime()) <= liveWindow {
-			live[p] = true
+	for _, f := range files {
+		if maxMod.Sub(f.mod) <= liveWindow {
+			live[f.path] = true
 		}
 	}
 	return live
@@ -283,10 +281,13 @@ func (a *App) ingestOneActivityLogBootstrap(
 	logger logwatcher.Logger,
 	emitEncounters func(),
 	cp *usecase.ActivityLogCheckpoint,
-	live map[string]bool,
+	finalizeAtEnd bool,
+	ingestAdapter *logwatcher.ActivityIngestAdapter,
 ) {
 	absFile := absLogPath(filePath)
-	adapter := logwatcher.NewActivityIngestAdapter(a.activity, ctx, logger, emitEncounters, absFile)
+	if ingestAdapter == nil {
+		ingestAdapter = logwatcher.NewActivityIngestAdapter(a.activity, ctx, logger, emitEncounters, absFile)
+	}
 	off := int64(0)
 	if cp != nil && matchAbsPaths(cp.WatchPath, absWatch) {
 		if fc, ok := cp.FileCheckpoint(absFile); ok {
@@ -296,19 +297,6 @@ func (a *App) ingestOneActivityLogBootstrap(
 			}
 		}
 	}
-	finalize := live == nil || !live[filePath]
-	a.ingestOneActivityLogBootstrapWithAdapter(ctx, absWatch, filePath, off, parser, adapter, logger, finalize)
-}
-
-func (a *App) ingestOneActivityLogBootstrapWithAdapter(
-	ctx context.Context,
-	absWatch, filePath string,
-	off int64,
-	parser *activity.LogParser,
-	ingestAdapter *logwatcher.ActivityIngestAdapter,
-	logger logwatcher.Logger,
-	finalizeAtEnd bool,
-) {
 	pathCopy := filePath
 	ingestAdapter.SetSuppressEncounterNotify(true)
 	defer ingestAdapter.SetSuppressEncounterNotify(false)
@@ -348,7 +336,11 @@ func (a *App) ingestOneActivityLogBootstrapWithAdapter(
 	if statErr == nil && st != nil {
 		endOff = st.Size()
 	}
-	_ = a.activity.SetActivityLogFileCheckpoint(ctx, absWatch, absLogPath(pathCopy), endOff, formatActivityCheckpointLineTime(lastVRLineTime))
+	endVRTime := ""
+	if !lastVRLineTime.IsZero() {
+		endVRTime = lastVRLineTime.Format(time.RFC3339)
+	}
+	_ = a.activity.SetActivityLogFileCheckpoint(ctx, absWatch, absLogPath(pathCopy), endOff, endVRTime)
 }
 
 func (a *App) startOutputLogWatcher(ctx context.Context) {
@@ -397,7 +389,14 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 				return a.handleActivityLogRotationHandoff(c, watchDeps, oldPath)
 			},
 			OnTailCheckpoint: func(c context.Context, path string, offset int64, lineTime time.Time) {
-				a.activityTailCheckpoint(c, watchDeps, path, offset, lineTime)
+				if a.activity == nil {
+					return
+				}
+				vrTime := ""
+				if !lineTime.IsZero() {
+					vrTime = lineTime.Format(time.RFC3339)
+				}
+				_ = a.activity.SetActivityLogFileCheckpoint(c, watchDeps.watchPath, absLogPath(path), offset, vrTime)
 			},
 		}, logger)
 		if startErr := watcher.Start(ctx); startErr != nil {
@@ -428,7 +427,11 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 			if err != nil {
 				return err
 			}
-			_ = a.activity.SetActivityLogFileCheckpoint(c, watchDeps.watchPath, absLogPath(newPath), endOff, formatActivityCheckpointLineTime(lastVRLineTime))
+			endVRTime := ""
+			if !lastVRLineTime.IsZero() {
+				endVRTime = lastVRLineTime.Format(time.RFC3339)
+			}
+			_ = a.activity.SetActivityLogFileCheckpoint(c, watchDeps.watchPath, absLogPath(newPath), endOff, endVRTime)
 			if watchDeps.emitEncounters != nil {
 				watchDeps.emitEncounters()
 			}

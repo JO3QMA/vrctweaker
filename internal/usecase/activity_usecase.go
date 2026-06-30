@@ -315,24 +315,6 @@ func (uc *ActivityUseCase) EndPlaySession(ctx context.Context, logSource string,
 	return uc.playRepo.Save(ctx, open)
 }
 
-// CloseOpenEncountersAtLastLogLine sets left_at on any encounter row still open for logSource.
-func (uc *ActivityUseCase) CloseOpenEncountersAtLastLogLine(ctx context.Context, logSource string, lastLine time.Time) error {
-	if lastLine.IsZero() {
-		return nil
-	}
-	_, err := uc.encounterRepo.CloseOpenEncountersAtForLogSource(ctx, logSource, lastLine)
-	return err
-}
-
-// CloseOpenEncountersAtAll sets left_at on all open encounter rows (legacy NULL included).
-func (uc *ActivityUseCase) CloseOpenEncountersAtAll(ctx context.Context, at time.Time) error {
-	if at.IsZero() {
-		return nil
-	}
-	_, err := uc.encounterRepo.CloseOpenEncountersAt(ctx, at)
-	return err
-}
-
 // CloseOpenEncountersAt sets left_at on open encounter rows for one log source.
 func (uc *ActivityUseCase) CloseOpenEncountersAt(ctx context.Context, logSource string, at time.Time) error {
 	if at.IsZero() {
@@ -347,7 +329,7 @@ func (uc *ActivityUseCase) FinalizeOpenActivityForLogSource(ctx context.Context,
 	if err := uc.CloseOpenPlaySessionAtLastLogLine(ctx, logSource, lastLine); err != nil {
 		return err
 	}
-	return uc.CloseOpenEncountersAtLastLogLine(ctx, logSource, lastLine)
+	return uc.CloseOpenEncountersAt(ctx, logSource, lastLine)
 }
 
 // FinalizeAllOpenActivity closes all open play sessions and encounters at lastLine (VRChat exit).
@@ -461,10 +443,11 @@ func (uc *ActivityUseCase) GetActivityStats(ctx context.Context, fromISO, toISO 
 	}, nil
 }
 
-func (uc *ActivityUseCase) lastObservedLogTime(ctx context.Context) *time.Time {
+// LastObservedLogTime returns the latest VRChat line timestamp across all log file checkpoints.
+func (uc *ActivityUseCase) LastObservedLogTime(ctx context.Context) time.Time {
 	cp, err := uc.GetActivityLogCheckpoint(ctx)
 	if err != nil || cp == nil {
-		return nil
+		return time.Time{}
 	}
 	cp.NormalizeFiles()
 	var max time.Time
@@ -480,10 +463,14 @@ func (uc *ActivityUseCase) lastObservedLogTime(ctx context.Context) *time.Time {
 			max = t
 		}
 	}
-	if max.IsZero() {
-		return nil
+	return max
+}
+
+func (uc *ActivityUseCase) lastObservedLogTime(ctx context.Context) *time.Time {
+	if t := uc.LastObservedLogTime(ctx); !t.IsZero() {
+		return &t
 	}
-	return &max
+	return nil
 }
 
 func (uc *ActivityUseCase) activityRetentionCutoff(ctx context.Context) (time.Time, error) {

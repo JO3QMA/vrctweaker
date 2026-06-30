@@ -144,28 +144,6 @@ func (r *recordingEncounterRepo) CloseOpenEncountersAtForLogSource(_ context.Con
 	return 0, nil
 }
 
-func TestActivityUseCase_CloseOpenEncountersAtLastLogLine(t *testing.T) {
-	ctx := context.Background()
-	const logSource = "/logs/output_log.txt"
-	rec := &recordingEncounterRepo{}
-	uc := NewActivityUseCase(&fakePlaySessionRepo{}, rec, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
-
-	if err := uc.CloseOpenEncountersAtLastLogLine(ctx, logSource, time.Time{}); err != nil {
-		t.Fatal(err)
-	}
-	if len(rec.closeForLogSource) != 0 {
-		t.Fatalf("zero last line: expected no CloseOpenEncountersAtForLogSource, got %v", rec.closeForLogSource)
-	}
-
-	last := time.Date(2025, 1, 2, 15, 4, 5, 0, time.UTC)
-	if err := uc.CloseOpenEncountersAtLastLogLine(ctx, logSource, last); err != nil {
-		t.Fatal(err)
-	}
-	if len(rec.closeForLogSource) != 1 || rec.closeForLogSource[0].logSource != logSource || !rec.closeForLogSource[0].at.Equal(last) {
-		t.Fatalf("CloseOpenEncountersAtForLogSource calls = %v, want [{logSource:%q at:%v}]", rec.closeForLogSource, logSource, last)
-	}
-}
-
 func TestActivityUseCase_CloseOpenPlaySessionAtLastLogLine_sameDay(t *testing.T) {
 	ctx := context.Background()
 	const logSource = "/logs/output_log.txt"
