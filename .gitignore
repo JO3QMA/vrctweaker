@@ -12,6 +12,7 @@ frontend/coverage/
 frontend/.pnpm-store/
 frontend/wailsjs/
 frontend/tsconfig.tsbuildinfo
+frontend/src/data/licenses.json
 
 # Go
 *.test
