@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"vrchat-tweaker/internal/infrastructure/diag"
@@ -36,7 +37,7 @@ type MultiOutputLogWatcher struct {
 type trackedLogFile struct {
 	lastSize     int64
 	lastGrowthAt time.Time
-	readOffset   int64
+	readOffset   atomic.Int64
 	tailing      bool
 	cancel       context.CancelFunc
 }
@@ -174,7 +175,7 @@ func (w *MultiOutputLogWatcher) run(ctx context.Context) {
 			} else if size < state.lastSize {
 				// Truncated or rotated in place; restart from current size.
 				w.stopTail(state)
-				state.readOffset = size
+				state.readOffset.Store(size)
 				state.lastSize = size
 				state.lastGrowthAt = now
 			} else {
@@ -237,19 +238,24 @@ func (w *MultiOutputLogWatcher) shouldHandoff(
 
 func (w *MultiOutputLogWatcher) startTail(ctx context.Context, path string, state *trackedLogFile, startOffset int64) {
 	if state.tailing {
-		if startOffset > state.readOffset {
-			state.readOffset = startOffset
+		for {
+			cur := state.readOffset.Load()
+			if startOffset <= cur {
+				return
+			}
+			if state.readOffset.CompareAndSwap(cur, startOffset) {
+				return
+			}
 		}
-		return
 	}
-	state.readOffset = startOffset
+	state.readOffset.Store(startOffset)
 	tailCtx, cancel := context.WithCancel(ctx)
 	state.cancel = cancel
 	state.tailing = true
 
 	handler := w.handlerFactory(path)
 	go tailOutputLogFile(tailCtx, path, startOffset, w.parser, handler, w.logger, func(offset int64, lineTime time.Time) {
-		state.readOffset = offset
+		state.readOffset.Store(offset)
 		if w.callbacks.OnTailCheckpoint != nil {
 			w.callbacks.OnTailCheckpoint(ctx, path, offset, lineTime)
 		}
