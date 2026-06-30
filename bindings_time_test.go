@@ -10,6 +10,7 @@ func TestParseDateOrRFC3339(t *testing.T) {
 	day := parseDateOrRFC3339("2024-06-01")
 	if day == nil {
 		t.Fatal("expected date")
+		return
 	}
 	if day.Format("2006-01-02") != "2024-06-01" {
 		t.Fatalf("got %s", day.Format(time.RFC3339))

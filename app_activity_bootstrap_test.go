@@ -187,7 +187,7 @@ func Test_ingestActivityLogsBootstrap_finalizesOpenEncounters_onHistoricalDirect
 	}
 	joinedAt := time.Date(2026, 3, 20, 22, 0, 0, 0, time.UTC)
 	closeAt := time.Date(2026, 3, 20, 23, 50, 0, 0, time.UTC)
-	if err := encounterRepo.Save(ctx, &activity.UserEncounter{
+	if saveErr := encounterRepo.Save(ctx, &activity.UserEncounter{
 		ID:            "enc-historical",
 		VRCUserID:     testBootstrapUserID,
 		DisplayName:   "Alice",
@@ -195,8 +195,8 @@ func Test_ingestActivityLogsBootstrap_finalizesOpenEncounters_onHistoricalDirect
 		WorldID:       testBootstrapWorldID,
 		LogSourcePath: absOldPath,
 		JoinedAt:      joinedAt,
-	}); err != nil {
-		t.Fatal(err)
+	}); saveErr != nil {
+		t.Fatal(saveErr)
 	}
 
 	absDir, err := filepath.Abs(dir)

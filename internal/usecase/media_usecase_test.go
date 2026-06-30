@@ -284,6 +284,7 @@ func TestMediaUseCase_ScanDirectory_WithExtractor(t *testing.T) {
 	got, _ := repo.GetByFilePath(ctx, path)
 	if got == nil {
 		t.Fatal("screenshot not saved")
+		return
 	}
 	if got.WorldID != "wrld_test123" {
 		t.Errorf("WorldID = %q, want wrld_test123", got.WorldID)
@@ -316,6 +317,7 @@ func TestMediaUseCase_ScanDirectory_ExtractorErrorContinues(t *testing.T) {
 	got, _ := repo.GetByFilePath(ctx, path)
 	if got == nil {
 		t.Fatal("screenshot not saved")
+		return
 	}
 	if got.WorldID != "" || got.WorldName != "" {
 		t.Errorf("extraction failure should yield empty metadata, got worldID=%q worldName=%q", got.WorldID, got.WorldName)

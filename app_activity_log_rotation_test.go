@@ -45,7 +45,7 @@ func Test_handleActivityLogRotationHandoff_finalizesOldSession(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := encounterRepo.Save(ctx, &activity.UserEncounter{
+	if saveErr := encounterRepo.Save(ctx, &activity.UserEncounter{
 		ID:            "enc-open",
 		VRCUserID:     "usr_abc",
 		DisplayName:   "Alice",
@@ -53,11 +53,11 @@ func Test_handleActivityLogRotationHandoff_finalizesOldSession(t *testing.T) {
 		WorldID:       cozyWorld,
 		LogSourcePath: absOldPath,
 		JoinedAt:      joinedAt,
-	}); err != nil {
-		t.Fatal(err)
+	}); saveErr != nil {
+		t.Fatal(saveErr)
 	}
-	if err := app.activity.StartPlaySession(ctx, absOldPath, cozyInst, joinedAt); err != nil {
-		t.Fatal(err)
+	if startErr := app.activity.StartPlaySession(ctx, absOldPath, cozyInst, joinedAt); startErr != nil {
+		t.Fatal(startErr)
 	}
 
 	absDir, err := filepath.Abs(dir)
@@ -122,8 +122,8 @@ func Test_finalizeOpenActivityForLogSource_usesLastTimestamp(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := app.activity.StartPlaySession(ctx, absLogPath, inst, joinedAt); err != nil {
-		t.Fatal(err)
+	if startErr := app.activity.StartPlaySession(ctx, absLogPath, inst, joinedAt); startErr != nil {
+		t.Fatal(startErr)
 	}
 	app.finalizeOpenActivityForLogSource(ctx, absLogPath)
 

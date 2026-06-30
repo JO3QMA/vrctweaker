@@ -55,6 +55,7 @@ func TestSettingsUseCase_GetPathSettings_SetPathSettings_roundtrip(t *testing.T)
 	}
 	if got == nil {
 		t.Fatal("GetPathSettings returned nil")
+		return
 	}
 	if got.VRChatPathWindows != ps.VRChatPathWindows {
 		t.Errorf("VRChatPathWindows: got %q, want %q", got.VRChatPathWindows, ps.VRChatPathWindows)

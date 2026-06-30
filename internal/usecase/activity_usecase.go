@@ -360,8 +360,8 @@ func (uc *ActivityUseCase) FinalizeAllOpenActivity(ctx context.Context, lastLine
 		return err
 	}
 	for _, open := range opens {
-		if err := uc.closePlaySessionAt(ctx, open, lastLine); err != nil {
-			return err
+		if closeErr := uc.closePlaySessionAt(ctx, open, lastLine); closeErr != nil {
+			return closeErr
 		}
 	}
 	_, err = uc.encounterRepo.CloseOpenEncountersAt(ctx, lastLine)

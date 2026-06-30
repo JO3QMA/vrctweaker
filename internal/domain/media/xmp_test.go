@@ -261,6 +261,7 @@ func TestExtractTakenAtFromEXIFData_fromFixture(t *testing.T) {
 	got := extractTakenAtFromEXIFData(minimalEXIFJPEG)
 	if got == nil {
 		t.Fatal("expected TakenAt from fixture EXIF")
+		return
 	}
 	if got.Year() != 2004 {
 		t.Fatalf("year = %d", got.Year())

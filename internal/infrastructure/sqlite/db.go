@@ -113,14 +113,14 @@ func addColumnIfMissing(db *sql.DB, table, column, decl string) error {
 	defer func() { _ = rows.Close() }()
 	for rows.Next() {
 		var name string
-		if err := rows.Scan(&name); err != nil {
-			return err
+		if scanErr := rows.Scan(&name); scanErr != nil {
+			return scanErr
 		}
 		if name == column {
 			return rows.Err()
 		}
 	}
-	if err := rows.Err(); err != nil {
+	if err = rows.Err(); err != nil {
 		return err
 	}
 	_, err = db.Exec(fmt.Sprintf(`ALTER TABLE %s ADD COLUMN %s %s`, table, column, decl))

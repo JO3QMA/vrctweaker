@@ -127,13 +127,6 @@ func (a *App) finalizeAllLogSourcesOnVRChatExit(ctx context.Context, watchPath s
 	}
 }
 
-func (a *App) finalizeOpenActivityFromCheckpoint(ctx context.Context) {
-	if a.activity == nil {
-		return
-	}
-	a.finalizeAllLogSourcesOnVRChatExit(ctx, "")
-}
-
 func (a *App) latestCheckpointLineTime(ctx context.Context) time.Time {
 	cp, err := a.activity.GetActivityLogCheckpoint(ctx)
 	if err != nil || cp == nil {
@@ -154,25 +147,6 @@ func (a *App) latestCheckpointLineTime(ctx context.Context) time.Time {
 		}
 	}
 	return max
-}
-
-func (a *App) resolveActiveOutputLogFilePath(ctx context.Context, watchPath string) (string, error) {
-	p := watchPath
-	if p == "" {
-		var err error
-		p, err = a.resolveEffectiveOutputLogWatchPath(ctx)
-		if err != nil {
-			return "", err
-		}
-	}
-	info, err := os.Stat(p)
-	if err != nil {
-		return "", err
-	}
-	if info.IsDir() {
-		return logwatcher.ResolveLatestOutputLogFile(p)
-	}
-	return filepath.Abs(filepath.Clean(p))
 }
 
 func absLogPath(p string) string {
