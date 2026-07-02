@@ -13,12 +13,57 @@ import (
 
 const activityLogCheckpointKey = "activity_log_checkpoint"
 
-// ActivityLogCheckpoint is persisted JSON in app_settings for incremental log ingest.
-type ActivityLogCheckpoint struct {
-	WatchPath      string `json:"watchPath"`
-	File           string `json:"file"`
+// ActivityLogFileCheckpoint is per-output_log ingest progress.
+type ActivityLogFileCheckpoint struct {
 	ByteOffset     int64  `json:"byteOffset"`
 	VRChatLineTime string `json:"vrChatLineTime,omitempty"`
+}
+
+// ActivityLogCheckpoint is persisted JSON in app_settings for incremental log ingest.
+type ActivityLogCheckpoint struct {
+	WatchPath string `json:"watchPath"`
+	// Legacy single-file fields; migrated into Files on read.
+	File           string                               `json:"file,omitempty"`
+	ByteOffset     int64                                `json:"byteOffset,omitempty"`
+	VRChatLineTime string                               `json:"vrChatLineTime,omitempty"`
+	Files          map[string]ActivityLogFileCheckpoint `json:"files,omitempty"`
+}
+
+// NormalizeFiles migrates legacy single-file checkpoint fields into Files.
+func (c *ActivityLogCheckpoint) NormalizeFiles() {
+	if c == nil {
+		return
+	}
+	if c.Files == nil {
+		c.Files = make(map[string]ActivityLogFileCheckpoint)
+	}
+	if c.File != "" {
+		if _, ok := c.Files[c.File]; !ok {
+			c.Files[c.File] = ActivityLogFileCheckpoint{
+				ByteOffset:     c.ByteOffset,
+				VRChatLineTime: c.VRChatLineTime,
+			}
+		}
+		c.File = ""
+		c.ByteOffset = 0
+		c.VRChatLineTime = ""
+	}
+}
+
+// FileCheckpoint returns the checkpoint for a log file path.
+func (c *ActivityLogCheckpoint) FileCheckpoint(path string) (ActivityLogFileCheckpoint, bool) {
+	if c == nil {
+		return ActivityLogFileCheckpoint{}, false
+	}
+	c.NormalizeFiles()
+	fc, ok := c.Files[path]
+	return fc, ok
+}
+
+// SetFileCheckpoint updates the checkpoint for one log file.
+func (c *ActivityLogCheckpoint) SetFileCheckpoint(path string, fc ActivityLogFileCheckpoint) {
+	c.NormalizeFiles()
+	c.Files[path] = fc
 }
 
 func parseDateRange(fromISO, toISO string) (from, to time.Time, err error) {
@@ -98,21 +143,21 @@ func (uc *ActivityUseCase) ListEncountersWithContext(ctx context.Context, filter
 }
 
 // ApplyCommand executes a fine-grained activity ingest command from SessionCorrelator.
-func (uc *ActivityUseCase) ApplyCommand(ctx context.Context, cmd any) error {
+func (uc *ActivityUseCase) ApplyCommand(ctx context.Context, logSource string, cmd any) error {
 	if cmd == nil {
 		return nil
 	}
 	switch c := cmd.(type) {
 	case activity.EndPlaySessionCmd:
-		return uc.EndPlaySession(ctx, c.At)
+		return uc.EndPlaySession(ctx, logSource, c.At)
 	case activity.StartPlaySessionCmd:
-		return uc.StartPlaySession(ctx, c.InstanceID, c.At)
+		return uc.StartPlaySession(ctx, logSource, c.InstanceID, c.At)
 	case activity.CloseOpenEncountersAtCmd:
-		return uc.CloseOpenEncountersAt(ctx, c.At)
+		return uc.CloseOpenEncountersAt(ctx, logSource, c.At)
 	case activity.RecordEncounterJoinCmd:
-		return uc.RecordEncounterAt(ctx, c.VRCUserID, c.DisplayName, activity.EncounterActionJoin, c.InstanceID, c.WorldID, c.At)
+		return uc.RecordEncounterAt(ctx, logSource, c.VRCUserID, c.DisplayName, activity.EncounterActionJoin, c.InstanceID, c.WorldID, c.At)
 	case activity.RecordEncounterLeaveCmd:
-		return uc.RecordEncounterAt(ctx, c.VRCUserID, c.DisplayName, activity.EncounterActionLeave, c.InstanceID, c.WorldID, c.At)
+		return uc.RecordEncounterAt(ctx, logSource, c.VRCUserID, c.DisplayName, activity.EncounterActionLeave, c.InstanceID, c.WorldID, c.At)
 	case activity.UpsertWorldVisitCmd:
 		return uc.UpsertWorldVisit(ctx, c.WorldID, c.At)
 	case activity.UpsertWorldRoomNameCmd:
@@ -124,11 +169,11 @@ func (uc *ActivityUseCase) ApplyCommand(ctx context.Context, cmd any) error {
 
 // RecordEncounter saves a join/leave event (uses current time).
 func (uc *ActivityUseCase) RecordEncounter(ctx context.Context, vrcUserID, displayName, action, instanceID string) error {
-	return uc.RecordEncounterAt(ctx, vrcUserID, displayName, action, instanceID, "", time.Now().UTC())
+	return uc.RecordEncounterAt(ctx, "", vrcUserID, displayName, action, instanceID, "", time.Now().UTC())
 }
 
 // RecordEncounterAt records a join as a new open stay or a leave as closing the user's open stay.
-func (uc *ActivityUseCase) RecordEncounterAt(ctx context.Context, vrcUserID, displayName, action, instanceID, worldID string, at time.Time) error {
+func (uc *ActivityUseCase) RecordEncounterAt(ctx context.Context, logSource, vrcUserID, displayName, action, instanceID, worldID string, at time.Time) error {
 	wid := worldID
 	if wid == "" && instanceID != "" {
 		wid = activity.WorldIDFromInstanceKey(instanceID)
@@ -154,13 +199,14 @@ func (uc *ActivityUseCase) RecordEncounterAt(ctx context.Context, vrcUserID, dis
 			}
 		} else {
 			e := &activity.UserEncounter{
-				ID:          uuid.New().String(),
-				VRCUserID:   vrcUserID,
-				DisplayName: displayName,
-				InstanceID:  instanceID,
-				WorldID:     wid,
-				JoinedAt:    at,
-				LeftAt:      nil,
+				ID:            uuid.New().String(),
+				VRCUserID:     vrcUserID,
+				DisplayName:   displayName,
+				InstanceID:    instanceID,
+				WorldID:       wid,
+				LogSourcePath: logSource,
+				JoinedAt:      at,
+				LeftAt:        nil,
 			}
 			if err := uc.encounterRepo.Save(ctx, e); err != nil {
 				return err
@@ -199,7 +245,25 @@ func (uc *ActivityUseCase) GetActivityLogCheckpoint(ctx context.Context) (*Activ
 	if err := json.Unmarshal([]byte(raw), &c); err != nil {
 		return nil, err
 	}
+	c.NormalizeFiles()
 	return &c, nil
+}
+
+// SetActivityLogFileCheckpoint updates one file entry in the checkpoint map.
+func (uc *ActivityUseCase) SetActivityLogFileCheckpoint(ctx context.Context, watchPath, filePath string, byteOffset int64, vrChatLineTime string) error {
+	cp, err := uc.GetActivityLogCheckpoint(ctx)
+	if err != nil {
+		return err
+	}
+	if cp == nil {
+		cp = &ActivityLogCheckpoint{WatchPath: watchPath}
+	}
+	cp.WatchPath = watchPath
+	cp.SetFileCheckpoint(filePath, ActivityLogFileCheckpoint{
+		ByteOffset:     byteOffset,
+		VRChatLineTime: vrChatLineTime,
+	})
+	return uc.SetActivityLogCheckpoint(ctx, cp)
 }
 
 // SetActivityLogCheckpoint persists the last processed log position.
@@ -228,19 +292,20 @@ func (uc *ActivityUseCase) SavePlaySession(ctx context.Context, s *activity.Play
 }
 
 // StartPlaySession creates a new play session with the given start time.
-func (uc *ActivityUseCase) StartPlaySession(ctx context.Context, instanceID string, startedAt time.Time) error {
-	_ = instanceID // reserved for future schema extension
+func (uc *ActivityUseCase) StartPlaySession(ctx context.Context, logSource, instanceID string, startedAt time.Time) error {
 	s := &activity.PlaySession{
-		ID:        uuid.New().String(),
-		StartTime: startedAt,
-		EndTime:   nil,
+		ID:            uuid.New().String(),
+		StartTime:     startedAt,
+		EndTime:       nil,
+		InstanceID:    instanceID,
+		LogSourcePath: logSource,
 	}
 	return uc.playRepo.Save(ctx, s)
 }
 
-// EndPlaySession closes the most recent open session with end time and duration.
-func (uc *ActivityUseCase) EndPlaySession(ctx context.Context, endedAt time.Time) error {
-	open, err := uc.playRepo.FindLatestWithoutEndTime(ctx)
+// EndPlaySession closes the open session for the given log source.
+func (uc *ActivityUseCase) EndPlaySession(ctx context.Context, logSource string, endedAt time.Time) error {
+	open, err := uc.playRepo.FindOpenForLogSource(ctx, logSource)
 	if err != nil || open == nil {
 		return err
 	}
@@ -250,65 +315,92 @@ func (uc *ActivityUseCase) EndPlaySession(ctx context.Context, endedAt time.Time
 	return uc.playRepo.Save(ctx, open)
 }
 
-// CloseOpenEncountersAtLastLogLine sets left_at on any encounter row still open, using the last
-// processed log line time (e.g. after output_log ingest catches up).
-func (uc *ActivityUseCase) CloseOpenEncountersAtLastLogLine(ctx context.Context, lastLine time.Time) error {
-	if lastLine.IsZero() {
-		return nil
-	}
-	_, err := uc.encounterRepo.CloseOpenEncountersAt(ctx, lastLine)
-	return err
-}
-
-// CloseOpenEncountersAt sets left_at on all open encounter rows at the given time (e.g. when the
-// local user starts joining a new instance).
-func (uc *ActivityUseCase) CloseOpenEncountersAt(ctx context.Context, at time.Time) error {
+// CloseOpenEncountersAt sets left_at on open encounter rows for one log source.
+func (uc *ActivityUseCase) CloseOpenEncountersAt(ctx context.Context, logSource string, at time.Time) error {
 	if at.IsZero() {
 		return nil
 	}
-	_, err := uc.encounterRepo.CloseOpenEncountersAt(ctx, at)
+	_, err := uc.encounterRepo.CloseOpenEncountersAtForLogSource(ctx, logSource, at)
 	return err
 }
 
-// CloseOpenPlaySessionAtLastLogLine closes the latest open play session using the timestamp of the
-// last processed log line. Same local calendar day: single segment [start, lastLine]. If the session
-// spans local midnights, it is split into multiple closed rows at each local 23:59:59.999999999 with
-// continuation rows starting at the next local midnight (VRChat may keep writing to the previous
-// day's output_log file after date change).
-func (uc *ActivityUseCase) CloseOpenPlaySessionAtLastLogLine(ctx context.Context, lastLine time.Time) error {
+// FinalizeOpenActivityForLogSource closes open play sessions and encounters for one log source.
+func (uc *ActivityUseCase) FinalizeOpenActivityForLogSource(ctx context.Context, logSource string, lastLine time.Time) error {
+	if err := uc.CloseOpenPlaySessionAtLastLogLine(ctx, logSource, lastLine); err != nil {
+		return err
+	}
+	return uc.CloseOpenEncountersAt(ctx, logSource, lastLine)
+}
+
+// FinalizeAllOpenActivity closes all open play sessions and encounters at lastLine (VRChat exit).
+func (uc *ActivityUseCase) FinalizeAllOpenActivity(ctx context.Context, lastLine time.Time) error {
 	if lastLine.IsZero() {
 		return nil
 	}
-	open, err := uc.playRepo.FindLatestWithoutEndTime(ctx)
+	opens, err := uc.playRepo.FindAllWithoutEndTime(ctx)
+	if err != nil {
+		return err
+	}
+	for _, open := range opens {
+		if closeErr := uc.closePlaySessionAt(ctx, open, lastLine); closeErr != nil {
+			return closeErr
+		}
+	}
+	_, err = uc.encounterRepo.CloseOpenEncountersAt(ctx, lastLine)
+	return err
+}
+
+// CloseOpenPlaySessionAtLastLogLine closes the open play session for logSource at lastLine.
+func (uc *ActivityUseCase) CloseOpenPlaySessionAtLastLogLine(ctx context.Context, logSource string, lastLine time.Time) error {
+	if lastLine.IsZero() {
+		return nil
+	}
+	open, err := uc.playRepo.FindOpenForLogSource(ctx, logSource)
 	if err != nil || open == nil {
 		return err
+	}
+	return uc.closePlaySessionAt(ctx, open, lastLine)
+}
+
+func (uc *ActivityUseCase) closePlaySessionAt(ctx context.Context, open *activity.PlaySession, lastLine time.Time) error {
+	if open == nil || lastLine.IsZero() {
+		return nil
 	}
 	if lastLine.Before(open.StartTime) {
 		return nil
 	}
 	if activity.SameLocalCalendarDay(open.StartTime, lastLine) {
-		return uc.EndPlaySession(ctx, lastLine)
+		dur := int(lastLine.Sub(open.StartTime).Seconds())
+		open.EndTime = &lastLine
+		open.DurationSec = &dur
+		return uc.playRepo.Save(ctx, open)
 	}
 	cur := open.StartTime
 	id := open.ID
+	logSource := open.LogSourcePath
+	instanceID := open.InstanceID
 	for {
 		if activity.SameLocalCalendarDay(cur, lastLine) {
 			dur := int(lastLine.Sub(cur).Seconds())
 			s := &activity.PlaySession{
-				ID:          id,
-				StartTime:   cur,
-				EndTime:     &lastLine,
-				DurationSec: &dur,
+				ID:            id,
+				StartTime:     cur,
+				EndTime:       &lastLine,
+				DurationSec:   &dur,
+				InstanceID:    instanceID,
+				LogSourcePath: logSource,
 			}
 			return uc.playRepo.Save(ctx, s)
 		}
 		segEnd := activity.EndOfLocalCalendarDay(cur)
 		dur := int(segEnd.Sub(cur).Seconds())
 		s := &activity.PlaySession{
-			ID:          id,
-			StartTime:   cur,
-			EndTime:     &segEnd,
-			DurationSec: &dur,
+			ID:            id,
+			StartTime:     cur,
+			EndTime:       &segEnd,
+			DurationSec:   &dur,
+			InstanceID:    instanceID,
+			LogSourcePath: logSource,
 		}
 		if err := uc.playRepo.Save(ctx, s); err != nil {
 			return err
@@ -330,18 +422,17 @@ func (uc *ActivityUseCase) GetActivityStats(ctx context.Context, fromISO, toISO 
 	if err != nil {
 		return nil, err
 	}
-	if open, err := uc.playRepo.FindLatestWithoutEndTime(ctx); err != nil {
+	if opens, err := uc.playRepo.FindAllWithoutEndTime(ctx); err != nil {
 		return nil, err
-	} else if open != nil {
-		found := false
+	} else {
+		seen := make(map[string]bool, len(sessions))
 		for _, s := range sessions {
-			if s.ID == open.ID {
-				found = true
-				break
-			}
+			seen[s.ID] = true
 		}
-		if !found {
-			sessions = append(sessions, open)
+		for _, open := range opens {
+			if !seen[open.ID] {
+				sessions = append(sessions, open)
+			}
 		}
 	}
 	lastObserved := uc.lastObservedLogTime(ctx)
@@ -352,16 +443,34 @@ func (uc *ActivityUseCase) GetActivityStats(ctx context.Context, fromISO, toISO 
 	}, nil
 }
 
-func (uc *ActivityUseCase) lastObservedLogTime(ctx context.Context) *time.Time {
+// LastObservedLogTime returns the latest VRChat line timestamp across all log file checkpoints.
+func (uc *ActivityUseCase) LastObservedLogTime(ctx context.Context) time.Time {
 	cp, err := uc.GetActivityLogCheckpoint(ctx)
-	if err != nil || cp == nil || cp.VRChatLineTime == "" {
-		return nil
+	if err != nil || cp == nil {
+		return time.Time{}
 	}
-	t, err := time.Parse(time.RFC3339, cp.VRChatLineTime)
-	if err != nil || t.IsZero() {
-		return nil
+	cp.NormalizeFiles()
+	var max time.Time
+	for _, fc := range cp.Files {
+		if fc.VRChatLineTime == "" {
+			continue
+		}
+		t, err := time.Parse(time.RFC3339, fc.VRChatLineTime)
+		if err != nil || t.IsZero() {
+			continue
+		}
+		if t.After(max) {
+			max = t
+		}
 	}
-	return &t
+	return max
+}
+
+func (uc *ActivityUseCase) lastObservedLogTime(ctx context.Context) *time.Time {
+	if t := uc.LastObservedLogTime(ctx); !t.IsZero() {
+		return &t
+	}
+	return nil
 }
 
 func (uc *ActivityUseCase) activityRetentionCutoff(ctx context.Context) (time.Time, error) {

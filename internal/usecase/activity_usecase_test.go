@@ -44,6 +44,26 @@ func (f *fakePlaySessionRepo) FindLatestWithoutEndTime(context.Context) (*activi
 	return nil, nil
 }
 
+func (f *fakePlaySessionRepo) FindOpenForLogSource(_ context.Context, logSource string) (*activity.PlaySession, error) {
+	for i := len(f.sessions) - 1; i >= 0; i-- {
+		if f.sessions[i].EndTime == nil && f.sessions[i].LogSourcePath == logSource {
+			return f.sessions[i], nil
+		}
+	}
+	return nil, nil
+}
+
+func (f *fakePlaySessionRepo) FindAllWithoutEndTime(_ context.Context) ([]*activity.PlaySession, error) {
+	var out []*activity.PlaySession
+	for _, s := range f.sessions {
+		if s.EndTime == nil {
+			cp := *s
+			out = append(out, &cp)
+		}
+	}
+	return out, nil
+}
+
 func (f *fakePlaySessionRepo) Count(context.Context) (int64, error) {
 	return int64(len(f.sessions)), nil
 }
@@ -88,6 +108,10 @@ func (stubEncounterRepo) CloseOpenEncountersAt(context.Context, time.Time) (int6
 	return 0, nil
 }
 
+func (stubEncounterRepo) CloseOpenEncountersAtForLogSource(context.Context, string, time.Time) (int64, error) {
+	return 0, nil
+}
+
 func (stubEncounterRepo) DeleteOlderThan(context.Context, time.Time) (int64, error) { return 0, nil }
 
 func (stubEncounterRepo) DeleteAll(context.Context) (int64, error) { return 0, nil }
@@ -100,7 +124,11 @@ func (stubEncounterRepo) DeduplicateEncounters(context.Context) (int64, error) {
 
 type recordingEncounterRepo struct {
 	stubEncounterRepo
-	closeOpenAts []time.Time
+	closeOpenAts      []time.Time
+	closeForLogSource []struct {
+		logSource string
+		at        time.Time
+	}
 }
 
 func (r *recordingEncounterRepo) CloseOpenEncountersAt(_ context.Context, at time.Time) (int64, error) {
@@ -108,44 +136,33 @@ func (r *recordingEncounterRepo) CloseOpenEncountersAt(_ context.Context, at tim
 	return 0, nil
 }
 
-func TestActivityUseCase_CloseOpenEncountersAtLastLogLine(t *testing.T) {
-	ctx := context.Background()
-	rec := &recordingEncounterRepo{}
-	uc := NewActivityUseCase(&fakePlaySessionRepo{}, rec, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
-
-	if err := uc.CloseOpenEncountersAtLastLogLine(ctx, time.Time{}); err != nil {
-		t.Fatal(err)
-	}
-	if len(rec.closeOpenAts) != 0 {
-		t.Fatalf("zero last line: expected no CloseOpenEncountersAt, got %v", rec.closeOpenAts)
-	}
-
-	last := time.Date(2025, 1, 2, 15, 4, 5, 0, time.UTC)
-	if err := uc.CloseOpenEncountersAtLastLogLine(ctx, last); err != nil {
-		t.Fatal(err)
-	}
-	if len(rec.closeOpenAts) != 1 || !rec.closeOpenAts[0].Equal(last) {
-		t.Fatalf("CloseOpenEncountersAt calls = %v, want [%v]", rec.closeOpenAts, last)
-	}
+func (r *recordingEncounterRepo) CloseOpenEncountersAtForLogSource(_ context.Context, logSource string, at time.Time) (int64, error) {
+	r.closeForLogSource = append(r.closeForLogSource, struct {
+		logSource string
+		at        time.Time
+	}{logSource, at})
+	return 0, nil
 }
 
 func TestActivityUseCase_CloseOpenPlaySessionAtLastLogLine_sameDay(t *testing.T) {
 	ctx := context.Background()
+	const logSource = "/logs/output_log.txt"
 	repo := &fakePlaySessionRepo{}
 	uc := NewActivityUseCase(repo, stubEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
 
 	start := time.Date(2024, 3, 18, 10, 0, 0, 0, time.Local)
 	_ = repo.Save(ctx, &activity.PlaySession{
-		ID:        "s1",
-		StartTime: start,
-		EndTime:   nil,
+		ID:            "s1",
+		StartTime:     start,
+		EndTime:       nil,
+		LogSourcePath: logSource,
 	})
 
 	lastLine := time.Date(2024, 3, 18, 20, 0, 0, 0, time.Local)
-	if err := uc.CloseOpenPlaySessionAtLastLogLine(ctx, lastLine); err != nil {
+	if err := uc.CloseOpenPlaySessionAtLastLogLine(ctx, logSource, lastLine); err != nil {
 		t.Fatalf("CloseOpenPlaySessionAtLastLogLine: %v", err)
 	}
-	open, err := repo.FindLatestWithoutEndTime(ctx)
+	open, err := repo.FindOpenForLogSource(ctx, logSource)
 	if err != nil {
 		t.Fatalf("FindLatestWithoutEndTime: %v", err)
 	}
@@ -162,21 +179,23 @@ func TestActivityUseCase_CloseOpenPlaySessionAtLastLogLine_sameDay(t *testing.T)
 
 func TestActivityUseCase_CloseOpenPlaySessionAtLastLogLine_splitsTwoLocalDays(t *testing.T) {
 	ctx := context.Background()
+	const logSource = "/logs/output_log.txt"
 	repo := &fakePlaySessionRepo{}
 	uc := NewActivityUseCase(repo, stubEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
 
 	start := time.Date(2024, 3, 18, 23, 0, 0, 0, time.Local)
 	_ = repo.Save(ctx, &activity.PlaySession{
-		ID:        "s1",
-		StartTime: start,
-		EndTime:   nil,
+		ID:            "s1",
+		StartTime:     start,
+		EndTime:       nil,
+		LogSourcePath: logSource,
 	})
 
 	lastLine := time.Date(2024, 3, 19, 1, 0, 0, 0, time.Local)
-	if err := uc.CloseOpenPlaySessionAtLastLogLine(ctx, lastLine); err != nil {
+	if err := uc.CloseOpenPlaySessionAtLastLogLine(ctx, logSource, lastLine); err != nil {
 		t.Fatalf("CloseOpenPlaySessionAtLastLogLine: %v", err)
 	}
-	open, err := repo.FindLatestWithoutEndTime(ctx)
+	open, err := repo.FindOpenForLogSource(ctx, logSource)
 	if err != nil {
 		t.Fatalf("FindLatestWithoutEndTime: %v", err)
 	}
@@ -201,21 +220,23 @@ func TestActivityUseCase_CloseOpenPlaySessionAtLastLogLine_splitsTwoLocalDays(t 
 
 func TestActivityUseCase_CloseOpenPlaySessionAtLastLogLine_splitsThreeLocalDays(t *testing.T) {
 	ctx := context.Background()
+	const logSource = "/logs/output_log.txt"
 	repo := &fakePlaySessionRepo{}
 	uc := NewActivityUseCase(repo, stubEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
 
 	start := time.Date(2024, 3, 18, 20, 0, 0, 0, time.Local)
 	_ = repo.Save(ctx, &activity.PlaySession{
-		ID:        "s1",
-		StartTime: start,
-		EndTime:   nil,
+		ID:            "s1",
+		StartTime:     start,
+		EndTime:       nil,
+		LogSourcePath: logSource,
 	})
 
 	lastLine := time.Date(2024, 3, 20, 3, 0, 0, 0, time.Local)
-	if err := uc.CloseOpenPlaySessionAtLastLogLine(ctx, lastLine); err != nil {
+	if err := uc.CloseOpenPlaySessionAtLastLogLine(ctx, logSource, lastLine); err != nil {
 		t.Fatalf("CloseOpenPlaySessionAtLastLogLine: %v", err)
 	}
-	open3, err3 := repo.FindLatestWithoutEndTime(ctx)
+	open3, err3 := repo.FindOpenForLogSource(ctx, logSource)
 	if err3 != nil {
 		t.Fatal(err3)
 	}
@@ -317,6 +338,18 @@ func (m *memEncounterRepo) CloseOpenEncountersAt(_ context.Context, at time.Time
 	var n int64
 	for _, e := range m.encounters {
 		if e.LeftAt == nil && !e.JoinedAt.After(at) {
+			t := at
+			e.LeftAt = &t
+			n++
+		}
+	}
+	return n, nil
+}
+
+func (m *memEncounterRepo) CloseOpenEncountersAtForLogSource(_ context.Context, logSource string, at time.Time) (int64, error) {
+	var n int64
+	for _, e := range m.encounters {
+		if e.LeftAt == nil && e.LogSourcePath == logSource && !e.JoinedAt.After(at) {
 			t := at
 			e.LeftAt = &t
 			n++
@@ -435,7 +468,7 @@ func TestActivityUseCase_RecordEncounterAt_joinLeaveAndUserCache(t *testing.T) {
 	uc := NewActivityUseCase(&fakePlaySessionRepo{}, enc, &fakeAppSettingsRepo{m: make(map[string]string)}, users, nil)
 
 	at := time.Date(2025, 6, 1, 12, 0, 0, 0, time.UTC)
-	if err := uc.RecordEncounterAt(ctx, "usr_a", "Alice", activity.EncounterActionJoin, "wrld_x:1~abc", "", at); err != nil {
+	if err := uc.RecordEncounterAt(ctx, "", "usr_a", "Alice", activity.EncounterActionJoin, "wrld_x:1~abc", "", at); err != nil {
 		t.Fatal(err)
 	}
 	if len(enc.encounters) != 1 || enc.encounters[0].WorldID == "" {
@@ -446,7 +479,7 @@ func TestActivityUseCase_RecordEncounterAt_joinLeaveAndUserCache(t *testing.T) {
 	}
 
 	leaveAt := at.Add(time.Hour)
-	if err := uc.RecordEncounterAt(ctx, "usr_a", "Alice", activity.EncounterActionLeave, "", "", leaveAt); err != nil {
+	if err := uc.RecordEncounterAt(ctx, "", "usr_a", "Alice", activity.EncounterActionLeave, "", "", leaveAt); err != nil {
 		t.Fatal(err)
 	}
 	if enc.encounters[0].LeftAt == nil || !enc.encounters[0].LeftAt.Equal(leaveAt) {
@@ -477,7 +510,7 @@ func (e *errActivityUserCacheRepo) GetByVRCUserID(_ context.Context, id string) 
 func TestActivityUseCase_RecordEncounterAt_userCacheGetError(t *testing.T) {
 	users := &errActivityUserCacheRepo{getErr: errors.New("read failed")}
 	uc := NewActivityUseCase(&fakePlaySessionRepo{}, &memEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, users, nil)
-	err := uc.RecordEncounterAt(context.Background(), "usr_x", "X", activity.EncounterActionJoin, "inst", "", time.Now())
+	err := uc.RecordEncounterAt(context.Background(), "", "usr_x", "X", activity.EncounterActionJoin, "inst", "", time.Now())
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -486,7 +519,7 @@ func TestActivityUseCase_RecordEncounterAt_userCacheGetError(t *testing.T) {
 func TestActivityUseCase_RecordEncounterAt_userCacheSaveError(t *testing.T) {
 	users := &errActivityUserCacheRepo{saveErr: errors.New("cache write failed")}
 	uc := NewActivityUseCase(&fakePlaySessionRepo{}, &memEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, users, nil)
-	err := uc.RecordEncounterAt(context.Background(), "usr_x", "X", activity.EncounterActionJoin, "inst", "", time.Now())
+	err := uc.RecordEncounterAt(context.Background(), "", "usr_x", "X", activity.EncounterActionJoin, "inst", "", time.Now())
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -495,7 +528,7 @@ func TestActivityUseCase_RecordEncounterAt_userCacheSaveError(t *testing.T) {
 func TestActivityUseCase_RecordEncounterAt_unknownActionNoOp(t *testing.T) {
 	enc := &memEncounterRepo{}
 	uc := NewActivityUseCase(&fakePlaySessionRepo{}, enc, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
-	if err := uc.RecordEncounterAt(context.Background(), "u", "U", "wave", "inst", "", time.Now()); err != nil {
+	if err := uc.RecordEncounterAt(context.Background(), "", "u", "U", "wave", "inst", "", time.Now()); err != nil {
 		t.Fatal(err)
 	}
 	if len(enc.encounters) != 0 {
@@ -521,7 +554,7 @@ func TestActivityUseCase_ApplyCommand_recordEncounterJoin(t *testing.T) {
 	cmd := activity.RecordEncounterJoinCmd{
 		VRCUserID: "usr_x", DisplayName: "X", InstanceID: "wrld_a:1", WorldID: "wrld_a", At: at,
 	}
-	if err := uc.ApplyCommand(context.Background(), cmd); err != nil {
+	if err := uc.ApplyCommand(context.Background(), "", cmd); err != nil {
 		t.Fatal(err)
 	}
 	if len(enc.encounters) != 1 || enc.encounters[0].VRCUserID != "usr_x" {
@@ -538,8 +571,12 @@ func TestActivityUseCase_Checkpoint_roundtripAndClear(t *testing.T) {
 		t.Fatal(err)
 	}
 	got, err := uc.GetActivityLogCheckpoint(ctx)
-	if err != nil || got == nil || got.ByteOffset != 42 {
+	if err != nil || got == nil {
 		t.Fatalf("GetActivityLogCheckpoint = %+v err=%v", got, err)
+	}
+	fc, ok := got.FileCheckpoint("output_log.txt")
+	if !ok || fc.ByteOffset != 42 {
+		t.Fatalf("FileCheckpoint = %+v ok=%v, want ByteOffset 42", fc, ok)
 	}
 	if err := uc.SetActivityLogCheckpoint(ctx, nil); err != nil {
 		t.Fatal(err)
@@ -560,22 +597,23 @@ func TestActivityUseCase_GetActivityLogCheckpoint_invalidJSON(t *testing.T) {
 
 func TestActivityUseCase_PlaySessionLifecycle(t *testing.T) {
 	ctx := context.Background()
+	const logSource = "/logs/output_log.txt"
 	uc, play, _, _ := newActivityUC(t)
 
 	start := time.Date(2025, 1, 10, 20, 0, 0, 0, time.UTC)
-	if err := uc.StartPlaySession(ctx, "wrld:1~x", start); err != nil {
+	if err := uc.StartPlaySession(ctx, logSource, "wrld:1~x", start); err != nil {
 		t.Fatal(err)
 	}
-	open, _ := play.FindLatestWithoutEndTime(ctx)
+	open, _ := play.FindOpenForLogSource(ctx, logSource)
 	if open == nil {
 		t.Fatal("expected open session")
 	}
 
 	end := start.Add(2 * time.Hour)
-	if err := uc.EndPlaySession(ctx, end); err != nil {
+	if err := uc.EndPlaySession(ctx, logSource, end); err != nil {
 		t.Fatal(err)
 	}
-	closed, _ := play.FindLatestWithoutEndTime(ctx)
+	closed, _ := play.FindOpenForLogSource(ctx, logSource)
 	if closed != nil {
 		t.Fatal("session should be closed")
 	}
@@ -645,15 +683,16 @@ func TestActivityUseCase_GetActivityStats_openSessionUsesCheckpoint(t *testing.T
 
 func TestActivityUseCase_CloseOpenPlaySessionAtLastLogLine_lastLineBeforeStart(t *testing.T) {
 	ctx := context.Background()
+	const logSource = "/logs/output_log.txt"
 	repo := &fakePlaySessionRepo{}
 	start := time.Date(2024, 3, 18, 20, 0, 0, 0, time.Local)
-	_ = repo.Save(ctx, &activity.PlaySession{ID: "s1", StartTime: start})
+	_ = repo.Save(ctx, &activity.PlaySession{ID: "s1", StartTime: start, LogSourcePath: logSource})
 	uc := NewActivityUseCase(repo, stubEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
 	last := start.Add(-time.Hour)
-	if err := uc.CloseOpenPlaySessionAtLastLogLine(ctx, last); err != nil {
+	if err := uc.CloseOpenPlaySessionAtLastLogLine(ctx, logSource, last); err != nil {
 		t.Fatal(err)
 	}
-	open, _ := repo.FindLatestWithoutEndTime(ctx)
+	open, _ := repo.FindOpenForLogSource(ctx, logSource)
 	if open == nil {
 		t.Fatal("session should remain open when lastLine before start")
 	}
@@ -669,14 +708,14 @@ func TestActivityUseCase_GetActivityLogCheckpoint_missing(t *testing.T) {
 
 func TestActivityUseCase_CloseOpenPlaySessionAtLastLogLine_zeroTime(t *testing.T) {
 	uc, _, _, _ := newActivityUC(t)
-	if err := uc.CloseOpenPlaySessionAtLastLogLine(context.Background(), time.Time{}); err != nil {
+	if err := uc.CloseOpenPlaySessionAtLastLogLine(context.Background(), "/logs/output_log.txt", time.Time{}); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestActivityUseCase_EndPlaySession_noOpenSession(t *testing.T) {
 	uc, _, _, _ := newActivityUC(t)
-	if err := uc.EndPlaySession(context.Background(), time.Now()); err != nil {
+	if err := uc.EndPlaySession(context.Background(), "/logs/output_log.txt", time.Now()); err != nil {
 		t.Fatalf("EndPlaySession with no open session: %v", err)
 	}
 }
@@ -787,18 +826,19 @@ func TestActivityUseCase_ListEncounters_delegates(t *testing.T) {
 func TestActivityUseCase_CloseOpenEncountersAt_zeroTimeNoOp(t *testing.T) {
 	rec := &recordingEncounterRepo{}
 	uc := NewActivityUseCase(&fakePlaySessionRepo{}, rec, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
-	if err := uc.CloseOpenEncountersAt(context.Background(), time.Time{}); err != nil {
+	const logSource = "/logs/output_log.txt"
+	if err := uc.CloseOpenEncountersAt(context.Background(), logSource, time.Time{}); err != nil {
 		t.Fatal(err)
 	}
-	if len(rec.closeOpenAts) != 0 {
+	if len(rec.closeForLogSource) != 0 {
 		t.Fatal("zero time should not call repo")
 	}
 	at := time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC)
-	if err := uc.CloseOpenEncountersAt(context.Background(), at); err != nil {
+	if err := uc.CloseOpenEncountersAt(context.Background(), logSource, at); err != nil {
 		t.Fatal(err)
 	}
-	if len(rec.closeOpenAts) != 1 || !rec.closeOpenAts[0].Equal(at) {
-		t.Fatalf("calls = %v", rec.closeOpenAts)
+	if len(rec.closeForLogSource) != 1 || rec.closeForLogSource[0].logSource != logSource || !rec.closeForLogSource[0].at.Equal(at) {
+		t.Fatalf("calls = %v", rec.closeForLogSource)
 	}
 }
 
@@ -886,7 +926,7 @@ func TestActivityUseCase_RecordEncounterAt_idempotentJoin(t *testing.T) {
 	at := time.Date(2026, 6, 22, 22, 51, 17, 0, time.UTC)
 	inst := "wrld_a:1~region(jp)"
 	for i := 0; i < 2; i++ {
-		if err := uc.RecordEncounterAt(ctx, "usr_a", "User A", activity.EncounterActionJoin, inst, "wrld_a", at); err != nil {
+		if err := uc.RecordEncounterAt(ctx, "", "usr_a", "User A", activity.EncounterActionJoin, inst, "wrld_a", at); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -900,17 +940,73 @@ func TestActivityUseCase_RecordEncounterAt_idempotentJoin(t *testing.T) {
 
 func TestActivityUseCase_CloseOpenEncountersAt_skipsFutureJoins(t *testing.T) {
 	ctx := context.Background()
+	const logSource = "/logs/output_log.txt"
 	enc := &memEncounterRepo{}
 	uc := NewActivityUseCase(&fakePlaySessionRepo{}, enc, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
 	early := time.Date(2026, 6, 22, 18, 45, 54, 0, time.UTC)
 	lateJoin := time.Date(2026, 6, 22, 22, 51, 17, 0, time.UTC)
-	if err := uc.RecordEncounterAt(ctx, "usr_a", "User A", activity.EncounterActionJoin, "wrld_b:1", "wrld_b", lateJoin); err != nil {
+	if err := uc.RecordEncounterAt(ctx, logSource, "usr_a", "User A", activity.EncounterActionJoin, "wrld_b:1", "wrld_b", lateJoin); err != nil {
 		t.Fatal(err)
 	}
-	if err := uc.CloseOpenEncountersAt(ctx, early); err != nil {
+	if err := uc.CloseOpenEncountersAt(ctx, logSource, early); err != nil {
 		t.Fatal(err)
 	}
 	if enc.encounters[0].LeftAt != nil {
 		t.Fatalf("future join should stay open, left_at=%v", enc.encounters[0].LeftAt)
+	}
+}
+
+func TestActivityUseCase_logSourceScopedClose(t *testing.T) {
+	ctx := context.Background()
+	const logA = "/logs/output_log_a.txt"
+	const logB = "/logs/output_log_b.txt"
+	play := &fakePlaySessionRepo{}
+	enc := &memEncounterRepo{}
+	uc := NewActivityUseCase(play, enc, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
+
+	startA := time.Date(2026, 3, 21, 10, 0, 0, 0, time.UTC)
+	startB := time.Date(2026, 3, 21, 11, 0, 0, 0, time.UTC)
+	closeAt := time.Date(2026, 3, 21, 12, 0, 0, 0, time.UTC)
+
+	if err := uc.StartPlaySession(ctx, logA, "wrld_a:1", startA); err != nil {
+		t.Fatal(err)
+	}
+	if err := uc.StartPlaySession(ctx, logB, "wrld_b:1", startB); err != nil {
+		t.Fatal(err)
+	}
+	if err := enc.Save(ctx, &activity.UserEncounter{
+		VRCUserID: "usr_a", DisplayName: "A", JoinedAt: startA, LogSourcePath: logA,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := enc.Save(ctx, &activity.UserEncounter{
+		VRCUserID: "usr_b", DisplayName: "B", JoinedAt: startB, LogSourcePath: logB,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := uc.FinalizeOpenActivityForLogSource(ctx, logA, closeAt); err != nil {
+		t.Fatal(err)
+	}
+
+	openA, _ := play.FindOpenForLogSource(ctx, logA)
+	if openA != nil {
+		t.Fatal("log A session should be closed")
+	}
+	openB, _ := play.FindOpenForLogSource(ctx, logB)
+	if openB == nil {
+		t.Fatal("log B session should remain open")
+	}
+	for _, e := range enc.encounters {
+		switch e.VRCUserID {
+		case "usr_a":
+			if e.LeftAt == nil || !e.LeftAt.Equal(closeAt) {
+				t.Fatalf("usr_a left_at = %v, want %v", e.LeftAt, closeAt)
+			}
+		case "usr_b":
+			if e.LeftAt != nil {
+				t.Fatalf("usr_b should stay open, left_at = %v", e.LeftAt)
+			}
+		}
 	}
 }

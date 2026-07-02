@@ -173,6 +173,7 @@ func TestUserEncounterRepository_BackfillMissingWorldContext(t *testing.T) {
 		e := byID[id]
 		if e == nil {
 			t.Fatalf("missing encounter %s", id)
+			return
 		}
 		if e.WorldID != "wrld_fill" || e.InstanceID != "inst_full" {
 			t.Fatalf("encounter %s: world_id=%q instance_id=%q", id, e.WorldID, e.InstanceID)

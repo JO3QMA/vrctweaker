@@ -57,6 +57,9 @@ type App struct {
 	activityWatchMu     sync.Mutex
 	activityWatchCancel context.CancelFunc
 	activityWatchWG     sync.WaitGroup
+
+	activityIngestMu       sync.Mutex
+	activityIngestAdapters map[string]*logwatcher.ActivityIngestAdapter
 }
 
 // NewApp creates a new App application struct.
@@ -219,7 +222,7 @@ func (a *App) resolveEffectiveOutputLogWatchPath(ctx context.Context) (string, e
 	return absDir, nil
 }
 
-func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, parser *activity.LogParser, ingestAdapter *logwatcher.ActivityIngestAdapter, logger logwatcher.Logger) {
+func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, parser *activity.LogParser, logger logwatcher.Logger, emitEncounters func()) {
 	info, err := os.Stat(absWatch)
 	if err != nil {
 		return
@@ -231,100 +234,75 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 		if listErr != nil {
 			return
 		}
-		startIdx := 0
-		var startOff int64
-		if cp != nil && matchAbsPaths(cp.WatchPath, absWatch) {
-			found := false
-			for i, f := range files {
-				if matchAbsPaths(f, cp.File) {
-					found = true
-					startIdx = i
-					st, statErr := os.Stat(f)
-					sz := int64(0)
-					if statErr == nil && st != nil {
-						sz = st.Size()
-					}
-					if sz > 0 && cp.ByteOffset >= sz {
-						startIdx = i + 1
-						startOff = 0
-					} else {
-						startOff = cp.ByteOffset
-					}
-					break
-				}
-			}
-			if !found {
-				startIdx = len(files) - 1
-				startOff = 0
-			}
-		}
-		if startIdx >= len(files) {
-			return
-		}
-		for i := startIdx; i < len(files); i++ {
-			fp := files[i]
-			off := int64(0)
-			if i == startIdx {
-				off = startOff
-			}
-			pathCopy := fp
-			checkpointLines := 0
-			var lastVRLineTime time.Time
-			if off == 0 {
-				ingestAdapter.ResetSessionContextForNewLogFile()
-			} else if warmErr := logwatcher.WarmSessionCorrelatorFromLogFile(ctx, pathCopy, off, parser, ingestAdapter, logger); warmErr != nil {
-				runtime.LogWarning(ctx, "activity log correlator warm: "+warmErr.Error())
-			}
-			_, procErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, ingestAdapter, logger, func(pos int64, line string) {
-				if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
-					lastVRLineTime = ts
-				}
-				checkpointLines++
-				if checkpointLines != 1 && checkpointLines%32 != 0 {
-					return
-				}
-				vrTime := ""
-				if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
-					vrTime = ts.Format(time.RFC3339)
-				}
-				_ = a.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
-					WatchPath:      absWatch,
-					File:           pathCopy,
-					ByteOffset:     pos,
-					VRChatLineTime: vrTime,
-				})
-			})
-			if procErr != nil {
-				if errors.Is(procErr, context.Canceled) {
-					return
-				}
-				runtime.LogWarning(ctx, "activity log ingest: "+procErr.Error())
-				return
-			}
-			if shouldFinalizeOpenActivityAtLogFileEnd(true, i, len(files)) {
-				_ = a.activity.CloseOpenPlaySessionAtLastLogLine(ctx, lastVRLineTime)
-				_ = a.activity.CloseOpenEncountersAtLastLogLine(ctx, lastVRLineTime)
-			}
-			st, statErr := os.Stat(pathCopy)
-			endOff := int64(0)
-			if statErr == nil && st != nil {
-				endOff = st.Size()
-			}
-			_ = a.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
-				WatchPath:      absWatch,
-				File:           pathCopy,
-				ByteOffset:     endOff,
-				VRChatLineTime: formatActivityCheckpointLineTime(lastVRLineTime),
-			})
+		live := bootstrapLiveLogFiles(files)
+		for _, fp := range files {
+			finalize := live == nil || !live[fp]
+			a.ingestOneActivityLogBootstrap(ctx, absWatch, fp, parser, logger, emitEncounters, cp, finalize, nil)
 		}
 		return
 	}
 
-	off := int64(0)
-	if cp != nil && matchAbsPaths(cp.WatchPath, absWatch) && matchAbsPaths(cp.File, absWatch) {
-		off = cp.ByteOffset
+	adapter := logwatcher.NewActivityIngestAdapter(a.activity, ctx, logger, emitEncounters, absLogPath(absWatch))
+	a.ingestOneActivityLogBootstrap(ctx, absWatch, absWatch, parser, logger, emitEncounters, cp, false, adapter)
+}
+
+func bootstrapLiveLogFiles(paths []string) map[string]bool {
+	const liveWindow = 5 * time.Second
+	type fileMod struct {
+		path string
+		mod  time.Time
 	}
-	pathCopy := absWatch
+	var files []fileMod
+	var maxMod time.Time
+	for _, p := range paths {
+		info, err := os.Stat(p)
+		if err != nil {
+			continue
+		}
+		mod := info.ModTime()
+		files = append(files, fileMod{path: p, mod: mod})
+		if mod.After(maxMod) {
+			maxMod = mod
+		}
+	}
+	if maxMod.IsZero() {
+		return nil
+	}
+	live := make(map[string]bool)
+	for _, f := range files {
+		if maxMod.Sub(f.mod) <= liveWindow {
+			live[f.path] = true
+		}
+	}
+	return live
+}
+
+func (a *App) ingestOneActivityLogBootstrap(
+	ctx context.Context,
+	absWatch, filePath string,
+	parser *activity.LogParser,
+	logger logwatcher.Logger,
+	emitEncounters func(),
+	cp *usecase.ActivityLogCheckpoint,
+	finalizeAtEnd bool,
+	ingestAdapter *logwatcher.ActivityIngestAdapter,
+) {
+	absFile := absLogPath(filePath)
+	if ingestAdapter == nil {
+		ingestAdapter = a.activityIngestAdapterForPath(ctx, logger, emitEncounters, filePath)
+	}
+	off := int64(0)
+	if cp != nil && matchAbsPaths(cp.WatchPath, absWatch) {
+		if fc, ok := cp.FileCheckpoint(absFile); ok {
+			off = fc.ByteOffset
+			if st, statErr := os.Stat(filePath); statErr == nil && st != nil && st.Size() > 0 && off >= st.Size() {
+				off = 0
+			}
+		}
+	}
+	pathCopy := filePath
+	ingestAdapter.SetSuppressEncounterNotify(true)
+	defer ingestAdapter.SetSuppressEncounterNotify(false)
 	checkpointLines := 0
 	var lastVRLineTime time.Time
 	if off == 0 {
@@ -332,63 +310,33 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 	} else if warmErr := logwatcher.WarmSessionCorrelatorFromLogFile(ctx, pathCopy, off, parser, ingestAdapter, logger); warmErr != nil {
 		runtime.LogWarning(ctx, "activity log correlator warm: "+warmErr.Error())
 	}
-	_, fileProcErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, ingestAdapter, logger, func(pos int64, line string) {
-		if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
+	_, procErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, pathCopy, off, parser, ingestAdapter, logger, func(pos int64, line string) {
+		ts := activity.ParseVRChatTimestamp(line, time.Time{})
+		if !ts.IsZero() {
 			lastVRLineTime = ts
 		}
 		checkpointLines++
 		if checkpointLines != 1 && checkpointLines%32 != 0 {
 			return
 		}
-		vrTime := ""
-		if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
-			vrTime = ts.Format(time.RFC3339)
-		}
-		_ = a.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
-			WatchPath:      absWatch,
-			File:           pathCopy,
-			ByteOffset:     pos,
-			VRChatLineTime: vrTime,
-		})
+		_ = a.activity.SetActivityLogFileCheckpoint(ctx, absWatch, absLogPath(pathCopy), pos, checkpointVRTime(ts))
 	})
-	if fileProcErr != nil && !errors.Is(fileProcErr, context.Canceled) {
-		runtime.LogWarning(ctx, "activity log ingest: "+fileProcErr.Error())
+	if procErr != nil {
+		if errors.Is(procErr, context.Canceled) {
+			return
+		}
+		runtime.LogWarning(ctx, "activity log ingest: "+procErr.Error())
 		return
 	}
-	if fileProcErr != nil {
-		// context.Canceled: preserve last progress-callback checkpoint (same as directory mode)
-		return
+	if finalizeAtEnd && !lastVRLineTime.IsZero() {
+		_ = a.activity.FinalizeOpenActivityForLogSource(ctx, ingestAdapter.LogSourcePath(), lastVRLineTime)
 	}
-	// Single-file watch tails the active output_log; do not close open rows at EOF on bootstrap.
 	st, statErr := os.Stat(pathCopy)
 	endOff := int64(0)
 	if statErr == nil && st != nil {
 		endOff = st.Size()
 	}
-	_ = a.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
-		WatchPath:      absWatch,
-		File:           pathCopy,
-		ByteOffset:     endOff,
-		VRChatLineTime: formatActivityCheckpointLineTime(lastVRLineTime),
-	})
-}
-
-func formatActivityCheckpointLineTime(t time.Time) string {
-	if t.IsZero() {
-		return ""
-	}
-	return t.Format(time.RFC3339)
-}
-
-// shouldFinalizeOpenActivityAtLogFileEnd reports whether bootstrap ingest should close open
-// play sessions and encounters at the end of processing a log file. Only completed historical
-// files in directory mode are finalized; the active tail file may still be written by VRChat
-// while VRCTweaker restarts, so open rows must stay open until real leave events arrive.
-func shouldFinalizeOpenActivityAtLogFileEnd(isDirectoryMode bool, fileIndex, fileCount int) bool {
-	if !isDirectoryMode || fileCount <= 0 {
-		return false
-	}
-	return fileIndex < fileCount-1
+	_ = a.activity.SetActivityLogFileCheckpoint(ctx, absWatch, absLogPath(pathCopy), endOff, checkpointVRTime(lastVRLineTime))
 }
 
 func (a *App) startOutputLogWatcher(ctx context.Context) {
@@ -414,34 +362,79 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 	emitEncounters := func() {
 		runtime.EventsEmit(a.ctx, activityEncountersChangedEvent, struct{}{})
 	}
-	ingestAdapter := logwatcher.NewActivityIngestAdapter(a.activity, ctx, logger, emitEncounters)
-	triggerHandler := logwatcher.NewAutomationTriggerHandler(a.automation, ctx, logger)
-	handler := logwatcher.NewMultiHandler(ingestAdapter, triggerHandler)
 
-	ingestAdapter.SetSuppressEncounterNotify(true)
-	a.ingestActivityLogsBootstrap(ctx, watchPath, parser, ingestAdapter, logger)
+	a.resetActivityIngestAdapterCache()
+	a.ingestActivityLogsBootstrap(ctx, watchPath, parser, logger, emitEncounters)
 	if _, dedupeErr := a.activity.DeduplicateEncounters(ctx); dedupeErr != nil {
 		runtime.LogWarning(ctx, "activity encounter dedupe: "+dedupeErr.Error())
 	}
-	ingestAdapter.SetSuppressEncounterNotify(false)
+	if _, backfillErr := a.activity.BackfillEncounterWorldContext(ctx); backfillErr != nil {
+		runtime.LogWarning(ctx, "activity encounter world backfill: "+backfillErr.Error())
+	}
 
 	watchDeps := activityLogWatchDeps{
 		watchPath:      watchPath,
 		parser:         parser,
-		ingestAdapter:  ingestAdapter,
-		handler:        handler,
 		logger:         logger,
 		emitEncounters: emitEncounters,
 	}
 
-	watcher := logwatcher.NewOutputLogWatcher(watchPath, parser, handler, logger)
-	watcher.SetLogFileSwitchHandler(logwatcher.LogFileSwitchHandlerFunc(func(c context.Context, previousPath, newPath string) error {
-		return a.handleActivityLogFileSwitch(c, watchDeps, previousPath, newPath)
-	}))
-	if startErr := watcher.Start(ctx); startErr != nil {
-		runtime.LogError(ctx, "failed to start output_log watcher: "+startErr.Error())
-		return
+	if info.IsDir() {
+		watcher := logwatcher.NewMultiOutputLogWatcher(watchPath, parser, func(logPath string) logwatcher.EventHandler {
+			adapter := a.activityIngestAdapterForPath(ctx, logger, emitEncounters, logPath)
+			triggerHandler := logwatcher.NewAutomationTriggerHandler(a.automation, ctx, logger)
+			return logwatcher.NewMultiHandler(adapter, triggerHandler)
+		}, logwatcher.MultiOutputLogWatcherCallbacks{
+			OnLogRotationHandoff: func(c context.Context, oldPath string) error {
+				return a.handleActivityLogRotationHandoff(c, watchDeps, oldPath)
+			},
+			OnTailCheckpoint: func(c context.Context, path string, offset int64, lineTime time.Time) {
+				if a.activity == nil {
+					return
+				}
+				_ = a.activity.SetActivityLogFileCheckpoint(c, watchDeps.watchPath, absLogPath(path), offset, checkpointVRTime(lineTime))
+			},
+		}, logger)
+		if startErr := watcher.Start(ctx); startErr != nil {
+			runtime.LogError(ctx, "failed to start multi output_log watcher: "+startErr.Error())
+			return
+		}
+	} else {
+		ingestAdapter := logwatcher.NewActivityIngestAdapter(a.activity, ctx, logger, emitEncounters, absLogPath(watchPath))
+		triggerHandler := logwatcher.NewAutomationTriggerHandler(a.automation, ctx, logger)
+		handler := logwatcher.NewMultiHandler(ingestAdapter, triggerHandler)
+		watcher := logwatcher.NewOutputLogWatcher(watchPath, parser, handler, logger)
+		watcher.SetLogFileSwitchHandler(logwatcher.LogFileSwitchHandlerFunc(func(c context.Context, previousPath, newPath string) error {
+			if previousPath != "" {
+				a.finalizeOpenActivityForLogSource(c, previousPath)
+			}
+			if newPath != "" {
+				ingestAdapter.ResetSessionContextForNewLogFile()
+			}
+			if newPath == "" || parser == nil || handler == nil {
+				return nil
+			}
+			var lastVRLineTime time.Time
+			endOff, err := logwatcher.ProcessOutputLogFileFromOffset(c, newPath, 0, parser, handler, logger, func(_ int64, line string) {
+				if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
+					lastVRLineTime = ts
+				}
+			})
+			if err != nil {
+				return err
+			}
+			_ = a.activity.SetActivityLogFileCheckpoint(c, watchDeps.watchPath, absLogPath(newPath), endOff, checkpointVRTime(lastVRLineTime))
+			if watchDeps.emitEncounters != nil {
+				watchDeps.emitEncounters()
+			}
+			return nil
+		}))
+		if startErr := watcher.Start(ctx); startErr != nil {
+			runtime.LogError(ctx, "failed to start output_log watcher: "+startErr.Error())
+			return
+		}
 	}
+
 	a.startVRChatActivityMonitor(ctx, watchPath)
 	runtime.LogInfo(ctx, "output_log watcher started for "+watchPath)
 }

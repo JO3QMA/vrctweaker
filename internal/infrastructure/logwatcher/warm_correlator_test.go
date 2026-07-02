@@ -46,7 +46,7 @@ func TestWarmSessionCorrelatorFromLogFile_restoresPendingDestinationBeforeResume
 
 	t.Run("without warm skips room name upsert", func(t *testing.T) {
 		worldRepo.displayNameCalls = nil
-		adapter := NewActivityIngestAdapter(uc, ctx, nil, nil)
+		adapter := NewActivityIngestAdapter(uc, ctx, nil, nil, logPath)
 		if _, err := ProcessOutputLogFileFromOffset(ctx, logPath, int64(len(prefix)), parser, adapter, nil, nil); err != nil {
 			t.Fatal(err)
 		}
@@ -57,7 +57,7 @@ func TestWarmSessionCorrelatorFromLogFile_restoresPendingDestinationBeforeResume
 
 	t.Run("with warm upserts cozy display name", func(t *testing.T) {
 		worldRepo.displayNameCalls = nil
-		adapter := NewActivityIngestAdapter(uc, ctx, nil, nil)
+		adapter := NewActivityIngestAdapter(uc, ctx, nil, nil, logPath)
 		if err := WarmSessionCorrelatorFromLogFile(ctx, logPath, int64(len(prefix)), parser, adapter, nil); err != nil {
 			t.Fatal(err)
 		}
