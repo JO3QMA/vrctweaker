@@ -52,6 +52,7 @@ func (a *App) finalizeOpenActivityForLogSource(ctx context.Context, logPath stri
 func (a *App) handleActivityLogRotationHandoff(ctx context.Context, deps activityLogWatchDeps, oldPath string) error {
 	if oldPath != "" {
 		a.finalizeOpenActivityForLogSource(ctx, oldPath)
+		a.evictActivityIngestAdapter(oldPath)
 	}
 	if deps.emitEncounters != nil {
 		deps.emitEncounters()

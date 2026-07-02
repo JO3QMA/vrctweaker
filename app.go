@@ -57,6 +57,9 @@ type App struct {
 	activityWatchMu     sync.Mutex
 	activityWatchCancel context.CancelFunc
 	activityWatchWG     sync.WaitGroup
+
+	activityIngestMu       sync.Mutex
+	activityIngestAdapters map[string]*logwatcher.ActivityIngestAdapter
 }
 
 // NewApp creates a new App application struct.
@@ -286,7 +289,7 @@ func (a *App) ingestOneActivityLogBootstrap(
 ) {
 	absFile := absLogPath(filePath)
 	if ingestAdapter == nil {
-		ingestAdapter = logwatcher.NewActivityIngestAdapter(a.activity, ctx, logger, emitEncounters, absFile)
+		ingestAdapter = a.activityIngestAdapterForPath(ctx, logger, emitEncounters, filePath)
 	}
 	off := int64(0)
 	if cp != nil && matchAbsPaths(cp.WatchPath, absWatch) {
@@ -360,9 +363,13 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 		runtime.EventsEmit(a.ctx, activityEncountersChangedEvent, struct{}{})
 	}
 
+	a.resetActivityIngestAdapterCache()
 	a.ingestActivityLogsBootstrap(ctx, watchPath, parser, logger, emitEncounters)
 	if _, dedupeErr := a.activity.DeduplicateEncounters(ctx); dedupeErr != nil {
 		runtime.LogWarning(ctx, "activity encounter dedupe: "+dedupeErr.Error())
+	}
+	if _, backfillErr := a.activity.BackfillEncounterWorldContext(ctx); backfillErr != nil {
+		runtime.LogWarning(ctx, "activity encounter world backfill: "+backfillErr.Error())
 	}
 
 	watchDeps := activityLogWatchDeps{
@@ -374,7 +381,7 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 
 	if info.IsDir() {
 		watcher := logwatcher.NewMultiOutputLogWatcher(watchPath, parser, func(logPath string) logwatcher.EventHandler {
-			adapter := logwatcher.NewActivityIngestAdapter(a.activity, ctx, logger, emitEncounters, absLogPath(logPath))
+			adapter := a.activityIngestAdapterForPath(ctx, logger, emitEncounters, logPath)
 			triggerHandler := logwatcher.NewAutomationTriggerHandler(a.automation, ctx, logger)
 			return logwatcher.NewMultiHandler(adapter, triggerHandler)
 		}, logwatcher.MultiOutputLogWatcherCallbacks{
