@@ -38,7 +38,8 @@ type trackedLogFile struct {
 	lastSize     int64
 	lastGrowthAt time.Time
 	readOffset   atomic.Int64
-	tailing      bool
+	tailing      atomic.Bool
+	tailGen      atomic.Uint64
 	cancel       context.CancelFunc
 }
 
@@ -192,7 +193,7 @@ func (w *MultiOutputLogWatcher) run(ctx context.Context) {
 			if _, growing := growingNow[path]; growing {
 				continue
 			}
-			if !state.tailing {
+			if !state.tailing.Load() {
 				continue
 			}
 			if w.shouldHandoff(state, now, growingNow, path) {
@@ -237,32 +238,50 @@ func (w *MultiOutputLogWatcher) shouldHandoff(
 }
 
 func (w *MultiOutputLogWatcher) startTail(ctx context.Context, path string, state *trackedLogFile, startOffset int64) {
-	if state.tailing {
+	if state.tailing.Load() {
 		return
 	}
 	state.readOffset.Store(startOffset)
 	tailCtx, cancel := context.WithCancel(ctx)
+	myGen := state.tailGen.Add(1)
 	state.cancel = cancel
-	state.tailing = true
+	state.tailing.Store(true)
 
 	handler := w.handlerFactory(path)
-	go tailOutputLogFile(tailCtx, path, startOffset, w.parser, handler, w.logger, func(offset int64, lineTime time.Time) {
-		state.readOffset.Store(offset)
-		if w.callbacks.OnTailCheckpoint != nil {
-			w.callbacks.OnTailCheckpoint(ctx, path, offset, lineTime)
-		}
-	})
+	if handler == nil {
+		state.tailing.Store(false)
+		state.cancel = nil
+		return
+	}
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				w.logger("[multi-logwatcher] tail panic %s: %v", path, r)
+			}
+			if state.tailGen.Load() == myGen {
+				state.tailing.Store(false)
+				state.cancel = nil
+			}
+		}()
+		tailOutputLogFile(tailCtx, path, startOffset, w.parser, handler, w.logger, func(offset int64, lineTime time.Time) {
+			state.readOffset.Store(offset)
+			if w.callbacks.OnTailCheckpoint != nil {
+				w.callbacks.OnTailCheckpoint(ctx, path, offset, lineTime)
+			}
+		})
+	}()
 }
 
 func (w *MultiOutputLogWatcher) stopTail(state *trackedLogFile) {
-	if !state.tailing {
+	if !state.tailing.Load() {
 		return
 	}
+	state.tailGen.Add(1)
 	if state.cancel != nil {
 		state.cancel()
 		state.cancel = nil
 	}
-	state.tailing = false
+	state.tailing.Store(false)
 }
 
 func (w *MultiOutputLogWatcher) stopAllTails(tracked map[string]*trackedLogFile) {

@@ -10,6 +10,7 @@ import (
 	"vrchat-tweaker/internal/domain/activity"
 	"vrchat-tweaker/internal/infrastructure/logwatcher"
 	"vrchat-tweaker/internal/infrastructure/sleepsuppress"
+	"vrchat-tweaker/internal/usecase"
 )
 
 type activityLogWatchDeps struct {
@@ -100,16 +101,16 @@ func (a *App) finalizeAllLogSourcesOnVRChatExit(ctx context.Context, watchPath s
 	if lastLine.IsZero() {
 		lastLine = time.Now().UTC()
 	}
-	_ = a.activity.FinalizeAllOpenActivity(ctx, lastLine)
 
 	cp, err := a.activity.GetActivityLogCheckpoint(ctx)
 	if err == nil && cp != nil {
 		cp.NormalizeFiles()
-		for path := range cp.Files {
-			if t, tErr := logwatcher.LastVRChatLineTimeInFile(path); tErr == nil && t.After(lastLine) {
-				lastLine = t
+		for path, fc := range cp.Files {
+			closeAt := closeTimeForLogFile(path, lastLine, &fc)
+			if closeAt.IsZero() {
+				continue
 			}
-			_ = a.activity.FinalizeOpenActivityForLogSource(ctx, absLogPath(path), lastLine)
+			_ = a.activity.FinalizeOpenActivityForLogSource(ctx, absLogPath(path), closeAt)
 		}
 	}
 
@@ -117,11 +118,17 @@ func (a *App) finalizeAllLogSourcesOnVRChatExit(ctx context.Context, watchPath s
 		if info, statErr := os.Stat(watchPath); statErr == nil && info.IsDir() {
 			if files, listErr := logwatcher.ListOutputLogFiles(watchPath); listErr == nil {
 				for _, path := range files {
-					_ = a.activity.FinalizeOpenActivityForLogSource(ctx, absLogPath(path), lastLine)
+					closeAt := closeTimeForLogFile(path, lastLine, nil)
+					if closeAt.IsZero() {
+						continue
+					}
+					_ = a.activity.FinalizeOpenActivityForLogSource(ctx, absLogPath(path), closeAt)
 				}
 			}
 		}
 	}
+
+	_ = a.activity.FinalizeAllOpenActivity(ctx, lastLine)
 
 	if a.ctx != nil {
 		runtime.EventsEmit(a.ctx, activityEncountersChangedEvent, struct{}{})
@@ -141,4 +148,16 @@ func checkpointVRTime(t time.Time) string {
 		return ""
 	}
 	return t.Format(time.RFC3339)
+}
+
+func closeTimeForLogFile(path string, fallback time.Time, fc *usecase.ActivityLogFileCheckpoint) time.Time {
+	if t, err := logwatcher.LastVRChatLineTimeInFile(path); err == nil && !t.IsZero() {
+		return t
+	}
+	if fc != nil && fc.VRChatLineTime != "" {
+		if t, err := time.Parse(time.RFC3339, fc.VRChatLineTime); err == nil && !t.IsZero() {
+			return t
+		}
+	}
+	return fallback
 }

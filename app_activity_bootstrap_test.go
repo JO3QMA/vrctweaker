@@ -107,6 +107,48 @@ func Test_ingestActivityLogsBootstrap_restart_keepsOpenEncounters_singleFile(t *
 	assertEncounterStillOpen(t, app, ctx, testBootstrapUserID)
 }
 
+func Test_ingestActivityLogsBootstrap_skipsFullyIngestedFile(t *testing.T) {
+	t.Setenv("TZ", "UTC")
+	ctx := context.Background()
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "output_log.txt")
+	content := []byte(
+		"2026.03.21 11:32:04 Debug      -  [Behaviour] Joining " + testBootstrapInstID + "\n" +
+			"2026.03.21 11:32:16 Debug      -  [Behaviour] OnPlayerJoined Alice (" + testBootstrapUserID + ")\n",
+	)
+	if err := os.WriteFile(logPath, content, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	app, _ := newTestAppWithActivity(t)
+	absLogPath, err := filepath.Abs(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	joinedAt := time.Date(2026, 3, 21, 11, 32, 16, 0, time.UTC)
+	if err := app.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
+		WatchPath: absLogPath,
+		Files: map[string]usecase.ActivityLogFileCheckpoint{
+			absLogPath: {
+				ByteOffset:     int64(len(content)),
+				VRChatLineTime: joinedAt.Format(time.RFC3339),
+			},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	runActivityBootstrap(t, app, ctx, absLogPath)
+
+	rows, err := app.activity.ListEncounters(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("encounters = %d, want 0 when fully ingested file is skipped", len(rows))
+	}
+}
+
 func Test_ingestActivityLogsBootstrap_restart_keepsOpenEncounters_directoryTailFile(t *testing.T) {
 	t.Setenv("TZ", "UTC")
 	ctx := context.Background()

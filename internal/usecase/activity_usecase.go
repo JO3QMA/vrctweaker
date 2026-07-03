@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -88,6 +89,7 @@ type ActivityUseCase struct {
 	settingsRepo  appSettingsRepo
 	userCacheRepo userCacheRepo
 	worldRepo     worldInfoRepo
+	checkpointMu  sync.Mutex
 }
 
 // NewActivityUseCase creates a new ActivityUseCase.
@@ -237,6 +239,12 @@ func (uc *ActivityUseCase) RecordEncounterAt(ctx context.Context, logSource, vrc
 
 // GetActivityLogCheckpoint loads the last processed log position.
 func (uc *ActivityUseCase) GetActivityLogCheckpoint(ctx context.Context) (*ActivityLogCheckpoint, error) {
+	uc.checkpointMu.Lock()
+	defer uc.checkpointMu.Unlock()
+	return uc.getActivityLogCheckpointLocked(ctx)
+}
+
+func (uc *ActivityUseCase) getActivityLogCheckpointLocked(ctx context.Context) (*ActivityLogCheckpoint, error) {
 	raw, err := uc.settingsRepo.Get(ctx, activityLogCheckpointKey)
 	if err != nil || raw == "" {
 		return nil, nil
@@ -251,7 +259,9 @@ func (uc *ActivityUseCase) GetActivityLogCheckpoint(ctx context.Context) (*Activ
 
 // SetActivityLogFileCheckpoint updates one file entry in the checkpoint map.
 func (uc *ActivityUseCase) SetActivityLogFileCheckpoint(ctx context.Context, watchPath, filePath string, byteOffset int64, vrChatLineTime string) error {
-	cp, err := uc.GetActivityLogCheckpoint(ctx)
+	uc.checkpointMu.Lock()
+	defer uc.checkpointMu.Unlock()
+	cp, err := uc.getActivityLogCheckpointLocked(ctx)
 	if err != nil {
 		return err
 	}
@@ -263,11 +273,17 @@ func (uc *ActivityUseCase) SetActivityLogFileCheckpoint(ctx context.Context, wat
 		ByteOffset:     byteOffset,
 		VRChatLineTime: vrChatLineTime,
 	})
-	return uc.SetActivityLogCheckpoint(ctx, cp)
+	return uc.setActivityLogCheckpointLocked(ctx, cp)
 }
 
 // SetActivityLogCheckpoint persists the last processed log position.
 func (uc *ActivityUseCase) SetActivityLogCheckpoint(ctx context.Context, c *ActivityLogCheckpoint) error {
+	uc.checkpointMu.Lock()
+	defer uc.checkpointMu.Unlock()
+	return uc.setActivityLogCheckpointLocked(ctx, c)
+}
+
+func (uc *ActivityUseCase) setActivityLogCheckpointLocked(ctx context.Context, c *ActivityLogCheckpoint) error {
 	if c == nil {
 		return uc.settingsRepo.Set(ctx, activityLogCheckpointKey, "")
 	}
@@ -425,14 +441,16 @@ func (uc *ActivityUseCase) GetActivityStats(ctx context.Context, fromISO, toISO 
 	if opens, err := uc.playRepo.FindAllWithoutEndTime(ctx); err != nil {
 		return nil, err
 	} else {
+		openCutoff := from.Add(-24 * time.Hour)
 		seen := make(map[string]bool, len(sessions))
 		for _, s := range sessions {
 			seen[s.ID] = true
 		}
 		for _, open := range opens {
-			if !seen[open.ID] {
-				sessions = append(sessions, open)
+			if seen[open.ID] || open.StartTime.Before(openCutoff) || open.StartTime.After(to) {
+				continue
 			}
+			sessions = append(sessions, open)
 		}
 	}
 	lastObserved := uc.lastObservedLogTime(ctx)

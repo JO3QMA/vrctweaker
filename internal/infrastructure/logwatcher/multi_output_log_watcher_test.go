@@ -362,3 +362,35 @@ func TestMultiOutputLogWatcher_OnTailCheckpoint(t *testing.T) {
 		t.Fatalf("checkpoint offset = %d, want > 0", last.offset)
 	}
 }
+
+func TestMultiOutputLogWatcher_TailGoroutineExitClearsTailing(t *testing.T) {
+	dir := t.TempDir()
+	missingPath := filepath.Join(dir, "output_log_missing.txt")
+	existingPath := filepath.Join(dir, "output_log_existing.txt")
+
+	w := newMultiWatcherForTest(t, dir, func(string) EventHandler {
+		return EventHandlerFunc(func(activity.ParsedEvent) {})
+	}, MultiOutputLogWatcherCallbacks{})
+
+	state := &trackedLogFile{}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	w.startTail(ctx, missingPath, state, 0)
+	time.Sleep(150 * time.Millisecond)
+	if state.tailing.Load() {
+		t.Fatal("tailing should be false after tail goroutine exits on open error")
+	}
+
+	if err := writeTestFile(existingPath, ""); err != nil {
+		t.Fatal(err)
+	}
+	state = &trackedLogFile{}
+	w.startTail(ctx, existingPath, state, 0)
+	time.Sleep(50 * time.Millisecond)
+	if !state.tailing.Load() {
+		t.Fatal("tailing should be true after successful restart")
+	}
+	cancel()
+	time.Sleep(50 * time.Millisecond)
+}

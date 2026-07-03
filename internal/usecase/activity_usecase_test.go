@@ -3,6 +3,8 @@ package usecase
 import (
 	"context"
 	"errors"
+	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -678,6 +680,56 @@ func TestActivityUseCase_GetActivityStats_openSessionUsesCheckpoint(t *testing.T
 	}
 	if len(stats.DailyPlaySeconds) != 1 || stats.DailyPlaySeconds[0].Seconds != 3600 {
 		t.Fatalf("daily = %+v", stats.DailyPlaySeconds)
+	}
+}
+
+func TestActivityUseCase_GetActivityStats_excludesStaleOpenSessions(t *testing.T) {
+	ctx := context.Background()
+	play := &fakePlaySessionRepo{}
+	staleStart := time.Date(2024, 1, 1, 10, 0, 0, 0, time.Local)
+	recentStart := time.Date(2025, 3, 1, 22, 0, 0, 0, time.Local)
+	recentEnd := recentStart.Add(2 * time.Hour)
+	_ = play.Save(ctx, &activity.PlaySession{ID: "stale-open", StartTime: staleStart})
+	_ = play.Save(ctx, &activity.PlaySession{
+		ID: "recent-closed", StartTime: recentStart, EndTime: &recentEnd, DurationSec: intPtr(7200),
+	})
+	uc := NewActivityUseCase(play, &memEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
+
+	stats, err := uc.GetActivityStats(ctx, "2025-03-01", "2025-03-02")
+	if err != nil {
+		t.Fatalf("GetActivityStats: %v", err)
+	}
+	var total int
+	for _, d := range stats.DailyPlaySeconds {
+		total += d.Seconds
+	}
+	if total != 7200 {
+		t.Fatalf("total seconds = %d, want 7200 without stale open session bleed", total)
+	}
+}
+
+func TestActivityUseCase_SetActivityLogFileCheckpoint_concurrent(t *testing.T) {
+	ctx := context.Background()
+	settings := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewActivityUseCase(&fakePlaySessionRepo{}, &memEncounterRepo{}, settings, nil, nil)
+
+	var wg sync.WaitGroup
+	for i := 0; i < 40; i++ {
+		wg.Add(1)
+		go func(n int) {
+			defer wg.Done()
+			path := "/logs/output_log_" + strconv.Itoa(n%4) + ".txt"
+			_ = uc.SetActivityLogFileCheckpoint(ctx, "/watch", path, int64(n), "")
+		}(i)
+	}
+	wg.Wait()
+
+	cp, err := uc.GetActivityLogCheckpoint(ctx)
+	if err != nil || cp == nil {
+		t.Fatalf("checkpoint = %+v err=%v", cp, err)
+	}
+	if len(cp.Files) != 4 {
+		t.Fatalf("files = %d, want 4 distinct log sources", len(cp.Files))
 	}
 }
 

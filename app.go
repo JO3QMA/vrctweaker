@@ -296,7 +296,23 @@ func (a *App) ingestOneActivityLogBootstrap(
 		if fc, ok := cp.FileCheckpoint(absFile); ok {
 			off = fc.ByteOffset
 			if st, statErr := os.Stat(filePath); statErr == nil && st != nil && st.Size() > 0 && off >= st.Size() {
-				off = 0
+				if finalizeAtEnd {
+					lastVRLineTime := time.Time{}
+					if fc.VRChatLineTime != "" {
+						if t, parseErr := time.Parse(time.RFC3339, fc.VRChatLineTime); parseErr == nil {
+							lastVRLineTime = t
+						}
+					}
+					if lastVRLineTime.IsZero() {
+						if t, tErr := logwatcher.LastVRChatLineTimeInFile(filePath); tErr == nil {
+							lastVRLineTime = t
+						}
+					}
+					if !lastVRLineTime.IsZero() {
+						_ = a.activity.FinalizeOpenActivityForLogSource(ctx, ingestAdapter.LogSourcePath(), lastVRLineTime)
+					}
+				}
+				return
 			}
 		}
 	}
