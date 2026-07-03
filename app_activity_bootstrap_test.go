@@ -126,7 +126,7 @@ func Test_ingestActivityLogsBootstrap_skipsFullyIngestedFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	joinedAt := time.Date(2026, 3, 21, 11, 32, 16, 0, time.UTC)
-	if err := app.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
+	if setErr := app.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
 		WatchPath: absLogPath,
 		Files: map[string]usecase.ActivityLogFileCheckpoint{
 			absLogPath: {
@@ -134,8 +134,8 @@ func Test_ingestActivityLogsBootstrap_skipsFullyIngestedFile(t *testing.T) {
 				VRChatLineTime: joinedAt.Format(time.RFC3339),
 			},
 		},
-	}); err != nil {
-		t.Fatal(err)
+	}); setErr != nil {
+		t.Fatal(setErr)
 	}
 
 	runActivityBootstrap(t, app, ctx, absLogPath)

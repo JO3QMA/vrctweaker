@@ -46,24 +46,22 @@ func Test_finalizeAllLogSourcesOnVRChatExit_usesPerFileLastLine(t *testing.T) {
 
 	startA := time.Date(2026, 3, 21, 9, 0, 0, 0, time.UTC)
 	startB := time.Date(2026, 3, 21, 10, 30, 0, 0, time.UTC)
-	if err := app.activity.StartPlaySession(ctx, absA, instA, startA); err != nil {
-		t.Fatal(err)
+	if startErr := app.activity.StartPlaySession(ctx, absA, instA, startA); startErr != nil {
+		t.Fatal(startErr)
 	}
-	if err := app.activity.StartPlaySession(ctx, absB, instB, startB); err != nil {
-		t.Fatal(err)
+	if startErr := app.activity.StartPlaySession(ctx, absB, instB, startB); startErr != nil {
+		t.Fatal(startErr)
 	}
 
-	if err := app.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
+	if setErr := app.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
 		WatchPath: absDir,
 		Files: map[string]usecase.ActivityLogFileCheckpoint{
 			absA: {ByteOffset: int64(len(contentA)), VRChatLineTime: timeA.Format(time.RFC3339)},
 			absB: {ByteOffset: int64(len(contentB)), VRChatLineTime: timeB.Format(time.RFC3339)},
 		},
-	}); err != nil {
-		t.Fatal(err)
+	}); setErr != nil {
+		t.Fatal(setErr)
 	}
-
-	app.finalizeAllLogSourcesOnVRChatExit(ctx, absDir)
 
 	from := time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC)
 	to := time.Date(2030, 1, 1, 0, 0, 0, 0, time.UTC)
