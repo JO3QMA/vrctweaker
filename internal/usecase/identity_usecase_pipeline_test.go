@@ -352,6 +352,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_createsUnresolve
 	saved := repo.getByID["usr_new"]
 	if saved == nil {
 		t.Fatal("expected new row")
+		return
 	}
 	if saved.UserKind != identity.UserKindContact {
 		t.Fatalf("user_kind = %q, want contact", saved.UserKind)
@@ -381,6 +382,7 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_resolvesListable
 	saved := repo.getByID["usr_new"]
 	if saved == nil {
 		t.Fatal("expected row")
+		return
 	}
 	if saved.UserKind != identity.UserKindFriend || saved.DisplayName != "Resolved" {
 		t.Fatalf("saved = %+v", saved)

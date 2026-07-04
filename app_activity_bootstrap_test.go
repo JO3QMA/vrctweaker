@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
-	"vrchat-tweaker/internal/infrastructure/logwatcher"
 	"vrchat-tweaker/internal/infrastructure/sqlite"
 	"vrchat-tweaker/internal/testvrc"
 	"vrchat-tweaker/internal/usecase"
@@ -20,52 +19,44 @@ const (
 	testBootstrapUserID  = "usr_abc"
 )
 
-func Test_shouldFinalizeOpenActivityAtLogFileEnd(t *testing.T) {
+func Test_bootstrapLiveLogFiles(t *testing.T) {
 	t.Parallel()
-	cases := []struct {
-		name            string
-		isDirectoryMode bool
-		fileIndex       int
-		fileCount       int
-		want            bool
+	dir := t.TempDir()
+	oldPath := filepath.Join(dir, "output_log_2026-03-20_23-00-00.txt")
+	midPath := filepath.Join(dir, "output_log_2026-03-21_08-00-00.txt")
+	newPath := filepath.Join(dir, "output_log_2026-03-21_11-00-00.txt")
+
+	base := time.Date(2026, 3, 21, 11, 0, 0, 0, time.UTC)
+	for _, spec := range []struct {
+		path string
+		mod  time.Time
 	}{
-		{
-			name:            "single file watch never finalizes",
-			isDirectoryMode: false,
-			fileIndex:       0,
-			fileCount:       1,
-			want:            false,
-		},
-		{
-			name:            "directory with one file is still active tail",
-			isDirectoryMode: true,
-			fileIndex:       0,
-			fileCount:       1,
-			want:            false,
-		},
-		{
-			name:            "directory historical file before tail finalizes",
-			isDirectoryMode: true,
-			fileIndex:       0,
-			fileCount:       3,
-			want:            true,
-		},
-		{
-			name:            "directory active tail file does not finalize",
-			isDirectoryMode: true,
-			fileIndex:       2,
-			fileCount:       3,
-			want:            false,
-		},
+		{oldPath, base.Add(-12 * time.Hour)},
+		{midPath, base.Add(-3 * time.Hour)},
+		{newPath, base},
+	} {
+		if err := os.WriteFile(spec.path, []byte("log\n"), 0600); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chtimes(spec.path, spec.mod, spec.mod); err != nil {
+			t.Fatal(err)
+		}
 	}
-	for _, tc := range cases {
-		tc := tc
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			if got := shouldFinalizeOpenActivityAtLogFileEnd(tc.isDirectoryMode, tc.fileIndex, tc.fileCount); got != tc.want {
-				t.Fatalf("shouldFinalizeOpenActivityAtLogFileEnd() = %v, want %v", got, tc.want)
-			}
-		})
+
+	live := bootstrapLiveLogFiles([]string{oldPath, midPath, newPath})
+	if live == nil {
+		t.Fatal("expected live map for directory with recent tail file")
+	}
+	if live[oldPath] || live[midPath] {
+		t.Fatalf("historical files should not be live: old=%v mid=%v", live[oldPath], live[midPath])
+	}
+	if !live[newPath] {
+		t.Fatal("newest file within live window should be marked live")
+	}
+
+	single := bootstrapLiveLogFiles([]string{newPath})
+	if single == nil || !single[newPath] {
+		t.Fatalf("single file watch should mark only file live: %+v", single)
 	}
 }
 
@@ -114,6 +105,48 @@ func Test_ingestActivityLogsBootstrap_restart_keepsOpenEncounters_singleFile(t *
 
 	runActivityBootstrap(t, app, ctx, absLogPath)
 	assertEncounterStillOpen(t, app, ctx, testBootstrapUserID)
+}
+
+func Test_ingestActivityLogsBootstrap_skipsFullyIngestedFile(t *testing.T) {
+	t.Setenv("TZ", "UTC")
+	ctx := context.Background()
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "output_log.txt")
+	content := []byte(
+		"2026.03.21 11:32:04 Debug      -  [Behaviour] Joining " + testBootstrapInstID + "\n" +
+			"2026.03.21 11:32:16 Debug      -  [Behaviour] OnPlayerJoined Alice (" + testBootstrapUserID + ")\n",
+	)
+	if err := os.WriteFile(logPath, content, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	app, _ := newTestAppWithActivity(t)
+	absLogPath, err := filepath.Abs(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	joinedAt := time.Date(2026, 3, 21, 11, 32, 16, 0, time.UTC)
+	if setErr := app.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
+		WatchPath: absLogPath,
+		Files: map[string]usecase.ActivityLogFileCheckpoint{
+			absLogPath: {
+				ByteOffset:     int64(len(content)),
+				VRChatLineTime: joinedAt.Format(time.RFC3339),
+			},
+		},
+	}); setErr != nil {
+		t.Fatal(setErr)
+	}
+
+	runActivityBootstrap(t, app, ctx, absLogPath)
+
+	rows, err := app.activity.ListEncounters(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("encounters = %d, want 0 when fully ingested file is skipped", len(rows))
+	}
 }
 
 func Test_ingestActivityLogsBootstrap_restart_keepsOpenEncounters_directoryTailFile(t *testing.T) {
@@ -181,19 +214,31 @@ func Test_ingestActivityLogsBootstrap_finalizesOpenEncounters_onHistoricalDirect
 	if err := os.WriteFile(newPath, []byte("2026.03.21 11:00:00 Debug      -  [EOSManager] new file start\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
+	base := time.Date(2026, 3, 21, 11, 0, 0, 0, time.UTC)
+	if err := os.Chtimes(oldPath, base.Add(-12*time.Hour), base.Add(-12*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chtimes(newPath, base, base); err != nil {
+		t.Fatal(err)
+	}
 
 	app, encounterRepo := newTestAppWithActivity(t)
+	absOldPath, err := filepath.Abs(oldPath)
+	if err != nil {
+		t.Fatal(err)
+	}
 	joinedAt := time.Date(2026, 3, 20, 22, 0, 0, 0, time.UTC)
 	closeAt := time.Date(2026, 3, 20, 23, 50, 0, 0, time.UTC)
-	if err := encounterRepo.Save(ctx, &activity.UserEncounter{
-		ID:          "enc-historical",
-		VRCUserID:   testBootstrapUserID,
-		DisplayName: "Alice",
-		InstanceID:  testBootstrapInstID,
-		WorldID:     testBootstrapWorldID,
-		JoinedAt:    joinedAt,
-	}); err != nil {
-		t.Fatal(err)
+	if saveErr := encounterRepo.Save(ctx, &activity.UserEncounter{
+		ID:            "enc-historical",
+		VRCUserID:     testBootstrapUserID,
+		DisplayName:   "Alice",
+		InstanceID:    testBootstrapInstID,
+		WorldID:       testBootstrapWorldID,
+		LogSourcePath: absOldPath,
+		JoinedAt:      joinedAt,
+	}); saveErr != nil {
+		t.Fatal(saveErr)
 	}
 
 	absDir, err := filepath.Abs(dir)
@@ -465,8 +510,7 @@ func newTestAppWithActivity(t *testing.T) (*App, *sqlite.UserEncounterRepository
 func runActivityBootstrap(t *testing.T, app *App, ctx context.Context, watchPath string) {
 	t.Helper()
 	parser := activity.NewLogParser()
-	adapter := logwatcher.NewActivityIngestAdapter(app.activity, ctx, appDiagLogger(), nil)
-	app.ingestActivityLogsBootstrap(ctx, watchPath, parser, adapter, appDiagLogger())
+	app.ingestActivityLogsBootstrap(ctx, watchPath, parser, appDiagLogger(), nil)
 }
 
 func assertEncounterStillOpen(t *testing.T, app *App, ctx context.Context, vrcUserID string) {

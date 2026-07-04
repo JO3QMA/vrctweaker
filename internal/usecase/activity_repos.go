@@ -14,6 +14,8 @@ type playSessionRepo interface {
 	GetByID(ctx context.Context, id string) (*activity.PlaySession, error)
 	Save(ctx context.Context, s *activity.PlaySession) error
 	FindLatestWithoutEndTime(ctx context.Context) (*activity.PlaySession, error)
+	FindOpenForLogSource(ctx context.Context, logSource string) (*activity.PlaySession, error)
+	FindAllWithoutEndTime(ctx context.Context) ([]*activity.PlaySession, error)
 	Count(ctx context.Context) (int64, error)
 	DeleteOlderThan(ctx context.Context, before time.Time) (int64, error)
 }
@@ -26,6 +28,7 @@ type userEncounterRepo interface {
 	UpdateEncounter(ctx context.Context, e *activity.UserEncounter) error
 	CloseEncounterLeave(ctx context.Context, vrcUserID, instanceID string, leftAt time.Time) (int64, error)
 	CloseOpenEncountersAt(ctx context.Context, at time.Time) (int64, error)
+	CloseOpenEncountersAtForLogSource(ctx context.Context, logSource string, at time.Time) (int64, error)
 	DeleteOlderThan(ctx context.Context, before time.Time) (int64, error)
 	DeleteAll(ctx context.Context) (int64, error)
 	Count(ctx context.Context) (int64, error)

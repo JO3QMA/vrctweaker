@@ -56,6 +56,7 @@ func TestScreenshotRepository_ThumbnailRoundTrip(t *testing.T) {
 	}
 	if got == nil {
 		t.Fatal("expected thumbnail")
+		return
 	}
 	if string(got.JpegBlob) != string(jpegHdr) {
 		t.Fatalf("thumbnail blob mismatch")

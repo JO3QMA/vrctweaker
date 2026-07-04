@@ -43,6 +43,10 @@ func (m *maintEncounterRepo) CloseOpenEncountersAt(context.Context, time.Time) (
 	return 0, nil
 }
 
+func (m *maintEncounterRepo) CloseOpenEncountersAtForLogSource(context.Context, string, time.Time) (int64, error) {
+	return 0, nil
+}
+
 func (m *maintEncounterRepo) DeleteOlderThan(context.Context, time.Time) (int64, error) {
 	return 0, nil
 }

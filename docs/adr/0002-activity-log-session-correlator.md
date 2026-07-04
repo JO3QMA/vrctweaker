@@ -17,7 +17,7 @@ Accepted（grill-with-docs セッションで合意）
 1. **SessionCorrelator** を `internal/domain/activity` に置く。I/O なし。`ParsedEvent` を受け取り **fine-grained Domain command** の列を返す
 2. **Command 実行**は `ActivityUseCase.ApplyCommand(ctx, cmd)` に集約する（既存の `RecordEncounterAt` 等を内部で呼ぶ）
 3. **ファイル境界**は infrastructure の ingest オーケストレーターが、新ファイルを offset 0 から読む直前に `correlator.Reset()` を呼ぶ。Correlator はファイルパスを知らない
-4. **ファイル末尾の後処理**（`CloseOpenEncountersAtLastLogLine` / `CloseOpenPlaySessionAtLastLogLine`）は行単位 correlator の外とし、bootstrap 完了時にオーケストレーターが明示的に呼ぶ
+4. **ファイル末尾の後処理**（`CloseOpenEncountersAt` / `CloseOpenPlaySessionAtLastLogLine`）は行単位 correlator の外とし、bootstrap 完了時にオーケストレーターが明示的に呼ぶ
 5. **UI 通知**（遭遇ログ変更）は Wails 固有の関心とし、correlator は知らない。Adapter が encounter 系 command 適用後に `NotifyEncounterLogChanged` を実行する（bootstrap 中は抑制）
 6. **未消費の ParsedEvent**（`AvatarSwitch` / `VideoPlayback`）はパーサーに残し、correlator は空 command を返す（スコープ外）
 7. **移行**は 2 段階 PR: PR1 で correlator・command・`ApplyCommand`・domain テスト（挙動不変）、PR2 で adapter 配線と `ActivityEventHandler` 相関ロジック削除

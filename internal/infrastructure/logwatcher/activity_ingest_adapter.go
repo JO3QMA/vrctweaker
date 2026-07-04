@@ -14,6 +14,7 @@ type ActivityIngestAdapter struct {
 	uc               *usecase.ActivityUseCase
 	ctx              context.Context
 	logger           diag.Logger
+	logSourcePath    string
 	correlator       activity.SessionCorrelator
 	onAfterEncounter func()
 	// suppressEncounterNotify skips onAfterEncounter (e.g. during historical log bootstrap).
@@ -21,8 +22,9 @@ type ActivityIngestAdapter struct {
 }
 
 // NewActivityIngestAdapter creates an adapter that correlates and persists log-derived activity.
+// logSourcePath is the normalized absolute path of the output_log file (empty for legacy single-file tests).
 // onAfterEncounter is optional (e.g. Wails EventsEmit after each encounter row).
-func NewActivityIngestAdapter(uc *usecase.ActivityUseCase, ctx context.Context, logger diag.Logger, onAfterEncounter func()) *ActivityIngestAdapter {
+func NewActivityIngestAdapter(uc *usecase.ActivityUseCase, ctx context.Context, logger diag.Logger, onAfterEncounter func(), logSourcePath string) *ActivityIngestAdapter {
 	if logger == nil {
 		logger = diag.Std()
 	}
@@ -30,8 +32,14 @@ func NewActivityIngestAdapter(uc *usecase.ActivityUseCase, ctx context.Context, 
 		uc:               uc,
 		ctx:              ctx,
 		logger:           logger,
+		logSourcePath:    logSourcePath,
 		onAfterEncounter: onAfterEncounter,
 	}
+}
+
+// LogSourcePath returns the bound output_log absolute path.
+func (a *ActivityIngestAdapter) LogSourcePath() string {
+	return a.logSourcePath
 }
 
 // SetSuppressEncounterNotify when true skips onAfterEncounter for encounter commands (e.g. bulk bootstrap).
@@ -52,7 +60,7 @@ func (a *ActivityIngestAdapter) WarmFromParsedEvent(event activity.ParsedEvent) 
 // Handle implements EventHandler.
 func (a *ActivityIngestAdapter) Handle(event activity.ParsedEvent) {
 	for _, cmd := range a.correlator.Apply(event) {
-		if err := a.uc.ApplyCommand(a.ctx, cmd); err != nil {
+		if err := a.uc.ApplyCommand(a.ctx, a.logSourcePath, cmd); err != nil {
 			a.logger("[activity_ingest] %T: %v", cmd, err)
 		}
 		switch cmd.(type) {

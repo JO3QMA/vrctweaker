@@ -52,6 +52,14 @@ func (stubPlaySessionRepo) FindLatestWithoutEndTime(context.Context) (*activity.
 	return nil, nil
 }
 
+func (stubPlaySessionRepo) FindOpenForLogSource(context.Context, string) (*activity.PlaySession, error) {
+	return nil, nil
+}
+
+func (stubPlaySessionRepo) FindAllWithoutEndTime(context.Context) ([]*activity.PlaySession, error) {
+	return nil, nil
+}
+
 func (stubPlaySessionRepo) Count(context.Context) (int64, error) { return 0, nil }
 
 func (stubPlaySessionRepo) DeleteOlderThan(context.Context, time.Time) (int64, error) {
@@ -81,6 +89,10 @@ func (stubEncounterRepo) CloseEncounterLeave(context.Context, string, string, ti
 }
 
 func (stubEncounterRepo) CloseOpenEncountersAt(context.Context, time.Time) (int64, error) {
+	return 0, nil
+}
+
+func (stubEncounterRepo) CloseOpenEncountersAtForLogSource(context.Context, string, time.Time) (int64, error) {
 	return 0, nil
 }
 
@@ -180,13 +192,15 @@ func (f *fakeAppSettingsRepo) GetAll(_ context.Context) (map[string]string, erro
 	return out, nil
 }
 
+const testLogSource = "/tmp/output_log.txt"
+
 func TestActivityIngestAdapter_SuppressEncounterNotify_skipsOnAfterEncounter(t *testing.T) {
 	ctx := context.Background()
 	base := time.Date(2026, 3, 22, 12, 0, 0, 0, time.UTC)
 	var calls int
 	cb := func() { calls++ }
 	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, stubEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
-	a := NewActivityIngestAdapter(uc, ctx, nil, cb)
+	a := NewActivityIngestAdapter(uc, ctx, nil, cb, testLogSource)
 	a.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: testFullInstance, OccurredAt: base})
 
 	a.SetSuppressEncounterNotify(true)
@@ -221,7 +235,7 @@ func TestActivityIngestAdapter_EndToEndEncounterPersistence(t *testing.T) {
 
 	spy := &spyEncounterRepo{}
 	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, spy, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
-	a := NewActivityIngestAdapter(uc, ctx, nil, nil)
+	a := NewActivityIngestAdapter(uc, ctx, nil, nil, testLogSource)
 
 	a.Handle(&activity.DestinationSetEvent{
 		WorldID:      minasocoWorld,
@@ -264,7 +278,7 @@ func TestActivityIngestAdapter_ReingestDoesNotDuplicateJoin(t *testing.T) {
 
 	spy := &spyEncounterRepo{}
 	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, spy, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
-	a := NewActivityIngestAdapter(uc, ctx, nil, nil)
+	a := NewActivityIngestAdapter(uc, ctx, nil, nil, testLogSource)
 
 	play := func() {
 		a.Handle(&activity.DestinationSetEvent{WorldID: world, FullInstance: inst, OccurredAt: base})
@@ -305,6 +319,10 @@ func (errEncounterRepo) CloseOpenEncountersAt(context.Context, time.Time) (int64
 	return 0, errors.New("close encounters fail")
 }
 
+func (errEncounterRepo) CloseOpenEncountersAtForLogSource(context.Context, string, time.Time) (int64, error) {
+	return 0, errors.New("close encounters fail")
+}
+
 type errPlaySessionRepo struct{ stubPlaySessionRepo }
 
 func (errPlaySessionRepo) Save(context.Context, *activity.PlaySession) error {
@@ -313,6 +331,14 @@ func (errPlaySessionRepo) Save(context.Context, *activity.PlaySession) error {
 
 func (errPlaySessionRepo) FindLatestWithoutEndTime(context.Context) (*activity.PlaySession, error) {
 	return &activity.PlaySession{ID: "open", StartTime: time.Now().Add(-time.Minute)}, nil
+}
+
+func (errPlaySessionRepo) FindOpenForLogSource(context.Context, string) (*activity.PlaySession, error) {
+	return &activity.PlaySession{ID: "open", StartTime: time.Now().Add(-time.Minute)}, nil
+}
+
+func (errPlaySessionRepo) FindAllWithoutEndTime(context.Context) ([]*activity.PlaySession, error) {
+	return nil, nil
 }
 
 func TestActivityIngestAdapter_LogsUpsertErrors(t *testing.T) {
@@ -325,7 +351,7 @@ func TestActivityIngestAdapter_LogsUpsertErrors(t *testing.T) {
 	}
 	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, stubEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, worldRepo)
 	buf := &raceSafeLogBuffer{}
-	h := NewActivityIngestAdapter(uc, ctx, buf.logger(), nil)
+	h := NewActivityIngestAdapter(uc, ctx, buf.logger(), nil, testLogSource)
 
 	h.Handle(nil)
 	h.Handle(&activity.DestinationSetEvent{WorldID: testWorldID, OccurredAt: base})
@@ -340,7 +366,7 @@ func TestActivityIngestAdapter_SessionStartEmptyInstanceIgnored(t *testing.T) {
 	ctx := context.Background()
 	h := NewActivityIngestAdapter(
 		usecase.NewActivityUseCase(stubPlaySessionRepo{}, stubEncounterRepo{}, &fakeAppSettingsRepo{m: map[string]string{}}, nil, nil),
-		ctx, nil, nil,
+		ctx, nil, nil, testLogSource,
 	)
 	h.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: "", OccurredAt: time.Now()})
 }
@@ -350,7 +376,7 @@ func TestActivityIngestAdapter_EncounterRecordErrorLogged(t *testing.T) {
 	buf := &raceSafeLogBuffer{}
 	encRepo := &errEncounterRepo{}
 	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, encRepo, &fakeAppSettingsRepo{m: map[string]string{}}, nil, nil)
-	h := NewActivityIngestAdapter(uc, ctx, buf.logger(), nil)
+	h := NewActivityIngestAdapter(uc, ctx, buf.logger(), nil, testLogSource)
 	h.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: testFullInstance, OccurredAt: time.Now()})
 	h.Handle(&activity.EncounterEvent{
 		VRCUserID: "usr_x", DisplayName: "X", Action: activity.EncounterActionJoin, EncounteredAt: time.Now(),
@@ -366,7 +392,7 @@ func TestActivityIngestAdapter_SessionErrorsLogged(t *testing.T) {
 	playRepo := &errPlaySessionRepo{}
 	encRepo := &errEncounterRepo{}
 	uc := usecase.NewActivityUseCase(playRepo, encRepo, &fakeAppSettingsRepo{m: map[string]string{}}, nil, nil)
-	h := NewActivityIngestAdapter(uc, ctx, buf.logger(), nil)
+	h := NewActivityIngestAdapter(uc, ctx, buf.logger(), nil, testLogSource)
 	h.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: testFullInstance, OccurredAt: time.Now()})
 	h.Handle(&activity.SessionEvent{Type: activity.SessionEventEnd, OccurredAt: time.Now()})
 	if buf.len() < 2 {
@@ -378,6 +404,6 @@ func TestActivityIngestAdapter_DefaultLoggerOnUpsertError(t *testing.T) {
 	ctx := context.Background()
 	worldRepo := &errWorldInfoRepo{visitErr: errors.New("visit fail")}
 	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, stubEncounterRepo{}, &fakeAppSettingsRepo{m: map[string]string{}}, nil, worldRepo)
-	h := NewActivityIngestAdapter(uc, ctx, nil, nil)
+	h := NewActivityIngestAdapter(uc, ctx, nil, nil, testLogSource)
 	h.Handle(&activity.DestinationSetEvent{WorldID: testWorldID, OccurredAt: time.Now()})
 }
