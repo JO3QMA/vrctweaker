@@ -35,17 +35,4 @@ describe("VrcUserTagChip", () => {
 
     expect(wrapper.text()).toBe("system_slug");
   });
-
-  it("forwards class attr to el-tag", async () => {
-    const wrapper = mount(VrcUserTagChip, {
-      props: { tag: "system_trust_basic" },
-      attrs: { class: "tag-chip" },
-    });
-    await flushPromises();
-    await nextTick();
-
-    const chip = wrapper.find("[data-testid='user-tag-chip']");
-    expect(chip.classes()).toContain("tag-chip");
-    expect(chip.classes()).toContain("vrc-user-tag-chip");
-  });
 });

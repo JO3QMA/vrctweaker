@@ -34,11 +34,13 @@ describe("vrcUserTags", () => {
     expect(isKnownUserTag("system_trust_basic")).toBe(true);
     expect(isKnownUserTag("language_kor")).toBe(true);
     expect(isKnownUserTag("system_not_real")).toBe(false);
+    expect(isKnownUserTag(" system_trust_basic ")).toBe(true);
   });
 
   it("detects deprecated tags", () => {
     expect(isDeprecatedUserTag("show_social_rank")).toBe(true);
     expect(isDeprecatedUserTag("system_trust_basic")).toBe(false);
+    expect(isDeprecatedUserTag(" show_social_rank ")).toBe(true);
   });
 
   it("maps trust rank tags to element types", () => {
@@ -78,5 +80,15 @@ describe("vrcUserTags", () => {
     expect(d.isKnown).toBe(false);
     expect(d.label).toBe("system_slug");
     expect(d.tooltip).toContain("Unknown tag");
+  });
+
+  it("returns empty display for null tag", () => {
+    const d = resolveUserTagDisplay(null as unknown as string, mockT);
+    expect(d).toEqual({
+      label: "",
+      tooltip: "",
+      isKnown: false,
+      deprecated: false,
+    });
   });
 });

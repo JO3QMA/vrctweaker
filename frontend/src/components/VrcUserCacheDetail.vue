@@ -168,7 +168,6 @@
                   v-for="tag in jsonStringArray(selected.tagsJson)"
                   :key="tag"
                   :tag="tag"
-                  class="tag-chip"
                 />
               </el-descriptions-item>
               <el-descriptions-item

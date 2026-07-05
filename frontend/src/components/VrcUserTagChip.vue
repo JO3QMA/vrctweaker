@@ -4,7 +4,6 @@
       <div v-for="(line, idx) in tooltipLines" :key="idx">{{ line }}</div>
     </template>
     <el-tag
-      v-bind="$attrs"
       size="small"
       :type="tagType"
       class="vrc-user-tag-chip"
@@ -17,10 +16,6 @@
 </template>
 
 <script setup lang="ts">
-defineOptions({
-  inheritAttrs: false,
-});
-
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import {
@@ -44,6 +39,7 @@ const tooltipLines = computed(() => display.value.tooltip.split("\n"));
 
 <style scoped>
 .vrc-user-tag-chip {
+  margin: 0.15rem 0.2rem 0 0;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;

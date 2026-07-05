@@ -129,11 +129,12 @@ export function isLanguageUserTag(tag: string): boolean {
 }
 
 export function isKnownUserTag(tag: string): boolean {
-  return KNOWN_USER_TAG_IDS.has(tag) || KNOWN_LANGUAGE_TAG_IDS.has(tag);
+  const trimmed = tag.trim();
+  return KNOWN_USER_TAG_IDS.has(trimmed) || KNOWN_LANGUAGE_TAG_IDS.has(trimmed);
 }
 
 export function isDeprecatedUserTag(tag: string): boolean {
-  return DEPRECATED_USER_TAG_IDS.has(tag);
+  return DEPRECATED_USER_TAG_IDS.has(tag.trim());
 }
 
 function userTagI18nKey(tag: string, field: "label" | "description"): string {
@@ -182,6 +183,9 @@ export function resolveUserTagDisplay(
   tag: string,
   t: UserTagTranslateFn,
 ): UserTagDisplay {
+  if (tag == null) {
+    return { label: "", tooltip: "", isKnown: false, deprecated: false };
+  }
   const trimmed = tag.trim();
   const deprecated = isDeprecatedUserTag(trimmed);
   const tagIdLine = `${t(userTagMetaI18nKey("tag_id"))}: ${trimmed}`;
