@@ -150,7 +150,8 @@ describe("VrcUserCacheDetail", () => {
     expect(text).toContain("wrld_x:123~grp");
     expect(text).toContain("trusted");
     expect(text).toContain("standalonewindows");
-    expect(text).toContain("system_trust_basic");
+    expect(text).toContain("新規ユーザー（青）");
+    expect(text).not.toContain("system_trust_basic");
     expect(text).toContain("author_tag");
   });
 
