@@ -58,3 +58,53 @@ func TestValidateRegularFile_NotRegular(t *testing.T) {
 		t.Fatal("expected error for directory")
 	}
 }
+
+func TestValidateDirectory_OK(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	got, err := ValidateDirectory(dir)
+	if err != nil {
+		t.Fatalf("ValidateDirectory: %v", err)
+	}
+	if got == "" {
+		t.Fatal("empty abs path")
+	}
+	info, err := os.Stat(got)
+	if err != nil || !info.IsDir() {
+		t.Fatalf("expected directory at %q", got)
+	}
+}
+
+func TestValidateDirectory_Empty(t *testing.T) {
+	t.Parallel()
+	_, err := ValidateDirectory("")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	_, err = ValidateDirectory("  ")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestValidateDirectory_NotFound(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	_, err := ValidateDirectory(filepath.Join(dir, "missing"))
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestValidateDirectory_NotDirectory(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	p := filepath.Join(dir, "file.txt")
+	if err := os.WriteFile(p, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	_, err := ValidateDirectory(p)
+	if err == nil {
+		t.Fatal("expected error for file path")
+	}
+}

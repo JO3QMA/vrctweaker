@@ -191,4 +191,84 @@ describe("DashboardView", () => {
     expect(errorSpy).toHaveBeenCalledWith("backend string err");
     errorSpy.mockRestore();
   });
+
+  it("calls App.launchVRChat with default profile id when launch is clicked", async () => {
+    mockLaunchProfiles.mockResolvedValue([defaultLaunchProfile]);
+    const wrapper = mount(DashboardView);
+    await flushPromises();
+
+    await wrapper.find(".launch-btn").trigger("click");
+    await flushPromises();
+
+    expect(mockLaunchVRChat).toHaveBeenCalledWith("p-default");
+  });
+
+  it("uses first profile when none is marked default", async () => {
+    mockLaunchProfiles.mockResolvedValue([
+      {
+        id: "p-first",
+        name: "FirstOnly",
+        arguments: "",
+        isDefault: false,
+      },
+    ]);
+    const wrapper = mount(DashboardView);
+    await flushPromises();
+
+    const launchBtn = wrapper.find(".launch-btn");
+    expect((launchBtn.element as HTMLButtonElement).disabled).toBe(false);
+    expect(launchBtn.text()).toContain("FirstOnly");
+  });
+
+  it("setStatusOnly calls join me and ask me statuses", async () => {
+    const wrapper = mount(DashboardView);
+    await flushPromises();
+
+    await wrapper
+      .find('[data-testid="dashboard-quick-status-join-me"]')
+      .trigger("click");
+    await flushPromises();
+    expect(mockSetStatus).toHaveBeenCalledWith("join me");
+
+    await wrapper
+      .find('[data-testid="dashboard-quick-status-ask-me"]')
+      .trigger("click");
+    await flushPromises();
+    expect(mockSetStatus).toHaveBeenCalledWith("ask me");
+  });
+
+  it("shows error when applyCustomDescription fails", async () => {
+    mockSetStatusDescription.mockRejectedValueOnce(new Error("desc failed"));
+    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
+      close: () => {},
+    }));
+
+    const wrapper = mount(DashboardView);
+    await flushPromises();
+    await wrapper.find(".custom-status-input input").setValue("bad");
+    await wrapper.find(".apply-btn").trigger("click");
+    await flushPromises();
+
+    expect(errorSpy).toHaveBeenCalledWith("desc failed");
+    errorSpy.mockRestore();
+  });
+
+  it("shows error when applyTemplate fails", async () => {
+    mockSetStatusAndDescription.mockRejectedValueOnce({ message: "tpl fail" });
+    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
+      close: () => {},
+    }));
+
+    const wrapper = mount(DashboardView);
+    await flushPromises();
+
+    const joinTemplateBtn = wrapper
+      .findAll(".templates-panel .status-btn")
+      .find((b) => b.text() === "だれでもどうぞ");
+    await joinTemplateBtn!.trigger("click");
+    await flushPromises();
+
+    expect(errorSpy).toHaveBeenCalledWith("tpl fail");
+    errorSpy.mockRestore();
+  });
 });

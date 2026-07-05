@@ -8,12 +8,78 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
+	"vrchat-tweaker/internal/infrastructure/diag"
 )
+
+// SessionCorrelatorWarmer rebuilds SessionCorrelator state from log lines without persisting commands.
+type SessionCorrelatorWarmer interface {
+	WarmFromParsedEvent(event activity.ParsedEvent)
+}
 
 // ProcessOutputLogFile reads an entire output_log file from the beginning and dispatches parsed events.
 func ProcessOutputLogFile(ctx context.Context, path string, parser LogParser, handler EventHandler, logger Logger) error {
 	_, err := ProcessOutputLogFileFromOffset(ctx, path, 0, parser, handler, logger, nil)
 	return err
+}
+
+// WarmSessionCorrelatorFromLogFile replays log lines in [0, endOffset) into correlator only.
+// Used before bootstrap resume so mid-file checkpoints keep correct world/instance context.
+func WarmSessionCorrelatorFromLogFile(ctx context.Context, path string, endOffset int64, parser LogParser, warmer SessionCorrelatorWarmer, logger Logger) error {
+	if endOffset <= 0 || warmer == nil {
+		return nil
+	}
+	if logger == nil {
+		logger = diag.Nop
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+
+	if _, err := f.Seek(0, io.SeekStart); err != nil {
+		return err
+	}
+
+	br := bufio.NewReader(f)
+	pos := int64(0)
+	for pos < endOffset {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+		}
+		lineBytes, err := br.ReadBytes('\n')
+		if len(lineBytes) == 0 && err == io.EOF {
+			break
+		}
+		pos += int64(len(lineBytes))
+		if pos > endOffset {
+			break
+		}
+		line := string(lineBytes)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		lineTrimmed := trimNL(line)
+		if lineTrimmed != "" {
+			baseTime := activity.ParseVRChatTimestamp(lineTrimmed, time.Now().In(time.Local))
+			events, parseErr := parser.ParseLine(lineTrimmed, baseTime)
+			if parseErr != nil {
+				logger("[logwatcher] warm parse error: %v", parseErr)
+			} else {
+				for _, ev := range events {
+					if ev != nil {
+						warmer.WarmFromParsedEvent(ev)
+					}
+				}
+			}
+		}
+		if err == io.EOF {
+			break
+		}
+	}
+	return nil
 }
 
 // ProgressCallback receives absolute byte offset in the file after each line (including newline) and the raw line text.
@@ -22,7 +88,7 @@ type ProgressCallback func(byteOffset int64, line string)
 // ProcessOutputLogFileFromOffset reads from startOffset and returns the final byte offset in the file.
 func ProcessOutputLogFileFromOffset(ctx context.Context, path string, startOffset int64, parser LogParser, handler EventHandler, logger Logger, onProgress ProgressCallback) (int64, error) {
 	if logger == nil {
-		logger = nopLogger{}
+		logger = diag.Nop
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -67,7 +133,7 @@ func ProcessOutputLogFileFromOffset(ctx context.Context, path string, startOffse
 			baseTime := activity.ParseVRChatTimestamp(lineTrimmed, time.Now().In(time.Local))
 			events, parseErr := parser.ParseLine(lineTrimmed, baseTime)
 			if parseErr != nil {
-				logger.Printf("[logwatcher] bootstrap parse error: %v", parseErr)
+				logger("[logwatcher] bootstrap parse error: %v", parseErr)
 			} else {
 				for _, ev := range events {
 					if ev != nil {

@@ -3,6 +3,7 @@ import type { UserCacheDTO } from "../wails/app";
 import {
   copyDisplayName,
   friendDetailStickyHeaderVisible,
+  friendIsOffline,
   friendLocationLabel,
   friendProfileBannerUrl,
   friendThumbUrl,
@@ -20,6 +21,19 @@ function dto(partial: Partial<UserCacheDTO> = {}): UserCacheDTO {
     ...partial,
   };
 }
+
+describe("friendIsOffline", () => {
+  it("treats empty and offline as offline", () => {
+    expect(friendIsOffline("")).toBe(true);
+    expect(friendIsOffline("offline")).toBe(true);
+    expect(friendIsOffline("Offline")).toBe(true);
+  });
+
+  it("treats other statuses as online", () => {
+    expect(friendIsOffline("active")).toBe(false);
+    expect(friendIsOffline("join me")).toBe(false);
+  });
+});
 
 describe("friendLocationLabel", () => {
   it("returns empty for missing location", () => {

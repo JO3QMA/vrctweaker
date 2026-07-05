@@ -48,7 +48,7 @@
             />
             <div v-else class="profile-avatar profile-avatar--placeholder" />
           </div>
-          <div class="profile-toolbar-actions">
+          <div v-if="variant !== 'self'" class="profile-toolbar-actions">
             <el-checkbox
               :model-value="selected.isFavorite"
               @update:model-value="onFavoriteUpdate"
@@ -97,8 +97,22 @@
       </div>
 
       <div class="profile-details-wrap">
-        <el-tabs v-model="detailTab" class="profile-detail-tabs">
+        <el-tabs
+          v-model="detailTab"
+          class="profile-detail-tabs"
+          :class="{ 'profile-detail-tabs--self': variant === 'self' }"
+        >
           <el-tab-pane :label="t('userDetail.tabDetail')" name="detail">
+            <div v-if="variant === 'self'" class="self-profile-actions">
+              <el-button
+                type="primary"
+                data-testid="self-profile-refresh"
+                :loading="refreshLoading"
+                @click="emit('refresh')"
+              >
+                {{ t("selfProfile.refresh") }}
+              </el-button>
+            </div>
             <el-descriptions :column="1" border size="small">
               <el-descriptions-item
                 v-if="selected.state"
@@ -242,6 +256,7 @@
             </el-descriptions>
           </el-tab-pane>
           <el-tab-pane
+            v-if="variant !== 'self'"
             :label="t('userDetail.tabEncounters')"
             name="encounters"
             lazy
@@ -276,9 +291,17 @@ import {
 
 const { t } = useI18n();
 
-const props = defineProps<{
-  selected: UserCacheDTO | null;
-}>();
+const props = withDefaults(
+  defineProps<{
+    selected: UserCacheDTO | null;
+    variant?: "default" | "self";
+    refreshLoading?: boolean;
+  }>(),
+  {
+    variant: "default",
+    refreshLoading: false,
+  },
+);
 
 const detailTab = ref<"detail" | "encounters">("detail");
 
@@ -309,6 +332,7 @@ function attachCardBodyScroll() {
 
 const emit = defineEmits<{
   favoriteChange: [user: UserCacheDTO, isFavorite: boolean];
+  refresh: [];
 }>();
 
 const bannerSrc = computed(() =>
@@ -608,6 +632,14 @@ onUnmounted(() => {
 
 .profile-detail-tabs {
   min-height: 0;
+}
+
+.profile-detail-tabs--self :deep(.el-tabs__header) {
+  display: none;
+}
+
+.self-profile-actions {
+  margin-bottom: 0.75rem;
 }
 
 .profile-detail-tabs :deep(.el-tabs__header) {

@@ -1,8 +1,11 @@
 package activity
 
 import (
+	"fmt"
 	"testing"
 	"time"
+
+	"vrchat-tweaker/internal/testvrc"
 )
 
 func TestLogParser_ParseLine_Encounter(t *testing.T) {
@@ -35,11 +38,11 @@ func TestLogParser_ParseLine_Encounter(t *testing.T) {
 		},
 		{
 			name:     "OnPlayerJoined VRChat Behaviour line",
-			line:     "2026.03.21 11:32:16 Debug      -  [Behaviour] OnPlayerJoined ぶっちゃん！ (usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)",
+			line:     fmt.Sprintf("2026.03.21 11:32:16 Debug      -  [Behaviour] OnPlayerJoined %s (%s)", testvrc.PlayerDisplayName, testvrc.PlayerUserID),
 			wantKind: EventKindEncounter,
 			wantAct:  EncounterActionJoin,
-			wantName: "ぶっちゃん！",
-			wantID:   "usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e",
+			wantName: testvrc.PlayerDisplayName,
+			wantID:   testvrc.PlayerUserID,
 		},
 		{
 			name:     "OnPlayerLeft with user ID",
@@ -83,16 +86,42 @@ func TestLogParser_ParseLine_Encounter(t *testing.T) {
 }
 
 func TestParseVRChatTimestamp(t *testing.T) {
-	t.Setenv("TZ", "UTC")
-	fallback := time.Date(1999, 1, 1, 0, 0, 0, 0, time.UTC)
+	fallback := time.Date(1999, 1, 1, 0, 0, 0, 0, time.Local)
 	line := "2026.03.17 23:59:58 Debug      -  [Behaviour] OnPlayerJoined x (usr_abc)"
 	got := ParseVRChatTimestamp(line, fallback)
-	want := time.Date(2026, 3, 17, 23, 59, 58, 0, time.UTC)
+	want, err := time.ParseInLocation("2006.01.02 15:04:05", "2026.03.17 23:59:58", time.Local)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if !got.Equal(want) {
-		t.Errorf("ParseVRChatTimestamp() = %v, want %v", got, want)
+		t.Errorf("ParseVRChatTimestamp() = %v, want %v (time.Local)", got, want)
 	}
 	if !ParseVRChatTimestamp("no timestamp here", fallback).Equal(fallback) {
 		t.Errorf("ParseVRChatTimestamp() should return fallback for bare line")
+	}
+	if !ParseVRChatTimestamp("9999.99.99 99:99:99 Debug - x", fallback).Equal(fallback) {
+		t.Errorf("ParseVRChatTimestamp() should return fallback for invalid timestamp")
+	}
+}
+
+func TestParsedEventKind(t *testing.T) {
+	at := time.Now()
+	tests := []struct {
+		name string
+		ev   ParsedEvent
+		want EventKind
+	}{
+		{"destination", &DestinationSetEvent{OccurredAt: at}, EventKindDestination},
+		{"room name", &RoomNameEvent{OccurredAt: at}, EventKindRoomName},
+		{"avatar switch", &AvatarSwitchEvent{OccurredAt: at}, EventKindAvatarSwitch},
+		{"video playback", &VideoPlaybackEvent{OccurredAt: at}, EventKindVideoPlayback},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.ev.Kind(); got != tt.want {
+				t.Errorf("Kind() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
@@ -195,7 +224,7 @@ func TestLogParser_ParseLine_Unparseable(t *testing.T) {
 		"Loading level",
 		"[Time: 1.0] Unrelated message",
 		"OnPlayerJoined Alice (usr_abc123)",
-		"2026.03.21 11:32:16 Debug      -  [VisitorsInformationBoard] 18.88 / OnPlayerJoined / player=ぶっちゃん！(local)",
+		"2026.03.21 11:32:16 Debug      -  [VisitorsInformationBoard] 18.88 / OnPlayerJoined / player=TestPlayerAlpha(local)",
 		"Destination set: wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b:64190~private(usr_x)~region(jp)",
 		"Entering Room: SomeWorld",
 	}
@@ -215,7 +244,7 @@ func TestLogParser_ParseLine_DestinationRoomAvatarVideo(t *testing.T) {
 	p := NewLogParser()
 
 	t.Run("Destination set", func(t *testing.T) {
-		line := "2026.03.17 23:59:56 Debug      -  [Behaviour] Destination set: wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b:64190~private(usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e)~region(jp)"
+		line := fmt.Sprintf("2026.03.17 23:59:56 Debug      -  [Behaviour] Destination set: wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b:64190~private(%s)~region(jp)", testvrc.PlayerUserID)
 		events, err := p.ParseLine(line, base)
 		if err != nil {
 			t.Fatal(err)
@@ -230,7 +259,7 @@ func TestLogParser_ParseLine_DestinationRoomAvatarVideo(t *testing.T) {
 		if d.WorldID != "wrld_e055f1a3-6fcb-4d19-9945-f0a1c92cc19b" || d.InstanceID != "64190" || d.InstanceType != "private" {
 			t.Errorf("destination fields %+v", d)
 		}
-		if d.OwnerUserID != "usr_dec48a78-894a-4ef3-8524-8cf546ad1b2e" || d.Region != "jp" {
+		if d.OwnerUserID != testvrc.PlayerUserID || d.Region != "jp" {
 			t.Errorf("owner/region %+v", d)
 		}
 	})
@@ -280,7 +309,7 @@ func TestLogParser_ParseLine_DestinationRoomAvatarVideo(t *testing.T) {
 	})
 
 	t.Run("Avatar switch", func(t *testing.T) {
-		line := "2026.03.18 00:00:08 Debug      -  [Behaviour] Switching ぶっちゃん！ to avatar RearAlice （SailorMaid）"
+		line := "2026.03.18 00:00:08 Debug      -  [Behaviour] Switching TestPlayerAlpha to avatar RearAlice （SailorMaid）"
 		events, err := p.ParseLine(line, base)
 		if err != nil {
 			t.Fatal(err)
@@ -292,7 +321,7 @@ func TestLogParser_ParseLine_DestinationRoomAvatarVideo(t *testing.T) {
 		if !ok {
 			t.Fatalf("type %T", events[0])
 		}
-		if a.DisplayName != "ぶっちゃん！" || a.AvatarName != "RearAlice （SailorMaid）" {
+		if a.DisplayName != "TestPlayerAlpha" || a.AvatarName != "RearAlice （SailorMaid）" {
 			t.Errorf("avatar %+v", a)
 		}
 	})
@@ -323,6 +352,63 @@ func TestLogParser_ParseLine_DestinationRoomAvatarVideo(t *testing.T) {
 		}
 		if len(events) != 0 {
 			t.Fatalf("want 0 events, got %v", events)
+		}
+	})
+
+	t.Run("Destination set loose without region suffix", func(t *testing.T) {
+		line := "2026.03.22 00:49:03 Debug      -  [Behaviour] Destination set: wrld_b2d24c29-1ded-4990-a90d-dd6dcc440300:mosco1~group(grp_abc)~groupAccessType(public)"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("got %d events", len(events))
+		}
+		d, ok := events[0].(*DestinationSetEvent)
+		if !ok {
+			t.Fatalf("type %T", events[0])
+		}
+		if d.Region != "" {
+			t.Errorf("Region = %q, want empty", d.Region)
+		}
+		if d.InstanceID != "mosco1" {
+			t.Errorf("InstanceID = %q, want mosco1", d.InstanceID)
+		}
+	})
+
+	t.Run("Destination set loose without tilde suffix", func(t *testing.T) {
+		line := "2026.03.22 00:49:03 Debug      -  [Behaviour] Destination set: wrld_b2d24c29-1ded-4990-a90d-dd6dcc440300:64190"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("got %d events", len(events))
+		}
+		d, ok := events[0].(*DestinationSetEvent)
+		if !ok {
+			t.Fatalf("type %T", events[0])
+		}
+		if d.InstanceID != "64190" {
+			t.Errorf("InstanceID = %q, want 64190", d.InstanceID)
+		}
+	})
+
+	t.Run("Video playback Resolving URL variant", func(t *testing.T) {
+		line := "2026.03.18 00:01:12 Debug      -  [Video Playback] Resolving URL 'https://example.com/vid'"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("got %d events", len(events))
+		}
+		v, ok := events[0].(*VideoPlaybackEvent)
+		if !ok {
+			t.Fatalf("type %T", events[0])
+		}
+		if v.URL != "https://example.com/vid" {
+			t.Errorf("URL = %q", v.URL)
 		}
 	})
 }

@@ -238,6 +238,86 @@ func TestUserCacheRepository_List_onlyFriendsWithStatus(t *testing.T) {
 	}
 }
 
+func TestUserCacheRepository_List_omitsUnnamedFriends(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	if migErr := applySchema(db); migErr != nil {
+		t.Fatal(migErr)
+	}
+	repo := NewUserCacheRepository(db)
+	ctx := context.Background()
+	at := time.Now().UTC()
+	for _, u := range []*identity.UserCache{
+		{
+			VRCUserID: "usr_named", DisplayName: "Named", Status: "active",
+			UserKind: identity.UserKindFriend, LastUpdated: at,
+		},
+		{
+			VRCUserID: "usr_unnamed", DisplayName: "", Status: "active", Platform: "web",
+			UserKind: identity.UserKindFriend, LastUpdated: at,
+		},
+	} {
+		if saveErr := repo.Save(ctx, u); saveErr != nil {
+			t.Fatal(saveErr)
+		}
+	}
+	list, err := repo.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].VRCUserID != "usr_named" {
+		t.Fatalf("List = %+v, want only named friend", list)
+	}
+}
+
+func TestApplyDataMigrations_demotesUnnamedFriends(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	if migErr := applySchema(db); migErr != nil {
+		t.Fatal(migErr)
+	}
+	repo := NewUserCacheRepository(db)
+	ctx := context.Background()
+	at := time.Now().UTC()
+	if saveErr := repo.Save(ctx, &identity.UserCache{
+		VRCUserID: "usr_orphan", DisplayName: "", Status: "active", Platform: "web",
+		IsFavorite: true, UserKind: identity.UserKindFriend, LastUpdated: at,
+	}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+	if migErr := applyDataMigrations(db); migErr != nil {
+		t.Fatal(migErr)
+	}
+	got, err := repo.GetByVRCUserID(ctx, "usr_orphan")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.UserKind != identity.UserKindContact {
+		t.Fatalf("user_kind = %q, want contact", got.UserKind)
+	}
+	if got.IsFavorite {
+		t.Fatal("is_favorite should be cleared on demotion")
+	}
+	if got.Status != "active" || got.Platform != "web" {
+		t.Fatalf("presence should remain: %+v", got)
+	}
+	list, err := repo.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 0 {
+		t.Fatalf("List = %+v, want empty", list)
+	}
+}
+
 func TestUserCacheRepository_SaveBatch_persistsFriendExtendedFields(t *testing.T) {
 	dir := t.TempDir()
 	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db")+"?_pragma=foreign_keys(1)")
@@ -401,5 +481,165 @@ func TestUserCacheRepository_GetSelfBySessionFingerprint(t *testing.T) {
 	}
 	if miss != nil {
 		t.Fatalf("wrong fingerprint: want nil, got %+v", miss)
+	}
+	empty, err := repo.GetSelfBySessionFingerprint(ctx, "")
+	if err != nil || empty != nil {
+		t.Fatalf("empty fingerprint: got %#v err=%v", empty, err)
+	}
+}
+
+func TestUserCacheRepository_ListFavorites_Delete_DeleteSelfRows(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	if migErr := applySchema(db); migErr != nil {
+		t.Fatal(migErr)
+	}
+	repo := NewUserCacheRepository(db)
+	ctx := context.Background()
+	at := time.Now().UTC()
+
+	fav := &identity.UserCache{
+		VRCUserID:   "usr_fav",
+		DisplayName: "FavFriend",
+		Status:      "join me",
+		IsFavorite:  true,
+		UserKind:    identity.UserKindFriend,
+		LastUpdated: at,
+	}
+	plain := &identity.UserCache{
+		VRCUserID:   "usr_plain",
+		DisplayName: "PlainFriend",
+		Status:      "offline",
+		UserKind:    identity.UserKindFriend,
+		LastUpdated: at,
+	}
+	for _, u := range []*identity.UserCache{fav, plain} {
+		if saveErr := repo.Save(ctx, u); saveErr != nil {
+			t.Fatal(saveErr)
+		}
+	}
+
+	favs, err := repo.ListFavorites(ctx)
+	if err != nil || len(favs) != 1 || favs[0].VRCUserID != "usr_fav" {
+		t.Fatalf("ListFavorites: %#v err=%v", favs, err)
+	}
+
+	if delErr := repo.Delete(ctx, "usr_plain"); delErr != nil {
+		t.Fatal(delErr)
+	}
+	gone, err := repo.GetByVRCUserID(ctx, "usr_plain")
+	if err != nil || gone != nil {
+		t.Fatalf("after Delete: %#v err=%v", gone, err)
+	}
+
+	if upErr := repo.UpsertSelf(ctx, &identity.UserCache{
+		VRCUserID: "usr_self_del", DisplayName: "Self", Status: "active",
+		UserKind: identity.UserKindSelf, LastUpdated: at, SessionFingerprint: "fp",
+		Username: "me", UserState: "online",
+	}); upErr != nil {
+		t.Fatal(upErr)
+	}
+	if selfDelErr := repo.DeleteSelfRows(ctx); selfDelErr != nil {
+		t.Fatal(selfDelErr)
+	}
+	self, err := repo.GetByVRCUserID(ctx, "usr_self_del")
+	if err != nil || self != nil {
+		t.Fatalf("DeleteSelfRows: %#v err=%v", self, err)
+	}
+}
+
+func TestUserCacheRepository_UpsertSelf_rejectsEmptyID(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	if migErr := applySchema(db); migErr != nil {
+		t.Fatal(migErr)
+	}
+	repo := NewUserCacheRepository(db)
+	ctx := context.Background()
+	err = repo.UpsertSelf(ctx, &identity.UserCache{VRCUserID: ""})
+	if err == nil {
+		t.Fatal("expected error for empty vrc_user_id")
+	}
+}
+
+func TestUserCacheRepository_GetByVRCUserID_missing(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	if migErr := applySchema(db); migErr != nil {
+		t.Fatal(migErr)
+	}
+	repo := NewUserCacheRepository(db)
+	ctx := context.Background()
+	got, err := repo.GetByVRCUserID(ctx, "missing")
+	if err != nil || got != nil {
+		t.Fatalf("GetByVRCUserID missing: %#v err=%v", got, err)
+	}
+}
+
+func TestUserCacheRepository_SaveBatch_empty(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	if migErr := applySchema(db); migErr != nil {
+		t.Fatal(migErr)
+	}
+	repo := NewUserCacheRepository(db)
+	ctx := context.Background()
+	if batchErr := repo.SaveBatch(ctx, nil); batchErr != nil {
+		t.Fatal(batchErr)
+	}
+}
+
+func TestUserCacheRepository_UpsertSelf_replacesOtherSelfAccount(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = db.Close() }()
+	if migErr := applySchema(db); migErr != nil {
+		t.Fatal(migErr)
+	}
+	repo := NewUserCacheRepository(db)
+	ctx := context.Background()
+	at := time.Now().UTC()
+	selfA := &identity.UserCache{
+		VRCUserID: "usr_a", DisplayName: "A", Status: "active",
+		UserKind: identity.UserKindSelf, LastUpdated: at, SessionFingerprint: "fp_a",
+		Username: "a", UserState: "online",
+	}
+	selfB := &identity.UserCache{
+		VRCUserID: "usr_b", DisplayName: "B", Status: "active",
+		UserKind: identity.UserKindSelf, LastUpdated: at, SessionFingerprint: "fp_b",
+		Username: "b", UserState: "online",
+	}
+	if upErr := repo.UpsertSelf(ctx, selfA); upErr != nil {
+		t.Fatal(upErr)
+	}
+	if upErr := repo.UpsertSelf(ctx, selfB); upErr != nil {
+		t.Fatal(upErr)
+	}
+	old, err := repo.GetByVRCUserID(ctx, "usr_a")
+	if err != nil || old != nil {
+		t.Fatalf("previous self should be removed: %#v err=%v", old, err)
+	}
+	cur, err := repo.GetByVRCUserID(ctx, "usr_b")
+	if err != nil || cur == nil || cur.UserKind != identity.UserKindSelf {
+		t.Fatalf("current self: %#v err=%v", cur, err)
 	}
 }

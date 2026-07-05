@@ -1,0 +1,89 @@
+name: Bug report
+description: 不具合の報告（再現手順と期待動作を含めてください）
+title: "[Bug]: "
+labels:
+  - bug
+  - needs-triage
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **プライバシー:** 表示名・VRC user ID・ログ全文はマスクしてください。再現に必要なら手順とバージョンだけで構いません。
+        ドメイン用語は [CONTEXT.md](https://github.com/JO3QMA/vrctweaker/blob/main/CONTEXT.md) に合わせて記載してください。
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: 実際に起きたこと。スクリーンショットやログの抜粋（マスク済み）があれば添付してください。
+      placeholder: Activity の遭遇ログに同一入室時刻の行が2件表示される…
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What I expected
+      description: 正しいと思う振る舞い
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: 再現手順（番号付きリスト推奨）
+      placeholder: |
+        1. VRChat Tweaker を起動し、…を有効にする
+        2. …
+        3. …画面を開く
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: 当たりがつく画面・領域
+      options:
+        - Dashboard
+        - Launcher
+        - Gallery
+        - Activity / Encounter log
+        - Friends / User profile
+        - Automation
+        - Settings / Config
+        - Backend / ingest
+        - Other / Unknown
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: App version or commit
+      description: リリースタグ、ビルド日、または `git rev-parse --short HEAD` の結果
+      placeholder: main @ abc1234 / v0.x.y
+    validations:
+      required: false
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Windows
+        - Linux
+        - WSL2
+        - Dev Container
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: 関連する設定、直前の操作、仮説、既存 Issue / PR へのリンクなど
+    validations:
+      required: false

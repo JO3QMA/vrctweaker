@@ -150,6 +150,61 @@ func TestMediaUseCase_ScreenshotThumbnailDataURL_UnsupportedExt(t *testing.T) {
 	}
 }
 
+func TestResizeScreenshotThumb_scalesLargeImage(t *testing.T) {
+	dir := t.TempDir()
+	imgPath := filepath.Join(dir, "large.png")
+	if err := writeTestPNG(imgPath, 800, 600); err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(imgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	img, _, err := image.Decode(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := resizeScreenshotThumb(img)
+	b := out.Bounds()
+	if b.Dx() > screenshotThumbMaxEdge || b.Dy() > screenshotThumbMaxEdge {
+		t.Fatalf("thumb too large: %dx%d", b.Dx(), b.Dy())
+	}
+	if b.Dx() != screenshotThumbMaxEdge {
+		t.Fatalf("width = %d, want %d", b.Dx(), screenshotThumbMaxEdge)
+	}
+}
+
+func TestResizeScreenshotThumb_scalesTallImage(t *testing.T) {
+	dir := t.TempDir()
+	imgPath := filepath.Join(dir, "tall.png")
+	if err := writeTestPNG(imgPath, 600, 800); err != nil {
+		t.Fatal(err)
+	}
+	f, err := os.Open(imgPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	img, _, err := image.Decode(f)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := resizeScreenshotThumb(img)
+	b := out.Bounds()
+	if b.Dy() != screenshotThumbMaxEdge {
+		t.Fatalf("height = %d, want %d", b.Dy(), screenshotThumbMaxEdge)
+	}
+}
+
+func TestResizeScreenshotThumb_keepsSmallImage(t *testing.T) {
+	img := image.NewRGBA(image.Rect(0, 0, 100, 80))
+	out := resizeScreenshotThumb(img)
+	if out != img {
+		t.Fatal("small image should be returned unchanged")
+	}
+}
+
 func writeTestPNG(path string, w, h int) error {
 	f, err := os.Create(path)
 	if err != nil {

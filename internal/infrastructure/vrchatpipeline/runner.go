@@ -13,6 +13,11 @@ import (
 
 const defaultPipelineHost = "pipeline.vrchat.cloud"
 
+var (
+	pipelineDialHost   = defaultPipelineHost
+	pipelineDialScheme = "wss"
+)
+
 // EventHandler receives normalized Pipeline event types and inner JSON payloads.
 type EventHandler func(ctx context.Context, eventType string, payload []byte) error
 
@@ -86,7 +91,7 @@ func Run(ctx context.Context, cfg Config) error {
 }
 
 func dialPipeline(ctx context.Context, dialer websocket.Dialer, token, userAgent string) (*websocket.Conn, error) {
-	u := url.URL{Scheme: "wss", Host: defaultPipelineHost, Path: "/"}
+	u := url.URL{Scheme: pipelineDialScheme, Host: pipelineDialHost, Path: "/"}
 	q := u.Query()
 	q.Set("authToken", token)
 	u.RawQuery = q.Encode()

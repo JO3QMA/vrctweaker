@@ -1,26 +1,18 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
 import EncounterHistoryList from "./EncounterHistoryList.vue";
-import type { UserEncounterDTO } from "../wails/app";
-import { wailsEncountersByUserDecorator } from "./vrcUserCacheDetailStoryDecorator";
-
-const rows: UserEncounterDTO[] = [
-  {
-    id: "e1",
-    vrcUserId: "usr_story",
-    displayName: "Story User",
-    instanceId: "inst_1",
-    worldId: "wrld_1",
-    worldDisplayName: "Test World",
-    joinedAt: "2026-02-01T10:00:00+09:00",
-    leftAt: "2026-02-01T11:00:00+09:00",
-  },
-];
+import { userProfileEncounters } from "../stories/fixtures/encounters";
+import { withWailsApp } from "../stories/wailsDecorator";
 
 const meta = {
   title: "Components/EncounterHistoryList",
   component: EncounterHistoryList,
   tags: ["autodocs"],
-  decorators: [wailsEncountersByUserDecorator(rows)],
+  decorators: [
+    withWailsApp({
+      EncountersByVRCUserID: () => Promise.resolve(userProfileEncounters),
+      EncountersByWorldID: () => Promise.resolve([]),
+    }),
+  ],
   parameters: {
     layout: "padded",
   },

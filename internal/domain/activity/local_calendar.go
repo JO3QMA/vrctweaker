@@ -1,6 +1,23 @@
 package activity
 
-import "time"
+import (
+	"fmt"
+	"time"
+)
+
+// StartOfLocalCalendarDay returns midnight at the start of t's local calendar day.
+func StartOfLocalCalendarDay(t time.Time) time.Time {
+	loc := time.Local
+	lt := t.In(loc)
+	y, m, d := lt.Date()
+	return time.Date(y, m, d, 0, 0, 0, 0, loc)
+}
+
+// LocalDateISO formats t's local calendar date as YYYY-MM-DD.
+func LocalDateISO(t time.Time) string {
+	lt := t.In(time.Local)
+	return fmt.Sprintf("%04d-%02d-%02d", lt.Year(), int(lt.Month()), lt.Day())
+}
 
 // EndOfLocalCalendarDay returns the last instant of t's local calendar day (23:59:59.999999999 in time.Local).
 func EndOfLocalCalendarDay(t time.Time) time.Time {

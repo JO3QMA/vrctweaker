@@ -6,6 +6,7 @@ import ActivityView from "../ActivityView.vue";
 const {
   mockEncounters,
   mockGetActivityStats,
+  mockGetLogRetentionDays,
   mockResolveUserProfileNavigation,
 } = vi.hoisted(() => ({
   mockEncounters: vi.fn().mockResolvedValue([]),
@@ -13,8 +14,10 @@ const {
     dailyPlaySeconds: [],
     topWorlds: [],
   }),
+  mockGetLogRetentionDays: vi.fn().mockResolvedValue(30),
   mockResolveUserProfileNavigation: vi.fn().mockResolvedValue({
     openInFriendsView: false,
+    openInSelfProfile: false,
     user: {
       vrcUserId: "stub",
       displayName: "Stub",
@@ -23,6 +26,14 @@ const {
       lastUpdated: "",
     },
   }),
+}));
+
+const runtimeHooks = vi.hoisted(() => ({
+  encountersChangedHandler: null as (() => void) | null,
+}));
+
+vi.mock("../../utils/openEncounterHistoryWindow", () => ({
+  openEncounterHistoryWindow: vi.fn(),
 }));
 
 vi.mock("../../components/PlayTimeChart.vue", () => ({
@@ -40,15 +51,63 @@ vi.mock("../../wails/app", async (importOriginal) => {
       ...actual.App,
       encounters: mockEncounters,
       getActivityStats: mockGetActivityStats,
+      getLogRetentionDays: mockGetLogRetentionDays,
       resolveUserProfileNavigation: mockResolveUserProfileNavigation,
     },
   };
 });
 
+vi.mock("../../wails/runtime", () => ({
+  getRuntime: () => ({
+    EventsOn: (event: string, handler: () => void) => {
+      if (event === "activity:encounters-changed") {
+        runtimeHooks.encountersChangedHandler = handler;
+      }
+      return () => {};
+    },
+  }),
+}));
+
+import { openEncounterHistoryWindow } from "../../utils/openEncounterHistoryWindow";
+
 describe("ActivityView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    runtimeHooks.encountersChangedHandler = null;
+    mockEncounters.mockResolvedValue([]);
+    mockGetActivityStats.mockResolvedValue({
+      dailyPlaySeconds: [],
+      topWorlds: [],
+    });
+    mockGetLogRetentionDays.mockResolvedValue(30);
   });
+
+  async function mountActivity() {
+    const router = createRouter({
+      history: createWebHashHistory(),
+      routes: [
+        { path: "/activity", component: ActivityView },
+        {
+          path: "/friends",
+          name: "friends",
+          component: { template: "<div/>" },
+        },
+        {
+          path: "/user-profile",
+          name: "user-profile",
+          component: { template: "<div/>" },
+        },
+      ],
+    });
+    await router.push("/activity");
+    await router.isReady();
+    const wrapper = mount(ActivityView, {
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+    await wrapper.vm.$nextTick();
+    return { wrapper, router };
+  }
 
   it("uses layout classes for playtime card and encounter log scroll region", async () => {
     const router = createRouter({
@@ -72,9 +131,26 @@ describe("ActivityView", () => {
 
     const encountersCard = wrapper.find(".section-card--encounters");
     expect(encountersCard.exists()).toBe(true);
+
+    const cards = wrapper.findAll(".collapsible-section-card");
+    expect(cards[0]!.classes()).toContain("section-card--encounters");
+    expect(cards[1]!.classes()).toContain("section-card--playtime");
   });
 
-  it("collapses playtime section when header toggle is clicked", async () => {
+  it("starts with playtime section collapsed and encounters expanded", async () => {
+    const { wrapper } = await mountActivity();
+    const playtimeCard = wrapper.find(".section-card--playtime");
+    const encountersCard = wrapper.find(".section-card--encounters");
+
+    expect(
+      playtimeCard.find(".section-card__toggle").attributes("aria-expanded"),
+    ).toBe("false");
+    expect(
+      encountersCard.find(".section-card__toggle").attributes("aria-expanded"),
+    ).toBe("true");
+  });
+
+  it("expands playtime section when header toggle is clicked", async () => {
     const router = createRouter({
       history: createWebHashHistory(),
       routes: [{ path: "/activity", component: ActivityView }],
@@ -90,11 +166,11 @@ describe("ActivityView", () => {
 
     const playtimeCard = wrapper.find(".section-card--playtime");
     const toggle = playtimeCard.find(".section-card__toggle");
-    expect(toggle.attributes("aria-expanded")).toBe("true");
+    expect(toggle.attributes("aria-expanded")).toBe("false");
 
     await toggle.trigger("click");
-    expect(playtimeCard.classes()).toContain("section-card--collapsed");
-    expect(toggle.attributes("aria-expanded")).toBe("false");
+    expect(playtimeCard.classes()).not.toContain("section-card--collapsed");
+    expect(toggle.attributes("aria-expanded")).toBe("true");
   });
 
   it("display name click pushes friends route when resolve says friend", async () => {
@@ -109,6 +185,7 @@ describe("ActivityView", () => {
     ]);
     mockResolveUserProfileNavigation.mockResolvedValue({
       openInFriendsView: true,
+      openInSelfProfile: false,
       user: {
         vrcUserId: "u1",
         displayName: "EncUser",
@@ -166,6 +243,7 @@ describe("ActivityView", () => {
     ]);
     mockResolveUserProfileNavigation.mockResolvedValue({
       openInFriendsView: false,
+      openInSelfProfile: false,
       user: {
         vrcUserId: "u2",
         displayName: "Stranger",
@@ -208,6 +286,50 @@ describe("ActivityView", () => {
       name: "user-profile",
       query: { vrcUserId: "u2", displayName: "Stranger" },
     });
+  });
+
+  it("display name click pushes me route when resolve says self", async () => {
+    mockEncounters.mockResolvedValue([
+      {
+        id: "1",
+        vrcUserId: "usr_self",
+        displayName: "Me",
+        instanceId: "inst",
+        joinedAt: "2024-01-01T12:00:00.000Z",
+      },
+    ]);
+    mockResolveUserProfileNavigation.mockResolvedValue({
+      openInFriendsView: false,
+      openInSelfProfile: true,
+      user: {
+        vrcUserId: "usr_self",
+        displayName: "Me",
+        status: "active",
+        isFavorite: false,
+        lastUpdated: "",
+      },
+    });
+
+    const router = createRouter({
+      history: createWebHashHistory(),
+      routes: [
+        { path: "/activity", component: ActivityView },
+        { path: "/me", name: "me", component: { template: "<div/>" } },
+      ],
+    });
+    await router.push("/activity");
+    await router.isReady();
+    const pushSpy = vi.spyOn(router, "push");
+
+    const wrapper = mount(ActivityView, {
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+
+    await wrapper.find(".timeline-link").trigger("click");
+    await flushPromises();
+
+    expect(pushSpy).toHaveBeenCalledWith({ name: "me" });
   });
 
   it("display name click falls back to user-profile when resolve rejects", async () => {
@@ -255,5 +377,169 @@ describe("ActivityView", () => {
       name: "user-profile",
       query: { vrcUserId: "u3", displayName: "FailUser" },
     });
+  });
+
+  it("loads encounters, stats, and retention days on mount", async () => {
+    await mountActivity();
+    expect(mockEncounters).toHaveBeenCalled();
+    expect(mockGetActivityStats).toHaveBeenCalled();
+    expect(mockGetLogRetentionDays).toHaveBeenCalled();
+  });
+
+  it("shows retention hint at page level with configured days", async () => {
+    mockGetLogRetentionDays.mockResolvedValue(45);
+    const { wrapper } = await mountActivity();
+    const hint = wrapper.find(".page-retention-hint");
+    expect(hint.exists()).toBe(true);
+    expect(hint.text()).toContain("45");
+    expect(
+      wrapper.find(".section-card--encounters .retention-hint").exists(),
+    ).toBe(false);
+  });
+
+  it("shows dynamic playtime section title from retention cap", async () => {
+    mockGetLogRetentionDays.mockResolvedValue(7);
+    const { wrapper } = await mountActivity();
+    expect(wrapper.find(".section-card--playtime").text()).toContain("7");
+  });
+
+  it("shows playtime chart when stats are available and section is expanded", async () => {
+    mockGetActivityStats.mockResolvedValue({
+      dailyPlaySeconds: [{ date: "2026-06-01", seconds: 3600 }],
+      topWorlds: [],
+    });
+    const { wrapper } = await mountActivity();
+    await wrapper
+      .find(".section-card--playtime .section-card__toggle")
+      .trigger("click");
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find(".playtime-chart-stub").exists()).toBe(true);
+  });
+
+  it("filters encounters by display name", async () => {
+    mockEncounters.mockResolvedValue([
+      {
+        id: "1",
+        vrcUserId: "u1",
+        displayName: "Alpha",
+        instanceId: "inst",
+        joinedAt: "2024-01-01T12:00:00.000Z",
+      },
+      {
+        id: "2",
+        vrcUserId: "u2",
+        displayName: "Beta",
+        instanceId: "inst",
+        joinedAt: "2024-01-02T12:00:00.000Z",
+      },
+    ]);
+    const { wrapper } = await mountActivity();
+
+    const input = wrapper.find(".filters .el-input input");
+    await input.setValue("beta");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("Beta");
+    expect(wrapper.text()).not.toContain("Alpha");
+  });
+
+  it("reloads encounters and stats when refresh button is clicked", async () => {
+    const { wrapper } = await mountActivity();
+    mockEncounters.mockClear();
+    mockGetActivityStats.mockClear();
+
+    const buttons = wrapper.findAll(".filters .el-button");
+    await buttons[0]!.trigger("click");
+    await flushPromises();
+
+    expect(mockEncounters).toHaveBeenCalledTimes(1);
+    expect(mockGetActivityStats).toHaveBeenCalledTimes(1);
+  });
+
+  it("renders muted display name when encounter has no vrcUserId", async () => {
+    mockEncounters.mockResolvedValue([
+      {
+        id: "1",
+        vrcUserId: "",
+        displayName: "Anonymous",
+        instanceId: "inst",
+        joinedAt: "2024-01-01T12:00:00.000Z",
+      },
+    ]);
+    const { wrapper } = await mountActivity();
+
+    expect(wrapper.find(".timeline-name-muted").text()).toBe("Anonymous");
+    expect(wrapper.find(".timeline-link").exists()).toBe(false);
+  });
+
+  it("shows still-present label for open encounter", async () => {
+    mockEncounters.mockResolvedValue([
+      {
+        id: "1",
+        vrcUserId: "u1",
+        displayName: "StillHere",
+        instanceId: "inst",
+        joinedAt: "2024-01-01T12:00:00.000Z",
+        leftAt: "",
+      },
+    ]);
+    const { wrapper } = await mountActivity();
+    expect(wrapper.text()).toContain("滞在中");
+  });
+
+  it("opens world encounter history when world link is clicked", async () => {
+    mockEncounters.mockResolvedValue([
+      {
+        id: "1",
+        vrcUserId: "u1",
+        displayName: "User",
+        worldId: "wrld_abc",
+        worldDisplayName: "Test World",
+        instanceId: "inst",
+        joinedAt: "2024-01-01T12:00:00.000Z",
+      },
+    ]);
+    const { wrapper, router } = await mountActivity();
+
+    const worldLinks = wrapper.findAll(".timeline-link");
+    await worldLinks[worldLinks.length - 1]!.trigger("click");
+
+    expect(openEncounterHistoryWindow).toHaveBeenCalledWith(
+      router,
+      "world",
+      "wrld_abc",
+    );
+  });
+
+  it("debounces activity refresh on activity:encounters-changed event", async () => {
+    vi.useFakeTimers();
+    await mountActivity();
+    mockEncounters.mockClear();
+    mockGetActivityStats.mockClear();
+
+    runtimeHooks.encountersChangedHandler?.();
+    runtimeHooks.encountersChangedHandler?.();
+    expect(mockEncounters).not.toHaveBeenCalled();
+    expect(mockGetActivityStats).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(400);
+    expect(mockEncounters).toHaveBeenCalledTimes(1);
+    expect(mockGetActivityStats).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it("shows empty encounters message when list is empty", async () => {
+    mockEncounters.mockResolvedValue([]);
+    const { wrapper } = await mountActivity();
+    expect(wrapper.find(".empty").text()).toContain("遭遇");
+  });
+
+  it("collapses encounter section when header toggle is clicked", async () => {
+    const { wrapper } = await mountActivity();
+    const encountersCard = wrapper.find(".section-card--encounters");
+    const toggle = encountersCard.find(".section-card__toggle");
+
+    await toggle.trigger("click");
+    expect(encountersCard.classes()).toContain("section-card--collapsed");
   });
 });

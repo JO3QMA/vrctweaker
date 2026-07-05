@@ -9,17 +9,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"vrchat-tweaker/internal/domain/settings"
 )
 
 // SettingsUseCase handles app settings.
 type SettingsUseCase struct {
-	repo settings.AppSettingsRepository
+	repo appSettingsRepo
 }
 
 // NewSettingsUseCase creates a new SettingsUseCase.
-func NewSettingsUseCase(repo settings.AppSettingsRepository) *SettingsUseCase {
+func NewSettingsUseCase(repo appSettingsRepo) *SettingsUseCase {
 	return &SettingsUseCase{repo: repo}
 }
 
@@ -140,11 +138,11 @@ func parseBoolSetting(v string) bool {
 	}
 }
 
-// PathSettings holds VRChat/Steam/output_log paths.
+// PathSettings holds VRChat/Steam/output_log paths (Wails-bound; camelCase json tags).
 type PathSettings struct {
-	VRChatPathWindows string
-	SteamPathLinux    string
-	OutputLogPath     string
+	VRChatPathWindows string `json:"vrchatPathWindows"`
+	SteamPathLinux    string `json:"steamPathLinux"`
+	OutputLogPath     string `json:"outputLogPath"`
 }
 
 // GetPathSettings returns all path settings.

@@ -9,12 +9,11 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
+	"vrchat-tweaker/internal/infrastructure/diag"
 )
 
-// Logger is a minimal interface for watcher logging.
-type Logger interface {
-	Printf(format string, args ...interface{})
-}
+// Logger is a diagnostic logger for logwatcher (shared with picturewatcher via diag).
+type Logger = diag.Logger
 
 // EventHandler receives parsed events from the watcher.
 type EventHandler interface {
@@ -27,6 +26,23 @@ type EventHandlerFunc func(event activity.ParsedEvent)
 // Handle implements EventHandler.
 func (f EventHandlerFunc) Handle(event activity.ParsedEvent) {
 	f(event)
+}
+
+// LogFileSwitchHandler is invoked when the watcher begins tailing a different output_log file,
+// or when the current file was truncated in place. previousPath is empty on the first file.
+type LogFileSwitchHandler interface {
+	OnLogFileSwitch(ctx context.Context, previousPath, newPath string) error
+}
+
+// LogFileSwitchHandlerFunc adapts a function to LogFileSwitchHandler.
+type LogFileSwitchHandlerFunc func(ctx context.Context, previousPath, newPath string) error
+
+// OnLogFileSwitch implements LogFileSwitchHandler.
+func (f LogFileSwitchHandlerFunc) OnLogFileSwitch(ctx context.Context, previousPath, newPath string) error {
+	if f == nil {
+		return nil
+	}
+	return f(ctx, previousPath, newPath)
 }
 
 // LogParser parses a log line into events.
@@ -44,11 +60,10 @@ type OutputLogWatcher struct {
 	parser         LogParser
 	handler        EventHandler
 	logger         Logger
-	// onActiveLogPathChange is optional; in directory mode, called after a successful open+seek
-	// when the tailed file path differs from the previous one (not called on the first file).
-	// Used to clear ActivityEventHandler session state so lines before Joining in the new file
-	// do not inherit the previous log file's world/instance context.
-	onActiveLogPathChange func()
+	// logFileSwitchHandler is optional; called when tailing switches to another output_log file
+	// or when the current file was truncated. Used to finalize open activity rows and ingest
+	// startup lines already written to the new file before the watcher seeks to EOF.
+	logFileSwitchHandler LogFileSwitchHandler
 
 	mu        sync.Mutex
 	status    string // "idle", "running", "stopped"
@@ -62,7 +77,7 @@ type OutputLogWatcher struct {
 // NewOutputLogWatcher creates a watcher for the given path (file or directory).
 func NewOutputLogWatcher(configuredPath string, parser LogParser, handler EventHandler, logger Logger) *OutputLogWatcher {
 	if logger == nil {
-		logger = nopLogger{}
+		logger = diag.Nop
 	}
 	w := &OutputLogWatcher{
 		configuredPath: configuredPath,
@@ -79,12 +94,12 @@ func NewOutputLogWatcher(configuredPath string, parser LogParser, handler EventH
 	return w
 }
 
-// SetOnActiveLogPathChange registers a callback invoked in directory mode when the watcher
-// begins tailing a different output_log*.txt path than before. Call before Start.
-func (w *OutputLogWatcher) SetOnActiveLogPathChange(fn func()) {
+// SetLogFileSwitchHandler registers a callback invoked when the tailed output_log path changes
+// or the current file is truncated. Call before Start.
+func (w *OutputLogWatcher) SetLogFileSwitchHandler(h LogFileSwitchHandler) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	w.onActiveLogPathChange = fn
+	w.logFileSwitchHandler = h
 }
 
 func (w *OutputLogWatcher) resolveActivePath() (string, error) {
@@ -96,10 +111,6 @@ func (w *OutputLogWatcher) resolveActivePath() (string, error) {
 	}
 	return "", os.ErrInvalid
 }
-
-type nopLogger struct{}
-
-func (nopLogger) Printf(format string, args ...interface{}) {}
 
 // Start begins tailing the file in a goroutine. Cancel ctx to stop.
 func (w *OutputLogWatcher) Start(ctx context.Context) error {
@@ -155,7 +166,7 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 		activePath, resolveErr := w.resolveActivePath()
 		if resolveErr != nil {
 			w.setErr(resolveErr)
-			w.logger.Printf("[logwatcher] resolve active log: %v", resolveErr)
+			w.logger("[logwatcher] resolve active log: %v", resolveErr)
 			select {
 			case <-ctx.Done():
 				return
@@ -167,7 +178,7 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 		f, err := os.Open(activePath)
 		if err != nil {
 			w.setErr(err)
-			w.logger.Printf("[logwatcher] open %s: %v", activePath, err)
+			w.logger("[logwatcher] open %s: %v", activePath, err)
 			select {
 			case <-ctx.Done():
 				return
@@ -180,7 +191,7 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 		if err != nil {
 			_ = f.Close()
 			w.setErr(err)
-			w.logger.Printf("[logwatcher] stat: %v", err)
+			w.logger("[logwatcher] stat: %v", err)
 			time.Sleep(reopenBackoff)
 			continue
 		}
@@ -193,12 +204,14 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 			continue
 		}
 
-		if w.watchDir != "" && activePath != w.lastTailedPath && w.lastTailedPath != "" {
+		if w.lastTailedPath != "" && activePath != w.lastTailedPath {
 			w.mu.Lock()
-			cb := w.onActiveLogPathChange
+			h := w.logFileSwitchHandler
 			w.mu.Unlock()
-			if cb != nil {
-				cb()
+			if h != nil {
+				if switchErr := h.OnLogFileSwitch(ctx, w.lastTailedPath, activePath); switchErr != nil {
+					w.logger("[logwatcher] log file switch: %v", switchErr)
+				}
 			}
 		}
 		w.lastTailedPath = activePath
@@ -219,7 +232,7 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 				if err != io.EOF {
 					_ = f.Close()
 					w.setErr(err)
-					w.logger.Printf("[logwatcher] read error: %v", err)
+					w.logger("[logwatcher] read error: %v", err)
 					break readLoop
 				}
 				// EOF: check for file rotation (truncate or replace) or newer log file in dir mode
@@ -228,7 +241,19 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 					_ = f.Close()
 					break readLoop
 				}
-				if curInfo.ModTime() != info.ModTime() || curInfo.Size() < initialSize {
+				if curInfo.Size() < initialSize {
+					w.mu.Lock()
+					h := w.logFileSwitchHandler
+					w.mu.Unlock()
+					if h != nil {
+						if switchErr := h.OnLogFileSwitch(ctx, activePath, activePath); switchErr != nil {
+							w.logger("[logwatcher] log file truncate: %v", switchErr)
+						}
+					}
+					_ = f.Close()
+					break readLoop
+				}
+				if curInfo.ModTime() != info.ModTime() {
 					_ = f.Close()
 					break readLoop
 				}
@@ -236,7 +261,7 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 					latest, latErr := ResolveLatestOutputLogFile(w.watchDir)
 					if latErr == nil && latest != activePath {
 						_ = f.Close()
-						w.logger.Printf("[logwatcher] switching to newer output log: %s", latest)
+						w.logger("[logwatcher] switching to newer output log: %s", latest)
 						break readLoop
 					}
 				}
@@ -256,7 +281,7 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 			baseTime := activity.ParseVRChatTimestamp(lineTrimmed, time.Now().In(time.Local))
 			events, parseErr := w.parser.ParseLine(lineTrimmed, baseTime)
 			if parseErr != nil {
-				w.logger.Printf("[logwatcher] parse error: %v", parseErr)
+				w.logger("[logwatcher] parse error: %v", parseErr)
 				continue
 			}
 			for _, ev := range events {

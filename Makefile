@@ -1,7 +1,7 @@
 # vrchat-tweaker Makefile
 # フルビルド、front/backendビルド、lint、fmt、test、e2e を実行
 
-.PHONY: all build build-native build-windows build-front build-back dev-wails lint fmt test test-e2e clean help
+.PHONY: all build build-native build-windows build-front build-back dev-wails lint fmt test test-e2e setup-e2e link-var clean help
 
 # デフォルトターゲット
 all: build
@@ -76,8 +76,11 @@ test-front:
 
 # --- E2E テスト ---
 
+## E2E テスト環境の初回セットアップ（pnpm install + Playwright chromium）
+setup-e2e: install-front test-e2e-install
+
 ## E2Eテスト（Playwright）
-## 初回は `make test-e2e-install` でブラウザをインストール
+## 初回は `make setup-e2e`（または `make test-e2e-install`）でブラウザをインストール
 ## 手元で通常の `pnpm run dev` が :5173 を占有していると E2E 用サーバーが起動できないため、失敗時は dev を止めてから再実行すること
 test-e2e:
 	cd frontend && pnpm run test:e2e
@@ -87,6 +90,10 @@ test-e2e-install:
 	cd frontend && pnpm exec playwright install --with-deps chromium
 
 # --- ユーティリティ ---
+
+## WSL: Windows 側の DB・VRChat ログを var/ に symlink（var/local.env が必要）
+link-var:
+	bash scripts/link-windows-var.sh
 
 ## フロントエンド依存関係のインストール
 install-front:
@@ -123,10 +130,12 @@ help:
 	@echo "  make test         - 全体のユニットテスト"
 	@echo "  make test-back    - バックエンドテスト"
 	@echo "  make test-front   - フロントエンドテスト"
+	@echo "  make setup-e2e    - E2E 環境の初回セットアップ"
 	@echo "  make test-e2e     - E2Eテスト（Playwright）"
 	@echo "  make test-e2e-install - Playwright ブラウザのインストール"
 	@echo ""
 	@echo "その他:"
+	@echo "  make link-var      - WSL: Windows の DB/ログを var/ に symlink"
 	@echo "  make install-front - フロントエンド依存関係のインストール"
 	@echo "  make clean        - ビルド成果物の削除"
 	@echo "  make help         - このヘルプを表示"

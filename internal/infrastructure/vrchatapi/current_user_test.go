@@ -3,6 +3,10 @@ package vrchatapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -44,5 +48,62 @@ func TestClient_GetCurrentUser_notAuthenticated(t *testing.T) {
 	_, err := c.GetCurrentUser(context.Background())
 	if err != ErrNotAuthenticated {
 		t.Fatalf("err = %v, want ErrNotAuthenticated", err)
+	}
+}
+
+func TestClient_GetCurrentUser_ok(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/1/auth/user" {
+			http.NotFound(w, r)
+			return
+		}
+		_ = json.NewEncoder(w).Encode(CurrentUserProfile{
+			ID:          "usr_me",
+			DisplayName: "Me",
+			Username:    "me_user",
+			Status:      "active",
+		})
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient("tok")
+	c.apiRoot = srv.URL + "/api/1"
+	u, err := c.GetCurrentUser(context.Background())
+	if err != nil {
+		t.Fatalf("GetCurrentUser: %v", err)
+	}
+	if u.ID != "usr_me" || u.DisplayName != "Me" {
+		t.Fatalf("user: %+v", u)
+	}
+}
+
+func TestClient_GetCurrentUser_sessionExpired(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient("expired")
+	c.apiRoot = srv.URL + "/api/1"
+	_, err := c.GetCurrentUser(context.Background())
+	if !errors.Is(err, ErrSessionExpired) {
+		t.Fatalf("err = %v, want ErrSessionExpired", err)
+	}
+}
+
+func TestClient_GetCurrentUser_invalidJSON(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("not-json"))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient("tok")
+	c.apiRoot = srv.URL + "/api/1"
+	_, err := c.GetCurrentUser(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "parse current user") {
+		t.Fatalf("err = %v, want parse error", err)
 	}
 }

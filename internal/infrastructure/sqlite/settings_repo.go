@@ -4,13 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"time"
-
-	"vrchat-tweaker/internal/domain/settings"
 )
 
-var _ settings.AppSettingsRepository = (*AppSettingsRepository)(nil)
-
-// AppSettingsRepository implements settings.AppSettingsRepository.
+// AppSettingsRepository persists app settings (key-value) in SQLite.
 type AppSettingsRepository struct {
 	db *sql.DB
 }

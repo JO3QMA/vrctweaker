@@ -10,9 +10,7 @@ import (
 	"vrchat-tweaker/internal/domain/identity"
 )
 
-var _ identity.UserCacheRepository = (*UserCacheRepository)(nil)
-
-// UserCacheRepository implements identity.UserCacheRepository.
+// UserCacheRepository persists users_cache rows.
 type UserCacheRepository struct {
 	db *sql.DB
 }
@@ -78,7 +76,7 @@ func userCacheRowArgs(u *identity.UserCache, uk identity.UserKind, fs, lc interf
 
 // List returns cached VRChat friends (user_kind=friend with API status).
 func (r *UserCacheRepository) List(ctx context.Context) ([]*identity.UserCache, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT `+userCacheSelectCols+` FROM users_cache WHERE user_kind = 'friend' AND status IS NOT NULL AND TRIM(status) != '' ORDER BY display_name`)
+	rows, err := r.db.QueryContext(ctx, `SELECT `+userCacheSelectCols+` FROM users_cache WHERE user_kind = 'friend' AND status IS NOT NULL AND TRIM(status) != '' AND display_name IS NOT NULL AND TRIM(display_name) != '' ORDER BY display_name`)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +92,24 @@ func (r *UserCacheRepository) GetByVRCUserID(ctx context.Context, vrcUserID stri
 
 // ListFavorites returns favorites among API friends.
 func (r *UserCacheRepository) ListFavorites(ctx context.Context) ([]*identity.UserCache, error) {
-	rows, err := r.db.QueryContext(ctx, `SELECT `+userCacheSelectCols+` FROM users_cache WHERE user_kind = 'friend' AND is_favorite = 1 AND status IS NOT NULL AND TRIM(status) != '' ORDER BY display_name`)
+	rows, err := r.db.QueryContext(ctx, `SELECT `+userCacheSelectCols+` FROM users_cache WHERE user_kind = 'friend' AND is_favorite = 1 AND status IS NOT NULL AND TRIM(status) != '' AND display_name IS NOT NULL AND TRIM(display_name) != '' ORDER BY display_name`)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	return scanUserCacheRows(rows)
+}
+
+// ListContactsNeedingProfileResolution returns contact rows with pipeline presence but no display name.
+func (r *UserCacheRepository) ListContactsNeedingProfileResolution(ctx context.Context) ([]*identity.UserCache, error) {
+	rows, err := r.db.QueryContext(ctx, `SELECT `+userCacheSelectCols+` FROM users_cache
+		WHERE user_kind = 'contact'
+		AND (display_name IS NULL OR TRIM(display_name) = '')
+		AND (
+			(status IS NOT NULL AND TRIM(status) != '')
+			OR (platform IS NOT NULL AND TRIM(platform) != '')
+			OR (last_platform IS NOT NULL AND TRIM(last_platform) != '')
+		)`)
 	if err != nil {
 		return nil, err
 	}

@@ -21,10 +21,13 @@ async function mountFriendsView(query: Record<string, string> = {}) {
   return wrapper;
 }
 
-const { mockFriends, mockIsLoggedIn } = vi.hoisted(() => ({
-  mockFriends: vi.fn(),
-  mockIsLoggedIn: vi.fn(),
-}));
+const { mockFriends, mockIsLoggedIn, mockRefreshFriends, mockSetFavorite } =
+  vi.hoisted(() => ({
+    mockFriends: vi.fn(),
+    mockIsLoggedIn: vi.fn(),
+    mockRefreshFriends: vi.fn(),
+    mockSetFavorite: vi.fn(),
+  }));
 
 vi.mock("../../composables/useSessionUnlock", () => ({
   useSessionUnlock: () => ({
@@ -55,9 +58,9 @@ vi.mock("../../wails/app", async (importOriginal) => {
       ...actual.App,
       friends: mockFriends,
       isLoggedIn: mockIsLoggedIn,
-      refreshFriends: vi.fn(),
+      refreshFriends: mockRefreshFriends,
       reconcileVRChatSocialCache: vi.fn().mockResolvedValue(undefined),
-      setFavorite: vi.fn(),
+      setFavorite: mockSetFavorite,
     },
   };
 });
@@ -93,6 +96,7 @@ describe("FriendsView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockIsLoggedIn.mockResolvedValue(false);
+    mockSetFavorite.mockResolvedValue(undefined);
     runtimeHooks.friendsChangedHandler = null;
   });
 
@@ -339,5 +343,139 @@ describe("FriendsView", () => {
     const router = wrapper.vm.$router;
     expect(router.currentRoute.value.query.vrcUserId).toBeUndefined();
     warnSpy.mockRestore();
+  });
+
+  it("shows login hint when user is not logged in", async () => {
+    mockFriends.mockResolvedValue([]);
+    mockIsLoggedIn.mockResolvedValue(false);
+    const wrapper = await mountFriendsView();
+
+    expect(wrapper.find(".login-hint").exists()).toBe(true);
+    expect(wrapper.text()).toContain("ログイン");
+  });
+
+  it("shows online-none message when online list is empty", async () => {
+    mockFriends.mockResolvedValue([]);
+    const wrapper = await mountFriendsView();
+    expect(wrapper.text()).toContain("オンラインのフレンドはいません");
+  });
+
+  it("shows offline-none message when offline list is empty", async () => {
+    mockFriends.mockResolvedValue([
+      minimalUser({
+        vrcUserId: "1",
+        displayName: "OnUser",
+        status: "active",
+      }),
+    ]);
+    const wrapper = await mountFriendsView();
+
+    await switchInput(wrapper, "friends-filter-mode").setValue(true);
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("オフラインのフレンドはいません");
+  });
+
+  it("refresh reconciles and reloads friends when logged in", async () => {
+    mockFriends.mockResolvedValue([
+      minimalUser({
+        vrcUserId: "1",
+        displayName: "Alice",
+        status: "active",
+      }),
+    ]);
+    mockIsLoggedIn.mockResolvedValue(true);
+    const wrapper = await mountFriendsView();
+    await flushPromises();
+
+    const reconcile = vi.mocked(App.reconcileVRChatSocialCache);
+    reconcile.mockClear();
+    mockFriends.mockClear();
+
+    await wrapper.find(".friends-header .el-button").trigger("click");
+    await flushPromises();
+
+    expect(reconcile).toHaveBeenCalledTimes(1);
+    expect(mockFriends).toHaveBeenCalled();
+  });
+
+  it("toggleFavorite calls App.setFavorite from list panel", async () => {
+    mockFriends.mockResolvedValue([
+      minimalUser({
+        vrcUserId: "1",
+        displayName: "FavUser",
+        status: "active",
+        isFavorite: false,
+      }),
+    ]);
+    const wrapper = await mountFriendsView();
+
+    await wrapper.find(".btn-favorite").trigger("click");
+    await flushPromises();
+
+    expect(mockSetFavorite).toHaveBeenCalledWith("1", true);
+  });
+
+  it("does not change favorite when list toggle fails", async () => {
+    mockSetFavorite.mockRejectedValueOnce(new Error("fail"));
+    mockFriends.mockResolvedValue([
+      minimalUser({
+        vrcUserId: "1",
+        displayName: "FavUser",
+        status: "active",
+        isFavorite: false,
+      }),
+    ]);
+    const wrapper = await mountFriendsView();
+
+    await wrapper.find(".btn-favorite").trigger("click");
+    await flushPromises();
+
+    expect(wrapper.find(".btn-favorite").classes()).not.toContain(
+      "el-button--primary",
+    );
+  });
+
+  it("clears selection when selected friend disappears after reload", async () => {
+    mockFriends
+      .mockResolvedValueOnce([
+        minimalUser({
+          vrcUserId: "u1",
+          displayName: "Alice",
+          status: "active",
+        }),
+      ])
+      .mockResolvedValueOnce([]);
+    const wrapper = await mountFriendsView();
+    await flushPromises();
+
+    await wrapper.find(".friend-card").trigger("click");
+    await wrapper.vm.$nextTick();
+    expect(wrapper.find(".friend-card.active").exists()).toBe(true);
+
+    runtimeHooks.friendsChangedHandler?.();
+    await flushPromises();
+
+    expect(wrapper.find(".friend-card.active").exists()).toBe(false);
+  });
+
+  it("reconciles on visibility when logged in after throttle interval", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-01-01T12:00:00.000Z"));
+    mockFriends.mockResolvedValue([]);
+    mockIsLoggedIn.mockResolvedValue(true);
+    const wrapper = await mountFriendsView();
+    await flushPromises();
+
+    const reconcile = vi.mocked(App.reconcileVRChatSocialCache);
+    reconcile.mockClear();
+
+    vi.setSystemTime(new Date("2026-01-01T12:01:01.000Z"));
+    document.dispatchEvent(new Event("visibilitychange"));
+    await flushPromises();
+
+    expect(reconcile).toHaveBeenCalledTimes(1);
+    wrapper.unmount();
+    vi.useRealTimers();
   });
 });

@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -55,6 +56,7 @@ func TestScreenshotRepository_ThumbnailRoundTrip(t *testing.T) {
 	}
 	if got == nil {
 		t.Fatal("expected thumbnail")
+		return
 	}
 	if string(got.JpegBlob) != string(jpegHdr) {
 		t.Fatalf("thumbnail blob mismatch")
@@ -135,5 +137,100 @@ func TestScreenshotRepository_ListJoinsWorldAndAuthorDisplayNames(t *testing.T) 
 	}
 	if len(list2) != 1 {
 		t.Fatalf("WorldName filter: len=%d", len(list2))
+	}
+}
+
+func TestScreenshotRepository_GetByID_GetByFilePath_ListFilters(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if mErr := applySchema(db); mErr != nil {
+		t.Fatal(mErr)
+	}
+	ctx := context.Background()
+	repo := NewScreenshotRepository(db)
+
+	tEarly := time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC)
+	tLate := time.Date(2024, 1, 2, 10, 0, 0, 0, time.UTC)
+	sz := int64(99)
+	shots := []*media.Screenshot{
+		{ID: "s_a", FilePath: "/pics/a.png", WorldID: "wrld_a", TakenAt: &tEarly, FileSizeBytes: &sz},
+		{ID: "s_b", FilePath: "/pics/b.png", WorldID: "wrld_b", TakenAt: &tLate, FileSizeBytes: &sz},
+	}
+	for _, s := range shots {
+		if saveErr := repo.Save(ctx, s); saveErr != nil {
+			t.Fatal(saveErr)
+		}
+	}
+
+	byID, err := repo.GetByID(ctx, "s_a")
+	if err != nil || byID == nil || byID.FilePath != "/pics/a.png" {
+		t.Fatalf("GetByID: %#v err=%v", byID, err)
+	}
+	miss, err := repo.GetByID(ctx, "missing")
+	if err != nil || miss != nil {
+		t.Fatalf("GetByID missing: %#v err=%v", miss, err)
+	}
+
+	byPath, err := repo.GetByFilePath(ctx, "/pics/b.png")
+	if err != nil || byPath == nil || byPath.ID != "s_b" {
+		t.Fatalf("GetByFilePath: %#v err=%v", byPath, err)
+	}
+
+	from := tEarly.Add(-time.Minute)
+	to := tEarly.Add(time.Minute)
+	list, err := repo.List(ctx, &media.ScreenshotFilter{
+		WorldID:        "wrld_a",
+		FromDate:       &from,
+		ToDate:         &to,
+		FilePathPrefix: "/pics/a",
+	})
+	if err != nil || len(list) != 1 || list[0].ID != "s_a" {
+		t.Fatalf("List filters: err=%v %#v", err, list)
+	}
+
+	if nilErr := repo.UpsertThumbnail(ctx, "s_a", nil); nilErr != nil {
+		t.Fatal(nilErr)
+	}
+
+	missThumb, err := repo.GetThumbnail(ctx, "s_b")
+	if err != nil || missThumb != nil {
+		t.Fatalf("GetThumbnail missing: %#v err=%v", missThumb, err)
+	}
+}
+
+func TestScreenshotRepository_List_FilePathPrefix_excludesSiblingFolder(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "test.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+	ctx := context.Background()
+	repo := NewScreenshotRepository(db)
+
+	inRoot := filepath.Join(dir, "VRChat", "in.png")
+	outRoot := filepath.Join(dir, "VRChat_old", "out.png")
+	for _, p := range []string{inRoot, outRoot} {
+		if mkdirErr := os.MkdirAll(filepath.Dir(p), 0o755); mkdirErr != nil {
+			t.Fatal(mkdirErr)
+		}
+	}
+	_ = repo.Save(ctx, &media.Screenshot{ID: "in", FilePath: inRoot})
+	_ = repo.Save(ctx, &media.Screenshot{ID: "out", FilePath: outRoot})
+
+	prefix := media.PictureFolderPathPrefix(filepath.Join(dir, "VRChat"))
+	list, err := repo.List(ctx, &media.ScreenshotFilter{FilePathPrefix: prefix})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].ID != "in" {
+		t.Fatalf("List with prefix %q: %#v", prefix, list)
 	}
 }

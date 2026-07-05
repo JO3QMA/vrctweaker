@@ -7,8 +7,6 @@ import (
 	"vrchat-tweaker/internal/domain/media"
 )
 
-var _ media.ScreenshotRepository = (*ScreenshotRepository)(nil)
-
 const screenshotSelectBase = `SELECT s.id, s.file_path, COALESCE(s.world_id, ''),
 	COALESCE(w.display_name, '') AS world_name_resolved,
 	COALESCE(s.author_vrc_user_id, ''),
@@ -18,7 +16,7 @@ const screenshotSelectBase = `SELECT s.id, s.file_path, COALESCE(s.world_id, '')
 	LEFT JOIN world_info w ON w.world_id = s.world_id
 	LEFT JOIN users_cache u ON u.vrc_user_id = s.author_vrc_user_id`
 
-// ScreenshotRepository implements media.ScreenshotRepository.
+// ScreenshotRepository persists screenshots in SQLite.
 type ScreenshotRepository struct {
 	db *sql.DB
 }

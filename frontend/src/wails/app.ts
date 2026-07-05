@@ -1,64 +1,38 @@
 // Wails app bindings - calls Go backend methods
 // When running in Wails, window.go.main.App is injected
 
-export interface LaunchProfileDTO {
-  id: string;
-  name: string;
-  arguments: string;
-  isDefault: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-}
+import {
+  activity,
+  automation,
+  launcher,
+  main,
+  usecase,
+} from "../../wailsjs/go/models";
+import type * as WailsApp from "../../wailsjs/go/main/App";
 
-export interface LaunchArgsParsedDTO {
-  noVr: boolean; // -no-vr (デスクトップモード)
-  screenMode: "" | "fullscreen" | "windowed" | "popupwindow";
-  screenWidth: number;
-  screenHeight: number;
-  fps: number;
-  skipRegistry: boolean;
-  processPriority: number; // -2..2, -999=omit
-  mainThreadPriority: number; // -2..2, -999=omit
-  monitor: number; // 1-based, 0=omit
-  profile: number; // --profile=X, -1=omit
-  enableDebugGui: boolean;
-  enableSDKLogLevels: boolean;
-  enableUdonDebugLogging: boolean;
-  midi: string;
-  watchWorlds: boolean;
-  watchAvatars: boolean;
-  ignoreTrackers: string;
-  videoDecoding: "" | "software" | "hardware";
-  disableAMDStutterWorkaround: boolean;
-  osc: string;
-  affinity: string;
-  enforceWorldServerChecks: boolean;
-  custom: string;
-}
+/** Data fields only (wailsjs model classes may include convertValues). */
+type WailsDTO<T> = Omit<T, "convertValues">;
+
+export type LaunchProfileDTO = WailsDTO<main.LaunchProfileDTO>;
+export type LaunchArgsParsedDTO = WailsDTO<launcher.LaunchArgsParsed>;
+export type ScreenshotDTO = WailsDTO<main.ScreenshotDTO>;
+export type ScreenshotSearchDTO = WailsDTO<main.ScreenshotSearchDTO>;
+export type UserEncounterDTO = WailsDTO<main.UserEncounterDTO>;
+export type UserCacheDTO = WailsDTO<main.UserCacheDTO>;
+export type UserProfileNavigationDTO = WailsDTO<main.UserProfileNavigationDTO>;
+export type PathSettingsDTO = WailsDTO<usecase.PathSettings>;
+export type LoginResultDTO = WailsDTO<main.LoginResultDTO>;
+export type VRChatCurrentUserDTO = WailsDTO<main.VRChatCurrentUserDTO>;
+export type DailyPlaySecondsDTO = WailsDTO<activity.DailyPlaySeconds>;
+export type TopWorldDTO = WailsDTO<activity.TopWorldSummary>;
+export type ActivityStatsDTO = WailsDTO<activity.ActivityStats>;
+export type AutomationRuleDTO = WailsDTO<automation.AutomationRule>;
+export type VRChatConfigDTO = WailsDTO<main.VRChatConfigDTO>;
 
 /** -999 = omit for process/main thread priority */
 export const PRIORITY_OMIT = -999;
 
-export interface ScreenshotDTO {
-  id: string;
-  filePath: string;
-  worldId: string;
-  worldName: string;
-  authorVrcUserId?: string;
-  authorDisplayName?: string;
-  takenAt?: string;
-  /** Original image file size in bytes when known */
-  fileSizeBytes?: number;
-}
-
-export interface ScreenshotSearchDTO {
-  worldId?: string;
-  worldName?: string;
-  dateFrom?: string;
-  dateTo?: string;
-}
-
-/** Payload for Wails event gallery:scan-progress (matches ScanProgressDTO in Go). */
+/** Payload for Wails event gallery:scan-progress (usecase.ScanProgress). */
 export interface ScanProgressPayload {
   phase: string;
   current: number;
@@ -66,211 +40,16 @@ export interface ScanProgressPayload {
   item?: string;
 }
 
-/** Payload for Wails event gallery:scan-done (matches GalleryScanDoneDTO in Go). */
+/** Payload for Wails event gallery:scan-done (usecase.GalleryScanDone). */
 export interface GalleryScanDonePayload {
   count: number;
   error?: string;
   cancelled?: boolean;
 }
 
-export interface UserEncounterDTO {
-  id: string;
-  vrcUserId: string;
-  displayName: string;
-  instanceId: string;
-  worldId?: string;
-  worldDisplayName?: string;
-  userFirstSeenAt?: string;
-  userLastContactAt?: string;
-  isFirstEncounter?: boolean;
-  joinedAt: string;
-  leftAt?: string;
-}
-
-export interface UserCacheDTO {
-  vrcUserId: string;
-  displayName: string;
-  status: string;
-  isFavorite: boolean;
-  lastUpdated: string;
-  firstSeenAt?: string;
-  lastContactAt?: string;
-  username?: string;
-  statusDescription?: string;
-  state?: string;
-  currentAvatarThumbnailImageUrl?: string;
-  userIcon?: string;
-  profilePicOverrideThumbnail?: string;
-  bio?: string;
-  bioLinksJson?: string;
-  currentAvatarImageUrl?: string;
-  currentAvatarTagsJson?: string;
-  developerType?: string;
-  friendKey?: string;
-  imageUrl?: string;
-  lastPlatform?: string;
-  location?: string;
-  lastLogin?: string;
-  lastActivity?: string;
-  lastMobile?: string;
-  platform?: string;
-  profilePicOverride?: string;
-  tagsJson?: string;
-}
-
-/** ResolveUserProfileNavigation の戻り値（フレンド画面 vs ユーザープロフィール画面）。 */
-export interface UserProfileNavigationDTO {
-  user: UserCacheDTO;
-  openInFriendsView: boolean;
-}
-
-export interface PathSettingsDTO {
-  vrchatPathWindows: string;
-  steamPathLinux: string;
-  outputLogPath: string;
-}
-
-export interface LoginResultDTO {
-  ok: boolean;
-  error?: string;
-  /** One-time plaintext token; must be immediately wrapped by Web Crypto. Do not store or log. */
-  plaintextToken?: string;
-}
-
-/** GET /auth/user subset for settings UI (no authToken). */
-export interface VRChatCurrentUserDTO {
-  id: string;
-  displayName: string;
-  username: string;
-  status: string;
-  statusDescription: string;
-  state: string;
-  currentAvatarThumbnailImageUrl: string;
-  userIcon: string;
-  profilePicOverrideThumbnail: string;
-}
-
-export interface DailyPlaySecondsDTO {
-  date: string;
-  seconds: number;
-}
-
-export interface TopWorldDTO {
-  worldId: string;
-  worldName?: string;
-  seconds: number;
-  sessions: number;
-}
-
-export interface ActivityStatsDTO {
-  dailyPlaySeconds: DailyPlaySecondsDTO[];
-  topWorlds: TopWorldDTO[];
-}
-
-export interface AutomationRuleDTO {
-  id: string;
-  name: string;
-  triggerType: string;
-  conditionJson: string;
-  actionType: string;
-  actionPayload: string;
-  isEnabled: boolean;
-}
-
-export interface VRChatConfigDTO {
-  cameraResWidth: number;
-  cameraResHeight: number;
-  screenshotResWidth: number;
-  screenshotResHeight: number;
-  pictureOutputFolder: string;
-  pictureOutputSplitByDate: boolean | null;
-  fpvSteadycamFov: number;
-  cacheDirectory: string;
-  cacheSize: number;
-  cacheExpiryDelay: number;
-  disableRichPresence: boolean | null;
-}
-
-interface AppBindings {
-  Greet(name: string): Promise<string>;
-  LaunchProfiles(): Promise<LaunchProfileDTO[]>;
-  LaunchVRChat(profileID: string): Promise<void>;
-  LaunchVRChatWithArgs(args: string): Promise<void>;
-  ParseLaunchArgsForGUI(args: string): Promise<LaunchArgsParsedDTO>;
-  MergeLaunchArgsForGUI(dto: LaunchArgsParsedDTO): Promise<string>;
-  JoinWorld(worldId: string): Promise<void>;
-  JoinWorldFromScreenshot(screenshotId: string): Promise<void>;
-  SaveLaunchProfile(p: LaunchProfileDTO): Promise<void>;
-  DeleteLaunchProfile(id: string): Promise<void>;
-  GetLogRetentionDays(): Promise<number>;
-  SetLogRetentionDays(days: number): Promise<void>;
-  GetLanguage(): Promise<string>;
-  SetLanguage(lang: string): Promise<void>;
-  GetSystemLocale(): Promise<string>;
-  GetPathSettings(): Promise<PathSettingsDTO>;
-  SetPathSettings(dto: PathSettingsDTO): Promise<void>;
-  GetSuppressSleepWhileVRChat(): Promise<boolean>;
-  SetSuppressSleepWhileVRChat(on: boolean): Promise<void>;
-  ValidatePath(path: string): Promise<boolean>;
-  ValidateOutputLogPath(path: string): Promise<boolean>;
-  OpenVRChatLogFolder(): Promise<void>;
-  OpenFileDialog(
-    title: string,
-    defaultDir: string,
-    filterPattern: string,
-  ): Promise<string>;
-  OpenDirectoryDialog(title: string, defaultDir: string): Promise<string>;
-  Screenshots(worldId?: string): Promise<ScreenshotDTO[]>;
-  SearchScreenshots(filter: ScreenshotSearchDTO): Promise<ScreenshotDTO[]>;
-  GetScreenshot(id: string): Promise<ScreenshotDTO | null>;
-  ScreenshotThumbnailDataURL(id: string): Promise<string>;
-  OpenScreenshotExternally(id: string): Promise<void>;
-  RevealScreenshotInFileManager(id: string): Promise<void>;
-  ScanScreenshotDir(path: string): Promise<number>;
-  IsGalleryScanning(): Promise<boolean>;
-  ReindexScreenshotDir(path: string): Promise<number>;
-  Encounters(): Promise<UserEncounterDTO[]>;
-  EncountersByVRCUserID(vrcUserID: string): Promise<UserEncounterDTO[]>;
-  EncountersByWorldID(worldID: string): Promise<UserEncounterDTO[]>;
-  RotateEncounters(): Promise<number>;
-  GetActivityStats(fromISO: string, toISO: string): Promise<ActivityStatsDTO>;
-  Friends(): Promise<UserCacheDTO[]>;
-  ResolveUserProfileNavigation(
-    vrcUserID: string,
-  ): Promise<UserProfileNavigationDTO>;
-  SetFavorite(vrcUserId: string, favorite: boolean): Promise<void>;
-  SetStatus(status: string): Promise<void>;
-  SetStatusDescription(description: string): Promise<void>;
-  SetStatusAndDescription(status: string, description: string): Promise<void>;
-  Login(
-    username: string,
-    password: string,
-    twoFactorCode?: string,
-  ): Promise<LoginResultDTO>;
-  Logout(): Promise<void>;
-  IsLoggedIn(): Promise<boolean>;
-  HasStoredCredential(): Promise<boolean>;
-  GetCredentialBlob(): Promise<string>;
-  UnlockVRChatSession(token: string): Promise<void>;
-  PersistWrappedCredential(blob: string): Promise<void>;
-  ClearStoredCredential(): Promise<void>;
-  GetVRChatCurrentUser(forceRefresh?: boolean): Promise<VRChatCurrentUserDTO>;
-  RefreshFriends(): Promise<void>;
-  ReconcileVRChatSocialCache(): Promise<void>;
-  VacuumDb(): Promise<void>;
-  ClearEncounters(): Promise<number>;
-  ClearScreenshots(): Promise<number>;
-  ClearFriendsCache(): Promise<number>;
-  ListAutomationRules(): Promise<AutomationRuleDTO[]>;
-  SaveAutomationRule(rule: AutomationRuleDTO): Promise<void>;
-  DeleteAutomationRule(id: string): Promise<void>;
-  ToggleAutomationRule(id: string, enabled: boolean): Promise<void>;
-  VRChatConfigExists(): Promise<boolean>;
-  GetVRChatConfig(): Promise<VRChatConfigDTO>;
-  SaveVRChatConfig(dto: VRChatConfigDTO): Promise<void>;
-  DeleteVRChatConfig(): Promise<void>;
-  DefaultVRChatPictureFolder(): Promise<string>;
-}
+export type AppBindings = {
+  [K in keyof typeof WailsApp]: (typeof WailsApp)[K];
+};
 
 declare global {
   interface Window {
@@ -565,15 +344,31 @@ export const App = {
   async resolveUserProfileNavigation(
     vrcUserID: string,
   ): Promise<UserProfileNavigationDTO> {
-    return callApp((a) => a.ResolveUserProfileNavigation(vrcUserID), {
-      user: {
-        vrcUserId: vrcUserID,
-        displayName: "",
-        status: "",
-        isFavorite: false,
-        lastUpdated: "",
+    return callApp<UserProfileNavigationDTO>(
+      (a) =>
+        a.ResolveUserProfileNavigation(
+          vrcUserID,
+        ) as Promise<UserProfileNavigationDTO>,
+      {
+        user: {
+          vrcUserId: vrcUserID,
+          displayName: "",
+          status: "",
+          isFavorite: false,
+          lastUpdated: "",
+        },
+        openInFriendsView: false,
+        openInSelfProfile: false,
       },
-      openInFriendsView: false,
+    );
+  },
+  async getSelfProfile(forceRefresh?: boolean): Promise<UserCacheDTO> {
+    return callApp((a) => a.GetSelfProfile(forceRefresh ?? false), {
+      vrcUserId: "",
+      displayName: "",
+      status: "",
+      isFavorite: false,
+      lastUpdated: "",
     });
   },
   async setFavorite(vrcUserId: string, favorite: boolean): Promise<void> {
@@ -665,10 +460,13 @@ export const App = {
     fromISO: string,
     toISO: string,
   ): Promise<ActivityStatsDTO> {
-    return callApp((a) => a.GetActivityStats(fromISO, toISO), {
-      dailyPlaySeconds: [],
-      topWorlds: [],
-    });
+    return callApp<ActivityStatsDTO>(
+      (a) => a.GetActivityStats(fromISO, toISO) as Promise<ActivityStatsDTO>,
+      {
+        dailyPlaySeconds: [],
+        topWorlds: [],
+      },
+    );
   },
   async clearScreenshots(): Promise<number> {
     return callApp((a) => a.ClearScreenshots(), 0);
@@ -704,12 +502,12 @@ export const App = {
       screenshotResWidth: 0,
       screenshotResHeight: 0,
       pictureOutputFolder: "",
-      pictureOutputSplitByDate: null,
+      pictureOutputSplitByDate: undefined,
       fpvSteadycamFov: 0,
       cacheDirectory: "",
       cacheSize: 0,
       cacheExpiryDelay: 0,
-      disableRichPresence: null,
+      disableRichPresence: undefined,
     });
   },
   async saveVRChatConfig(dto: VRChatConfigDTO): Promise<void> {

@@ -100,3 +100,17 @@ func TestClient_SetUserStatusAndDescription_requestBody(t *testing.T) {
 		t.Fatalf("SetUserStatusAndDescription: %v", err)
 	}
 }
+
+func TestPutUserPath_emptyID(t *testing.T) {
+	_, err := putUserPath("")
+	if err == nil {
+		t.Fatal("want error for empty user id")
+	}
+}
+
+func TestClient_SetUserStatus_emptyUserID(t *testing.T) {
+	c := NewClient("tok")
+	if err := c.SetUserStatus(context.Background(), "", StatusBusy); err == nil {
+		t.Fatal("want error for empty user id")
+	}
+}

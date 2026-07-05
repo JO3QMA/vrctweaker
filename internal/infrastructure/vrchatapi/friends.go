@@ -100,10 +100,10 @@ func (c *Client) GetFriends(ctx context.Context) ([]Friend, error) {
 				seen[f.ID] = struct{}{}
 				out = append(out, f)
 			}
-			if len(batch) < friendsListPageSize {
+			if len(batch) == 0 {
 				break
 			}
-			offset += friendsListPageSize
+			offset += len(batch)
 		}
 	}
 	return out, nil

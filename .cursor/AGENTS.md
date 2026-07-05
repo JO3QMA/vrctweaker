@@ -62,6 +62,18 @@ GitHub Issue の URL・番号、または `docs/ai_dlc/issues/` 等の Issue ド
 
 実装の**主戦場は Composer**。アーキテクチャ分岐・曖昧な受け入れ条件・QA の連続失敗などで詰まったときだけ、**別枠で Claude Sonnet または Codex**（Chat または SubAgent）に短く相談し、要約を Composer に戻す。手順・回数上限は **advisor-workflow** Skill（`.cursor/skills/advisor-workflow/SKILL.md`）に従う。
 
+## WSL 開発時の実データ参照
+
+動作確認を Windows で行い、WSL 上で Agent がログや DB を読む場合は `make link-var` で `var/` に symlink を張る（`var/README.md` 参照）。
+
+| 用途 | パス |
+|------|------|
+| SQLite DB | `var/data/win/vrchat-tweaker.db` |
+| 最新 output_log | `var/logs/latest-output_log.txt` |
+| ログ一覧 | `var/logs/vrchat/` |
+
+`/mnt/c/Users/...` を直接触るより、上記パスを優先する。
+
 ## プロジェクトルール
 
 - `.cursor/rules/post-change-fmt.mdc`: コード変更後は `make fmt`（常時適用）
@@ -77,3 +89,21 @@ GitHub Issue の URL・番号、または `docs/ai_dlc/issues/` 等の Issue ド
 - **advisor-workflow**: Composer をメインに、詰まりどころだけ Sonnet / Codex で短い相談を挟む（`.cursor/skills/advisor-workflow/SKILL.md`）
 - **tdd-workflow**: テスト駆動開発と fmt→test→lint→（フロント時）E2E の検証ループ。コード変更時に適用。
 - **element-plus-frontend**: Element Plus による UI 実装・Vitest/Playwright セレクタ・公式ドキュメント参照（`.cursor/skills/element-plus-frontend/SKILL.md`）
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on `JO3QMA/vrctweaker` (`gh` CLI). See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Canonical triage roles use default label names (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Redaction (public artifacts)
+
+PR / Issue / commit messages and agent-drafted GitHub text must not name real VRChat users or paste `usr_*` IDs. See `docs/agents/redaction.md`. Cursor rule: `.cursor/rules/redaction-public-artifacts.mdc`.
+
+### Domain docs
+
+Single-context: root `CONTEXT.md` and `docs/adr/`. See `docs/agents/domain.md`.

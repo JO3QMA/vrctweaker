@@ -1,9 +1,12 @@
 package usecase
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"image"
+	"image/jpeg"
 	"os"
 	"path/filepath"
 	"slices"
@@ -16,7 +19,7 @@ import (
 	"vrchat-tweaker/internal/domain/media"
 )
 
-// mockScreenshotRepo implements media.ScreenshotRepository for tests.
+// mockScreenshotRepo is a minimal screenshot store for tests.
 type mockScreenshotRepo struct {
 	screenshots    map[string]*media.Screenshot
 	byPath         map[string]*media.Screenshot
@@ -74,9 +77,16 @@ func (m *mockScreenshotRepo) List(ctx context.Context, filter *media.ScreenshotF
 }
 
 func hasPathPrefix(path, prefix string) bool {
+	if prefix == "" {
+		return true
+	}
 	normPath := filepath.ToSlash(path)
 	normPrefix := filepath.ToSlash(prefix)
-	return normPath == normPrefix || strings.HasPrefix(normPath, normPrefix)
+	likePrefix := normPrefix
+	if !strings.HasSuffix(likePrefix, "/") {
+		likePrefix += "/"
+	}
+	return normPath == strings.TrimSuffix(normPrefix, "/") || strings.HasPrefix(normPath, likePrefix)
 }
 
 func (m *mockScreenshotRepo) GetByID(ctx context.Context, id string) (*media.Screenshot, error) {
@@ -127,7 +137,20 @@ func (m *mockMetadataExtractor) Extract(path string) (media.ScreenshotMetadata, 
 	}, nil
 }
 
-// mockWorldInfoRepo records WorldInfoRepository calls for tests.
+type countingMetadataExtractor struct {
+	inner   *mockMetadataExtractor
+	extract []string
+}
+
+func (c *countingMetadataExtractor) Extract(path string) (media.ScreenshotMetadata, error) {
+	c.extract = append(c.extract, path)
+	if c.inner != nil {
+		return c.inner.Extract(path)
+	}
+	return media.ScreenshotMetadata{}, nil
+}
+
+// mockWorldInfoRepo records world info repo calls for tests.
 type mockWorldInfoRepo struct {
 	upsertDisplayCalls []struct {
 		worldID, displayName string
@@ -205,6 +228,10 @@ func (m *screenshotAuthorUserCacheMock) UpsertSelf(_ context.Context, _ *identit
 }
 func (m *screenshotAuthorUserCacheMock) DeleteSelfRows(_ context.Context) error { return nil }
 
+func (m *screenshotAuthorUserCacheMock) ListContactsNeedingProfileResolution(_ context.Context) ([]*identity.UserCache, error) {
+	return nil, nil
+}
+
 func TestMediaUseCase_IngestScreenshotFile_UpsertsAuthorInUserCache(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "ingest_author.png")
@@ -257,6 +284,7 @@ func TestMediaUseCase_ScanDirectory_WithExtractor(t *testing.T) {
 	got, _ := repo.GetByFilePath(ctx, path)
 	if got == nil {
 		t.Fatal("screenshot not saved")
+		return
 	}
 	if got.WorldID != "wrld_test123" {
 		t.Errorf("WorldID = %q, want wrld_test123", got.WorldID)
@@ -289,6 +317,7 @@ func TestMediaUseCase_ScanDirectory_ExtractorErrorContinues(t *testing.T) {
 	got, _ := repo.GetByFilePath(ctx, path)
 	if got == nil {
 		t.Fatal("screenshot not saved")
+		return
 	}
 	if got.WorldID != "" || got.WorldName != "" {
 		t.Errorf("extraction failure should yield empty metadata, got worldID=%q worldName=%q", got.WorldID, got.WorldName)
@@ -638,5 +667,327 @@ func TestMediaUseCase_ScanDirectory_ContextCancelDuringImport(t *testing.T) {
 	})
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("ScanDirectory: err = %v, want context.Canceled", err)
+	}
+}
+
+func TestMediaUseCase_ListScreenshotsInGalleryScope_emptyRoot(t *testing.T) {
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "s1", FilePath: "/any.png"})
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+
+	list, err := uc.ListScreenshotsInGalleryScope(context.Background(), "", nil)
+	if err != nil {
+		t.Fatalf("ListScreenshotsInGalleryScope: %v", err)
+	}
+	if len(list) != 0 {
+		t.Fatalf("want empty list, got %d", len(list))
+	}
+}
+
+func TestMediaUseCase_ListScreenshotsInGalleryScope_excludesOutOfScopePaths(t *testing.T) {
+	base := t.TempDir()
+	inScope := filepath.Join(base, "shot.png")
+	if err := os.WriteFile(inScope, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	outScope := filepath.Join(filepath.Dir(base), "other-root", "other.png")
+
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "in", FilePath: inScope})
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "out", FilePath: outScope})
+
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+	list, err := uc.ListScreenshotsInGalleryScope(context.Background(), base, nil)
+	if err != nil {
+		t.Fatalf("ListScreenshotsInGalleryScope: %v", err)
+	}
+	if len(list) != 1 || list[0].ID != "in" {
+		t.Fatalf("list = %#v, want only in-scope row", list)
+	}
+	if repo.listFilter == nil || repo.listFilter.FilePathPrefix != media.PictureFolderPathPrefix(base) {
+		t.Fatalf("FilePathPrefix = %q, want %q", repo.listFilter.FilePathPrefix, media.PictureFolderPathPrefix(base))
+	}
+}
+
+func TestMediaUseCase_ListScreenshotsInGalleryScope_excludesMissingFiles(t *testing.T) {
+	base := t.TempDir()
+	existing := filepath.Join(base, "here.png")
+	if err := os.WriteFile(existing, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	missing := filepath.Join(base, "gone.png")
+
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "here", FilePath: existing})
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "gone", FilePath: missing})
+
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+	list, err := uc.ListScreenshotsInGalleryScope(context.Background(), base, nil)
+	if err != nil {
+		t.Fatalf("ListScreenshotsInGalleryScope: %v", err)
+	}
+	if len(list) != 1 || list[0].ID != "here" {
+		t.Fatalf("list = %#v, want only existing file", list)
+	}
+	if repo.screenshots["gone"] == nil {
+		t.Fatal("missing-file row should remain in DB")
+	}
+}
+
+func TestMediaUseCase_ListScreenshotsInGalleryScope_preservesWorldFilter(t *testing.T) {
+	base := t.TempDir()
+	path := filepath.Join(base, "a.png")
+	_ = os.WriteFile(path, []byte("x"), 0o644)
+
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "a", FilePath: path, WorldID: "wrld_a"})
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+
+	_, err := uc.ListScreenshotsInGalleryScope(context.Background(), base, &media.ScreenshotFilter{WorldID: "wrld_a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if repo.listFilter == nil || repo.listFilter.WorldID != "wrld_a" {
+		t.Fatalf("WorldID filter not passed: %#v", repo.listFilter)
+	}
+}
+
+func TestMediaUseCase_ListGetDeleteScreenshot(t *testing.T) {
+	repo := newMockScreenshotRepo()
+	s := &media.Screenshot{ID: "s-del", FilePath: "/tmp/x.png"}
+	_ = repo.Save(context.Background(), s)
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+	ctx := context.Background()
+
+	list, err := uc.ListScreenshots(ctx, nil)
+	if err != nil || len(list) != 1 {
+		t.Fatalf("ListScreenshots = %d err=%v", len(list), err)
+	}
+	got, err := uc.GetScreenshot(ctx, "s-del")
+	if err != nil || got == nil || got.ID != "s-del" {
+		t.Fatalf("GetScreenshot = %+v err=%v", got, err)
+	}
+	if err := uc.DeleteScreenshot(ctx, "s-del"); err != nil {
+		t.Fatal(err)
+	}
+	if repo.screenshots["s-del"] != nil {
+		t.Fatal("expected deleted")
+	}
+}
+
+func TestMediaUseCase_ReindexScreenshots_updatesStaleFileSize(t *testing.T) {
+	dir := t.TempDir()
+	basePath := filepath.Join(dir, "shots")
+	_ = os.MkdirAll(basePath, 0755)
+	path := filepath.Join(basePath, "size.png")
+	_ = os.WriteFile(path, []byte("12345678"), 0644)
+
+	oldSize := int64(1)
+	repo := newMockScreenshotRepo()
+	s := &media.Screenshot{ID: "sz1", FilePath: path, FileSizeBytes: &oldSize}
+	_ = repo.Save(context.Background(), s)
+
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+	updated, err := uc.ReindexScreenshots(context.Background(), basePath)
+	if err != nil || updated != 1 {
+		t.Fatalf("updated = %d err=%v", updated, err)
+	}
+	got, _ := repo.GetByID(context.Background(), "sz1")
+	if got.FileSizeBytes == nil || *got.FileSizeBytes != 8 {
+		t.Fatalf("FileSizeBytes = %v", got.FileSizeBytes)
+	}
+}
+
+func TestMediaUseCase_ReindexScreenshots_regeneratesStaleThumbnail(t *testing.T) {
+	dir := t.TempDir()
+	basePath := filepath.Join(dir, "shots")
+	_ = os.MkdirAll(basePath, 0755)
+	path := filepath.Join(basePath, "thumb.png")
+	if err := writeTestPNG(path, 64, 64); err != nil {
+		t.Fatal(err)
+	}
+	info, _ := os.Stat(path)
+	size := info.Size()
+
+	repo := newMockScreenshotRepo()
+	s := &media.Screenshot{ID: "stale", FilePath: path, FileSizeBytes: &size}
+	_ = repo.Save(context.Background(), s)
+	_ = repo.UpsertThumbnail(context.Background(), "stale", &media.ScreenshotThumbnail{
+		JpegBlob:      []byte{0xff, 0xd8, 0xff, 0x00},
+		SourceSize:    size + 999,
+		SourceModUnix: info.ModTime().Unix(),
+	})
+
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+	updated, err := uc.ReindexScreenshots(context.Background(), basePath)
+	if err != nil || updated != 1 {
+		t.Fatalf("updated = %d err=%v", updated, err)
+	}
+	if repo.thumbs["stale"] == nil || repo.thumbs["stale"].SourceSize != size {
+		t.Fatalf("thumb = %+v", repo.thumbs["stale"])
+	}
+}
+
+func TestMediaUseCase_prepareScreenshotThumbnailJPEG_usesJpegSource(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "photo.jpg")
+	if err := writeTestJPEG(path, 120, 90); err != nil {
+		t.Fatal(err)
+	}
+	repo := newMockScreenshotRepo()
+	s := &media.Screenshot{ID: "jpg1", FilePath: path}
+	_ = repo.Save(context.Background(), s)
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+	if err := uc.EnsureScreenshotThumbnail(context.Background(), "jpg1"); err != nil {
+		t.Fatalf("EnsureScreenshotThumbnail: %v", err)
+	}
+	if repo.thumbs["jpg1"] == nil || len(repo.thumbs["jpg1"].JpegBlob) == 0 {
+		t.Fatal("expected thumbnail bytes")
+	}
+}
+
+func TestMediaUseCase_prepareScreenshotThumbnailJPEG_invalidCachedBlobRegenerates(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "shot.png")
+	if err := writeTestPNG(path, 32, 32); err != nil {
+		t.Fatal(err)
+	}
+	info, _ := os.Stat(path)
+	repo := newMockScreenshotRepo()
+	s := &media.Screenshot{ID: "badcache", FilePath: path}
+	_ = repo.Save(context.Background(), s)
+	_ = repo.UpsertThumbnail(context.Background(), "badcache", &media.ScreenshotThumbnail{
+		JpegBlob:      []byte("not-a-jpeg"),
+		SourceSize:    info.Size(),
+		SourceModUnix: info.ModTime().Unix(),
+	})
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+	if err := uc.EnsureScreenshotThumbnail(context.Background(), "badcache"); err != nil {
+		t.Fatal(err)
+	}
+	if !isJpegBlob(repo.thumbs["badcache"].JpegBlob) {
+		t.Fatal("expected regenerated jpeg blob")
+	}
+}
+
+func TestMediaUseCase_IngestScreenshotFile_skipsDirectory(t *testing.T) {
+	dir := t.TempDir()
+	uc := NewMediaUseCase(newMockScreenshotRepo(), nil, nil, nil)
+	s, created, err := uc.IngestScreenshotFile(context.Background(), dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created || s != nil {
+		t.Fatalf("want skip directory, got s=%v created=%v", s, created)
+	}
+}
+
+func writeTestJPEG(path string, w, h int) error {
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	img := image.NewRGBA(image.Rect(0, 0, w, h))
+	var buf bytes.Buffer
+	if encErr := jpeg.Encode(&buf, img, &jpeg.Options{Quality: 80}); encErr != nil {
+		return encErr
+	}
+	_, err = f.Write(buf.Bytes())
+	return err
+}
+
+func TestMediaUseCase_ReindexScreenshots_skipsMissingFileOnDisk(t *testing.T) {
+	dir := t.TempDir()
+	basePath := filepath.Join(dir, "shots")
+	_ = os.MkdirAll(basePath, 0755)
+	missing := filepath.Join(basePath, "gone.png")
+	repo := newMockScreenshotRepo()
+	sz := int64(1)
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "gone", FilePath: missing, FileSizeBytes: &sz})
+	uc := NewMediaUseCase(repo, nil, nil, nil)
+	updated, err := uc.ReindexScreenshots(context.Background(), basePath)
+	if err != nil || updated != 0 {
+		t.Fatalf("updated = %d err=%v", updated, err)
+	}
+}
+
+func TestMediaUseCase_ReindexScreenshots_skipsExtractWhenMetadataCurrent(t *testing.T) {
+	dir := t.TempDir()
+	basePath := filepath.Join(dir, "shots")
+	_ = os.MkdirAll(basePath, 0755)
+	path := filepath.Join(basePath, "ok.png")
+	_ = os.WriteFile(path, []byte("same"), 0o644)
+	info, _ := os.Stat(path)
+	size := info.Size()
+
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{
+		ID: "ok", FilePath: path, WorldID: "wrld_ok", FileSizeBytes: &size,
+	})
+	_ = repo.UpsertThumbnail(context.Background(), "ok", &media.ScreenshotThumbnail{
+		JpegBlob:      []byte{0xff, 0xd8},
+		SourceSize:    size,
+		SourceModUnix: info.ModTime().Unix(),
+	})
+
+	counter := &countingMetadataExtractor{inner: &mockMetadataExtractor{worldID: "wrld_other"}}
+	uc := NewMediaUseCase(repo, counter, nil, nil)
+	updated, err := uc.ReindexScreenshots(context.Background(), basePath)
+	if err != nil {
+		t.Fatalf("ReindexScreenshots: %v", err)
+	}
+	if updated != 0 {
+		t.Fatalf("updated = %d, want 0", updated)
+	}
+	if len(counter.extract) != 0 {
+		t.Fatalf("Extract calls = %d, want 0", len(counter.extract))
+	}
+}
+
+func TestMediaUseCase_SyncPictureFolder_ingestsAndReindexesEmptyWorldID(t *testing.T) {
+	dir := t.TempDir()
+	basePath := filepath.Join(dir, "shots")
+	_ = os.MkdirAll(basePath, 0755)
+
+	existingPath := filepath.Join(basePath, "old.png")
+	_ = os.WriteFile(existingPath, []byte("old"), 0o644)
+	newPath := filepath.Join(basePath, "new.png")
+	_ = os.WriteFile(newPath, []byte("new"), 0o644)
+
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{
+		ID: "old", FilePath: existingPath, WorldID: "",
+	})
+
+	counter := &countingMetadataExtractor{
+		inner: &mockMetadataExtractor{worldID: "wrld_sync", worldName: "Sync World"},
+	}
+	uc := NewMediaUseCase(repo, counter, nil, nil)
+
+	total, err := uc.SyncPictureFolder(context.Background(), basePath, nil)
+	if err != nil {
+		t.Fatalf("SyncPictureFolder: %v", err)
+	}
+	if total < 2 {
+		t.Fatalf("total = %d, want at least 2 (1 ingest + 1 reindex)", total)
+	}
+
+	gotOld, _ := repo.GetByID(context.Background(), "old")
+	if gotOld.WorldID != "wrld_sync" {
+		t.Errorf("old WorldID = %q", gotOld.WorldID)
+	}
+	if _, ok := repo.byPath[newPath]; !ok {
+		t.Fatal("expected new file ingested")
+	}
+	// New file: extract once on ingest only, not again on reindex skip list.
+	newExtracts := 0
+	for _, p := range counter.extract {
+		if p == filepath.Clean(newPath) {
+			newExtracts++
+		}
+	}
+	if newExtracts != 1 {
+		t.Fatalf("Extract on new file = %d, want 1", newExtracts)
 	}
 }

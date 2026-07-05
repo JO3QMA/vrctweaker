@@ -99,7 +99,7 @@ test.describe("VRChat Tweaker", () => {
       await expect(page.getByText("VRChat ログイン")).toBeVisible();
       await expect(page.getByText("パス設定")).toBeVisible();
       await expect(page.getByText("ログ・データ管理")).toBeVisible();
-      await expect(page.getByText(/遭遇記録の保存期間/)).toBeVisible();
+      await expect(page.getByText(/Activity データの保存期間/)).toBeVisible();
     });
 
     test("log retention input has default value", async ({ page }) => {
@@ -107,7 +107,7 @@ test.describe("VRChat Tweaker", () => {
       await expect(page.locator("h1")).toContainText("設定");
       const retentionRow = page
         .locator(".setting-row")
-        .filter({ hasText: /遭遇記録の保存期間/ });
+        .filter({ hasText: /Activity データの保存期間/ });
       const retentionInput = retentionRow.locator(".el-input__inner").first();
       await retentionInput.scrollIntoViewIfNeeded();
       await expect(retentionInput).toHaveValue("30");

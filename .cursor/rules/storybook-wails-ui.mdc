@@ -21,7 +21,7 @@ UI の**変更**や**抽象化**（共通コンポーネント化・レイアウ
 
 2. **ビュー（`views/*.vue`）の変更**  
    - 対応する `*.stories.ts` を更新する。  
-   - Wails バインディングが必要な画面は、既存の **`window.go` スタブ用デコレータ**（例: `wailsFriendsStoryDecorator.ts`, `activityViewStoryDecorator.ts`）と同パターンで Storybook 上で意味のある表示になるようにする。
+   - Wails バインディングが必要な画面は、**`frontend/src/stories/wailsDecorator.ts`** の `withWailsApp` / `withRouter` と **`frontend/src/stories/fixtures/`** のサンプルデータで Storybook 上の表示を揃える。
 
 3. **グローバルスタイル（`frontend/src/assets/style.css` 等）**  
    - Storybook の `preview.ts` は既に `style.css` を読み込んでいる。クラス名の追加・変更時は、**コンポーネント／ビューのストーリーで実際にそのクラスが使われる**ようにして、Storybook 上でも差分が見えるようにする。

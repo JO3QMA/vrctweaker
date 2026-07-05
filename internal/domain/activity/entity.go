@@ -4,22 +4,25 @@ import "time"
 
 // PlaySession represents a single VRChat play session.
 type PlaySession struct {
-	ID          string
-	StartTime   time.Time
-	EndTime     *time.Time
-	DurationSec *int
+	ID            string
+	StartTime     time.Time
+	EndTime       *time.Time
+	DurationSec   *int
+	InstanceID    string // VRChat instance key when known
+	LogSourcePath string // output_log absolute path; empty for legacy rows
 }
 
 // UserEncounter represents one stay (join → leave) of a user in an instance.
 // LeftAt nil means the stay is still open (no leave observed yet).
 type UserEncounter struct {
-	ID          string
-	VRCUserID   string
-	DisplayName string
-	InstanceID  string
-	WorldID     string // wrld_* from current instance when known
-	JoinedAt    time.Time
-	LeftAt      *time.Time
+	ID            string
+	VRCUserID     string
+	DisplayName   string
+	InstanceID    string
+	WorldID       string // wrld_* from current instance when known
+	LogSourcePath string // output_log absolute path; empty for legacy rows
+	JoinedAt      time.Time
+	LeftAt        *time.Time
 }
 
 // EncounterWithContext is a user encounter plus joined user/world cache fields for the UI.
@@ -29,4 +32,14 @@ type EncounterWithContext struct {
 	UserFirstSeenAt   *time.Time
 	UserLastContactAt *time.Time
 	IsFirstEncounter  bool
+}
+
+// EncounterFilter provides optional filtering for encounter list queries.
+type EncounterFilter struct {
+	VRCUserID   string
+	DisplayName string
+	InstanceID  string
+	WorldID     string
+	From        *time.Time
+	To          *time.Time
 }

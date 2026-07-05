@@ -20,6 +20,7 @@ const sampleEncounter: UserEncounterDTO = {
   worldDisplayName: "World W",
   joinedAt: "2025-01-01T12:00:00Z",
   leftAt: "2025-01-01T13:00:00Z",
+  isFirstEncounter: false,
 };
 
 describe("EncounterHistoryList", () => {
@@ -82,6 +83,22 @@ describe("EncounterHistoryList", () => {
     const headerTexts = wrapper.findAll("th").map((th) => th.text());
     expect(headerTexts.some((t) => t.includes("表示名"))).toBe(false);
     expect(headerTexts.some((t) => t.includes("ワールド名"))).toBe(true);
+  });
+
+  it("shows still-present label when leftAt is empty", async () => {
+    vi.mocked(wailsApp.App.encountersByVRCUserID).mockResolvedValue([
+      {
+        ...sampleEncounter,
+        leftAt: "",
+      },
+    ]);
+
+    const wrapper = mount(EncounterHistoryList, {
+      props: { mode: "user", userId: "u1" },
+    });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("滞在中");
   });
 
   it("shows error alert when fetch fails", async () => {

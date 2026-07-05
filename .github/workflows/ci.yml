@@ -3,8 +3,19 @@ name: CI
 on:
   pull_request:
     branches: [main]
+    paths-ignore:
+      # ドキュメント・エージェント設定のみの変更では Lint / テストを走らせない
+      - '**.md'
+      - 'docs/**'
+      - '.cursor/**'
+      - '.github/ISSUE_TEMPLATE/**'
   push:
     branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.cursor/**'
+      - '.github/ISSUE_TEMPLATE/**'
   workflow_dispatch:
 
 permissions:
@@ -19,7 +30,7 @@ jobs:
     name: Go Backend
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-go@v6
         with:
@@ -35,6 +46,15 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      - name: Generate Wails bindings
+        run: |
+          mkdir -p frontend/dist
+          echo '<!DOCTYPE html><html></html>' > frontend/dist/index.html
+          wails generate module
 
       - name: Build frontend (for //go:embed)
         run: cd frontend && pnpm install --frozen-lockfile && pnpm run build
@@ -60,7 +80,12 @@ jobs:
     name: Vue Frontend
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+          cache-dependency-path: go.sum
 
       - uses: pnpm/action-setup@v6
         with:
@@ -71,6 +96,15 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
           cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
+
+      - name: Generate Wails bindings
+        run: |
+          mkdir -p frontend/dist
+          echo '<!DOCTYPE html><html></html>' > frontend/dist/index.html
+          wails generate module
 
       - name: Install
         run: cd frontend && pnpm install --frozen-lockfile

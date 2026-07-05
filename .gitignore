@@ -12,6 +12,7 @@ frontend/coverage/
 frontend/.pnpm-store/
 frontend/wailsjs/
 frontend/tsconfig.tsbuildinfo
+frontend/src/data/licenses.json
 
 # Go
 *.test
@@ -30,6 +31,16 @@ frontend/tsconfig.tsbuildinfo
 # OS
 .DS_Store
 Thumbs.db
+
+# Local environment (direnv)
+.envrc
+
+# Local runtime data (logs, DB, credentials — see var/README.md)
+var/local.env
+var/data/*
+!var/data/.gitkeep
+var/logs/*
+!var/logs/.gitkeep
 
 # Test
 coverage.txt

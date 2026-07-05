@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Contributing guide
+    url: https://github.com/JO3QMA/vrctweaker/blob/main/README.md#コントリビューション
+    about: Issue / PR の書き方と開発コマンド

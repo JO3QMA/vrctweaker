@@ -1,6 +1,9 @@
 package identity
 
-import "time"
+import (
+	"strings"
+	"time"
+)
 
 // UserCache represents a VRChat user row in users_cache (self, friends, and log-derived contacts).
 type UserCache struct {
@@ -37,6 +40,14 @@ type UserCache struct {
 	Platform              string
 	ProfilePicOverride    string
 	TagsJSON              string
+}
+
+// IsListableFriend reports whether u may appear in the Friends master list (ADR 0004).
+func IsListableFriend(u *UserCache) bool {
+	if u == nil || u.UserKind != UserKindFriend {
+		return false
+	}
+	return strings.TrimSpace(u.DisplayName) != ""
 }
 
 // MergeFromLog merges log-derived contact info without downgrading friend or self rows.

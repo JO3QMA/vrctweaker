@@ -45,7 +45,7 @@ import { ElMessage } from "element-plus";
 import FriendsDetailPane from "./friends/FriendsDetailPane.vue";
 import FriendsListPanel from "./friends/FriendsListPanel.vue";
 import FriendsViewToolbar from "./friends/FriendsViewToolbar.vue";
-import { friendIsOffline } from "./friends/friendsViewUtils";
+import { friendIsOffline } from "@/utils/vrcUserCacheDisplay";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
 import { App } from "../wails/app";
 import type { UserCacheDTO } from "../wails/app";
@@ -135,6 +135,16 @@ async function stripVrcUserIdFromQuery(): Promise<void> {
 async function applyVrcUserIdFromQuery(): Promise<void> {
   const id = firstQueryString(route.query.vrcUserId).trim();
   if (!id) return;
+  try {
+    const nav = await App.resolveUserProfileNavigation(id);
+    if (nav.openInSelfProfile) {
+      await router.push({ name: "me" });
+      await stripVrcUserIdFromQuery();
+      return;
+    }
+  } catch {
+    /* fall through to friends list lookup */
+  }
   let f = friends.value.find((x) => x.vrcUserId === id);
   if (!f) {
     await loadFriends();

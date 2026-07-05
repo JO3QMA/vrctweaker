@@ -4,42 +4,41 @@ import (
 	"context"
 	"fmt"
 
-	"vrchat-tweaker/internal/domain/activity"
 	"vrchat-tweaker/internal/domain/identity"
-	"vrchat-tweaker/internal/domain/maintenance"
-	"vrchat-tweaker/internal/domain/media"
-	"vrchat-tweaker/internal/domain/settings"
+	"vrchat-tweaker/internal/infrastructure/sqlite"
+
+	"database/sql"
 )
 
 // DBMaintenanceUseCase handles DB maintenance operations (Vacuum, Clear).
 type DBMaintenanceUseCase struct {
-	encounterRepo   activity.UserEncounterRepository
-	screenshotRepo  media.ScreenshotRepository
-	userCacheRepo   identity.UserCacheRepository
-	maintenanceRepo maintenance.Repository
-	appSettings     settings.AppSettingsRepository
+	db             *sql.DB
+	encounterRepo  userEncounterRepo
+	screenshotRepo screenshotRepo
+	userCacheRepo  userCacheRepo
+	appSettings    appSettingsRepo
 }
 
 // NewDBMaintenanceUseCase creates a new DBMaintenanceUseCase.
 func NewDBMaintenanceUseCase(
-	encounterRepo activity.UserEncounterRepository,
-	screenshotRepo media.ScreenshotRepository,
-	userCacheRepo identity.UserCacheRepository,
-	maintenanceRepo maintenance.Repository,
-	appSettings settings.AppSettingsRepository,
+	db *sql.DB,
+	encounterRepo userEncounterRepo,
+	screenshotRepo screenshotRepo,
+	userCacheRepo userCacheRepo,
+	appSettings appSettingsRepo,
 ) *DBMaintenanceUseCase {
 	return &DBMaintenanceUseCase{
-		encounterRepo:   encounterRepo,
-		screenshotRepo:  screenshotRepo,
-		userCacheRepo:   userCacheRepo,
-		maintenanceRepo: maintenanceRepo,
-		appSettings:     appSettings,
+		db:             db,
+		encounterRepo:  encounterRepo,
+		screenshotRepo: screenshotRepo,
+		userCacheRepo:  userCacheRepo,
+		appSettings:    appSettings,
 	}
 }
 
 // VacuumDb runs VACUUM to reclaim space and optimize the database.
 func (uc *DBMaintenanceUseCase) VacuumDb(ctx context.Context) error {
-	return uc.maintenanceRepo.Vacuum(ctx)
+	return sqlite.Vacuum(ctx, uc.db)
 }
 
 // ClearEncounters deletes all user encounters. Returns affected row count.

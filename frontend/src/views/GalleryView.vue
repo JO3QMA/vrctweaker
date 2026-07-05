@@ -4,18 +4,30 @@
 
     <div class="filters">
       <el-input
-        v-model="filterWorldId"
+        v-model="filterWorldSearch"
         data-testid="gallery-world-filter"
         type="search"
         :placeholder="t('gallery.searchPlaceholder')"
         clearable
-        style="flex: 1; max-width: 400px"
+        class="gallery-world-filter"
         @keyup.enter="onFilterEnter"
       >
         <template #prefix>
           <el-icon><Search /></el-icon>
         </template>
       </el-input>
+      <el-date-picker
+        v-model="filterDateRange"
+        data-testid="gallery-date-range"
+        type="daterange"
+        :start-placeholder="t('gallery.dateRangeStart')"
+        :end-placeholder="t('gallery.dateRangeEnd')"
+        format="YYYY-MM-DD"
+        value-format="YYYY-MM-DD"
+        clearable
+        class="gallery-date-range"
+        @change="onFilterEnter"
+      />
       <el-button :disabled="loading || scanning" @click="onRefreshClick">
         {{ t("common.refresh") }}
       </el-button>
@@ -230,7 +242,6 @@ import { useI18n } from "vue-i18n";
 import {
   App,
   type ScreenshotDTO,
-  type ScreenshotSearchDTO,
   type ScanProgressPayload,
   type GalleryScanDonePayload,
 } from "../wails/app";
@@ -242,6 +253,10 @@ import {
   type GalleryVirtualRow,
 } from "./galleryDateGroups";
 import { pruneThumbnailUrlMap } from "./galleryThumbnailCache";
+import {
+  buildGallerySearchFilter,
+  type GalleryDateRangeFilter,
+} from "./gallerySearchFilter";
 import { formatEncounteredAt } from "../utils/formatEncounteredAt";
 import { appLocaleToBcp47 } from "../i18n";
 
@@ -278,7 +293,8 @@ const scanning = ref(false);
 const scanProgress = ref<ScanProgressPayload | null>(null);
 const loadError = ref<string | null>(null);
 const scanError = ref<string | null>(null);
-const filterWorldId = ref("");
+const filterWorldSearch = ref("");
+const filterDateRange = ref<GalleryDateRangeFilter | null>(null);
 const thumbnailUrls = ref<Record<string, string>>({});
 const collapsed = ref(new Set<string>());
 const gridScrollRef = ref<HTMLElement | null>(null);
@@ -731,9 +747,11 @@ async function load(): Promise<void> {
   loadError.value = null;
   loading.value = true;
   try {
-    const wid = filterWorldId.value.trim();
-    if (wid) {
-      const filter: ScreenshotSearchDTO = { worldId: wid };
+    const filter = buildGallerySearchFilter(
+      filterWorldSearch.value,
+      filterDateRange.value,
+    );
+    if (filter) {
       list.value = await App.searchScreenshots(filter);
     } else {
       list.value = await App.screenshots("");
@@ -770,7 +788,10 @@ function onFilterEnter(): void {
   void load();
 }
 
-watch(filterWorldId, () => {
+watch(filterWorldSearch, scheduleDebouncedLoad);
+watch(filterDateRange, scheduleDebouncedLoad);
+
+function scheduleDebouncedLoad(): void {
   if (filterDebounceTimer !== null) {
     clearTimeout(filterDebounceTimer);
   }
@@ -778,7 +799,7 @@ watch(filterWorldId, () => {
     filterDebounceTimer = null;
     void load();
   }, FILTER_DEBOUNCE_MS);
-});
+}
 
 onBeforeUnmount(() => {
   thumbnailFetchGeneration++;
@@ -918,6 +939,18 @@ onMounted(() => {
   gap: 0.5rem;
   align-items: center;
   flex-shrink: 0;
+}
+
+.gallery-world-filter {
+  flex: 1;
+  min-width: 12rem;
+  max-width: 400px;
+}
+
+.gallery-date-range {
+  flex: 0 1 auto;
+  min-width: 16rem;
+  max-width: 320px;
 }
 
 .gallery-body {

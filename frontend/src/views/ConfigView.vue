@@ -331,7 +331,6 @@ import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
 import { App } from "../wails/app";
 import type { VRChatConfigDTO } from "../wails/app";
-import { clampCacheNumeric } from "../utils/cacheNormalize";
 
 const { t } = useI18n();
 
@@ -373,12 +372,12 @@ const config = ref<VRChatConfigDTO>({
   screenshotResWidth: 0,
   screenshotResHeight: 0,
   pictureOutputFolder: "",
-  pictureOutputSplitByDate: null,
+  pictureOutputSplitByDate: undefined,
   fpvSteadycamFov: 0,
   cacheDirectory: "",
   cacheSize: CACHE_MIN,
   cacheExpiryDelay: CACHE_MIN,
-  disableRichPresence: null,
+  disableRichPresence: undefined,
 });
 
 const cameraPreset = ref<ResolutionPreset>("custom");
@@ -421,10 +420,8 @@ function syncFromConfig(cfg: VRChatConfigDTO) {
     cfg.screenshotResHeight,
     SCREENSHOT_PRESETS,
   );
-  pictureOutputSplitByDate.value =
-    cfg.pictureOutputSplitByDate === null ? true : cfg.pictureOutputSplitByDate;
-  disableRichPresence.value =
-    cfg.disableRichPresence === null ? false : cfg.disableRichPresence;
+  pictureOutputSplitByDate.value = cfg.pictureOutputSplitByDate ?? true;
+  disableRichPresence.value = cfg.disableRichPresence ?? false;
 }
 
 function applyCameraPreset() {
@@ -441,6 +438,13 @@ function applyScreenshotPreset() {
     config.value.screenshotResWidth = preset.width;
     config.value.screenshotResHeight = preset.height;
   }
+}
+
+function clampCacheNumeric(n: number | undefined, min: number): number {
+  if (typeof n !== "number" || !Number.isFinite(n)) {
+    return min;
+  }
+  return Math.max(min, n);
 }
 
 function clampCacheSize() {
@@ -578,12 +582,12 @@ async function deleteConfig() {
       screenshotResWidth: 0,
       screenshotResHeight: 0,
       pictureOutputFolder: "",
-      pictureOutputSplitByDate: null,
+      pictureOutputSplitByDate: undefined,
       fpvSteadycamFov: 0,
       cacheDirectory: "",
       cacheSize: CACHE_MIN,
       cacheExpiryDelay: CACHE_MIN,
-      disableRichPresence: null,
+      disableRichPresence: undefined,
     };
   } catch (e) {
     saveError.value = e instanceof Error ? e.message : t("config.errDelete");

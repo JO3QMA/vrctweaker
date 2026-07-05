@@ -135,6 +135,68 @@ func TestClient_GetFriends_paginationAndOfflinePasses(t *testing.T) {
 	}
 }
 
+// ponytail: VRChat can return a short offline page before the list ends; stop on empty page, not len < n.
+func TestClient_GetFriends_continuesAfterPartialOfflinePage(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/1/auth/user/friends" {
+			http.NotFound(w, r)
+			return
+		}
+		q := r.URL.Query()
+		if q.Get("offline") != "true" {
+			_ = json.NewEncoder(w).Encode([]Friend{})
+			return
+		}
+		off, _ := strconv.Atoi(q.Get("offset"))
+		switch off {
+		case 0, 100, 200:
+			batch := make([]Friend, friendsListPageSize)
+			for i := range batch {
+				batch[i] = Friend{
+					ID:          fmt.Sprintf("usr_off_%d", off+i),
+					DisplayName: "off",
+					Status:      "offline",
+				}
+			}
+			_ = json.NewEncoder(w).Encode(batch)
+		case 300:
+			partial := make([]Friend, 30)
+			for i := range partial {
+				partial[i] = Friend{
+					ID:          fmt.Sprintf("usr_off_%d", off+i),
+					DisplayName: "off",
+					Status:      "offline",
+				}
+			}
+			_ = json.NewEncoder(w).Encode(partial)
+		case 330:
+			tail := make([]Friend, 78)
+			for i := range tail {
+				tail[i] = Friend{
+					ID:          fmt.Sprintf("usr_off_%d", off+i),
+					DisplayName: "off",
+					Status:      "offline",
+				}
+			}
+			_ = json.NewEncoder(w).Encode(tail)
+		default:
+			_ = json.NewEncoder(w).Encode([]Friend{})
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient("")
+	c.apiRoot = srv.URL + "/api/1"
+	list, err := c.GetFriends(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 408 {
+		t.Fatalf("offline pass len = %d, want 408 (330 short-page trap + 78 tail)", len(list))
+	}
+}
+
 func TestClient_GetFriends_errorsWhenPagesNeverShrink(t *testing.T) {
 	var nCalls int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -172,5 +234,51 @@ func TestClient_GetFriends_errorsWhenPagesNeverShrink(t *testing.T) {
 	}
 	if nCalls != friendsListMaxPagesPerOfflinePass {
 		t.Fatalf("HTTP calls = %d, want %d (one pass of full pages before guard)", nCalls, friendsListMaxPagesPerOfflinePass)
+	}
+}
+
+func TestClient_SetFavorite_putAndDelete(t *testing.T) {
+	t.Parallel()
+	var lastMethod string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		lastMethod = r.Method
+		if r.URL.Path != "/api/1/users/usr_fav/favorite" {
+			http.NotFound(w, r)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient("tok")
+	c.apiRoot = srv.URL + "/api/1"
+
+	if err := c.SetFavorite(context.Background(), "usr_fav", true); err != nil {
+		t.Fatalf("SetFavorite true: %v", err)
+	}
+	if lastMethod != http.MethodPut {
+		t.Fatalf("method = %q, want PUT", lastMethod)
+	}
+
+	if err := c.SetFavorite(context.Background(), "usr_fav", false); err != nil {
+		t.Fatalf("SetFavorite false: %v", err)
+	}
+	if lastMethod != http.MethodDelete {
+		t.Fatalf("method = %q, want DELETE", lastMethod)
+	}
+}
+
+func TestClient_getFriendsPage_decodeError(t *testing.T) {
+	t.Parallel()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte("not-json"))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := NewClient("tok")
+	c.apiRoot = srv.URL + "/api/1"
+	_, err := c.getFriendsPage(context.Background(), 0, 10, false)
+	if err == nil || !strings.Contains(err.Error(), "decode friends page") {
+		t.Fatalf("err = %v, want decode error", err)
 	}
 }
