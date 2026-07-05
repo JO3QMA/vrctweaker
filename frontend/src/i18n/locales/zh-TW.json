@@ -373,7 +373,7 @@
     "userTags": {
       "deprecated": "已廢止",
       "unknown": "未知標籤",
-      "tagId": "ID",
+      "tag_id": "ID",
       "admin_avatar_access": {
         "label": "Admin avatar access",
         "description": "User can upload Avatars without needing the necessary trust rank"

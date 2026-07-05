@@ -373,7 +373,7 @@
     "userTags": {
       "deprecated": "廃止",
       "unknown": "不明なタグ",
-      "tagId": "ID",
+      "tag_id": "ID",
       "admin_avatar_access": {
         "label": "管理者: アバターアクセス",
         "description": "必要な Trust rank がなくてもアバターをアップロードできる"

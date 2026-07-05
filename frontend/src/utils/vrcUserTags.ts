@@ -140,12 +140,14 @@ function userTagI18nKey(tag: string, field: "label" | "description"): string {
   return `userDetail.userTags.${tag}.${field}`;
 }
 
-function userTagMetaI18nKey(field: "deprecated" | "unknown" | "tagId"): string {
+function userTagMetaI18nKey(
+  field: "deprecated" | "unknown" | "tag_id",
+): string {
   return `userDetail.userTags.${field}`;
 }
 
 export function userTagElementType(tag: string): VrcStatusElementTagType {
-  switch (tag) {
+  switch (tag.trim()) {
     case "system_trust_basic":
       return "info";
     case "system_trust_known":
@@ -182,7 +184,7 @@ export function resolveUserTagDisplay(
 ): UserTagDisplay {
   const trimmed = tag.trim();
   const deprecated = isDeprecatedUserTag(trimmed);
-  const tagIdLine = `${t(userTagMetaI18nKey("tagId"))}: ${trimmed}`;
+  const tagIdLine = `${t(userTagMetaI18nKey("tag_id"))}: ${trimmed}`;
 
   if (isKnownUserTag(trimmed)) {
     const label = t(userTagI18nKey(trimmed, "label"));

@@ -11,7 +11,7 @@ function mockT(key: string): string {
   const map: Record<string, string> = {
     "userDetail.userTags.deprecated": "Deprecated",
     "userDetail.userTags.unknown": "Unknown tag",
-    "userDetail.userTags.tagId": "ID",
+    "userDetail.userTags.tag_id": "ID",
     "userDetail.userTags.system_trust_basic.label": "New User (blue)",
     "userDetail.userTags.system_trust_basic.description":
       "User is New User (blue) Trust rank",
@@ -46,6 +46,10 @@ describe("vrcUserTags", () => {
     expect(userTagElementType("system_trust_known")).toBe("success");
     expect(userTagElementType("system_trust_trusted")).toBe("warning");
     expect(userTagElementType("system_trust_veteran")).toBe("primary");
+  });
+
+  it("trims tag id before resolving element type", () => {
+    expect(userTagElementType(" system_trust_known ")).toBe("success");
   });
 
   it("resolves known user tag display", () => {

@@ -1,6 +1,10 @@
 <template>
-  <el-tooltip :content="display.tooltip" placement="top">
+  <el-tooltip placement="top" popper-class="vrc-user-tag-chip-tooltip">
+    <template #content>
+      <div v-for="(line, idx) in tooltipLines" :key="idx">{{ line }}</div>
+    </template>
     <el-tag
+      v-bind="$attrs"
       size="small"
       :type="tagType"
       class="vrc-user-tag-chip"
@@ -13,6 +17,10 @@
 </template>
 
 <script setup lang="ts">
+defineOptions({
+  inheritAttrs: false,
+});
+
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import {
@@ -20,14 +28,18 @@ import {
   userTagElementType,
 } from "../utils/vrcUserTags";
 
-const props = defineProps<{
-  tag: string;
-}>();
+const props = defineProps({
+  tag: {
+    type: String,
+    required: true,
+  },
+});
 
 const { t } = useI18n();
 
 const display = computed(() => resolveUserTagDisplay(props.tag, t));
 const tagType = computed(() => userTagElementType(props.tag));
+const tooltipLines = computed(() => display.value.tooltip.split("\n"));
 </script>
 
 <style scoped>
