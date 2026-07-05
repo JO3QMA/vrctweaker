@@ -174,14 +174,11 @@
                 v-if="jsonStringArray(selected.currentAvatarTagsJson).length"
                 :label="t('userDetail.avatarTags')"
               >
-                <el-tag
+                <VrcUserTagChip
                   v-for="tag in jsonStringArray(selected.currentAvatarTagsJson)"
                   :key="tag"
-                  size="small"
-                  class="tag-chip"
-                >
-                  {{ tag }}
-                </el-tag>
+                  :tag="tag"
+                />
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.currentAvatarImageUrl"
@@ -648,10 +645,6 @@ onUnmounted(() => {
 .profile-detail-tabs :deep(.el-tabs__content),
 .profile-detail-tabs :deep(.el-tab-pane) {
   min-height: 0;
-}
-
-.tag-chip {
-  margin: 0.15rem 0.2rem 0 0;
 }
 
 .mono {

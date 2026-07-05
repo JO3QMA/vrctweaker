@@ -183,7 +183,7 @@ export function resolveUserTagDisplay(
   tag: string,
   t: UserTagTranslateFn,
 ): UserTagDisplay {
-  if (tag == null) {
+  if (tag === null || tag === undefined) {
     return { label: "", tooltip: "", isKnown: false, deprecated: false };
   }
   const trimmed = tag.trim();

@@ -23,12 +23,9 @@ import {
   userTagElementType,
 } from "../utils/vrcUserTags";
 
-const props = defineProps({
-  tag: {
-    type: String,
-    required: true,
-  },
-});
+const props = defineProps<{
+  tag: string;
+}>();
 
 const { t } = useI18n();
 
