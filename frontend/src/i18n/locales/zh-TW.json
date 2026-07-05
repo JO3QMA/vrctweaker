@@ -394,6 +394,399 @@
     "profilePicOverride": "大頭貼（覆寫）",
     "profilePicThumb": "大頭貼縮圖",
     "friendKey": "friendKey",
-    "cacheUpdated": "快取更新"
+    "cacheUpdated": "快取更新",
+    "userTags": {
+      "deprecated": "已廢止",
+      "unknown": "未知標籤",
+      "tag_id": "ID",
+      "admin_avatar_access": {
+        "label": "Admin avatar access",
+        "description": "User can upload Avatars without needing the necessary trust rank"
+      },
+      "admin_can_grant_licenses": {
+        "label": "Can grant licenses",
+        "description": "User can give out licenses to other users"
+      },
+      "admin_canny_access": {
+        "label": "Admin Canny access",
+        "description": "User can access Canny without needing the necessary trust rank"
+      },
+      "admin_lock_tags": {
+        "label": "Locked tags",
+        "description": "User's tags have been locked and cannot be edited by the user"
+      },
+      "admin_lock_level": {
+        "label": "Locked trust rank",
+        "description": "User's Trust rank has been locked and can no longer be changed automatically"
+      },
+      "admin_moderator": {
+        "label": "VRChat Staff",
+        "description": "User is part of the VRChat Staff team"
+      },
+      "admin_official_thumbnail": {
+        "label": "Official thumbnail",
+        "description": "Replaces the user's profile picture with the VRChat logo"
+      },
+      "admin_scripting_access": {
+        "label": "Admin scripting access",
+        "description": "User can upload user-made scripts (Deprecated)"
+      },
+      "admin_world_access": {
+        "label": "Admin world access",
+        "description": "User can upload Worlds without needing the necessary trust rank"
+      },
+      "show_social_rank": {
+        "label": "Show social rank",
+        "description": "Toggle whether to show the user's real social rank (Deprecated: now a registry key sent over Photon)"
+      },
+      "show_mod_tag": {
+        "label": "Show mod tag",
+        "description": "Toggle whether to show the Red Staff nameplate"
+      },
+      "system_avatar_access": {
+        "label": "Avatar upload access",
+        "description": "User can upload and publish Avatars"
+      },
+      "system_early_adopter": {
+        "label": "Early adopter",
+        "description": "User bought VRC+ in the early period of its launch, around December 2020"
+      },
+      "system_feedback_access": {
+        "label": "Feedback access",
+        "description": "User can send Feedback"
+      },
+      "system_generated": {
+        "label": "System generated",
+        "description": "User was internally created by the system (Tag was visible briefly on 2025-09-29 and removed on 2025-09-30)"
+      },
+      "system_probable_troll": {
+        "label": "Probable troll",
+        "description": "User has been reported multiple times and is (probably) a troll"
+      },
+      "system_supporter": {
+        "label": "VRC+ supporter",
+        "description": "User has an active VRC+ subscription"
+      },
+      "system_legend": {
+        "label": "Legend",
+        "description": "User is an Experienced player and was active during the Summer of 2018 (Tag removed in 2022-05-05)"
+      },
+      "system_scripting_access": {
+        "label": "Scripting access",
+        "description": "User can upload user-made scripts (Deprecated)"
+      },
+      "system_troll": {
+        "label": "Confirmed troll",
+        "description": "User is a confirmed troll"
+      },
+      "system_trust_basic": {
+        "label": "New User (blue)",
+        "description": "User is \"New User\" (blue) Trust rank"
+      },
+      "system_trust_known": {
+        "label": "User (green)",
+        "description": "User is \"User\" (green) Trust rank"
+      },
+      "system_trust_trusted": {
+        "label": "Known User (orange)",
+        "description": "User is \"Known User\" (orange) Trust rank"
+      },
+      "system_trust_veteran": {
+        "label": "Trusted User (purple)",
+        "description": "User is \"Trusted User\" (purple) Trust rank"
+      },
+      "system_trust_intermediate": {
+        "label": "Intermediate trust",
+        "description": "Unknown (Tag removed in 2022-05-05)"
+      },
+      "system_trust_advanced": {
+        "label": "Advanced trust",
+        "description": "Unknown (Tag removed in 2022-05-05)"
+      },
+      "system_trust_legend": {
+        "label": "Veteran User (gold)",
+        "description": "User is \"Veteran User\" (gold color) Trust rank (Role was removed in Sep 2018. Tag removed in 2022-05-05)"
+      },
+      "system_world_access": {
+        "label": "World upload access",
+        "description": "User can upload and publish Worlds"
+      },
+      "system_vital_test_user_do_not_delete": {
+        "label": "Vital test user",
+        "description": "User should not be deleted as it is vital for testing or other internal systems (Tag was visible briefly on 2025-09-29 and removed on 2025-09-30)"
+      },
+      "language_afr": {
+        "label": "Afrikaans",
+        "description": "Afrikaans"
+      },
+      "language_ara": {
+        "label": "العربية",
+        "description": "Arabic"
+      },
+      "language_ase": {
+        "label": "American Sign Language",
+        "description": "American Sign Language"
+      },
+      "language_asf": {
+        "label": "Auslan (Australian Sign Language)",
+        "description": "Australian Sign Language"
+      },
+      "language_ben": {
+        "label": "বাংলা",
+        "description": "Bengali"
+      },
+      "language_bfi": {
+        "label": "British Sign Language",
+        "description": "British Sign Language"
+      },
+      "language_bul": {
+        "label": "български",
+        "description": "Bulgarian"
+      },
+      "language_ces": {
+        "label": "Čeština",
+        "description": "Czech"
+      },
+      "language_cmn": {
+        "label": "官话",
+        "description": "Mandarin Chinese"
+      },
+      "language_cym": {
+        "label": "Cymraeg",
+        "description": "Welsh"
+      },
+      "language_dan": {
+        "label": "Dansk",
+        "description": "Danish"
+      },
+      "language_deu": {
+        "label": "Deutsch",
+        "description": "German"
+      },
+      "language_dse": {
+        "label": "Nederlandse Gebarentaal",
+        "description": "Dutch Sign Language"
+      },
+      "language_ell": {
+        "label": "Ελληνικά",
+        "description": "Modern Greek (1453-)"
+      },
+      "language_eng": {
+        "label": "English",
+        "description": "English"
+      },
+      "language_epo": {
+        "label": "Esperanto",
+        "description": "Esperanto"
+      },
+      "language_est": {
+        "label": "eesti",
+        "description": "Estonian"
+      },
+      "language_fil": {
+        "label": "Filipino",
+        "description": "Filipino, Pilipino"
+      },
+      "language_fin": {
+        "label": "Suomi",
+        "description": "Finnish"
+      },
+      "language_fra": {
+        "label": "Français",
+        "description": "French"
+      },
+      "language_fsl": {
+        "label": "langue des signes française",
+        "description": "French Sign Language"
+      },
+      "language_gla": {
+        "label": "Gàidhlig",
+        "description": "Scottish Gaelic, Gaelic"
+      },
+      "language_gle": {
+        "label": "Gaeilge",
+        "description": "Irish"
+      },
+      "language_gsg": {
+        "label": "Deutsche Gebärdensprache",
+        "description": "German Sign Language"
+      },
+      "language_heb": {
+        "label": "עברית",
+        "description": "Hebrew"
+      },
+      "language_hin": {
+        "label": "हिन्दी",
+        "description": "Hindi"
+      },
+      "language_hmn": {
+        "label": "Hmoob",
+        "description": "Hmong, Mong"
+      },
+      "language_hrv": {
+        "label": "hrvatski",
+        "description": "Croatian"
+      },
+      "language_hun": {
+        "label": "Magyar",
+        "description": "Hungarian"
+      },
+      "language_hye": {
+        "label": "հայերեն",
+        "description": "Armenian"
+      },
+      "language_ind": {
+        "label": "Bahasa Indonesia",
+        "description": "Indonesian"
+      },
+      "language_isl": {
+        "label": "íslenska",
+        "description": "Icelandic"
+      },
+      "language_ita": {
+        "label": "Italiano",
+        "description": "Italian"
+      },
+      "language_jpn": {
+        "label": "日本語",
+        "description": "Japanese"
+      },
+      "language_jsl": {
+        "label": "日本手話",
+        "description": "Japanese Sign Language"
+      },
+      "language_kor": {
+        "label": "한국어",
+        "description": "Korean"
+      },
+      "language_kvk": {
+        "label": "한국 수화 언어",
+        "description": "Korean Sign Language"
+      },
+      "language_lav": {
+        "label": "Latviešu",
+        "description": "Latvian"
+      },
+      "language_lit": {
+        "label": "lietuvių",
+        "description": "Lithuanian"
+      },
+      "language_ltz": {
+        "label": "Lëtzebuergesch",
+        "description": "Luxembourgish, Letzeburgesch"
+      },
+      "language_mar": {
+        "label": "मराठी",
+        "description": "Marathi"
+      },
+      "language_mkd": {
+        "label": "македонски",
+        "description": "Macedonian"
+      },
+      "language_mlt": {
+        "label": "Malti",
+        "description": "Maltese"
+      },
+      "language_mri": {
+        "label": "Māori",
+        "description": "Maori"
+      },
+      "language_msa": {
+        "label": "Bahasa Melayu",
+        "description": "Malay (macrolanguage)"
+      },
+      "language_nld": {
+        "label": "Nederlands",
+        "description": "Dutch, Flemish"
+      },
+      "language_nor": {
+        "label": "Norsk",
+        "description": "Norwegian"
+      },
+      "language_nzs": {
+        "label": "New Zealand Sign Language",
+        "description": "New Zealand Sign Language"
+      },
+      "language_pol": {
+        "label": "Polski",
+        "description": "Polish"
+      },
+      "language_por": {
+        "label": "Português",
+        "description": "Portuguese"
+      },
+      "language_ron": {
+        "label": "Română",
+        "description": "Romanian, Moldavian, Moldovan"
+      },
+      "language_rus": {
+        "label": "Русский",
+        "description": "Russian"
+      },
+      "language_sco": {
+        "label": "Scots",
+        "description": "Scots"
+      },
+      "language_slk": {
+        "label": "slovenčina",
+        "description": "Slovak"
+      },
+      "language_slv": {
+        "label": "slovenščina",
+        "description": "Slovenian"
+      },
+      "language_spa": {
+        "label": "Español",
+        "description": "Spanish, Castilian"
+      },
+      "language_swe": {
+        "label": "Svenska",
+        "description": "Swedish"
+      },
+      "language_tel": {
+        "label": "తెలుగు",
+        "description": "Telugu"
+      },
+      "language_tha": {
+        "label": "ภาษาไทย",
+        "description": "Thai"
+      },
+      "language_tok": {
+        "label": "toki pona",
+        "description": "Toki Pona"
+      },
+      "language_tur": {
+        "label": "Türkçe",
+        "description": "Turkish"
+      },
+      "language_tws": {
+        "label": "潮州話",
+        "description": "Tio-Sua"
+      },
+      "language_ukr": {
+        "label": "украї́нська",
+        "description": "Ukrainian"
+      },
+      "language_vie": {
+        "label": "Tiếng Việt",
+        "description": "Vietnamese"
+      },
+      "language_wuu": {
+        "label": "吳語",
+        "description": "Wu Chinese"
+      },
+      "language_yue": {
+        "label": "廣東話",
+        "description": "Yue Chinese"
+      },
+      "language_zho": {
+        "label": "中文",
+        "description": "Chinese"
+      },
+      "language_zxx": {
+        "label": "No linguistic content",
+        "description": "No linguistic content, Not applicable"
+      }
+    }
   }
 }

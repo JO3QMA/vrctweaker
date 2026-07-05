@@ -164,27 +164,21 @@
                 v-if="jsonStringArray(selected.tagsJson).length"
                 :label="t('userDetail.tags')"
               >
-                <el-tag
+                <VrcUserTagChip
                   v-for="tag in jsonStringArray(selected.tagsJson)"
                   :key="tag"
-                  size="small"
-                  class="tag-chip"
-                >
-                  {{ tag }}
-                </el-tag>
+                  :tag="tag"
+                />
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="jsonStringArray(selected.currentAvatarTagsJson).length"
                 :label="t('userDetail.avatarTags')"
               >
-                <el-tag
+                <VrcUserTagChip
                   v-for="tag in jsonStringArray(selected.currentAvatarTagsJson)"
                   :key="tag"
-                  size="small"
-                  class="tag-chip"
-                >
-                  {{ tag }}
-                </el-tag>
+                  :tag="tag"
+                />
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.currentAvatarImageUrl"
@@ -280,6 +274,7 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import EncounterHistoryList from "./EncounterHistoryList.vue";
 import VrcStatusTag from "./VrcStatusTag.vue";
+import VrcUserTagChip from "./VrcUserTagChip.vue";
 import type { UserCacheDTO } from "../wails/app";
 import {
   copyDisplayName,
@@ -650,10 +645,6 @@ onUnmounted(() => {
 .profile-detail-tabs :deep(.el-tabs__content),
 .profile-detail-tabs :deep(.el-tab-pane) {
   min-height: 0;
-}
-
-.tag-chip {
-  margin: 0.15rem 0.2rem 0 0;
 }
 
 .mono {
