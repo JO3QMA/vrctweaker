@@ -12,7 +12,8 @@ describe("VrcUserTagChip", () => {
     await nextTick();
 
     const chip = wrapper.find("[data-testid='user-tag-chip']");
-    expect(chip.text()).toContain("新規ユーザー（青）");
+    expect(chip.text()).toContain("New User");
+    expect(chip.text()).not.toContain("新規ユーザー");
     expect(chip.attributes("data-tag-id")).toBe("system_trust_basic");
   });
 

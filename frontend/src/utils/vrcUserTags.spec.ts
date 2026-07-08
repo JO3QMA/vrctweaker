@@ -12,7 +12,7 @@ function mockT(key: string): string {
     "userDetail.userTags.deprecated": "Deprecated",
     "userDetail.userTags.unknown": "Unknown tag",
     "userDetail.userTags.tag_id": "ID",
-    "userDetail.userTags.system_trust_basic.label": "New User (blue)",
+    "userDetail.userTags.system_trust_basic.label": "New User",
     "userDetail.userTags.system_trust_basic.description":
       "User is New User (blue) Trust rank",
     "userDetail.userTags.language_jpn.label": "日本語",
@@ -54,12 +54,13 @@ describe("vrcUserTags", () => {
     expect(userTagElementType(" system_trust_known ")).toBe("success");
   });
 
-  it("resolves known user tag display", () => {
+  it("resolves known user tag display without tag id in tooltip", () => {
     const d = resolveUserTagDisplay("system_trust_basic", mockT);
     expect(d.isKnown).toBe(true);
-    expect(d.label).toBe("New User (blue)");
+    expect(d.label).toBe("New User");
     expect(d.tooltip).toContain("New User (blue) Trust rank");
-    expect(d.tooltip).toContain("ID: system_trust_basic");
+    expect(d.tooltip).not.toContain("ID:");
+    expect(d.tooltip).not.toContain("system_trust_basic");
   });
 
   it("resolves language tag display", () => {
@@ -75,11 +76,13 @@ describe("vrcUserTags", () => {
     expect(d.tooltip).toContain("(Deprecated)");
   });
 
-  it("falls back for unknown tags", () => {
+  it("falls back for unknown tags without tag id in tooltip", () => {
     const d = resolveUserTagDisplay("system_slug", mockT);
     expect(d.isKnown).toBe(false);
     expect(d.label).toBe("system_slug");
     expect(d.tooltip).toContain("Unknown tag");
+    expect(d.tooltip).not.toContain("ID:");
+    expect(d.tooltip).not.toContain("system_slug");
   });
 
   it("returns empty display for null tag", () => {

@@ -480,31 +480,31 @@
         "description": "確認済みのトロール"
       },
       "system_trust_basic": {
-        "label": "新規ユーザー（青）",
+        "label": "New User",
         "description": "Trust rank「新規ユーザー」（青）"
       },
       "system_trust_known": {
-        "label": "ユーザー（緑）",
+        "label": "User",
         "description": "Trust rank「ユーザー」（緑）"
       },
       "system_trust_trusted": {
-        "label": "既知のユーザー（橙）",
+        "label": "Known User",
         "description": "Trust rank「既知のユーザー」（橙）"
       },
       "system_trust_veteran": {
-        "label": "信頼されたユーザー（紫）",
+        "label": "Trusted User",
         "description": "Trust rank「信頼されたユーザー」（紫）"
       },
       "system_trust_intermediate": {
-        "label": "中間 Trust",
+        "label": "Intermediate trust",
         "description": "不明（2022-05-05 にタグ削除）"
       },
       "system_trust_advanced": {
-        "label": "上級 Trust",
+        "label": "Advanced trust",
         "description": "不明（2022-05-05 にタグ削除）"
       },
       "system_trust_legend": {
-        "label": "ベテランユーザー（金）",
+        "label": "Veteran User",
         "description": "Trust rank「ベテランユーザー」（金）（2018年9月に役割削除、2022-05-05 にタグ削除）"
       },
       "system_world_access": {

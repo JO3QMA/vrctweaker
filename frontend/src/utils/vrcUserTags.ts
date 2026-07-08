@@ -188,7 +188,6 @@ export function resolveUserTagDisplay(
   }
   const trimmed = tag.trim();
   const deprecated = isDeprecatedUserTag(trimmed);
-  const tagIdLine = `${t(userTagMetaI18nKey("tag_id"))}: ${trimmed}`;
 
   if (isKnownUserTag(trimmed)) {
     const label = t(userTagI18nKey(trimmed, "label"));
@@ -196,9 +195,7 @@ export function resolveUserTagDisplay(
     const deprecatedLine = deprecated
       ? `(${t(userTagMetaI18nKey("deprecated"))})`
       : "";
-    const tooltip = [description, deprecatedLine, tagIdLine]
-      .filter(Boolean)
-      .join("\n");
+    const tooltip = [description, deprecatedLine].filter(Boolean).join("\n");
 
     return { label, tooltip, isKnown: true, deprecated };
   }
@@ -206,7 +203,7 @@ export function resolveUserTagDisplay(
   const unknown = t(userTagMetaI18nKey("unknown"));
   return {
     label: trimmed,
-    tooltip: `${unknown}\n${tagIdLine}`,
+    tooltip: unknown,
     isKnown: false,
     deprecated: false,
   };
