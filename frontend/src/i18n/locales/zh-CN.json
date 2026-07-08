@@ -480,19 +480,19 @@
         "description": "User is a confirmed troll"
       },
       "system_trust_basic": {
-        "label": "New User (blue)",
+        "label": "New User",
         "description": "User is \"New User\" (blue) Trust rank"
       },
       "system_trust_known": {
-        "label": "User (green)",
+        "label": "User",
         "description": "User is \"User\" (green) Trust rank"
       },
       "system_trust_trusted": {
-        "label": "Known User (orange)",
+        "label": "Known User",
         "description": "User is \"Known User\" (orange) Trust rank"
       },
       "system_trust_veteran": {
-        "label": "Trusted User (purple)",
+        "label": "Trusted User",
         "description": "User is \"Trusted User\" (purple) Trust rank"
       },
       "system_trust_intermediate": {
@@ -504,7 +504,7 @@
         "description": "Unknown (Tag removed in 2022-05-05)"
       },
       "system_trust_legend": {
-        "label": "Veteran User (gold)",
+        "label": "Veteran User",
         "description": "User is \"Veteran User\" (gold color) Trust rank (Role was removed in Sep 2018. Tag removed in 2022-05-05)"
       },
       "system_world_access": {

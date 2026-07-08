@@ -44,7 +44,8 @@ describe("VrcUserCacheDetail", () => {
     await nextTick();
 
     expect(wrapper.text()).toContain("日本語");
-    expect(wrapper.text()).toContain("新規ユーザー（青）");
+    expect(wrapper.text()).toContain("New User");
+    expect(wrapper.text()).not.toContain("新規ユーザー");
     expect(wrapper.text()).not.toContain("system_trust_basic");
   });
 
@@ -150,7 +151,8 @@ describe("VrcUserCacheDetail", () => {
     expect(text).toContain("wrld_x:123~grp");
     expect(text).toContain("trusted");
     expect(text).toContain("standalonewindows");
-    expect(text).toContain("新規ユーザー（青）");
+    expect(text).toContain("New User");
+    expect(text).not.toContain("新規ユーザー");
     expect(text).not.toContain("system_trust_basic");
     expect(text).toContain("author_tag");
   });
