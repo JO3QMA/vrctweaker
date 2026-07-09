@@ -179,8 +179,7 @@ func (c *Client) verifyTwoFactor(ctx context.Context, client *http.Client, code 
 		return errors.New("2FAコードが正しくありません")
 	}
 	if resp.StatusCode >= 400 {
-		msg, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("2FA verification failed: %d %s", resp.StatusCode, string(msg))
+		return fmt.Errorf("2FA verification failed: %d", resp.StatusCode)
 	}
 	return nil
 }

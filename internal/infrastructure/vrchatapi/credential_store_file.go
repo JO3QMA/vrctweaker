@@ -8,6 +8,11 @@ import (
 
 // FileCredentialStore persists the VRChat auth token in a single file (0600).
 // Used when the OS keyring is unavailable (e.g. headless Linux / devcontainer without D-Bus).
+//
+// ponytail: on Windows, os.WriteFile mode bits do not map to restrictive ACLs; the file
+// gets default user ACLs. Accepted because the value is normally an AES-GCM wrapped blob
+// and Windows uses the keyring as the primary store (this file is a rare fallback). Upgrade
+// path: golang.org/x/sys/windows ACL APIs if restrictive ACLs are ever required.
 type FileCredentialStore struct {
 	path string
 }

@@ -191,6 +191,9 @@ func TestClient_Login_twoFactorVerifyServerError(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "2FA verification failed") {
 		t.Fatalf("err = %v, want verification failed", err)
 	}
+	if strings.Contains(err.Error(), "server blew up") {
+		t.Fatalf("err must not embed API response body, got %v", err)
+	}
 }
 
 func TestClient_getAuthUserWithJar_apiError(t *testing.T) {
