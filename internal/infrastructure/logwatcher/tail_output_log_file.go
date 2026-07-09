@@ -6,8 +6,6 @@ import (
 	"io"
 	"os"
 	"time"
-
-	"vrchat-tweaker/internal/domain/activity"
 )
 
 // tailCheckpoint reports read progress after each consumed line.
@@ -68,16 +66,9 @@ func tailOutputLogFile(
 
 		lineTrimmed := trimNL(line)
 		if lineTrimmed != "" {
-			baseTime := activity.ParseVRChatTimestamp(lineTrimmed, time.Now().In(time.Local))
-			events, parseErr := parser.ParseLine(lineTrimmed, baseTime)
+			baseTime, parseErr := dispatchOutputLogLine(lineTrimmed, parser, handler)
 			if parseErr != nil {
 				logger("[multi-logwatcher] parse %s: %v", path, parseErr)
-			} else {
-				for _, ev := range events {
-					if ev != nil {
-						handler.Handle(ev)
-					}
-				}
 			}
 			if checkpoint != nil {
 				checkpoint(offset, baseTime)

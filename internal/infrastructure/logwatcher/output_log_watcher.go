@@ -5,7 +5,6 @@ import (
 	"context"
 	"io"
 	"os"
-	"sync"
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
@@ -65,10 +64,7 @@ type OutputLogWatcher struct {
 	// startup lines already written to the new file before the watcher seeks to EOF.
 	logFileSwitchHandler LogFileSwitchHandler
 
-	mu        sync.Mutex
-	status    string // "idle", "running", "stopped"
-	lastErr   error
-	lastErrAt time.Time
+	pollWatcherState
 
 	// lastTailedPath is written only from run(); tracks the path last opened for tailing.
 	lastTailedPath string
@@ -80,11 +76,11 @@ func NewOutputLogWatcher(configuredPath string, parser LogParser, handler EventH
 		logger = diag.Nop
 	}
 	w := &OutputLogWatcher{
-		configuredPath: configuredPath,
-		parser:         parser,
-		handler:        handler,
-		logger:         logger,
-		status:         "idle",
+		configuredPath:   configuredPath,
+		parser:           parser,
+		handler:          handler,
+		logger:           logger,
+		pollWatcherState: newPollWatcherState(),
 	}
 	if info, err := os.Stat(configuredPath); err == nil && info.IsDir() {
 		w.watchDir = configuredPath
@@ -114,37 +110,11 @@ func (w *OutputLogWatcher) resolveActivePath() (string, error) {
 
 // Start begins tailing the file in a goroutine. Cancel ctx to stop.
 func (w *OutputLogWatcher) Start(ctx context.Context) error {
-	w.mu.Lock()
-	if w.status == "running" {
-		w.mu.Unlock()
+	if !w.tryStart() {
 		return nil
 	}
-	w.status = "running"
-	w.lastErr = nil
-	w.mu.Unlock()
-
 	go w.run(ctx)
 	return nil
-}
-
-// Status returns the current status and last error if any.
-func (w *OutputLogWatcher) Status() (status string, lastErr error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	return w.status, w.lastErr
-}
-
-func (w *OutputLogWatcher) setErr(err error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.lastErr = err
-	w.lastErrAt = time.Now()
-}
-
-func (w *OutputLogWatcher) setStatus(s string) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.status = s
 }
 
 const (
@@ -278,16 +248,9 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 				continue
 			}
 
-			baseTime := activity.ParseVRChatTimestamp(lineTrimmed, time.Now().In(time.Local))
-			events, parseErr := w.parser.ParseLine(lineTrimmed, baseTime)
-			if parseErr != nil {
+			if _, parseErr := dispatchOutputLogLine(lineTrimmed, w.parser, w.handler); parseErr != nil {
 				w.logger("[logwatcher] parse error: %v", parseErr)
 				continue
-			}
-			for _, ev := range events {
-				if ev != nil {
-					w.handler.Handle(ev)
-				}
 			}
 		}
 
@@ -299,11 +262,4 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 		case <-time.After(200 * time.Millisecond):
 		}
 	}
-}
-
-func trimNL(s string) string {
-	for len(s) > 0 && (s[len(s)-1] == '\n' || s[len(s)-1] == '\r') {
-		s = s[:len(s)-1]
-	}
-	return s
 }

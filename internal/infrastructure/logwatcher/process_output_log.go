@@ -5,7 +5,6 @@ import (
 	"context"
 	"io"
 	"os"
-	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
 	"vrchat-tweaker/internal/infrastructure/diag"
@@ -63,16 +62,8 @@ func WarmSessionCorrelatorFromLogFile(ctx context.Context, path string, endOffse
 		}
 		lineTrimmed := trimNL(line)
 		if lineTrimmed != "" {
-			baseTime := activity.ParseVRChatTimestamp(lineTrimmed, time.Now().In(time.Local))
-			events, parseErr := parser.ParseLine(lineTrimmed, baseTime)
-			if parseErr != nil {
+			if _, parseErr := dispatchOutputLogLine(lineTrimmed, parser, EventHandlerFunc(warmer.WarmFromParsedEvent)); parseErr != nil {
 				logger("[logwatcher] warm parse error: %v", parseErr)
-			} else {
-				for _, ev := range events {
-					if ev != nil {
-						warmer.WarmFromParsedEvent(ev)
-					}
-				}
 			}
 		}
 		if err == io.EOF {
@@ -130,16 +121,8 @@ func ProcessOutputLogFileFromOffset(ctx context.Context, path string, startOffse
 		}
 		lineTrimmed := trimNL(line)
 		if lineTrimmed != "" {
-			baseTime := activity.ParseVRChatTimestamp(lineTrimmed, time.Now().In(time.Local))
-			events, parseErr := parser.ParseLine(lineTrimmed, baseTime)
-			if parseErr != nil {
+			if _, parseErr := dispatchOutputLogLine(lineTrimmed, parser, handler); parseErr != nil {
 				logger("[logwatcher] bootstrap parse error: %v", parseErr)
-			} else {
-				for _, ev := range events {
-					if ev != nil {
-						handler.Handle(ev)
-					}
-				}
 			}
 		}
 		if onProgress != nil {

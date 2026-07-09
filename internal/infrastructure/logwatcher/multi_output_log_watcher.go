@@ -3,7 +3,6 @@ package logwatcher
 import (
 	"context"
 	"os"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -28,10 +27,7 @@ type MultiOutputLogWatcher struct {
 
 	activeLogStallTimeout time.Duration
 
-	mu        sync.Mutex
-	status    string
-	lastErr   error
-	lastErrAt time.Time
+	pollWatcherState
 }
 
 type trackedLogFile struct {
@@ -61,43 +57,17 @@ func NewMultiOutputLogWatcher(
 		callbacks:             callbacks,
 		logger:                logger,
 		activeLogStallTimeout: defaultActiveLogStallTimeout,
-		status:                "idle",
+		pollWatcherState:      newPollWatcherState(),
 	}
 }
 
 // Start begins polling in a goroutine. Cancel ctx to stop.
 func (w *MultiOutputLogWatcher) Start(ctx context.Context) error {
-	w.mu.Lock()
-	if w.status == "running" {
-		w.mu.Unlock()
+	if !w.tryStart() {
 		return nil
 	}
-	w.status = "running"
-	w.lastErr = nil
-	w.mu.Unlock()
-
 	go w.run(ctx)
 	return nil
-}
-
-// Status returns the current status and last error if any.
-func (w *MultiOutputLogWatcher) Status() (status string, lastErr error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	return w.status, w.lastErr
-}
-
-func (w *MultiOutputLogWatcher) setErr(err error) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.lastErr = err
-	w.lastErrAt = time.Now()
-}
-
-func (w *MultiOutputLogWatcher) setStatus(s string) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.status = s
 }
 
 func (w *MultiOutputLogWatcher) run(ctx context.Context) {
