@@ -1,20 +1,16 @@
 package logwatcher
 
-import (
-	"sync"
-	"time"
-)
+import "sync"
 
 // pollWatcherState holds status and last error for tail/poll log watchers.
 type pollWatcherState struct {
-	mu        sync.Mutex
-	status    string // "idle", "running", "stopped"
-	lastErr   error
-	lastErrAt time.Time
+	mu      sync.Mutex
+	status  string // "idle", "running", "stopped"
+	lastErr error
 }
 
-func newPollWatcherState() pollWatcherState {
-	return pollWatcherState{status: "idle"}
+func newPollWatcherState() *pollWatcherState {
+	return &pollWatcherState{status: "idle"}
 }
 
 func (s *pollWatcherState) Status() (status string, lastErr error) {
@@ -27,7 +23,6 @@ func (s *pollWatcherState) setErr(err error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.lastErr = err
-	s.lastErrAt = time.Now()
 }
 
 func (s *pollWatcherState) setStatus(status string) {

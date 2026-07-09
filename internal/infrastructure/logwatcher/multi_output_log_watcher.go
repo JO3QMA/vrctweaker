@@ -27,7 +27,7 @@ type MultiOutputLogWatcher struct {
 
 	activeLogStallTimeout time.Duration
 
-	pollWatcherState
+	*pollWatcherState
 }
 
 type trackedLogFile struct {

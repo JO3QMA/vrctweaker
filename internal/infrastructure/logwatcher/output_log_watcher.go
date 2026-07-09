@@ -64,7 +64,7 @@ type OutputLogWatcher struct {
 	// startup lines already written to the new file before the watcher seeks to EOF.
 	logFileSwitchHandler LogFileSwitchHandler
 
-	pollWatcherState
+	*pollWatcherState
 
 	// lastTailedPath is written only from run(); tracks the path last opened for tailing.
 	lastTailedPath string
