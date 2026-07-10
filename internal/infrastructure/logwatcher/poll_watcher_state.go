@@ -24,7 +24,7 @@ func newPollWatcherState() *pollWatcherState {
 func (s *pollWatcherState) Status() (status string, lastErr error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return s.status, s.lastErr
+	return string(s.status), s.lastErr
 }
 
 func (s *pollWatcherState) setErr(err error) {
@@ -33,7 +33,7 @@ func (s *pollWatcherState) setErr(err error) {
 	s.lastErr = err
 }
 
-func (s *pollWatcherState) setStatus(status string) {
+func (s *pollWatcherState) setStatus(status watcherStatus) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.status = status
@@ -43,10 +43,10 @@ func (s *pollWatcherState) setStatus(status string) {
 func (s *pollWatcherState) tryStart() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.status == "running" {
+	if s.status == statusRunning {
 		return false
 	}
-	s.status = "running"
+	s.status = statusRunning
 	s.lastErr = nil
 	return true
 }

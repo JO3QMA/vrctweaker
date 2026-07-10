@@ -71,7 +71,7 @@ func (w *MultiOutputLogWatcher) Start(ctx context.Context) error {
 }
 
 func (w *MultiOutputLogWatcher) run(ctx context.Context) {
-	defer w.setStatus("stopped")
+	defer w.setStatus(statusStopped)
 
 	tracked := make(map[string]*trackedLogFile)
 	now := time.Now()

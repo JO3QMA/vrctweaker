@@ -124,7 +124,7 @@ const (
 )
 
 func (w *OutputLogWatcher) run(ctx context.Context) {
-	defer w.setStatus("stopped")
+	defer w.setStatus(statusStopped)
 
 	for {
 		select {
