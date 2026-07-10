@@ -36,6 +36,9 @@ func (s *pollWatcherState) setErr(err error) {
 func (s *pollWatcherState) setStopped() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if s.status != statusRunning {
+		return
+	}
 	s.status = statusStopped
 }
 
