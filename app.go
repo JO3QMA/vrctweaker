@@ -416,7 +416,7 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 			return
 		}
 	} else {
-		ingestAdapter := logwatcher.NewActivityIngestAdapter(a.activity, ctx, logger, emitEncounters, absLogPath(watchPath))
+		ingestAdapter := a.activityIngestAdapterForPath(ctx, logger, emitEncounters, watchPath)
 		triggerHandler := logwatcher.NewAutomationTriggerHandler(a.automation, ctx, logger)
 		handler := logwatcher.NewMultiHandler(ingestAdapter, triggerHandler)
 		watcher := logwatcher.NewOutputLogWatcher(watchPath, parser, handler, logger)
@@ -424,25 +424,7 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 			if previousPath != "" {
 				a.finalizeOpenActivityForLogSource(c, previousPath)
 			}
-			if newPath != "" {
-				ingestAdapter.ResetSessionContextForNewLogFile()
-			}
-			if newPath == "" || parser == nil || handler == nil {
-				return nil
-			}
-			var lastVRLineTime time.Time
-			endOff, err := logwatcher.ProcessOutputLogFileFromOffset(c, newPath, 0, parser, handler, logger, func(_ int64, line string) {
-				if ts := activity.ParseVRChatTimestamp(line, time.Time{}); !ts.IsZero() {
-					lastVRLineTime = ts
-				}
-			})
-			if err != nil {
-				return err
-			}
-			_ = a.activity.SetActivityLogFileCheckpoint(c, watchDeps.watchPath, absLogPath(newPath), endOff, checkpointVRTime(lastVRLineTime))
-			if watchDeps.emitEncounters != nil {
-				watchDeps.emitEncounters()
-			}
+			a.replayActivityLogAfterFileSwitch(c, watchDeps, newPath, ingestAdapter)
 			return nil
 		}))
 		if startErr := watcher.Start(ctx); startErr != nil {

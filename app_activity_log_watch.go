@@ -61,6 +61,26 @@ func (a *App) handleActivityLogRotationHandoff(ctx context.Context, deps activit
 	return nil
 }
 
+// replayActivityLogAfterFileSwitch runs Log replay after single-file switch/truncate.
+// Activity ingest only — automation stays on live tail (ADR 0005 Decision 12).
+func (a *App) replayActivityLogAfterFileSwitch(
+	ctx context.Context,
+	deps activityLogWatchDeps,
+	newPath string,
+	ingestAdapter *logwatcher.ActivityIngestAdapter,
+) {
+	if newPath == "" || deps.parser == nil || ingestAdapter == nil || a.activity == nil {
+		return
+	}
+	a.ingestOneActivityLogBootstrap(
+		ctx, deps.watchPath, newPath, deps.parser, deps.logger, deps.emitEncounters,
+		nil, false, ingestAdapter,
+	)
+	if deps.emitEncounters != nil {
+		deps.emitEncounters()
+	}
+}
+
 func (a *App) startVRChatActivityMonitor(ctx context.Context, watchPath string) {
 	a.activityWatchMu.Lock()
 	if a.activityWatchCancel != nil {
@@ -102,15 +122,19 @@ func (a *App) finalizeAllLogSourcesOnVRChatExit(ctx context.Context, watchPath s
 		lastLine = time.Now().UTC()
 	}
 
+	// Stage 1: per-source finalize for known paths (checkpoint ∪ dir listing).
+	// Stage 2: global FinalizeAllOpenActivity for log_source_path IS NULL legacy rows (ADR 0005 Decision 13).
+	type pathClose struct {
+		fc *usecase.ActivityLogFileCheckpoint
+	}
+	paths := make(map[string]pathClose)
+
 	cp, err := a.activity.GetActivityLogCheckpoint(ctx)
 	if err == nil && cp != nil {
 		cp.NormalizeFiles()
 		for path, fc := range cp.Files {
-			closeAt := closeTimeForLogFile(path, lastLine, &fc)
-			if closeAt.IsZero() {
-				continue
-			}
-			_ = a.activity.FinalizeOpenActivityForLogSource(ctx, absLogPath(path), closeAt)
+			fcCopy := fc
+			paths[absLogPath(path)] = pathClose{fc: &fcCopy}
 		}
 	}
 
@@ -118,14 +142,22 @@ func (a *App) finalizeAllLogSourcesOnVRChatExit(ctx context.Context, watchPath s
 		if info, statErr := os.Stat(watchPath); statErr == nil && info.IsDir() {
 			if files, listErr := logwatcher.ListOutputLogFiles(watchPath); listErr == nil {
 				for _, path := range files {
-					closeAt := closeTimeForLogFile(path, lastLine, nil)
-					if closeAt.IsZero() {
+					abs := absLogPath(path)
+					if _, ok := paths[abs]; ok {
 						continue
 					}
-					_ = a.activity.FinalizeOpenActivityForLogSource(ctx, absLogPath(path), closeAt)
+					paths[abs] = pathClose{}
 				}
 			}
 		}
+	}
+
+	for path, pc := range paths {
+		closeAt := closeTimeForLogFile(path, lastLine, pc.fc)
+		if closeAt.IsZero() {
+			continue
+		}
+		_ = a.activity.FinalizeOpenActivityForLogSource(ctx, path, closeAt)
 	}
 
 	_ = a.activity.FinalizeAllOpenActivity(ctx, lastLine)
