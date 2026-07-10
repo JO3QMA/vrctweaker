@@ -124,7 +124,7 @@ const (
 )
 
 func (w *OutputLogWatcher) run(ctx context.Context) {
-	defer w.setStatus(statusStopped)
+	defer w.setStopped()
 
 	for {
 		select {
@@ -249,7 +249,8 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 			}
 
 			if _, parseErr := dispatchOutputLogLine(lineTrimmed, w.parser, w.handler); parseErr != nil {
-				w.logger("[logwatcher] parse error: %v", parseErr)
+				logDispatchLineErr(w.logger, parseErr,
+					"[logwatcher] parse error: %v", "[logwatcher] dispatch error: %v")
 				continue
 			}
 		}

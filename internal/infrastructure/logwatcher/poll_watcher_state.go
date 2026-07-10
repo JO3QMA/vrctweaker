@@ -33,13 +33,14 @@ func (s *pollWatcherState) setErr(err error) {
 	s.lastErr = err
 }
 
-func (s *pollWatcherState) setStatus(status watcherStatus) {
+func (s *pollWatcherState) setStopped() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	s.status = status
+	s.status = statusStopped
 }
 
 // tryStart marks the watcher running unless already running.
+// Restart after statusStopped is intentional: ctx cancel stops the goroutine, then Start may run again.
 func (s *pollWatcherState) tryStart() bool {
 	s.mu.Lock()
 	defer s.mu.Unlock()

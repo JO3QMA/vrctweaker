@@ -68,7 +68,9 @@ func tailOutputLogFile(
 		if lineTrimmed != "" {
 			baseTime, parseErr := dispatchOutputLogLine(lineTrimmed, parser, handler)
 			if parseErr != nil {
-				logger("[multi-logwatcher] parse %s: %v", path, parseErr)
+				logDispatchLineErr(logger, parseErr,
+					"[multi-logwatcher] parse %s: %v", "[multi-logwatcher] dispatch %s: %v",
+					path)
 			}
 			if checkpoint != nil {
 				checkpoint(offset, baseTime)

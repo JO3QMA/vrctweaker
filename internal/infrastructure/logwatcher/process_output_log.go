@@ -63,7 +63,8 @@ func WarmSessionCorrelatorFromLogFile(ctx context.Context, path string, endOffse
 		lineTrimmed := trimNL(line)
 		if lineTrimmed != "" {
 			if _, parseErr := dispatchOutputLogLine(lineTrimmed, parser, EventHandlerFunc(warmer.WarmFromParsedEvent)); parseErr != nil {
-				logger("[logwatcher] warm parse error: %v", parseErr)
+				logDispatchLineErr(logger, parseErr,
+					"[logwatcher] warm parse error: %v", "[logwatcher] warm dispatch error: %v")
 			}
 		}
 		if err == io.EOF {
@@ -122,7 +123,8 @@ func ProcessOutputLogFileFromOffset(ctx context.Context, path string, startOffse
 		lineTrimmed := trimNL(line)
 		if lineTrimmed != "" {
 			if _, parseErr := dispatchOutputLogLine(lineTrimmed, parser, handler); parseErr != nil {
-				logger("[logwatcher] bootstrap parse error: %v", parseErr)
+				logDispatchLineErr(logger, parseErr,
+					"[logwatcher] bootstrap parse error: %v", "[logwatcher] bootstrap dispatch error: %v")
 			}
 		}
 		if onProgress != nil {
