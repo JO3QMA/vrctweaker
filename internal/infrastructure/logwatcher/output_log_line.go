@@ -31,11 +31,14 @@ func dispatchOutputLogLine(lineTrimmed string, parser LogParser, handler EventHa
 
 // logDispatchLineErr logs dispatchOutputLogLine errors; nil parser/handler uses nilArgFmt.
 func logDispatchLineErr(logger Logger, err error, parseFmt, nilArgFmt string, args ...any) {
+	fmt := parseFmt
 	if errors.Is(err, errNilDispatchArg) {
-		logger(nilArgFmt, append(args, err)...)
-		return
+		fmt = nilArgFmt
 	}
-	logger(parseFmt, append(args, err)...)
+	logArgs := make([]any, len(args)+1)
+	copy(logArgs, args)
+	logArgs[len(args)] = err
+	logger(fmt, logArgs...)
 }
 
 func trimNL(s string) string {

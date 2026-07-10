@@ -40,6 +40,7 @@ func (s *pollWatcherState) setStopped() {
 		return
 	}
 	s.status = statusStopped
+	// lastErr is retained after stop so Status() can report the last resolve/read failure.
 }
 
 // tryStart marks the watcher running unless already running.

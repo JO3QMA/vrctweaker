@@ -79,6 +79,24 @@ func TestPollWatcherState_setErrStatus_concurrent(t *testing.T) {
 	}
 }
 
+func TestPollWatcherState_setStopped_retainsLastErr(t *testing.T) {
+	t.Parallel()
+	s := newPollWatcherState()
+	if !s.tryStart() {
+		t.Fatal("tryStart")
+	}
+	want := errors.New("resolve failed")
+	s.setErr(want)
+	s.setStopped()
+	status, lastErr := s.Status()
+	if status != string(statusStopped) {
+		t.Fatalf("status = %q, want stopped", status)
+	}
+	if !errors.Is(lastErr, want) {
+		t.Fatalf("lastErr = %v, want retained %v", lastErr, want)
+	}
+}
+
 func TestPollWatcherState_setStopped_onlyFromRunning(t *testing.T) {
 	t.Parallel()
 	s := newPollWatcherState()
