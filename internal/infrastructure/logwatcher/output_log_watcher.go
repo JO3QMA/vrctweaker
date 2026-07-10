@@ -3,6 +3,8 @@ package logwatcher
 import (
 	"bufio"
 	"context"
+	"errors"
+	"fmt"
 	"io"
 	"os"
 	"time"
@@ -13,6 +15,10 @@ import (
 
 // Logger is a diagnostic logger for logwatcher (shared with picturewatcher via diag).
 type Logger = diag.Logger
+
+// ErrOutputLogWatcherFileOnly is returned when Start is given a directory path.
+// Directory watching uses NewMultiOutputLogWatcher (ADR 0005 Decision 11).
+var ErrOutputLogWatcherFileOnly = errors.New("logwatcher: OutputLogWatcher is file-only; use NewMultiOutputLogWatcher for directories")
 
 // EventHandler receives parsed events from the watcher.
 type EventHandler interface {
@@ -49,19 +55,17 @@ type LogParser interface {
 	ParseLine(line string, baseTime time.Time) ([]activity.ParsedEvent, error)
 }
 
-// OutputLogWatcher tails output_log.txt and emits parsed events.
-// configuredPath may be a regular file or a directory; if it is a directory, the newest
-// output_log*.txt under it is tailed and the watcher switches when a newer file appears.
+// OutputLogWatcher tails a single output_log.txt file and emits parsed events.
+// For a log directory, use NewMultiOutputLogWatcher instead (ADR 0005 Decision 11).
 type OutputLogWatcher struct {
 	configuredPath string
-	watchDir       string // non-empty => resolve latest output_log*.txt under this dir
-	fixedFile      string // non-empty => tail this file only
+	fixedFile      string
 	parser         LogParser
 	handler        EventHandler
 	logger         Logger
-	// logFileSwitchHandler is optional; called when tailing switches to another output_log file
-	// or when the current file was truncated. Used to finalize open activity rows and ingest
-	// startup lines already written to the new file before the watcher seeks to EOF.
+	// logFileSwitchHandler is optional; called when the tailed file path changes
+	// or when the current file was truncated. Used to finalize open activity rows and
+	// Log-replay lines already written before the watcher seeks to EOF.
 	logFileSwitchHandler LogFileSwitchHandler
 
 	*pollWatcherState
@@ -70,27 +74,23 @@ type OutputLogWatcher struct {
 	lastTailedPath string
 }
 
-// NewOutputLogWatcher creates a watcher for the given path (file or directory).
+// NewOutputLogWatcher creates a single-file watcher.
+// configuredPath must be a regular file; Start returns ErrOutputLogWatcherFileOnly for directories.
 func NewOutputLogWatcher(configuredPath string, parser LogParser, handler EventHandler, logger Logger) *OutputLogWatcher {
 	if logger == nil {
 		logger = diag.Nop
 	}
-	w := &OutputLogWatcher{
+	return &OutputLogWatcher{
 		configuredPath:   configuredPath,
+		fixedFile:        configuredPath,
 		parser:           parser,
 		handler:          handler,
 		logger:           logger,
 		pollWatcherState: newPollWatcherState(),
 	}
-	if info, err := os.Stat(configuredPath); err == nil && info.IsDir() {
-		w.watchDir = configuredPath
-	} else {
-		w.fixedFile = configuredPath
-	}
-	return w
 }
 
-// SetLogFileSwitchHandler registers a callback invoked when the tailed output_log path changes
+// SetLogFileSwitchHandler registers a callback invoked when the tailed file path changes
 // or the current file is truncated. Call before Start.
 func (w *OutputLogWatcher) SetLogFileSwitchHandler(h LogFileSwitchHandler) {
 	w.mu.Lock()
@@ -99,9 +99,6 @@ func (w *OutputLogWatcher) SetLogFileSwitchHandler(h LogFileSwitchHandler) {
 }
 
 func (w *OutputLogWatcher) resolveActivePath() (string, error) {
-	if w.watchDir != "" {
-		return ResolveLatestOutputLogFile(w.watchDir)
-	}
 	if w.fixedFile != "" {
 		return w.fixedFile, nil
 	}
@@ -109,7 +106,11 @@ func (w *OutputLogWatcher) resolveActivePath() (string, error) {
 }
 
 // Start begins tailing the file in a goroutine. Cancel ctx to stop.
+// Returns ErrOutputLogWatcherFileOnly if configuredPath is a directory.
 func (w *OutputLogWatcher) Start(ctx context.Context) error {
+	if info, err := os.Stat(w.fixedFile); err == nil && info.IsDir() {
+		return fmt.Errorf("%w: %s", ErrOutputLogWatcherFileOnly, w.fixedFile)
+	}
 	if !w.tryStart() {
 		return nil
 	}
@@ -205,7 +206,7 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 					w.logger("[logwatcher] read error: %v", err)
 					break readLoop
 				}
-				// EOF: check for file rotation (truncate or replace) or newer log file in dir mode
+				// EOF: check for truncate or replace
 				curInfo, statErr := os.Stat(activePath)
 				if statErr != nil {
 					_ = f.Close()
@@ -226,14 +227,6 @@ func (w *OutputLogWatcher) run(ctx context.Context) {
 				if curInfo.ModTime() != info.ModTime() {
 					_ = f.Close()
 					break readLoop
-				}
-				if w.watchDir != "" {
-					latest, latErr := ResolveLatestOutputLogFile(w.watchDir)
-					if latErr == nil && latest != activePath {
-						_ = f.Close()
-						w.logger("[logwatcher] switching to newer output log: %s", latest)
-						break readLoop
-					}
 				}
 				select {
 				case <-ctx.Done():

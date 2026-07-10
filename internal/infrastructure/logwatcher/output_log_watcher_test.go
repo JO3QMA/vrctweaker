@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
-	"vrchat-tweaker/internal/testvrc"
 )
 
 func TestOutputLogWatcher_EmitsEvents(t *testing.T) {
@@ -72,191 +71,15 @@ func TestOutputLogWatcher_EmitsEvents(t *testing.T) {
 	}
 }
 
-func TestOutputLogWatcher_DirectoryMode_SwitchesToNewerFile(t *testing.T) {
+func TestOutputLogWatcher_Start_rejectsDirectory(t *testing.T) {
 	dir := t.TempDir()
-	oldPath := filepath.Join(dir, "output_log_2026-01-01_00-00-00.txt")
-	newPath := filepath.Join(dir, "output_log_2026-03-22_00-47-45.txt")
-	if err := os.WriteFile(oldPath, []byte(""), 0600); err != nil {
-		t.Fatal(err)
+	w := NewOutputLogWatcher(dir, activity.NewLogParser(), EventHandlerFunc(func(activity.ParsedEvent) {}), nil)
+	err := w.Start(context.Background())
+	if err == nil {
+		t.Fatal("Start: want error for directory path")
 	}
-	oldT := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	if err := os.Chtimes(oldPath, oldT, oldT); err != nil {
-		t.Fatal(err)
-	}
-
-	parser := activity.NewLogParser()
-	var mu sync.Mutex
-	var received []activity.ParsedEvent
-	handler := EventHandlerFunc(func(ev activity.ParsedEvent) {
-		mu.Lock()
-		received = append(received, ev)
-		mu.Unlock()
-	})
-
-	watcher := NewOutputLogWatcher(dir, parser, handler, nil)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	if err := watcher.Start(ctx); err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(200 * time.Millisecond)
-
-	if err := os.WriteFile(newPath, []byte(""), 0600); err != nil {
-		t.Fatal(err)
-	}
-	newT := time.Date(2026, 3, 22, 0, 47, 45, 0, time.UTC)
-	if err := os.Chtimes(newPath, newT, newT); err != nil {
-		t.Fatal(err)
-	}
-
-	time.Sleep(700 * time.Millisecond)
-
-	lines := []byte("2026.03.22 00:47:45 Debug      -  [Behaviour] OnPlayerJoined SwitchUser (usr_switch01)\n")
-	f, err := os.OpenFile(newPath, os.O_APPEND|os.O_WRONLY, 0600)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := f.Write(lines); err != nil {
-		_ = f.Close()
-		t.Fatal(err)
-	}
-	_ = f.Close()
-
-	deadline := time.Now().Add(4 * time.Second)
-	for time.Now().Before(deadline) {
-		mu.Lock()
-		n := len(received)
-		mu.Unlock()
-		if n >= 1 {
-			break
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
-
-	mu.Lock()
-	defer mu.Unlock()
-	if len(received) < 1 {
-		t.Fatalf("handler received %d events after switch, want at least 1", len(received))
-	}
-	enc, ok := received[len(received)-1].(*activity.EncounterEvent)
-	if !ok || enc.DisplayName != "SwitchUser" {
-		t.Fatalf("last event = %T %+v, want Encounter SwitchUser", received[len(received)-1], received[len(received)-1])
-	}
-}
-
-func TestOutputLogWatcher_DirectoryMode_IngestsPrefixedLinesOnSwitch(t *testing.T) {
-	dir := t.TempDir()
-	oldPath := filepath.Join(dir, "output_log_2026-01-01_00-00-00.txt")
-	newPath := filepath.Join(dir, "output_log_2026-03-22_00-47-45.txt")
-	const cozyWorld = "wrld_6041ba53-0ac0-4b5b-9ecb-890ea2b0aefa"
-	cozyInst := cozyWorld + ":48580~friends(" + testvrc.FriendsHostUserID + ")~region(jp)"
-	prefixed := []byte(
-		"2026.03.22 00:47:45 Debug      -  [Behaviour] Destination set: " + cozyInst + "\n" +
-			"2026.03.22 00:47:46 Debug      -  [Behaviour] Entering Room: Cozy with․\n",
-	)
-	if err := os.WriteFile(oldPath, []byte(""), 0600); err != nil {
-		t.Fatal(err)
-	}
-	oldT := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	if err := os.Chtimes(oldPath, oldT, oldT); err != nil {
-		t.Fatal(err)
-	}
-
-	parser := activity.NewLogParser()
-	var mu sync.Mutex
-	var received []activity.ParsedEvent
-	handler := EventHandlerFunc(func(ev activity.ParsedEvent) {
-		mu.Lock()
-		received = append(received, ev)
-		mu.Unlock()
-	})
-
-	watcher := NewOutputLogWatcher(dir, parser, handler, nil)
-	watcher.SetLogFileSwitchHandler(LogFileSwitchHandlerFunc(func(ctx context.Context, _, newPath string) error {
-		_, err := ProcessOutputLogFileFromOffset(ctx, newPath, 0, parser, handler, nil, nil)
-		return err
-	}))
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	if err := watcher.Start(ctx); err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(200 * time.Millisecond)
-
-	if err := os.WriteFile(newPath, prefixed, 0600); err != nil {
-		t.Fatal(err)
-	}
-	newT := time.Date(2026, 3, 22, 0, 47, 45, 0, time.UTC)
-	if err := os.Chtimes(newPath, newT, newT); err != nil {
-		t.Fatal(err)
-	}
-
-	deadline := time.Now().Add(4 * time.Second)
-	for time.Now().Before(deadline) {
-		mu.Lock()
-		n := len(received)
-		mu.Unlock()
-		if n >= 2 {
-			break
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
-
-	mu.Lock()
-	defer mu.Unlock()
-	if len(received) < 2 {
-		t.Fatalf("handler received %d events after switch, want at least 2 (destination + room name)", len(received))
-	}
-}
-
-func TestOutputLogWatcher_DirectoryMode_OnActiveLogPathChangeOnSwitch(t *testing.T) {
-	dir := t.TempDir()
-	oldPath := filepath.Join(dir, "output_log_2026-01-01_00-00-00.txt")
-	newPath := filepath.Join(dir, "output_log_2026-03-22_00-47-45.txt")
-	if err := os.WriteFile(oldPath, []byte(""), 0600); err != nil {
-		t.Fatal(err)
-	}
-	oldT := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
-	if err := os.Chtimes(oldPath, oldT, oldT); err != nil {
-		t.Fatal(err)
-	}
-
-	parser := activity.NewLogParser()
-	handler := EventHandlerFunc(func(activity.ParsedEvent) {})
-
-	var pathChangeCalls atomic.Int32
-	watcher := NewOutputLogWatcher(dir, parser, handler, nil)
-	watcher.SetLogFileSwitchHandler(LogFileSwitchHandlerFunc(func(context.Context, string, string) error {
-		pathChangeCalls.Add(1)
-		return nil
-	}))
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	if err := watcher.Start(ctx); err != nil {
-		t.Fatal(err)
-	}
-	time.Sleep(200 * time.Millisecond)
-	if pathChangeCalls.Load() != 0 {
-		t.Fatalf("path change callback on initial tail: %d, want 0", pathChangeCalls.Load())
-	}
-
-	if err := os.WriteFile(newPath, []byte(""), 0600); err != nil {
-		t.Fatal(err)
-	}
-	newT := time.Date(2026, 3, 22, 0, 47, 45, 0, time.UTC)
-	if err := os.Chtimes(newPath, newT, newT); err != nil {
-		t.Fatal(err)
-	}
-
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) && pathChangeCalls.Load() < 1 {
-		time.Sleep(50 * time.Millisecond)
-	}
-	if pathChangeCalls.Load() != 1 {
-		t.Fatalf("path change callbacks = %d, want 1 after switch to newer log", pathChangeCalls.Load())
+	if !errors.Is(err, ErrOutputLogWatcherFileOnly) {
+		t.Fatalf("Start err = %v, want ErrOutputLogWatcherFileOnly", err)
 	}
 }
 
