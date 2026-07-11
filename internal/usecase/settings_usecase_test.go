@@ -386,6 +386,28 @@ func TestEnsureOutputLogWatchDir_statPermissionKeepsSetting(t *testing.T) {
 	}
 }
 
+func TestEnsureOutputLogWatchDir_clearSetFailureKeepsSetting(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "missing", "output_log.txt")
+	repo := &errOnSetSettingsRepo{
+		fakeAppSettingsRepo: fakeAppSettingsRepo{m: map[string]string{keyOutputLogPath: missing}},
+		failKey:             keyOutputLogPath,
+	}
+	uc := NewSettingsUseCase(repo)
+	got, cleared, err := uc.EnsureOutputLogWatchDir(context.Background())
+	if err == nil {
+		t.Fatal("expected set error when clearing stale path")
+	}
+	if cleared {
+		t.Fatal("cleared must be false when Set fails")
+	}
+	if got != "" {
+		t.Fatalf("got %q", got)
+	}
+	if stored, _ := uc.GetOutputLogPath(context.Background()); stored != missing {
+		t.Fatalf("stored %q, want preserved %q", stored, missing)
+	}
+}
+
 func TestEnsureOutputLogWatchDir_directoryPassthrough(t *testing.T) {
 	dir := t.TempDir()
 	absDir, _ := filepath.Abs(dir)

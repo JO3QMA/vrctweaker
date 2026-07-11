@@ -89,7 +89,8 @@ func validateOutputLogPathSetting(path string) error {
 // If the stored setting is a regular file, it is migrated once to the parent directory.
 // Missing or unusable paths clear the setting and return ("", true, nil) so the caller can
 // log a warning and fall back to the default folder. Transient I/O errors are returned
-// without clearing (cleared=false).
+// without clearing (cleared=false). If clearing the setting fails, cleared=false and the
+// Set error is returned.
 func (uc *SettingsUseCase) EnsureOutputLogWatchDir(ctx context.Context) (dir string, cleared bool, err error) {
 	p, err := uc.GetOutputLogPath(ctx)
 	if err != nil {
@@ -106,8 +107,7 @@ func (uc *SettingsUseCase) EnsureOutputLogWatchDir(ctx context.Context) (dir str
 	info, statErr := os.Stat(absPath)
 	if statErr != nil {
 		if errors.Is(statErr, os.ErrNotExist) {
-			_ = uc.repo.Set(ctx, keyOutputLogPath, "")
-			return "", true, nil
+			return uc.clearStaleOutputLogPath(ctx)
 		}
 		return "", false, fmt.Errorf("output_log path not accessible: %w", statErr)
 	}
@@ -115,21 +115,18 @@ func (uc *SettingsUseCase) EnsureOutputLogWatchDir(ctx context.Context) (dir str
 		return absPath, false, nil
 	}
 	if !info.Mode().IsRegular() {
-		_ = uc.repo.Set(ctx, keyOutputLogPath, "")
-		return "", true, nil
+		return uc.clearStaleOutputLogPath(ctx)
 	}
 	parent := filepath.Dir(absPath)
 	parentInfo, parentErr := os.Stat(parent)
 	if parentErr != nil {
 		if errors.Is(parentErr, os.ErrNotExist) {
-			_ = uc.repo.Set(ctx, keyOutputLogPath, "")
-			return "", true, nil
+			return uc.clearStaleOutputLogPath(ctx)
 		}
 		return "", false, fmt.Errorf("output_log parent path not accessible: %w", parentErr)
 	}
 	if !parentInfo.IsDir() {
-		_ = uc.repo.Set(ctx, keyOutputLogPath, "")
-		return "", true, nil
+		return uc.clearStaleOutputLogPath(ctx)
 	}
 	absParent, parentAbsErr := filepath.Abs(parent)
 	if parentAbsErr != nil {
@@ -141,6 +138,13 @@ func (uc *SettingsUseCase) EnsureOutputLogWatchDir(ctx context.Context) (dir str
 		return "", false, setErr
 	}
 	return absParent, false, nil
+}
+
+func (uc *SettingsUseCase) clearStaleOutputLogPath(ctx context.Context) (string, bool, error) {
+	if setErr := uc.repo.Set(ctx, keyOutputLogPath, ""); setErr != nil {
+		return "", false, setErr
+	}
+	return "", true, nil
 }
 
 // Path settings keys in app_settings.

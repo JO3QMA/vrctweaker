@@ -201,8 +201,12 @@ func (a *App) resolveEffectiveOutputLogWatchPath(ctx context.Context) (string, e
 		runtime.LogWarning(ctx, "cleared stale output_log_path setting; using default log folder")
 	}
 	if dir != "" {
-		if _, statErr := os.Stat(dir); statErr != nil {
+		info, statErr := os.Stat(dir)
+		if statErr != nil {
 			return "", statErr
+		}
+		if !info.IsDir() {
+			return "", fmt.Errorf("output_log watch path is not a directory: %s", dir)
 		}
 		return dir, nil
 	}
@@ -222,7 +226,12 @@ func (a *App) resolveEffectiveOutputLogWatchPath(ctx context.Context) (string, e
 
 func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, parser *activity.LogParser, logger logwatcher.Logger, emitEncounters func()) {
 	info, err := os.Stat(absWatch)
-	if err != nil || !info.IsDir() {
+	if err != nil {
+		runtime.LogWarning(ctx, "activity log bootstrap skipped: "+err.Error())
+		return
+	}
+	if !info.IsDir() {
+		runtime.LogWarning(ctx, "activity log bootstrap skipped: not a directory: "+absWatch)
 		return
 	}
 	cp, _ := a.activity.GetActivityLogCheckpoint(ctx)
