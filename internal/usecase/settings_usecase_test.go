@@ -331,11 +331,9 @@ func TestEnsureOutputLogWatchDir_migratesFileToParent(t *testing.T) {
 }
 
 func TestEnsureOutputLogWatchDir_orphanFileClearsToDefault(t *testing.T) {
-	// File path whose parent cannot be used: store a path under a temp file-as-parent is hard;
-	// use a missing path instead — cleared to empty.
-	repo := &fakeAppSettingsRepo{m: map[string]string{
-		keyOutputLogPath: filepath.Join(t.TempDir(), "missing", "output_log.txt"),
-	}}
+	// Missing path (ErrNotExist) — cleared to empty for default fallback.
+	missing := filepath.Join(t.TempDir(), "missing", "output_log.txt")
+	repo := &fakeAppSettingsRepo{m: map[string]string{keyOutputLogPath: missing}}
 	uc := NewSettingsUseCase(repo)
 	got, err := uc.EnsureOutputLogWatchDir(context.Background())
 	if err != nil {
@@ -347,6 +345,35 @@ func TestEnsureOutputLogWatchDir_orphanFileClearsToDefault(t *testing.T) {
 	stored, _ := uc.GetOutputLogPath(context.Background())
 	if stored != "" {
 		t.Fatalf("stored %q, want cleared", stored)
+	}
+}
+
+func TestEnsureOutputLogWatchDir_statPermissionKeepsSetting(t *testing.T) {
+	dir := t.TempDir()
+	blocked := filepath.Join(dir, "blocked")
+	if err := os.Mkdir(blocked, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	logFile := filepath.Join(blocked, "output_log.txt")
+	if err := os.WriteFile(logFile, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(blocked, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(blocked, 0o700) })
+
+	repo := &fakeAppSettingsRepo{m: map[string]string{keyOutputLogPath: logFile}}
+	uc := NewSettingsUseCase(repo)
+	got, err := uc.EnsureOutputLogWatchDir(context.Background())
+	if err == nil {
+		t.Fatal("expected permission/access error")
+	}
+	if got != "" {
+		t.Fatalf("got %q, want empty on error", got)
+	}
+	if stored, _ := uc.GetOutputLogPath(context.Background()); stored != logFile {
+		t.Fatalf("setting cleared to %q, want preserved %q", stored, logFile)
 	}
 }
 

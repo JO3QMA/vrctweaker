@@ -534,7 +534,7 @@ async function savePathSettings() {
   try {
     await App.setPathSettings(pathSettings);
   } catch (e) {
-    ElMessage.error(formatBackendError(e, t("settings.errOutputLogMustBeDir")));
+    ElMessage.error(formatBackendError(e, t("settings.errOperation")));
     return;
   }
 }

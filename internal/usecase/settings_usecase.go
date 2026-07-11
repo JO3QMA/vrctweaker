@@ -87,7 +87,8 @@ func validateOutputLogPathSetting(path string) error {
 
 // EnsureOutputLogWatchDir returns the directory to watch for output_log*.txt.
 // If the stored setting is a regular file, it is migrated once to the parent directory.
-// If migration is impossible, the setting is cleared and ("", nil) is returned (caller uses default).
+// Missing paths (os.ErrNotExist) clear the setting and return ("", nil) so the caller
+// can fall back to the default folder. Transient I/O errors are returned without clearing.
 func (uc *SettingsUseCase) EnsureOutputLogWatchDir(ctx context.Context) (string, error) {
 	p, err := uc.GetOutputLogPath(ctx)
 	if err != nil {
@@ -99,13 +100,15 @@ func (uc *SettingsUseCase) EnsureOutputLogWatchDir(ctx context.Context) (string,
 	}
 	absPath, absErr := filepath.Abs(filepath.Clean(p))
 	if absErr != nil {
-		_ = uc.repo.Set(ctx, keyOutputLogPath, "")
-		return "", nil
+		return "", fmt.Errorf("output_log path cannot be resolved: %w", absErr)
 	}
 	info, statErr := os.Stat(absPath)
 	if statErr != nil {
-		_ = uc.repo.Set(ctx, keyOutputLogPath, "")
-		return "", nil
+		if errors.Is(statErr, os.ErrNotExist) {
+			_ = uc.repo.Set(ctx, keyOutputLogPath, "")
+			return "", nil
+		}
+		return "", fmt.Errorf("output_log path not accessible: %w", statErr)
 	}
 	if info.IsDir() {
 		return absPath, nil
@@ -116,14 +119,20 @@ func (uc *SettingsUseCase) EnsureOutputLogWatchDir(ctx context.Context) (string,
 	}
 	parent := filepath.Dir(absPath)
 	parentInfo, parentErr := os.Stat(parent)
-	if parentErr != nil || !parentInfo.IsDir() {
+	if parentErr != nil {
+		if errors.Is(parentErr, os.ErrNotExist) {
+			_ = uc.repo.Set(ctx, keyOutputLogPath, "")
+			return "", nil
+		}
+		return "", fmt.Errorf("output_log parent path not accessible: %w", parentErr)
+	}
+	if !parentInfo.IsDir() {
 		_ = uc.repo.Set(ctx, keyOutputLogPath, "")
 		return "", nil
 	}
 	absParent, parentAbsErr := filepath.Abs(parent)
 	if parentAbsErr != nil {
-		_ = uc.repo.Set(ctx, keyOutputLogPath, "")
-		return "", nil
+		return "", fmt.Errorf("output_log parent path cannot be resolved: %w", parentAbsErr)
 	}
 	if setErr := uc.repo.Set(ctx, keyOutputLogPath, absParent); setErr != nil {
 		return "", setErr
