@@ -144,7 +144,9 @@ func (w *MultiOutputLogWatcher) run(ctx context.Context) {
 				w.startTail(ctx, path, state, state.lastSize)
 				state.lastSize = size
 			} else if size < state.lastSize {
-				// Truncated or rotated in place; restart from current size.
+				// ponytail: in-place truncate — stop tail and snap offset only; no finalize/replay.
+				// VRChat normally rotates to a new output_log_*.txt (Log rotation handoff).
+				// Upgrade: treat truncate like handoff (finalize + offset-0 replay) if needed.
 				w.stopTail(state)
 				state.readOffset.Store(size)
 				state.lastSize = size

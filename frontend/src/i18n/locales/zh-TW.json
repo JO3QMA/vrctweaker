@@ -282,7 +282,7 @@
     "validateExists": "檢查是否存在",
     "existsYes": "存在",
     "existsNo": "不存在",
-    "pathHint": "用於啟動 VRChat 與監看日誌。請指定 launch.exe。留空則使用預設路徑。output_log 可指定單一檔案或資料夾。",
+    "pathHint": "用於啟動 VRChat 與監看日誌。請指定 launch.exe。留空則使用預設路徑。output_log 請指定日誌資料夾（留空使用預設）。將並行監看資料夾內正在增長的 output_log*.txt。",
     "powerSection": "電源",
     "suppressSleep": "VRChat 執行時防止睡眠",
     "suppressSleepHint": "VRChat.exe 執行時減少閒置睡眠與關閉螢幕（僅 Windows，Tweaker 執行中）。預設關閉。",
@@ -303,8 +303,8 @@
     "pathVrchatWinPh": "e.g. C:\\Program Files (x86)\\Steam\\steamapps\\common\\VRChat\\launch.exe",
     "pathSteamLinux": "Steam 指令（Linux）",
     "pathSteamLinuxPh": "e.g. steam or /usr/bin/steam",
-    "pathOutputLog": "output_log（檔案或資料夾）",
-    "pathOutputLogPh": "e.g. …\\VRChat\\VRChat\\output_log_….txt or the …\\VRChat\\VRChat folder",
+    "pathOutputLog": "output_log（資料夾）",
+    "pathOutputLogPh": "例如：…\\VRChat\\VRChat 資料夾（留空為預設）",
     "browseFile": "檔案",
     "browseFolder": "資料夾",
     "openLogFolder": "開啟日誌資料夾",
@@ -312,7 +312,7 @@
     "titlePickVrchatExe": "選擇 VRChat 執行檔",
     "titlePickSteam": "選擇 Steam 執行檔",
     "titlePickOutputLog": "選擇 output_log.txt",
-    "titlePickLogDir": "選擇 VRChat 日誌資料夾",
+    "titlePickLogDir": "選擇 VRChat 日誌資料夾（含 output_log*.txt）",
     "titlePickLogDirShort": "選擇 VRChat 日誌資料夾",
     "titleOpenLogFolder": "在檔案總管開啟日誌資料夾",
     "errProfile": "無法取得個人資料",
@@ -330,7 +330,8 @@
     "clearScreenshotsConfirm": "要刪除所有截圖索引嗎？",
     "clearScreenshotsDone": "已刪除 {n} 筆截圖索引",
     "clearFriendsConfirm": "要刪除 users_cache 的所有列嗎？",
-    "clearFriendsDone": "已刪除 {n} 筆好友快取"
+    "clearFriendsDone": "已刪除 {n} 筆好友快取",
+    "errOutputLogMustBeDir": "output_log 必須是日誌資料夾（目錄）"
   },
   "settingsLanguages": {
     "ja": "日本語",

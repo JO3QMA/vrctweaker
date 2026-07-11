@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +11,9 @@ import (
 	"strings"
 	"time"
 )
+
+// ErrOutputLogPathMustBeDirectory is returned when saving a non-directory output_log path.
+var ErrOutputLogPathMustBeDirectory = errors.New("output log path must be a directory")
 
 // SettingsUseCase handles app settings.
 type SettingsUseCase struct {
@@ -52,14 +56,79 @@ func (uc *SettingsUseCase) SetLogRetentionDays(ctx context.Context, days int) er
 	return uc.repo.Set(ctx, "log_retention_days", strconv.Itoa(days))
 }
 
-// GetOutputLogPath returns the output_log.txt path for VRChat (empty if not set).
+// GetOutputLogPath returns the configured VRChat log folder (empty if not set).
 func (uc *SettingsUseCase) GetOutputLogPath(ctx context.Context) (string, error) {
-	return uc.repo.Get(ctx, "output_log_path")
+	return uc.repo.Get(ctx, keyOutputLogPath)
 }
 
-// SaveOutputLogPath saves the output_log.txt path.
+// SaveOutputLogPath saves the VRChat log folder path (empty clears to default).
+// Regular files are rejected with ErrOutputLogPathMustBeDirectory.
 func (uc *SettingsUseCase) SaveOutputLogPath(ctx context.Context, path string) error {
-	return uc.repo.Set(ctx, "output_log_path", path)
+	if err := validateOutputLogPathSetting(path); err != nil {
+		return err
+	}
+	return uc.repo.Set(ctx, keyOutputLogPath, strings.TrimSpace(path))
+}
+
+func validateOutputLogPathSetting(path string) error {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return nil
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if !info.IsDir() {
+		return ErrOutputLogPathMustBeDirectory
+	}
+	return nil
+}
+
+// EnsureOutputLogWatchDir returns the directory to watch for output_log*.txt.
+// If the stored setting is a regular file, it is migrated once to the parent directory.
+// If migration is impossible, the setting is cleared and ("", nil) is returned (caller uses default).
+func (uc *SettingsUseCase) EnsureOutputLogWatchDir(ctx context.Context) (string, error) {
+	p, err := uc.GetOutputLogPath(ctx)
+	if err != nil {
+		return "", err
+	}
+	p = strings.TrimSpace(p)
+	if p == "" {
+		return "", nil
+	}
+	absPath, absErr := filepath.Abs(filepath.Clean(p))
+	if absErr != nil {
+		_ = uc.repo.Set(ctx, keyOutputLogPath, "")
+		return "", nil
+	}
+	info, statErr := os.Stat(absPath)
+	if statErr != nil {
+		_ = uc.repo.Set(ctx, keyOutputLogPath, "")
+		return "", nil
+	}
+	if info.IsDir() {
+		return absPath, nil
+	}
+	if !info.Mode().IsRegular() {
+		_ = uc.repo.Set(ctx, keyOutputLogPath, "")
+		return "", nil
+	}
+	parent := filepath.Dir(absPath)
+	parentInfo, parentErr := os.Stat(parent)
+	if parentErr != nil || !parentInfo.IsDir() {
+		_ = uc.repo.Set(ctx, keyOutputLogPath, "")
+		return "", nil
+	}
+	absParent, parentAbsErr := filepath.Abs(parent)
+	if parentAbsErr != nil {
+		_ = uc.repo.Set(ctx, keyOutputLogPath, "")
+		return "", nil
+	}
+	if setErr := uc.repo.Set(ctx, keyOutputLogPath, absParent); setErr != nil {
+		return "", setErr
+	}
+	return absParent, nil
 }
 
 // Path settings keys in app_settings.
@@ -162,13 +231,16 @@ func (uc *SettingsUseCase) SetPathSettings(ctx context.Context, ps *PathSettings
 	if ps == nil {
 		return nil
 	}
+	if err := validateOutputLogPathSetting(ps.OutputLogPath); err != nil {
+		return err
+	}
 	if err := uc.repo.Set(ctx, keyVRChatPathWindows, ps.VRChatPathWindows); err != nil {
 		return err
 	}
 	if err := uc.repo.Set(ctx, keySteamPathLinux, ps.SteamPathLinux); err != nil {
 		return err
 	}
-	return uc.repo.Set(ctx, keyOutputLogPath, ps.OutputLogPath)
+	return uc.repo.Set(ctx, keyOutputLogPath, strings.TrimSpace(ps.OutputLogPath))
 }
 
 // ValidatePath checks if the path exists and is accessible (file or executable in PATH).

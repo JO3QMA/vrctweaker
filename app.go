@@ -193,26 +193,21 @@ func matchAbsPaths(a, b string) bool {
 }
 
 func (a *App) resolveEffectiveOutputLogWatchPath(ctx context.Context) (string, error) {
-	p, err := a.settings.GetOutputLogPath(ctx)
+	dir, err := a.settings.EnsureOutputLogWatchDir(ctx)
 	if err != nil {
 		return "", err
 	}
-	p = strings.TrimSpace(p)
-	if p != "" {
-		absPath, absErr := filepath.Abs(filepath.Clean(p))
-		if absErr != nil {
-			return "", absErr
-		}
-		if _, statErr := os.Stat(absPath); statErr != nil {
+	if dir != "" {
+		if _, statErr := os.Stat(dir); statErr != nil {
 			return "", statErr
 		}
-		return absPath, nil
+		return dir, nil
 	}
-	dir := defaultVRChatOutputLogDir()
-	if dir == "" {
+	defaultDir := defaultVRChatOutputLogDir()
+	if defaultDir == "" {
 		return "", os.ErrNotExist
 	}
-	absDir, err := filepath.Abs(dir)
+	absDir, err := filepath.Abs(defaultDir)
 	if err != nil {
 		return "", err
 	}
@@ -224,26 +219,20 @@ func (a *App) resolveEffectiveOutputLogWatchPath(ctx context.Context) (string, e
 
 func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, parser *activity.LogParser, logger logwatcher.Logger, emitEncounters func()) {
 	info, err := os.Stat(absWatch)
-	if err != nil {
+	if err != nil || !info.IsDir() {
 		return
 	}
 	cp, _ := a.activity.GetActivityLogCheckpoint(ctx)
 
-	if info.IsDir() {
-		files, listErr := logwatcher.ListOutputLogFiles(absWatch)
-		if listErr != nil {
-			return
-		}
-		live := bootstrapLiveLogFiles(files)
-		for _, fp := range files {
-			finalize := live == nil || !live[fp]
-			a.ingestOneActivityLogBootstrap(ctx, absWatch, fp, parser, logger, emitEncounters, cp, finalize, nil)
-		}
+	files, listErr := logwatcher.ListOutputLogFiles(absWatch)
+	if listErr != nil {
 		return
 	}
-
-	adapter := logwatcher.NewActivityIngestAdapter(a.activity, ctx, logger, emitEncounters, absLogPath(absWatch))
-	a.ingestOneActivityLogBootstrap(ctx, absWatch, absWatch, parser, logger, emitEncounters, cp, false, adapter)
+	live := bootstrapLiveLogFiles(files)
+	for _, fp := range files {
+		finalize := live == nil || !live[fp]
+		a.ingestOneActivityLogBootstrap(ctx, absWatch, fp, parser, logger, emitEncounters, cp, finalize, nil)
+	}
 }
 
 func bootstrapLiveLogFiles(paths []string) map[string]bool {
@@ -364,12 +353,8 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 		return
 	}
 	info, err := os.Stat(watchPath)
-	if err != nil || info == nil {
-		runtime.LogWarning(ctx, "output_log path not accessible, skipping log watcher")
-		return
-	}
-	if !info.Mode().IsRegular() && !info.IsDir() {
-		runtime.LogWarning(ctx, "output_log path must be a file or directory, skipping log watcher")
+	if err != nil || info == nil || !info.IsDir() {
+		runtime.LogWarning(ctx, "output_log path not accessible as directory, skipping log watcher")
 		return
 	}
 
@@ -395,49 +380,31 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 		emitEncounters: emitEncounters,
 	}
 
-	if info.IsDir() {
-		watcher := logwatcher.NewMultiOutputLogWatcher(watchPath, parser, func(logPath string) logwatcher.EventHandler {
-			adapter := a.activityIngestAdapterForPath(ctx, logger, emitEncounters, logPath)
-			triggerHandler := logwatcher.NewAutomationTriggerHandler(a.automation, ctx, logger)
-			return logwatcher.NewMultiHandler(adapter, triggerHandler)
-		}, logwatcher.MultiOutputLogWatcherCallbacks{
-			OnLogRotationHandoff: func(c context.Context, oldPath string) error {
-				return a.handleActivityLogRotationHandoff(c, watchDeps, oldPath)
-			},
-			OnTailCheckpoint: func(c context.Context, path string, offset int64, lineTime time.Time) {
-				if a.activity == nil {
-					return
-				}
-				_ = a.activity.SetActivityLogFileCheckpoint(c, watchDeps.watchPath, absLogPath(path), offset, checkpointVRTime(lineTime))
-			},
-		}, logger)
-		if startErr := watcher.Start(ctx); startErr != nil {
-			runtime.LogError(ctx, "failed to start multi output_log watcher: "+startErr.Error())
-			return
-		}
-	} else {
-		ingestAdapter := a.activityIngestAdapterForPath(ctx, logger, emitEncounters, watchPath)
+	watcher := logwatcher.NewMultiOutputLogWatcher(watchPath, parser, func(logPath string) logwatcher.EventHandler {
+		adapter := a.activityIngestAdapterForPath(ctx, logger, emitEncounters, logPath)
 		triggerHandler := logwatcher.NewAutomationTriggerHandler(a.automation, ctx, logger)
-		handler := logwatcher.NewMultiHandler(ingestAdapter, triggerHandler)
-		watcher := logwatcher.NewOutputLogWatcher(watchPath, parser, handler, logger)
-		watcher.SetLogFileSwitchHandler(logwatcher.LogFileSwitchHandlerFunc(func(c context.Context, previousPath, newPath string) error {
-			if previousPath != "" {
-				a.finalizeOpenActivityForLogSource(c, previousPath)
+		return logwatcher.NewMultiHandler(adapter, triggerHandler)
+	}, logwatcher.MultiOutputLogWatcherCallbacks{
+		OnLogRotationHandoff: func(c context.Context, oldPath string) error {
+			return a.handleActivityLogRotationHandoff(c, watchDeps, oldPath)
+		},
+		OnTailCheckpoint: func(c context.Context, path string, offset int64, lineTime time.Time) {
+			if a.activity == nil {
+				return
 			}
-			a.replayActivityLogAfterFileSwitch(c, watchDeps, newPath, ingestAdapter)
-			return nil
-		}))
-		if startErr := watcher.Start(ctx); startErr != nil {
-			runtime.LogError(ctx, "failed to start output_log watcher: "+startErr.Error())
-			return
-		}
+			_ = a.activity.SetActivityLogFileCheckpoint(c, watchDeps.watchPath, absLogPath(path), offset, checkpointVRTime(lineTime))
+		},
+	}, logger)
+	if startErr := watcher.Start(ctx); startErr != nil {
+		runtime.LogError(ctx, "failed to start multi output_log watcher: "+startErr.Error())
+		return
 	}
 
 	a.startVRChatActivityMonitor(ctx, watchPath)
 	runtime.LogInfo(ctx, "output_log watcher started for "+watchPath)
 }
 
-// ValidateOutputLogPath checks if path is a readable log file or a directory containing output_log*.txt.
+// ValidateOutputLogPath checks if path is an existing directory (empty dirs allowed).
 func (a *App) ValidateOutputLogPath(path string) bool {
 	return logwatcher.OutputLogPathValid(path)
 }

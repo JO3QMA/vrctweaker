@@ -42,56 +42,12 @@ func ListOutputLogFiles(dir string) ([]string, error) {
 	return out, nil
 }
 
-type outputLogCandidate struct {
-	path    string
-	modUnix int64
-}
-
-// ResolveLatestOutputLogFile returns the path to the newest output_log*.txt under dir (by ModTime, then name).
-func ResolveLatestOutputLogFile(dir string) (string, error) {
-	matches, err := filepath.Glob(filepath.Join(dir, "output_log*.txt"))
-	if err != nil {
-		return "", err
-	}
-	if len(matches) == 0 {
-		return "", ErrNoOutputLogFiles
-	}
-	var cands []outputLogCandidate
-	for _, p := range matches {
-		if !isVRChatPrimaryOutputLogFile(p) {
-			continue
-		}
-		info, statErr := os.Stat(p)
-		if statErr != nil || !info.Mode().IsRegular() {
-			continue
-		}
-		cands = append(cands, outputLogCandidate{path: p, modUnix: info.ModTime().UnixNano()})
-	}
-	if len(cands) == 0 {
-		return "", ErrNoOutputLogFiles
-	}
-	sort.SliceStable(cands, func(i, j int) bool {
-		if cands[i].modUnix != cands[j].modUnix {
-			return cands[i].modUnix < cands[j].modUnix
-		}
-		return cands[i].path < cands[j].path
-	})
-	return cands[len(cands)-1].path, nil
-}
-
-// OutputLogPathValid reports whether path is an existing regular file or a directory
-// that contains at least one output_log*.txt file.
+// OutputLogPathValid reports whether path is an existing directory suitable for log watching.
+// Empty directories are valid (logs may appear later). Regular files are rejected (ADR 0005 Decision 14).
 func OutputLogPathValid(path string) bool {
 	info, err := os.Stat(path)
 	if err != nil || info == nil {
 		return false
 	}
-	if info.Mode().IsRegular() {
-		return true
-	}
-	if info.IsDir() {
-		_, err := ResolveLatestOutputLogFile(path)
-		return err == nil
-	}
-	return false
+	return info.IsDir()
 }
