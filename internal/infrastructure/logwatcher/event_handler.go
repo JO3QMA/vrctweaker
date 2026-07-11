@@ -20,7 +20,9 @@ type EventHandlerFunc func(event activity.ParsedEvent)
 
 // Handle implements EventHandler.
 func (f EventHandlerFunc) Handle(event activity.ParsedEvent) {
-	f(event)
+	if f != nil {
+		f(event)
+	}
 }
 
 // LogParser parses a log line into events.

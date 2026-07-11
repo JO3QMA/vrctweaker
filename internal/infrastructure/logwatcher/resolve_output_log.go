@@ -46,7 +46,7 @@ func ListOutputLogFiles(dir string) ([]string, error) {
 // Empty directories are valid (logs may appear later). Regular files are rejected (ADR 0005 Decision 14).
 func OutputLogPathValid(path string) bool {
 	info, err := os.Stat(path)
-	if err != nil || info == nil {
+	if err != nil {
 		return false
 	}
 	return info.IsDir()

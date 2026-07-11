@@ -77,7 +77,7 @@ func validateOutputLogPathSetting(path string) error {
 	}
 	info, err := os.Stat(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("output_log path not accessible: %w", err)
 	}
 	if !info.IsDir() {
 		return ErrOutputLogPathMustBeDirectory
@@ -87,57 +87,60 @@ func validateOutputLogPathSetting(path string) error {
 
 // EnsureOutputLogWatchDir returns the directory to watch for output_log*.txt.
 // If the stored setting is a regular file, it is migrated once to the parent directory.
-// Missing paths (os.ErrNotExist) clear the setting and return ("", nil) so the caller
-// can fall back to the default folder. Transient I/O errors are returned without clearing.
-func (uc *SettingsUseCase) EnsureOutputLogWatchDir(ctx context.Context) (string, error) {
+// Missing or unusable paths clear the setting and return ("", true, nil) so the caller can
+// log a warning and fall back to the default folder. Transient I/O errors are returned
+// without clearing (cleared=false).
+func (uc *SettingsUseCase) EnsureOutputLogWatchDir(ctx context.Context) (dir string, cleared bool, err error) {
 	p, err := uc.GetOutputLogPath(ctx)
 	if err != nil {
-		return "", err
+		return "", false, err
 	}
 	p = strings.TrimSpace(p)
 	if p == "" {
-		return "", nil
+		return "", false, nil
 	}
 	absPath, absErr := filepath.Abs(filepath.Clean(p))
 	if absErr != nil {
-		return "", fmt.Errorf("output_log path cannot be resolved: %w", absErr)
+		return "", false, fmt.Errorf("output_log path cannot be resolved: %w", absErr)
 	}
 	info, statErr := os.Stat(absPath)
 	if statErr != nil {
 		if errors.Is(statErr, os.ErrNotExist) {
 			_ = uc.repo.Set(ctx, keyOutputLogPath, "")
-			return "", nil
+			return "", true, nil
 		}
-		return "", fmt.Errorf("output_log path not accessible: %w", statErr)
+		return "", false, fmt.Errorf("output_log path not accessible: %w", statErr)
 	}
 	if info.IsDir() {
-		return absPath, nil
+		return absPath, false, nil
 	}
 	if !info.Mode().IsRegular() {
 		_ = uc.repo.Set(ctx, keyOutputLogPath, "")
-		return "", nil
+		return "", true, nil
 	}
 	parent := filepath.Dir(absPath)
 	parentInfo, parentErr := os.Stat(parent)
 	if parentErr != nil {
 		if errors.Is(parentErr, os.ErrNotExist) {
 			_ = uc.repo.Set(ctx, keyOutputLogPath, "")
-			return "", nil
+			return "", true, nil
 		}
-		return "", fmt.Errorf("output_log parent path not accessible: %w", parentErr)
+		return "", false, fmt.Errorf("output_log parent path not accessible: %w", parentErr)
 	}
 	if !parentInfo.IsDir() {
 		_ = uc.repo.Set(ctx, keyOutputLogPath, "")
-		return "", nil
+		return "", true, nil
 	}
 	absParent, parentAbsErr := filepath.Abs(parent)
 	if parentAbsErr != nil {
-		return "", fmt.Errorf("output_log parent path cannot be resolved: %w", parentAbsErr)
+		return "", false, fmt.Errorf("output_log parent path cannot be resolved: %w", parentAbsErr)
 	}
+	// ponytail: on Set failure keep the legacy file path and retry next startup —
+	// clearing here would hide a DB write failure by silently falling back to default.
 	if setErr := uc.repo.Set(ctx, keyOutputLogPath, absParent); setErr != nil {
-		return "", setErr
+		return "", false, setErr
 	}
-	return absParent, nil
+	return absParent, false, nil
 }
 
 // Path settings keys in app_settings.

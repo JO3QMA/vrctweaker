@@ -193,9 +193,12 @@ func matchAbsPaths(a, b string) bool {
 }
 
 func (a *App) resolveEffectiveOutputLogWatchPath(ctx context.Context) (string, error) {
-	dir, err := a.settings.EnsureOutputLogWatchDir(ctx)
+	dir, cleared, err := a.settings.EnsureOutputLogWatchDir(ctx)
 	if err != nil {
 		return "", err
+	}
+	if cleared {
+		runtime.LogWarning(ctx, "cleared stale output_log_path setting; using default log folder")
 	}
 	if dir != "" {
 		if _, statErr := os.Stat(dir); statErr != nil {

@@ -316,9 +316,12 @@ func TestEnsureOutputLogWatchDir_migratesFileToParent(t *testing.T) {
 	}
 	repo := &fakeAppSettingsRepo{m: map[string]string{keyOutputLogPath: filePath}}
 	uc := NewSettingsUseCase(repo)
-	got, err := uc.EnsureOutputLogWatchDir(context.Background())
+	got, cleared, err := uc.EnsureOutputLogWatchDir(context.Background())
 	if err != nil {
 		t.Fatal(err)
+	}
+	if cleared {
+		t.Fatal("migration should not report cleared")
 	}
 	absDir, _ := filepath.Abs(dir)
 	if got != absDir {
@@ -335,9 +338,12 @@ func TestEnsureOutputLogWatchDir_orphanFileClearsToDefault(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "missing", "output_log.txt")
 	repo := &fakeAppSettingsRepo{m: map[string]string{keyOutputLogPath: missing}}
 	uc := NewSettingsUseCase(repo)
-	got, err := uc.EnsureOutputLogWatchDir(context.Background())
+	got, cleared, err := uc.EnsureOutputLogWatchDir(context.Background())
 	if err != nil {
 		t.Fatal(err)
+	}
+	if !cleared {
+		t.Fatal("want cleared=true")
 	}
 	if got != "" {
 		t.Fatalf("got %q, want empty for default fallback", got)
@@ -365,9 +371,12 @@ func TestEnsureOutputLogWatchDir_statPermissionKeepsSetting(t *testing.T) {
 
 	repo := &fakeAppSettingsRepo{m: map[string]string{keyOutputLogPath: logFile}}
 	uc := NewSettingsUseCase(repo)
-	got, err := uc.EnsureOutputLogWatchDir(context.Background())
+	got, cleared, err := uc.EnsureOutputLogWatchDir(context.Background())
 	if err == nil {
 		t.Fatal("expected permission/access error")
+	}
+	if cleared {
+		t.Fatal("transient error must not clear setting")
 	}
 	if got != "" {
 		t.Fatalf("got %q, want empty on error", got)
@@ -382,9 +391,12 @@ func TestEnsureOutputLogWatchDir_directoryPassthrough(t *testing.T) {
 	absDir, _ := filepath.Abs(dir)
 	repo := &fakeAppSettingsRepo{m: map[string]string{keyOutputLogPath: dir}}
 	uc := NewSettingsUseCase(repo)
-	got, err := uc.EnsureOutputLogWatchDir(context.Background())
+	got, cleared, err := uc.EnsureOutputLogWatchDir(context.Background())
 	if err != nil {
 		t.Fatal(err)
+	}
+	if cleared {
+		t.Fatal("directory passthrough should not clear")
 	}
 	if got != absDir {
 		t.Fatalf("got %q want %q", got, absDir)
