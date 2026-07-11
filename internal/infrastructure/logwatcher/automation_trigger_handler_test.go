@@ -79,3 +79,9 @@ func TestEventHandlerFunc_Handle(t *testing.T) {
 		t.Fatal("expected handle call")
 	}
 }
+
+func TestEventHandlerFunc_Handle_nilSafe(t *testing.T) {
+	var f EventHandlerFunc
+	var h EventHandler = f
+	h.Handle(&activity.EncounterEvent{}) // typed nil must not panic
+}

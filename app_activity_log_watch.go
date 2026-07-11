@@ -61,26 +61,6 @@ func (a *App) handleActivityLogRotationHandoff(ctx context.Context, deps activit
 	return nil
 }
 
-// replayActivityLogAfterFileSwitch runs Log replay after single-file switch/truncate.
-// Activity ingest only — automation stays on live tail (ADR 0005 Decision 12).
-func (a *App) replayActivityLogAfterFileSwitch(
-	ctx context.Context,
-	deps activityLogWatchDeps,
-	newPath string,
-	ingestAdapter *logwatcher.ActivityIngestAdapter,
-) {
-	if newPath == "" || deps.parser == nil || ingestAdapter == nil || a.activity == nil {
-		return
-	}
-	a.ingestOneActivityLogBootstrap(
-		ctx, deps.watchPath, newPath, deps.parser, deps.logger, deps.emitEncounters,
-		nil, false, ingestAdapter,
-	)
-	if deps.emitEncounters != nil {
-		deps.emitEncounters()
-	}
-}
-
 func (a *App) startVRChatActivityMonitor(ctx context.Context, watchPath string) {
 	a.activityWatchMu.Lock()
 	if a.activityWatchCancel != nil {

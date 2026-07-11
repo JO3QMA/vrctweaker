@@ -282,7 +282,7 @@
     "validateExists": "존재 확인",
     "existsYes": "있습니다",
     "existsNo": "없습니다",
-    "pathHint": "VRChat 실행 및 로그 감시에 사용합니다. launch.exe를 지정하세요. 비우면 기본 경로를 사용합니다. output_log는 파일 하나 또는 로그 폴더를 지정하세요.",
+    "pathHint": "VRChat 실행 및 로그 감시에 사용합니다. launch.exe를 지정하세요. 비우면 기본 경로를 사용합니다. output_log는 로그 폴더를 지정하세요(비우면 기본 폴더). 폴더 안에서 증가 중인 output_log*.txt를 병렬로 감시합니다.",
     "powerSection": "전원",
     "suppressSleep": "VRChat 실행 중 절전 방지",
     "suppressSleepHint": "VRChat.exe 실행 중 유휴 절전·디스플레이 끄기를 줄입니다 (Windows, Tweaker 실행 중만). 기본값 끔.",
@@ -303,8 +303,8 @@
     "pathVrchatWinPh": "e.g. C:\\Program Files (x86)\\Steam\\steamapps\\common\\VRChat\\launch.exe",
     "pathSteamLinux": "Steam 명령 (Linux)",
     "pathSteamLinuxPh": "e.g. steam or /usr/bin/steam",
-    "pathOutputLog": "output_log (파일 또는 폴더)",
-    "pathOutputLogPh": "e.g. …\\VRChat\\VRChat\\output_log_….txt or the …\\VRChat\\VRChat folder",
+    "pathOutputLog": "output_log (폴더)",
+    "pathOutputLogPh": "예: …\\VRChat\\VRChat 폴더(비우면 기본)",
     "browseFile": "파일",
     "browseFolder": "폴더",
     "openLogFolder": "로그 폴더 열기",
@@ -312,7 +312,7 @@
     "titlePickVrchatExe": "VRChat 실행 파일 선택",
     "titlePickSteam": "Steam 실행 파일 선택",
     "titlePickOutputLog": "output_log.txt 선택",
-    "titlePickLogDir": "VRChat 로그 폴더 선택",
+    "titlePickLogDir": "VRChat 로그 폴더 선택(output_log*.txt가 있는 폴더)",
     "titlePickLogDirShort": "VRChat 로그 폴더 선택",
     "titleOpenLogFolder": "파일 관리자에서 로그 폴더 열기",
     "errProfile": "프로필을 가져오지 못했습니다",
@@ -330,7 +330,8 @@
     "clearScreenshotsConfirm": "스크린샷 인덱스를 모두 삭제할까요?",
     "clearScreenshotsDone": "스크린샷 인덱스 {n}건 삭제",
     "clearFriendsConfirm": "users_cache의 모든 행을 삭제할까요?",
-    "clearFriendsDone": "친구 캐시 {n}건 삭제"
+    "clearFriendsDone": "친구 캐시 {n}건 삭제",
+    "errOutputLogMustBeDir": "output_log는 로그 폴더(디렉터리)여야 합니다"
   },
   "settingsLanguages": {
     "ja": "日本語",

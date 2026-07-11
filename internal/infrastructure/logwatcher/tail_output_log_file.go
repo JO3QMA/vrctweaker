@@ -8,6 +8,11 @@ import (
 	"time"
 )
 
+const (
+	pollInterval   = 500 * time.Millisecond
+	readBufferSize = 64 * 1024
+)
+
 // tailCheckpoint reports read progress after each consumed line.
 type tailCheckpoint func(byteOffset int64, vrChatLineTime time.Time)
 

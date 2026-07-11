@@ -182,24 +182,6 @@ describe("SettingsView", () => {
     );
   });
 
-  it("browse output log file saves selected path", async () => {
-    vi.mocked(App.openFileDialog).mockResolvedValueOnce(
-      "C:\\logs\\output_log.txt",
-    );
-    const wrapper = mountSettings();
-    await flushPromises();
-    vi.mocked(App.setPathSettings).mockClear();
-
-    await wrapper
-      .find('[data-testid="output-log-path-browse"]')
-      .trigger("click");
-    await flushPromises();
-
-    expect(App.setPathSettings).toHaveBeenCalledWith(
-      expect.objectContaining({ outputLogPath: "C:\\logs\\output_log.txt" }),
-    );
-  });
-
   it("browse output log directory saves selected folder", async () => {
     vi.mocked(App.openDirectoryDialog).mockResolvedValueOnce("C:\\logs");
     const wrapper = mountSettings();
@@ -214,6 +196,14 @@ describe("SettingsView", () => {
     expect(App.setPathSettings).toHaveBeenCalledWith(
       expect.objectContaining({ outputLogPath: "C:\\logs" }),
     );
+  });
+
+  it("does not show output log file browse button", async () => {
+    const wrapper = mountSettings();
+    await flushPromises();
+    expect(
+      wrapper.find('[data-testid="output-log-path-browse"]').exists(),
+    ).toBe(false);
   });
 
   it("opens VRChat log folder via App", async () => {

@@ -56,55 +56,8 @@ func Test_bootstrapLiveLogFiles(t *testing.T) {
 
 	single := bootstrapLiveLogFiles([]string{newPath})
 	if single == nil || !single[newPath] {
-		t.Fatalf("single file watch should mark only file live: %+v", single)
+		t.Fatalf("sole listed file should be marked live: %+v", single)
 	}
-}
-
-func Test_ingestActivityLogsBootstrap_restart_keepsOpenEncounters_singleFile(t *testing.T) {
-	t.Setenv("TZ", "UTC")
-	ctx := context.Background()
-	dir := t.TempDir()
-	logPath := filepath.Join(dir, "output_log.txt")
-	initial := []byte(
-		"2026.03.21 11:32:04 Debug      -  [Behaviour] Joining " + testBootstrapInstID + "\n" +
-			"2026.03.21 11:32:16 Debug      -  [Behaviour] OnPlayerJoined Alice (" + testBootstrapUserID + ")\n",
-	)
-	if err := os.WriteFile(logPath, initial, 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	app, encounterRepo := newTestAppWithActivity(t)
-	joinedAt := time.Date(2026, 3, 21, 11, 32, 16, 0, time.UTC)
-	if err := encounterRepo.Save(ctx, &activity.UserEncounter{
-		ID:          "enc-open",
-		VRCUserID:   testBootstrapUserID,
-		DisplayName: "Alice",
-		InstanceID:  testBootstrapInstID,
-		WorldID:     testBootstrapWorldID,
-		JoinedAt:    joinedAt,
-	}); err != nil {
-		t.Fatal(err)
-	}
-	absLogPath, err := filepath.Abs(logPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if err := app.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
-		WatchPath:      absLogPath,
-		File:           absLogPath,
-		ByteOffset:     int64(len(initial)),
-		VRChatLineTime: joinedAt.Format(time.RFC3339),
-	}); err != nil {
-		t.Fatal(err)
-	}
-
-	appendLine := "2026.03.21 11:40:00 Debug      -  [EOSManager] heartbeat while VRCTweaker was closed\n"
-	if err := os.WriteFile(logPath, append(initial, []byte(appendLine)...), 0600); err != nil {
-		t.Fatal(err)
-	}
-
-	runActivityBootstrap(t, app, ctx, absLogPath)
-	assertEncounterStillOpen(t, app, ctx, testBootstrapUserID)
 }
 
 func Test_ingestActivityLogsBootstrap_skipsFullyIngestedFile(t *testing.T) {
@@ -121,13 +74,17 @@ func Test_ingestActivityLogsBootstrap_skipsFullyIngestedFile(t *testing.T) {
 	}
 
 	app, _ := newTestAppWithActivity(t)
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	absLogPath, err := filepath.Abs(logPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	joinedAt := time.Date(2026, 3, 21, 11, 32, 16, 0, time.UTC)
 	if setErr := app.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
-		WatchPath: absLogPath,
+		WatchPath: absDir,
 		Files: map[string]usecase.ActivityLogFileCheckpoint{
 			absLogPath: {
 				ByteOffset:     int64(len(content)),
@@ -138,7 +95,7 @@ func Test_ingestActivityLogsBootstrap_skipsFullyIngestedFile(t *testing.T) {
 		t.Fatal(setErr)
 	}
 
-	runActivityBootstrap(t, app, ctx, absLogPath)
+	runActivityBootstrap(t, app, ctx, absDir)
 
 	rows, err := app.activity.ListEncounters(ctx, nil)
 	if err != nil {
@@ -294,12 +251,16 @@ func Test_ingestActivityLogsBootstrap_checkpointResume_assignsWorldRoomName(t *t
 	}
 
 	app, _ := newTestAppWithActivity(t)
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	absLogPath, err := filepath.Abs(logPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cpErr := app.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
-		WatchPath:      absLogPath,
+		WatchPath:      absDir,
 		File:           absLogPath,
 		ByteOffset:     int64(len(prefix)),
 		VRChatLineTime: time.Date(2026, 6, 24, 8, 25, 3, 0, time.UTC).Format(time.RFC3339),
@@ -311,7 +272,7 @@ func Test_ingestActivityLogsBootstrap_checkpointResume_assignsWorldRoomName(t *t
 		t.Fatal(writeErr)
 	}
 
-	runActivityBootstrap(t, app, ctx, absLogPath)
+	runActivityBootstrap(t, app, ctx, absDir)
 
 	rows, err := app.activity.ListEncountersWithContext(ctx, &activity.EncounterFilter{VRCUserID: buddyID})
 	if err != nil {
@@ -355,12 +316,16 @@ func Test_ingestActivityLogsBootstrap_checkpointResume_homeEncounterKeepsWorldID
 	}
 
 	app, _ := newTestAppWithActivity(t)
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	absLogPath, err := filepath.Abs(logPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cpErr := app.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
-		WatchPath:      absLogPath,
+		WatchPath:      absDir,
 		File:           absLogPath,
 		ByteOffset:     int64(len(prefix)),
 		VRChatLineTime: time.Date(2026, 6, 24, 8, 25, 3, 0, time.UTC).Format(time.RFC3339),
@@ -371,7 +336,7 @@ func Test_ingestActivityLogsBootstrap_checkpointResume_homeEncounterKeepsWorldID
 		t.Fatal(writeErr)
 	}
 
-	runActivityBootstrap(t, app, ctx, absLogPath)
+	runActivityBootstrap(t, app, ctx, absDir)
 
 	rows, err := app.activity.ListEncountersWithContext(ctx, &activity.EncounterFilter{VRCUserID: hostID})
 	if err != nil {
@@ -438,12 +403,16 @@ func Test_ingestActivityLogsBootstrap_checkpointResume_worldNamesNotCrossAssigne
 		t.Fatal(seedErr)
 	}
 
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
 	absLogPath, err := filepath.Abs(logPath)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if cpErr := app.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
-		WatchPath:      absLogPath,
+		WatchPath:      absDir,
 		File:           absLogPath,
 		ByteOffset:     int64(len(prefix)),
 		VRChatLineTime: homeJoinedAt.Format(time.RFC3339),
@@ -454,7 +423,7 @@ func Test_ingestActivityLogsBootstrap_checkpointResume_worldNamesNotCrossAssigne
 		t.Fatal(writeErr)
 	}
 
-	runActivityBootstrap(t, app, ctx, absLogPath)
+	runActivityBootstrap(t, app, ctx, absDir)
 
 	homeRows, err := app.activity.ListEncountersWithContext(ctx, &activity.EncounterFilter{VRCUserID: hostID})
 	if err != nil {

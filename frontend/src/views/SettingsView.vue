@@ -412,12 +412,6 @@ const pathFields = computed(() => [
     placeholder: t("settings.pathOutputLogPh"),
     buttons: [
       {
-        label: t("settings.browseFile"),
-        testid: "output-log-path-browse",
-        title: t("settings.titlePickOutputLog"),
-        handler: browseOutputLogPath,
-      },
-      {
         label: t("settings.browseFolder"),
         testid: "output-log-dir-browse",
         title: t("settings.titlePickLogDir"),
@@ -537,7 +531,12 @@ async function saveSuppressSleepWhileVRChat() {
 }
 
 async function savePathSettings() {
-  await App.setPathSettings(pathSettings);
+  try {
+    await App.setPathSettings(pathSettings);
+  } catch (e) {
+    ElMessage.error(formatBackendError(e, t("settings.errOperation")));
+    return;
+  }
 }
 
 function dirOfPath(p: string): string {
@@ -567,18 +566,6 @@ async function browseSteamPath() {
   );
   if (path) {
     pathSettings.steamPathLinux = path;
-    await savePathSettings();
-  }
-}
-
-async function browseOutputLogPath() {
-  const path = await App.openFileDialog(
-    t("settings.titlePickOutputLog"),
-    dirOfPath(pathSettings.outputLogPath),
-    "*.txt",
-  );
-  if (path) {
-    pathSettings.outputLogPath = path;
     await savePathSettings();
   }
 }

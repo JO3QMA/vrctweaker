@@ -39,10 +39,11 @@ func TestSettingsUseCase_GetPathSettings_SetPathSettings_roundtrip(t *testing.T)
 	uc := NewSettingsUseCase(repo)
 	ctx := context.Background()
 
+	logDir := t.TempDir()
 	ps := &PathSettings{
 		VRChatPathWindows: `C:\Program Files (x86)\Steam\steamapps\common\VRChat\launch.exe`,
 		SteamPathLinux:    "/usr/bin/steam",
-		OutputLogPath:     "/home/user/.local/share/Steam/logs/output_log.txt",
+		OutputLogPath:     logDir,
 	}
 
 	if err := uc.SetPathSettings(ctx, ps); err != nil {
@@ -75,6 +76,35 @@ func TestSettingsUseCase_SetPathSettings_nil(t *testing.T) {
 
 	if err := uc.SetPathSettings(ctx, nil); err != nil {
 		t.Fatalf("SetPathSettings(nil) should not error: %v", err)
+	}
+}
+
+func TestSettingsUseCase_SetPathSettings_trimsPaths(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+	logDir := t.TempDir()
+
+	if err := uc.SetPathSettings(ctx, &PathSettings{
+		VRChatPathWindows: "  C:\\VRChat\\launch.exe  ",
+		SteamPathLinux:    "  /usr/bin/steam  ",
+		OutputLogPath:     "  " + logDir + "  ",
+	}); err != nil {
+		t.Fatalf("SetPathSettings: %v", err)
+	}
+
+	got, err := uc.GetPathSettings(ctx)
+	if err != nil {
+		t.Fatalf("GetPathSettings: %v", err)
+	}
+	if got.VRChatPathWindows != `C:\VRChat\launch.exe` {
+		t.Errorf("VRChatPathWindows: got %q", got.VRChatPathWindows)
+	}
+	if got.SteamPathLinux != "/usr/bin/steam" {
+		t.Errorf("SteamPathLinux: got %q", got.SteamPathLinux)
+	}
+	if got.OutputLogPath != logDir {
+		t.Errorf("OutputLogPath: got %q, want %q", got.OutputLogPath, logDir)
 	}
 }
 
@@ -238,13 +268,189 @@ func TestSettingsUseCase_OutputLogPath_roundtrip(t *testing.T) {
 	uc := NewSettingsUseCase(repo)
 	ctx := context.Background()
 
-	path := "/tmp/output_log.txt"
+	path := t.TempDir()
 	if err := uc.SaveOutputLogPath(ctx, path); err != nil {
 		t.Fatal(err)
 	}
 	got, err := uc.GetOutputLogPath(ctx)
 	if err != nil || got != path {
 		t.Fatalf("GetOutputLogPath = %q err=%v", got, err)
+	}
+}
+
+func TestSaveOutputLogPath_rejectsFile(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "output_log.txt")
+	if err := os.WriteFile(filePath, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	err := uc.SaveOutputLogPath(ctx, filePath)
+	if !errors.Is(err, ErrOutputLogPathMustBeDirectory) {
+		t.Fatalf("err = %v, want ErrOutputLogPathMustBeDirectory", err)
+	}
+	if got, _ := uc.GetOutputLogPath(ctx); got != "" {
+		t.Fatalf("DB changed to %q", got)
+	}
+}
+
+func TestSaveOutputLogPath_emptyAllowed(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: map[string]string{keyOutputLogPath: "prev"}}
+	uc := NewSettingsUseCase(repo)
+	if err := uc.SaveOutputLogPath(context.Background(), ""); err != nil {
+		t.Fatal(err)
+	}
+	got, err := uc.GetOutputLogPath(context.Background())
+	if err != nil || got != "" {
+		t.Fatalf("got %q err=%v", got, err)
+	}
+}
+
+func TestSaveOutputLogPath_emptyDirAllowed(t *testing.T) {
+	uc := NewSettingsUseCase(&fakeAppSettingsRepo{m: make(map[string]string)})
+	dir := t.TempDir()
+	if err := uc.SaveOutputLogPath(context.Background(), dir); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestSetPathSettings_rejectsFileOutputLog(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "output_log.txt")
+	if err := os.WriteFile(filePath, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	err := uc.SetPathSettings(context.Background(), &PathSettings{
+		VRChatPathWindows: "a",
+		SteamPathLinux:    "b",
+		OutputLogPath:     filePath,
+	})
+	if !errors.Is(err, ErrOutputLogPathMustBeDirectory) {
+		t.Fatalf("err = %v", err)
+	}
+	if repo.m[keyVRChatPathWindows] != "" || repo.m[keyOutputLogPath] != "" {
+		t.Fatalf("partial write: %#v", repo.m)
+	}
+}
+
+func TestEnsureOutputLogWatchDir_migratesFileToParent(t *testing.T) {
+	dir := t.TempDir()
+	filePath := filepath.Join(dir, "output_log.txt")
+	if err := os.WriteFile(filePath, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	repo := &fakeAppSettingsRepo{m: map[string]string{keyOutputLogPath: filePath}}
+	uc := NewSettingsUseCase(repo)
+	got, cleared, err := uc.EnsureOutputLogWatchDir(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cleared {
+		t.Fatal("migration should not report cleared")
+	}
+	absDir, _ := filepath.Abs(dir)
+	if got != absDir {
+		t.Fatalf("got %q want %q", got, absDir)
+	}
+	stored, _ := uc.GetOutputLogPath(context.Background())
+	if stored != absDir {
+		t.Fatalf("stored %q want %q", stored, absDir)
+	}
+}
+
+func TestEnsureOutputLogWatchDir_orphanFileClearsToDefault(t *testing.T) {
+	// Missing path (ErrNotExist) — cleared to empty for default fallback.
+	missing := filepath.Join(t.TempDir(), "missing", "output_log.txt")
+	repo := &fakeAppSettingsRepo{m: map[string]string{keyOutputLogPath: missing}}
+	uc := NewSettingsUseCase(repo)
+	got, cleared, err := uc.EnsureOutputLogWatchDir(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !cleared {
+		t.Fatal("want cleared=true")
+	}
+	if got != "" {
+		t.Fatalf("got %q, want empty for default fallback", got)
+	}
+	stored, _ := uc.GetOutputLogPath(context.Background())
+	if stored != "" {
+		t.Fatalf("stored %q, want cleared", stored)
+	}
+}
+
+func TestEnsureOutputLogWatchDir_statPermissionKeepsSetting(t *testing.T) {
+	dir := t.TempDir()
+	blocked := filepath.Join(dir, "blocked")
+	if err := os.Mkdir(blocked, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	logFile := filepath.Join(blocked, "output_log.txt")
+	if err := os.WriteFile(logFile, []byte("x"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(blocked, 0o000); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(blocked, 0o700) })
+
+	repo := &fakeAppSettingsRepo{m: map[string]string{keyOutputLogPath: logFile}}
+	uc := NewSettingsUseCase(repo)
+	got, cleared, err := uc.EnsureOutputLogWatchDir(context.Background())
+	if err == nil {
+		t.Fatal("expected permission/access error")
+	}
+	if cleared {
+		t.Fatal("transient error must not clear setting")
+	}
+	if got != "" {
+		t.Fatalf("got %q, want empty on error", got)
+	}
+	if stored, _ := uc.GetOutputLogPath(context.Background()); stored != logFile {
+		t.Fatalf("setting cleared to %q, want preserved %q", stored, logFile)
+	}
+}
+
+func TestEnsureOutputLogWatchDir_clearSetFailureKeepsSetting(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "missing", "output_log.txt")
+	repo := &errOnSetSettingsRepo{
+		fakeAppSettingsRepo: fakeAppSettingsRepo{m: map[string]string{keyOutputLogPath: missing}},
+		failKey:             keyOutputLogPath,
+	}
+	uc := NewSettingsUseCase(repo)
+	got, cleared, err := uc.EnsureOutputLogWatchDir(context.Background())
+	if err == nil {
+		t.Fatal("expected set error when clearing stale path")
+	}
+	if cleared {
+		t.Fatal("cleared must be false when Set fails")
+	}
+	if got != "" {
+		t.Fatalf("got %q", got)
+	}
+	if stored, _ := uc.GetOutputLogPath(context.Background()); stored != missing {
+		t.Fatalf("stored %q, want preserved %q", stored, missing)
+	}
+}
+
+func TestEnsureOutputLogWatchDir_directoryPassthrough(t *testing.T) {
+	dir := t.TempDir()
+	absDir, _ := filepath.Abs(dir)
+	repo := &fakeAppSettingsRepo{m: map[string]string{keyOutputLogPath: dir}}
+	uc := NewSettingsUseCase(repo)
+	got, cleared, err := uc.EnsureOutputLogWatchDir(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cleared {
+		t.Fatal("directory passthrough should not clear")
+	}
+	if got != absDir {
+		t.Fatalf("got %q want %q", got, absDir)
 	}
 }
 
