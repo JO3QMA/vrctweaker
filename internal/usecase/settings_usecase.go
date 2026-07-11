@@ -247,16 +247,19 @@ func (uc *SettingsUseCase) SetPathSettings(ctx context.Context, ps *PathSettings
 	if ps == nil {
 		return nil
 	}
-	if err := validateOutputLogPathSetting(ps.OutputLogPath); err != nil {
+	vrchat := strings.TrimSpace(ps.VRChatPathWindows)
+	steam := strings.TrimSpace(ps.SteamPathLinux)
+	outputLog := strings.TrimSpace(ps.OutputLogPath)
+	if err := validateOutputLogPathSetting(outputLog); err != nil {
 		return err
 	}
-	if err := uc.repo.Set(ctx, keyVRChatPathWindows, ps.VRChatPathWindows); err != nil {
+	if err := uc.repo.Set(ctx, keyVRChatPathWindows, vrchat); err != nil {
 		return err
 	}
-	if err := uc.repo.Set(ctx, keySteamPathLinux, ps.SteamPathLinux); err != nil {
+	if err := uc.repo.Set(ctx, keySteamPathLinux, steam); err != nil {
 		return err
 	}
-	return uc.repo.Set(ctx, keyOutputLogPath, strings.TrimSpace(ps.OutputLogPath))
+	return uc.repo.Set(ctx, keyOutputLogPath, outputLog)
 }
 
 // ValidatePath checks if the path exists and is accessible (file or executable in PATH).

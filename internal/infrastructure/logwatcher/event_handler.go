@@ -29,8 +29,3 @@ func (f EventHandlerFunc) Handle(event activity.ParsedEvent) {
 type LogParser interface {
 	ParseLine(line string, baseTime time.Time) ([]activity.ParsedEvent, error)
 }
-
-const (
-	pollInterval   = 500 * time.Millisecond
-	readBufferSize = 64 * 1024
-)

@@ -79,6 +79,35 @@ func TestSettingsUseCase_SetPathSettings_nil(t *testing.T) {
 	}
 }
 
+func TestSettingsUseCase_SetPathSettings_trimsPaths(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+	logDir := t.TempDir()
+
+	if err := uc.SetPathSettings(ctx, &PathSettings{
+		VRChatPathWindows: "  C:\\VRChat\\launch.exe  ",
+		SteamPathLinux:    "  /usr/bin/steam  ",
+		OutputLogPath:     "  " + logDir + "  ",
+	}); err != nil {
+		t.Fatalf("SetPathSettings: %v", err)
+	}
+
+	got, err := uc.GetPathSettings(ctx)
+	if err != nil {
+		t.Fatalf("GetPathSettings: %v", err)
+	}
+	if got.VRChatPathWindows != `C:\VRChat\launch.exe` {
+		t.Errorf("VRChatPathWindows: got %q", got.VRChatPathWindows)
+	}
+	if got.SteamPathLinux != "/usr/bin/steam" {
+		t.Errorf("SteamPathLinux: got %q", got.SteamPathLinux)
+	}
+	if got.OutputLogPath != logDir {
+		t.Errorf("OutputLogPath: got %q, want %q", got.OutputLogPath, logDir)
+	}
+}
+
 func TestSettingsUseCase_ValidatePath_empty(t *testing.T) {
 	repo := &fakeAppSettingsRepo{}
 	uc := NewSettingsUseCase(repo)
