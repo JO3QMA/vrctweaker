@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -44,6 +45,19 @@ func (f *fakePlaySessionRepo) FindLatestWithoutEndTime(context.Context) (*activi
 		}
 	}
 	return nil, nil
+}
+
+func (f *fakePlaySessionRepo) FindLatestWithInstanceID(_ context.Context) (*activity.PlaySession, error) {
+	var best *activity.PlaySession
+	for _, s := range f.sessions {
+		if s == nil || strings.TrimSpace(s.InstanceID) == "" {
+			continue
+		}
+		if best == nil || s.StartTime.After(best.StartTime) {
+			best = s
+		}
+	}
+	return best, nil
 }
 
 func (f *fakePlaySessionRepo) FindOpenForLogSource(_ context.Context, logSource string) (*activity.PlaySession, error) {

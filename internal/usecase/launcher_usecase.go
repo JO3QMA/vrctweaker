@@ -95,7 +95,7 @@ func (uc *LauncherUseCase) LaunchToWorld(ctx context.Context, profileID, worldID
 	if worldID == "" {
 		return fmt.Errorf("world_id is required for Join World")
 	}
-	profile, err := uc.getProfileOrDefault(ctx, profileID)
+	profile, err := uc.getProfileByIDOrDefault(ctx, profileID)
 	if err != nil {
 		return err
 	}
@@ -107,8 +107,8 @@ func (uc *LauncherUseCase) LaunchToWorld(ctx context.Context, profileID, worldID
 	return uc.launchWithArgs(ctx, args, vrchatPath, steamPath)
 }
 
-// BuildJoinWorldArgs returns base launch args with vrchat://launch?id=<worldID> appended.
-// This is a pure function for unit testing.
+// BuildJoinWorldArgs returns base launch args with vrchat://launch?id=<location> appended.
+// ponytail: worldID param accepts wrld_* or a full VRChat instance key; rename when World join and Instance rejoin share a clearer name.
 func BuildJoinWorldArgs(baseArgsStr string, worldID string) []string {
 	base := parseLaunchArgs(baseArgsStr)
 	joinURL := "vrchat://launch?id=" + strings.TrimSpace(worldID)
@@ -120,15 +120,16 @@ func (uc *LauncherUseCase) prepareLaunchArgs(ctx context.Context, args []string,
 	return args, nil
 }
 
-func (uc *LauncherUseCase) getProfileOrDefault(ctx context.Context, profileID string) (*launcher.LaunchProfile, error) {
+func (uc *LauncherUseCase) getProfileByIDOrDefault(ctx context.Context, profileID string) (*launcher.LaunchProfile, error) {
 	if profileID != "" {
 		p, err := uc.repo.GetByID(ctx, profileID)
 		if err != nil {
 			return nil, err
 		}
-		if p != nil {
-			return p, nil
+		if p == nil {
+			return nil, fmt.Errorf("profile not found: %s", profileID)
 		}
+		return p, nil
 	}
 	return uc.repo.GetDefault(ctx)
 }

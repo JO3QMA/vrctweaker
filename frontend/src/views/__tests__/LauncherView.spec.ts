@@ -390,6 +390,7 @@ describe("LauncherView", () => {
     );
     expect(mockLaunchVRChatWithArgs).toHaveBeenCalledWith(
       "-screen-fullscreen 1",
+      "1",
     );
   });
 
@@ -785,7 +786,7 @@ describe("LauncherView", () => {
     expect(mockMergeLaunchArgsForGUI).toHaveBeenCalledWith(
       expect.objectContaining({ screenMode: "popupwindow" }),
     );
-    expect(mockLaunchVRChatWithArgs).toHaveBeenCalledWith("-popupwindow");
+    expect(mockLaunchVRChatWithArgs).toHaveBeenCalledWith("-popupwindow", "1");
   });
 
   it("mounts without profiles and opens editor only after add", async () => {
@@ -896,7 +897,7 @@ describe("LauncherView", () => {
         videoDecoding: "software",
       }),
     );
-    expect(mockLaunchVRChatWithArgs).toHaveBeenCalledWith("merged-args");
+    expect(mockLaunchVRChatWithArgs).toHaveBeenCalledWith("merged-args", "1");
   });
 
   it("selects remaining profile after delete succeeds", async () => {

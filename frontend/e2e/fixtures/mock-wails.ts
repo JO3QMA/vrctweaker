@@ -175,7 +175,9 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
           return Promise.resolve();
         },
         LaunchVRChat: () => Promise.resolve(),
-        LaunchVRChatWithArgs: () => Promise.resolve(),
+        LaunchVRChatWithArgs: (_args, _profileId) => Promise.resolve(),
+        GetInstanceRejoinSection: () => Promise.resolve(null),
+        InstanceRejoin: (_profileId, _playSessionId) => Promise.resolve(),
         ParseLaunchArgsForGUI: () =>
           Promise.resolve({
             noVr: false,

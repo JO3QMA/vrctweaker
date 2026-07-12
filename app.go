@@ -513,7 +513,8 @@ func (a *App) LaunchProfiles() ([]LaunchProfileDTO, error) {
 
 // LaunchVRChatWithArgs starts VRChat with the given arguments string (from GUI state).
 // Use when launching with current GUI settings without saving first.
-func (a *App) LaunchVRChatWithArgs(args string) error {
+// lastLaunchProfileID updates Last launch profile on success when non-empty (Profile launch).
+func (a *App) LaunchVRChatWithArgs(args string, lastLaunchProfileID string) error {
 	ps, err := a.settings.GetPathSettings(a.ctx)
 	if err != nil {
 		return err
@@ -526,7 +527,8 @@ func (a *App) LaunchVRChatWithArgs(args string) error {
 		steamPath = ps.SteamPathLinux
 		outputLogPath = ps.OutputLogPath
 	}
-	return a.launcher.LaunchWithArgs(a.ctx, args, vrchatPath, steamPath, outputLogPath)
+	launchErr := a.launcher.LaunchWithArgs(a.ctx, args, vrchatPath, steamPath, outputLogPath)
+	return a.setLastLaunchProfileOnSuccess(lastLaunchProfileID, launchErr)
 }
 
 // LaunchVRChat starts VRChat with the given profile ID.

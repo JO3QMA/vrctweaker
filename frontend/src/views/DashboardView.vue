@@ -15,6 +15,37 @@
             : t("dashboard.launch")
         }}
       </el-button>
+      <el-card
+        v-if="instanceRejoin"
+        class="instance-rejoin-panel"
+        shadow="never"
+        data-testid="instance-rejoin-section"
+      >
+        <div class="instance-rejoin-row">
+          <el-select
+            v-model="selectedRejoinProfileId"
+            class="instance-rejoin-profile"
+            data-testid="instance-rejoin-profile-select"
+            :placeholder="t('dashboard.instanceRejoinProfilePlaceholder')"
+          >
+            <el-option
+              v-for="p in instanceRejoin.profiles"
+              :key="p.id"
+              :label="p.name"
+              :value="p.id"
+            />
+          </el-select>
+          <el-button
+            type="primary"
+            class="instance-rejoin-btn"
+            data-testid="instance-rejoin-btn"
+            :disabled="!selectedRejoinProfileId"
+            @click="launchInstanceRejoin"
+          >
+            {{ rejoinButtonLabel }}
+          </el-button>
+        </div>
+      </el-card>
       <el-card class="status-panel" shadow="never">
         <template #header>
           <span class="status-label">{{ t("dashboard.quickStatus") }}</span>
@@ -78,15 +109,32 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessage } from "element-plus";
-import { App, type LaunchProfileDTO } from "../wails/app";
+import {
+  App,
+  type InstanceRejoinSectionDTO,
+  type LaunchProfileDTO,
+} from "../wails/app";
+import { getRuntime } from "../wails/runtime";
 
 const { t } = useI18n();
 
+const ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS = 400;
+
 const defaultProfile = ref<LaunchProfileDTO | null>(null);
 const customDescription = ref("");
+const instanceRejoin = ref<InstanceRejoinSectionDTO | null>(null);
+const selectedRejoinProfileId = ref("");
+
+const rejoinButtonLabel = computed(() => {
+  const name = instanceRejoin.value?.worldDisplayName?.trim();
+  if (name) {
+    return t("dashboard.instanceRejoinWithWorld", { name });
+  }
+  return t("dashboard.instanceRejoinGeneric");
+});
 
 const statusOptions = computed(() => [
   {
@@ -158,15 +206,69 @@ function formatError(e: unknown, fallback: string): string {
   return fallback;
 }
 
-onMounted(async () => {
+let encountersChangedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let unsubscribeEncountersChanged: (() => void) | undefined;
+
+function scheduleInstanceRejoinRefresh(): void {
+  if (encountersChangedDebounceTimer !== null) {
+    clearTimeout(encountersChangedDebounceTimer);
+  }
+  encountersChangedDebounceTimer = setTimeout(() => {
+    encountersChangedDebounceTimer = null;
+    void loadInstanceRejoinSection();
+  }, ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS);
+}
+
+async function loadLaunchProfiles(): Promise<void> {
   const profiles = await App.launchProfiles();
   defaultProfile.value =
     profiles.find((p) => p.isDefault) ?? profiles[0] ?? null;
+}
+
+async function loadInstanceRejoinSection(): Promise<void> {
+  try {
+    const section = await App.getInstanceRejoinSection();
+    instanceRejoin.value = section;
+    selectedRejoinProfileId.value = section?.selectedProfileId ?? "";
+  } catch (e) {
+    instanceRejoin.value = null;
+    ElMessage.error(formatError(e, t("dashboard.instanceRejoinLoadError")));
+  }
+}
+
+onMounted(async () => {
+  await Promise.all([loadLaunchProfiles(), loadInstanceRejoinSection()]);
+  const rt = getRuntime();
+  const off = rt?.EventsOn?.("activity:encounters-changed", () => {
+    scheduleInstanceRejoinRefresh();
+  });
+  if (typeof off === "function") {
+    unsubscribeEncountersChanged = off;
+  }
+});
+
+onUnmounted(() => {
+  if (encountersChangedDebounceTimer !== null) {
+    clearTimeout(encountersChangedDebounceTimer);
+    encountersChangedDebounceTimer = null;
+  }
+  unsubscribeEncountersChanged?.();
 });
 
 async function launch() {
   if (!defaultProfile.value) return;
   await App.launchVRChat(defaultProfile.value.id);
+}
+
+async function launchInstanceRejoin() {
+  const playSessionId = instanceRejoin.value?.playSessionId?.trim();
+  if (!selectedRejoinProfileId.value || !playSessionId) return;
+  try {
+    await App.instanceRejoin(selectedRejoinProfileId.value, playSessionId);
+  } catch (e) {
+    ElMessage.error(formatError(e, t("dashboard.instanceRejoinError")));
+    void loadInstanceRejoinSection();
+  }
 }
 
 async function setStatusOnly(status: string) {
@@ -215,11 +317,28 @@ async function applyTemplate(tpl: { status: string; label: string }) {
   height: 52px !important;
 }
 
+.instance-rejoin-panel,
 .status-panel,
 .custom-status-panel,
 .templates-panel {
   background: var(--bg-secondary) !important;
   border-color: var(--border) !important;
+}
+
+.instance-rejoin-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.instance-rejoin-profile {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
+.instance-rejoin-btn {
+  flex: 1 1 160px;
 }
 
 .status-label {

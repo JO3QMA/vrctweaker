@@ -44,6 +44,14 @@ func (r *PlaySessionRepository) FindLatestWithoutEndTime(ctx context.Context) (*
 	return scanPlaySessionRow(row)
 }
 
+// FindLatestWithInstanceID returns the most recent play session with a non-empty instance_id.
+func (r *PlaySessionRepository) FindLatestWithInstanceID(ctx context.Context) (*activity.PlaySession, error) {
+	row := r.db.QueryRowContext(ctx, `SELECT id, start_time, end_time, duration_sec, IFNULL(instance_id, ''), IFNULL(log_source_path, '')
+		FROM play_sessions WHERE instance_id IS NOT NULL AND TRIM(instance_id) != ''
+		ORDER BY start_time DESC LIMIT 1`)
+	return scanPlaySessionRow(row)
+}
+
 // FindOpenForLogSource returns the open play session for the given log source path.
 func (r *PlaySessionRepository) FindOpenForLogSource(ctx context.Context, logSource string) (*activity.PlaySession, error) {
 	row := r.db.QueryRowContext(ctx, `SELECT id, start_time, end_time, duration_sec, IFNULL(instance_id, ''), IFNULL(log_source_path, '')

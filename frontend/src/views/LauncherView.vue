@@ -883,7 +883,7 @@ async function launch() {
   const argsStr = await App.mergeLaunchArgsForGUI(
     sanitizeLaunchArgs(launchArgs.value),
   );
-  await App.launchVRChatWithArgs(argsStr);
+  await App.launchVRChatWithArgs(argsStr, selected.value.id ?? "");
 }
 
 async function confirmDelete() {

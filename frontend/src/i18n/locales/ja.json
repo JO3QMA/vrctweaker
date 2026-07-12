@@ -67,7 +67,12 @@
     "templateJoinOpen": "だれでもどうぞ",
     "templateAskWelcome": "声かけ歓迎",
     "statusUpdateSuccess": "ステータスを更新しました",
-    "statusUpdateError": "ステータスの更新に失敗しました"
+    "statusUpdateError": "ステータスの更新に失敗しました",
+    "instanceRejoinProfilePlaceholder": "起動プロファイル",
+    "instanceRejoinWithWorld": "{name} に参加",
+    "instanceRejoinGeneric": "最後のインスタンスに参加",
+    "instanceRejoinError": "インスタンスへの再参加起動に失敗しました",
+    "instanceRejoinLoadError": "再参加セクションの読み込みに失敗しました"
   },
   "launcher": {
     "title": "ランチャー",

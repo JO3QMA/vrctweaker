@@ -67,7 +67,12 @@
     "templateJoinOpen": "자유 참가",
     "templateAskWelcome": "참가 전 문의",
     "statusUpdateSuccess": "상태를 업데이트했습니다",
-    "statusUpdateError": "상태 업데이트에 실패했습니다"
+    "statusUpdateError": "상태 업데이트에 실패했습니다",
+    "instanceRejoinProfilePlaceholder": "실행 프로필",
+    "instanceRejoinWithWorld": "{name}에 참가",
+    "instanceRejoinGeneric": "마지막 인스턴스에 참가",
+    "instanceRejoinError": "인스턴스 재참가 실행에 실패했습니다",
+    "instanceRejoinLoadError": "재참가 섹션을 불러오지 못했습니다"
   },
   "launcher": {
     "title": "런처",

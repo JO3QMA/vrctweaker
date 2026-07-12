@@ -109,6 +109,14 @@ func TestLauncherUseCase_LaunchToWorld_requiresWorldID(t *testing.T) {
 	}
 }
 
+func TestLauncherUseCase_LaunchToWorld_profileNotFound(t *testing.T) {
+	uc := NewLauncherUseCase(newFakeLaunchProfileRepo())
+	err := uc.LaunchToWorld(context.Background(), "missing", "wrld_x", "", "", "")
+	if err == nil {
+		t.Fatal("expected profile not found error")
+	}
+}
+
 func TestLauncherUseCase_LaunchToWorld_usesDefaultProfile(t *testing.T) {
 	repo := newFakeLaunchProfileRepo()
 	uc := NewLauncherUseCase(repo)
@@ -116,7 +124,7 @@ func TestLauncherUseCase_LaunchToWorld_usesDefaultProfile(t *testing.T) {
 	p := &launcher.LaunchProfile{Name: "Default", Arguments: "--no-vr", IsDefault: true}
 	_ = uc.SaveProfile(ctx, p)
 
-	// Launch will fail on missing steam/vrchat binary, but getProfileOrDefault path is exercised.
+	// Launch will fail on missing steam/vrchat binary, but getProfileByIDOrDefault path is exercised.
 	err := uc.LaunchToWorld(ctx, "", "wrld_test", "", "/nonexistent-steam-binary-xyz", "")
 	if err == nil {
 		t.Fatal("expected launch error")
@@ -141,16 +149,24 @@ func TestDefaultVRChatPathWindows(t *testing.T) {
 	}
 }
 
-func TestLauncherUseCase_getProfileOrDefault_fallback(t *testing.T) {
+func TestLauncherUseCase_getProfileByIDOrDefault_fallback(t *testing.T) {
 	repo := newFakeLaunchProfileRepo()
 	uc := NewLauncherUseCase(repo)
 	ctx := context.Background()
 	def := &launcher.LaunchProfile{Name: "Def", Arguments: "-x", IsDefault: true}
 	_ = uc.SaveProfile(ctx, def)
 
-	got, err := uc.getProfileOrDefault(ctx, "unknown-id")
+	got, err := uc.getProfileByIDOrDefault(ctx, "")
 	if err != nil || got == nil || got.ID != def.ID {
-		t.Fatalf("getProfileOrDefault = %+v err=%v", got, err)
+		t.Fatalf("getProfileByIDOrDefault = %+v err=%v", got, err)
+	}
+}
+
+func TestLauncherUseCase_getProfileByIDOrDefault_unknownID(t *testing.T) {
+	uc := NewLauncherUseCase(newFakeLaunchProfileRepo())
+	_, err := uc.getProfileByIDOrDefault(context.Background(), "unknown-id")
+	if err == nil {
+		t.Fatal("expected error")
 	}
 }
 
@@ -189,10 +205,10 @@ func (e *errLaunchProfileRepo) GetByID(ctx context.Context, id string) (*launche
 	return e.fakeLaunchProfileRepo.GetByID(ctx, id)
 }
 
-func TestLauncherUseCase_getProfileOrDefault_getByIDError(t *testing.T) {
+func TestLauncherUseCase_getProfileByIDOrDefault_getByIDError(t *testing.T) {
 	repo := &errLaunchProfileRepo{getByIDErr: errors.New("db error")}
 	uc := NewLauncherUseCase(repo)
-	_, err := uc.getProfileOrDefault(context.Background(), "p1")
+	_, err := uc.getProfileByIDOrDefault(context.Background(), "p1")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -300,6 +316,12 @@ func TestBuildJoinWorldArgs(t *testing.T) {
 			baseArgs:   "--no-vr -batchmode -nographics",
 			worldID:    "wrld_xyz",
 			wantSuffix: "vrchat://launch?id=wrld_xyz",
+		},
+		{
+			name:       "full instance key",
+			baseArgs:   "--no-vr",
+			worldID:    "wrld_48cf80e6-15dd-4c17-8667-c5dc01baa5cb:88577~region(jp)",
+			wantSuffix: "vrchat://launch?id=wrld_48cf80e6-15dd-4c17-8667-c5dc01baa5cb:88577~region(jp)",
 		},
 	}
 	for _, tt := range tests {

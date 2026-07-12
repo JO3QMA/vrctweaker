@@ -45,6 +45,14 @@ func toLaunchProfile(d LaunchProfileDTO) *launcher.LaunchProfile {
 	return p
 }
 
+// InstanceRejoinSectionDTO is the Dashboard Instance rejoin section (no instance key in JSON).
+type InstanceRejoinSectionDTO struct {
+	PlaySessionID     string             `json:"playSessionId"`
+	WorldDisplayName  string             `json:"worldDisplayName"`
+	Profiles          []LaunchProfileDTO `json:"profiles"`
+	SelectedProfileID string             `json:"selectedProfileId"`
+}
+
 // ScreenshotDTO is the frontend-facing screenshot.
 type ScreenshotDTO struct {
 	ID                string  `json:"id"`

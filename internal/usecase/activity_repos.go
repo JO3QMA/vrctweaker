@@ -14,6 +14,7 @@ type playSessionRepo interface {
 	GetByID(ctx context.Context, id string) (*activity.PlaySession, error)
 	Save(ctx context.Context, s *activity.PlaySession) error
 	FindLatestWithoutEndTime(ctx context.Context) (*activity.PlaySession, error)
+	FindLatestWithInstanceID(ctx context.Context) (*activity.PlaySession, error)
 	FindOpenForLogSource(ctx context.Context, logSource string) (*activity.PlaySession, error)
 	FindAllWithoutEndTime(ctx context.Context) ([]*activity.PlaySession, error)
 	Count(ctx context.Context) (int64, error)
