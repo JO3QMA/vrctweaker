@@ -220,7 +220,10 @@ export const App = {
     profileID: string,
     playSessionID: string,
   ): Promise<void> {
-    return callApp((a) => a.InstanceRejoin(profileID, playSessionID), undefined);
+    return callApp(
+      (a) => a.InstanceRejoin(profileID, playSessionID),
+      undefined,
+    );
   },
   async parseLaunchArgsForGUI(args: string): Promise<LaunchArgsParsedDTO> {
     return callApp((a) => a.ParseLaunchArgsForGUI(args), {
