@@ -298,6 +298,68 @@ _Avoid_: Visitor タグ, `system_trust_visitor`（存在しない ID）
 User detail で 1 つの User tag を示すチップ UI。ラベルとツールチップ（説明・deprecated 表示）を持つ。ツールチップにタグ ID 行は出さない。未知タグはラベルに生のタグ文字列を示し、ツールチップは不明旨のみ。
 _Avoid_: バッジ, タグ一覧（行全体のラベル付きセクションと混同しやすいため）
 
+## yt-dlp
+
+VRChat の動画プレイヤーが裏で使う yt-dlp 向けの用語。**yt-dlp Cookie linkage**（[Issue #8](https://github.com/JO3QMA/vrctweaker/issues/8)、[ADR 0007](docs/adr/0007-ytdlp-cookie-linkage.md)）は同梱ビルドの Cookie 非対応により Blocked。**yt-dlp Tools replace maintain**（[Issue #9](https://github.com/JO3QMA/vrctweaker/issues/9)、[ADR 0008](docs/adr/0008-ytdlp-tools-replace-maintain.md)）は製品方針を合意済みだが、実機 PoC 前は Proposed。起動前ワンショット置換の試作は [PR #40](https://github.com/JO3QMA/vrctweaker/pull/40)（望む動作に未達）。
+
+### Language
+
+**VRChat-bundled yt-dlp**:
+VRChat が Tools 配下に置く yt-dlp 実行ファイル。公式 yt-dlp を削った／独自オプション付きのビルドであり、調査時点では `--cookies` / `--cookies-from-browser` を受け付けない。起動やログインの過程で Tools 上の差し替えバイナリを同梱版へ戻しうることがある。
+_Avoid_: 公式 yt-dlp, yt-dlp.exe（どちらを指すか曖昧なため）
+
+**yt-dlp Tools replace**:
+Tools 配下の VRChat-bundled yt-dlp を、Official yt-dlp cache など別バイナリで置き換える**一回の配置操作**。起動前のワンショットだけだと VRChat が同梱版へ戻しうる。読み取り専用で戻しを防ぐと、調査時点では動画再生ができなくなる（原因未特定）。維持の仕組み全体は **yt-dlp Tools replace maintain**。
+_Avoid_: yt-dlp 更新（ユーザー config や Cookie linkage と混同しやすいため）, バージョン管理（UI 見出しは可）, 維持モード（maintain を指すときは専用語を使う）
+
+**yt-dlp Tools replace maintain**:
+ユーザーが有効化した、Official yt-dlp cache 由来の exe を Tools に載せ続ける desired 状態（オプトイン・既定オフ）。Tweaker 常駐中に VRChat 起動を検知して yt-dlp Tools replace と監視を行い、無効化時は監視だけ止めて Tools 上のファイルは触らない。v1 は Windows のみ（動画タブ）。製品実装は ADR 0008（Proposed）と PoC 前提。
+_Avoid_: yt-dlp Tools replace（一回の配置操作）, Cookie linkage, 自動更新（明示更新と混同しやすいため）
+
+**Tools replace effective state**:
+Tools 上の `yt-dlp.exe` が Official yt-dlp cache と一致しているかどうかで決まる実効状態。desired（maintain オン／オフ）とは別。動画タブは両方を示す。
+_Avoid_: 維持オン（desired だけを指す印象）, 適用済み（監視中と混同しやすいため）
+
+**Tools replace risk acknowledgment**:
+yt-dlp Tools replace maintain を初めて有効化する前に、同梱版を外すリスクと公式の差し替え非推奨をユーザーが確認したこと。一度行えば以降の有効化では再確認しない。画面上の常時警告文とは別。
+_Avoid_: Cookie linkage risk acknowledgment（別機能）, 利用規約同意, 毎回確認
+
+**Official yt-dlp cache**:
+Tweaker が保持する公式 `yt-dlp.exe` のローカル控え。初回適用と明示の更新確認で取得し、以降の VRChat セッションではこの控えから Tools へ配置する。
+_Avoid_: 最新版（キャッシュと GitHub latest を同一視する印象）, Tools 上の exe（effective 側）
+
+**yt-dlp Cookie linkage**:
+Tweaker が yt-dlp user config へ Cookie 参照オプションを書き込み／削除する設定体験（設計のみ。公式 exe を RO なしで維持できる手順が固まってから実装する。UI は Settings）。Cookie 本体の取得・検証や動画の取得は行わない。VRChat の `config.json` を扱う Config 画面の対象ではない。
+_Avoid_: Cookie 同期, ログイン連携（VRChat 認証と混同しやすいため）, yt-dlp 実行, Config（VRChat config.json 編集と混同しやすいため）, yt-dlp Tools replace / maintain（別問題）, 動画タブ（Cookie は載せない）
+
+**yt-dlp user config**:
+yt-dlp が読むユーザー向け設定ファイル。Cookie 参照オプションの置き場。VRChat の `config.json`（Config 画面の対象）とは別物。無ければ親ディレクトリごと作成してよい。Managed cookie options 削除後に他行が無く空ならファイル自体を削除してよい。
+_Avoid_: VRChat config, config.json, yt-dlp 設定（対象ファイルが曖昧なため）
+
+**Managed cookie options**:
+yt-dlp Cookie linkage が yt-dlp user config 内で所有する Cookie 参照オプション。有効時は Browser cookie source か Cookies file source のどちらか一方だけ（排他）。誰が書いたかに関わらず、同種の Cookie 参照行は Managed とみなし、書き込み時はそれらを upsert（置換）する。無効化時はこれらの行だけを削除する。ファイル内の他行は触らない。
+_Avoid_: yt-dlp 設定全体, config 全体（手書きオプションまで含意するため）, 設定ファイルの退避・リネーム（無効化の意味に含めない）
+
+**Browser cookie source**:
+Cookie 参照方式のひとつ。指定したブラウザのログイン Cookie を yt-dlp に読ませる。v1 で選べるブラウザは chrome / edge / firefox の既定プロファイルのみ（プロファイルパス指定なし）。ブラウザ起動中は Cookie ストアがロックされ、読み込みに失敗しうる。
+_Avoid_: ブラウザ連携, Chrome 連携（特定ブラウザに固定する印象）, プロファイル指定（v1 の範囲外）
+
+**Cookies file source**:
+Cookie 参照方式のひとつ。ユーザーが用意した cookies テキストファイルのパスを yt-dlp に読ませる。Browser cookie source のファイルロック回避手段。ファイルの作成・更新自体は Tweaker の責務外。Managed cookie options への書き込み前に、指定パスにファイルが存在することを必須とする（形式の中身検証はしない）。
+_Avoid_: Cookie エクスポート（Tweaker がファイルを作る印象）, cookies.txt（ファイル名に限定する印象）
+
+**Cookie linkage risk acknowledgment**:
+yt-dlp Cookie linkage を初めて有効化する前に、アカウント BAN リスクとサブアカウント利用の推奨をユーザーが確認したこと。一度行えば、以降の有効化では再確認しない。画面上の常時警告文とは別。
+_Avoid_: 利用規約同意（アプリ全体の同意と混同しやすいため）, 毎回確認
+
+**Cookie linkage effective state**:
+yt-dlp user config 上に Managed cookie options があるかどうかで決まる、いま実際に効いている有効／方式／参照先。ファイルが無いことも「Managed なし＝無効」として扱い、読み取りエラーにはしない。Settings の表示はこれを正とする。書き込み失敗時はエラーを示し、表示を操作前の Effective state に戻す（試した値は Cookie linkage draft に残してよい）。
+_Avoid_: アプリ内の有効フラグ（ファイルと食い違う下書きと混同しやすいため）, 未初期化（無効と別状態にしない）
+
+**Cookie linkage draft**:
+Settings 上で覚える、方式・ブラウザ・cookies ファイルパスなどの入力下書き、および Cookie linkage risk acknowledgment。無効中でも前回の選択を残してよい。有効時の変更は即時に yt-dlp user config へ書き込み、Cookie linkage effective state と揃える。Cookie ファイルの作成・エクスポート、ブラウザ起動中のロック自動検知、yt-dlp／動画再生の成否確認は含まない。
+_Avoid_: 保存済み設定（未書き込みの下書きだけを指す印象）, 適用待ち（明示適用ボタン前提の印象）, Cookie エクスポート, ロック監視
+
 ## Agent contribution
 
 Issue・PR・コミットなど Git に残るテキストを書くときの用語。
