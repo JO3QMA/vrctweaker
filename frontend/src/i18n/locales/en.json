@@ -67,7 +67,11 @@
     "templateJoinOpen": "Open to join",
     "templateAskWelcome": "Ask before joining",
     "statusUpdateSuccess": "Status updated",
-    "statusUpdateError": "Failed to update status"
+    "statusUpdateError": "Failed to update status",
+    "instanceRejoinProfilePlaceholder": "Launch profile",
+    "instanceRejoinWithWorld": "Join {name}",
+    "instanceRejoinGeneric": "Rejoin last instance",
+    "instanceRejoinError": "Failed to launch rejoin to instance"
   },
   "launcher": {
     "title": "Launcher",

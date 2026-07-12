@@ -109,6 +109,14 @@ func TestLauncherUseCase_LaunchToWorld_requiresWorldID(t *testing.T) {
 	}
 }
 
+func TestLauncherUseCase_LaunchToWorld_profileNotFound(t *testing.T) {
+	uc := NewLauncherUseCase(newFakeLaunchProfileRepo())
+	err := uc.LaunchToWorld(context.Background(), "missing", "wrld_x", "", "", "")
+	if err == nil {
+		t.Fatal("expected profile not found error")
+	}
+}
+
 func TestLauncherUseCase_LaunchToWorld_usesDefaultProfile(t *testing.T) {
 	repo := newFakeLaunchProfileRepo()
 	uc := NewLauncherUseCase(repo)
@@ -148,9 +156,17 @@ func TestLauncherUseCase_getProfileOrDefault_fallback(t *testing.T) {
 	def := &launcher.LaunchProfile{Name: "Def", Arguments: "-x", IsDefault: true}
 	_ = uc.SaveProfile(ctx, def)
 
-	got, err := uc.getProfileOrDefault(ctx, "unknown-id")
+	got, err := uc.getProfileOrDefault(ctx, "")
 	if err != nil || got == nil || got.ID != def.ID {
 		t.Fatalf("getProfileOrDefault = %+v err=%v", got, err)
+	}
+}
+
+func TestLauncherUseCase_getProfileOrDefault_unknownID(t *testing.T) {
+	uc := NewLauncherUseCase(newFakeLaunchProfileRepo())
+	_, err := uc.getProfileOrDefault(context.Background(), "unknown-id")
+	if err == nil {
+		t.Fatal("expected error")
 	}
 }
 
@@ -300,6 +316,12 @@ func TestBuildJoinWorldArgs(t *testing.T) {
 			baseArgs:   "--no-vr -batchmode -nographics",
 			worldID:    "wrld_xyz",
 			wantSuffix: "vrchat://launch?id=wrld_xyz",
+		},
+		{
+			name:       "full instance key",
+			baseArgs:   "--no-vr",
+			worldID:    "wrld_48cf80e6-15dd-4c17-8667-c5dc01baa5cb:88577~region(jp)",
+			wantSuffix: "vrchat://launch?id=wrld_48cf80e6-15dd-4c17-8667-c5dc01baa5cb:88577~region(jp)",
 		},
 	}
 	for _, tt := range tests {

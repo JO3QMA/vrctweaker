@@ -155,6 +155,7 @@ const (
 	keyGalleryLastExitAt        = "gallery_last_exit_at"
 	keySuppressSleepWhileVRChat = "suppress_sleep_while_vrchat"
 	keyLanguage                 = "language"
+	keyLastLaunchProfileID      = "last_launch_profile_id"
 )
 
 // SupportedAppLanguages are UI locale codes persisted in app_settings.
@@ -177,6 +178,16 @@ func (uc *SettingsUseCase) SetLanguage(ctx context.Context, lang string) error {
 		return fmt.Errorf("unsupported language: %q", lang)
 	}
 	return uc.repo.Set(ctx, keyLanguage, lang)
+}
+
+// GetLastLaunchProfileID returns the saved Last launch profile ID, or empty when unset.
+func (uc *SettingsUseCase) GetLastLaunchProfileID(ctx context.Context) (string, error) {
+	return uc.repo.Get(ctx, keyLastLaunchProfileID)
+}
+
+// SetLastLaunchProfileID persists the Last launch profile ID (no existence check).
+func (uc *SettingsUseCase) SetLastLaunchProfileID(ctx context.Context, profileID string) error {
+	return uc.repo.Set(ctx, keyLastLaunchProfileID, strings.TrimSpace(profileID))
 }
 
 // GetGalleryLastExitAt returns the last app shutdown time used for incremental gallery sync.

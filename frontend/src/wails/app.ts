@@ -14,6 +14,7 @@ import type * as WailsApp from "../../wailsjs/go/main/App";
 type WailsDTO<T> = Omit<T, "convertValues">;
 
 export type LaunchProfileDTO = WailsDTO<main.LaunchProfileDTO>;
+export type InstanceRejoinSectionDTO = WailsDTO<main.InstanceRejoinSectionDTO>;
 export type LaunchArgsParsedDTO = WailsDTO<launcher.LaunchArgsParsed>;
 export type ScreenshotDTO = WailsDTO<main.ScreenshotDTO>;
 export type ScreenshotSearchDTO = WailsDTO<main.ScreenshotSearchDTO>;
@@ -203,8 +204,20 @@ export const App = {
   async launchVRChat(profileID: string): Promise<void> {
     return callApp((a) => a.LaunchVRChat(profileID), undefined);
   },
-  async launchVRChatWithArgs(args: string): Promise<void> {
-    return callApp((a) => a.LaunchVRChatWithArgs(args), undefined);
+  async launchVRChatWithArgs(
+    args: string,
+    lastLaunchProfileID = "",
+  ): Promise<void> {
+    return callApp(
+      (a) => a.LaunchVRChatWithArgs(args, lastLaunchProfileID),
+      undefined,
+    );
+  },
+  async getInstanceRejoinSection(): Promise<InstanceRejoinSectionDTO | null> {
+    return callApp((a) => a.GetInstanceRejoinSection(), null);
+  },
+  async instanceRejoin(profileID: string): Promise<void> {
+    return callApp((a) => a.InstanceRejoin(profileID), undefined);
   },
   async parseLaunchArgsForGUI(args: string): Promise<LaunchArgsParsedDTO> {
     return callApp((a) => a.ParseLaunchArgsForGUI(args), {

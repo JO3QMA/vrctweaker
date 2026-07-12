@@ -299,6 +299,31 @@ func (uc *ActivityUseCase) ListPlaySessions(ctx context.Context, from, to time.T
 	return uc.playRepo.List(ctx, from, to)
 }
 
+// GetRejoinTarget returns the latest play session suitable for Instance rejoin, or nil when none.
+func (uc *ActivityUseCase) GetRejoinTarget(ctx context.Context) (*RejoinTarget, error) {
+	s, err := uc.playRepo.FindLatestWithInstanceID(ctx)
+	if err != nil || s == nil {
+		return nil, err
+	}
+	target := &RejoinTarget{
+		PlaySessionID: s.ID,
+		InstanceID:    s.InstanceID,
+	}
+	if uc.worldRepo == nil {
+		return target, nil
+	}
+	wid := activity.WorldIDFromInstanceKey(s.InstanceID)
+	if wid == "" {
+		return target, nil
+	}
+	wi, err := uc.worldRepo.GetByWorldID(ctx, wid)
+	if err != nil || wi == nil {
+		return target, nil
+	}
+	target.WorldDisplayName = wi.DisplayName
+	return target, nil
+}
+
 // SavePlaySession persists a play session.
 func (uc *ActivityUseCase) SavePlaySession(ctx context.Context, s *activity.PlaySession) error {
 	if s.ID == "" {

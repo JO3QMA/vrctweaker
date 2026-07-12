@@ -10,13 +10,27 @@ const {
   mockSetStatusDescription,
   mockSetStatusAndDescription,
   mockLaunchVRChat,
-} = vi.hoisted(() => ({
-  mockLaunchProfiles: vi.fn(),
-  mockSetStatus: vi.fn(),
-  mockSetStatusDescription: vi.fn(),
-  mockSetStatusAndDescription: vi.fn(),
-  mockLaunchVRChat: vi.fn(),
-}));
+  mockGetInstanceRejoinSection,
+  mockInstanceRejoin,
+  mockEventsOn,
+  triggerEncountersChanged,
+} = vi.hoisted(() => {
+  let encountersChangedCb: (() => void) | undefined;
+  return {
+    mockLaunchProfiles: vi.fn(),
+    mockSetStatus: vi.fn(),
+    mockSetStatusDescription: vi.fn(),
+    mockSetStatusAndDescription: vi.fn(),
+    mockLaunchVRChat: vi.fn(),
+    mockGetInstanceRejoinSection: vi.fn(),
+    mockInstanceRejoin: vi.fn(),
+    mockEventsOn: vi.fn((_event: string, cb: () => void) => {
+      encountersChangedCb = cb;
+      return vi.fn();
+    }),
+    triggerEncountersChanged: () => encountersChangedCb?.(),
+  };
+});
 
 vi.mock("../../wails/app", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../wails/app")>();
@@ -26,12 +40,20 @@ vi.mock("../../wails/app", async (importOriginal) => {
       ...actual.App,
       launchProfiles: mockLaunchProfiles,
       launchVRChat: mockLaunchVRChat,
+      getInstanceRejoinSection: mockGetInstanceRejoinSection,
+      instanceRejoin: mockInstanceRejoin,
       setStatus: mockSetStatus,
       setStatusDescription: mockSetStatusDescription,
       setStatusAndDescription: mockSetStatusAndDescription,
     },
   };
 });
+
+vi.mock("../../wails/runtime", () => ({
+  getRuntime: () => ({
+    EventsOn: mockEventsOn,
+  }),
+}));
 
 const emptyProfiles: LaunchProfileDTO[] = [];
 
@@ -46,6 +68,8 @@ describe("DashboardView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockLaunchProfiles.mockResolvedValue([...emptyProfiles]);
+    mockGetInstanceRejoinSection.mockResolvedValue(null);
+    mockInstanceRejoin.mockResolvedValue(undefined);
     mockLaunchVRChat.mockResolvedValue(undefined);
     mockSetStatus.mockResolvedValue(undefined);
     mockSetStatusDescription.mockResolvedValue(undefined);
@@ -270,5 +294,70 @@ describe("DashboardView", () => {
 
     expect(errorSpy).toHaveBeenCalledWith("tpl fail");
     errorSpy.mockRestore();
+  });
+
+  it("hides instance rejoin section when unavailable", async () => {
+    const wrapper = mount(DashboardView);
+    await flushPromises();
+    expect(
+      wrapper.find('[data-testid="instance-rejoin-section"]').exists(),
+    ).toBe(false);
+  });
+
+  it("shows world name on rejoin button", async () => {
+    mockGetInstanceRejoinSection.mockResolvedValue({
+      worldDisplayName: "Test World",
+      profiles: [defaultLaunchProfile],
+      selectedProfileId: "p-default",
+    });
+    const wrapper = mount(DashboardView);
+    await flushPromises();
+    expect(wrapper.find('[data-testid="instance-rejoin-btn"]').text()).toBe(
+      "Test World に参加",
+    );
+  });
+
+  it("shows generic rejoin label without world name", async () => {
+    mockGetInstanceRejoinSection.mockResolvedValue({
+      worldDisplayName: "",
+      profiles: [defaultLaunchProfile],
+      selectedProfileId: "p-default",
+    });
+    const wrapper = mount(DashboardView);
+    await flushPromises();
+    expect(wrapper.find('[data-testid="instance-rejoin-btn"]').text()).toBe(
+      "最後のインスタンスに参加",
+    );
+  });
+
+  it("shows error on instance rejoin failure", async () => {
+    mockGetInstanceRejoinSection.mockResolvedValue({
+      worldDisplayName: "",
+      profiles: [defaultLaunchProfile],
+      selectedProfileId: "p-default",
+    });
+    mockInstanceRejoin.mockRejectedValueOnce(new Error("rejoin failed"));
+    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
+      close: () => {},
+    }));
+    const wrapper = mount(DashboardView);
+    await flushPromises();
+    await wrapper.find('[data-testid="instance-rejoin-btn"]').trigger("click");
+    await flushPromises();
+    expect(mockInstanceRejoin).toHaveBeenCalledWith("p-default");
+    expect(errorSpy).toHaveBeenCalledWith("rejoin failed");
+    errorSpy.mockRestore();
+  });
+
+  it("refreshes instance rejoin on activity event", async () => {
+    vi.useFakeTimers();
+    mockGetInstanceRejoinSection.mockClear();
+    mount(DashboardView);
+    await flushPromises();
+    expect(mockGetInstanceRejoinSection).toHaveBeenCalledTimes(1);
+    triggerEncountersChanged();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(mockGetInstanceRejoinSection).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
   });
 });

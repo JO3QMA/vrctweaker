@@ -67,7 +67,11 @@
     "templateJoinOpen": "欢迎加入",
     "templateAskWelcome": "加入前请先联系",
     "statusUpdateSuccess": "状态已更新",
-    "statusUpdateError": "状态更新失败"
+    "statusUpdateError": "状态更新失败",
+    "instanceRejoinProfilePlaceholder": "启动配置",
+    "instanceRejoinWithWorld": "加入 {name}",
+    "instanceRejoinGeneric": "加入上次实例",
+    "instanceRejoinError": "重新加入实例启动失败"
   },
   "launcher": {
     "title": "启动器",

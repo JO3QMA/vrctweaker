@@ -67,7 +67,11 @@
     "templateJoinOpen": "歡迎加入",
     "templateAskWelcome": "加入前請先聯絡",
     "statusUpdateSuccess": "狀態已更新",
-    "statusUpdateError": "狀態更新失敗"
+    "statusUpdateError": "狀態更新失敗",
+    "instanceRejoinProfilePlaceholder": "啟動設定檔",
+    "instanceRejoinWithWorld": "加入 {name}",
+    "instanceRejoinGeneric": "加入上次實例",
+    "instanceRejoinError": "重新加入實例啟動失敗"
   },
   "launcher": {
     "title": "啟動器",

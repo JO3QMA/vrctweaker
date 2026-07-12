@@ -84,6 +84,40 @@ func TestPlaySessionRepository_FindLatestWithoutEndTime(t *testing.T) {
 	}
 }
 
+func TestPlaySessionRepository_FindLatestWithInstanceID(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+
+	repo := NewPlaySessionRepository(db)
+	t0 := time.Date(2024, 6, 1, 10, 0, 0, 0, time.UTC)
+	t1 := time.Date(2024, 6, 1, 12, 0, 0, 0, time.UTC)
+	if saveErr := repo.Save(ctx, &activity.PlaySession{ID: "empty", StartTime: t1}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+	if saveErr := repo.Save(ctx, &activity.PlaySession{ID: "good", StartTime: t0, InstanceID: "wrld_a:1~public"}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+	if saveErr := repo.Save(ctx, &activity.PlaySession{ID: "best", StartTime: t1, InstanceID: "wrld_b:2~public"}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+
+	got, err := repo.FindLatestWithInstanceID(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == nil || got.ID != "best" {
+		t.Fatalf("FindLatestWithInstanceID: %#v", got)
+	}
+}
+
 func TestPlaySessionRepository_List_emptyRange(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()

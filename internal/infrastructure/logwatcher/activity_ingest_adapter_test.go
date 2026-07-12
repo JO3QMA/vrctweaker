@@ -52,6 +52,10 @@ func (stubPlaySessionRepo) FindLatestWithoutEndTime(context.Context) (*activity.
 	return nil, nil
 }
 
+func (stubPlaySessionRepo) FindLatestWithInstanceID(context.Context) (*activity.PlaySession, error) {
+	return nil, nil
+}
+
 func (stubPlaySessionRepo) FindOpenForLogSource(context.Context, string) (*activity.PlaySession, error) {
 	return nil, nil
 }
