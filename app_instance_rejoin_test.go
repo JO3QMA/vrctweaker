@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -39,20 +40,28 @@ func (errRejoinPlayRepo) DeleteOlderThan(context.Context, time.Time) (int64, err
 	return 0, errors.New("db down")
 }
 
-func TestGetInstanceRejoinSection_degradesOnError(t *testing.T) {
+func TestGetInstanceRejoinSection_returnsErrorOnInfraFailure(t *testing.T) {
 	a := &App{ctx: context.Background()}
 	a.activity = usecase.NewActivityUseCase(errRejoinPlayRepo{}, nil, &memSettingsRepo{m: map[string]string{}}, nil, nil)
 	a.launcher = usecase.NewLauncherUseCase(&memLaunchRepo{profiles: []*launcher.LaunchProfile{{ID: "p1", Name: "P"}}})
 	a.settings = usecase.NewSettingsUseCase(&memSettingsRepo{m: map[string]string{}})
 	got, err := a.GetInstanceRejoinSection()
-	if err != nil || got != nil {
+	if err == nil || got != nil {
 		t.Fatalf("got=%v err=%v", got, err)
 	}
 }
 
 func TestInstanceRejoin_emptyProfileID(t *testing.T) {
 	a := &App{ctx: context.Background()}
-	err := a.InstanceRejoin("")
+	err := a.InstanceRejoin("", "s1")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestInstanceRejoin_emptyPlaySessionID(t *testing.T) {
+	a := &App{ctx: context.Background()}
+	err := a.InstanceRejoin("p1", "")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -60,7 +69,7 @@ func TestInstanceRejoin_emptyProfileID(t *testing.T) {
 
 func TestGetInstanceRejoinSection_noProfiles(t *testing.T) {
 	a := &App{ctx: context.Background()}
-	a.activity = usecase.NewActivityUseCase(&memRejoinPlayRepo{session: &activity.PlaySession{
+	a.activity = usecase.NewActivityUseCase(&memRejoinPlayRepo{latest: &activity.PlaySession{
 		ID: "s1", StartTime: time.Now().UTC(), InstanceID: "wrld_x:1~public",
 	}}, nil, &memSettingsRepo{m: map[string]string{}}, nil, nil)
 	a.launcher = usecase.NewLauncherUseCase(&memLaunchRepo{})
@@ -74,39 +83,64 @@ func TestGetInstanceRejoinSection_noProfiles(t *testing.T) {
 func TestGetInstanceRejoinSection_withWorldDisplayName(t *testing.T) {
 	inst := "wrld_test1111-1111-4111-8111-111111111101:42~public"
 	wid := activity.WorldIDFromInstanceKey(inst)
+	s := &activity.PlaySession{ID: "s1", StartTime: time.Now().UTC(), InstanceID: inst}
 	a := &App{ctx: context.Background()}
-	a.activity = usecase.NewActivityUseCase(&memRejoinPlayRepo{session: &activity.PlaySession{
-		ID: "s1", StartTime: time.Now().UTC(), InstanceID: inst,
-	}}, nil, &memSettingsRepo{m: map[string]string{}}, nil, &memRejoinWorldRepo{names: map[string]string{wid: "Test World"}})
+	a.activity = usecase.NewActivityUseCase(&memRejoinPlayRepo{latest: s, byID: map[string]*activity.PlaySession{"s1": s}},
+		nil, &memSettingsRepo{m: map[string]string{}}, nil, &memRejoinWorldRepo{names: map[string]string{wid: "Test World"}})
 	a.launcher = usecase.NewLauncherUseCase(&memLaunchRepo{profiles: []*launcher.LaunchProfile{{ID: "p1", Name: "P"}}})
 	a.settings = usecase.NewSettingsUseCase(&memSettingsRepo{m: map[string]string{}})
 	got, err := a.GetInstanceRejoinSection()
-	if err != nil || got == nil || got.WorldDisplayName != "Test World" || got.SelectedProfileID != "p1" {
+	if err != nil || got == nil || got.WorldDisplayName != "Test World" || got.SelectedProfileID != "p1" || got.PlaySessionID != "s1" {
 		t.Fatalf("got=%+v err=%v", got, err)
 	}
 }
 
 func TestInstanceRejoin_profileNotFound(t *testing.T) {
+	s := &activity.PlaySession{ID: "s1", StartTime: time.Now().UTC(), InstanceID: "wrld_x:1~public"}
 	a := &App{ctx: context.Background()}
-	a.activity = usecase.NewActivityUseCase(&memRejoinPlayRepo{session: &activity.PlaySession{
-		ID: "s1", StartTime: time.Now().UTC(), InstanceID: "wrld_x:1~public",
-	}}, nil, &memSettingsRepo{m: map[string]string{}}, nil, nil)
+	a.activity = usecase.NewActivityUseCase(&memRejoinPlayRepo{latest: s, byID: map[string]*activity.PlaySession{"s1": s}},
+		nil, &memSettingsRepo{m: map[string]string{}}, nil, nil)
 	a.launcher = usecase.NewLauncherUseCase(&memLaunchRepo{profiles: []*launcher.LaunchProfile{{ID: "p1", Name: "P"}}})
 	a.settings = usecase.NewSettingsUseCase(&memSettingsRepo{m: map[string]string{}})
-	err := a.InstanceRejoin("missing")
+	err := a.InstanceRejoin("missing", "s1")
 	if err == nil {
 		t.Fatal("expected error")
 	}
 }
 
+func TestInstanceRejoin_stalePlaySessionID(t *testing.T) {
+	t0 := time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC)
+	t1 := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	old := &activity.PlaySession{ID: "old", StartTime: t0, InstanceID: "wrld_old:1~public"}
+	newest := &activity.PlaySession{ID: "new", StartTime: t1, InstanceID: "wrld_new:2~public"}
+	a := &App{ctx: context.Background()}
+	a.activity = usecase.NewActivityUseCase(&memRejoinPlayRepo{
+		latest: newest,
+		byID:   map[string]*activity.PlaySession{"old": old, "new": newest},
+	}, nil, &memSettingsRepo{m: map[string]string{}}, nil, nil)
+	a.launcher = usecase.NewLauncherUseCase(&memLaunchRepo{profiles: []*launcher.LaunchProfile{{ID: "p1", Name: "P"}}})
+	a.settings = usecase.NewSettingsUseCase(&memSettingsRepo{m: map[string]string{}})
+	err := a.InstanceRejoin("p1", "old")
+	if err == nil || !strings.Contains(err.Error(), "changed") {
+		t.Fatalf("err=%v", err)
+	}
+}
+
 type memRejoinPlayRepo struct {
-	session *activity.PlaySession
+	latest *activity.PlaySession
+	byID   map[string]*activity.PlaySession
 }
 
 func (r *memRejoinPlayRepo) List(context.Context, time.Time, time.Time) ([]*activity.PlaySession, error) {
 	return nil, nil
 }
-func (r *memRejoinPlayRepo) GetByID(context.Context, string) (*activity.PlaySession, error) {
+func (r *memRejoinPlayRepo) GetByID(_ context.Context, id string) (*activity.PlaySession, error) {
+	if r.byID != nil {
+		return r.byID[id], nil
+	}
+	if r.latest != nil && r.latest.ID == id {
+		return r.latest, nil
+	}
 	return nil, nil
 }
 func (r *memRejoinPlayRepo) Save(context.Context, *activity.PlaySession) error { return nil }
@@ -114,7 +148,7 @@ func (r *memRejoinPlayRepo) FindLatestWithoutEndTime(context.Context) (*activity
 	return nil, nil
 }
 func (r *memRejoinPlayRepo) FindLatestWithInstanceID(context.Context) (*activity.PlaySession, error) {
-	return r.session, nil
+	return r.latest, nil
 }
 func (r *memRejoinPlayRepo) FindOpenForLogSource(context.Context, string) (*activity.PlaySession, error) {
 	return nil, nil

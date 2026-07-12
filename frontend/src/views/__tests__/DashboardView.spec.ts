@@ -306,6 +306,7 @@ describe("DashboardView", () => {
 
   it("shows world name on rejoin button", async () => {
     mockGetInstanceRejoinSection.mockResolvedValue({
+      playSessionId: "ps-1",
       worldDisplayName: "Test World",
       profiles: [defaultLaunchProfile],
       selectedProfileId: "p-default",
@@ -319,6 +320,7 @@ describe("DashboardView", () => {
 
   it("shows generic rejoin label without world name", async () => {
     mockGetInstanceRejoinSection.mockResolvedValue({
+      playSessionId: "ps-1",
       worldDisplayName: "",
       profiles: [defaultLaunchProfile],
       selectedProfileId: "p-default",
@@ -332,6 +334,7 @@ describe("DashboardView", () => {
 
   it("shows error on instance rejoin failure", async () => {
     mockGetInstanceRejoinSection.mockResolvedValue({
+      playSessionId: "ps-1",
       worldDisplayName: "",
       profiles: [defaultLaunchProfile],
       selectedProfileId: "p-default",
@@ -344,8 +347,23 @@ describe("DashboardView", () => {
     await flushPromises();
     await wrapper.find('[data-testid="instance-rejoin-btn"]').trigger("click");
     await flushPromises();
-    expect(mockInstanceRejoin).toHaveBeenCalledWith("p-default");
+    expect(mockInstanceRejoin).toHaveBeenCalledWith("p-default", "ps-1");
     expect(errorSpy).toHaveBeenCalledWith("rejoin failed");
+    expect(mockGetInstanceRejoinSection).toHaveBeenCalledTimes(2);
+    errorSpy.mockRestore();
+  });
+
+  it("shows error when instance rejoin section load fails", async () => {
+    mockGetInstanceRejoinSection.mockRejectedValueOnce(new Error("db down"));
+    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
+      close: () => {},
+    }));
+    const wrapper = mount(DashboardView);
+    await flushPromises();
+    expect(
+      wrapper.find('[data-testid="instance-rejoin-section"]').exists(),
+    ).toBe(false);
+    expect(errorSpy).toHaveBeenCalledWith("db down");
     errorSpy.mockRestore();
   });
 

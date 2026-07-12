@@ -71,7 +71,8 @@
     "instanceRejoinProfilePlaceholder": "啟動設定檔",
     "instanceRejoinWithWorld": "加入 {name}",
     "instanceRejoinGeneric": "加入上次實例",
-    "instanceRejoinError": "重新加入實例啟動失敗"
+    "instanceRejoinError": "重新加入實例啟動失敗",
+    "instanceRejoinLoadError": "無法載入重新加入區塊"
   },
   "launcher": {
     "title": "啟動器",

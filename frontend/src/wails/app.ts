@@ -216,8 +216,11 @@ export const App = {
   async getInstanceRejoinSection(): Promise<InstanceRejoinSectionDTO | null> {
     return callApp((a) => a.GetInstanceRejoinSection(), null);
   },
-  async instanceRejoin(profileID: string): Promise<void> {
-    return callApp((a) => a.InstanceRejoin(profileID), undefined);
+  async instanceRejoin(
+    profileID: string,
+    playSessionID: string,
+  ): Promise<void> {
+    return callApp((a) => a.InstanceRejoin(profileID, playSessionID), undefined);
   },
   async parseLaunchArgsForGUI(args: string): Promise<LaunchArgsParsedDTO> {
     return callApp((a) => a.ParseLaunchArgsForGUI(args), {

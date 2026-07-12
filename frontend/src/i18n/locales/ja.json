@@ -71,7 +71,8 @@
     "instanceRejoinProfilePlaceholder": "起動プロファイル",
     "instanceRejoinWithWorld": "{name} に参加",
     "instanceRejoinGeneric": "最後のインスタンスに参加",
-    "instanceRejoinError": "インスタンスへの再参加起動に失敗しました"
+    "instanceRejoinError": "インスタンスへの再参加起動に失敗しました",
+    "instanceRejoinLoadError": "再参加セクションの読み込みに失敗しました"
   },
   "launcher": {
     "title": "ランチャー",

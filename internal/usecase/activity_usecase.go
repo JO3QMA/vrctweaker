@@ -3,8 +3,10 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -306,27 +308,54 @@ func (uc *ActivityUseCase) GetRejoinTarget(ctx context.Context) (*RejoinTarget, 
 	if err != nil || s == nil {
 		return nil, err
 	}
+	return uc.rejoinTargetFromPlaySession(ctx, s), nil
+}
+
+// ResolveRejoinTarget validates playSessionID is still the current Rejoin target and returns it.
+func (uc *ActivityUseCase) ResolveRejoinTarget(ctx context.Context, playSessionID string) (*RejoinTarget, error) {
+	playSessionID = strings.TrimSpace(playSessionID)
+	if playSessionID == "" {
+		return nil, fmt.Errorf("play session id is required")
+	}
+	s, err := uc.playRepo.GetByID(ctx, playSessionID)
+	if err != nil {
+		return nil, err
+	}
+	if s == nil || strings.TrimSpace(s.InstanceID) == "" {
+		return nil, fmt.Errorf("rejoin target not found")
+	}
+	latest, err := uc.playRepo.FindLatestWithInstanceID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if latest == nil || latest.ID != playSessionID {
+		return nil, fmt.Errorf("rejoin target changed")
+	}
+	return uc.rejoinTargetFromPlaySession(ctx, s), nil
+}
+
+func (uc *ActivityUseCase) rejoinTargetFromPlaySession(ctx context.Context, s *activity.PlaySession) *RejoinTarget {
 	target := &RejoinTarget{
 		PlaySessionID: s.ID,
 		InstanceID:    s.InstanceID,
 	}
 	if uc.worldRepo == nil {
-		return target, nil
+		return target
 	}
 	wid := activity.WorldIDFromInstanceKey(s.InstanceID)
 	if wid == "" {
-		return target, nil
+		return target
 	}
 	wi, err := uc.worldRepo.GetByWorldID(ctx, wid)
 	if err != nil {
 		log.Printf("activity: get world info for %s: %v", wid, err)
-		return target, nil
+		return target
 	}
 	if wi == nil {
-		return target, nil
+		return target
 	}
 	target.WorldDisplayName = wi.DisplayName
-	return target, nil
+	return target
 }
 
 // SavePlaySession persists a play session.

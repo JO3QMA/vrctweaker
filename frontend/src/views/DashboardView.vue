@@ -226,9 +226,14 @@ async function loadLaunchProfiles(): Promise<void> {
 }
 
 async function loadInstanceRejoinSection(): Promise<void> {
-  const section = await App.getInstanceRejoinSection();
-  instanceRejoin.value = section;
-  selectedRejoinProfileId.value = section?.selectedProfileId ?? "";
+  try {
+    const section = await App.getInstanceRejoinSection();
+    instanceRejoin.value = section;
+    selectedRejoinProfileId.value = section?.selectedProfileId ?? "";
+  } catch (e) {
+    instanceRejoin.value = null;
+    ElMessage.error(formatError(e, t("dashboard.instanceRejoinLoadError")));
+  }
 }
 
 onMounted(async () => {
@@ -256,11 +261,13 @@ async function launch() {
 }
 
 async function launchInstanceRejoin() {
-  if (!selectedRejoinProfileId.value) return;
+  const playSessionId = instanceRejoin.value?.playSessionId?.trim();
+  if (!selectedRejoinProfileId.value || !playSessionId) return;
   try {
-    await App.instanceRejoin(selectedRejoinProfileId.value);
+    await App.instanceRejoin(selectedRejoinProfileId.value, playSessionId);
   } catch (e) {
     ElMessage.error(formatError(e, t("dashboard.instanceRejoinError")));
+    void loadInstanceRejoinSection();
   }
 }
 

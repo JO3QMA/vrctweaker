@@ -30,6 +30,8 @@ func (a *App) setLastLaunchProfileOnSuccess(profileID string, launchErr error) e
 		return nil
 	}
 	if err := a.settings.SetLastLaunchProfileID(a.ctx, profileID); err != nil {
+		// ponytail: best-effort — launch already succeeded; do not fail the caller.
+		// Upgrade path: surface to user or retry persistence.
 		log.Printf("instance rejoin: save last launch profile: %v", err)
 	}
 	return nil
@@ -39,45 +41,40 @@ func (a *App) setLastLaunchProfileOnSuccess(profileID string, launchErr error) e
 func (a *App) GetInstanceRejoinSection() (*InstanceRejoinSectionDTO, error) {
 	target, err := a.activity.GetRejoinTarget(a.ctx)
 	if err != nil {
-		log.Printf("instance rejoin: get target: %v", err)
-		return nil, nil
+		return nil, fmt.Errorf("instance rejoin: get target: %w", err)
 	}
 	if target == nil {
 		return nil, nil
 	}
 	profiles, err := a.launcher.ListProfiles(a.ctx)
 	if err != nil {
-		log.Printf("instance rejoin: list profiles: %v", err)
-		return nil, nil
+		return nil, fmt.Errorf("instance rejoin: list profiles: %w", err)
 	}
 	if len(profiles) == 0 {
 		return nil, nil
 	}
 	lastID, err := a.settings.GetLastLaunchProfileID(a.ctx)
 	if err != nil {
-		log.Printf("instance rejoin: get last launch profile: %v", err)
-		return nil, nil
+		return nil, fmt.Errorf("instance rejoin: get last launch profile: %w", err)
 	}
 	selectedID := usecase.ResolveInstanceRejoinProfileID(profiles, lastID)
 	return &InstanceRejoinSectionDTO{
+		PlaySessionID:     target.PlaySessionID,
 		WorldDisplayName:  target.WorldDisplayName,
 		Profiles:          toLaunchProfileDTOs(profiles),
 		SelectedProfileID: selectedID,
 	}, nil
 }
 
-// InstanceRejoin launches VRChat into the current Rejoin target using the given launch profile.
-func (a *App) InstanceRejoin(profileID string) error {
+// InstanceRejoin launches VRChat into the Rejoin target for playSessionID using the given launch profile.
+func (a *App) InstanceRejoin(profileID, playSessionID string) error {
 	profileID = strings.TrimSpace(profileID)
 	if profileID == "" {
 		return fmt.Errorf("profile id is required")
 	}
-	target, err := a.activity.GetRejoinTarget(a.ctx)
+	target, err := a.activity.ResolveRejoinTarget(a.ctx, playSessionID)
 	if err != nil {
 		return err
-	}
-	if target == nil {
-		return fmt.Errorf("no rejoin target available")
 	}
 	vrchatPath, steamPath, outputLogPath, err := a.launchPathSettings()
 	if err != nil {

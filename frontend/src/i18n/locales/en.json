@@ -71,7 +71,8 @@
     "instanceRejoinProfilePlaceholder": "Launch profile",
     "instanceRejoinWithWorld": "Join {name}",
     "instanceRejoinGeneric": "Rejoin last instance",
-    "instanceRejoinError": "Failed to launch rejoin to instance"
+    "instanceRejoinError": "Failed to launch rejoin to instance",
+    "instanceRejoinLoadError": "Failed to load rejoin section"
   },
   "launcher": {
     "title": "Launcher",

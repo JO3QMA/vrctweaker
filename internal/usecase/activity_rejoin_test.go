@@ -19,7 +19,15 @@ type fakeRejoinPlayRepo struct {
 func (f *fakeRejoinPlayRepo) List(context.Context, time.Time, time.Time) ([]*activity.PlaySession, error) {
 	return f.sessions, f.err
 }
-func (f *fakeRejoinPlayRepo) GetByID(context.Context, string) (*activity.PlaySession, error) {
+func (f *fakeRejoinPlayRepo) GetByID(_ context.Context, id string) (*activity.PlaySession, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	for _, s := range f.sessions {
+		if s != nil && s.ID == id {
+			return s, nil
+		}
+	}
 	return nil, nil
 }
 func (f *fakeRejoinPlayRepo) Save(context.Context, *activity.PlaySession) error { return nil }
@@ -126,5 +134,38 @@ func TestGetRejoinTarget_dbError(t *testing.T) {
 	got, err := uc.GetRejoinTarget(context.Background())
 	if err == nil || got != nil {
 		t.Fatalf("got=%v err=%v", got, err)
+	}
+}
+
+func TestResolveRejoinTarget_emptyPlaySessionID(t *testing.T) {
+	uc := NewActivityUseCase(&fakeRejoinPlayRepo{}, &memEncounterRepo{}, &fakeAppSettingsRepo{m: map[string]string{}}, nil, nil)
+	_, err := uc.ResolveRejoinTarget(context.Background(), "")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestResolveRejoinTarget_stillLatest(t *testing.T) {
+	repo := &fakeRejoinPlayRepo{sessions: []*activity.PlaySession{
+		{ID: "s1", StartTime: time.Now().UTC(), InstanceID: testRejoinInst},
+	}}
+	uc := NewActivityUseCase(repo, &memEncounterRepo{}, &fakeAppSettingsRepo{m: map[string]string{}}, nil, nil)
+	got, err := uc.ResolveRejoinTarget(context.Background(), "s1")
+	if err != nil || got == nil || got.PlaySessionID != "s1" {
+		t.Fatalf("got=%v err=%v", got, err)
+	}
+}
+
+func TestResolveRejoinTarget_staleSession(t *testing.T) {
+	t0 := time.Date(2024, 1, 1, 10, 0, 0, 0, time.UTC)
+	t1 := time.Date(2024, 1, 1, 12, 0, 0, 0, time.UTC)
+	repo := &fakeRejoinPlayRepo{sessions: []*activity.PlaySession{
+		{ID: "old", StartTime: t0, InstanceID: "wrld_old:1~public"},
+		{ID: "new", StartTime: t1, InstanceID: testRejoinInst},
+	}}
+	uc := NewActivityUseCase(repo, &memEncounterRepo{}, &fakeAppSettingsRepo{m: map[string]string{}}, nil, nil)
+	_, err := uc.ResolveRejoinTarget(context.Background(), "old")
+	if err == nil {
+		t.Fatal("expected stale error")
 	}
 }
