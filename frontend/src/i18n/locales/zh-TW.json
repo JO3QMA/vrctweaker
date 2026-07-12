@@ -826,6 +826,12 @@
     "flashEnabled": "已啟用取代。",
     "flashDisabled": "已停止取代（不更動 VRChat 端檔案）。",
     "flashLatest": "Latest: {version}",
-    "flashUpdated": "Official build updated: {version}"
+    "flashUpdated": "Official build updated: {version}",
+    "error_risk_ack_required": "Risk acknowledgment is required before enabling replacement.",
+    "error_unsupported_platform": "This feature is available on Windows only.",
+    "reason": {
+      "unsupported_platform": "This feature is available on Windows only.",
+      "not_initialized": "Video settings are not initialized yet."
+    }
   }
 }

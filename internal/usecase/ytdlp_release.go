@@ -7,9 +7,11 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -17,6 +19,8 @@ import (
 const DefaultYTDLPReleasesLatestURL = "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest"
 
 const userAgentGitHub = "VRChatTweaker/1.0.0 (+https://github.com/JO3QMA/vrctweaker)"
+
+const ytdlpExeName = "yt-dlp.exe"
 
 // YTDLPReleaseInfo is the latest official Windows exe from GitHub Releases.
 type YTDLPReleaseInfo struct {
@@ -37,8 +41,10 @@ type githubReleaseLatest struct {
 
 // YTDLPUpdater fetches official yt-dlp releases into the Official yt-dlp cache.
 type YTDLPUpdater struct {
-	HTTPClient        *http.Client
-	ReleasesLatestURL string
+	mu                        sync.Mutex
+	HTTPClient                *http.Client
+	ReleasesLatestURL         string
+	SkipDownloadURLValidation bool // tests only
 }
 
 // NewYTDLPUpdater returns an updater with sane defaults.
@@ -77,6 +83,33 @@ func ytdlpExeAssetFromReleaseJSON(data []byte) (tagName, downloadURL string, err
 
 func normalizeReleaseTag(tag string) string {
 	return strings.TrimPrefix(strings.TrimSpace(tag), "v")
+}
+
+var allowedYTDlpDownloadHosts = map[string]struct{}{
+	"github.com":                    {},
+	"objects.githubusercontent.com": {},
+}
+
+func validateYTDlpDownloadURL(u *YTDLPUpdater, raw string) error {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return errors.New("download URL is empty")
+	}
+	if u != nil && u.SkipDownloadURLValidation {
+		return nil
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("invalid download URL: %w", err)
+	}
+	if parsed.Scheme != "https" {
+		return errors.New("download URL must use https")
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if _, ok := allowedYTDlpDownloadHosts[host]; !ok {
+		return fmt.Errorf("download URL host not allowed: %s", host)
+	}
+	return nil
 }
 
 // FetchLatestRelease resolves the latest release tag and yt-dlp.exe browser_download_url.
@@ -130,8 +163,34 @@ func LocalYTDLPVersion(ctx context.Context, exePath string) string {
 
 // DownloadToCache downloads downloadURL into Official yt-dlp cache (atomic replace via .partial).
 func (u *YTDLPUpdater) DownloadToCache(ctx context.Context, cachePath, downloadURL string) error {
-	if strings.TrimSpace(downloadURL) == "" {
-		return errors.New("download URL is empty")
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	return u.downloadToCacheLocked(ctx, cachePath, downloadURL)
+}
+
+// EnsureOfficialCache downloads the latest release into cache when cache is missing.
+func (u *YTDLPUpdater) EnsureOfficialCache(ctx context.Context, cachePath string) (YTDLPReleaseInfo, error) {
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	if st, err := os.Stat(cachePath); err == nil && !st.IsDir() {
+		return YTDLPReleaseInfo{Version: LocalYTDLPVersion(ctx, cachePath)}, nil
+	}
+	info, err := u.FetchLatestRelease(ctx)
+	if err != nil {
+		return YTDLPReleaseInfo{}, err
+	}
+	if err := u.downloadToCacheLocked(ctx, cachePath, info.DownloadURL); err != nil {
+		return YTDLPReleaseInfo{}, err
+	}
+	if info.Version == "" {
+		info.Version = LocalYTDLPVersion(ctx, cachePath)
+	}
+	return info, nil
+}
+
+func (u *YTDLPUpdater) downloadToCacheLocked(ctx context.Context, cachePath, downloadURL string) error {
+	if err := validateYTDlpDownloadURL(u, downloadURL); err != nil {
+		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(cachePath), 0o755); err != nil {
 		return err
@@ -147,24 +206,6 @@ func (u *YTDLPUpdater) DownloadToCache(ctx context.Context, cachePath, downloadU
 		return fmt.Errorf("install cache: %w", err)
 	}
 	return nil
-}
-
-// EnsureOfficialCache downloads the latest release into cache when cache is missing.
-func (u *YTDLPUpdater) EnsureOfficialCache(ctx context.Context, cachePath string) (YTDLPReleaseInfo, error) {
-	if st, err := os.Stat(cachePath); err == nil && !st.IsDir() {
-		return YTDLPReleaseInfo{Version: LocalYTDLPVersion(ctx, cachePath)}, nil
-	}
-	info, err := u.FetchLatestRelease(ctx)
-	if err != nil {
-		return YTDLPReleaseInfo{}, err
-	}
-	if err := u.DownloadToCache(ctx, cachePath, info.DownloadURL); err != nil {
-		return YTDLPReleaseInfo{}, err
-	}
-	if info.Version == "" {
-		info.Version = LocalYTDLPVersion(ctx, cachePath)
-	}
-	return info, nil
 }
 
 func downloadToFile(ctx context.Context, client *http.Client, url, dest string) error {

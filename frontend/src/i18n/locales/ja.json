@@ -826,6 +826,12 @@
     "flashEnabled": "置き換えを有効化しました。",
     "flashDisabled": "置き換えを停止しました（VRChat 側のファイルはそのままです）。",
     "flashLatest": "最新版: {version}",
-    "flashUpdated": "公式版を更新しました: {version}"
+    "flashUpdated": "公式版を更新しました: {version}",
+    "error_risk_ack_required": "有効化する前にリスク確認が必要です。",
+    "error_unsupported_platform": "この機能は Windows 版のみ利用できます。",
+    "reason": {
+      "unsupported_platform": "この機能は Windows 版のみ利用できます。",
+      "not_initialized": "動画設定がまだ初期化されていません。"
+    }
   }
 }

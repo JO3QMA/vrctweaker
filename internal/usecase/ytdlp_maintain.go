@@ -4,8 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"runtime"
+	"sync"
 	"time"
 )
 
@@ -38,6 +40,7 @@ type YTDLPMaintainStatus struct {
 
 // YTDLPMaintainUseCase orchestrates Official cache, Tools symlink, and maintain settings.
 type YTDLPMaintainUseCase struct {
+	mu            sync.Mutex
 	settings      *SettingsUseCase
 	updater       *YTDLPUpdater
 	UnlockTimeout time.Duration
@@ -81,45 +84,9 @@ func (uc *YTDLPMaintainUseCase) unlockTimeout() time.Duration {
 
 // GetStatus returns desired/effective state without calling GitHub.
 func (uc *YTDLPMaintainUseCase) GetStatus(ctx context.Context) (YTDLPMaintainStatus, error) {
-	st := YTDLPMaintainStatus{}
-	tools, err := uc.toolsPath()
-	if err != nil {
-		st.Supported = false
-		st.UnsupportedReason = err.Error()
-		return st, nil
-	}
-	cache, err := uc.cachePath()
-	if err != nil {
-		st.Supported = false
-		st.UnsupportedReason = err.Error()
-		return st, nil
-	}
-	st.ToolsPath = tools
-	st.CachePath = cache
-
-	if runtime.GOOS != "windows" {
-		st.Supported = false
-		st.UnsupportedReason = "この機能は Windows 版のみ利用できます。"
-		return st, nil
-	}
-	st.Supported = true
-
-	if uc.settings != nil {
-		st.MaintainDesired, _ = uc.settings.GetYTDLPToolsReplaceMaintain(ctx)
-		st.RiskAcknowledged, _ = uc.settings.GetYTDLPToolsReplaceRiskAck(ctx)
-		st.PendingError, _ = uc.settings.GetYTDLPToolsReplacePendingError(ctx)
-	}
-
-	if fi, stErr := os.Stat(cache); stErr == nil && !fi.IsDir() {
-		st.CachePresent = true
-		st.CacheVersion = LocalYTDLPVersion(ctx, cache)
-	}
-	eff, err := EffectiveOfficialLink(tools, cache)
-	if err != nil {
-		return st, err
-	}
-	st.EffectiveOfficial = eff
-	return st, nil
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+	return uc.getStatusLocked(ctx)
 }
 
 // AcknowledgeRisk records Tools replace risk acknowledgment.
@@ -134,6 +101,8 @@ func (uc *YTDLPMaintainUseCase) AcknowledgeRisk(ctx context.Context) error {
 // On enable, ensures Official cache exists and attempts one Tools symlink (best-effort).
 // On disable, only clears desired — Tools file is left untouched.
 func (uc *YTDLPMaintainUseCase) SetMaintainDesired(ctx context.Context, on bool) error {
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
 	if runtime.GOOS != "windows" {
 		return ErrYTDLPUnsupportedPlatform
 	}
@@ -148,11 +117,12 @@ func (uc *YTDLPMaintainUseCase) SetMaintainDesired(ctx context.Context, on bool)
 		if !ack {
 			return ErrYTDLPRiskAckRequired
 		}
-		if setErr := uc.settings.SetYTDLPToolsReplaceMaintain(ctx, true); setErr != nil {
-			return setErr
+		if st, linkErr := uc.ensureAndLinkLocked(ctx); linkErr != nil {
+			return linkErr
+		} else if st.PendingError != "" {
+			return errors.New(st.PendingError)
 		}
-		_, err = uc.EnsureAndLink(ctx)
-		return err
+		return uc.settings.SetYTDLPToolsReplaceMaintain(ctx, true)
 	}
 	return uc.settings.SetYTDLPToolsReplaceMaintain(ctx, false)
 }
@@ -179,7 +149,9 @@ func (uc *YTDLPMaintainUseCase) CheckLatest(ctx context.Context) (YTDLPMaintainS
 
 // UpdateOfficialCache downloads latest into cache. When maintain is desired, re-links Tools.
 func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloadURL, expectedTag string) (YTDLPMaintainStatus, error) {
-	st, err := uc.GetStatus(ctx)
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+	st, err := uc.getStatusLocked(ctx)
 	if err != nil {
 		return st, err
 	}
@@ -223,7 +195,13 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 // If Tools is already a symlink to cache, it does not remove/recreate (re-enable after stop
 // must not fail just because the existing correct link is briefly locked).
 func (uc *YTDLPMaintainUseCase) EnsureAndLink(ctx context.Context) (YTDLPMaintainStatus, error) {
-	st, err := uc.GetStatus(ctx)
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+	return uc.ensureAndLinkLocked(ctx)
+}
+
+func (uc *YTDLPMaintainUseCase) ensureAndLinkLocked(ctx context.Context) (YTDLPMaintainStatus, error) {
+	st, err := uc.getStatusLocked(ctx)
 	if err != nil {
 		return st, err
 	}
@@ -246,6 +224,8 @@ func (uc *YTDLPMaintainUseCase) EnsureAndLink(ctx context.Context) (YTDLPMaintai
 
 // ReapplyIfNeeded links Tools when maintain is desired and the link is not effective.
 func (uc *YTDLPMaintainUseCase) ReapplyIfNeeded(ctx context.Context) error {
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
 	if uc.settings == nil {
 		return nil
 	}
@@ -277,7 +257,9 @@ func (uc *YTDLPMaintainUseCase) linkIfNeeded(ctx context.Context, tools, cache s
 	}
 	if !need {
 		if uc.settings != nil {
-			_ = uc.settings.SetYTDLPToolsReplacePendingError(ctx, "")
+			if err := uc.settings.SetYTDLPToolsReplacePendingError(ctx, ""); err != nil {
+				log.Printf("ytdlp maintain: clear pending error: %v", err)
+			}
 		}
 		return nil
 	}
@@ -290,22 +272,68 @@ func (uc *YTDLPMaintainUseCase) linkAndRecord(ctx context.Context, tools, cache 
 		return err
 	}
 	if err != nil {
-		_ = uc.settings.SetYTDLPToolsReplacePendingError(ctx, err.Error())
+		if setErr := uc.settings.SetYTDLPToolsReplacePendingError(ctx, err.Error()); setErr != nil {
+			log.Printf("ytdlp maintain: set pending error: %v", setErr)
+		}
 		return err
 	}
 	return uc.settings.SetYTDLPToolsReplacePendingError(ctx, "")
 }
 
-// FormatMaintainError returns a user-facing message for maintain API errors.
+// getStatusLocked is GetStatus without acquiring uc.mu (caller must hold the lock).
+func (uc *YTDLPMaintainUseCase) getStatusLocked(ctx context.Context) (YTDLPMaintainStatus, error) {
+	st := YTDLPMaintainStatus{}
+	tools, err := uc.toolsPath()
+	if err != nil {
+		st.Supported = false
+		st.UnsupportedReason = err.Error()
+		return st, nil
+	}
+	cache, err := uc.cachePath()
+	if err != nil {
+		st.Supported = false
+		st.UnsupportedReason = err.Error()
+		return st, nil
+	}
+	st.ToolsPath = tools
+	st.CachePath = cache
+
+	if runtime.GOOS != "windows" {
+		st.Supported = false
+		st.UnsupportedReason = "unsupported_platform"
+		return st, nil
+	}
+	st.Supported = true
+
+	if uc.settings != nil {
+		st.MaintainDesired, _ = uc.settings.GetYTDLPToolsReplaceMaintain(ctx)
+		st.RiskAcknowledged, _ = uc.settings.GetYTDLPToolsReplaceRiskAck(ctx)
+		st.PendingError, _ = uc.settings.GetYTDLPToolsReplacePendingError(ctx)
+	}
+
+	if fi, stErr := os.Stat(cache); stErr == nil && !fi.IsDir() {
+		st.CachePresent = true
+		st.CacheVersion = LocalYTDLPVersion(ctx, cache)
+	}
+	eff, err := EffectiveOfficialLink(tools, cache)
+	if err != nil {
+		return st, err
+	}
+	st.EffectiveOfficial = eff
+	return st, nil
+}
+
+// FormatMaintainError returns an i18n key for maintain API errors.
+// Frontend should resolve the key via i18n; fallback to error string for unknown errors.
 func FormatMaintainError(err error) string {
 	if err == nil {
 		return ""
 	}
 	if errors.Is(err, ErrYTDLPRiskAckRequired) {
-		return "初回有効化の前にリスク確認が必要です。"
+		return "error_risk_ack_required"
 	}
 	if errors.Is(err, ErrYTDLPUnsupportedPlatform) {
-		return "この機能は Windows 版のみ利用できます。"
+		return "error_unsupported_platform"
 	}
 	return fmt.Sprintf("%v", err)
 }

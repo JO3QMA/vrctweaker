@@ -50,7 +50,11 @@ func TestYTDLPMaintain_enableLinksTools(t *testing.T) {
 
 	repo := &fakeAppSettingsRepo{m: map[string]string{}}
 	settings := NewSettingsUseCase(repo)
-	updater := &YTDLPUpdater{HTTPClient: srv.Client(), ReleasesLatestURL: srv.URL + "/api/latest"}
+	updater := &YTDLPUpdater{
+		HTTPClient:                srv.Client(),
+		ReleasesLatestURL:         srv.URL + "/api/latest",
+		SkipDownloadURLValidation: true,
+	}
 	uc := NewYTDLPMaintainUseCase(settings, updater)
 	dir := t.TempDir()
 	uc.ToolsPathOverride = filepath.Join(dir, "Tools", "yt-dlp.exe")
@@ -86,6 +90,9 @@ func TestYTDLPMaintain_enableLinksTools(t *testing.T) {
 }
 
 func TestYTDLPMaintain_ReapplyIfNeeded(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("ReapplyIfNeeded links Tools on Windows only")
+	}
 	t.Parallel()
 	dir := t.TempDir()
 	cache := filepath.Join(dir, "cache", "yt-dlp.exe")
@@ -148,7 +155,7 @@ func TestYTDLPMaintain_linkIfNeeded_skipsWhenAlreadyLinked(t *testing.T) {
 	}
 
 	repo := &fakeAppSettingsRepo{m: map[string]string{
-		keyYTDLPToolsReplacePending: "stale-pending",
+		keyYTDLPToolsReplacePendingError: "stale-pending",
 	}}
 	settings := NewSettingsUseCase(repo)
 	uc := NewYTDLPMaintainUseCase(settings, NewYTDLPUpdater())

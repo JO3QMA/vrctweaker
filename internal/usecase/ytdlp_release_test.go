@@ -82,6 +82,21 @@ func TestFetchLatestRelease_httptest(t *testing.T) {
 	}
 }
 
+func TestValidateYTDlpDownloadURL(t *testing.T) {
+	t.Parallel()
+	u := &YTDLPUpdater{}
+	if err := validateYTDlpDownloadURL(u, "https://objects.githubusercontent.com/x/yt-dlp.exe"); err != nil {
+		t.Fatalf("allowed host: %v", err)
+	}
+	if err := validateYTDlpDownloadURL(u, "https://evil.example/yt-dlp.exe"); err == nil {
+		t.Fatal("expected reject for untrusted host")
+	}
+	u.SkipDownloadURLValidation = true
+	if err := validateYTDlpDownloadURL(u, "http://127.0.0.1/x"); err != nil {
+		t.Fatalf("skip validation: %v", err)
+	}
+}
+
 func TestDownloadToCache_andEnsure(t *testing.T) {
 	t.Parallel()
 	var base string
@@ -97,7 +112,11 @@ func TestDownloadToCache_andEnsure(t *testing.T) {
 	defer srv.Close()
 
 	cache := filepath.Join(t.TempDir(), "ytdlp", "yt-dlp.exe")
-	u := &YTDLPUpdater{HTTPClient: srv.Client(), ReleasesLatestURL: srv.URL + "/api/latest"}
+	u := &YTDLPUpdater{
+		HTTPClient:                srv.Client(),
+		ReleasesLatestURL:         srv.URL + "/api/latest",
+		SkipDownloadURLValidation: true,
+	}
 	info, err := u.EnsureOfficialCache(context.Background(), cache)
 	if err != nil {
 		t.Fatal(err)

@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	goruntime "runtime"
+	goruntime "runtime" // stdlib; wails v2/pkg/runtime is imported as runtime below
 	"strings"
 	"sync"
 	"time"
@@ -1356,9 +1356,6 @@ type ytdlpMaintainSettingGetter struct {
 }
 
 func (g ytdlpMaintainSettingGetter) YTDLPToolsReplaceMaintain(ctx context.Context) (bool, error) {
-	if g.a == nil || g.a.settings == nil {
-		return false, nil
-	}
 	return g.a.settings.GetYTDLPToolsReplaceMaintain(ctx)
 }
 
@@ -1367,9 +1364,6 @@ type ytdlpMaintainReapplier struct {
 }
 
 func (r ytdlpMaintainReapplier) ReapplyIfNeeded(ctx context.Context) error {
-	if r.a == nil || r.a.ytdlp == nil {
-		return nil
-	}
 	return r.a.ytdlp.ReapplyIfNeeded(ctx)
 }
 
@@ -1378,7 +1372,7 @@ type ytdlpToolsDirProvider struct {
 }
 
 func (p ytdlpToolsDirProvider) ToolsDir() (string, error) {
-	if p.a != nil && p.a.ytdlp != nil && p.a.ytdlp.ToolsPathOverride != "" {
+	if p.a.ytdlp != nil && p.a.ytdlp.ToolsPathOverride != "" {
 		return filepath.Dir(p.a.ytdlp.ToolsPathOverride), nil
 	}
 	tools, err := usecase.VRChatYTDLPToolsPath()
@@ -1457,7 +1451,10 @@ func (a *App) SetYTDLPToolsReplaceMaintain(on bool) error {
 	if a.ytdlp == nil {
 		return errors.New("not initialized")
 	}
-	return a.ytdlp.SetMaintainDesired(a.ctx, on)
+	if err := a.ytdlp.SetMaintainDesired(a.ctx, on); err != nil {
+		return errors.New(usecase.FormatMaintainError(err))
+	}
+	return nil
 }
 
 // CheckYTDLPLatestRelease queries GitHub for the latest official yt-dlp.exe.

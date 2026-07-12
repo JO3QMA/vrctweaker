@@ -149,16 +149,16 @@ func (uc *SettingsUseCase) clearStaleOutputLogPath(ctx context.Context) (string,
 
 // Path settings keys in app_settings.
 const (
-	keyVRChatPathWindows         = "vrchat_path_windows"
-	keySteamPathLinux            = "steam_path_linux"
-	keyOutputLogPath             = "output_log_path"
-	keyGalleryLastExitAt         = "gallery_last_exit_at"
-	keySuppressSleepWhileVRChat  = "suppress_sleep_while_vrchat"
-	keyLanguage                  = "language"
-	keyLastLaunchProfileID       = "last_launch_profile_id"
-	keyYTDLPToolsReplaceMaintain = "ytdlp_tools_replace_maintain"
-	keyYTDLPToolsReplaceRiskAck  = "ytdlp_tools_replace_risk_ack"
-	keyYTDLPToolsReplacePending  = "ytdlp_tools_replace_pending_error"
+	keyVRChatPathWindows             = "vrchat_path_windows"
+	keySteamPathLinux                = "steam_path_linux"
+	keyOutputLogPath                 = "output_log_path"
+	keyGalleryLastExitAt             = "gallery_last_exit_at"
+	keySuppressSleepWhileVRChat      = "suppress_sleep_while_vrchat"
+	keyLanguage                      = "language"
+	keyLastLaunchProfileID           = "last_launch_profile_id"
+	keyYTDLPToolsReplaceMaintain     = "ytdlp_tools_replace_maintain"
+	keyYTDLPToolsReplaceRiskAck      = "ytdlp_tools_replace_risk_ack"
+	keyYTDLPToolsReplacePendingError = "ytdlp_tools_replace_pending_error"
 )
 
 // SupportedAppLanguages are UI locale codes persisted in app_settings.
@@ -257,12 +257,12 @@ func (uc *SettingsUseCase) SetYTDLPToolsReplaceRiskAck(ctx context.Context, ack 
 
 // GetYTDLPToolsReplacePendingError returns the last pending re-link error message (empty if none).
 func (uc *SettingsUseCase) GetYTDLPToolsReplacePendingError(ctx context.Context) (string, error) {
-	return uc.repo.Get(ctx, keyYTDLPToolsReplacePending)
+	return uc.repo.Get(ctx, keyYTDLPToolsReplacePendingError)
 }
 
 // SetYTDLPToolsReplacePendingError persists or clears the pending re-link error.
 func (uc *SettingsUseCase) SetYTDLPToolsReplacePendingError(ctx context.Context, msg string) error {
-	return uc.repo.Set(ctx, keyYTDLPToolsReplacePending, strings.TrimSpace(msg))
+	return uc.repo.Set(ctx, keyYTDLPToolsReplacePendingError, strings.TrimSpace(msg))
 }
 
 func parseBoolSetting(v string) bool {

@@ -14,7 +14,7 @@
           type="warning"
           :closable="false"
           show-icon
-          :title="status.unsupportedReason || t('video.unsupported')"
+          :title="videoReason(status.unsupportedReason ?? '')"
         />
         <template v-else>
           <el-alert
@@ -122,7 +122,7 @@ import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
 import { App, type YTDLPMaintainStatusDTO } from "../wails/app";
 
-const { t } = useI18n();
+const { t, te } = useI18n();
 
 const emptyStatus = (): YTDLPMaintainStatusDTO => ({
   supported: false,
@@ -150,6 +150,17 @@ const busy = ref(false);
 const flash = ref("");
 const flashClass = ref("");
 
+function videoReason(code: string): string {
+  if (!code) return t("video.unsupported");
+  const key = `video.reason.${code}`;
+  return te(key) ? t(key) : code;
+}
+
+function videoErrorMessage(msg: string): string {
+  const key = `video.${msg}`;
+  return te(key) ? t(key) : msg;
+}
+
 function applyStatus(s: YTDLPMaintainStatusDTO) {
   status.value = s;
   maintainOn.value = !!s.maintainDesired;
@@ -159,6 +170,9 @@ async function refresh() {
   loading.value = true;
   try {
     applyStatus(await App.getYTDLPMaintainStatus());
+  } catch (e) {
+    flash.value = videoErrorMessage(e instanceof Error ? e.message : String(e));
+    flashClass.value = "flash-err";
   } finally {
     loading.value = false;
   }
@@ -187,10 +201,10 @@ async function onMaintainChange(on: boolean | string | number) {
     flashClass.value = "flash-ok";
   } catch (e) {
     maintainOn.value = status.value.maintainDesired;
-    if (e === "cancel" || (e && typeof e === "object" && "action" in e)) {
+    if (e === "cancel") {
       return;
     }
-    flash.value = e instanceof Error ? e.message : String(e);
+    flash.value = videoErrorMessage(e instanceof Error ? e.message : String(e));
     flashClass.value = "flash-err";
   } finally {
     busy.value = false;

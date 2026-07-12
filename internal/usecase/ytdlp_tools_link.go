@@ -1,3 +1,5 @@
+//go:build windows
+
 package usecase
 
 import (
@@ -6,8 +8,6 @@ import (
 	"path/filepath"
 	"time"
 )
-
-const ytdlpExeName = "yt-dlp.exe"
 
 // OfficialYTDLPCachePath returns …/Local/vrchat-tweaker/ytdlp/yt-dlp.exe (outside LocalLow).
 func OfficialYTDLPCachePath() (string, error) {
@@ -39,6 +39,7 @@ func vrchatYTDLPToolsPathFromLocal(localAppData string) string {
 
 // NeedsOfficialLink reports whether Tools/yt-dlp.exe should be (re)linked to cache.
 // Missing cache → false (caller must download first). Plain file or wrong symlink → true.
+// Callers must ensure cache exists before interpreting the result as "link is valid".
 func NeedsOfficialLink(toolsPath, cachePath string) (bool, error) {
 	if _, err := os.Stat(cachePath); err != nil {
 		if os.IsNotExist(err) {
@@ -114,7 +115,9 @@ func LinkToolsToCache(toolsPath, cachePath string, unlockTimeout time.Duration) 
 	}
 
 	if _, statErr := os.Lstat(toolsPath); statErr == nil {
-		_ = waitUntilUnlocked(toolsPath, unlockTimeout)
+		if unlockErr := waitUntilUnlocked(toolsPath, unlockTimeout); unlockErr != nil {
+			return fmt.Errorf("unlock tools yt-dlp: %w", unlockErr)
+		}
 		if rmErr := os.Remove(toolsPath); rmErr != nil && !os.IsNotExist(rmErr) {
 			return fmt.Errorf("remove tools yt-dlp: %w", rmErr)
 		}
@@ -126,7 +129,7 @@ func LinkToolsToCache(toolsPath, cachePath string, unlockTimeout time.Duration) 
 		return err
 	}
 	if err := os.Symlink(absCache, toolsPath); err != nil {
-		return fmt.Errorf("公式 yt-dlp の配置に失敗しました（Windows の開発者モードを有効にするか、管理者として実行してください）: %w", err)
+		return fmt.Errorf("symlink tools yt-dlp: enable Windows Developer Mode or run as administrator: %w", err)
 	}
 	return nil
 }

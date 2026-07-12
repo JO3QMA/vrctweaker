@@ -2,6 +2,7 @@ package ytdlpmaintain
 
 import (
 	"context"
+	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -63,6 +64,7 @@ func Run(
 	ensureWatch := func() {
 		dir, err := toolsDir.ToolsDir()
 		if err != nil {
+			log.Printf("ytdlp maintain: ToolsDir error: %v", err)
 			return
 		}
 		if watching && watchPath == dir {
@@ -71,13 +73,16 @@ func Run(
 		closeWatcher()
 		w, err := fsnotify.NewWatcher()
 		if err != nil {
+			log.Printf("ytdlp maintain: fsnotify.NewWatcher error: %v", err)
 			return
 		}
 		if err := os.MkdirAll(dir, 0o755); err != nil {
+			log.Printf("ytdlp maintain: MkdirAll(%s) error: %v", dir, err)
 			_ = w.Close()
 			return
 		}
 		if err := w.Add(dir); err != nil {
+			log.Printf("ytdlp maintain: watcher Add(%s) error: %v", dir, err)
 			_ = w.Close()
 			return
 		}
@@ -87,7 +92,9 @@ func Run(
 	}
 
 	reapply := func() {
-		_ = reapplier.ReapplyIfNeeded(ctx)
+		if err := reapplier.ReapplyIfNeeded(ctx); err != nil {
+			log.Printf("ytdlp maintain: ReapplyIfNeeded error: %v", err)
+		}
 	}
 
 	for {
@@ -113,11 +120,13 @@ func Run(
 				continue
 			}
 			reapply()
-		case _, ok := <-errCh:
+		case evErr, ok := <-errCh:
 			if !ok {
 				closeWatcher()
 				continue
 			}
+			log.Printf("ytdlp maintain: watcher error: %v", evErr)
+			closeWatcher()
 		case <-ticker.C:
 			enabled, err := settings.YTDLPToolsReplaceMaintain(ctx)
 			if err != nil || !enabled {

@@ -826,6 +826,12 @@
     "flashEnabled": "교체를 켰습니다.",
     "flashDisabled": "교체를 중지했습니다(VRChat 쪽 파일은 그대로입니다).",
     "flashLatest": "Latest: {version}",
-    "flashUpdated": "Official build updated: {version}"
+    "flashUpdated": "Official build updated: {version}",
+    "error_risk_ack_required": "Risk acknowledgment is required before enabling replacement.",
+    "error_unsupported_platform": "This feature is available on Windows only.",
+    "reason": {
+      "unsupported_platform": "This feature is available on Windows only.",
+      "not_initialized": "Video settings are not initialized yet."
+    }
   }
 }

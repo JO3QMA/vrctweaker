@@ -32,7 +32,11 @@ const { t } = useI18n();
 const isWindows = ref(false);
 
 onMounted(async () => {
-  isWindows.value = await App.runtimeIsWindows();
+  try {
+    isWindows.value = await App.runtimeIsWindows();
+  } catch {
+    isWindows.value = false;
+  }
 });
 
 const menuItems = computed(() => {
