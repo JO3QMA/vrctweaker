@@ -252,10 +252,12 @@ onMounted(() => {
 
 <style scoped>
 .video-view {
-  max-width: 52rem;
+  width: 100%;
+  box-sizing: border-box;
 }
 .video-card {
   margin-top: 1rem;
+  width: 100%;
 }
 .block-hint {
   margin-bottom: 1rem;
