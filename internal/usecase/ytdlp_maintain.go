@@ -204,8 +204,8 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 		st.LatestTag = info.Tag
 		st.LatestDownloadURL = info.DownloadURL
 	}
-	if err := uc.updater.DownloadToCache(ctx, cachePath, url); err != nil {
-		return st, err
+	if dlErr := uc.updater.DownloadToCache(ctx, cachePath, url); dlErr != nil {
+		return st, dlErr
 	}
 
 	uc.mu.Lock()
@@ -245,8 +245,8 @@ func (uc *YTDLPMaintainUseCase) EnsureAndLink(ctx context.Context) (YTDLPMaintai
 	tools, cache := st.ToolsPath, st.CachePath
 	uc.mu.Unlock()
 
-	if _, err := uc.updater.EnsureOfficialCache(ctx, cache); err != nil {
-		return st, err
+	if _, cacheErr := uc.updater.EnsureOfficialCache(ctx, cache); cacheErr != nil {
+		return st, cacheErr
 	}
 
 	uc.mu.Lock()
