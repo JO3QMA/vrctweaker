@@ -126,7 +126,7 @@ func LinkToolsToCache(toolsPath, cachePath string, unlockTimeout time.Duration) 
 		return err
 	}
 	if err := os.Symlink(absCache, toolsPath); err != nil {
-		return fmt.Errorf("symlink Tools -> cache (enable Windows Developer Mode or run elevated): %w", err)
+		return fmt.Errorf("公式 yt-dlp の配置に失敗しました（Windows の開発者モードを有効にするか、管理者として実行してください）: %w", err)
 	}
 	return nil
 }
