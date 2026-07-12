@@ -2,7 +2,10 @@
 
 package usecase
 
-import "time"
+import (
+	"os"
+	"time"
+)
 
 // OfficialYTDLPCachePath is Windows-only.
 func OfficialYTDLPCachePath() (string, error) {
@@ -14,13 +17,25 @@ func VRChatYTDLPToolsPath() (string, error) {
 	return "", ErrYTDLPUnsupportedPlatform
 }
 
-// NeedsOfficialLink is a no-op on non-Windows.
-func NeedsOfficialLink(_, _ string) (bool, error) {
+// NeedsOfficialLink is a no-op on non-Windows when cache is present.
+func NeedsOfficialLink(_, cachePath string) (bool, error) {
+	if _, err := os.Stat(cachePath); err != nil {
+		if os.IsNotExist(err) {
+			return false, ErrYTDLPCacheMissing
+		}
+		return false, err
+	}
 	return false, nil
 }
 
 // EffectiveOfficialLink is always false on non-Windows.
-func EffectiveOfficialLink(_, _ string) (bool, error) {
+func EffectiveOfficialLink(_, cachePath string) (bool, error) {
+	if _, err := os.Stat(cachePath); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
 	return false, nil
 }
 

@@ -188,6 +188,30 @@ func (u *YTDLPUpdater) EnsureOfficialCache(ctx context.Context, cachePath string
 	return info, nil
 }
 
+func (u *YTDLPUpdater) downloadHTTPClient() *http.Client {
+	base := u.httpClient()
+	checkRedirect := func(req *http.Request, via []*http.Request) error {
+		if len(via) >= 10 {
+			return errors.New("too many redirects")
+		}
+		return validateYTDlpDownloadURL(u, req.URL.String())
+	}
+	if base.CheckRedirect != nil {
+		orig := base.CheckRedirect
+		checkRedirect = func(req *http.Request, via []*http.Request) error {
+			if err := orig(req, via); err != nil {
+				return err
+			}
+			return validateYTDlpDownloadURL(u, req.URL.String())
+		}
+	}
+	return &http.Client{
+		Timeout:       base.Timeout,
+		Transport:     base.Transport,
+		CheckRedirect: checkRedirect,
+	}
+}
+
 func (u *YTDLPUpdater) downloadToCacheLocked(ctx context.Context, cachePath, downloadURL string) error {
 	if err := validateYTDlpDownloadURL(u, downloadURL); err != nil {
 		return err
@@ -196,15 +220,22 @@ func (u *YTDLPUpdater) downloadToCacheLocked(ctx context.Context, cachePath, dow
 		return err
 	}
 	part := cachePath + ".partial"
-	if err := downloadToFile(ctx, u.httpClient(), downloadURL, part); err != nil {
+	if err := downloadToFile(ctx, u.downloadHTTPClient(), downloadURL, part); err != nil {
 		_ = os.Remove(part)
 		return err
 	}
-	_ = os.Remove(cachePath)
+	bak := cachePath + ".bak"
+	_ = os.Remove(bak)
+	if err := os.Rename(cachePath, bak); err != nil && !os.IsNotExist(err) {
+		_ = os.Remove(part)
+		return fmt.Errorf("backup cache: %w", err)
+	}
 	if err := os.Rename(part, cachePath); err != nil {
+		_ = os.Rename(bak, cachePath)
 		_ = os.Remove(part)
 		return fmt.Errorf("install cache: %w", err)
 	}
+	_ = os.Remove(bak)
 	return nil
 }
 
@@ -231,7 +262,7 @@ func downloadToFile(ctx context.Context, client *http.Client, url, dest string) 
 	if err != nil {
 		return fmt.Errorf("create temp file: %w", err)
 	}
-	if _, err := io.Copy(f, resp.Body); err != nil {
+	if _, err := io.Copy(f, io.LimitReader(resp.Body, 100<<20)); err != nil {
 		_ = f.Close()
 		return fmt.Errorf("write failed: %w", err)
 	}
@@ -240,8 +271,9 @@ func downloadToFile(ctx context.Context, client *http.Client, url, dest string) 
 
 func truncateForErr(s string, max int) string {
 	s = strings.TrimSpace(s)
-	if len(s) <= max {
+	runes := []rune(s)
+	if len(runes) <= max {
 		return s
 	}
-	return s[:max] + "…"
+	return string(runes[:max]) + "…"
 }

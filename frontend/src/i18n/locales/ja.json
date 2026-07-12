@@ -828,8 +828,9 @@
     "flashDisabled": "置き換えを OFF にしました（VRChat 側のファイルはそのままです）。",
     "flashLatest": "確認できた yt-dlp 公式最新版: {version}",
     "flashUpdated": "yt-dlp 公式最新版を更新しました: {version}",
-    "error_risk_ack_required": "有効化する前にリスク確認が必要です。",
-    "error_unsupported_platform": "この機能は Windows 版のみ利用できます。",
+    "errorRiskAckRequired": "有効化する前にリスク確認が必要です。",
+    "errorUnsupportedPlatform": "この機能は Windows 版のみ利用できます。",
+    "errorMaintainFailed": "操作に失敗しました。しばらくしてから再度お試しください。",
     "errors": {
       "githubRateLimit": "GitHub の通信制限に達したため、最新バージョンの取得に失敗しました。時間を置いて再度お試しください。",
       "githubForbidden": "GitHub へのアクセスが拒否されたため、最新バージョンの取得に失敗しました。時間を置いて再度お試しください。",

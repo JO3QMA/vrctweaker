@@ -3,7 +3,6 @@ package usecase
 import (
 	"context"
 	"errors"
-	"fmt"
 	"log"
 	"os"
 	"runtime"
@@ -18,6 +17,8 @@ var (
 	ErrYTDLPRiskAckRequired = errors.New("tools replace risk acknowledgment required")
 	// ErrYTDLPUnsupportedPlatform is returned on non-Windows.
 	ErrYTDLPUnsupportedPlatform = errors.New("yt-dlp Tools replace maintain is Windows only")
+	// ErrYTDLPCacheMissing is returned when Official cache is absent before linking.
+	ErrYTDLPCacheMissing = errors.New("official yt-dlp cache missing")
 )
 
 // YTDLPMaintainStatus is desired + effective state for the Video tab.
@@ -101,30 +102,56 @@ func (uc *YTDLPMaintainUseCase) AcknowledgeRisk(ctx context.Context) error {
 // On enable, ensures Official cache exists and attempts one Tools symlink (best-effort).
 // On disable, only clears desired — Tools file is left untouched.
 func (uc *YTDLPMaintainUseCase) SetMaintainDesired(ctx context.Context, on bool) error {
-	uc.mu.Lock()
-	defer uc.mu.Unlock()
 	if runtime.GOOS != "windows" {
 		return ErrYTDLPUnsupportedPlatform
 	}
 	if uc.settings == nil {
 		return errors.New("settings not configured")
 	}
-	if on {
-		ack, err := uc.settings.GetYTDLPToolsReplaceRiskAck(ctx)
-		if err != nil {
-			return err
-		}
-		if !ack {
-			return ErrYTDLPRiskAckRequired
-		}
-		if st, linkErr := uc.ensureAndLinkLocked(ctx); linkErr != nil {
-			return linkErr
-		} else if st.PendingError != "" {
-			return errors.New(st.PendingError)
-		}
-		return uc.settings.SetYTDLPToolsReplaceMaintain(ctx, true)
+	if !on {
+		uc.mu.Lock()
+		defer uc.mu.Unlock()
+		return uc.settings.SetYTDLPToolsReplaceMaintain(ctx, false)
 	}
-	return uc.settings.SetYTDLPToolsReplaceMaintain(ctx, false)
+
+	uc.mu.Lock()
+	ack, err := uc.settings.GetYTDLPToolsReplaceRiskAck(ctx)
+	if err != nil {
+		uc.mu.Unlock()
+		return err
+	}
+	if !ack {
+		uc.mu.Unlock()
+		return ErrYTDLPRiskAckRequired
+	}
+	st, err := uc.getStatusLocked(ctx)
+	if err != nil {
+		uc.mu.Unlock()
+		return err
+	}
+	if !st.Supported {
+		uc.mu.Unlock()
+		return ErrYTDLPUnsupportedPlatform
+	}
+	tools, cache := st.ToolsPath, st.CachePath
+	uc.mu.Unlock()
+
+	if err := uc.ensureCacheAndLink(ctx, tools, cache); err != nil {
+		return err
+	}
+
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+	return uc.settings.SetYTDLPToolsReplaceMaintain(ctx, true)
+}
+
+func (uc *YTDLPMaintainUseCase) ensureCacheAndLink(ctx context.Context, tools, cache string) error {
+	if _, err := uc.updater.EnsureOfficialCache(ctx, cache); err != nil {
+		return err
+	}
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+	return uc.linkIfNeeded(ctx, tools, cache)
 }
 
 // CheckLatest fills Latest* fields on a fresh status (GitHub API).
@@ -150,14 +177,19 @@ func (uc *YTDLPMaintainUseCase) CheckLatest(ctx context.Context) (YTDLPMaintainS
 // UpdateOfficialCache downloads latest into cache. When maintain is desired, re-links Tools.
 func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloadURL, expectedTag string) (YTDLPMaintainStatus, error) {
 	uc.mu.Lock()
-	defer uc.mu.Unlock()
 	st, err := uc.getStatusLocked(ctx)
 	if err != nil {
+		uc.mu.Unlock()
 		return st, err
 	}
 	if !st.Supported {
+		uc.mu.Unlock()
 		return st, ErrYTDLPUnsupportedPlatform
 	}
+	cachePath, toolsPath := st.CachePath, st.ToolsPath
+	maintainDesired := st.MaintainDesired
+	uc.mu.Unlock()
+
 	url := downloadURL
 	tag := expectedTag
 	if url == "" {
@@ -172,16 +204,23 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 		st.LatestTag = info.Tag
 		st.LatestDownloadURL = info.DownloadURL
 	}
-	if err := uc.updater.DownloadToCache(ctx, st.CachePath, url); err != nil {
+	if err := uc.updater.DownloadToCache(ctx, cachePath, url); err != nil {
+		return st, err
+	}
+
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+	st, err = uc.getStatusLocked(ctx)
+	if err != nil {
 		return st, err
 	}
 	st.CachePresent = true
 	st.CacheVersion = normalizeReleaseTag(tag)
 	if st.CacheVersion == "" {
-		st.CacheVersion = LocalYTDLPVersion(ctx, st.CachePath)
+		st.CacheVersion = LocalYTDLPVersion(ctx, cachePath)
 	}
-	if st.MaintainDesired {
-		if linkErr := uc.linkIfNeeded(ctx, st.ToolsPath, st.CachePath); linkErr != nil {
+	if maintainDesired {
+		if linkErr := uc.linkIfNeeded(ctx, toolsPath, cachePath); linkErr != nil {
 			st.PendingError = linkErr.Error()
 			return st, nil
 		}
@@ -192,60 +231,75 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 }
 
 // EnsureAndLink ensures cache exists and links Tools when needed. Records pending errors.
-// If Tools is already a symlink to cache, it does not remove/recreate (re-enable after stop
-// must not fail just because the existing correct link is briefly locked).
 func (uc *YTDLPMaintainUseCase) EnsureAndLink(ctx context.Context) (YTDLPMaintainStatus, error) {
 	uc.mu.Lock()
-	defer uc.mu.Unlock()
-	return uc.ensureAndLinkLocked(ctx)
-}
-
-func (uc *YTDLPMaintainUseCase) ensureAndLinkLocked(ctx context.Context) (YTDLPMaintainStatus, error) {
 	st, err := uc.getStatusLocked(ctx)
 	if err != nil {
+		uc.mu.Unlock()
 		return st, err
 	}
 	if !st.Supported {
+		uc.mu.Unlock()
 		return st, ErrYTDLPUnsupportedPlatform
 	}
-	if _, err := uc.updater.EnsureOfficialCache(ctx, st.CachePath); err != nil {
+	tools, cache := st.ToolsPath, st.CachePath
+	uc.mu.Unlock()
+
+	if _, err := uc.updater.EnsureOfficialCache(ctx, cache); err != nil {
 		return st, err
 	}
-	st.CachePresent = true
-	st.CacheVersion = LocalYTDLPVersion(ctx, st.CachePath)
-	if err := uc.linkIfNeeded(ctx, st.ToolsPath, st.CachePath); err != nil {
-		st.PendingError = err.Error()
+
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+	st, err = uc.getStatusLocked(ctx)
+	if err != nil {
+		return st, err
+	}
+	if linkErr := uc.linkIfNeeded(ctx, tools, cache); linkErr != nil {
+		st.PendingError = linkErr.Error()
 		return st, nil
 	}
 	st.PendingError = ""
+	st.CachePresent = true
+	st.CacheVersion = LocalYTDLPVersion(ctx, cache)
 	st.EffectiveOfficial = true
 	return st, nil
 }
 
 // ReapplyIfNeeded links Tools when maintain is desired and the link is not effective.
 func (uc *YTDLPMaintainUseCase) ReapplyIfNeeded(ctx context.Context) error {
+	if runtime.GOOS != "windows" {
+		return nil
+	}
 	uc.mu.Lock()
-	defer uc.mu.Unlock()
 	if uc.settings == nil {
+		uc.mu.Unlock()
 		return nil
 	}
 	on, err := uc.settings.GetYTDLPToolsReplaceMaintain(ctx)
 	if err != nil || !on {
-		return nil
+		uc.mu.Unlock()
+		return err
 	}
 	tools, err := uc.toolsPath()
 	if err != nil {
+		uc.mu.Unlock()
 		return err
 	}
 	cache, err := uc.cachePath()
 	if err != nil {
+		uc.mu.Unlock()
 		return err
 	}
+	uc.mu.Unlock()
+
 	if _, err := os.Stat(cache); err != nil {
 		if _, e2 := uc.updater.EnsureOfficialCache(ctx, cache); e2 != nil {
 			return e2
 		}
 	}
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
 	return uc.linkIfNeeded(ctx, tools, cache)
 }
 
@@ -306,9 +360,19 @@ func (uc *YTDLPMaintainUseCase) getStatusLocked(ctx context.Context) (YTDLPMaint
 	st.Supported = true
 
 	if uc.settings != nil {
-		st.MaintainDesired, _ = uc.settings.GetYTDLPToolsReplaceMaintain(ctx)
-		st.RiskAcknowledged, _ = uc.settings.GetYTDLPToolsReplaceRiskAck(ctx)
-		st.PendingError, _ = uc.settings.GetYTDLPToolsReplacePendingError(ctx)
+		var getErr error
+		st.MaintainDesired, getErr = uc.settings.GetYTDLPToolsReplaceMaintain(ctx)
+		if getErr != nil {
+			log.Printf("ytdlp maintain: GetYTDLPToolsReplaceMaintain: %v", getErr)
+		}
+		st.RiskAcknowledged, getErr = uc.settings.GetYTDLPToolsReplaceRiskAck(ctx)
+		if getErr != nil {
+			log.Printf("ytdlp maintain: GetYTDLPToolsReplaceRiskAck: %v", getErr)
+		}
+		st.PendingError, getErr = uc.settings.GetYTDLPToolsReplacePendingError(ctx)
+		if getErr != nil {
+			log.Printf("ytdlp maintain: GetYTDLPToolsReplacePendingError: %v", getErr)
+		}
 	}
 
 	if fi, stErr := os.Stat(cache); stErr == nil && !fi.IsDir() {
@@ -324,16 +388,16 @@ func (uc *YTDLPMaintainUseCase) getStatusLocked(ctx context.Context) (YTDLPMaint
 }
 
 // FormatMaintainError returns an i18n key for maintain API errors.
-// Frontend should resolve the key via i18n; fallback to error string for unknown errors.
 func FormatMaintainError(err error) string {
 	if err == nil {
 		return ""
 	}
 	if errors.Is(err, ErrYTDLPRiskAckRequired) {
-		return "error_risk_ack_required"
+		return "errorRiskAckRequired"
 	}
 	if errors.Is(err, ErrYTDLPUnsupportedPlatform) {
-		return "error_unsupported_platform"
+		return "errorUnsupportedPlatform"
 	}
-	return fmt.Sprintf("%v", err)
+	log.Printf("ytdlp maintain: %v", err)
+	return "errorMaintainFailed"
 }

@@ -3,6 +3,7 @@
 package usecase
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -81,8 +82,8 @@ func TestNeedsOfficialLink_missingCache(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
 	need, err := NeedsOfficialLink(filepath.Join(dir, "yt-dlp.exe"), filepath.Join(dir, "missing.exe"))
-	if err != nil {
-		t.Fatal(err)
+	if !errors.Is(err, ErrYTDLPCacheMissing) {
+		t.Fatalf("got need=%v err=%v", need, err)
 	}
 	if need {
 		t.Fatal("missing cache should not request link")

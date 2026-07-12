@@ -1432,7 +1432,7 @@ func (a *App) GetYTDLPMaintainStatus() (usecase.YTDLPMaintainStatus, error) {
 	if a.ytdlp == nil {
 		return usecase.YTDLPMaintainStatus{
 			Supported:         false,
-			UnsupportedReason: "not initialized",
+			UnsupportedReason: "not_initialized",
 		}, nil
 	}
 	return a.ytdlp.GetStatus(a.ctx)
@@ -1462,7 +1462,7 @@ func (a *App) CheckYTDLPLatestRelease() (usecase.YTDLPMaintainStatus, error) {
 	if a.ytdlp == nil {
 		return usecase.YTDLPMaintainStatus{
 			Supported:         false,
-			UnsupportedReason: "not initialized",
+			UnsupportedReason: "not_initialized",
 		}, nil
 	}
 	return a.ytdlp.CheckLatest(a.ctx)
@@ -1473,7 +1473,7 @@ func (a *App) UpdateOfficialYTDLPCache(downloadURL, latestTag string) (usecase.Y
 	if a.ytdlp == nil {
 		return usecase.YTDLPMaintainStatus{
 			Supported:         false,
-			UnsupportedReason: "not initialized",
+			UnsupportedReason: "not_initialized",
 		}, nil
 	}
 	return a.ytdlp.UpdateOfficialCache(a.ctx, downloadURL, latestTag)

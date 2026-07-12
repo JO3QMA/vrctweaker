@@ -12,7 +12,16 @@
         <!-- 1. 注意・エラー（タイトル直下・1箇所） -->
         <div class="video-alerts" data-testid="ytdlp-alert-area">
           <el-alert
-            v-if="!status.supported"
+            v-if="actionError"
+            type="error"
+            :closable="false"
+            show-icon
+            class="block-hint"
+            data-testid="ytdlp-error-banner"
+            :title="actionError"
+          />
+          <el-alert
+            v-else-if="!status.supported"
             type="warning"
             :closable="false"
             show-icon
@@ -236,8 +245,8 @@ async function refresh() {
   }
 }
 
-async function onMaintainChange(on: boolean | string | number) {
-  const desired = on === true;
+async function onMaintainChange(on: boolean) {
+  const desired = on;
   busy.value = true;
   clearFeedback();
   try {
@@ -254,13 +263,18 @@ async function onMaintainChange(on: boolean | string | number) {
       await App.acknowledgeYTDLPToolsReplaceRisk();
     }
     await App.setYTDLPToolsReplaceMaintain(desired);
-    applyStatus(await App.getYTDLPMaintainStatus());
+    try {
+      applyStatus(await App.getYTDLPMaintainStatus());
+    } catch {
+      maintainOn.value = desired;
+      status.value = { ...status.value, maintainDesired: desired };
+    }
     flashOk.value = desired
       ? t("video.flashEnabled")
       : t("video.flashDisabled");
   } catch (e) {
     maintainOn.value = status.value.maintainDesired;
-    if (e === "cancel") {
+    if (e === "cancel" || e === "close") {
       return;
     }
     actionError.value = userFacingError(

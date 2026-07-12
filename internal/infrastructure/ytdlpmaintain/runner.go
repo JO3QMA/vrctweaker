@@ -65,6 +65,7 @@ func Run(
 		dir, err := toolsDir.ToolsDir()
 		if err != nil {
 			log.Printf("ytdlp maintain: ToolsDir error: %v", err)
+			closeWatcher()
 			return
 		}
 		if watching && watchPath == dir {
@@ -92,9 +93,11 @@ func Run(
 	}
 
 	reapply := func() {
-		if err := reapplier.ReapplyIfNeeded(ctx); err != nil {
-			log.Printf("ytdlp maintain: ReapplyIfNeeded error: %v", err)
-		}
+		go func() {
+			if err := reapplier.ReapplyIfNeeded(ctx); err != nil {
+				log.Printf("ytdlp maintain: ReapplyIfNeeded error: %v", err)
+			}
+		}()
 	}
 
 	for {

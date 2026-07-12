@@ -16,14 +16,14 @@ export function classifyVideoError(raw: string): VideoUserErrorKey {
   if (
     s.includes("risk acknowledgment") ||
     s.includes("risk_ack") ||
-    s.includes("error_risk_ack")
+    s.includes("errorriskack")
   ) {
     return "riskAck";
   }
   if (
     s.includes("unsupported") ||
     s.includes("windows only") ||
-    s.includes("error_unsupported")
+    s.includes("errorunsupported")
   ) {
     return "unsupported";
   }
@@ -54,7 +54,8 @@ export function classifyVideoError(raw: string): VideoUserErrorKey {
     s.includes("network") ||
     s.includes("no such host") ||
     s.includes("eof") ||
-    s.includes("download")
+    s.includes("download request failed") ||
+    s.includes("download failed")
   ) {
     return "network";
   }

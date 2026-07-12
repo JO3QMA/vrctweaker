@@ -25,6 +25,7 @@ describe("classifyVideoError", () => {
     expect(
       classifyVideoError("download request failed: dial tcp timeout"),
     ).toBe("network");
+    expect(classifyVideoError("download URL is empty")).toBe("generic");
   });
 
   it("returns i18n key path", () => {

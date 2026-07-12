@@ -828,8 +828,9 @@
     "flashDisabled": "Replacement turned OFF (VRChat’s file is left unchanged).",
     "flashLatest": "Official yt-dlp latest: {version}",
     "flashUpdated": "Official yt-dlp updated: {version}",
-    "error_risk_ack_required": "Risk acknowledgment is required before enabling.",
-    "error_unsupported_platform": "This feature is Windows-only.",
+    "errorRiskAckRequired": "Risk acknowledgment is required before enabling.",
+    "errorUnsupportedPlatform": "This feature is Windows-only.",
+    "errorMaintainFailed": "The operation failed. Please try again later.",
     "errors": {
       "githubRateLimit": "Could not fetch the latest version because GitHub’s rate limit was reached. Try again later.",
       "githubForbidden": "GitHub refused the request. Try again later.",

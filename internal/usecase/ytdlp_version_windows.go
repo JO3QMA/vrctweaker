@@ -51,7 +51,7 @@ func stringFileInfoVersionKeys(block unsafe.Pointer, keys ...string) string {
 			var valLen uint32
 			sub := prefix + key
 			err = windows.VerQueryValue(block, sub, unsafe.Pointer(&val), &valLen)
-			if err != nil || val == nil || valLen < 2 {
+			if err != nil || val == nil || valLen < 4 {
 				continue
 			}
 			// VerQueryValue returns size in bytes per MSDN; divide by 2 to get WCHAR count.
