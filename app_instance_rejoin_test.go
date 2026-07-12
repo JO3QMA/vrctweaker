@@ -19,7 +19,9 @@ func (errRejoinPlayRepo) List(context.Context, time.Time, time.Time) ([]*activit
 func (errRejoinPlayRepo) GetByID(context.Context, string) (*activity.PlaySession, error) {
 	return nil, errors.New("db down")
 }
-func (errRejoinPlayRepo) Save(context.Context, *activity.PlaySession) error { return errors.New("db down") }
+func (errRejoinPlayRepo) Save(context.Context, *activity.PlaySession) error {
+	return errors.New("db down")
+}
 func (errRejoinPlayRepo) FindLatestWithoutEndTime(context.Context) (*activity.PlaySession, error) {
 	return nil, errors.New("db down")
 }
@@ -164,7 +166,9 @@ type memLaunchRepo struct {
 	profiles []*launcher.LaunchProfile
 }
 
-func (r *memLaunchRepo) List(context.Context) ([]*launcher.LaunchProfile, error) { return r.profiles, nil }
+func (r *memLaunchRepo) List(context.Context) ([]*launcher.LaunchProfile, error) {
+	return r.profiles, nil
+}
 func (r *memLaunchRepo) GetByID(_ context.Context, id string) (*launcher.LaunchProfile, error) {
 	for _, p := range r.profiles {
 		if p.ID == id {

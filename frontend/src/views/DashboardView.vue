@@ -206,8 +206,7 @@ function formatError(e: unknown, fallback: string): string {
   return fallback;
 }
 
-let encountersChangedDebounceTimer: ReturnType<typeof setTimeout> | null =
-  null;
+let encountersChangedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let unsubscribeEncountersChanged: (() => void) | undefined;
 
 function scheduleInstanceRejoinRefresh(): void {
