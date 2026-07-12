@@ -47,8 +47,6 @@
                 v-model="maintainOn"
                 data-testid="ytdlp-maintain-switch"
                 :disabled="busy"
-                :active-text="t('video.switchOn')"
-                :inactive-text="t('video.switchOff')"
                 @change="onMaintainChange"
               />
               <span class="switch-status" data-testid="ytdlp-effective-inline">
@@ -56,7 +54,7 @@
               </span>
             </div>
 
-            <div class="video-actions">
+            <div class="video-actions" data-testid="ytdlp-action-grid">
               <el-button
                 data-testid="ytdlp-check-latest"
                 :loading="checkLoading"
@@ -101,31 +99,43 @@
             </p>
           </section>
 
-          <!-- 3. ステータス・詳細（パスは出さない） -->
+          <!-- 3. 詳細（バージョンのみ・初期は折りたたみ） -->
           <section class="video-status" data-testid="ytdlp-status">
-            <h3 class="status-heading">{{ t("video.statusHeading") }}</h3>
-            <dl class="video-dl">
-              <dt>{{ t("video.desired") }}</dt>
-              <dd>
-                {{
-                  status.maintainDesired
-                    ? t("video.desiredOn")
-                    : t("video.desiredOff")
-                }}
-              </dd>
-              <dt>{{ t("video.effective") }}</dt>
-              <dd>{{ effectiveStatusText }}</dd>
-              <dt>{{ t("video.cacheVersion") }}</dt>
-              <dd>{{ status.cacheVersion || t("video.cacheMissing") }}</dd>
-              <dt>{{ t("video.latest") }}</dt>
-              <dd>
-                {{
-                  status.latestVersion
-                    ? status.latestVersion
-                    : t("video.latestUnchecked")
-                }}
-              </dd>
-            </dl>
+            <button
+              type="button"
+              class="details-toggle"
+              data-testid="ytdlp-details-toggle"
+              :aria-expanded="detailsExpanded"
+              :aria-controls="detailsPanelId"
+              @click="detailsExpanded = !detailsExpanded"
+            >
+              <el-icon class="details-toggle-icon" aria-hidden="true">
+                <CaretBottom v-if="detailsExpanded" />
+                <CaretRight v-else />
+              </el-icon>
+              <span>{{ t("video.detailsToggle") }}</span>
+            </button>
+            <div
+              v-show="detailsExpanded"
+              :id="detailsPanelId"
+              class="details-panel"
+              role="region"
+            >
+              <dl class="video-dl">
+                <dt>{{ t("video.cacheVersion") }}</dt>
+                <dd data-testid="ytdlp-cache-version">
+                  {{ status.cacheVersion || t("video.cacheMissing") }}
+                </dd>
+                <dt>{{ t("video.latest") }}</dt>
+                <dd data-testid="ytdlp-latest-version">
+                  {{
+                    status.latestVersion
+                      ? status.latestVersion
+                      : t("video.latestUnchecked")
+                  }}
+                </dd>
+              </dl>
+            </div>
           </section>
         </template>
       </template>
@@ -137,6 +147,7 @@
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
+import { CaretBottom, CaretRight } from "@element-plus/icons-vue";
 import { App, type YTDLPMaintainStatusDTO } from "../wails/app";
 import { videoErrorI18nKey } from "./videoErrors";
 
@@ -167,6 +178,9 @@ const updateLoading = ref(false);
 const busy = ref(false);
 const flashOk = ref("");
 const actionError = ref("");
+/** 詳細アコーディオンは初期閉じ */
+const detailsExpanded = ref(false);
+const detailsPanelId = "ytdlp-details-panel";
 
 const effectiveStatusText = computed(() =>
   status.value.effectiveOfficial
@@ -350,9 +364,7 @@ onMounted(() => {
   margin-bottom: 0.75rem;
 }
 .video-ops {
-  margin-bottom: 1.5rem;
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.25rem;
 }
 .video-switch-row {
   display: flex;
@@ -368,23 +380,49 @@ onMounted(() => {
   color: var(--text-secondary);
 }
 .video-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
-  align-items: center;
+  width: 100%;
+  max-width: 40rem;
+}
+.video-actions :deep(.el-button) {
+  width: 100%;
+  margin: 0;
+  justify-content: center;
 }
 .btn-icon {
   margin-right: 0.25rem;
   vertical-align: middle;
 }
-.status-heading {
-  margin: 0 0 0.75rem;
-  font-size: 1rem;
-  font-weight: 600;
+.video-status {
+  margin-top: 0.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.details-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+.details-toggle:hover {
+  color: var(--text-primary);
+}
+.details-toggle-icon {
+  font-size: 0.9rem;
+}
+.details-panel {
+  margin-top: 0.75rem;
 }
 .video-dl {
   display: grid;
-  grid-template-columns: 12rem 1fr;
+  grid-template-columns: minmax(10rem, 14rem) 1fr;
   gap: 0.4rem 1rem;
   margin: 0;
 }

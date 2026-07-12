@@ -842,6 +842,7 @@
     "reason": {
       "unsupported_platform": "This feature is Windows-only.",
       "not_initialized": "Video settings are not initialized yet."
-    }
+    },
+    "detailsToggle": "상세 정보 표시"
   }
 }

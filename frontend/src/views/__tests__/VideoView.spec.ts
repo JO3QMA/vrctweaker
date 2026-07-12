@@ -69,18 +69,41 @@ describe("VideoView", () => {
     });
   }
 
-  it("loads maintain status without raw paths", async () => {
+  it("loads without paths, ON/OFF labels, or duplicate detail rows", async () => {
     const wrapper = mountView();
     await flushPromises();
     expect(App.getYTDLPMaintainStatus).toHaveBeenCalled();
-    expect(wrapper.text()).toContain("2025.04.01");
     expect(wrapper.text()).toContain("VRChat 同梱版");
+    expect(wrapper.text()).toContain("yt-dlp の置換");
     expect(wrapper.text()).not.toContain("C:\\Tools\\yt-dlp.exe");
-    expect(wrapper.text()).not.toContain("C:\\cache\\yt-dlp.exe");
     expect(wrapper.find('[data-testid="ytdlp-maintain-switch"]').exists()).toBe(
       true,
     );
-    expect(wrapper.find('[data-testid="ytdlp-ops"]').exists()).toBe(true);
+    // Switch has no active/inactive text
+    expect(wrapper.find(".el-switch__label").exists()).toBe(false);
+    // Details collapsed by default — version hidden
+    expect(
+      wrapper.find('[data-testid="ytdlp-cache-version"]').isVisible(),
+    ).toBe(false);
+    expect(wrapper.text()).not.toContain("置き換え設定");
+  });
+
+  it("uses a 2x2 action grid", async () => {
+    const wrapper = mountView();
+    await flushPromises();
+    const grid = wrapper.get('[data-testid="ytdlp-action-grid"]');
+    expect(grid.classes()).toContain("video-actions");
+    expect(grid.findAll("button").length).toBeGreaterThanOrEqual(4);
+  });
+
+  it("expands details accordion to show versions", async () => {
+    const wrapper = mountView();
+    await flushPromises();
+    await wrapper.get('[data-testid="ytdlp-details-toggle"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.get('[data-testid="ytdlp-cache-version"]').text()).toContain(
+      "2025.04.01",
+    );
   });
 
   it("shows friendly GitHub rate-limit error once in alert area", async () => {
@@ -105,7 +128,11 @@ describe("VideoView", () => {
     await wrapper.get('[data-testid="ytdlp-check-latest"]').trigger("click");
     await flushPromises();
     expect(App.checkYTDLPLatestRelease).toHaveBeenCalled();
-    expect(wrapper.text()).toContain("2025.05.01");
+    await wrapper.get('[data-testid="ytdlp-details-toggle"]').trigger("click");
+    await flushPromises();
+    expect(
+      wrapper.get('[data-testid="ytdlp-latest-version"]').text(),
+    ).toContain("2025.05.01");
   });
 
   it("opens cache folder", async () => {

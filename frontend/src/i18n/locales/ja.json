@@ -842,6 +842,7 @@
     "reason": {
       "unsupported_platform": "この機能は Windows 版のみ利用できます。",
       "not_initialized": "動画設定がまだ初期化されていません。"
-    }
+    },
+    "detailsToggle": "詳細情報を表示"
   }
 }
