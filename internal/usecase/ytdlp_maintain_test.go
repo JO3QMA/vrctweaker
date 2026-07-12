@@ -120,3 +120,57 @@ func TestYTDLPMaintain_ReapplyIfNeeded(t *testing.T) {
 		t.Fatalf("effective=%v err=%v", eff, err)
 	}
 }
+
+func TestYTDLPMaintain_linkIfNeeded_skipsWhenAlreadyLinked(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	cache := filepath.Join(dir, "cache", "yt-dlp.exe")
+	tools := filepath.Join(dir, "Tools", "yt-dlp.exe")
+	if err := os.MkdirAll(filepath.Dir(cache), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cache, []byte("official"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Dir(tools), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(cache, tools); err != nil {
+		t.Fatal(err)
+	}
+
+	// Make Tools path non-removable to prove we do not call Remove on a correct link.
+	// (On Unix, chmod 000 on the parent still allows Lstat of the symlink; instead we
+	// assert inode/target unchanged by comparing Readlink before/after.)
+	before, err := os.Readlink(tools)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	repo := &fakeAppSettingsRepo{m: map[string]string{
+		keyYTDLPToolsReplacePending: "stale-pending",
+	}}
+	settings := NewSettingsUseCase(repo)
+	uc := NewYTDLPMaintainUseCase(settings, NewYTDLPUpdater())
+	uc.ToolsPathOverride = tools
+	uc.CachePathOverride = cache
+	uc.UnlockTimeout = time.Millisecond // would fail fast if we tried Remove+relink under lock
+
+	if linkErr := uc.linkIfNeeded(context.Background(), tools, cache); linkErr != nil {
+		t.Fatal(linkErr)
+	}
+	after, err := os.Readlink(tools)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if before != after {
+		t.Fatalf("symlink target changed: %q -> %q", before, after)
+	}
+	pending, err := settings.GetYTDLPToolsReplacePendingError(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pending != "" {
+		t.Fatalf("pending should clear on skip, got %q", pending)
+	}
+}

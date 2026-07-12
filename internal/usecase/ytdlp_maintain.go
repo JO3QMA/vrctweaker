@@ -209,7 +209,7 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 		st.CacheVersion = LocalYTDLPVersion(ctx, st.CachePath)
 	}
 	if st.MaintainDesired {
-		if linkErr := uc.linkAndRecord(ctx, st.ToolsPath, st.CachePath); linkErr != nil {
+		if linkErr := uc.linkIfNeeded(ctx, st.ToolsPath, st.CachePath); linkErr != nil {
 			st.PendingError = linkErr.Error()
 			return st, nil
 		}
@@ -220,6 +220,8 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 }
 
 // EnsureAndLink ensures cache exists and links Tools when needed. Records pending errors.
+// If Tools is already a symlink to cache, it does not remove/recreate (re-enable after stop
+// must not fail just because the existing correct link is briefly locked).
 func (uc *YTDLPMaintainUseCase) EnsureAndLink(ctx context.Context) (YTDLPMaintainStatus, error) {
 	st, err := uc.GetStatus(ctx)
 	if err != nil {
@@ -233,7 +235,7 @@ func (uc *YTDLPMaintainUseCase) EnsureAndLink(ctx context.Context) (YTDLPMaintai
 	}
 	st.CachePresent = true
 	st.CacheVersion = LocalYTDLPVersion(ctx, st.CachePath)
-	if err := uc.linkAndRecord(ctx, st.ToolsPath, st.CachePath); err != nil {
+	if err := uc.linkIfNeeded(ctx, st.ToolsPath, st.CachePath); err != nil {
 		st.PendingError = err.Error()
 		return st, nil
 	}
@@ -259,18 +261,25 @@ func (uc *YTDLPMaintainUseCase) ReapplyIfNeeded(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	if _, err := os.Stat(cache); err != nil {
+		if _, e2 := uc.updater.EnsureOfficialCache(ctx, cache); e2 != nil {
+			return e2
+		}
+	}
+	return uc.linkIfNeeded(ctx, tools, cache)
+}
+
+// linkIfNeeded creates/repairs the Tools symlink only when NeedsOfficialLink is true.
+func (uc *YTDLPMaintainUseCase) linkIfNeeded(ctx context.Context, tools, cache string) error {
 	need, err := NeedsOfficialLink(tools, cache)
 	if err != nil {
 		return err
 	}
 	if !need {
-		_ = uc.settings.SetYTDLPToolsReplacePendingError(ctx, "")
-		return nil
-	}
-	if _, err := os.Stat(cache); err != nil {
-		if _, e2 := uc.updater.EnsureOfficialCache(ctx, cache); e2 != nil {
-			return e2
+		if uc.settings != nil {
+			_ = uc.settings.SetYTDLPToolsReplacePendingError(ctx, "")
 		}
+		return nil
 	}
 	return uc.linkAndRecord(ctx, tools, cache)
 }
