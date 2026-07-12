@@ -9,107 +9,124 @@
 
       <div v-if="loading" class="muted">{{ t("common.loading") }}</div>
       <template v-else>
-        <el-alert
-          v-if="!status.supported"
-          type="warning"
-          :closable="false"
-          show-icon
-          :title="videoReason(status.unsupportedReason ?? '')"
-        />
-        <template v-else>
+        <!-- 1. 注意・エラー（タイトル直下・1箇所） -->
+        <div class="video-alerts" data-testid="ytdlp-alert-area">
           <el-alert
+            v-if="!status.supported"
             type="warning"
             :closable="false"
             show-icon
-            class="block-hint"
-            :title="t('video.alwaysWarn')"
+            :title="userFacingReason(status.unsupportedReason ?? '')"
           />
-
-          <dl class="video-dl">
-            <dt>{{ t("video.desired") }}</dt>
-            <dd>
-              {{
-                status.maintainDesired
-                  ? t("video.desiredOn")
-                  : t("video.desiredOff")
-              }}
-            </dd>
-            <dt>{{ t("video.effective") }}</dt>
-            <dd>
-              {{
-                status.effectiveOfficial
-                  ? t("video.effectiveOfficial")
-                  : t("video.effectiveBundled")
-              }}
-            </dd>
-            <dt>{{ t("video.cacheVersion") }}</dt>
-            <dd>{{ status.cacheVersion || t("video.cacheMissing") }}</dd>
-            <dt>{{ t("video.cachePath") }}</dt>
-            <dd>
-              <code class="path-code">{{ status.cachePath || "—" }}</code>
-            </dd>
-            <dt>{{ t("video.toolsPath") }}</dt>
-            <dd>
-              <code class="path-code">{{ status.toolsPath || "—" }}</code>
-            </dd>
-            <dt>{{ t("video.latest") }}</dt>
-            <dd>
-              {{
-                status.latestVersion
-                  ? status.latestVersion
-                  : status.latestError
-                    ? "—"
-                    : t("video.latestUnchecked")
-              }}
-            </dd>
-          </dl>
-
-          <el-alert
-            v-if="status.pendingError"
-            type="error"
-            :closable="false"
-            show-icon
-            class="block-hint"
-            :title="t('video.pendingError', { msg: status.pendingError })"
-          />
-          <el-alert
-            v-if="status.latestError"
-            type="error"
-            :closable="false"
-            show-icon
-            class="block-hint"
-            :title="t('video.latestError', { msg: status.latestError })"
-          />
-
-          <div class="video-actions">
-            <el-switch
-              v-model="maintainOn"
-              data-testid="ytdlp-maintain-switch"
-              :disabled="busy"
-              :active-text="t('video.maintainOn')"
-              :inactive-text="t('video.maintainOff')"
-              @change="onMaintainChange"
+          <template v-else>
+            <el-alert
+              type="warning"
+              :closable="false"
+              show-icon
+              class="block-hint"
+              :title="t('video.alwaysWarn')"
             />
-            <el-button
-              data-testid="ytdlp-check-latest"
-              :loading="checkLoading"
-              :disabled="busy"
-              @click="checkLatest"
-            >
-              {{ t("video.checkLatest") }}
-            </el-button>
-            <el-button
-              type="primary"
-              data-testid="ytdlp-update-cache"
-              :loading="updateLoading"
-              :disabled="busy"
-              @click="updateCache"
-            >
-              {{ t("video.updateCache") }}
-            </el-button>
-          </div>
+            <el-alert
+              v-if="bannerError"
+              type="error"
+              :closable="false"
+              show-icon
+              class="block-hint"
+              data-testid="ytdlp-error-banner"
+              :title="bannerError"
+            />
+          </template>
+        </div>
 
-          <p v-if="flash" class="flash" :class="flashClass">{{ flash }}</p>
+        <template v-if="status.supported">
+          <!-- 2. 操作エリア -->
+          <section class="video-ops" data-testid="ytdlp-ops">
+            <div class="video-switch-row">
+              <span class="switch-label">{{ t("video.replaceLabel") }}</span>
+              <el-switch
+                v-model="maintainOn"
+                data-testid="ytdlp-maintain-switch"
+                :disabled="busy"
+                :active-text="t('video.switchOn')"
+                :inactive-text="t('video.switchOff')"
+                @change="onMaintainChange"
+              />
+              <span class="switch-status" data-testid="ytdlp-effective-inline">
+                {{ t("video.statusPrefix") }}{{ effectiveStatusText }}
+              </span>
+            </div>
+
+            <div class="video-actions">
+              <el-button
+                data-testid="ytdlp-check-latest"
+                :loading="checkLoading"
+                :disabled="busy"
+                @click="checkLatest"
+              >
+                {{ t("video.checkLatest") }}
+              </el-button>
+              <el-button
+                type="primary"
+                data-testid="ytdlp-update-cache"
+                :loading="updateLoading"
+                :disabled="busy"
+                @click="updateCache"
+              >
+                {{ t("video.updateCache") }}
+              </el-button>
+              <el-button
+                data-testid="ytdlp-open-cache-folder"
+                :disabled="busy"
+                @click="openCacheFolder"
+              >
+                <el-icon class="btn-icon"><FolderOpened /></el-icon>
+                {{ t("video.openCacheFolder") }}
+              </el-button>
+              <el-button
+                data-testid="ytdlp-open-tools-folder"
+                :disabled="busy"
+                @click="openToolsFolder"
+              >
+                <el-icon class="btn-icon"><FolderOpened /></el-icon>
+                {{ t("video.openToolsFolder") }}
+              </el-button>
+            </div>
+
+            <p
+              v-if="flashOk"
+              class="flash flash-ok"
+              data-testid="ytdlp-flash-ok"
+            >
+              {{ flashOk }}
+            </p>
+          </section>
+
+          <!-- 3. ステータス・詳細（パスは出さない） -->
+          <section class="video-status" data-testid="ytdlp-status">
+            <h3 class="status-heading">{{ t("video.statusHeading") }}</h3>
+            <dl class="video-dl">
+              <dt>{{ t("video.desired") }}</dt>
+              <dd>
+                {{
+                  status.maintainDesired
+                    ? t("video.desiredOn")
+                    : t("video.desiredOff")
+                }}
+              </dd>
+              <dt>{{ t("video.effective") }}</dt>
+              <dd>{{ effectiveStatusText }}</dd>
+              <dt>{{ t("video.cacheVersion") }}</dt>
+              <dd>{{ status.cacheVersion || t("video.cacheMissing") }}</dd>
+              <dt>{{ t("video.latest") }}</dt>
+              <dd>
+                {{
+                  status.latestVersion
+                    ? status.latestVersion
+                    : t("video.latestUnchecked")
+                }}
+              </dd>
+            </dl>
+          </section>
         </template>
       </template>
     </el-card>
@@ -117,10 +134,11 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
 import { App, type YTDLPMaintainStatusDTO } from "../wails/app";
+import { videoErrorI18nKey } from "./videoErrors";
 
 const { t, te } = useI18n();
 
@@ -147,18 +165,37 @@ const loading = ref(true);
 const checkLoading = ref(false);
 const updateLoading = ref(false);
 const busy = ref(false);
-const flash = ref("");
-const flashClass = ref("");
+const flashOk = ref("");
+const actionError = ref("");
 
-function videoReason(code: string): string {
+const effectiveStatusText = computed(() =>
+  status.value.effectiveOfficial
+    ? t("video.effectiveOfficial")
+    : t("video.effectiveBundled"),
+);
+
+const bannerError = computed(() => {
+  if (actionError.value) return actionError.value;
+  if (status.value.pendingError) {
+    return userFacingError(status.value.pendingError);
+  }
+  if (status.value.latestError) {
+    return userFacingError(status.value.latestError);
+  }
+  return "";
+});
+
+function userFacingReason(code: string): string {
   if (!code) return t("video.unsupported");
   const key = `video.reason.${code}`;
-  return te(key) ? t(key) : code;
+  return te(key) ? t(key) : t("video.unsupported");
 }
 
-function videoErrorMessage(msg: string): string {
-  const key = `video.${msg}`;
-  return te(key) ? t(key) : msg;
+function userFacingError(raw: string): string {
+  if (!raw) return "";
+  // Stable app error codes (if backend ever returns them)
+  if (te(`video.${raw}`)) return t(`video.${raw}`);
+  return t(videoErrorI18nKey(raw));
 }
 
 function applyStatus(s: YTDLPMaintainStatusDTO) {
@@ -166,13 +203,20 @@ function applyStatus(s: YTDLPMaintainStatusDTO) {
   maintainOn.value = !!s.maintainDesired;
 }
 
+function clearFeedback() {
+  flashOk.value = "";
+  actionError.value = "";
+}
+
 async function refresh() {
   loading.value = true;
+  clearFeedback();
   try {
     applyStatus(await App.getYTDLPMaintainStatus());
   } catch (e) {
-    flash.value = videoErrorMessage(e instanceof Error ? e.message : String(e));
-    flashClass.value = "flash-err";
+    actionError.value = userFacingError(
+      e instanceof Error ? e.message : String(e),
+    );
   } finally {
     loading.value = false;
   }
@@ -181,7 +225,7 @@ async function refresh() {
 async function onMaintainChange(on: boolean | string | number) {
   const desired = on === true;
   busy.value = true;
-  flash.value = "";
+  clearFeedback();
   try {
     if (desired && !status.value.riskAcknowledged) {
       await ElMessageBox.confirm(
@@ -197,15 +241,17 @@ async function onMaintainChange(on: boolean | string | number) {
     }
     await App.setYTDLPToolsReplaceMaintain(desired);
     applyStatus(await App.getYTDLPMaintainStatus());
-    flash.value = desired ? t("video.flashEnabled") : t("video.flashDisabled");
-    flashClass.value = "flash-ok";
+    flashOk.value = desired
+      ? t("video.flashEnabled")
+      : t("video.flashDisabled");
   } catch (e) {
     maintainOn.value = status.value.maintainDesired;
     if (e === "cancel") {
       return;
     }
-    flash.value = videoErrorMessage(e instanceof Error ? e.message : String(e));
-    flashClass.value = "flash-err";
+    actionError.value = userFacingError(
+      e instanceof Error ? e.message : String(e),
+    );
   } finally {
     busy.value = false;
   }
@@ -214,21 +260,20 @@ async function onMaintainChange(on: boolean | string | number) {
 async function checkLatest() {
   checkLoading.value = true;
   busy.value = true;
-  flash.value = "";
+  clearFeedback();
   try {
     applyStatus(await App.checkYTDLPLatestRelease());
     if (status.value.latestError) {
-      flash.value = status.value.latestError;
-      flashClass.value = "flash-err";
-    } else {
-      flash.value = t("video.flashLatest", {
-        version: status.value.latestVersion,
-      });
-      flashClass.value = "flash-ok";
+      // bannerError reads latestError — do not also set actionError (no duplicate)
+      return;
     }
+    flashOk.value = t("video.flashLatest", {
+      version: status.value.latestVersion,
+    });
   } catch (e) {
-    flash.value = e instanceof Error ? e.message : String(e);
-    flashClass.value = "flash-err";
+    actionError.value = userFacingError(
+      e instanceof Error ? e.message : String(e),
+    );
   } finally {
     checkLoading.value = false;
     busy.value = false;
@@ -238,7 +283,7 @@ async function checkLatest() {
 async function updateCache() {
   updateLoading.value = true;
   busy.value = true;
-  flash.value = "";
+  clearFeedback();
   try {
     applyStatus(
       await App.updateOfficialYTDLPCache(
@@ -246,16 +291,41 @@ async function updateCache() {
         status.value.latestTag || "",
       ),
     );
-    flash.value = t("video.flashUpdated", {
+    if (status.value.pendingError || status.value.latestError) {
+      return;
+    }
+    flashOk.value = t("video.flashUpdated", {
       version: status.value.cacheVersion,
     });
-    flashClass.value = "flash-ok";
   } catch (e) {
-    flash.value = e instanceof Error ? e.message : String(e);
-    flashClass.value = "flash-err";
+    actionError.value = userFacingError(
+      e instanceof Error ? e.message : String(e),
+    );
   } finally {
     updateLoading.value = false;
     busy.value = false;
+  }
+}
+
+async function openCacheFolder() {
+  clearFeedback();
+  try {
+    await App.openYTDLPCacheFolder();
+  } catch (e) {
+    actionError.value = userFacingError(
+      e instanceof Error ? e.message : String(e),
+    );
+  }
+}
+
+async function openToolsFolder() {
+  clearFeedback();
+  try {
+    await App.openYTDLPToolsFolder();
+  } catch (e) {
+    actionError.value = userFacingError(
+      e instanceof Error ? e.message : String(e),
+    );
   }
 }
 
@@ -273,30 +343,56 @@ onMounted(() => {
   margin-top: 1rem;
   width: 100%;
 }
-.block-hint {
+.video-alerts {
   margin-bottom: 1rem;
 }
-.video-dl {
-  display: grid;
-  grid-template-columns: 10rem 1fr;
-  gap: 0.4rem 1rem;
-  margin: 0 0 1rem;
+.block-hint {
+  margin-bottom: 0.75rem;
 }
-.video-dl dt {
+.video-ops {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+.video-switch-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+.switch-label {
+  font-weight: 600;
+}
+.switch-status {
   color: var(--text-secondary);
-}
-.video-dl dd {
-  margin: 0;
-  word-break: break-all;
-}
-.path-code {
-  font-size: 0.85em;
 }
 .video-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
   align-items: center;
+}
+.btn-icon {
+  margin-right: 0.25rem;
+  vertical-align: middle;
+}
+.status-heading {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+.video-dl {
+  display: grid;
+  grid-template-columns: 12rem 1fr;
+  gap: 0.4rem 1rem;
+  margin: 0;
+}
+.video-dl dt {
+  color: var(--text-secondary);
+}
+.video-dl dd {
+  margin: 0;
 }
 .muted {
   color: var(--text-secondary);
@@ -306,8 +402,5 @@ onMounted(() => {
 }
 .flash-ok {
   color: var(--el-color-success);
-}
-.flash-err {
-  color: var(--el-color-danger);
 }
 </style>

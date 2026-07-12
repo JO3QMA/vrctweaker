@@ -343,6 +343,12 @@ export const App = {
       emptyYTDLPMaintainStatus,
     );
   },
+  async openYTDLPCacheFolder(): Promise<void> {
+    return callApp((a) => a.OpenYTDLPCacheFolder(), undefined);
+  },
+  async openYTDLPToolsFolder(): Promise<void> {
+    return callApp((a) => a.OpenYTDLPToolsFolder(), undefined);
+  },
   async validatePath(path: string): Promise<boolean> {
     return callApp((a) => a.ValidatePath(path), false);
   },

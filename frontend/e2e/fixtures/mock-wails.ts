@@ -270,6 +270,8 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
             latestDownloadUrl: '',
             latestError: '',
           }),
+        OpenYTDLPCacheFolder: () => Promise.resolve(),
+        OpenYTDLPToolsFolder: () => Promise.resolve(),
         ValidatePath: () => Promise.resolve(true),
         ValidateOutputLogPath: () => Promise.resolve(true),
         OpenVRChatLogFolder: () => Promise.resolve(),

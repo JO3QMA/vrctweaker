@@ -13,6 +13,8 @@ vi.mock("../../wails/app", () => ({
     setYTDLPToolsReplaceMaintain: vi.fn(),
     checkYTDLPLatestRelease: vi.fn(),
     updateOfficialYTDLPCache: vi.fn(),
+    openYTDLPCacheFolder: vi.fn(),
+    openYTDLPToolsFolder: vi.fn(),
   },
 }));
 
@@ -52,6 +54,8 @@ describe("VideoView", () => {
       effectiveOfficial: true,
       maintainDesired: true,
     });
+    vi.mocked(App.openYTDLPCacheFolder).mockResolvedValue(undefined);
+    vi.mocked(App.openYTDLPToolsFolder).mockResolvedValue(undefined);
   });
 
   function mountView() {
@@ -65,14 +69,34 @@ describe("VideoView", () => {
     });
   }
 
-  it("loads maintain status", async () => {
+  it("loads maintain status without raw paths", async () => {
     const wrapper = mountView();
     await flushPromises();
     expect(App.getYTDLPMaintainStatus).toHaveBeenCalled();
     expect(wrapper.text()).toContain("2025.04.01");
+    expect(wrapper.text()).toContain("VRChat 同梱版");
+    expect(wrapper.text()).not.toContain("C:\\Tools\\yt-dlp.exe");
+    expect(wrapper.text()).not.toContain("C:\\cache\\yt-dlp.exe");
     expect(wrapper.find('[data-testid="ytdlp-maintain-switch"]').exists()).toBe(
       true,
     );
+    expect(wrapper.find('[data-testid="ytdlp-ops"]').exists()).toBe(true);
+  });
+
+  it("shows friendly GitHub rate-limit error once in alert area", async () => {
+    vi.mocked(App.checkYTDLPLatestRelease).mockResolvedValue({
+      ...baseStatus,
+      latestError:
+        'github api: 403 Forbidden: {"message":"API rate limit exceeded for xxx"}',
+    });
+    const wrapper = mountView();
+    await flushPromises();
+    await wrapper.get('[data-testid="ytdlp-check-latest"]').trigger("click");
+    await flushPromises();
+    const banner = wrapper.get('[data-testid="ytdlp-error-banner"]');
+    expect(banner.text()).toContain("GitHub の通信制限");
+    expect(wrapper.text()).not.toContain("API rate limit exceeded");
+    expect(wrapper.text().match(/GitHub の通信制限/g)?.length).toBe(1);
   });
 
   it("checks latest release", async () => {
@@ -82,5 +106,15 @@ describe("VideoView", () => {
     await flushPromises();
     expect(App.checkYTDLPLatestRelease).toHaveBeenCalled();
     expect(wrapper.text()).toContain("2025.05.01");
+  });
+
+  it("opens cache folder", async () => {
+    const wrapper = mountView();
+    await flushPromises();
+    await wrapper
+      .get('[data-testid="ytdlp-open-cache-folder"]')
+      .trigger("click");
+    await flushPromises();
+    expect(App.openYTDLPCacheFolder).toHaveBeenCalled();
   });
 });

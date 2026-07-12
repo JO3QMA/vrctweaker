@@ -1479,6 +1479,32 @@ func (a *App) UpdateOfficialYTDLPCache(downloadURL, latestTag string) (usecase.Y
 	return a.ytdlp.UpdateOfficialCache(a.ctx, downloadURL, latestTag)
 }
 
+// OpenYTDLPCacheFolder opens the Official yt-dlp cache directory in the file manager.
+func (a *App) OpenYTDLPCacheFolder() error {
+	path, err := usecase.OfficialYTDLPCachePath()
+	if err != nil {
+		return err
+	}
+	dir := filepath.Dir(path)
+	if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
+		return mkErr
+	}
+	return desktop.OpenFolderInFileManager(dir)
+}
+
+// OpenYTDLPToolsFolder opens VRChat's Tools directory (parent of yt-dlp.exe) in the file manager.
+func (a *App) OpenYTDLPToolsFolder() error {
+	path, err := usecase.VRChatYTDLPToolsPath()
+	if err != nil {
+		return err
+	}
+	dir := filepath.Dir(path)
+	if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
+		return mkErr
+	}
+	return desktop.OpenFolderInFileManager(dir)
+}
+
 // getVRChatConfigPath returns the path to VRChat's config.json.
 // On Windows: %LocalAppData%Low\VRChat\VRChat\config.json
 // On other OS: falls back to ~/.local/share/VRChat/VRChat/config.json
