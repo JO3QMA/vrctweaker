@@ -14,7 +14,8 @@
     "automation": "自動化",
     "configOther": "其他設定",
     "settings": "設定",
-    "licenses": "OSS 授權"
+    "licenses": "OSS 授權",
+    "video": "影片"
   },
   "nav": {
     "dashboard": "儀表板",
@@ -25,7 +26,8 @@
     "me": "我",
     "automation": "自動化",
     "configOther": "其他設定",
-    "settings": "設定"
+    "settings": "設定",
+    "video": "影片"
   },
   "common": {
     "confirm": "確認",
@@ -794,5 +796,36 @@
         "description": "No linguistic content, Not applicable"
       }
     }
+  },
+  "video": {
+    "title": "影片",
+    "maintainSection": "yt-dlp Tools replace maintain",
+    "unsupported": "Not available in this environment.",
+    "alwaysWarn": "Replacing VRChat’s bundled yt-dlp with the official build may be unsupported by VRChat. Enable at your own risk. Creating the symlink may require Windows Developer Mode or elevation.",
+    "desired": "Maintain (desired)",
+    "desiredOn": "On",
+    "desiredOff": "Off",
+    "effective": "Effective",
+    "effectiveOfficial": "Symlink to Official cache",
+    "effectiveBundled": "Bundled or not linked",
+    "cacheVersion": "Official cache version",
+    "cacheMissing": "(not downloaded)",
+    "cachePath": "Cache path",
+    "toolsPath": "Tools path",
+    "latest": "GitHub latest",
+    "latestUnchecked": "Not checked yet",
+    "latestError": "Failed to fetch latest: {msg}",
+    "pendingError": "Re-link pending: {msg}",
+    "maintainOn": "Maintain",
+    "maintainOff": "Stop",
+    "checkLatest": "Check GitHub for latest",
+    "updateCache": "Update Official cache",
+    "riskAckTitle": "Risk acknowledgment",
+    "riskAckBody": "This replaces VRChat’s bundled yt-dlp with a symlink to the official cache. Playback or account risk may apply. Continue?",
+    "riskAckConfirm": "I understand — enable",
+    "flashEnabled": "Maintain enabled.",
+    "flashDisabled": "Maintain stopped (Tools file left unchanged).",
+    "flashLatest": "Latest: {version}",
+    "flashUpdated": "Cache updated: {version}"
   }
 }

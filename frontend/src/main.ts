@@ -79,6 +79,12 @@ const routes: RouteRecordRaw[] = [
     meta: { titleKey: "routes.configOther" },
   },
   {
+    path: "/video",
+    name: "video",
+    component: () => import("./views/VideoView.vue"),
+    meta: { titleKey: "routes.video" },
+  },
+  {
     path: "/settings",
     name: "settings",
     component: () => import("./views/SettingsView.vue"),

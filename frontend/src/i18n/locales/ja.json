@@ -13,6 +13,7 @@
     "user": "ユーザー",
     "automation": "オートメーション",
     "configOther": "その他の設定",
+    "video": "動画",
     "settings": "設定",
     "licenses": "OSSライセンス"
   },
@@ -25,6 +26,7 @@
     "me": "自分",
     "automation": "オートメーション",
     "configOther": "その他の設定",
+    "video": "動画",
     "settings": "設定"
   },
   "common": {
@@ -794,5 +796,36 @@
         "description": "No linguistic content, Not applicable"
       }
     }
+  },
+  "video": {
+    "title": "動画",
+    "maintainSection": "yt-dlp Tools replace maintain",
+    "unsupported": "この環境では利用できません。",
+    "alwaysWarn": "公式 yt-dlp への差し替えは VRChat 非推奨の可能性があります。自己責任で有効化してください。symlink には Windows の開発者モードまたは管理者権限が必要な場合があります。",
+    "desired": "維持（desired）",
+    "desiredOn": "オン",
+    "desiredOff": "オフ",
+    "effective": "実効（effective）",
+    "effectiveOfficial": "Official cache への symlink",
+    "effectiveBundled": "同梱版または未リンク",
+    "cacheVersion": "Official cache 版",
+    "cacheMissing": "（未取得）",
+    "cachePath": "cache パス",
+    "toolsPath": "Tools パス",
+    "latest": "GitHub 最新",
+    "latestUnchecked": "未確認（下のボタンで取得）",
+    "latestError": "最新版の取得に失敗: {msg}",
+    "pendingError": "再リンク保留: {msg}",
+    "maintainOn": "維持する",
+    "maintainOff": "停止",
+    "checkLatest": "GitHub で最新版を確認",
+    "updateCache": "Official cache を更新",
+    "riskAckTitle": "リスク確認",
+    "riskAckBody": "VRChat 同梱の yt-dlp を公式版への symlink で差し替えます。動画再生やアカウントに影響する可能性があります。続行しますか？",
+    "riskAckConfirm": "理解して有効化する",
+    "flashEnabled": "維持を有効化しました。",
+    "flashDisabled": "維持を停止しました（Tools 上のファイルはそのままです）。",
+    "flashLatest": "最新版: {version}",
+    "flashUpdated": "cache を更新しました: {version}"
   }
 }

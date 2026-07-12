@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	goruntime "runtime"
 	"strings"
 	"sync"
 	"time"
@@ -26,6 +27,7 @@ import (
 	"vrchat-tweaker/internal/infrastructure/sqlite"
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
 	"vrchat-tweaker/internal/infrastructure/vrchatpipeline"
+	"vrchat-tweaker/internal/infrastructure/ytdlpmaintain"
 	"vrchat-tweaker/internal/locale"
 	"vrchat-tweaker/internal/usecase"
 )
@@ -40,6 +42,7 @@ type App struct {
 	automation       *usecase.AutomationUseCase
 	settings         *usecase.SettingsUseCase
 	dbMaintenance    *usecase.DBMaintenanceUseCase
+	ytdlp            *usecase.YTDLPMaintainUseCase
 	vrchatConfigRepo vrchatconfig.ConfigRepository
 
 	galleryScanMu     sync.Mutex
@@ -53,6 +56,10 @@ type App struct {
 	sleepSuppressMu     sync.Mutex
 	sleepSuppressCancel context.CancelFunc
 	sleepSuppressWG     sync.WaitGroup
+
+	ytdlpMaintainMu     sync.Mutex
+	ytdlpMaintainCancel context.CancelFunc
+	ytdlpMaintainWG     sync.WaitGroup
 
 	activityWatchMu     sync.Mutex
 	activityWatchCancel context.CancelFunc
@@ -112,6 +119,7 @@ func (a *App) startup(ctx context.Context) {
 	a.automation = usecase.NewAutomationUseCase(automationRepo, a.identity)
 	a.settings = usecase.NewSettingsUseCase(settingsRepo)
 	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(db, encounterRepo, mediaRepo, userCacheRepo, settingsRepo)
+	a.ytdlp = usecase.NewYTDLPMaintainUseCase(a.settings, usecase.NewYTDLPUpdater())
 
 	configPath := getVRChatConfigPath()
 	configRepo := filesystem.NewVRChatConfigFileRepository(configPath)
@@ -123,12 +131,14 @@ func (a *App) startup(ctx context.Context) {
 	a.startPictureFolderWatcher(ctx)
 	go a.startupGalleryIncremental()
 	a.startSleepSuppressLoop()
+	a.startYTDLPMaintainLoop()
 }
 
 // onShutdown persists state before the process exits (Wails lifecycle).
 func (a *App) onShutdown(ctx context.Context) {
 	a.stopVRChatActivityMonitor()
 	a.stopSleepSuppressLoop()
+	a.stopYTDLPMaintainLoop()
 	if a.settings == nil {
 		return
 	}
@@ -1339,6 +1349,137 @@ func (a *App) stopSleepSuppressLoop() {
 		cancel()
 		a.sleepSuppressWG.Wait()
 	}
+}
+
+type ytdlpMaintainSettingGetter struct {
+	a *App
+}
+
+func (g ytdlpMaintainSettingGetter) YTDLPToolsReplaceMaintain(ctx context.Context) (bool, error) {
+	if g.a == nil || g.a.settings == nil {
+		return false, nil
+	}
+	return g.a.settings.GetYTDLPToolsReplaceMaintain(ctx)
+}
+
+type ytdlpMaintainReapplier struct {
+	a *App
+}
+
+func (r ytdlpMaintainReapplier) ReapplyIfNeeded(ctx context.Context) error {
+	if r.a == nil || r.a.ytdlp == nil {
+		return nil
+	}
+	return r.a.ytdlp.ReapplyIfNeeded(ctx)
+}
+
+type ytdlpToolsDirProvider struct {
+	a *App
+}
+
+func (p ytdlpToolsDirProvider) ToolsDir() (string, error) {
+	if p.a != nil && p.a.ytdlp != nil && p.a.ytdlp.ToolsPathOverride != "" {
+		return filepath.Dir(p.a.ytdlp.ToolsPathOverride), nil
+	}
+	tools, err := usecase.VRChatYTDLPToolsPath()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Dir(tools), nil
+}
+
+func (a *App) startYTDLPMaintainLoop() {
+	a.ytdlpMaintainMu.Lock()
+	defer a.ytdlpMaintainMu.Unlock()
+	if a.ytdlp == nil || a.settings == nil {
+		return
+	}
+	if a.ytdlpMaintainCancel != nil {
+		a.ytdlpMaintainCancel()
+		a.ytdlpMaintainWG.Wait()
+		a.ytdlpMaintainCancel = nil
+	}
+	runCtx, cancel := context.WithCancel(context.Background())
+	a.ytdlpMaintainCancel = cancel
+	a.ytdlpMaintainWG.Add(1)
+	go func() {
+		defer a.ytdlpMaintainWG.Done()
+		checker := sleepsuppress.NewVRChatProcessChecker()
+		_ = ytdlpmaintain.Run(
+			runCtx,
+			2*time.Second,
+			ytdlpMaintainSettingGetter{a: a},
+			checker,
+			ytdlpMaintainReapplier{a: a},
+			ytdlpToolsDirProvider{a: a},
+		)
+	}()
+}
+
+func (a *App) stopYTDLPMaintainLoop() {
+	var cancel context.CancelFunc
+	a.ytdlpMaintainMu.Lock()
+	cancel = a.ytdlpMaintainCancel
+	a.ytdlpMaintainCancel = nil
+	a.ytdlpMaintainMu.Unlock()
+	if cancel != nil {
+		cancel()
+		a.ytdlpMaintainWG.Wait()
+	}
+}
+
+// RuntimeIsWindows reports whether the backend process is running on Windows.
+func (a *App) RuntimeIsWindows() bool {
+	return goruntime.GOOS == "windows"
+}
+
+// GetYTDLPMaintainStatus returns desired/effective Tools replace maintain state (no GitHub call).
+func (a *App) GetYTDLPMaintainStatus() (usecase.YTDLPMaintainStatus, error) {
+	if a.ytdlp == nil {
+		return usecase.YTDLPMaintainStatus{
+			Supported:         false,
+			UnsupportedReason: "not initialized",
+		}, nil
+	}
+	return a.ytdlp.GetStatus(a.ctx)
+}
+
+// AcknowledgeYTDLPToolsReplaceRisk records first-enable risk acknowledgment.
+func (a *App) AcknowledgeYTDLPToolsReplaceRisk() error {
+	if a.ytdlp == nil {
+		return errors.New("not initialized")
+	}
+	return a.ytdlp.AcknowledgeRisk(a.ctx)
+}
+
+// SetYTDLPToolsReplaceMaintain enables or disables maintain (enable requires risk ack).
+func (a *App) SetYTDLPToolsReplaceMaintain(on bool) error {
+	if a.ytdlp == nil {
+		return errors.New("not initialized")
+	}
+	return a.ytdlp.SetMaintainDesired(a.ctx, on)
+}
+
+// CheckYTDLPLatestRelease queries GitHub for the latest official yt-dlp.exe.
+func (a *App) CheckYTDLPLatestRelease() (usecase.YTDLPMaintainStatus, error) {
+	if a.ytdlp == nil {
+		return usecase.YTDLPMaintainStatus{
+			Supported:         false,
+			UnsupportedReason: "not initialized",
+		}, nil
+	}
+	return a.ytdlp.CheckLatest(a.ctx)
+}
+
+// UpdateOfficialYTDLPCache downloads latest (or given URL) into Official cache; re-links when maintain is on.
+func (a *App) UpdateOfficialYTDLPCache(downloadURL, latestTag string) (usecase.YTDLPMaintainStatus, error) {
+	if a.ytdlp == nil {
+		return usecase.YTDLPMaintainStatus{
+			Supported:         false,
+			UnsupportedReason: "not initialized",
+		}, nil
+	}
+	return a.ytdlp.UpdateOfficialCache(a.ctx, downloadURL, latestTag)
 }
 
 // getVRChatConfigPath returns the path to VRChat's config.json.

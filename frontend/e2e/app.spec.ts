@@ -24,6 +24,13 @@ test.describe("VRChat Tweaker", () => {
     await expect(page.locator("h1")).toContainText("設定");
   });
 
+  test("navigates to video", async ({ page }) => {
+    await page.goto("/");
+    await page.getByRole("menuitem", { name: "動画" }).click();
+    await expect(page.locator("h1")).toContainText("動画");
+    await expect(page.getByTestId("ytdlp-maintain-switch")).toBeVisible();
+  });
+
   test.describe("Dashboard", () => {
     test("displays default profile and status buttons", async ({ page }) => {
       await page.goto("/");

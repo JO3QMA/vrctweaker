@@ -22,23 +22,39 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
+import { App } from "../wails/app";
 
 const route = useRoute();
 const { t } = useI18n();
+const isWindows = ref(false);
 
-const menuItems = computed(() => [
-  { path: "/", icon: "🏠", label: t("nav.dashboard") },
-  { path: "/launcher", icon: "🚀", label: t("nav.launcher") },
-  { path: "/gallery", icon: "🖼️", label: t("nav.gallery") },
-  { path: "/activity", icon: "📊", label: t("nav.activity") },
-  { path: "/me", icon: "👤", label: t("nav.me") },
-  { path: "/friends", icon: "👥", label: t("nav.friends") },
-  { path: "/automation", icon: "🤖", label: t("nav.automation") },
-  { path: "/config", icon: "📝", label: t("nav.configOther") },
-]);
+onMounted(async () => {
+  isWindows.value = await App.runtimeIsWindows();
+});
+
+const menuItems = computed(() => {
+  const items = [
+    { path: "/", icon: "🏠", label: t("nav.dashboard") },
+    { path: "/launcher", icon: "🚀", label: t("nav.launcher") },
+    { path: "/gallery", icon: "🖼️", label: t("nav.gallery") },
+    { path: "/activity", icon: "📊", label: t("nav.activity") },
+    { path: "/me", icon: "👤", label: t("nav.me") },
+    { path: "/friends", icon: "👥", label: t("nav.friends") },
+    { path: "/automation", icon: "🤖", label: t("nav.automation") },
+    { path: "/config", icon: "📝", label: t("nav.configOther") },
+  ];
+  if (isWindows.value) {
+    items.splice(7, 0, {
+      path: "/video",
+      icon: "🎬",
+      label: t("nav.video"),
+    });
+  }
+  return items;
+});
 </script>
 
 <style scoped>

@@ -14,7 +14,8 @@
     "automation": "자동화",
     "configOther": "기타 설정",
     "settings": "설정",
-    "licenses": "OSS 라이선스"
+    "licenses": "OSS 라이선스",
+    "video": "비디오"
   },
   "nav": {
     "dashboard": "대시보드",
@@ -25,7 +26,8 @@
     "me": "나",
     "automation": "자동화",
     "configOther": "기타 설정",
-    "settings": "설정"
+    "settings": "설정",
+    "video": "비디오"
   },
   "common": {
     "confirm": "확인",
@@ -794,5 +796,36 @@
         "description": "No linguistic content, Not applicable"
       }
     }
+  },
+  "video": {
+    "title": "비디오",
+    "maintainSection": "yt-dlp Tools replace maintain",
+    "unsupported": "Not available in this environment.",
+    "alwaysWarn": "Replacing VRChat’s bundled yt-dlp with the official build may be unsupported by VRChat. Enable at your own risk. Creating the symlink may require Windows Developer Mode or elevation.",
+    "desired": "Maintain (desired)",
+    "desiredOn": "On",
+    "desiredOff": "Off",
+    "effective": "Effective",
+    "effectiveOfficial": "Symlink to Official cache",
+    "effectiveBundled": "Bundled or not linked",
+    "cacheVersion": "Official cache version",
+    "cacheMissing": "(not downloaded)",
+    "cachePath": "Cache path",
+    "toolsPath": "Tools path",
+    "latest": "GitHub latest",
+    "latestUnchecked": "Not checked yet",
+    "latestError": "Failed to fetch latest: {msg}",
+    "pendingError": "Re-link pending: {msg}",
+    "maintainOn": "유지",
+    "maintainOff": "중지",
+    "checkLatest": "Check GitHub for latest",
+    "updateCache": "Update Official cache",
+    "riskAckTitle": "Risk acknowledgment",
+    "riskAckBody": "This replaces VRChat’s bundled yt-dlp with a symlink to the official cache. Playback or account risk may apply. Continue?",
+    "riskAckConfirm": "I understand — enable",
+    "flashEnabled": "Maintain enabled.",
+    "flashDisabled": "Maintain stopped (Tools file left unchanged).",
+    "flashLatest": "Latest: {version}",
+    "flashUpdated": "Cache updated: {version}"
   }
 }

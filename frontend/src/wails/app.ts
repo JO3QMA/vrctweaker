@@ -22,6 +22,7 @@ export type UserEncounterDTO = WailsDTO<main.UserEncounterDTO>;
 export type UserCacheDTO = WailsDTO<main.UserCacheDTO>;
 export type UserProfileNavigationDTO = WailsDTO<main.UserProfileNavigationDTO>;
 export type PathSettingsDTO = WailsDTO<usecase.PathSettings>;
+export type YTDLPMaintainStatusDTO = WailsDTO<usecase.YTDLPMaintainStatus>;
 export type LoginResultDTO = WailsDTO<main.LoginResultDTO>;
 export type VRChatCurrentUserDTO = WailsDTO<main.VRChatCurrentUserDTO>;
 export type DailyPlaySecondsDTO = WailsDTO<activity.DailyPlaySeconds>;
@@ -29,6 +30,23 @@ export type TopWorldDTO = WailsDTO<activity.TopWorldSummary>;
 export type ActivityStatsDTO = WailsDTO<activity.ActivityStats>;
 export type AutomationRuleDTO = WailsDTO<automation.AutomationRule>;
 export type VRChatConfigDTO = WailsDTO<main.VRChatConfigDTO>;
+
+const emptyYTDLPMaintainStatus: YTDLPMaintainStatusDTO = {
+  supported: false,
+  unsupportedReason: "",
+  maintainDesired: false,
+  riskAcknowledged: false,
+  effectiveOfficial: false,
+  cachePresent: false,
+  cacheVersion: "",
+  toolsPath: "",
+  cachePath: "",
+  pendingError: "",
+  latestVersion: "",
+  latestTag: "",
+  latestDownloadUrl: "",
+  latestError: "",
+};
 
 /** -999 = omit for process/main thread priority */
 export const PRIORITY_OMIT = -999;
@@ -297,6 +315,33 @@ export const App = {
   },
   async setSuppressSleepWhileVRChat(on: boolean): Promise<void> {
     return callApp((a) => a.SetSuppressSleepWhileVRChat(on), undefined);
+  },
+  async runtimeIsWindows(): Promise<boolean> {
+    return callApp((a) => a.RuntimeIsWindows(), false);
+  },
+  async getYTDLPMaintainStatus(): Promise<YTDLPMaintainStatusDTO> {
+    return callApp((a) => a.GetYTDLPMaintainStatus(), emptyYTDLPMaintainStatus);
+  },
+  async acknowledgeYTDLPToolsReplaceRisk(): Promise<void> {
+    return callApp((a) => a.AcknowledgeYTDLPToolsReplaceRisk(), undefined);
+  },
+  async setYTDLPToolsReplaceMaintain(on: boolean): Promise<void> {
+    return callApp((a) => a.SetYTDLPToolsReplaceMaintain(on), undefined);
+  },
+  async checkYTDLPLatestRelease(): Promise<YTDLPMaintainStatusDTO> {
+    return callApp(
+      (a) => a.CheckYTDLPLatestRelease(),
+      emptyYTDLPMaintainStatus,
+    );
+  },
+  async updateOfficialYTDLPCache(
+    downloadURL: string,
+    latestTag: string,
+  ): Promise<YTDLPMaintainStatusDTO> {
+    return callApp(
+      (a) => a.UpdateOfficialYTDLPCache(downloadURL, latestTag),
+      emptyYTDLPMaintainStatus,
+    );
   },
   async validatePath(path: string): Promise<boolean> {
     return callApp((a) => a.ValidatePath(path), false);
