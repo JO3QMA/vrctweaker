@@ -3,6 +3,7 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"log"
 	"strconv"
 	"sync"
 	"time"
@@ -317,7 +318,11 @@ func (uc *ActivityUseCase) GetRejoinTarget(ctx context.Context) (*RejoinTarget, 
 		return target, nil
 	}
 	wi, err := uc.worldRepo.GetByWorldID(ctx, wid)
-	if err != nil || wi == nil {
+	if err != nil {
+		log.Printf("activity: get world info for %s: %v", wid, err)
+		return target, nil
+	}
+	if wi == nil {
 		return target, nil
 	}
 	target.WorldDisplayName = wi.DisplayName

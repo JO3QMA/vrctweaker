@@ -95,7 +95,7 @@ func (uc *LauncherUseCase) LaunchToWorld(ctx context.Context, profileID, worldID
 	if worldID == "" {
 		return fmt.Errorf("world_id is required for Join World")
 	}
-	profile, err := uc.getProfileOrDefault(ctx, profileID)
+	profile, err := uc.getProfileByIDOrDefault(ctx, profileID)
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func (uc *LauncherUseCase) prepareLaunchArgs(ctx context.Context, args []string,
 	return args, nil
 }
 
-func (uc *LauncherUseCase) getProfileOrDefault(ctx context.Context, profileID string) (*launcher.LaunchProfile, error) {
+func (uc *LauncherUseCase) getProfileByIDOrDefault(ctx context.Context, profileID string) (*launcher.LaunchProfile, error) {
 	if profileID != "" {
 		p, err := uc.repo.GetByID(ctx, profileID)
 		if err != nil {

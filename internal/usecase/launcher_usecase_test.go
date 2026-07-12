@@ -124,7 +124,7 @@ func TestLauncherUseCase_LaunchToWorld_usesDefaultProfile(t *testing.T) {
 	p := &launcher.LaunchProfile{Name: "Default", Arguments: "--no-vr", IsDefault: true}
 	_ = uc.SaveProfile(ctx, p)
 
-	// Launch will fail on missing steam/vrchat binary, but getProfileOrDefault path is exercised.
+	// Launch will fail on missing steam/vrchat binary, but getProfileByIDOrDefault path is exercised.
 	err := uc.LaunchToWorld(ctx, "", "wrld_test", "", "/nonexistent-steam-binary-xyz", "")
 	if err == nil {
 		t.Fatal("expected launch error")
@@ -149,22 +149,22 @@ func TestDefaultVRChatPathWindows(t *testing.T) {
 	}
 }
 
-func TestLauncherUseCase_getProfileOrDefault_fallback(t *testing.T) {
+func TestLauncherUseCase_getProfileByIDOrDefault_fallback(t *testing.T) {
 	repo := newFakeLaunchProfileRepo()
 	uc := NewLauncherUseCase(repo)
 	ctx := context.Background()
 	def := &launcher.LaunchProfile{Name: "Def", Arguments: "-x", IsDefault: true}
 	_ = uc.SaveProfile(ctx, def)
 
-	got, err := uc.getProfileOrDefault(ctx, "")
+	got, err := uc.getProfileByIDOrDefault(ctx, "")
 	if err != nil || got == nil || got.ID != def.ID {
-		t.Fatalf("getProfileOrDefault = %+v err=%v", got, err)
+		t.Fatalf("getProfileByIDOrDefault = %+v err=%v", got, err)
 	}
 }
 
-func TestLauncherUseCase_getProfileOrDefault_unknownID(t *testing.T) {
+func TestLauncherUseCase_getProfileByIDOrDefault_unknownID(t *testing.T) {
 	uc := NewLauncherUseCase(newFakeLaunchProfileRepo())
-	_, err := uc.getProfileOrDefault(context.Background(), "unknown-id")
+	_, err := uc.getProfileByIDOrDefault(context.Background(), "unknown-id")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -205,10 +205,10 @@ func (e *errLaunchProfileRepo) GetByID(ctx context.Context, id string) (*launche
 	return e.fakeLaunchProfileRepo.GetByID(ctx, id)
 }
 
-func TestLauncherUseCase_getProfileOrDefault_getByIDError(t *testing.T) {
+func TestLauncherUseCase_getProfileByIDOrDefault_getByIDError(t *testing.T) {
 	repo := &errLaunchProfileRepo{getByIDErr: errors.New("db error")}
 	uc := NewLauncherUseCase(repo)
-	_, err := uc.getProfileOrDefault(context.Background(), "p1")
+	_, err := uc.getProfileByIDOrDefault(context.Background(), "p1")
 	if err == nil {
 		t.Fatal("expected error")
 	}
