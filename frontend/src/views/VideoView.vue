@@ -236,6 +236,23 @@ function clearFeedback() {
   actionError.value = "";
 }
 
+function isMessageBoxDismiss(e: unknown): boolean {
+  if (e === "cancel" || e === "close") return true;
+  if (e instanceof Error) {
+    const m = e.message.toLowerCase();
+    return m === "cancel" || m === "close";
+  }
+  return false;
+}
+
+async function refreshSilent() {
+  try {
+    applyStatus(await App.getYTDLPMaintainStatus());
+  } catch {
+    /* best-effort sync after partial backend update */
+  }
+}
+
 async function refresh() {
   loading.value = true;
   clearFeedback();
@@ -272,14 +289,20 @@ async function onMaintainChange(on: boolean) {
       applyStatus(await App.getYTDLPMaintainStatus());
     } catch {
       maintainOn.value = desired;
-      status.value = { ...status.value, maintainDesired: desired };
+      status.value = {
+        ...status.value,
+        maintainDesired: desired,
+        riskAcknowledged: desired ? true : status.value.riskAcknowledged,
+        effectiveOfficial: desired ? status.value.effectiveOfficial : false,
+      };
+      void refreshSilent();
     }
     flashOk.value = desired
       ? t("video.flashEnabled")
       : t("video.flashDisabled");
   } catch (e) {
     maintainOn.value = status.value.maintainDesired;
-    if (e === "cancel" || e === "close") {
+    if (isMessageBoxDismiss(e)) {
       return;
     }
     actionError.value = userFacingError(

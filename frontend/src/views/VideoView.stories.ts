@@ -46,13 +46,14 @@ const meta = {
   parameters: {
     layout: "fullscreen",
   },
-  decorators: [withVideoWails()],
 } satisfies Meta<typeof VideoView>;
 
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Default: Story = {};
+export const Default: Story = {
+  decorators: [withVideoWails()],
+};
 
 export const BundledEffective: Story = {
   decorators: [

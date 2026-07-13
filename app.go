@@ -1372,8 +1372,8 @@ type ytdlpToolsDirProvider struct {
 }
 
 func (p ytdlpToolsDirProvider) ToolsDir() (string, error) {
-	if p.a.ytdlp != nil && p.a.ytdlp.ToolsPathOverride != "" {
-		return filepath.Dir(p.a.ytdlp.ToolsPathOverride), nil
+	if p.a.ytdlp != nil {
+		return p.a.ytdlp.ToolsDir()
 	}
 	tools, err := usecase.VRChatYTDLPToolsPath()
 	if err != nil {
@@ -1441,7 +1441,7 @@ func (a *App) GetYTDLPMaintainStatus() (usecase.YTDLPMaintainStatus, error) {
 // AcknowledgeYTDLPToolsReplaceRisk records first-enable risk acknowledgment.
 func (a *App) AcknowledgeYTDLPToolsReplaceRisk() error {
 	if a.ytdlp == nil {
-		return errors.New("not initialized")
+		return errors.New("notInitialized")
 	}
 	return a.ytdlp.AcknowledgeRisk(a.ctx)
 }
@@ -1449,12 +1449,9 @@ func (a *App) AcknowledgeYTDLPToolsReplaceRisk() error {
 // SetYTDLPToolsReplaceMaintain enables or disables maintain (enable requires risk ack).
 func (a *App) SetYTDLPToolsReplaceMaintain(on bool) error {
 	if a.ytdlp == nil {
-		return errors.New("not initialized")
+		return errors.New("notInitialized")
 	}
-	if err := a.ytdlp.SetMaintainDesired(a.ctx, on); err != nil {
-		return errors.New(usecase.FormatMaintainError(err))
-	}
-	return nil
+	return usecase.WrapMaintainAPIError(a.ytdlp.SetMaintainDesired(a.ctx, on))
 }
 
 // CheckYTDLPLatestRelease queries GitHub for the latest official yt-dlp.exe.

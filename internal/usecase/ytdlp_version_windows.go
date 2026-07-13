@@ -4,12 +4,15 @@ package usecase
 
 import (
 	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
+
+const maxYTDLPVersionInfoBytes = 4 << 20
 
 // localYTDLPFileVersionString reads FileVersion / ProductVersion from the PE VERSIONINFO
 // resource (same metadata as Explorer “詳細” / file properties), without executing the exe.
@@ -19,15 +22,24 @@ func localYTDLPFileVersionString(exePath string) string {
 	}
 	abs, err := filepath.Abs(exePath)
 	if err != nil {
+		log.Printf("ytdlp version: Abs(%s): %v", exePath, err)
 		abs = exePath
 	}
 	size, err := windows.GetFileVersionInfoSize(abs, nil)
 	if err != nil || size == 0 {
+		if err != nil {
+			log.Printf("ytdlp version: GetFileVersionInfoSize(%s): %v", abs, err)
+		}
+		return ""
+	}
+	if size > maxYTDLPVersionInfoBytes {
+		log.Printf("ytdlp version: VERSIONINFO too large (%d bytes) for %s", size, abs)
 		return ""
 	}
 	buf := make([]byte, size)
 	err = windows.GetFileVersionInfo(abs, 0, size, unsafe.Pointer(&buf[0]))
 	if err != nil {
+		log.Printf("ytdlp version: GetFileVersionInfo(%s): %v", abs, err)
 		return ""
 	}
 	return stringFileInfoVersionKeys(unsafe.Pointer(&buf[0]), "FileVersion", "ProductVersion")
@@ -53,7 +65,10 @@ func stringFileInfoVersionKeys(block unsafe.Pointer, keys ...string) string {
 			var valLen uint32
 			sub := prefix + key
 			err = windows.VerQueryValue(block, sub, unsafe.Pointer(&val), &valLen)
-			if err != nil || val == nil || valLen < 4 {
+			if err != nil || val == nil || valLen < 2 {
+				continue
+			}
+			if valLen%2 != 0 {
 				continue
 			}
 			// VerQueryValue sets valLen to the value size in bytes (UTF-16 code units × 2).

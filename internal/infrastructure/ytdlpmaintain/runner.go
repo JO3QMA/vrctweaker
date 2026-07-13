@@ -12,6 +12,8 @@ import (
 	"github.com/fsnotify/fsnotify"
 )
 
+const toolsDirLogInterval = 30 * time.Second
+
 // SettingGetter reads whether Tools replace maintain is desired.
 type SettingGetter interface {
 	YTDLPToolsReplaceMaintain(ctx context.Context) (bool, error)
@@ -49,9 +51,10 @@ func Run(
 	defer ticker.Stop()
 
 	var (
-		watcher   *fsnotify.Watcher
-		watching  bool
-		watchPath string
+		watcher         *fsnotify.Watcher
+		watching        bool
+		watchPath       string
+		lastToolsDirLog time.Time
 	)
 	closeWatcher := func() {
 		if watcher != nil {
@@ -63,35 +66,43 @@ func Run(
 	}
 	defer closeWatcher()
 
-	ensureWatch := func() {
-		dir, err := toolsDir.ToolsDir()
-		if err != nil {
-			log.Printf("ytdlp maintain: ToolsDir error: %v", err)
-			closeWatcher()
+	logToolsDirErr := func(err error) {
+		if time.Since(lastToolsDirLog) < toolsDirLogInterval {
 			return
 		}
+		log.Printf("ytdlp maintain: ToolsDir error: %v", err)
+		lastToolsDirLog = time.Now()
+	}
+
+	ensureWatch := func() bool {
+		dir, err := toolsDir.ToolsDir()
+		if err != nil {
+			logToolsDirErr(err)
+			return false
+		}
 		if watching && watchPath == dir {
-			return
+			return true
 		}
 		closeWatcher()
 		w, err := fsnotify.NewWatcher()
 		if err != nil {
 			log.Printf("ytdlp maintain: fsnotify.NewWatcher error: %v", err)
-			return
+			return false
 		}
 		if err := os.MkdirAll(dir, 0o755); err != nil {
 			log.Printf("ytdlp maintain: MkdirAll(%s) error: %v", dir, err)
 			_ = w.Close()
-			return
+			return false
 		}
 		if err := w.Add(dir); err != nil {
 			log.Printf("ytdlp maintain: watcher Add(%s) error: %v", dir, err)
 			_ = w.Close()
-			return
+			return false
 		}
 		watcher = w
 		watching = true
 		watchPath = dir
+		return true
 	}
 
 	var reapplyBusy atomic.Bool
@@ -148,8 +159,9 @@ func Run(
 				closeWatcher()
 				continue
 			}
-			ensureWatch()
-			reapply()
+			if ensureWatch() {
+				reapply()
+			}
 		}
 	}
 }

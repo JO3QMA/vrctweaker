@@ -831,8 +831,10 @@
     "errorRiskAckRequired": "有効化する前にリスク確認が必要です。",
     "errorUnsupportedPlatform": "この機能は Windows 版のみ利用できます。",
     "errorMaintenanceFailed": "操作に失敗しました。しばらくしてから再度お試しください。",
+    "notInitialized": "動画設定がまだ初期化されていません。",
     "errors": {
       "githubRateLimit": "GitHub の通信制限に達したため、最新バージョンの取得に失敗しました。時間を置いて再度お試しください。",
+      "githubUnauthorized": "GitHub が認証不足のためリクエストを拒否しました。",
       "githubForbidden": "GitHub へのアクセスが拒否されたため、最新バージョンの取得に失敗しました。時間を置いて再度お試しください。",
       "network": "ネットワークエラーのため、通信に失敗しました。接続を確認して再度お試しください。",
       "placeOfficial": "yt-dlp 公式最新版の配置に失敗しました。Windows の開発者モードを有効にするか、管理者としてアプリを起動して再度お試しください。",

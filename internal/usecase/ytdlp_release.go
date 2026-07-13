@@ -180,6 +180,10 @@ func (u *YTDLPUpdater) EnsureOfficialCache(ctx context.Context, cachePath string
 
 	info, err := u.FetchLatestRelease(ctx)
 	if err != nil {
+		if st, stErr := os.Stat(cachePath); stErr == nil && !st.IsDir() {
+			ver := LocalYTDLPVersion(ctx, cachePath)
+			return YTDLPReleaseInfo{Version: ver, Tag: ver}, nil
+		}
 		return YTDLPReleaseInfo{}, err
 	}
 
@@ -254,6 +258,8 @@ func (u *YTDLPUpdater) downloadToCacheLocked(ctx context.Context, cachePath, dow
 	return nil
 }
 
+const maxYTDlpDownloadBytes = 100 << 20
+
 func downloadToFile(ctx context.Context, client *http.Client, url, dest string) error {
 	if client == nil {
 		client = http.DefaultClient
@@ -277,11 +283,19 @@ func downloadToFile(ctx context.Context, client *http.Client, url, dest string) 
 	if err != nil {
 		return fmt.Errorf("create temp file: %w", err)
 	}
-	if _, err := io.Copy(f, io.LimitReader(resp.Body, 100<<20)); err != nil {
-		_ = f.Close()
+	n, err := io.Copy(f, io.LimitReader(resp.Body, maxYTDlpDownloadBytes+1))
+	if closeErr := f.Close(); err == nil {
+		err = closeErr
+	}
+	if err != nil {
+		_ = os.Remove(dest)
 		return fmt.Errorf("write failed: %w", err)
 	}
-	return f.Close()
+	if n > maxYTDlpDownloadBytes {
+		_ = os.Remove(dest)
+		return fmt.Errorf("download exceeds %d bytes", maxYTDlpDownloadBytes)
+	}
+	return nil
 }
 
 func truncateForErr(s string, max int) string {

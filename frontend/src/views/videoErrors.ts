@@ -2,6 +2,7 @@
 
 export type VideoUserErrorKey =
   | "githubRateLimit"
+  | "githubUnauthorized"
   | "githubForbidden"
   | "network"
   | "placeOfficial"
@@ -30,22 +31,23 @@ export function classifyVideoError(
     return "unsupported";
   }
   if (
-    s.includes("403") ||
     s.includes("rate limit") ||
     s.includes("api rate limit") ||
     s.includes("secondary rate")
   ) {
     return "githubRateLimit";
   }
-  if (s.includes("401") || s.includes("forbidden")) {
+  if (s.includes("401") || /\bunauthorized\b/.test(s)) {
+    return "githubUnauthorized";
+  }
+  if (s.includes("403") || s.includes("forbidden")) {
     return "githubForbidden";
   }
   if (
-    s.includes("開発者モード") ||
     s.includes("developer mode") ||
-    s.includes("配置に失敗") ||
     s.includes("symlink") ||
-    s.includes("elevated")
+    s.includes("elevated") ||
+    s.includes("administrator")
   ) {
     return "placeOfficial";
   }

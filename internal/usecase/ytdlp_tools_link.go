@@ -106,7 +106,7 @@ func waitUntilUnlocked(path string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	var lastErr error
 	for {
-		f, err := os.OpenFile(path, os.O_RDWR, 0)
+		f, err := os.OpenFile(path, os.O_RDONLY, 0)
 		if err == nil {
 			_ = f.Close()
 			return nil
@@ -147,16 +147,16 @@ func LinkToolsToCache(toolsPath, cachePath string, unlockTimeout time.Duration) 
 }
 
 func linkToolsToCacheOnce(toolsPath, absCache string, unlockTimeout time.Duration) error {
-	if _, statErr := os.Lstat(toolsPath); statErr == nil {
-		if unlockErr := waitUntilUnlocked(toolsPath, unlockTimeout); unlockErr != nil {
-			return fmt.Errorf("unlock tools yt-dlp: %w", unlockErr)
-		}
-		if rmErr := os.Remove(toolsPath); rmErr != nil && !os.IsNotExist(rmErr) {
-			return fmt.Errorf("remove tools yt-dlp: %w", rmErr)
-		}
-	} else if !os.IsNotExist(statErr) {
-		return fmt.Errorf("lstat tools yt-dlp: %w", statErr)
+	restore, err := backupToolsEntry(toolsPath, unlockTimeout)
+	if err != nil {
+		return err
 	}
+	symlinkFailed := true
+	defer func() {
+		if symlinkFailed {
+			restore()
+		}
+	}()
 
 	if err := os.MkdirAll(filepath.Dir(toolsPath), 0o755); err != nil {
 		return err
@@ -164,5 +164,34 @@ func linkToolsToCacheOnce(toolsPath, absCache string, unlockTimeout time.Duratio
 	if err := os.Symlink(absCache, toolsPath); err != nil {
 		return fmt.Errorf("symlink tools yt-dlp: enable Windows Developer Mode or run as administrator: %w", err)
 	}
+	symlinkFailed = false
 	return nil
+}
+
+func backupToolsEntry(toolsPath string, unlockTimeout time.Duration) (restore func(), err error) {
+	fi, statErr := os.Lstat(toolsPath)
+	if statErr != nil {
+		if os.IsNotExist(statErr) {
+			return func() {}, nil
+		}
+		return nil, fmt.Errorf("lstat tools yt-dlp: %w", statErr)
+	}
+	if unlockErr := waitUntilUnlocked(toolsPath, unlockTimeout); unlockErr != nil {
+		return nil, fmt.Errorf("unlock tools yt-dlp: %w", unlockErr)
+	}
+	if fi.Mode()&os.ModeSymlink != 0 {
+		if rmErr := os.Remove(toolsPath); rmErr != nil && !os.IsNotExist(rmErr) {
+			return nil, fmt.Errorf("remove tools yt-dlp: %w", rmErr)
+		}
+		return func() {}, nil
+	}
+	bak := toolsPath + ".vrctweaker.bak"
+	_ = os.Remove(bak)
+	if err := os.Rename(toolsPath, bak); err != nil {
+		return nil, fmt.Errorf("backup tools yt-dlp: %w", err)
+	}
+	return func() {
+		_ = os.Remove(toolsPath)
+		_ = os.Rename(bak, toolsPath)
+	}, nil
 }

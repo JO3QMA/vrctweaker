@@ -831,8 +831,10 @@
     "errorRiskAckRequired": "Risk acknowledgment is required before enabling.",
     "errorUnsupportedPlatform": "This feature is Windows-only.",
     "errorMaintenanceFailed": "The operation failed. Please try again later.",
+    "notInitialized": "Video settings are not initialized yet.",
     "errors": {
       "githubRateLimit": "Could not fetch the latest version because GitHub’s rate limit was reached. Try again later.",
+      "githubUnauthorized": "GitHub rejected the request because authentication is missing or invalid.",
       "githubForbidden": "GitHub refused the request. Try again later.",
       "network": "A network error occurred. Check your connection and try again.",
       "placeOfficial": "Could not place the official yt-dlp build. Enable Windows Developer Mode or run the app as administrator, then try again.",

@@ -3,8 +3,10 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sync"
 	"time"
@@ -62,14 +64,25 @@ func NewYTDLPMaintainUseCase(settings *SettingsUseCase, updater *YTDLPUpdater) *
 	}
 }
 
-func (uc *YTDLPMaintainUseCase) toolsPath() (string, error) {
+// ToolsDir returns the parent directory of Tools/yt-dlp.exe (mutex-safe).
+func (uc *YTDLPMaintainUseCase) ToolsDir() (string, error) {
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+	tools, err := uc.toolsPathLocked()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Dir(tools), nil
+}
+
+func (uc *YTDLPMaintainUseCase) toolsPathLocked() (string, error) {
 	if uc.ToolsPathOverride != "" {
 		return uc.ToolsPathOverride, nil
 	}
 	return VRChatYTDLPToolsPath()
 }
 
-func (uc *YTDLPMaintainUseCase) cachePath() (string, error) {
+func (uc *YTDLPMaintainUseCase) cachePathLocked() (string, error) {
 	if uc.CachePathOverride != "" {
 		return uc.CachePathOverride, nil
 	}
@@ -121,7 +134,27 @@ func (uc *YTDLPMaintainUseCase) SetMaintainDesired(ctx context.Context, on bool)
 		return err
 	}
 
-	return uc.setMaintainDesiredLocked(ctx, true)
+	return uc.finalizeEnableLocked(ctx)
+}
+
+func (uc *YTDLPMaintainUseCase) finalizeEnableLocked(ctx context.Context) error {
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+	ack, err := uc.settings.GetYTDLPToolsReplaceRiskAck(ctx)
+	if err != nil {
+		return err
+	}
+	if !ack {
+		return ErrYTDLPRiskAckRequired
+	}
+	st, err := uc.getStatusLocked(ctx)
+	if err != nil {
+		return err
+	}
+	if !st.Supported {
+		return ErrYTDLPUnsupportedPlatform
+	}
+	return uc.settings.SetYTDLPToolsReplaceMaintain(ctx, true)
 }
 
 func (uc *YTDLPMaintainUseCase) setMaintainDesiredLocked(ctx context.Context, on bool) error {
@@ -266,18 +299,23 @@ func (uc *YTDLPMaintainUseCase) ReapplyIfNeeded(ctx context.Context) error {
 	if runtime.GOOS != "windows" {
 		return nil
 	}
-	tools, cache, on, err := uc.reapplyInputs(ctx)
-	if err != nil || !on {
+	tools, cache, err := uc.reapplyPathsIfEnabled(ctx)
+	if err != nil || tools == "" {
 		return err
 	}
 
-	if _, err := os.Stat(cache); err != nil {
+	if _, statErr := os.Stat(cache); statErr != nil {
 		if _, e2 := uc.updater.EnsureOfficialCache(ctx, cache); e2 != nil {
 			return e2
 		}
 	}
+
 	uc.mu.Lock()
 	defer uc.mu.Unlock()
+	on, err := uc.settings.GetYTDLPToolsReplaceMaintain(ctx)
+	if err != nil || !on {
+		return err
+	}
 	return uc.linkIfNeeded(ctx, tools, cache)
 }
 
@@ -315,13 +353,13 @@ func (uc *YTDLPMaintainUseCase) linkAndRecord(ctx context.Context, tools, cache 
 // getStatusLocked is GetStatus without acquiring uc.mu (caller must hold the lock).
 func (uc *YTDLPMaintainUseCase) getStatusLocked(ctx context.Context) (YTDLPMaintainStatus, error) {
 	st := YTDLPMaintainStatus{}
-	tools, err := uc.toolsPath()
+	tools, err := uc.toolsPathLocked()
 	if err != nil {
 		st.Supported = false
 		st.UnsupportedReason = err.Error()
 		return st, nil
 	}
-	cache, err := uc.cachePath()
+	cache, err := uc.cachePathLocked()
 	if err != nil {
 		st.Supported = false
 		st.UnsupportedReason = err.Error()
@@ -338,18 +376,17 @@ func (uc *YTDLPMaintainUseCase) getStatusLocked(ctx context.Context) (YTDLPMaint
 	st.Supported = true
 
 	if uc.settings != nil {
-		var getErr error
-		st.MaintainDesired, getErr = uc.settings.GetYTDLPToolsReplaceMaintain(ctx)
-		if getErr != nil {
-			log.Printf("ytdlp maintain: GetYTDLPToolsReplaceMaintain: %v", getErr)
+		st.MaintainDesired, err = uc.settings.GetYTDLPToolsReplaceMaintain(ctx)
+		if err != nil {
+			return st, fmt.Errorf("GetYTDLPToolsReplaceMaintain: %w", err)
 		}
-		st.RiskAcknowledged, getErr = uc.settings.GetYTDLPToolsReplaceRiskAck(ctx)
-		if getErr != nil {
-			log.Printf("ytdlp maintain: GetYTDLPToolsReplaceRiskAck: %v", getErr)
+		st.RiskAcknowledged, err = uc.settings.GetYTDLPToolsReplaceRiskAck(ctx)
+		if err != nil {
+			return st, fmt.Errorf("GetYTDLPToolsReplaceRiskAck: %w", err)
 		}
-		st.PendingError, getErr = uc.settings.GetYTDLPToolsReplacePendingError(ctx)
-		if getErr != nil {
-			log.Printf("ytdlp maintain: GetYTDLPToolsReplacePendingError: %v", getErr)
+		st.PendingError, err = uc.settings.GetYTDLPToolsReplacePendingError(ctx)
+		if err != nil {
+			return st, fmt.Errorf("GetYTDLPToolsReplacePendingError: %w", err)
 		}
 	}
 
@@ -387,25 +424,46 @@ func (uc *YTDLPMaintainUseCase) statusPathsForEnsure(ctx context.Context) (st YT
 	return st, st.ToolsPath, st.CachePath, nil
 }
 
-func (uc *YTDLPMaintainUseCase) reapplyInputs(ctx context.Context) (tools, cache string, on bool, err error) {
+func (uc *YTDLPMaintainUseCase) reapplyPathsIfEnabled(ctx context.Context) (tools, cache string, err error) {
 	uc.mu.Lock()
 	defer uc.mu.Unlock()
 	if uc.settings == nil {
-		return "", "", false, nil
+		return "", "", nil
 	}
-	on, err = uc.settings.GetYTDLPToolsReplaceMaintain(ctx)
+	on, err := uc.settings.GetYTDLPToolsReplaceMaintain(ctx)
 	if err != nil || !on {
-		return "", "", on, err
+		return "", "", err
 	}
-	tools, err = uc.toolsPath()
+	tools, err = uc.toolsPathLocked()
 	if err != nil {
-		return "", "", false, err
+		return "", "", err
 	}
-	cache, err = uc.cachePath()
+	cache, err = uc.cachePathLocked()
 	if err != nil {
-		return "", "", false, err
+		return "", "", err
 	}
-	return tools, cache, true, nil
+	return tools, cache, nil
+}
+
+// WrapMaintainAPIError maps sentinel maintain errors to stable i18n keys; other errors pass through.
+func WrapMaintainAPIError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if key := maintainErrorI18nKey(err); key != "" {
+		return errors.New(key)
+	}
+	return err
+}
+
+func maintainErrorI18nKey(err error) string {
+	if errors.Is(err, ErrYTDLPRiskAckRequired) {
+		return "errorRiskAckRequired"
+	}
+	if errors.Is(err, ErrYTDLPUnsupportedPlatform) {
+		return "errorUnsupportedPlatform"
+	}
+	return ""
 }
 
 // FormatMaintainError returns an i18n key for maintain API errors.
@@ -413,11 +471,8 @@ func FormatMaintainError(err error) string {
 	if err == nil {
 		return ""
 	}
-	if errors.Is(err, ErrYTDLPRiskAckRequired) {
-		return "errorRiskAckRequired"
-	}
-	if errors.Is(err, ErrYTDLPUnsupportedPlatform) {
-		return "errorUnsupportedPlatform"
+	if key := maintainErrorI18nKey(err); key != "" {
+		return key
 	}
 	log.Printf("ytdlp maintain: %v", err)
 	return "errorMaintenanceFailed"
