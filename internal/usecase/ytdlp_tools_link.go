@@ -5,6 +5,7 @@ package usecase
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -106,14 +107,13 @@ func waitUntilUnlocked(path string, timeout time.Duration) error {
 	deadline := time.Now().Add(timeout)
 	var lastErr error
 	for {
-		f, err := os.OpenFile(path, os.O_RDONLY, 0)
-		if err == nil {
-			_ = f.Close()
+		if err := tryOpenToolsPath(path); err == nil {
 			return nil
+		} else {
+			lastErr = err
 		}
-		lastErr = err
-		if !isTransientLockErr(err) {
-			return fmt.Errorf("cannot open %s: %w", path, err)
+		if !isTransientLockErr(lastErr) {
+			return fmt.Errorf("cannot open %s: %w", path, lastErr)
 		}
 		if time.Now().After(deadline) {
 			return fmt.Errorf("timed out waiting for unlock: %s: %w", path, lastErr)
@@ -122,7 +122,23 @@ func waitUntilUnlocked(path string, timeout time.Duration) error {
 	}
 }
 
+func tryOpenToolsPath(path string) error {
+	f, err := os.OpenFile(path, os.O_RDWR, 0)
+	if err == nil {
+		return f.Close()
+	}
+	if !os.IsPermission(err) {
+		return err
+	}
+	f, err = os.OpenFile(path, os.O_RDONLY, 0)
+	if err == nil {
+		return f.Close()
+	}
+	return err
+}
+
 // LinkToolsToCache removes Tools/yt-dlp.exe (file or old link) and creates a symlink to cache.
+// Callers must serialize concurrent invocations (YTDLPMaintainUseCase holds its mutex during link).
 func LinkToolsToCache(toolsPath, cachePath string, unlockTimeout time.Duration) error {
 	if _, err := os.Stat(cachePath); err != nil {
 		return fmt.Errorf("cache missing: %w", err)
@@ -191,7 +207,19 @@ func backupToolsEntry(toolsPath string, unlockTimeout time.Duration) (restore fu
 		return nil, fmt.Errorf("backup tools yt-dlp: %w", err)
 	}
 	return func() {
+		if _, statErr := os.Stat(bak); statErr != nil {
+			return
+		}
 		_ = os.Remove(toolsPath)
-		_ = os.Rename(bak, toolsPath)
+		if err := os.Rename(bak, toolsPath); err != nil {
+			data, readErr := os.ReadFile(bak)
+			if readErr != nil {
+				log.Printf("ytdlp maintain: restore tools from backup: %v", err)
+				return
+			}
+			if writeErr := os.WriteFile(toolsPath, data, fi.Mode().Perm()); writeErr != nil {
+				log.Printf("ytdlp maintain: restore tools from backup: %v", writeErr)
+			}
+		}
 	}, nil
 }

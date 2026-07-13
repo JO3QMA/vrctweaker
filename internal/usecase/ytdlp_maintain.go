@@ -130,31 +130,16 @@ func (uc *YTDLPMaintainUseCase) SetMaintainDesired(ctx context.Context, on bool)
 		return err
 	}
 
+	if err := uc.setMaintainDesiredLocked(ctx, true); err != nil {
+		return err
+	}
 	if err := uc.ensureCacheAndLink(ctx, tools, cache); err != nil {
+		if rbErr := uc.setMaintainDesiredLocked(ctx, false); rbErr != nil {
+			log.Printf("ytdlp maintain: rollback maintain flag: %v", rbErr)
+		}
 		return err
 	}
-
-	return uc.finalizeEnableLocked(ctx)
-}
-
-func (uc *YTDLPMaintainUseCase) finalizeEnableLocked(ctx context.Context) error {
-	uc.mu.Lock()
-	defer uc.mu.Unlock()
-	ack, err := uc.settings.GetYTDLPToolsReplaceRiskAck(ctx)
-	if err != nil {
-		return err
-	}
-	if !ack {
-		return ErrYTDLPRiskAckRequired
-	}
-	st, err := uc.getStatusLocked(ctx)
-	if err != nil {
-		return err
-	}
-	if !st.Supported {
-		return ErrYTDLPUnsupportedPlatform
-	}
-	return uc.settings.SetYTDLPToolsReplaceMaintain(ctx, true)
+	return nil
 }
 
 func (uc *YTDLPMaintainUseCase) setMaintainDesiredLocked(ctx context.Context, on bool) error {
@@ -453,6 +438,7 @@ func WrapMaintainAPIError(err error) error {
 	if key := maintainErrorI18nKey(err); key != "" {
 		return errors.New(key)
 	}
+	log.Printf("ytdlp maintain: %v", err)
 	return err
 }
 
@@ -474,6 +460,5 @@ func FormatMaintainError(err error) string {
 	if key := maintainErrorI18nKey(err); key != "" {
 		return key
 	}
-	log.Printf("ytdlp maintain: %v", err)
 	return "errorMaintenanceFailed"
 }

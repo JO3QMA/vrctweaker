@@ -168,10 +168,15 @@ func (u *YTDLPUpdater) DownloadToCache(ctx context.Context, cachePath, downloadU
 	return u.downloadToCacheLocked(ctx, cachePath, downloadURL)
 }
 
+func ytdlpCacheExePresent(cachePath string) bool {
+	st, err := os.Stat(cachePath)
+	return err == nil && !st.IsDir()
+}
+
 // EnsureOfficialCache downloads the latest release into cache when cache is missing.
 func (u *YTDLPUpdater) EnsureOfficialCache(ctx context.Context, cachePath string) (YTDLPReleaseInfo, error) {
 	u.mu.Lock()
-	if st, err := os.Stat(cachePath); err == nil && !st.IsDir() {
+	if ytdlpCacheExePresent(cachePath) {
 		ver := LocalYTDLPVersion(ctx, cachePath)
 		u.mu.Unlock()
 		return YTDLPReleaseInfo{Version: ver, Tag: ver}, nil
@@ -180,7 +185,7 @@ func (u *YTDLPUpdater) EnsureOfficialCache(ctx context.Context, cachePath string
 
 	info, err := u.FetchLatestRelease(ctx)
 	if err != nil {
-		if st, stErr := os.Stat(cachePath); stErr == nil && !st.IsDir() {
+		if ytdlpCacheExePresent(cachePath) {
 			ver := LocalYTDLPVersion(ctx, cachePath)
 			return YTDLPReleaseInfo{Version: ver, Tag: ver}, nil
 		}
@@ -189,7 +194,7 @@ func (u *YTDLPUpdater) EnsureOfficialCache(ctx context.Context, cachePath string
 
 	u.mu.Lock()
 	defer u.mu.Unlock()
-	if st, err := os.Stat(cachePath); err == nil && !st.IsDir() {
+	if ytdlpCacheExePresent(cachePath) {
 		ver := LocalYTDLPVersion(ctx, cachePath)
 		if ver == "" {
 			ver = info.Version
@@ -234,6 +239,9 @@ func (u *YTDLPUpdater) downloadHTTPClient() *http.Client {
 func (u *YTDLPUpdater) downloadToCacheLocked(ctx context.Context, cachePath, downloadURL string) error {
 	if err := validateYTDlpDownloadURL(u, downloadURL); err != nil {
 		return err
+	}
+	if st, err := os.Stat(cachePath); err == nil && st.IsDir() {
+		return fmt.Errorf("cache path is a directory: %s", cachePath)
 	}
 	if err := os.MkdirAll(filepath.Dir(cachePath), 0o755); err != nil {
 		return err

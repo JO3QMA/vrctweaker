@@ -1384,29 +1384,36 @@ func (p ytdlpToolsDirProvider) ToolsDir() (string, error) {
 
 func (a *App) startYTDLPMaintainLoop() {
 	a.ytdlpMaintainMu.Lock()
-	defer a.ytdlpMaintainMu.Unlock()
 	if a.ytdlp == nil || a.settings == nil {
+		a.ytdlpMaintainMu.Unlock()
 		return
 	}
 	if a.ytdlpMaintainCancel != nil {
-		a.ytdlpMaintainCancel()
-		a.ytdlpMaintainWG.Wait()
+		cancel := a.ytdlpMaintainCancel
 		a.ytdlpMaintainCancel = nil
+		a.ytdlpMaintainMu.Unlock()
+		cancel()
+		a.ytdlpMaintainWG.Wait()
+		a.ytdlpMaintainMu.Lock()
 	}
 	runCtx, cancel := context.WithCancel(context.Background())
 	a.ytdlpMaintainCancel = cancel
 	a.ytdlpMaintainWG.Add(1)
+	a.ytdlpMaintainMu.Unlock()
+
 	go func() {
 		defer a.ytdlpMaintainWG.Done()
 		checker := sleepsuppress.NewVRChatProcessChecker()
-		_ = ytdlpmaintain.Run(
+		if err := ytdlpmaintain.Run(
 			runCtx,
 			2*time.Second,
 			ytdlpMaintainSettingGetter{a: a},
 			checker,
 			ytdlpMaintainReapplier{a: a},
 			ytdlpToolsDirProvider{a: a},
-		)
+		); err != nil && !errors.Is(err, context.Canceled) {
+			log.Printf("ytdlp maintain loop: %v", err)
+		}
 	}()
 }
 

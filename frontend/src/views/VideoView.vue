@@ -153,7 +153,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
 import { CaretBottom, CaretRight, FolderOpened } from "@element-plus/icons-vue";
@@ -190,6 +190,11 @@ const actionError = ref("");
 /** 詳細アコーディオンは初期閉じ */
 const detailsExpanded = ref(false);
 const detailsPanelId = "ytdlp-details-panel";
+
+let viewGeneration = 0;
+function isViewStale(gen: number): boolean {
+  return gen !== viewGeneration;
+}
 
 const effectiveStatusText = computed(() =>
   status.value.effectiveOfficial
@@ -245,29 +250,40 @@ function isMessageBoxDismiss(e: unknown): boolean {
   return false;
 }
 
-async function refreshSilent() {
+async function refreshSilent(gen: number): Promise<boolean> {
   try {
+    if (isViewStale(gen)) return false;
     applyStatus(await App.getYTDLPMaintainStatus());
-  } catch {
-    /* best-effort sync after partial backend update */
+    return !isViewStale(gen);
+  } catch (e) {
+    if (!isViewStale(gen)) {
+      actionError.value = userFacingError(
+        e instanceof Error ? e.message : String(e),
+      );
+    }
+    return false;
   }
 }
 
 async function refresh() {
+  const gen = viewGeneration;
   loading.value = true;
   clearFeedback();
   try {
+    if (isViewStale(gen)) return;
     applyStatus(await App.getYTDLPMaintainStatus());
   } catch (e) {
+    if (isViewStale(gen)) return;
     actionError.value = userFacingError(
       e instanceof Error ? e.message : String(e),
     );
   } finally {
-    loading.value = false;
+    if (!isViewStale(gen)) loading.value = false;
   }
 }
 
 async function onMaintainChange(on: boolean) {
+  const gen = viewGeneration;
   const desired = on;
   busy.value = true;
   clearFeedback();
@@ -282,9 +298,12 @@ async function onMaintainChange(on: boolean) {
           type: "warning",
         },
       );
+      if (isViewStale(gen)) return;
       await App.acknowledgeYTDLPToolsReplaceRisk();
     }
+    if (isViewStale(gen)) return;
     await App.setYTDLPToolsReplaceMaintain(desired);
+    if (isViewStale(gen)) return;
     try {
       applyStatus(await App.getYTDLPMaintainStatus());
     } catch {
@@ -293,14 +312,17 @@ async function onMaintainChange(on: boolean) {
         ...status.value,
         maintainDesired: desired,
         riskAcknowledged: desired ? true : status.value.riskAcknowledged,
-        effectiveOfficial: desired ? status.value.effectiveOfficial : false,
+        effectiveOfficial: desired,
+        pendingError: desired ? "" : status.value.pendingError,
       };
-      void refreshSilent();
+      await refreshSilent(gen);
     }
+    if (isViewStale(gen)) return;
     flashOk.value = desired
       ? t("video.flashEnabled")
       : t("video.flashDisabled");
   } catch (e) {
+    if (isViewStale(gen)) return;
     maintainOn.value = status.value.maintainDesired;
     if (isMessageBoxDismiss(e)) {
       return;
@@ -309,38 +331,45 @@ async function onMaintainChange(on: boolean) {
       e instanceof Error ? e.message : String(e),
     );
   } finally {
-    busy.value = false;
+    if (!isViewStale(gen)) busy.value = false;
   }
 }
 
 async function checkLatest() {
+  const gen = viewGeneration;
   checkLoading.value = true;
   busy.value = true;
   clearFeedback();
   try {
+    if (isViewStale(gen)) return;
     applyStatus(await App.checkYTDLPLatestRelease(), { syncSwitch: false });
+    if (isViewStale(gen)) return;
     if (status.value.latestError) {
-      // bannerError reads latestError — do not also set actionError (no duplicate)
       return;
     }
     flashOk.value = t("video.flashLatest", {
       version: status.value.latestVersion,
     });
   } catch (e) {
+    if (isViewStale(gen)) return;
     actionError.value = userFacingError(
       e instanceof Error ? e.message : String(e),
     );
   } finally {
-    checkLoading.value = false;
-    busy.value = false;
+    if (!isViewStale(gen)) {
+      checkLoading.value = false;
+      busy.value = false;
+    }
   }
 }
 
 async function updateCache() {
+  const gen = viewGeneration;
   updateLoading.value = true;
   busy.value = true;
   clearFeedback();
   try {
+    if (isViewStale(gen)) return;
     applyStatus(
       await App.updateOfficialYTDLPCache(
         status.value.latestDownloadUrl || "",
@@ -348,6 +377,7 @@ async function updateCache() {
       ),
       { syncSwitch: false },
     );
+    if (isViewStale(gen)) return;
     if (status.value.pendingError || status.value.latestError) {
       return;
     }
@@ -355,42 +385,55 @@ async function updateCache() {
       version: status.value.cacheVersion,
     });
   } catch (e) {
+    if (isViewStale(gen)) return;
     actionError.value = userFacingError(
       e instanceof Error ? e.message : String(e),
     );
   } finally {
-    updateLoading.value = false;
-    busy.value = false;
+    if (!isViewStale(gen)) {
+      updateLoading.value = false;
+      busy.value = false;
+    }
   }
 }
 
 async function openCacheFolder() {
+  const gen = viewGeneration;
   busy.value = true;
   clearFeedback();
   try {
+    if (isViewStale(gen)) return;
     await App.openYTDLPCacheFolder();
   } catch (e) {
+    if (isViewStale(gen)) return;
     actionError.value = userFacingError(
       e instanceof Error ? e.message : String(e),
     );
   } finally {
-    busy.value = false;
+    if (!isViewStale(gen)) busy.value = false;
   }
 }
 
 async function openToolsFolder() {
+  const gen = viewGeneration;
   busy.value = true;
   clearFeedback();
   try {
+    if (isViewStale(gen)) return;
     await App.openYTDLPToolsFolder();
   } catch (e) {
+    if (isViewStale(gen)) return;
     actionError.value = userFacingError(
       e instanceof Error ? e.message : String(e),
     );
   } finally {
-    busy.value = false;
+    if (!isViewStale(gen)) busy.value = false;
   }
 }
+
+onBeforeUnmount(() => {
+  viewGeneration++;
+});
 
 onMounted(() => {
   void refresh();

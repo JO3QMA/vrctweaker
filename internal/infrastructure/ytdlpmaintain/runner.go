@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -51,10 +52,12 @@ func Run(
 	defer ticker.Stop()
 
 	var (
-		watcher         *fsnotify.Watcher
-		watching        bool
-		watchPath       string
-		lastToolsDirLog time.Time
+		watcher      *fsnotify.Watcher
+		watching     bool
+		watchPath    string
+		lastWatchLog time.Time
+		reapplyWG    sync.WaitGroup
+		reapplyBusy  atomic.Bool
 	)
 	closeWatcher := func() {
 		if watcher != nil {
@@ -66,18 +69,18 @@ func Run(
 	}
 	defer closeWatcher()
 
-	logToolsDirErr := func(err error) {
-		if time.Since(lastToolsDirLog) < toolsDirLogInterval {
+	logWatchErr := func(format string, args ...any) {
+		if time.Since(lastWatchLog) < toolsDirLogInterval {
 			return
 		}
-		log.Printf("ytdlp maintain: ToolsDir error: %v", err)
-		lastToolsDirLog = time.Now()
+		log.Printf(format, args...)
+		lastWatchLog = time.Now()
 	}
 
 	ensureWatch := func() bool {
 		dir, err := toolsDir.ToolsDir()
 		if err != nil {
-			logToolsDirErr(err)
+			logWatchErr("ytdlp maintain: ToolsDir error: %v", err)
 			return false
 		}
 		if watching && watchPath == dir {
@@ -86,16 +89,16 @@ func Run(
 		closeWatcher()
 		w, err := fsnotify.NewWatcher()
 		if err != nil {
-			log.Printf("ytdlp maintain: fsnotify.NewWatcher error: %v", err)
+			logWatchErr("ytdlp maintain: fsnotify.NewWatcher error: %v", err)
 			return false
 		}
 		if err := os.MkdirAll(dir, 0o755); err != nil {
-			log.Printf("ytdlp maintain: MkdirAll(%s) error: %v", dir, err)
+			logWatchErr("ytdlp maintain: MkdirAll(%s) error: %v", dir, err)
 			_ = w.Close()
 			return false
 		}
 		if err := w.Add(dir); err != nil {
-			log.Printf("ytdlp maintain: watcher Add(%s) error: %v", dir, err)
+			logWatchErr("ytdlp maintain: watcher Add(%s) error: %v", dir, err)
 			_ = w.Close()
 			return false
 		}
@@ -105,13 +108,17 @@ func Run(
 		return true
 	}
 
-	var reapplyBusy atomic.Bool
 	reapply := func() {
+		reapplyWG.Add(1)
 		go func() {
+			defer reapplyWG.Done()
 			if !reapplyBusy.CompareAndSwap(false, true) {
 				return
 			}
 			defer reapplyBusy.Store(false)
+			if ctx.Err() != nil {
+				return
+			}
 			if err := reapplier.ReapplyIfNeeded(ctx); err != nil {
 				log.Printf("ytdlp maintain: ReapplyIfNeeded error: %v", err)
 			}
@@ -128,6 +135,8 @@ func Run(
 
 		select {
 		case <-ctx.Done():
+			closeWatcher()
+			reapplyWG.Wait()
 			return ctx.Err()
 		case ev, ok := <-watchCh:
 			if !ok {
