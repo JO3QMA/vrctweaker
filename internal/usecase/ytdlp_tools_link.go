@@ -11,6 +11,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"golang.org/x/sys/windows"
 )
 
 // OfficialYTDLPCachePath returns …/Local/vrchat-tweaker/ytdlp/yt-dlp.exe (outside LocalLow).
@@ -98,7 +100,7 @@ func isTransientLockErr(err error) bool {
 	}
 	var errno syscall.Errno
 	if errors.As(err, &errno) {
-		return errno == syscall.ERROR_SHARING_VIOLATION || errno == syscall.ERROR_LOCK_VIOLATION
+		return errno == windows.ERROR_SHARING_VIOLATION || errno == windows.ERROR_LOCK_VIOLATION
 	}
 	return false
 }
