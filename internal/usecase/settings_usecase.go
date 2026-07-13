@@ -149,13 +149,16 @@ func (uc *SettingsUseCase) clearStaleOutputLogPath(ctx context.Context) (string,
 
 // Path settings keys in app_settings.
 const (
-	keyVRChatPathWindows        = "vrchat_path_windows"
-	keySteamPathLinux           = "steam_path_linux"
-	keyOutputLogPath            = "output_log_path"
-	keyGalleryLastExitAt        = "gallery_last_exit_at"
-	keySuppressSleepWhileVRChat = "suppress_sleep_while_vrchat"
-	keyLanguage                 = "language"
-	keyLastLaunchProfileID      = "last_launch_profile_id"
+	keyVRChatPathWindows             = "vrchat_path_windows"
+	keySteamPathLinux                = "steam_path_linux"
+	keyOutputLogPath                 = "output_log_path"
+	keyGalleryLastExitAt             = "gallery_last_exit_at"
+	keySuppressSleepWhileVRChat      = "suppress_sleep_while_vrchat"
+	keyLanguage                      = "language"
+	keyLastLaunchProfileID           = "last_launch_profile_id"
+	keyYTDLPToolsReplaceMaintain     = "ytdlp_tools_replace_maintain"
+	keyYTDLPToolsReplaceRiskAck      = "ytdlp_tools_replace_risk_ack"
+	keyYTDLPToolsReplacePendingError = "ytdlp_tools_replace_pending_error"
 )
 
 // SupportedAppLanguages are UI locale codes persisted in app_settings.
@@ -222,6 +225,44 @@ func (uc *SettingsUseCase) GetSuppressSleepWhileVRChat(ctx context.Context) (boo
 // SetSuppressSleepWhileVRChat persists the sleep-suppression toggle.
 func (uc *SettingsUseCase) SetSuppressSleepWhileVRChat(ctx context.Context, on bool) error {
 	return uc.repo.Set(ctx, keySuppressSleepWhileVRChat, strconv.FormatBool(on))
+}
+
+// GetYTDLPToolsReplaceMaintain returns whether Tools replace maintain is desired (default false).
+func (uc *SettingsUseCase) GetYTDLPToolsReplaceMaintain(ctx context.Context) (bool, error) {
+	v, err := uc.repo.Get(ctx, keyYTDLPToolsReplaceMaintain)
+	if err != nil {
+		return false, err
+	}
+	return parseBoolSetting(v), nil
+}
+
+// SetYTDLPToolsReplaceMaintain persists the maintain desired toggle.
+func (uc *SettingsUseCase) SetYTDLPToolsReplaceMaintain(ctx context.Context, on bool) error {
+	return uc.repo.Set(ctx, keyYTDLPToolsReplaceMaintain, strconv.FormatBool(on))
+}
+
+// GetYTDLPToolsReplaceRiskAck returns whether Tools replace risk acknowledgment was recorded.
+func (uc *SettingsUseCase) GetYTDLPToolsReplaceRiskAck(ctx context.Context) (bool, error) {
+	v, err := uc.repo.Get(ctx, keyYTDLPToolsReplaceRiskAck)
+	if err != nil {
+		return false, err
+	}
+	return parseBoolSetting(v), nil
+}
+
+// SetYTDLPToolsReplaceRiskAck persists risk acknowledgment.
+func (uc *SettingsUseCase) SetYTDLPToolsReplaceRiskAck(ctx context.Context, ack bool) error {
+	return uc.repo.Set(ctx, keyYTDLPToolsReplaceRiskAck, strconv.FormatBool(ack))
+}
+
+// GetYTDLPToolsReplacePendingError returns the last pending re-link error message (empty if none).
+func (uc *SettingsUseCase) GetYTDLPToolsReplacePendingError(ctx context.Context) (string, error) {
+	return uc.repo.Get(ctx, keyYTDLPToolsReplacePendingError)
+}
+
+// SetYTDLPToolsReplacePendingError persists or clears the pending re-link error.
+func (uc *SettingsUseCase) SetYTDLPToolsReplacePendingError(ctx context.Context, msg string) error {
+	return uc.repo.Set(ctx, keyYTDLPToolsReplacePendingError, strings.TrimSpace(msg))
 }
 
 func parseBoolSetting(v string) bool {

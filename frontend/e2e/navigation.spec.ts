@@ -15,12 +15,13 @@ const MAIN_SIDEBAR_PATHS = [
   "/friends",
   "/me",
   "/automation",
+  "/video",
   "/config",
 ] as const;
 
 /**
  * navigation.spec.ts + gallery.spec.ts + self-profile.spec.ts で専用のナビ／ロードテストを持つルート名。
- * APP_ROUTES 12 件のうち 10 件以上（90%）を E2E でカバーする目標。
+ * APP_ROUTES のうち 90% 以上を E2E でカバーする目標。
  */
 const ROUTES_WITH_DEDICATED_E2E_TESTS = new Set([
   "dashboard",
@@ -31,6 +32,7 @@ const ROUTES_WITH_DEDICATED_E2E_TESTS = new Set([
   "me",
   "automation",
   "config",
+  "video",
   "settings",
   "licenses",
   "encounter-history",
