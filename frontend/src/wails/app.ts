@@ -31,22 +31,24 @@ export type ActivityStatsDTO = WailsDTO<activity.ActivityStats>;
 export type AutomationRuleDTO = WailsDTO<automation.AutomationRule>;
 export type VRChatConfigDTO = WailsDTO<main.VRChatConfigDTO>;
 
-const emptyYTDLPMaintainStatus: YTDLPMaintainStatusDTO = {
-  supported: false,
-  unsupportedReason: "",
-  maintainDesired: false,
-  riskAcknowledged: false,
-  effectiveOfficial: false,
-  cachePresent: false,
-  cacheVersion: "",
-  toolsPath: "",
-  cachePath: "",
-  pendingError: "",
-  latestVersion: "",
-  latestTag: "",
-  latestDownloadUrl: "",
-  latestError: "",
-};
+function emptyYTDLPMaintainStatus(): YTDLPMaintainStatusDTO {
+  return {
+    supported: false,
+    unsupportedReason: "",
+    maintainDesired: false,
+    riskAcknowledged: false,
+    effectiveOfficial: false,
+    cachePresent: false,
+    cacheVersion: "",
+    toolsPath: "",
+    cachePath: "",
+    pendingError: "",
+    latestVersion: "",
+    latestTag: "",
+    latestDownloadUrl: "",
+    latestError: "",
+  };
+}
 
 /** -999 = omit for process/main thread priority */
 export const PRIORITY_OMIT = -999;
@@ -320,7 +322,10 @@ export const App = {
     return callApp((a) => a.RuntimeIsWindows(), false);
   },
   async getYTDLPMaintainStatus(): Promise<YTDLPMaintainStatusDTO> {
-    return callApp((a) => a.GetYTDLPMaintainStatus(), emptyYTDLPMaintainStatus);
+    return callApp(
+      (a) => a.GetYTDLPMaintainStatus(),
+      emptyYTDLPMaintainStatus(),
+    );
   },
   async acknowledgeYTDLPToolsReplaceRisk(): Promise<void> {
     return callApp((a) => a.AcknowledgeYTDLPToolsReplaceRisk(), undefined);
@@ -331,7 +336,7 @@ export const App = {
   async checkYTDLPLatestRelease(): Promise<YTDLPMaintainStatusDTO> {
     return callApp(
       (a) => a.CheckYTDLPLatestRelease(),
-      emptyYTDLPMaintainStatus,
+      emptyYTDLPMaintainStatus(),
     );
   },
   async updateOfficialYTDLPCache(
@@ -340,7 +345,7 @@ export const App = {
   ): Promise<YTDLPMaintainStatusDTO> {
     return callApp(
       (a) => a.UpdateOfficialYTDLPCache(downloadURL, latestTag),
-      emptyYTDLPMaintainStatus,
+      emptyYTDLPMaintainStatus(),
     );
   },
   async openYTDLPCacheFolder(): Promise<void> {

@@ -51,10 +51,12 @@ const menuItems = computed(() => {
     { path: "/config", icon: "📝", label: t("nav.configOther") },
   ];
   if (isWindows.value) {
+    const configIdx = items.findIndex((item) => item.path === "/config");
+    const insertAt = configIdx === -1 ? items.length : configIdx;
     return [
-      ...items.slice(0, 7),
+      ...items.slice(0, insertAt),
       { path: "/video", icon: "🎬", label: t("nav.video") },
-      ...items.slice(7),
+      ...items.slice(insertAt),
     ];
   }
   return items;

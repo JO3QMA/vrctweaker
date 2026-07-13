@@ -1,5 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/vue3-vite";
-import type { Decorator } from "@storybook/vue3-vite";
+import type { Decorator, Meta, StoryObj } from "@storybook/vue3-vite";
 import VideoView from "./VideoView.vue";
 import { withWailsApp } from "../stories/wailsDecorator";
 import type { YTDLPMaintainStatusDTO } from "../wails/app";
