@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -75,7 +76,7 @@ func NeedsOfficialLink(toolsPath, cachePath string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return filepath.Clean(absTarget) != filepath.Clean(absCache), nil
+	return !strings.EqualFold(filepath.Clean(absTarget), filepath.Clean(absCache)), nil
 }
 
 // EffectiveOfficialLink is true when Tools is a symlink to the Official yt-dlp cache.
@@ -98,7 +99,7 @@ func isTransientLockErr(err error) bool {
 	if errors.As(err, &errno) {
 		return errno == syscall.ERROR_SHARING_VIOLATION || errno == syscall.ERROR_LOCK_VIOLATION
 	}
-	return true
+	return false
 }
 
 func waitUntilUnlocked(path string, timeout time.Duration) error {
@@ -131,17 +132,18 @@ func LinkToolsToCache(toolsPath, cachePath string, unlockTimeout time.Duration) 
 		return err
 	}
 
+	var lastErr error
 	for attempt := 0; attempt < 2; attempt++ {
 		if err := linkToolsToCacheOnce(toolsPath, absCache, unlockTimeout); err == nil {
 			return nil
-		} else if attempt == 0 {
-			time.Sleep(100 * time.Millisecond)
-			continue
 		} else {
-			return err
+			lastErr = err
+			if attempt == 0 {
+				time.Sleep(100 * time.Millisecond)
+			}
 		}
 	}
-	return nil
+	return lastErr
 }
 
 func linkToolsToCacheOnce(toolsPath, absCache string, unlockTimeout time.Duration) error {

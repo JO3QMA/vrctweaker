@@ -171,13 +171,30 @@ func (u *YTDLPUpdater) DownloadToCache(ctx context.Context, cachePath, downloadU
 // EnsureOfficialCache downloads the latest release into cache when cache is missing.
 func (u *YTDLPUpdater) EnsureOfficialCache(ctx context.Context, cachePath string) (YTDLPReleaseInfo, error) {
 	u.mu.Lock()
-	defer u.mu.Unlock()
 	if st, err := os.Stat(cachePath); err == nil && !st.IsDir() {
-		return YTDLPReleaseInfo{Version: LocalYTDLPVersion(ctx, cachePath)}, nil
+		ver := LocalYTDLPVersion(ctx, cachePath)
+		u.mu.Unlock()
+		return YTDLPReleaseInfo{Version: ver, Tag: ver}, nil
 	}
+	u.mu.Unlock()
+
 	info, err := u.FetchLatestRelease(ctx)
 	if err != nil {
 		return YTDLPReleaseInfo{}, err
+	}
+
+	u.mu.Lock()
+	defer u.mu.Unlock()
+	if st, err := os.Stat(cachePath); err == nil && !st.IsDir() {
+		ver := LocalYTDLPVersion(ctx, cachePath)
+		if ver == "" {
+			ver = info.Version
+		}
+		return YTDLPReleaseInfo{
+			Tag:         info.Tag,
+			Version:     ver,
+			DownloadURL: info.DownloadURL,
+		}, nil
 	}
 	if err := u.downloadToCacheLocked(ctx, cachePath, info.DownloadURL); err != nil {
 		return YTDLPReleaseInfo{}, err
@@ -205,11 +222,9 @@ func (u *YTDLPUpdater) downloadHTTPClient() *http.Client {
 			return validateYTDlpDownloadURL(u, req.URL.String())
 		}
 	}
-	return &http.Client{
-		Timeout:       base.Timeout,
-		Transport:     base.Transport,
-		CheckRedirect: checkRedirect,
-	}
+	c := *base
+	c.CheckRedirect = checkRedirect
+	return &c
 }
 
 func (u *YTDLPUpdater) downloadToCacheLocked(ctx context.Context, cachePath, downloadURL string) error {

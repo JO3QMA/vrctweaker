@@ -830,7 +830,7 @@
     "flashUpdated": "Official yt-dlp updated: {version}",
     "errorRiskAckRequired": "Risk acknowledgment is required before enabling.",
     "errorUnsupportedPlatform": "This feature is Windows-only.",
-    "errorMaintainFailed": "The operation failed. Please try again later.",
+    "errorMaintenanceFailed": "The operation failed. Please try again later.",
     "errors": {
       "githubRateLimit": "Could not fetch the latest version because GitHub’s rate limit was reached. Try again later.",
       "githubForbidden": "GitHub refused the request. Try again later.",
@@ -841,8 +841,8 @@
       "generic": "The operation failed. Please try again later."
     },
     "reason": {
-      "unsupported_platform": "This feature is Windows-only.",
-      "not_initialized": "Video settings are not initialized yet."
+      "unsupportedPlatform": "This feature is Windows-only.",
+      "notInitialized": "Video settings are not initialized yet."
     },
     "detailsToggle": "显示详细信息"
   }

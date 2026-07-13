@@ -5,6 +5,8 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -92,8 +94,13 @@ func Run(
 		watchPath = dir
 	}
 
+	var reapplyBusy atomic.Bool
 	reapply := func() {
 		go func() {
+			if !reapplyBusy.CompareAndSwap(false, true) {
+				return
+			}
+			defer reapplyBusy.Store(false)
 			if err := reapplier.ReapplyIfNeeded(ctx); err != nil {
 				log.Printf("ytdlp maintain: ReapplyIfNeeded error: %v", err)
 			}
@@ -116,7 +123,7 @@ func Run(
 				closeWatcher()
 				continue
 			}
-			if filepath.Base(ev.Name) != "yt-dlp.exe" {
+			if !strings.EqualFold(filepath.Base(ev.Name), "yt-dlp.exe") {
 				continue
 			}
 			if ev.Op&(fsnotify.Create|fsnotify.Write|fsnotify.Rename|fsnotify.Remove) == 0 {

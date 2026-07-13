@@ -28,6 +28,11 @@ describe("classifyVideoError", () => {
     expect(classifyVideoError("download URL is empty")).toBe("generic");
   });
 
+  it("handles null/undefined input", () => {
+    expect(classifyVideoError(null)).toBe("generic");
+    expect(classifyVideoError(undefined)).toBe("generic");
+  });
+
   it("returns i18n key path", () => {
     expect(videoErrorI18nKey("403 Forbidden")).toBe(
       "video.errors.githubRateLimit",

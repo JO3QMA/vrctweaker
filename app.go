@@ -1432,7 +1432,7 @@ func (a *App) GetYTDLPMaintainStatus() (usecase.YTDLPMaintainStatus, error) {
 	if a.ytdlp == nil {
 		return usecase.YTDLPMaintainStatus{
 			Supported:         false,
-			UnsupportedReason: "not_initialized",
+			UnsupportedReason: "notInitialized",
 		}, nil
 	}
 	return a.ytdlp.GetStatus(a.ctx)
@@ -1462,7 +1462,7 @@ func (a *App) CheckYTDLPLatestRelease() (usecase.YTDLPMaintainStatus, error) {
 	if a.ytdlp == nil {
 		return usecase.YTDLPMaintainStatus{
 			Supported:         false,
-			UnsupportedReason: "not_initialized",
+			UnsupportedReason: "notInitialized",
 		}, nil
 	}
 	return a.ytdlp.CheckLatest(a.ctx)
@@ -1473,7 +1473,7 @@ func (a *App) UpdateOfficialYTDLPCache(downloadURL, latestTag string) (usecase.Y
 	if a.ytdlp == nil {
 		return usecase.YTDLPMaintainStatus{
 			Supported:         false,
-			UnsupportedReason: "not_initialized",
+			UnsupportedReason: "notInitialized",
 		}, nil
 	}
 	return a.ytdlp.UpdateOfficialCache(a.ctx, downloadURL, latestTag)
@@ -1481,20 +1481,16 @@ func (a *App) UpdateOfficialYTDLPCache(downloadURL, latestTag string) (usecase.Y
 
 // OpenYTDLPCacheFolder opens the Official yt-dlp cache directory in the file manager.
 func (a *App) OpenYTDLPCacheFolder() error {
-	path, err := usecase.OfficialYTDLPCachePath()
-	if err != nil {
-		return err
-	}
-	dir := filepath.Dir(path)
-	if mkErr := os.MkdirAll(dir, 0o755); mkErr != nil {
-		return mkErr
-	}
-	return desktop.OpenFolderInFileManager(dir)
+	return openYTDLPFolderInFileManager(usecase.OfficialYTDLPCachePath)
 }
 
 // OpenYTDLPToolsFolder opens VRChat's Tools directory (parent of yt-dlp.exe) in the file manager.
 func (a *App) OpenYTDLPToolsFolder() error {
-	path, err := usecase.VRChatYTDLPToolsPath()
+	return openYTDLPFolderInFileManager(usecase.VRChatYTDLPToolsPath)
+}
+
+func openYTDLPFolderInFileManager(pathResolver func() (string, error)) error {
+	path, err := pathResolver()
 	if err != nil {
 		return err
 	}

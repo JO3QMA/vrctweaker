@@ -109,40 +109,46 @@ func (uc *YTDLPMaintainUseCase) SetMaintainDesired(ctx context.Context, on bool)
 		return errors.New("settings not configured")
 	}
 	if !on {
-		uc.mu.Lock()
-		defer uc.mu.Unlock()
-		return uc.settings.SetYTDLPToolsReplaceMaintain(ctx, false)
+		return uc.setMaintainDesiredLocked(ctx, false)
 	}
 
-	uc.mu.Lock()
-	ack, err := uc.settings.GetYTDLPToolsReplaceRiskAck(ctx)
+	tools, cache, err := uc.prepareEnableLocked(ctx)
 	if err != nil {
-		uc.mu.Unlock()
 		return err
 	}
-	if !ack {
-		uc.mu.Unlock()
-		return ErrYTDLPRiskAckRequired
-	}
-	st, err := uc.getStatusLocked(ctx)
-	if err != nil {
-		uc.mu.Unlock()
-		return err
-	}
-	if !st.Supported {
-		uc.mu.Unlock()
-		return ErrYTDLPUnsupportedPlatform
-	}
-	tools, cache := st.ToolsPath, st.CachePath
-	uc.mu.Unlock()
 
 	if err := uc.ensureCacheAndLink(ctx, tools, cache); err != nil {
 		return err
 	}
 
+	return uc.setMaintainDesiredLocked(ctx, true)
+}
+
+func (uc *YTDLPMaintainUseCase) setMaintainDesiredLocked(ctx context.Context, on bool) error {
 	uc.mu.Lock()
 	defer uc.mu.Unlock()
-	return uc.settings.SetYTDLPToolsReplaceMaintain(ctx, true)
+	return uc.settings.SetYTDLPToolsReplaceMaintain(ctx, on)
+}
+
+func (uc *YTDLPMaintainUseCase) prepareEnableLocked(ctx context.Context) (tools, cache string, err error) {
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+
+	ack, err := uc.settings.GetYTDLPToolsReplaceRiskAck(ctx)
+	if err != nil {
+		return "", "", err
+	}
+	if !ack {
+		return "", "", ErrYTDLPRiskAckRequired
+	}
+	st, err := uc.getStatusLocked(ctx)
+	if err != nil {
+		return "", "", err
+	}
+	if !st.Supported {
+		return "", "", ErrYTDLPUnsupportedPlatform
+	}
+	return st.ToolsPath, st.CachePath, nil
 }
 
 func (uc *YTDLPMaintainUseCase) ensureCacheAndLink(ctx context.Context, tools, cache string) error {
@@ -176,19 +182,13 @@ func (uc *YTDLPMaintainUseCase) CheckLatest(ctx context.Context) (YTDLPMaintainS
 
 // UpdateOfficialCache downloads latest into cache. When maintain is desired, re-links Tools.
 func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloadURL, expectedTag string) (YTDLPMaintainStatus, error) {
-	uc.mu.Lock()
-	st, err := uc.getStatusLocked(ctx)
+	st, cachePath, toolsPath, maintainDesired, err := uc.statusPathsForUpdate(ctx)
 	if err != nil {
-		uc.mu.Unlock()
 		return st, err
 	}
 	if !st.Supported {
-		uc.mu.Unlock()
 		return st, ErrYTDLPUnsupportedPlatform
 	}
-	cachePath, toolsPath := st.CachePath, st.ToolsPath
-	maintainDesired := st.MaintainDesired
-	uc.mu.Unlock()
 
 	url := downloadURL
 	tag := expectedTag
@@ -232,18 +232,13 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 
 // EnsureAndLink ensures cache exists and links Tools when needed. Records pending errors.
 func (uc *YTDLPMaintainUseCase) EnsureAndLink(ctx context.Context) (YTDLPMaintainStatus, error) {
-	uc.mu.Lock()
-	st, err := uc.getStatusLocked(ctx)
+	st, tools, cache, err := uc.statusPathsForEnsure(ctx)
 	if err != nil {
-		uc.mu.Unlock()
 		return st, err
 	}
 	if !st.Supported {
-		uc.mu.Unlock()
 		return st, ErrYTDLPUnsupportedPlatform
 	}
-	tools, cache := st.ToolsPath, st.CachePath
-	uc.mu.Unlock()
 
 	if _, cacheErr := uc.updater.EnsureOfficialCache(ctx, cache); cacheErr != nil {
 		return st, cacheErr
@@ -271,27 +266,10 @@ func (uc *YTDLPMaintainUseCase) ReapplyIfNeeded(ctx context.Context) error {
 	if runtime.GOOS != "windows" {
 		return nil
 	}
-	uc.mu.Lock()
-	if uc.settings == nil {
-		uc.mu.Unlock()
-		return nil
-	}
-	on, err := uc.settings.GetYTDLPToolsReplaceMaintain(ctx)
+	tools, cache, on, err := uc.reapplyInputs(ctx)
 	if err != nil || !on {
-		uc.mu.Unlock()
 		return err
 	}
-	tools, err := uc.toolsPath()
-	if err != nil {
-		uc.mu.Unlock()
-		return err
-	}
-	cache, err := uc.cachePath()
-	if err != nil {
-		uc.mu.Unlock()
-		return err
-	}
-	uc.mu.Unlock()
 
 	if _, err := os.Stat(cache); err != nil {
 		if _, e2 := uc.updater.EnsureOfficialCache(ctx, cache); e2 != nil {
@@ -354,7 +332,7 @@ func (uc *YTDLPMaintainUseCase) getStatusLocked(ctx context.Context) (YTDLPMaint
 
 	if runtime.GOOS != "windows" {
 		st.Supported = false
-		st.UnsupportedReason = "unsupported_platform"
+		st.UnsupportedReason = "unsupportedPlatform"
 		return st, nil
 	}
 	st.Supported = true
@@ -381,10 +359,53 @@ func (uc *YTDLPMaintainUseCase) getStatusLocked(ctx context.Context) (YTDLPMaint
 	}
 	eff, err := EffectiveOfficialLink(tools, cache)
 	if err != nil {
-		return st, err
+		log.Printf("ytdlp maintain: EffectiveOfficialLink: %v", err)
+		st.EffectiveOfficial = false
+	} else {
+		st.EffectiveOfficial = eff
 	}
-	st.EffectiveOfficial = eff
 	return st, nil
+}
+
+func (uc *YTDLPMaintainUseCase) statusPathsForUpdate(ctx context.Context) (st YTDLPMaintainStatus, cachePath, toolsPath string, maintainDesired bool, err error) {
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+	st, err = uc.getStatusLocked(ctx)
+	if err != nil {
+		return st, "", "", false, err
+	}
+	return st, st.CachePath, st.ToolsPath, st.MaintainDesired, nil
+}
+
+func (uc *YTDLPMaintainUseCase) statusPathsForEnsure(ctx context.Context) (st YTDLPMaintainStatus, tools, cache string, err error) {
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+	st, err = uc.getStatusLocked(ctx)
+	if err != nil {
+		return st, "", "", err
+	}
+	return st, st.ToolsPath, st.CachePath, nil
+}
+
+func (uc *YTDLPMaintainUseCase) reapplyInputs(ctx context.Context) (tools, cache string, on bool, err error) {
+	uc.mu.Lock()
+	defer uc.mu.Unlock()
+	if uc.settings == nil {
+		return "", "", false, nil
+	}
+	on, err = uc.settings.GetYTDLPToolsReplaceMaintain(ctx)
+	if err != nil || !on {
+		return "", "", on, err
+	}
+	tools, err = uc.toolsPath()
+	if err != nil {
+		return "", "", false, err
+	}
+	cache, err = uc.cachePath()
+	if err != nil {
+		return "", "", false, err
+	}
+	return tools, cache, true, nil
 }
 
 // FormatMaintainError returns an i18n key for maintain API errors.
@@ -399,5 +420,5 @@ func FormatMaintainError(err error) string {
 		return "errorUnsupportedPlatform"
 	}
 	log.Printf("ytdlp maintain: %v", err)
-	return "errorMaintainFailed"
+	return "errorMaintenanceFailed"
 }

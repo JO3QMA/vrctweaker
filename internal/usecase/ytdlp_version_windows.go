@@ -33,6 +33,8 @@ func localYTDLPFileVersionString(exePath string) string {
 	return stringFileInfoVersionKeys(unsafe.Pointer(&buf[0]), "FileVersion", "ProductVersion")
 }
 
+// stringFileInfoVersionKeys walks StringFileInfo translation blocks and returns the first
+// non-empty value among keys (e.g. FileVersion, ProductVersion) from the PE VERSIONINFO resource.
 func stringFileInfoVersionKeys(block unsafe.Pointer, keys ...string) string {
 	var trans unsafe.Pointer
 	var transLen uint32
@@ -54,12 +56,12 @@ func stringFileInfoVersionKeys(block unsafe.Pointer, keys ...string) string {
 			if err != nil || val == nil || valLen < 4 {
 				continue
 			}
-			// VerQueryValue returns size in bytes per MSDN; divide by 2 to get WCHAR count.
-			n := valLen / 2
-			if n == 0 {
+			// VerQueryValue sets valLen to the value size in bytes (UTF-16 code units × 2).
+			charCount := valLen / uint32(unsafe.Sizeof(uint16(0)))
+			if charCount == 0 {
 				continue
 			}
-			u16 := unsafe.Slice((*uint16)(val), n)
+			u16 := unsafe.Slice((*uint16)(val), charCount)
 			s := windows.UTF16ToString(u16)
 			s = strings.TrimSpace(s)
 			if s != "" {

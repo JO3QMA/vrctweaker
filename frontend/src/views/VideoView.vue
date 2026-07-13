@@ -156,7 +156,7 @@
 import { computed, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
-import { CaretBottom, CaretRight } from "@element-plus/icons-vue";
+import { CaretBottom, CaretRight, FolderOpened } from "@element-plus/icons-vue";
 import { App, type YTDLPMaintainStatusDTO } from "../wails/app";
 import { videoErrorI18nKey } from "./videoErrors";
 
@@ -221,9 +221,14 @@ function userFacingError(raw: string): string {
   return t(videoErrorI18nKey(raw));
 }
 
-function applyStatus(s: YTDLPMaintainStatusDTO) {
+function applyStatus(
+  s: YTDLPMaintainStatusDTO,
+  opts?: { syncSwitch?: boolean },
+) {
   status.value = s;
-  maintainOn.value = !!s.maintainDesired;
+  if (opts?.syncSwitch !== false) {
+    maintainOn.value = !!s.maintainDesired;
+  }
 }
 
 function clearFeedback() {
@@ -290,7 +295,7 @@ async function checkLatest() {
   busy.value = true;
   clearFeedback();
   try {
-    applyStatus(await App.checkYTDLPLatestRelease());
+    applyStatus(await App.checkYTDLPLatestRelease(), { syncSwitch: false });
     if (status.value.latestError) {
       // bannerError reads latestError — do not also set actionError (no duplicate)
       return;
@@ -318,6 +323,7 @@ async function updateCache() {
         status.value.latestDownloadUrl || "",
         status.value.latestTag || "",
       ),
+      { syncSwitch: false },
     );
     if (status.value.pendingError || status.value.latestError) {
       return;
@@ -336,6 +342,7 @@ async function updateCache() {
 }
 
 async function openCacheFolder() {
+  busy.value = true;
   clearFeedback();
   try {
     await App.openYTDLPCacheFolder();
@@ -343,10 +350,13 @@ async function openCacheFolder() {
     actionError.value = userFacingError(
       e instanceof Error ? e.message : String(e),
     );
+  } finally {
+    busy.value = false;
   }
 }
 
 async function openToolsFolder() {
+  busy.value = true;
   clearFeedback();
   try {
     await App.openYTDLPToolsFolder();
@@ -354,6 +364,8 @@ async function openToolsFolder() {
     actionError.value = userFacingError(
       e instanceof Error ? e.message : String(e),
     );
+  } finally {
+    busy.value = false;
   }
 }
 

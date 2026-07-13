@@ -51,6 +51,23 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
     seedUserProfileNavigation(E2E_SELF_USER_ID),
   );
   const loggedInJson = JSON.stringify(loggedIn);
+  const ytdlpMaintainStatus = {
+    supported: true,
+    unsupportedReason: "",
+    maintainDesired: false,
+    riskAcknowledged: false,
+    effectiveOfficial: false,
+    cachePresent: false,
+    cacheVersion: "",
+    toolsPath: "",
+    cachePath: "",
+    pendingError: "",
+    latestVersion: "",
+    latestTag: "",
+    latestDownloadUrl: "",
+    latestError: "",
+  };
+  const ytdlpMaintainStatusJson = JSON.stringify(ytdlpMaintainStatus);
 
   return `
     (function() {
@@ -70,6 +87,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
       const resolveUserProfileSeed = ${resolveUserProfileSeedJson};
       const resolveSelfProfileSeed = ${resolveSelfProfileSeedJson};
       const loggedIn = ${loggedInJson};
+      const ytdlpMaintainStatus = ${ytdlpMaintainStatusJson};
       var selfProfile = Object.assign({}, selfProfileSeed);
       var selfProfileRefreshCount = 0;
 
@@ -217,59 +235,30 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         GetSuppressSleepWhileVRChat: () => Promise.resolve(false),
         SetSuppressSleepWhileVRChat: () => Promise.resolve(),
         RuntimeIsWindows: () => Promise.resolve(true),
-        GetYTDLPMaintainStatus: () =>
-          Promise.resolve({
-            supported: true,
-            unsupportedReason: '',
-            maintainDesired: false,
-            riskAcknowledged: false,
-            effectiveOfficial: false,
-            cachePresent: false,
-            cacheVersion: '',
-            toolsPath: '',
-            cachePath: '',
-            pendingError: '',
-            latestVersion: '',
-            latestTag: '',
-            latestDownloadUrl: '',
-            latestError: '',
-          }),
-        AcknowledgeYTDLPToolsReplaceRisk: () => Promise.resolve(),
-        SetYTDLPToolsReplaceMaintain: () => Promise.resolve(),
-        CheckYTDLPLatestRelease: () =>
-          Promise.resolve({
-            supported: true,
-            unsupportedReason: '',
-            maintainDesired: false,
-            riskAcknowledged: false,
-            effectiveOfficial: false,
-            cachePresent: false,
-            cacheVersion: '',
-            toolsPath: '',
-            cachePath: '',
-            pendingError: '',
+        GetYTDLPMaintainStatus: function() {
+          return Promise.resolve(ytdlpMaintainStatus);
+        },
+        AcknowledgeYTDLPToolsReplaceRisk: function() { return Promise.resolve(); },
+        SetYTDLPToolsReplaceMaintain: function(_on) { return Promise.resolve(); },
+        CheckYTDLPLatestRelease: function() {
+          return Promise.resolve(Object.assign({}, ytdlpMaintainStatus, {
             latestVersion: '2025.01.01',
             latestTag: '2025.01.01',
             latestDownloadUrl: 'https://example.com/yt-dlp.exe',
             latestError: '',
-          }),
-        UpdateOfficialYTDLPCache: () =>
-          Promise.resolve({
-            supported: true,
-            unsupportedReason: '',
-            maintainDesired: false,
-            riskAcknowledged: false,
-            effectiveOfficial: false,
+          }));
+        },
+        UpdateOfficialYTDLPCache: function(_url, _tag) {
+          return Promise.resolve(Object.assign({}, ytdlpMaintainStatus, {
             cachePresent: true,
             cacheVersion: '2025.01.01',
-            toolsPath: '',
-            cachePath: '',
             pendingError: '',
             latestVersion: '',
             latestTag: '',
             latestDownloadUrl: '',
             latestError: '',
-          }),
+          }));
+        },
         OpenYTDLPCacheFolder: () => Promise.resolve(),
         OpenYTDLPToolsFolder: () => Promise.resolve(),
         ValidatePath: () => Promise.resolve(true),

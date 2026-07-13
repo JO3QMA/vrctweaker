@@ -830,7 +830,7 @@
     "flashUpdated": "yt-dlp 公式最新版を更新しました: {version}",
     "errorRiskAckRequired": "有効化する前にリスク確認が必要です。",
     "errorUnsupportedPlatform": "この機能は Windows 版のみ利用できます。",
-    "errorMaintainFailed": "操作に失敗しました。しばらくしてから再度お試しください。",
+    "errorMaintenanceFailed": "操作に失敗しました。しばらくしてから再度お試しください。",
     "errors": {
       "githubRateLimit": "GitHub の通信制限に達したため、最新バージョンの取得に失敗しました。時間を置いて再度お試しください。",
       "githubForbidden": "GitHub へのアクセスが拒否されたため、最新バージョンの取得に失敗しました。時間を置いて再度お試しください。",
@@ -841,8 +841,8 @@
       "generic": "操作に失敗しました。時間を置いて再度お試しください。"
     },
     "reason": {
-      "unsupported_platform": "この機能は Windows 版のみ利用できます。",
-      "not_initialized": "動画設定がまだ初期化されていません。"
+      "unsupportedPlatform": "この機能は Windows 版のみ利用できます。",
+      "notInitialized": "動画設定がまだ初期化されていません。"
     },
     "detailsToggle": "詳細情報を表示"
   }

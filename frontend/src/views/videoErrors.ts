@@ -9,8 +9,10 @@ export type VideoUserErrorKey =
   | "unsupported"
   | "generic";
 
-export function classifyVideoError(raw: string): VideoUserErrorKey {
-  const s = raw.trim().toLowerCase();
+export function classifyVideoError(
+  raw: string | null | undefined,
+): VideoUserErrorKey {
+  const s = (raw ?? "").trim().toLowerCase();
   if (!s) return "generic";
 
   if (
@@ -53,7 +55,8 @@ export function classifyVideoError(raw: string): VideoUserErrorKey {
     s.includes("connection") ||
     s.includes("network") ||
     s.includes("no such host") ||
-    s.includes("eof") ||
+    /\beof\b/.test(s) ||
+    s.includes("connection reset") ||
     s.includes("download request failed") ||
     s.includes("download failed")
   ) {
@@ -63,7 +66,7 @@ export function classifyVideoError(raw: string): VideoUserErrorKey {
 }
 
 export function videoErrorI18nKey(
-  raw: string,
+  raw: string | null | undefined,
 ): `video.errors.${VideoUserErrorKey}` {
   return `video.errors.${classifyVideoError(raw)}`;
 }
