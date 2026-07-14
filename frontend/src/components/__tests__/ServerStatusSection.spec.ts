@@ -33,6 +33,15 @@ describe("ServerStatusSection", () => {
     vi.useRealTimers();
   });
 
+  it("shows loading before first fetch completes", () => {
+    mockGetServerStatus.mockReturnValue(new Promise(() => {}));
+    const wrapper = mountSection();
+    expect(wrapper.find('[data-testid="server-status-loading"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.text()).not.toContain("Could not load server status.");
+  });
+
   it("shows server status fetch failure", async () => {
     mockGetServerStatus.mockResolvedValue({
       fetchState: "unavailable",
@@ -101,6 +110,33 @@ describe("ServerStatusSection", () => {
     expect(detail.text()).toContain("Under maintenance");
     expect(detail.text()).toContain("API Degraded");
     expect(detail.text()).toContain("Database Maintenance");
+  });
+
+  it("keeps prior state when Wails IPC fails after initial load", async () => {
+    mockGetServerStatus.mockResolvedValueOnce({
+      fetchState: "ok",
+      summary: { indicator: "none", description: "" },
+      components: [],
+      incidents: [],
+      maintenances: [],
+    });
+    mockGetServerStatus.mockRejectedValueOnce(new Error("ipc failed"));
+
+    const wrapper = mountSection();
+    await flushPromises();
+    expect(wrapper.text()).toContain("All systems operational");
+
+    await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+    await flushPromises();
+    expect(wrapper.text()).toContain("All systems operational");
+    expect(wrapper.text()).not.toContain("Could not load server status.");
+  });
+
+  it("shows unavailable when Wails IPC fails on initial load", async () => {
+    mockGetServerStatus.mockRejectedValue(new Error("ipc failed"));
+    const wrapper = mountSection();
+    await flushPromises();
+    expect(wrapper.text()).toContain("Could not load server status.");
   });
 
   it("does not update server status after unmount", async () => {

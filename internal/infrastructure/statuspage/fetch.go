@@ -2,8 +2,7 @@ package statuspage
 
 import (
 	"context"
-
-	"golang.org/x/sync/errgroup"
+	"sync"
 )
 
 // Fetch loads status.vrchat.com data for Dashboard Server status.
@@ -27,28 +26,34 @@ func (c *Client) Fetch(ctx context.Context) Snapshot {
 		maintenancesErr  error
 	)
 
-	g, gctx := errgroup.WithContext(ctx)
-	g.Go(func() error {
-		componentsErr = c.fetchJSON(gctx, "components.json", &componentsResp)
-		return nil
-	})
-	g.Go(func() error {
-		incidentsErr = c.fetchJSON(gctx, "incidents/unresolved.json", &incidentsResp)
-		return nil
-	})
-	g.Go(func() error {
-		maintenancesErr = c.fetchJSON(gctx, "scheduled-maintenances/active.json", &maintenancesResp)
+	var wg sync.WaitGroup
+	wg.Add(3)
+	go func() {
+		defer wg.Done()
+		componentsErr = c.fetchJSON(ctx, "components.json", &componentsResp)
+	}()
+	go func() {
+		defer wg.Done()
+		incidentsErr = c.fetchJSON(ctx, "incidents/unresolved.json", &incidentsResp)
+	}()
+	go func() {
+		defer wg.Done()
+		maintenancesErr = c.fetchJSON(ctx, "scheduled-maintenances/active.json", &maintenancesResp)
 		if maintenancesErr == nil && len(maintenancesResp.ScheduledMaintenances) == 0 {
-			maintenancesErr = c.fetchJSON(gctx, "scheduled-maintenances/upcoming.json", &maintenancesResp)
+			maintenancesErr = c.fetchJSON(ctx, "scheduled-maintenances/upcoming.json", &maintenancesResp)
 		}
-		return nil
-	})
-	_ = g.Wait()
+	}()
+	wg.Wait()
+
+	incidents := headlinesFromIncidents(incidentsResp.Incidents)
+	maintenances := headlinesFromMaintenances(maintenancesResp.ScheduledMaintenances)
 
 	if componentsErr != nil {
 		return Snapshot{
-			FetchState: FetchStatePartial,
-			Summary:    summary,
+			FetchState:   FetchStatePartial,
+			Summary:      summary,
+			Incidents:    incidents,
+			Maintenances: maintenances,
 		}
 	}
 
@@ -57,13 +62,13 @@ func (c *Client) Fetch(ctx context.Context) Snapshot {
 
 	if len(nonOperational) > 0 && (incidentsErr != nil || maintenancesErr != nil) {
 		return Snapshot{
-			FetchState: FetchStatePartial,
-			Summary:    summary,
+			FetchState:   FetchStatePartial,
+			Summary:      summary,
+			Components:   nonOperational,
+			Incidents:    incidents,
+			Maintenances: maintenances,
 		}
 	}
-
-	incidents := headlinesFromIncidents(incidentsResp.Incidents)
-	maintenances := headlinesFromMaintenances(maintenancesResp.ScheduledMaintenances)
 
 	return Snapshot{
 		FetchState:   FetchStateOK,
@@ -96,20 +101,23 @@ func filterNonOperational(leaves []apiComponent) []Component {
 }
 
 func headlinesFromIncidents(list []apiIncident) []Headline {
-	if len(list) == 0 {
-		return nil
+	out := make([]Headline, 0, len(list))
+	for _, inc := range list {
+		if inc.Name == "" {
+			continue
+		}
+		out = append(out, Headline(inc))
 	}
-	return []Headline{{Name: list[0].Name}}
+	return out
 }
 
 func headlinesFromMaintenances(list []apiMaintenance) []Headline {
 	out := make([]Headline, 0, len(list))
 	for _, m := range list {
-		name := m.Name
-		if name == "" {
+		if m.Name == "" {
 			continue
 		}
-		out = append(out, Headline{Name: name})
+		out = append(out, Headline(m))
 	}
 	return out
 }

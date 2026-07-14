@@ -20,10 +20,7 @@ func testServer(t *testing.T, handlers map[string]http.HandlerFunc) *httptest.Se
 
 func clientForServer(t *testing.T, srv *httptest.Server) *Client {
 	t.Helper()
-	return &Client{
-		BaseURL:               srv.URL + "/api/v2/",
-		InsecureSkipHostCheck: true,
-	}
+	return NewTestClient(srv.URL + "/api/v2/")
 }
 
 const summaryOperational = `{"status":{"indicator":"none","description":"All Systems Operational"}}`
@@ -117,8 +114,10 @@ func TestFetch_summaryFailure(t *testing.T) {
 
 func TestFetch_partialComponentsFailure(t *testing.T) {
 	srv := testServer(t, map[string]http.HandlerFunc{
-		"/api/v2/summary.json":    jsonHandler(summaryOperational),
-		"/api/v2/components.json": statusHandler(http.StatusInternalServerError, "fail"),
+		"/api/v2/summary.json":                       jsonHandler(summaryOperational),
+		"/api/v2/components.json":                    statusHandler(http.StatusInternalServerError, "fail"),
+		"/api/v2/incidents/unresolved.json":          jsonHandler(oneIncident),
+		"/api/v2/scheduled-maintenances/active.json": jsonHandler(oneMaintenance),
 	})
 	defer srv.Close()
 
@@ -128,6 +127,12 @@ func TestFetch_partialComponentsFailure(t *testing.T) {
 	}
 	if got.Summary.Indicator != "none" {
 		t.Fatalf("summary indicator: got %q", got.Summary.Indicator)
+	}
+	if len(got.Incidents) != 1 || got.Incidents[0].Name != "API Degraded" {
+		t.Fatalf("incidents: %+v", got.Incidents)
+	}
+	if len(got.Maintenances) != 1 {
+		t.Fatalf("maintenances: %+v", got.Maintenances)
 	}
 }
 
@@ -182,5 +187,24 @@ func TestValidateHost_rejectsHTTP(t *testing.T) {
 	u, _ := http.NewRequest(http.MethodGet, "http://status.vrchat.com/api/v2/summary.json", nil)
 	if err := validateHost(u.URL); err == nil {
 		t.Fatal("expected https error")
+	}
+}
+
+func TestFetchJSON_rejectsAbsolutePath(t *testing.T) {
+	c := NewClient()
+	err := c.fetchJSON(context.Background(), "/summary.json", &summaryResponse{})
+	if err == nil || !strings.Contains(err.Error(), "path must be relative") {
+		t.Fatalf("expected relative path error, got %v", err)
+	}
+}
+
+func TestHeadlinesFromIncidents_returnsAllNonEmpty(t *testing.T) {
+	got := headlinesFromIncidents([]apiIncident{
+		{Name: "First"},
+		{Name: ""},
+		{Name: "Second"},
+	})
+	if len(got) != 2 || got[0].Name != "First" || got[1].Name != "Second" {
+		t.Fatalf("got %+v", got)
 	}
 }

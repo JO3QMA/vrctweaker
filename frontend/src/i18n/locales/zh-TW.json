@@ -84,6 +84,7 @@
       "summaryMaintenance": "維護中",
       "summaryUnknown": "狀態未知",
       "fetchUnavailable": "無法取得伺服器狀態。",
+      "loading": "正在載入伺服器狀態…",
       "detailUnavailable": "無法取得詳細資訊。",
       "linkToStatusPage": "開啟 status.vrchat.com",
       "statusOperational": "正常",

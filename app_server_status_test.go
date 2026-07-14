@@ -46,11 +46,8 @@ func TestGetServerStatus_returnsDTOWithoutErrorOnFetchFailure(t *testing.T) {
 	defer srv.Close()
 
 	a := &App{
-		ctx: t.Context(),
-		serverStatus: &statuspage.Client{
-			BaseURL:               srv.URL + "/api/v2/",
-			InsecureSkipHostCheck: true,
-		},
+		ctx:          t.Context(),
+		serverStatus: statuspage.NewTestClient(srv.URL + "/api/v2/"),
 	}
 	got, err := a.GetServerStatus()
 	if err != nil {
@@ -58,5 +55,17 @@ func TestGetServerStatus_returnsDTOWithoutErrorOnFetchFailure(t *testing.T) {
 	}
 	if got.FetchState != statuspage.FetchStateUnavailable {
 		t.Fatalf("FetchState: got %q want %q", got.FetchState, statuspage.FetchStateUnavailable)
+	}
+}
+
+func TestServerStatusClient_cachesDefaultClient(t *testing.T) {
+	a := &App{}
+	first := a.serverStatusClient()
+	second := a.serverStatusClient()
+	if first != second {
+		t.Fatal("expected same cached client instance")
+	}
+	if a.serverStatus == nil {
+		t.Fatal("expected serverStatus field to be set")
 	}
 }

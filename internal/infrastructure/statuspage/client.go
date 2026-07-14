@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
@@ -26,8 +27,11 @@ type Client struct {
 	BaseURL    string
 	HTTPClient *http.Client
 	UserAgent  string
-	// InsecureSkipHostCheck disables status.vrchat.com host checks (tests only).
-	InsecureSkipHostCheck bool
+
+	once          sync.Once
+	defaultClient *http.Client
+	// insecureSkipHostCheck disables status.vrchat.com host checks (tests only).
+	insecureSkipHostCheck bool
 }
 
 // NewClient returns a client with production defaults.
@@ -38,21 +42,32 @@ func NewClient() *Client {
 	}
 }
 
+// NewTestClient returns a client for httptest servers (skips production host checks).
+func NewTestClient(baseURL string) *Client {
+	return &Client{
+		BaseURL:               baseURL,
+		insecureSkipHostCheck: true,
+	}
+}
+
 func (c *Client) httpClient() *http.Client {
 	if c.HTTPClient != nil {
 		return c.HTTPClient
 	}
-	return &http.Client{
-		Timeout:       serverStatusHTTPTimeout,
-		CheckRedirect: c.redirectPolicy,
-	}
+	c.once.Do(func() {
+		c.defaultClient = &http.Client{
+			Timeout:       serverStatusHTTPTimeout,
+			CheckRedirect: c.redirectPolicy,
+		}
+	})
+	return c.defaultClient
 }
 
 func (c *Client) redirectPolicy(req *http.Request, via []*http.Request) error {
 	if len(via) >= 10 {
 		return errors.New("too many redirects")
 	}
-	if c != nil && c.InsecureSkipHostCheck {
+	if c != nil && c.insecureSkipHostCheck {
 		return nil
 	}
 	return validateHost(req.URL)
@@ -73,13 +88,17 @@ func validateHost(u *url.URL) error {
 }
 
 func (c *Client) validateRequestHost(u *url.URL) error {
-	if c != nil && c.InsecureSkipHostCheck {
+	if c != nil && c.insecureSkipHostCheck {
 		return nil
 	}
 	return validateHost(u)
 }
 
 func (c *Client) fetchJSON(ctx context.Context, path string, dest any) error {
+	if strings.HasPrefix(path, "/") {
+		return fmt.Errorf("path must be relative: %q", path)
+	}
+
 	base := strings.TrimSpace(c.BaseURL)
 	if base == "" {
 		base = DefaultBaseURL

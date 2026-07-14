@@ -10,7 +10,15 @@
       }}</span>
     </template>
 
-    <div v-if="fetchState === 'unavailable'" class="server-status-message">
+    <div
+      v-if="loading"
+      class="server-status-message"
+      data-testid="server-status-loading"
+    >
+      {{ t("dashboard.serverStatus.loading") }}
+    </div>
+
+    <div v-else-if="fetchState === 'unavailable'" class="server-status-message">
       {{ t("dashboard.serverStatus.fetchUnavailable") }}
     </div>
 
@@ -85,6 +93,7 @@ import {
 const { t } = useI18n();
 
 const statusPageUrl = SERVER_STATUS_PAGE_URL;
+const loading = ref(true);
 const fetchState = ref<ServerStatusDTO["fetchState"]>("unavailable");
 const summaryIndicator = ref("");
 const components = ref<ServerStatusDTO["components"]>([]);
@@ -140,8 +149,16 @@ async function refresh(): Promise<void> {
     const dto = await App.getServerStatus();
     if (gen !== generation) return;
     applySnapshot(dto);
+  } catch {
+    if (gen !== generation) return;
+    if (loading.value) {
+      fetchState.value = "unavailable";
+    }
   } finally {
     inFlight = false;
+    if (gen === generation) {
+      loading.value = false;
+    }
   }
 }
 

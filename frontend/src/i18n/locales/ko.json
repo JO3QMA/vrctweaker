@@ -84,6 +84,7 @@
       "summaryMaintenance": "유지보수 중",
       "summaryUnknown": "상태 알 수 없음",
       "fetchUnavailable": "서버 상태를 불러올 수 없습니다.",
+      "loading": "서버 상태 불러오는 중…",
       "detailUnavailable": "상세 정보를 불러올 수 없습니다.",
       "linkToStatusPage": "status.vrchat.com 열기",
       "statusOperational": "정상",

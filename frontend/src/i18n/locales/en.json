@@ -84,6 +84,7 @@
       "summaryMaintenance": "Service under maintenance",
       "summaryUnknown": "Status unknown",
       "fetchUnavailable": "Could not load server status.",
+      "loading": "Loading server status…",
       "detailUnavailable": "Could not load status details.",
       "linkToStatusPage": "View status.vrchat.com",
       "statusOperational": "Operational",

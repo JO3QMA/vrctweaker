@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"vrchat-tweaker/internal/infrastructure/statuspage"
 )
 
@@ -14,6 +15,9 @@ func (a *App) GetServerStatus() (ServerStatusDTO, error) {
 		ctx = context.Background()
 	}
 	snap := a.serverStatusClient().Fetch(ctx)
+	if snap.FetchState != statuspage.FetchStateOK {
+		runtime.LogWarning(ctx, "server status fetch: state="+snap.FetchState)
+	}
 	return toServerStatusDTO(snap), nil
 }
 
@@ -21,7 +25,8 @@ func (a *App) serverStatusClient() *statuspage.Client {
 	if a.serverStatus != nil {
 		return a.serverStatus
 	}
-	return statuspage.NewClient()
+	a.serverStatus = statuspage.NewClient()
+	return a.serverStatus
 }
 
 func toServerStatusDTO(snap statuspage.Snapshot) ServerStatusDTO {
