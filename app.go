@@ -25,6 +25,7 @@ import (
 	"vrchat-tweaker/internal/infrastructure/picturewatcher"
 	"vrchat-tweaker/internal/infrastructure/sleepsuppress"
 	"vrchat-tweaker/internal/infrastructure/sqlite"
+	"vrchat-tweaker/internal/infrastructure/statuspage"
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
 	"vrchat-tweaker/internal/infrastructure/vrchatpipeline"
 	"vrchat-tweaker/internal/infrastructure/ytdlpmaintain"
@@ -43,6 +44,7 @@ type App struct {
 	settings         *usecase.SettingsUseCase
 	dbMaintenance    *usecase.DBMaintenanceUseCase
 	ytdlp            *usecase.YTDLPMaintainUseCase
+	serverStatus     *statuspage.Client
 	vrchatConfigRepo vrchatconfig.ConfigRepository
 
 	galleryScanMu     sync.Mutex
@@ -120,6 +122,7 @@ func (a *App) startup(ctx context.Context) {
 	a.settings = usecase.NewSettingsUseCase(settingsRepo)
 	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(db, encounterRepo, mediaRepo, userCacheRepo, settingsRepo)
 	a.ytdlp = usecase.NewYTDLPMaintainUseCase(a.settings, usecase.NewYTDLPUpdater())
+	a.serverStatus = statuspage.NewClient()
 
 	configPath := getVRChatConfigPath()
 	configRepo := filesystem.NewVRChatConfigFileRepository(configPath)

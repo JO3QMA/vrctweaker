@@ -74,7 +74,25 @@
     "instanceRejoinWithWorld": "{name}에 참가",
     "instanceRejoinGeneric": "마지막 인스턴스에 참가",
     "instanceRejoinError": "인스턴스 재참가 실행에 실패했습니다",
-    "instanceRejoinLoadError": "재참가 섹션을 불러오지 못했습니다"
+    "instanceRejoinLoadError": "재참가 섹션을 불러오지 못했습니다",
+    "serverStatus": {
+      "title": "VRChat 서버 상태",
+      "summaryAllOperational": "모든 시스템이 정상입니다",
+      "summaryDegraded": "성능 저하",
+      "summaryPartialOutage": "부분 장애",
+      "summaryMajorOutage": "심각한 장애",
+      "summaryMaintenance": "유지보수 중",
+      "summaryUnknown": "상태 알 수 없음",
+      "fetchUnavailable": "서버 상태를 불러올 수 없습니다.",
+      "detailUnavailable": "상세 정보를 불러올 수 없습니다.",
+      "linkToStatusPage": "status.vrchat.com 열기",
+      "statusOperational": "정상",
+      "statusDegradedPerformance": "성능 저하",
+      "statusPartialOutage": "부분 장애",
+      "statusMajorOutage": "심각한 장애",
+      "statusUnderMaintenance": "유지보수 중",
+      "statusUnknown": "알 수 없음"
+    }
   },
   "launcher": {
     "title": "런처",

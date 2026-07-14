@@ -68,6 +68,13 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
     latestError: "",
   };
   const ytdlpMaintainStatusJson = JSON.stringify(ytdlpMaintainStatus);
+  const serverStatusJson = JSON.stringify({
+    fetchState: "ok",
+    summary: { indicator: "none", description: "All Systems Operational" },
+    components: [],
+    incidents: [],
+    maintenances: [],
+  });
 
   return `
     (function() {
@@ -88,6 +95,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
       const resolveSelfProfileSeed = ${resolveSelfProfileSeedJson};
       const loggedIn = ${loggedInJson};
       const ytdlpMaintainStatus = ${ytdlpMaintainStatusJson};
+      const serverStatus = ${serverStatusJson};
       var selfProfile = Object.assign({}, selfProfileSeed);
       var selfProfileRefreshCount = 0;
 
@@ -195,6 +203,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         LaunchVRChat: () => Promise.resolve(),
         LaunchVRChatWithArgs: (_args, _profileId) => Promise.resolve(),
         GetInstanceRejoinSection: () => Promise.resolve(null),
+        GetServerStatus: () => Promise.resolve(serverStatus),
         InstanceRejoin: (_profileId, _playSessionId) => Promise.resolve(),
         ParseLaunchArgsForGUI: () =>
           Promise.resolve({

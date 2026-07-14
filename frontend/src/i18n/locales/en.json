@@ -74,7 +74,25 @@
     "instanceRejoinWithWorld": "Join {name}",
     "instanceRejoinGeneric": "Rejoin last instance",
     "instanceRejoinError": "Failed to launch rejoin to instance",
-    "instanceRejoinLoadError": "Failed to load rejoin section"
+    "instanceRejoinLoadError": "Failed to load rejoin section",
+    "serverStatus": {
+      "title": "VRChat server status",
+      "summaryAllOperational": "All systems operational",
+      "summaryDegraded": "Degraded performance",
+      "summaryPartialOutage": "Partial outage",
+      "summaryMajorOutage": "Major outage",
+      "summaryMaintenance": "Service under maintenance",
+      "summaryUnknown": "Status unknown",
+      "fetchUnavailable": "Could not load server status.",
+      "detailUnavailable": "Could not load status details.",
+      "linkToStatusPage": "View status.vrchat.com",
+      "statusOperational": "Operational",
+      "statusDegradedPerformance": "Degraded performance",
+      "statusPartialOutage": "Partial outage",
+      "statusMajorOutage": "Major outage",
+      "statusUnderMaintenance": "Under maintenance",
+      "statusUnknown": "Unknown"
+    }
   },
   "launcher": {
     "title": "Launcher",

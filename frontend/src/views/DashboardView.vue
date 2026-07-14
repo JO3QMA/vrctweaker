@@ -2,6 +2,7 @@
   <div class="dashboard">
     <h1 class="page-title">{{ t("routes.dashboard") }}</h1>
     <div class="quick-actions">
+      <ServerStatusSection />
       <el-button
         type="primary"
         size="large"
@@ -112,6 +113,7 @@
 import { ref, onMounted, onUnmounted, computed } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessage } from "element-plus";
+import ServerStatusSection from "../components/ServerStatusSection.vue";
 import {
   App,
   type InstanceRejoinSectionDTO,

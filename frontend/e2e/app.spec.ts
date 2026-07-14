@@ -35,6 +35,8 @@ test.describe("VRChat Tweaker", () => {
     test("displays default profile and status buttons", async ({ page }) => {
       await page.goto("/");
       await expect(page.locator("h1")).toContainText("ダッシュボード");
+      await expect(page.getByTestId("server-status-section")).toBeVisible();
+      await expect(page.getByTestId("server-status-summary")).toBeVisible();
       // モックでデフォルトプロファイル1件を返すため、起動ボタンが有効になる
       await expect(
         page.getByRole("button", { name: /VRChat 起動/ }),
