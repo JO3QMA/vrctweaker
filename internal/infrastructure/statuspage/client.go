@@ -93,8 +93,8 @@ func (c *Client) fetchJSON(ctx context.Context, path string, dest any) error {
 		return fmt.Errorf("parse path: %w", err)
 	}
 	full := rawURL.ResolveReference(ref)
-	if err := c.validateRequestHost(full); err != nil {
-		return err
+	if hostErr := c.validateRequestHost(full); hostErr != nil {
+		return hostErr
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, full.String(), nil)
