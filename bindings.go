@@ -53,6 +53,32 @@ type InstanceRejoinSectionDTO struct {
 	SelectedProfileID string             `json:"selectedProfileId"`
 }
 
+// ServerStatusDTO is the Dashboard Server status section (status.vrchat.com).
+type ServerStatusDTO struct {
+	FetchState   string                     `json:"fetchState"`
+	Summary      ServerStatusSummaryDTO     `json:"summary"`
+	Components   []ServerStatusComponentDTO `json:"components"`
+	Incidents    []ServerStatusHeadlineDTO  `json:"incidents"`
+	Maintenances []ServerStatusHeadlineDTO  `json:"maintenances"`
+}
+
+// ServerStatusSummaryDTO is the overall indicator from status.vrchat.com.
+type ServerStatusSummaryDTO struct {
+	Indicator   string `json:"indicator"`
+	Description string `json:"description"`
+}
+
+// ServerStatusComponentDTO is a non-operational statuspage leaf component.
+type ServerStatusComponentDTO struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+}
+
+// ServerStatusHeadlineDTO is an incident or maintenance headline.
+type ServerStatusHeadlineDTO struct {
+	Name string `json:"name"`
+}
+
 // ScreenshotDTO is the frontend-facing screenshot.
 type ScreenshotDTO struct {
 	ID                string  `json:"id"`

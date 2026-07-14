@@ -64,6 +64,64 @@ _Avoid_: 自動スキャン, リアルタイム同期（フル同期と混同し
 ユーザーが Gallery 上の操作で Picture folder sync を明示的に開始すること。
 _Avoid_: 手動スキャン, 更新ボタン（一覧再取得だけを指す場合があるため）
 
+## Dashboard
+
+起動・自分のプレゼンス変更・公式サービス健全性をまとめるホーム画面体験の用語。**Server status**（[Issue #10](https://github.com/JO3QMA/vrctweaker/issues/10)、[ADR 0009](docs/adr/0009-dashboard-server-status.md)）は grill-with-docs / grill-review-ready で合意済み。実装契約は ADR を正本とする。
+
+### Language
+
+**Dashboard**:
+サイドバー先頭（`/`）のホーム画面体験。Quick launch、Instance rejoin section、自分のプレゼンス変更（Quick status 等）、**Server status** を置く。
+_Avoid_: ダッシュボード画面, ホーム（他アプリのホームと混同しやすいため）
+
+**Server status**:
+[status.vrchat.com](https://status.vrchat.com/) が示す VRChat **サービス**の健全性（API / 認証 / リージョン別リアルタイムなど）。ログイン中ユーザー自身の join me / busy などのプレゼンスや、フレンドのオンライン状況とは別物。
+_Avoid_: VRChat status, ステータス（Quick status や Cached VRChat user の status と混同しやすいため）, Server Status Page（取得元の俗称）
+
+**Server status summary**:
+Dashboard の Server status で常に示す全体の健全性の要約（例: 全システム正常 / 一部障害）。公式 `summary.json` のインジケータに相当。平常時はこれと外部リンク程度に畳む。
+_Avoid_: Quick status, サマリー行（Activity 等の別サマリーと混同しやすいため）
+
+**Server status detail**:
+component ごとの健全性の内訳。**Abnormal server status** のときだけ Dashboard に展開する。平常時（全 component が operational）は出さない。v1 の展開内容は、(1) リーフ component の名前とステータス、(2) 未解決インシデントの見出し（あれば 1 件）、(3) 予定または進行中メンテナンスの見出し（あれば）とする。過去インシデント履歴や公式ページ相当の全文は載せない。
+_Avoid_: component 一覧（常時表示を含意するため）, ステータス詳細（ユーザープロフィールと混同しやすいため）
+
+**Abnormal server status**:
+Server status detail を Dashboard に出す条件。少なくとも 1 つの component が `operational` 以外（`degraded_performance` / `partial_outage` / `major_outage` / `under_maintenance` など）のとき。未解決インシデントや予定メンテの有無は v1 では detail 展開条件に含めない（component 状態のみで判定）。
+_Avoid_: 障害中, メンテ中（component 状態とインシデント文面を同一視しないため）
+
+**Server status section**:
+Dashboard 上 **Quick launch より上**に置く Server status の UI ブロック。Server status summary を常時示し、Abnormal server status のときだけ Server status detail を展開する。status.vrchat.com への外部リンクを含む。
+_Avoid_: Quick status パネル, ステータスカード（個人プレゼンス変更と混同しやすいため）
+
+**Server status refresh**:
+Server status section のデータ再取得。Dashboard 表示時（`onMounted`）に 1 回行い、表示中は一定間隔（v1: 5 分）でバックグラウンドポーリングする。手動リフレッシュボタンは v1 では置かない。取得は Go バックエンド経由（フロントから status.vrchat.com へ直接 fetch しない）。
+_Avoid_: Activity refresh, 同期ボタン（他画面の更新と混同しやすいため）
+
+**Server status visibility**:
+Server status section の表示条件。VRChat へのログイン状態に依存せず、Dashboard を開けば常に表示する（未ログインでも取得・表示する）。Quick status とは別で、公開の status.vrchat.com API のみを参照する。
+_Avoid_: ログイン必須, 認証後のみ（Quick status の条件と混同しやすいため）
+
+**Server status fetch failure**:
+status.vrchat.com からの取得が失敗したときの扱い。Server status section は残し、取得できなかった旨だけを示す。次回の Server status refresh（ポーリング）で再試行する。最後に成功した値の stale 表示や、失敗時だけの手動リフレッシュは v1 では行わない。
+_Avoid_: 非表示, オフライン（ネットワーク断と公式障害を同一視しないため）
+
+**Server status labeling**:
+Server status section の表示言語の扱い。component 名とインシデント／メンテ見出しは API 原文（英語）のまま示す。ステータス値（operational / under_maintenance 等）と Server status summary の文言は UI ロケール（i18n）で翻訳する。
+_Avoid_: 全英語表示, 日本語 component 名（公式表記と照合しづらいため）
+
+**Server status presentation**:
+Server status section の視覚表現。他 Dashboard パネルと同様 `el-card` で枠を揃えつつ、健全性は status.vrchat.com に近い色分け（正常=緑、パフォーマンス低下=黄、部分障害=橙、重大障害=赤、メンテナンス=青系）で示す。平常時はコンパクトなサマリー行、Abnormal server status 時は Server status detail を同色ルールで展開する。
+_Avoid_: Quick status ボタン色（個人プレゼンス用の独自パレットと混同しやすいため）, モノクロのみ（障害判別が弱いため）
+
+**Server status v1 scope**:
+Issue #10 で最初に届ける Server status の範囲。Dashboard の Server status section（取得・表示・外部リンク）に限定する。v1 では含めないもの: 障害時 OS 通知、Settings でのオンオフやポーリング間隔変更、リージョン絞り込み、Dashboard 以外への常設表示、取得結果のローカル履歴・グラフ。
+_Avoid_: Server status（v1 機能全体を指すときは section とセットで書く）, 将来拡張（スコープ外リストの総称として曖昧なため）
+
+**Quick status**:
+Dashboard 上でログイン中ユーザー自身の VRChat プレゼンス（join me / active / ask me / busy）を API 経由で変更する操作群。Custom status・Templates と併置する。**Server status** とは無関係。
+_Avoid_: ステータス, Server status, クイックステータス（インフラ健全性と混同しやすいため）
+
 ## Launcher
 
 VRChat の起動引数を名前付きで保存し、起動に使うための用語。

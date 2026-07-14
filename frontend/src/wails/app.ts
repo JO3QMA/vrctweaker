@@ -15,6 +15,10 @@ type WailsDTO<T> = Omit<T, "convertValues">;
 
 export type LaunchProfileDTO = WailsDTO<main.LaunchProfileDTO>;
 export type InstanceRejoinSectionDTO = WailsDTO<main.InstanceRejoinSectionDTO>;
+export type ServerStatusDTO = WailsDTO<main.ServerStatusDTO>;
+export type ServerStatusSummaryDTO = WailsDTO<main.ServerStatusSummaryDTO>;
+export type ServerStatusComponentDTO = WailsDTO<main.ServerStatusComponentDTO>;
+export type ServerStatusHeadlineDTO = WailsDTO<main.ServerStatusHeadlineDTO>;
 export type LaunchArgsParsedDTO = WailsDTO<launcher.LaunchArgsParsed>;
 export type ScreenshotDTO = WailsDTO<main.ScreenshotDTO>;
 export type ScreenshotSearchDTO = WailsDTO<main.ScreenshotSearchDTO>;
@@ -30,6 +34,16 @@ export type TopWorldDTO = WailsDTO<activity.TopWorldSummary>;
 export type ActivityStatsDTO = WailsDTO<activity.ActivityStats>;
 export type AutomationRuleDTO = WailsDTO<automation.AutomationRule>;
 export type VRChatConfigDTO = WailsDTO<main.VRChatConfigDTO>;
+
+function emptyServerStatus(): ServerStatusDTO {
+  return {
+    fetchState: "unavailable",
+    summary: { indicator: "", description: "" },
+    components: [],
+    incidents: [],
+    maintenances: [],
+  };
+}
 
 function emptyYTDLPMaintainStatus(): YTDLPMaintainStatusDTO {
   return {
@@ -235,6 +249,9 @@ export const App = {
   },
   async getInstanceRejoinSection(): Promise<InstanceRejoinSectionDTO | null> {
     return callApp((a) => a.GetInstanceRejoinSection(), null);
+  },
+  async getServerStatus(): Promise<ServerStatusDTO> {
+    return callApp((a) => a.GetServerStatus(), emptyServerStatus());
   },
   async instanceRejoin(
     profileID: string,

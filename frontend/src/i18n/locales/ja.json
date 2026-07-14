@@ -74,7 +74,26 @@
     "instanceRejoinWithWorld": "{name} に参加",
     "instanceRejoinGeneric": "最後のインスタンスに参加",
     "instanceRejoinError": "インスタンスへの再参加起動に失敗しました",
-    "instanceRejoinLoadError": "再参加セクションの読み込みに失敗しました"
+    "instanceRejoinLoadError": "再参加セクションの読み込みに失敗しました",
+    "serverStatus": {
+      "title": "VRChat サーバーステータス",
+      "summaryAllOperational": "すべてのシステムが正常です",
+      "summaryDegraded": "パフォーマンス低下",
+      "summaryPartialOutage": "一部障害",
+      "summaryMajorOutage": "重大な障害",
+      "summaryMaintenance": "メンテナンス中",
+      "summaryUnknown": "状態不明",
+      "fetchUnavailable": "サーバーステータスを取得できませんでした。",
+      "loading": "サーバーステータスを読み込み中…",
+      "detailUnavailable": "詳細を取得できませんでした。",
+      "linkToStatusPage": "status.vrchat.com を開く",
+      "statusOperational": "正常",
+      "statusDegradedPerformance": "パフォーマンス低下",
+      "statusPartialOutage": "一部障害",
+      "statusMajorOutage": "重大な障害",
+      "statusUnderMaintenance": "メンテナンス中",
+      "statusUnknown": "不明"
+    }
   },
   "launcher": {
     "title": "ランチャー",
