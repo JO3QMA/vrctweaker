@@ -186,7 +186,7 @@ func TestEnrichYTDLPMaintainRelease(t *testing.T) {
 	t.Parallel()
 	st := YTDLPMaintainStatus{}
 	url := "https://github.com/yt-dlp/yt-dlp/releases/download/2026.07.04/yt-dlp.exe"
-	got := enrichYTDLPMaintainRelease(st, "", "", url, "")
+	got := enrichYTDLPMaintainRelease(context.Background(), st, "", "", url, "")
 	if got.LatestTag != "2026.07.04" || got.LatestVersion != "2026.07.04" {
 		t.Fatalf("latest %+v", got)
 	}

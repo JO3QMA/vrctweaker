@@ -193,8 +193,10 @@ func (uc *YTDLPMaintainUseCase) CheckLatest(ctx context.Context) (YTDLPMaintainS
 		st.LatestError = ferr.Error()
 		return st, nil
 	}
-	st = enrichYTDLPMaintainRelease(st, "", info.Tag, info.DownloadURL, info.Version)
+	st = enrichYTDLPMaintainRelease(ctx, st, "", info.Tag, info.DownloadURL, info.Version)
+	uc.mu.Lock()
 	uc.persistKnownLatest(ctx, st)
+	uc.mu.Unlock()
 	return st, nil
 }
 
@@ -235,7 +237,7 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 		return st, err
 	}
 	st.CachePresent = true
-	st = enrichYTDLPMaintainRelease(st, cachePath, tag, url, version)
+	st = enrichYTDLPMaintainRelease(ctx, st, cachePath, tag, url, version)
 	uc.persistKnownLatest(ctx, st)
 	if st.CacheVersion != "" {
 		uc.persistOfficialCacheTag(ctx, st.CacheVersion)
@@ -474,7 +476,7 @@ func maintainErrorI18nKey(err error) string {
 }
 
 // enrichYTDLPMaintainRelease fills Latest* and CacheVersion from a resolved GitHub release ref.
-func enrichYTDLPMaintainRelease(st YTDLPMaintainStatus, cachePath, tag, downloadURL, version string) YTDLPMaintainStatus {
+func enrichYTDLPMaintainRelease(ctx context.Context, st YTDLPMaintainStatus, cachePath, tag, downloadURL, version string) YTDLPMaintainStatus {
 	if tag == "" && downloadURL != "" {
 		tag = ytdlpReleaseTagFromDownloadURL(downloadURL)
 	}
@@ -495,7 +497,7 @@ func enrichYTDLPMaintainRelease(st YTDLPMaintainStatus, cachePath, tag, download
 	if ver != "" {
 		st.CacheVersion = ver
 	} else if cachePath != "" {
-		if fileVer := LocalYTDLPVersion(context.Background(), cachePath); fileVer != "" {
+		if fileVer := LocalYTDLPVersion(ctx, cachePath); fileVer != "" {
 			st.CacheVersion = fileVer
 		}
 	}
@@ -503,6 +505,7 @@ func enrichYTDLPMaintainRelease(st YTDLPMaintainStatus, cachePath, tag, download
 }
 
 func (uc *YTDLPMaintainUseCase) persistKnownLatest(ctx context.Context, st YTDLPMaintainStatus) {
+	// Caller must hold uc.mu (serializes the three settings writes with UpdateOfficialCache).
 	if uc.settings == nil {
 		return
 	}
@@ -510,7 +513,7 @@ func (uc *YTDLPMaintainUseCase) persistKnownLatest(ctx context.Context, st YTDLP
 		return
 	}
 	if err := uc.settings.SetYTDLPKnownLatest(ctx, st.LatestVersion, st.LatestTag, st.LatestDownloadURL); err != nil {
-		log.Printf("ytdlp maintain: persist known latest: %v", err)
+		log.Printf("ytdlp maintain: persist known latest (version=%s tag=%s): %v", st.LatestVersion, st.LatestTag, err)
 	}
 }
 
