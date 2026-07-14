@@ -19,6 +19,10 @@ updates:
       day: monday
     open-pull-requests-limit: 10
     versioning-strategy: increase-if-necessary
+    # Vue / vue-tsc still need TypeScript 6 programmatic APIs; TS 7 breaks vue-tsc.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
     groups:
       frontend:
         patterns:
