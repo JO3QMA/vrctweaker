@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 )
@@ -192,9 +193,8 @@ func (uc *YTDLPMaintainUseCase) CheckLatest(ctx context.Context) (YTDLPMaintainS
 		st.LatestError = ferr.Error()
 		return st, nil
 	}
-	st.LatestVersion = info.Version
-	st.LatestTag = info.Tag
-	st.LatestDownloadURL = info.DownloadURL
+	st = enrichYTDLPMaintainRelease(st, "", info.Tag, info.DownloadURL, info.Version)
+	uc.persistKnownLatest(ctx, st)
 	return st, nil
 }
 
@@ -210,6 +210,7 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 
 	url := downloadURL
 	tag := expectedTag
+	version := ""
 	if url == "" {
 		info, ferr := uc.updater.FetchLatestRelease(ctx)
 		if ferr != nil {
@@ -218,9 +219,10 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 		}
 		url = info.DownloadURL
 		tag = info.Tag
-		st.LatestVersion = info.Version
-		st.LatestTag = info.Tag
-		st.LatestDownloadURL = info.DownloadURL
+		version = info.Version
+	}
+	if tag == "" && url != "" {
+		tag = ytdlpReleaseTagFromDownloadURL(url)
 	}
 	if dlErr := uc.updater.DownloadToCache(ctx, cachePath, url); dlErr != nil {
 		return st, dlErr
@@ -233,9 +235,10 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 		return st, err
 	}
 	st.CachePresent = true
-	st.CacheVersion = normalizeReleaseTag(tag)
-	if st.CacheVersion == "" {
-		st.CacheVersion = LocalYTDLPVersion(ctx, cachePath)
+	st = enrichYTDLPMaintainRelease(st, cachePath, tag, url, version)
+	uc.persistKnownLatest(ctx, st)
+	if st.CacheVersion != "" {
+		uc.persistOfficialCacheTag(ctx, st.CacheVersion)
 	}
 	if maintainDesired {
 		if linkErr := uc.linkIfNeeded(ctx, toolsPath, cachePath); linkErr != nil {
@@ -378,6 +381,24 @@ func (uc *YTDLPMaintainUseCase) getStatusLocked(ctx context.Context) (YTDLPMaint
 	if fi, stErr := os.Stat(cache); stErr == nil && !fi.IsDir() {
 		st.CachePresent = true
 		st.CacheVersion = LocalYTDLPVersion(ctx, cache)
+		if st.CacheVersion == "" && uc.settings != nil {
+			if saved, tagErr := uc.settings.GetYTDLPOfficialCacheTag(ctx); tagErr == nil {
+				st.CacheVersion = saved
+			}
+		}
+	}
+	if uc.settings != nil {
+		if ver, tag, dl, latestErr := uc.settings.GetYTDLPKnownLatest(ctx); latestErr == nil {
+			if st.LatestVersion == "" {
+				st.LatestVersion = ver
+			}
+			if st.LatestTag == "" {
+				st.LatestTag = tag
+			}
+			if st.LatestDownloadURL == "" {
+				st.LatestDownloadURL = dl
+			}
+		}
 	}
 	eff, err := EffectiveOfficialLink(tools, cache)
 	if err != nil {
@@ -450,6 +471,56 @@ func maintainErrorI18nKey(err error) string {
 		return "errorUnsupportedPlatform"
 	}
 	return ""
+}
+
+// enrichYTDLPMaintainRelease fills Latest* and CacheVersion from a resolved GitHub release ref.
+func enrichYTDLPMaintainRelease(st YTDLPMaintainStatus, cachePath, tag, downloadURL, version string) YTDLPMaintainStatus {
+	if tag == "" && downloadURL != "" {
+		tag = ytdlpReleaseTagFromDownloadURL(downloadURL)
+	}
+	ver := normalizeReleaseTag(version)
+	if ver == "" {
+		ver = normalizeReleaseTag(tag)
+	}
+	if tag != "" {
+		st.LatestTag = tag
+	}
+	if ver != "" {
+		st.LatestVersion = ver
+	}
+	if downloadURL != "" {
+		st.LatestDownloadURL = downloadURL
+	}
+	st.LatestError = ""
+	if ver != "" {
+		st.CacheVersion = ver
+	} else if cachePath != "" {
+		if fileVer := LocalYTDLPVersion(context.Background(), cachePath); fileVer != "" {
+			st.CacheVersion = fileVer
+		}
+	}
+	return st
+}
+
+func (uc *YTDLPMaintainUseCase) persistKnownLatest(ctx context.Context, st YTDLPMaintainStatus) {
+	if uc.settings == nil {
+		return
+	}
+	if st.LatestVersion == "" && st.LatestTag == "" && st.LatestDownloadURL == "" {
+		return
+	}
+	if err := uc.settings.SetYTDLPKnownLatest(ctx, st.LatestVersion, st.LatestTag, st.LatestDownloadURL); err != nil {
+		log.Printf("ytdlp maintain: persist known latest: %v", err)
+	}
+}
+
+func (uc *YTDLPMaintainUseCase) persistOfficialCacheTag(ctx context.Context, tag string) {
+	if uc.settings == nil || strings.TrimSpace(tag) == "" {
+		return
+	}
+	if err := uc.settings.SetYTDLPOfficialCacheTag(ctx, tag); err != nil {
+		log.Printf("ytdlp maintain: persist cache tag: %v", err)
+	}
 }
 
 // FormatMaintainError returns an i18n key for maintain API errors.

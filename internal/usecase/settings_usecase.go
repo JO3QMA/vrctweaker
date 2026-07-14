@@ -159,6 +159,10 @@ const (
 	keyYTDLPToolsReplaceMaintain     = "ytdlp_tools_replace_maintain"
 	keyYTDLPToolsReplaceRiskAck      = "ytdlp_tools_replace_risk_ack"
 	keyYTDLPToolsReplacePendingError = "ytdlp_tools_replace_pending_error"
+	keyYTDLPOfficialCacheTag         = "ytdlp_official_cache_tag"
+	keyYTDLPKnownLatestVersion       = "ytdlp_known_latest_version"
+	keyYTDLPKnownLatestTag           = "ytdlp_known_latest_tag"
+	keyYTDLPKnownLatestDownloadURL   = "ytdlp_known_latest_download_url"
 )
 
 // SupportedAppLanguages are UI locale codes persisted in app_settings.
@@ -263,6 +267,44 @@ func (uc *SettingsUseCase) GetYTDLPToolsReplacePendingError(ctx context.Context)
 // SetYTDLPToolsReplacePendingError persists or clears the pending re-link error.
 func (uc *SettingsUseCase) SetYTDLPToolsReplacePendingError(ctx context.Context, msg string) error {
 	return uc.repo.Set(ctx, keyYTDLPToolsReplacePendingError, strings.TrimSpace(msg))
+}
+
+// GetYTDLPOfficialCacheTag returns the last recorded official cache release tag (empty if unset).
+func (uc *SettingsUseCase) GetYTDLPOfficialCacheTag(ctx context.Context) (string, error) {
+	return uc.repo.Get(ctx, keyYTDLPOfficialCacheTag)
+}
+
+// SetYTDLPOfficialCacheTag records the release tag installed into the official cache.
+func (uc *SettingsUseCase) SetYTDLPOfficialCacheTag(ctx context.Context, tag string) error {
+	return uc.repo.Set(ctx, keyYTDLPOfficialCacheTag, normalizeReleaseTag(tag))
+}
+
+// GetYTDLPKnownLatest returns the last GitHub latest release metadata shown in the Video tab.
+func (uc *SettingsUseCase) GetYTDLPKnownLatest(ctx context.Context) (version, tag, downloadURL string, err error) {
+	version, err = uc.repo.Get(ctx, keyYTDLPKnownLatestVersion)
+	if err != nil {
+		return "", "", "", err
+	}
+	tag, err = uc.repo.Get(ctx, keyYTDLPKnownLatestTag)
+	if err != nil {
+		return "", "", "", err
+	}
+	downloadURL, err = uc.repo.Get(ctx, keyYTDLPKnownLatestDownloadURL)
+	if err != nil {
+		return "", "", "", err
+	}
+	return version, tag, downloadURL, nil
+}
+
+// SetYTDLPKnownLatest persists GitHub latest release metadata for the Video tab.
+func (uc *SettingsUseCase) SetYTDLPKnownLatest(ctx context.Context, version, tag, downloadURL string) error {
+	if err := uc.repo.Set(ctx, keyYTDLPKnownLatestVersion, normalizeReleaseTag(version)); err != nil {
+		return err
+	}
+	if err := uc.repo.Set(ctx, keyYTDLPKnownLatestTag, normalizeReleaseTag(tag)); err != nil {
+		return err
+	}
+	return uc.repo.Set(ctx, keyYTDLPKnownLatestDownloadURL, strings.TrimSpace(downloadURL))
 }
 
 func parseBoolSetting(v string) bool {

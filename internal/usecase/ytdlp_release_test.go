@@ -2,6 +2,8 @@ package usecase
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -47,6 +49,17 @@ func TestNormalizeReleaseTag(t *testing.T) {
 	}
 }
 
+func TestYtdlpReleaseTagFromDownloadURL(t *testing.T) {
+	t.Parallel()
+	const url = "https://github.com/yt-dlp/yt-dlp/releases/download/2026.07.04/yt-dlp.exe"
+	if got := ytdlpReleaseTagFromDownloadURL(url); got != "2026.07.04" {
+		t.Fatalf("got %q", got)
+	}
+	if got := ytdlpReleaseTagFromDownloadURL("https://evil.example/x"); got != "" {
+		t.Fatalf("got %q", got)
+	}
+}
+
 func TestFetchLatestRelease_httptest(t *testing.T) {
 	t.Parallel()
 	const relJSON = `{
@@ -88,6 +101,9 @@ func TestValidateYTDlpDownloadURL(t *testing.T) {
 	if err := validateYTDlpDownloadURL(u, "https://objects.githubusercontent.com/x/yt-dlp.exe"); err != nil {
 		t.Fatalf("allowed host: %v", err)
 	}
+	if err := validateYTDlpDownloadURL(u, "https://release-assets.githubusercontent.com/github-production-release-asset/1/yt-dlp.exe"); err != nil {
+		t.Fatalf("release-assets host: %v", err)
+	}
 	if err := validateYTDlpDownloadURL(u, "https://evil.example/yt-dlp.exe"); err == nil {
 		t.Fatal("expected reject for untrusted host")
 	}
@@ -95,6 +111,52 @@ func TestValidateYTDlpDownloadURL(t *testing.T) {
 	if err := validateYTDlpDownloadURL(u, "http://127.0.0.1/x"); err != nil {
 		t.Fatalf("skip validation: %v", err)
 	}
+}
+
+func TestDownloadToCache_followsGitHubReleaseRedirect(t *testing.T) {
+	t.Parallel()
+	const exeBody = "MZfake-official"
+	client := &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			switch req.URL.Host {
+			case "github.com":
+				return &http.Response{
+					StatusCode: http.StatusFound,
+					Header:     http.Header{"Location": []string{"https://release-assets.githubusercontent.com/bin/yt-dlp.exe"}},
+					Body:       http.NoBody,
+					Request:    req,
+				}, nil
+			case "release-assets.githubusercontent.com":
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(exeBody)),
+					Request:    req,
+				}, nil
+			default:
+				return nil, fmt.Errorf("unexpected host %q", req.URL.Host)
+			}
+		}),
+	}
+
+	cache := filepath.Join(t.TempDir(), "ytdlp", "yt-dlp.exe")
+	u := &YTDLPUpdater{HTTPClient: client}
+	dlURL := "https://github.com/yt-dlp/yt-dlp/releases/download/2026.07.04/yt-dlp.exe"
+	if err := u.DownloadToCache(context.Background(), cache, dlURL); err != nil {
+		t.Fatalf("DownloadToCache: %v", err)
+	}
+	b, err := os.ReadFile(cache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(b) != exeBody {
+		t.Fatalf("cache content %q", b)
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
 
 func TestDownloadToCache_andEnsure(t *testing.T) {

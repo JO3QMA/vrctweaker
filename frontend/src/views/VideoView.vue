@@ -230,7 +230,14 @@ function applyStatus(
   s: YTDLPMaintainStatusDTO,
   opts?: { syncSwitch?: boolean },
 ) {
-  status.value = s;
+  const prev = status.value;
+  status.value = {
+    ...s,
+    latestVersion: s.latestVersion || prev.latestVersion,
+    latestTag: s.latestTag || prev.latestTag,
+    latestDownloadUrl: s.latestDownloadUrl || prev.latestDownloadUrl,
+    cacheVersion: s.cacheVersion || prev.cacheVersion,
+  };
   if (opts?.syncSwitch !== false) {
     maintainOn.value = !!s.maintainDesired;
   }

@@ -85,9 +85,25 @@ func normalizeReleaseTag(tag string) string {
 	return strings.TrimPrefix(strings.TrimSpace(tag), "v")
 }
 
+// ytdlpReleaseTagFromDownloadURL extracts the release tag from a GitHub browser_download_url.
+func ytdlpReleaseTagFromDownloadURL(raw string) string {
+	const marker = "/releases/download/"
+	i := strings.Index(raw, marker)
+	if i < 0 {
+		return ""
+	}
+	rest := raw[i+len(marker):]
+	end := strings.Index(rest, "/")
+	if end <= 0 {
+		return ""
+	}
+	return normalizeReleaseTag(rest[:end])
+}
+
 var allowedYTDlpDownloadHosts = map[string]struct{}{
-	"github.com":                    {},
-	"objects.githubusercontent.com": {},
+	"github.com":                           {},
+	"objects.githubusercontent.com":        {},
+	"release-assets.githubusercontent.com": {}, // github.com/releases/download → 302
 }
 
 func validateYTDlpDownloadURL(u *YTDLPUpdater, raw string) error {
