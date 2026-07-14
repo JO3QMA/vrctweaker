@@ -281,18 +281,9 @@ func (uc *SettingsUseCase) SetYTDLPOfficialCacheTag(ctx context.Context, tag str
 
 // GetYTDLPKnownLatest returns the last GitHub latest release metadata shown in the Video tab.
 func (uc *SettingsUseCase) GetYTDLPKnownLatest(ctx context.Context) (version, tag, downloadURL string, err error) {
-	version, err = uc.repo.Get(ctx, keyYTDLPKnownLatestVersion)
-	if err != nil {
-		return "", "", "", err
-	}
-	tag, err = uc.repo.Get(ctx, keyYTDLPKnownLatestTag)
-	if err != nil {
-		return "", "", "", err
-	}
-	downloadURL, err = uc.repo.Get(ctx, keyYTDLPKnownLatestDownloadURL)
-	if err != nil {
-		return "", "", "", err
-	}
+	version, _ = uc.repo.Get(ctx, keyYTDLPKnownLatestVersion)
+	tag, _ = uc.repo.Get(ctx, keyYTDLPKnownLatestTag)
+	downloadURL, _ = uc.repo.Get(ctx, keyYTDLPKnownLatestDownloadURL)
 	return version, tag, downloadURL, nil
 }
 

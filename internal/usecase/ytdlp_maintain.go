@@ -194,6 +194,7 @@ func (uc *YTDLPMaintainUseCase) CheckLatest(ctx context.Context) (YTDLPMaintainS
 		return st, nil
 	}
 	st = enrichYTDLPMaintainRelease(ctx, st, "", info.Tag, info.DownloadURL, info.Version)
+	st.LatestError = ""
 	uc.mu.Lock()
 	uc.persistKnownLatest(ctx, st)
 	uc.mu.Unlock()
@@ -238,6 +239,7 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 	}
 	st.CachePresent = true
 	st = enrichYTDLPMaintainRelease(ctx, st, cachePath, tag, url, version)
+	st.LatestError = ""
 	uc.persistKnownLatest(ctx, st)
 	if st.CacheVersion != "" {
 		uc.persistOfficialCacheTag(ctx, st.CacheVersion)
@@ -390,16 +392,15 @@ func (uc *YTDLPMaintainUseCase) getStatusLocked(ctx context.Context) (YTDLPMaint
 		}
 	}
 	if uc.settings != nil {
-		if ver, tag, dl, latestErr := uc.settings.GetYTDLPKnownLatest(ctx); latestErr == nil {
-			if st.LatestVersion == "" {
-				st.LatestVersion = ver
-			}
-			if st.LatestTag == "" {
-				st.LatestTag = tag
-			}
-			if st.LatestDownloadURL == "" {
-				st.LatestDownloadURL = dl
-			}
+		ver, tag, dl, _ := uc.settings.GetYTDLPKnownLatest(ctx)
+		if st.LatestVersion == "" {
+			st.LatestVersion = ver
+		}
+		if st.LatestTag == "" {
+			st.LatestTag = tag
+		}
+		if st.LatestDownloadURL == "" {
+			st.LatestDownloadURL = dl
 		}
 	}
 	eff, err := EffectiveOfficialLink(tools, cache)
@@ -493,7 +494,6 @@ func enrichYTDLPMaintainRelease(ctx context.Context, st YTDLPMaintainStatus, cac
 	if downloadURL != "" {
 		st.LatestDownloadURL = downloadURL
 	}
-	st.LatestError = ""
 	if ver != "" {
 		st.CacheVersion = ver
 	} else if cachePath != "" {
