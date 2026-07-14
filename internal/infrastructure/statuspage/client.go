@@ -52,6 +52,9 @@ func NewTestClient(baseURL string) *Client {
 
 func (c *Client) httpClient() *http.Client {
 	if c.HTTPClient != nil {
+		if c.HTTPClient.CheckRedirect == nil {
+			c.HTTPClient.CheckRedirect = c.redirectPolicy
+		}
 		return c.HTTPClient
 	}
 	c.once.Do(func() {
@@ -151,8 +154,12 @@ func (c *Client) fetchJSON(ctx context.Context, path string, dest any) error {
 
 func truncateForErr(s string, max int) string {
 	s = strings.TrimSpace(s)
-	if max <= 0 || len(s) <= max {
+	if max <= 0 {
 		return s
 	}
-	return s[:max] + "…"
+	runes := []rune(s)
+	if len(runes) <= max {
+		return s
+	}
+	return string(runes[:max]) + "…"
 }

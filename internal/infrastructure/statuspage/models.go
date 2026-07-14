@@ -13,7 +13,7 @@ const componentStatusOperational = "operational"
 type Snapshot struct {
 	FetchState   string
 	Summary      Summary
-	Components   []Component
+	Components   []Component // non-operational leaf components only (see filterNonOperational)
 	Incidents    []Headline
 	Maintenances []Headline
 }

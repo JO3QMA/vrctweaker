@@ -190,6 +190,32 @@ func TestValidateHost_rejectsHTTP(t *testing.T) {
 	}
 }
 
+func TestFetch_maintenancesFallbackWhenActiveFails(t *testing.T) {
+	srv := testServer(t, map[string]http.HandlerFunc{
+		"/api/v2/summary.json":                         jsonHandler(summaryOperational),
+		"/api/v2/components.json":                      jsonHandler(componentsAllOperational),
+		"/api/v2/incidents/unresolved.json":            jsonHandler(emptyIncidents),
+		"/api/v2/scheduled-maintenances/active.json":   statusHandler(http.StatusInternalServerError, "fail"),
+		"/api/v2/scheduled-maintenances/upcoming.json": jsonHandler(oneMaintenance),
+	})
+	defer srv.Close()
+
+	got := clientForServer(t, srv).Fetch(context.Background())
+	if got.FetchState != FetchStateOK {
+		t.Fatalf("FetchState: got %q want %q", got.FetchState, FetchStateOK)
+	}
+	if len(got.Maintenances) != 1 || got.Maintenances[0].Name != "Database Maintenance" {
+		t.Fatalf("maintenances: %+v", got.Maintenances)
+	}
+}
+
+func TestTruncateForErr_respectsRuneBoundary(t *testing.T) {
+	got := truncateForErr("日本語テスト", 3)
+	if got != "日本語…" {
+		t.Fatalf("got %q", got)
+	}
+}
+
 func TestFetchJSON_rejectsAbsolutePath(t *testing.T) {
 	c := NewClient()
 	err := c.fetchJSON(context.Background(), "/summary.json", &summaryResponse{})

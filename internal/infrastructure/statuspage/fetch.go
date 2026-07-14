@@ -39,8 +39,12 @@ func (c *Client) Fetch(ctx context.Context) Snapshot {
 	go func() {
 		defer wg.Done()
 		maintenancesErr = c.fetchJSON(ctx, "scheduled-maintenances/active.json", &maintenancesResp)
-		if maintenancesErr == nil && len(maintenancesResp.ScheduledMaintenances) == 0 {
-			maintenancesErr = c.fetchJSON(ctx, "scheduled-maintenances/upcoming.json", &maintenancesResp)
+		if maintenancesErr != nil || len(maintenancesResp.ScheduledMaintenances) == 0 {
+			var upcoming maintenancesResponse
+			if err := c.fetchJSON(ctx, "scheduled-maintenances/upcoming.json", &upcoming); err == nil {
+				maintenancesResp = upcoming
+				maintenancesErr = nil
+			}
 		}
 	}()
 	wg.Wait()
