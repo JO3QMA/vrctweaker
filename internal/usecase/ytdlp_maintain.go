@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 )
@@ -192,9 +193,13 @@ func (uc *YTDLPMaintainUseCase) CheckLatest(ctx context.Context) (YTDLPMaintainS
 		st.LatestError = ferr.Error()
 		return st, nil
 	}
-	st.LatestVersion = info.Version
-	st.LatestTag = info.Tag
-	st.LatestDownloadURL = info.DownloadURL
+	st = enrichYTDLPMaintainRelease(ctx, st, "", info.Tag, info.DownloadURL, info.Version)
+	st.LatestError = ""
+	uc.mu.Lock()
+	if err := uc.persistKnownLatest(ctx, st); err != nil {
+		log.Printf("ytdlp maintain: persist known latest (version=%s tag=%s): %v", st.LatestVersion, st.LatestTag, err)
+	}
+	uc.mu.Unlock()
 	return st, nil
 }
 
@@ -210,6 +215,7 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 
 	url := downloadURL
 	tag := expectedTag
+	version := ""
 	if url == "" {
 		info, ferr := uc.updater.FetchLatestRelease(ctx)
 		if ferr != nil {
@@ -218,9 +224,7 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 		}
 		url = info.DownloadURL
 		tag = info.Tag
-		st.LatestVersion = info.Version
-		st.LatestTag = info.Tag
-		st.LatestDownloadURL = info.DownloadURL
+		version = info.Version
 	}
 	if dlErr := uc.updater.DownloadToCache(ctx, cachePath, url); dlErr != nil {
 		return st, dlErr
@@ -233,9 +237,15 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 		return st, err
 	}
 	st.CachePresent = true
-	st.CacheVersion = normalizeReleaseTag(tag)
-	if st.CacheVersion == "" {
-		st.CacheVersion = LocalYTDLPVersion(ctx, cachePath)
+	st = enrichYTDLPMaintainRelease(ctx, st, cachePath, tag, url, version)
+	st.LatestError = ""
+	if err := uc.persistKnownLatest(ctx, st); err != nil {
+		return st, fmt.Errorf("persist known latest: %w", err)
+	}
+	if st.CacheVersion != "" {
+		if err := uc.persistOfficialCacheTag(ctx, st.CacheVersion); err != nil {
+			return st, fmt.Errorf("persist cache tag: %w", err)
+		}
 	}
 	if maintainDesired {
 		if linkErr := uc.linkIfNeeded(ctx, toolsPath, cachePath); linkErr != nil {
@@ -378,6 +388,23 @@ func (uc *YTDLPMaintainUseCase) getStatusLocked(ctx context.Context) (YTDLPMaint
 	if fi, stErr := os.Stat(cache); stErr == nil && !fi.IsDir() {
 		st.CachePresent = true
 		st.CacheVersion = LocalYTDLPVersion(ctx, cache)
+		if st.CacheVersion == "" && uc.settings != nil {
+			if saved, tagErr := uc.settings.GetYTDLPOfficialCacheTag(ctx); tagErr == nil {
+				st.CacheVersion = saved
+			}
+		}
+	}
+	if uc.settings != nil {
+		ver, tag, dl := uc.settings.GetYTDLPKnownLatest(ctx)
+		if st.LatestVersion == "" {
+			st.LatestVersion = ver
+		}
+		if st.LatestTag == "" {
+			st.LatestTag = tag
+		}
+		if st.LatestDownloadURL == "" {
+			st.LatestDownloadURL = dl
+		}
 	}
 	eff, err := EffectiveOfficialLink(tools, cache)
 	if err != nil {
@@ -450,6 +477,52 @@ func maintainErrorI18nKey(err error) string {
 		return "errorUnsupportedPlatform"
 	}
 	return ""
+}
+
+// enrichYTDLPMaintainRelease fills Latest* and CacheVersion from a resolved GitHub release ref.
+func enrichYTDLPMaintainRelease(ctx context.Context, st YTDLPMaintainStatus, cachePath, tag, downloadURL, version string) YTDLPMaintainStatus {
+	if tag == "" && downloadURL != "" {
+		tag = ytdlpReleaseTagFromDownloadURL(downloadURL)
+	}
+	ver := normalizeReleaseTag(version)
+	if ver == "" {
+		ver = normalizeReleaseTag(tag)
+	}
+	if tag != "" {
+		st.LatestTag = tag
+	}
+	if ver != "" {
+		st.LatestVersion = ver
+	}
+	if downloadURL != "" {
+		st.LatestDownloadURL = downloadURL
+	}
+	if cachePath != "" {
+		if ver != "" {
+			st.CacheVersion = ver
+		} else if fileVer := LocalYTDLPVersion(ctx, cachePath); fileVer != "" {
+			st.CacheVersion = fileVer
+		}
+	}
+	return st
+}
+
+func (uc *YTDLPMaintainUseCase) persistKnownLatest(ctx context.Context, st YTDLPMaintainStatus) error {
+	// Caller must hold uc.mu (serializes the three settings writes with UpdateOfficialCache).
+	if uc.settings == nil {
+		return nil
+	}
+	if st.LatestVersion == "" && st.LatestTag == "" && st.LatestDownloadURL == "" {
+		return nil
+	}
+	return uc.settings.SetYTDLPKnownLatest(ctx, st.LatestVersion, st.LatestTag, st.LatestDownloadURL)
+}
+
+func (uc *YTDLPMaintainUseCase) persistOfficialCacheTag(ctx context.Context, tag string) error {
+	if uc.settings == nil || strings.TrimSpace(tag) == "" {
+		return nil
+	}
+	return uc.settings.SetYTDLPOfficialCacheTag(ctx, tag)
 }
 
 // FormatMaintainError returns an i18n key for maintain API errors.

@@ -135,6 +135,36 @@ describe("VideoView", () => {
     ).toContain("2025.05.01");
   });
 
+  it("keeps latest version in details after cache update", async () => {
+    vi.mocked(App.checkYTDLPLatestRelease).mockResolvedValue({
+      ...baseStatus,
+      latestVersion: "2025.05.01",
+      latestTag: "2025.05.01",
+      latestDownloadUrl: "https://example.com/yt-dlp.exe",
+    });
+    vi.mocked(App.updateOfficialYTDLPCache).mockResolvedValue({
+      ...baseStatus,
+      cacheVersion: "2025.05.01",
+      latestVersion: "",
+      latestTag: "",
+      latestDownloadUrl: "",
+    });
+    const wrapper = mountView();
+    await flushPromises();
+    await wrapper.get('[data-testid="ytdlp-check-latest"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="ytdlp-update-cache"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="ytdlp-details-toggle"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.get('[data-testid="ytdlp-cache-version"]').text()).toContain(
+      "2025.05.01",
+    );
+    expect(
+      wrapper.get('[data-testid="ytdlp-latest-version"]').text(),
+    ).toContain("2025.05.01");
+  });
+
   it("opens cache folder", async () => {
     const wrapper = mountView();
     await flushPromises();
