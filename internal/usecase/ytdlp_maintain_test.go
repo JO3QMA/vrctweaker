@@ -184,18 +184,32 @@ func TestYTDLPMaintain_linkIfNeeded_skipsWhenAlreadyLinked(t *testing.T) {
 
 func TestEnrichYTDLPMaintainRelease(t *testing.T) {
 	t.Parallel()
-	st := YTDLPMaintainStatus{}
-	url := "https://github.com/yt-dlp/yt-dlp/releases/download/2026.07.04/yt-dlp.exe"
-	got := enrichYTDLPMaintainRelease(context.Background(), st, "", "", url, "")
-	if got.LatestTag != "2026.07.04" || got.LatestVersion != "2026.07.04" {
-		t.Fatalf("latest %+v", got)
-	}
-	if got.LatestDownloadURL != url {
-		t.Fatalf("download url %q", got.LatestDownloadURL)
-	}
-	if got.CacheVersion != "2026.07.04" {
-		t.Fatalf("cache version %q", got.CacheVersion)
-	}
+	const url = "https://github.com/yt-dlp/yt-dlp/releases/download/2026.07.04/yt-dlp.exe"
+
+	t.Run("latest only does not overwrite cache version", func(t *testing.T) {
+		st := YTDLPMaintainStatus{CacheVersion: "2025.01.01"}
+		got := enrichYTDLPMaintainRelease(context.Background(), st, "", "2026.07.04", url, "2026.07.04")
+		if got.LatestVersion != "2026.07.04" || got.LatestTag != "2026.07.04" {
+			t.Fatalf("latest %+v", got)
+		}
+		if got.CacheVersion != "2025.01.01" {
+			t.Fatalf("cache version should be preserved, got %q", got.CacheVersion)
+		}
+	})
+
+	t.Run("cache update sets cache version from release", func(t *testing.T) {
+		st := YTDLPMaintainStatus{}
+		got := enrichYTDLPMaintainRelease(context.Background(), st, "/cache/yt-dlp.exe", "", url, "")
+		if got.LatestTag != "2026.07.04" || got.LatestVersion != "2026.07.04" {
+			t.Fatalf("latest %+v", got)
+		}
+		if got.LatestDownloadURL != url {
+			t.Fatalf("download url %q", got.LatestDownloadURL)
+		}
+		if got.CacheVersion != "2026.07.04" {
+			t.Fatalf("cache version %q", got.CacheVersion)
+		}
+	})
 }
 
 func TestYTDLPKnownLatestSettingsRoundtrip(t *testing.T) {
@@ -210,10 +224,7 @@ func TestYTDLPKnownLatestSettingsRoundtrip(t *testing.T) {
 	if err := settings.SetYTDLPOfficialCacheTag(ctx, "2026.06.01"); err != nil {
 		t.Fatal(err)
 	}
-	ver, tag, gotURL, err := settings.GetYTDLPKnownLatest(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
+	ver, tag, gotURL := settings.GetYTDLPKnownLatest(ctx)
 	if ver != "2026.07.04" || tag != "2026.07.04" || gotURL != url {
 		t.Fatalf("latest ver=%q tag=%q url=%q", ver, tag, gotURL)
 	}

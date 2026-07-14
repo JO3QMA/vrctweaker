@@ -280,11 +280,12 @@ func (uc *SettingsUseCase) SetYTDLPOfficialCacheTag(ctx context.Context, tag str
 }
 
 // GetYTDLPKnownLatest returns the last GitHub latest release metadata shown in the Video tab.
-func (uc *SettingsUseCase) GetYTDLPKnownLatest(ctx context.Context) (version, tag, downloadURL string, err error) {
+// Missing keys are ignored (same pattern as GetPathSettings); partial results are returned.
+func (uc *SettingsUseCase) GetYTDLPKnownLatest(ctx context.Context) (version, tag, downloadURL string) {
 	version, _ = uc.repo.Get(ctx, keyYTDLPKnownLatestVersion)
 	tag, _ = uc.repo.Get(ctx, keyYTDLPKnownLatestTag)
 	downloadURL, _ = uc.repo.Get(ctx, keyYTDLPKnownLatestDownloadURL)
-	return version, tag, downloadURL, nil
+	return version, tag, downloadURL
 }
 
 // SetYTDLPKnownLatest persists GitHub latest release metadata for the Video tab.
