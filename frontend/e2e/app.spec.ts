@@ -39,7 +39,9 @@ test.describe("VRChat Tweaker", () => {
       await expect(page.getByTestId("server-status-section")).toBeVisible();
       await expect(page.getByTestId("server-status-summary")).toBeVisible();
       await expect(page.getByTestId("launch-block-quick-btn")).toBeVisible();
-      await expect(page.getByTestId("launch-block-profile-select")).toBeVisible();
+      await expect(
+        page.getByTestId("launch-block-profile-select"),
+      ).toBeVisible();
       // ラベルは i18n 依存のため data-testid でクイックステータス4種を検証する
       await expect(
         page.getByTestId("dashboard-quick-status-join-me"),

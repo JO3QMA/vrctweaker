@@ -36,7 +36,7 @@
         </router-link>
       </p>
 
-      <div class="launch-block-row">
+      <div class="launch-block-controls">
         <el-select
           v-model="selectedProfileId"
           class="launch-block-profile"
@@ -51,26 +51,32 @@
             :value="p.id"
           />
         </el-select>
-        <el-button
-          type="primary"
-          size="large"
-          class="launch-block-quick-btn"
-          data-testid="launch-block-quick-btn"
-          :disabled="isEmpty || !selectedProfileId"
-          @click="launchQuick"
+        <div
+          class="launch-block-actions"
+          :class="{ 'launch-block-actions--solo': !rejoin }"
         >
-          {{ t("dashboard.launchBlock.quickLaunch") }}
-        </el-button>
-        <el-button
-          v-if="rejoin"
-          type="primary"
-          class="launch-block-rejoin-btn"
-          data-testid="launch-block-rejoin-btn"
-          :disabled="isEmpty || !selectedProfileId"
-          @click="launchRejoin"
-        >
-          {{ rejoinButtonLabel }}
-        </el-button>
+          <el-button
+            type="primary"
+            size="large"
+            class="launch-block-quick-btn"
+            data-testid="launch-block-quick-btn"
+            :disabled="isEmpty || !selectedProfileId"
+            @click="launchQuick"
+          >
+            {{ t("dashboard.launchBlock.quickLaunch") }}
+          </el-button>
+          <el-button
+            v-if="rejoin"
+            type="primary"
+            size="large"
+            class="launch-block-rejoin-btn"
+            data-testid="launch-block-rejoin-btn"
+            :disabled="isEmpty || !selectedProfileId"
+            @click="launchRejoin"
+          >
+            {{ rejoinButtonLabel }}
+          </el-button>
+        </div>
       </div>
     </template>
   </el-card>
@@ -223,25 +229,31 @@ onUnmounted(() => {
   margin-left: 0.35rem;
 }
 
-.launch-block-row {
+.launch-block-controls {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.5rem;
-  align-items: stretch;
 }
 
 .launch-block-profile {
-  flex: 1 1 160px;
-  min-width: 0;
+  width: 100%;
+}
+
+.launch-block-actions {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
 }
 
 .launch-block-quick-btn,
 .launch-block-rejoin-btn {
-  flex: 1 1 160px;
+  flex: 1 1 50%;
+  min-width: 0;
   font-size: 1.05rem !important;
+  height: 52px !important;
 }
 
-.launch-block-quick-btn {
-  height: 52px !important;
+.launch-block-actions--solo .launch-block-quick-btn {
+  flex: 1 1 100%;
 }
 </style>
