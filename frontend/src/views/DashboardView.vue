@@ -73,6 +73,7 @@ import { ElMessage } from "element-plus";
 import ServerStatusSection from "../components/ServerStatusSection.vue";
 import DashboardLaunchBlock from "../components/DashboardLaunchBlock.vue";
 import { App } from "../wails/app";
+import { formatError } from "../utils/formatError";
 
 const { t } = useI18n();
 
@@ -134,19 +135,6 @@ const templateDefs = computed(() => {
     label: t(d.messageKey),
   }));
 });
-
-function formatError(e: unknown, fallback: string): string {
-  if (typeof e === "string") {
-    const msg = e.trim();
-    if (msg) return msg;
-  }
-  if (e instanceof Error && e.message) return e.message;
-  if (e && typeof e === "object" && "message" in e) {
-    const m = (e as { message: unknown }).message;
-    if (typeof m === "string" && m) return m;
-  }
-  return fallback;
-}
 
 async function setStatusOnly(status: string) {
   try {

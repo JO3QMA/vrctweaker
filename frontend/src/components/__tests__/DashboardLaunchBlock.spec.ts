@@ -143,13 +143,21 @@ describe("DashboardLaunchBlock", () => {
     const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
       close: () => {},
     }));
+    const consoleSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
     const wrapper = mountBlock();
     await flushPromises();
     expect(
       wrapper.find('[data-testid="launch-block-load-error"]').exists(),
     ).toBe(true);
     expect(errorSpy).not.toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalledWith(
+      "DashboardLaunchBlock load failed:",
+      expect.any(Error),
+    );
     errorSpy.mockRestore();
+    consoleSpy.mockRestore();
   });
 
   it("shows error on quick launch failure", async () => {
@@ -203,6 +211,38 @@ describe("DashboardLaunchBlock", () => {
     expect(mockGetDashboardLaunchBlock).toHaveBeenCalledTimes(1);
     triggerEncountersChanged();
     await vi.advanceTimersByTimeAsync(400);
+    expect(mockGetDashboardLaunchBlock).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it("retries refresh after in-flight load when debounced event fires", async () => {
+    vi.useFakeTimers();
+    let resolveFirst: (v: unknown) => void = () => {};
+    mockGetDashboardLaunchBlock
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        }),
+      )
+      .mockResolvedValueOnce({
+        profiles: [defaultLaunchProfile],
+        selectedProfileId: "p-default",
+        rejoin: null,
+      });
+
+    mountBlock();
+    await flushPromises();
+
+    triggerEncountersChanged();
+    await vi.advanceTimersByTimeAsync(400);
+
+    resolveFirst({
+      profiles: [],
+      selectedProfileId: "",
+      rejoin: null,
+    });
+    await flushPromises();
+
     expect(mockGetDashboardLaunchBlock).toHaveBeenCalledTimes(2);
     vi.useRealTimers();
   });

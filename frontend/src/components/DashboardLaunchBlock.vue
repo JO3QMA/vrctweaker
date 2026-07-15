@@ -91,6 +91,7 @@ import {
   type LaunchProfileDTO,
 } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
+import { formatError } from "../utils/formatError";
 
 const ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS = 400;
 
@@ -106,6 +107,7 @@ let encountersChangedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let unsubscribeEncountersChanged: (() => void) | undefined;
 let generation = 0;
 let inFlight = false;
+let pendingRefresh = false;
 
 const isEmpty = computed(() => profiles.value.length === 0);
 
@@ -117,19 +119,6 @@ const rejoinButtonLabel = computed(() => {
   return t("dashboard.launchBlock.rejoinGeneric");
 });
 
-function formatError(e: unknown, fallback: string): string {
-  if (typeof e === "string") {
-    const msg = e.trim();
-    if (msg) return msg;
-  }
-  if (e instanceof Error && e.message) return e.message;
-  if (e && typeof e === "object" && "message" in e) {
-    const m = (e as { message: unknown }).message;
-    if (typeof m === "string" && m) return m;
-  }
-  return fallback;
-}
-
 function applyBlock(dto: DashboardLaunchBlockDTO): void {
   profiles.value = dto.profiles ?? [];
   selectedProfileId.value = dto.selectedProfileId ?? "";
@@ -137,16 +126,21 @@ function applyBlock(dto: DashboardLaunchBlockDTO): void {
 }
 
 async function load(): Promise<void> {
-  if (inFlight) return;
+  if (inFlight) {
+    pendingRefresh = true;
+    return;
+  }
   inFlight = true;
+  pendingRefresh = false;
   const gen = generation;
   try {
     const dto = await App.getDashboardLaunchBlock();
     if (gen !== generation) return;
     loadError.value = false;
     applyBlock(dto);
-  } catch {
+  } catch (e) {
     if (gen !== generation) return;
+    console.error("DashboardLaunchBlock load failed:", e);
     loadError.value = true;
     profiles.value = [];
     selectedProfileId.value = "";
@@ -155,6 +149,10 @@ async function load(): Promise<void> {
     inFlight = false;
     if (gen === generation) {
       loading.value = false;
+    }
+    if (pendingRefresh && gen === generation) {
+      pendingRefresh = false;
+      void load();
     }
   }
 }
