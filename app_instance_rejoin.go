@@ -32,7 +32,7 @@ func (a *App) setLastLaunchProfileOnSuccess(profileID string, launchErr error) e
 	if err := a.settings.SetLastLaunchProfileID(a.ctx, profileID); err != nil {
 		// ponytail: best-effort — launch already succeeded; do not fail the caller.
 		// Upgrade path: surface to user or retry persistence.
-		log.Printf("instance rejoin: save last launch profile: %v", err)
+		log.Printf("launch: save last launch profile: %v", err)
 	}
 	return nil
 }

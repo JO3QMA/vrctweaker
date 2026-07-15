@@ -136,6 +136,11 @@ function applyBlock(dto: DashboardLaunchBlockDTO, isInitial: boolean): void {
   rejoin.value = dto.rejoin ?? null;
   if (isInitial) {
     selectedProfileId.value = dto.selectedProfileId ?? "";
+    return;
+  }
+  const exists = profiles.value.some((p) => p.id === selectedProfileId.value);
+  if (!exists) {
+    selectedProfileId.value = dto.selectedProfileId ?? "";
   }
 }
 

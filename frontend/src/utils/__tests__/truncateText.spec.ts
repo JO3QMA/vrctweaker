@@ -13,6 +13,11 @@ describe("truncateText", () => {
   it("appends ellipsis when text exceeds max length", () => {
     expect(truncateText("abcdefghijklmnop", 12)).toBe("abcdefghi...");
   });
+
+  it("returns empty string for non-positive maxLength", () => {
+    expect(truncateText("hello", 0)).toBe("");
+    expect(truncateText("hello", -1)).toBe("");
+  });
 });
 
 describe("truncateRejoinWorldName", () => {

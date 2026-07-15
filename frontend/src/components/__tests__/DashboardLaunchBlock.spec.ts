@@ -293,6 +293,31 @@ describe("DashboardLaunchBlock", () => {
     vi.useRealTimers();
   });
 
+  it("falls back selected profile when it was removed on refresh", async () => {
+    vi.useFakeTimers();
+    mockGetDashboardLaunchBlock
+      .mockResolvedValueOnce({
+        profiles: [defaultLaunchProfile, otherLaunchProfile],
+        selectedProfileId: "p-default",
+        rejoin: null,
+      })
+      .mockResolvedValueOnce({
+        profiles: [defaultLaunchProfile],
+        selectedProfileId: "p-default",
+        rejoin: null,
+      });
+    const wrapper = mountBlock();
+    await flushPromises();
+    const select = wrapper.findComponent(ElSelect);
+    select.vm.$emit("update:modelValue", "p-other");
+    await flushPromises();
+    triggerEncountersChanged();
+    await vi.advanceTimersByTimeAsync(400);
+    await flushPromises();
+    expect(select.props("modelValue")).toBe("p-default");
+    vi.useRealTimers();
+  });
+
   it("shows error on quick launch failure", async () => {
     mockGetDashboardLaunchBlock.mockResolvedValue({
       profiles: [defaultLaunchProfile],
