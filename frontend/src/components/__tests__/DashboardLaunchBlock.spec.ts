@@ -103,6 +103,22 @@ describe("DashboardLaunchBlock", () => {
     );
   });
 
+  it("truncates long world name on rejoin button", async () => {
+    mockGetDashboardLaunchBlock.mockResolvedValue({
+      profiles: [defaultLaunchProfile],
+      selectedProfileId: "p-default",
+      rejoin: {
+        playSessionId: "ps-1",
+        worldDisplayName: "とても長いワールド名のサンプルです",
+      },
+    });
+    const wrapper = mountBlock();
+    await flushPromises();
+    expect(wrapper.find('[data-testid="launch-block-rejoin-btn"]').text()).toBe(
+      "とても長いワールド... に参加",
+    );
+  });
+
   it("shows launch block without rejoin button", async () => {
     mockGetDashboardLaunchBlock.mockResolvedValue({
       profiles: [defaultLaunchProfile],

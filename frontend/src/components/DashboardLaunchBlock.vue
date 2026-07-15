@@ -92,6 +92,7 @@ import {
 } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
 import { formatError } from "../utils/formatError";
+import { truncateRejoinWorldName } from "../utils/truncateText";
 
 const ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS = 400;
 
@@ -114,7 +115,9 @@ const isEmpty = computed(() => profiles.value.length === 0);
 const rejoinButtonLabel = computed(() => {
   const name = rejoin.value?.worldDisplayName?.trim();
   if (name) {
-    return t("dashboard.launchBlock.rejoinWithWorld", { name });
+    return t("dashboard.launchBlock.rejoinWithWorld", {
+      name: truncateRejoinWorldName(name),
+    });
   }
   return t("dashboard.launchBlock.rejoinGeneric");
 });
@@ -245,6 +248,9 @@ onUnmounted(() => {
 .launch-block-rejoin-btn {
   flex: 1 1 50%;
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .launch-block-actions--solo .launch-block-quick-btn {
