@@ -109,6 +109,7 @@ let unsubscribeEncountersChanged: (() => void) | undefined;
 let generation = 0;
 let inFlight = false;
 let pendingRefresh = false;
+let hasLoadedOnce = false;
 
 const isEmpty = computed(() => profiles.value.length === 0);
 
@@ -141,13 +142,16 @@ async function load(): Promise<void> {
     if (gen !== generation) return;
     loadError.value = false;
     applyBlock(dto);
+    hasLoadedOnce = true;
   } catch (e) {
     if (gen !== generation) return;
     console.error("DashboardLaunchBlock load failed:", e);
-    loadError.value = true;
-    profiles.value = [];
-    selectedProfileId.value = "";
-    rejoin.value = null;
+    if (!hasLoadedOnce) {
+      loadError.value = true;
+      profiles.value = [];
+      selectedProfileId.value = "";
+      rejoin.value = null;
+    }
   } finally {
     inFlight = false;
     if (gen === generation) {
@@ -229,9 +233,10 @@ onUnmounted(() => {
 }
 
 .launch-block-controls {
+  --launch-block-gap: 0.5rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--launch-block-gap);
 }
 
 .launch-block-profile {
@@ -240,8 +245,12 @@ onUnmounted(() => {
 
 .launch-block-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--launch-block-gap);
   width: 100%;
+}
+
+.launch-block-actions :deep(.el-button) {
+  margin: 0;
 }
 
 .launch-block-quick-btn,

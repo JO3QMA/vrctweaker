@@ -4,7 +4,7 @@ export function truncateText(text: string, maxLength: number): string {
   return `${text.slice(0, maxLength - 3)}...`;
 }
 
-/** ponytail: fixed char count for 50% button width; not measured at runtime */
+/** Fixed char count for 50% button width; not measured at runtime */
 export const REJOIN_WORLD_NAME_MAX_LEN = 12;
 
 export function truncateRejoinWorldName(name: string): string {

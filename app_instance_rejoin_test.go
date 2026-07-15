@@ -59,14 +59,17 @@ func TestGetDashboardLaunchBlock_listProfilesError(t *testing.T) {
 	}
 }
 
-func TestGetDashboardLaunchBlock_returnsErrorOnRejoinInfraFailure(t *testing.T) {
+func TestGetDashboardLaunchBlock_continuesWithoutRejoinOnRejoinInfraFailure(t *testing.T) {
 	a := &App{ctx: context.Background()}
 	a.activity = usecase.NewActivityUseCase(errRejoinPlayRepo{}, nil, &memSettingsRepo{m: map[string]string{}}, nil, nil)
 	a.launcher = usecase.NewLauncherUseCase(&memLaunchRepo{profiles: []*launcher.LaunchProfile{{ID: "p1", Name: "P"}}})
 	a.settings = usecase.NewSettingsUseCase(&memSettingsRepo{m: map[string]string{}})
 	got, err := a.GetDashboardLaunchBlock()
-	if err == nil || got != nil {
+	if err != nil || got == nil {
 		t.Fatalf("got=%v err=%v", got, err)
+	}
+	if got.Rejoin != nil || got.SelectedProfileID != "p1" || len(got.Profiles) != 1 {
+		t.Fatalf("got=%+v", got)
 	}
 }
 

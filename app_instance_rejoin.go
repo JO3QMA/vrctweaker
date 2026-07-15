@@ -52,9 +52,8 @@ func (a *App) GetDashboardLaunchBlock() (*DashboardLaunchBlockDTO, error) {
 	var rejoin *DashboardRejoinDTO
 	target, err := a.activity.GetRejoinTarget(a.ctx)
 	if err != nil {
-		return nil, fmt.Errorf("dashboard launch block: get rejoin target: %w", err)
-	}
-	if target != nil {
+		log.Printf("dashboard launch block: get rejoin target: %v", err)
+	} else if target != nil {
 		rejoin = &DashboardRejoinDTO{
 			PlaySessionID:    target.PlaySessionID,
 			WorldDisplayName: target.WorldDisplayName,

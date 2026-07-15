@@ -154,6 +154,44 @@ describe("DashboardLaunchBlock", () => {
     ).toBe(true);
   });
 
+  it("keeps existing data when refresh fails after initial load", async () => {
+    vi.useFakeTimers();
+    mockGetDashboardLaunchBlock.mockResolvedValueOnce({
+      profiles: [defaultLaunchProfile],
+      selectedProfileId: "p-default",
+      rejoin: {
+        playSessionId: "ps-1",
+        worldDisplayName: "Test World",
+      },
+    });
+    mockGetDashboardLaunchBlock.mockRejectedValueOnce(new Error("db down"));
+    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
+      close: () => {},
+    }));
+    const consoleSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    const wrapper = mountBlock();
+    await flushPromises();
+    triggerEncountersChanged();
+    await vi.advanceTimersByTimeAsync(400);
+    await flushPromises();
+    expect(
+      wrapper.find('[data-testid="launch-block-load-error"]').exists(),
+    ).toBe(false);
+    expect(wrapper.find('[data-testid="launch-block-quick-btn"]').text()).toBe(
+      "VRChat を起動",
+    );
+    expect(wrapper.find('[data-testid="launch-block-rejoin-btn"]').text()).toBe(
+      "Test World に参加",
+    );
+    expect(errorSpy).not.toHaveBeenCalled();
+    expect(consoleSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+    consoleSpy.mockRestore();
+    vi.useRealTimers();
+  });
+
   it("shows inline error on load failure without toast", async () => {
     mockGetDashboardLaunchBlock.mockRejectedValueOnce(new Error("db down"));
     const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
