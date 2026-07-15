@@ -71,6 +71,7 @@
     "launchBlock": {
       "loading": "실행 블록을 불러오는 중…",
       "loadError": "실행 블록을 불러오지 못했습니다.",
+      "refreshError": "실행 블록을 새로고침하지 못했습니다.",
       "quickLaunch": "VRChat 실행",
       "profilePlaceholder": "실행 프로필",
       "rejoinWithWorld": "{name}에 참가",

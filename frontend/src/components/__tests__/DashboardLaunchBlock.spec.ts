@@ -168,6 +168,11 @@ describe("DashboardLaunchBlock", () => {
     const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
       close: () => {},
     }));
+    const warningSpy = vi
+      .spyOn(ElMessage, "warning")
+      .mockImplementation(() => ({
+        close: () => {},
+      }));
     const consoleSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
@@ -186,10 +191,30 @@ describe("DashboardLaunchBlock", () => {
       "Test World に参加",
     );
     expect(errorSpy).not.toHaveBeenCalled();
+    expect(warningSpy).toHaveBeenCalledWith(
+      "起動ブロックを更新できませんでした。",
+    );
     expect(consoleSpy).toHaveBeenCalled();
     errorSpy.mockRestore();
+    warningSpy.mockRestore();
     consoleSpy.mockRestore();
     vi.useRealTimers();
+  });
+
+  it("disables rejoin button when playSessionId is empty", async () => {
+    mockGetDashboardLaunchBlock.mockResolvedValue({
+      profiles: [defaultLaunchProfile],
+      selectedProfileId: "p-default",
+      rejoin: { playSessionId: "", worldDisplayName: "Test World" },
+    });
+    const wrapper = mountBlock();
+    await flushPromises();
+    expect(
+      (
+        wrapper.find('[data-testid="launch-block-rejoin-btn"]')
+          .element as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
   });
 
   it("shows inline error on load failure without toast", async () => {

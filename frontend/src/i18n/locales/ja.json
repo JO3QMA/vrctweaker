@@ -71,6 +71,7 @@
     "launchBlock": {
       "loading": "起動ブロックを読み込み中…",
       "loadError": "起動ブロックを読み込めませんでした。",
+      "refreshError": "起動ブロックを更新できませんでした。",
       "quickLaunch": "VRChat を起動",
       "profilePlaceholder": "起動プロファイル",
       "rejoinWithWorld": "{name} に参加",

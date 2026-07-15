@@ -71,6 +71,7 @@
     "launchBlock": {
       "loading": "Loading launch block…",
       "loadError": "Could not load launch block.",
+      "refreshError": "Could not refresh launch block.",
       "quickLaunch": "Launch VRChat",
       "profilePlaceholder": "Launch profile",
       "rejoinWithWorld": "Join {name}",

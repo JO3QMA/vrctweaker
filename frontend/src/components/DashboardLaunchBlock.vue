@@ -69,7 +69,9 @@
             type="primary"
             class="launch-block-rejoin-btn"
             data-testid="launch-block-rejoin-btn"
-            :disabled="isEmpty || !selectedProfileId"
+            :disabled="
+              isEmpty || !selectedProfileId || !rejoin.playSessionId?.trim()
+            "
             @click="launchRejoin"
           >
             {{ rejoinButtonLabel }}
@@ -151,6 +153,8 @@ async function load(): Promise<void> {
       profiles.value = [];
       selectedProfileId.value = "";
       rejoin.value = null;
+    } else {
+      ElMessage.warning(t("dashboard.launchBlock.refreshError"));
     }
   } finally {
     inFlight = false;

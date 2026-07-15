@@ -71,6 +71,7 @@
     "launchBlock": {
       "loading": "正在加载启动区块…",
       "loadError": "无法加载启动区块。",
+      "refreshError": "无法更新启动区块。",
       "quickLaunch": "启动 VRChat",
       "profilePlaceholder": "启动配置",
       "rejoinWithWorld": "加入 {name}",
