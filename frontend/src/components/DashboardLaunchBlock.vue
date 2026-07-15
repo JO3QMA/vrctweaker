@@ -57,7 +57,6 @@
         >
           <el-button
             type="primary"
-            size="large"
             class="launch-block-quick-btn"
             data-testid="launch-block-quick-btn"
             :disabled="isEmpty || !selectedProfileId"
@@ -68,7 +67,6 @@
           <el-button
             v-if="rejoin"
             type="primary"
-            size="large"
             class="launch-block-rejoin-btn"
             data-testid="launch-block-rejoin-btn"
             :disabled="isEmpty || !selectedProfileId"
@@ -249,8 +247,6 @@ onUnmounted(() => {
 .launch-block-rejoin-btn {
   flex: 1 1 50%;
   min-width: 0;
-  font-size: 1.05rem !important;
-  height: 52px !important;
 }
 
 .launch-block-actions--solo .launch-block-quick-btn {
