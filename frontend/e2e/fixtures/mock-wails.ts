@@ -202,7 +202,15 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         },
         LaunchVRChat: () => Promise.resolve(),
         LaunchVRChatWithArgs: (_args, _profileId) => Promise.resolve(),
-        GetInstanceRejoinSection: () => Promise.resolve(null),
+        GetDashboardLaunchBlock: () =>
+          Promise.resolve({
+            profiles: launchProfiles,
+            selectedProfileId:
+              launchProfiles.find(function(x) { return x.isDefault; })?.id ||
+              launchProfiles[0]?.id ||
+              "",
+            rejoin: null,
+          }),
         GetServerStatus: () => Promise.resolve(serverStatus),
         InstanceRejoin: (_profileId, _playSessionId) => Promise.resolve(),
         ParseLaunchArgsForGUI: () =>

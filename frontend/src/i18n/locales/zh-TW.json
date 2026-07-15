@@ -54,8 +54,6 @@
     "secondLong": "秒"
   },
   "dashboard": {
-    "launch": "啟動 VRChat",
-    "launchWithProfile": "啟動 VRChat（{name}）",
     "quickStatus": "快速狀態",
     "statusActive": "線上",
     "statusJoinMe": "歡迎加入",
@@ -70,11 +68,18 @@
     "templateAskWelcome": "加入前請先聯絡",
     "statusUpdateSuccess": "狀態已更新",
     "statusUpdateError": "狀態更新失敗",
-    "instanceRejoinProfilePlaceholder": "啟動設定檔",
-    "instanceRejoinWithWorld": "加入 {name}",
-    "instanceRejoinGeneric": "加入上次實例",
-    "instanceRejoinError": "重新加入實例啟動失敗",
-    "instanceRejoinLoadError": "無法載入重新加入區塊",
+    "launchBlock": {
+      "loading": "正在載入啟動區塊…",
+      "loadError": "無法載入啟動區塊。",
+      "quickLaunch": "啟動 VRChat",
+      "profilePlaceholder": "啟動設定檔",
+      "rejoinWithWorld": "加入 {name}",
+      "rejoinGeneric": "加入上次實例",
+      "launchError": "啟動 VRChat 失敗",
+      "rejoinError": "重新加入實例啟動失敗",
+      "emptyState": "尚無啟動設定檔。",
+      "goToLauncher": "在 Launcher 中建立"
+    },
     "serverStatus": {
       "title": "VRChat 伺服器狀態",
       "summaryAllOperational": "所有系統運作正常",

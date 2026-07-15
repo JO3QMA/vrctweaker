@@ -54,8 +54,6 @@
     "secondLong": "초"
   },
   "dashboard": {
-    "launch": "VRChat 실행",
-    "launchWithProfile": "VRChat 실행 ({name})",
     "quickStatus": "빠른 상태",
     "statusActive": "온라인",
     "statusJoinMe": "누구나 참여",
@@ -70,11 +68,18 @@
     "templateAskWelcome": "참가 전 문의",
     "statusUpdateSuccess": "상태를 업데이트했습니다",
     "statusUpdateError": "상태 업데이트에 실패했습니다",
-    "instanceRejoinProfilePlaceholder": "실행 프로필",
-    "instanceRejoinWithWorld": "{name}에 참가",
-    "instanceRejoinGeneric": "마지막 인스턴스에 참가",
-    "instanceRejoinError": "인스턴스 재참가 실행에 실패했습니다",
-    "instanceRejoinLoadError": "재참가 섹션을 불러오지 못했습니다",
+    "launchBlock": {
+      "loading": "실행 블록을 불러오는 중…",
+      "loadError": "실행 블록을 불러오지 못했습니다.",
+      "quickLaunch": "VRChat 실행",
+      "profilePlaceholder": "실행 프로필",
+      "rejoinWithWorld": "{name}에 참가",
+      "rejoinGeneric": "마지막 인스턴스에 참가",
+      "launchError": "VRChat 실행에 실패했습니다",
+      "rejoinError": "인스턴스 재참가 실행에 실패했습니다",
+      "emptyState": "실행 프로필이 없습니다.",
+      "goToLauncher": "Launcher에서 만들기"
+    },
     "serverStatus": {
       "title": "VRChat 서버 상태",
       "summaryAllOperational": "모든 시스템이 정상입니다",

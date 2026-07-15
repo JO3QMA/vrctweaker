@@ -45,12 +45,17 @@ func toLaunchProfile(d LaunchProfileDTO) *launcher.LaunchProfile {
 	return p
 }
 
-// InstanceRejoinSectionDTO is the Dashboard Instance rejoin section (no instance key in JSON).
-type InstanceRejoinSectionDTO struct {
-	PlaySessionID     string             `json:"playSessionId"`
-	WorldDisplayName  string             `json:"worldDisplayName"`
-	Profiles          []LaunchProfileDTO `json:"profiles"`
-	SelectedProfileID string             `json:"selectedProfileId"`
+// DashboardRejoinDTO is the Instance rejoin button state (no instance key in JSON).
+type DashboardRejoinDTO struct {
+	PlaySessionID    string `json:"playSessionId"`
+	WorldDisplayName string `json:"worldDisplayName"`
+}
+
+// DashboardLaunchBlockDTO is the Dashboard launch block (shared profile selector + launch buttons).
+type DashboardLaunchBlockDTO struct {
+	Profiles          []LaunchProfileDTO  `json:"profiles"`
+	SelectedProfileID string              `json:"selectedProfileId"`
+	Rejoin            *DashboardRejoinDTO `json:"rejoin"`
 }
 
 // ServerStatusDTO is the Dashboard Server status section (status.vrchat.com).

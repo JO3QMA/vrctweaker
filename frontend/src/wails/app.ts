@@ -14,7 +14,8 @@ import type * as WailsApp from "../../wailsjs/go/main/App";
 type WailsDTO<T> = Omit<T, "convertValues">;
 
 export type LaunchProfileDTO = WailsDTO<main.LaunchProfileDTO>;
-export type InstanceRejoinSectionDTO = WailsDTO<main.InstanceRejoinSectionDTO>;
+export type DashboardRejoinDTO = WailsDTO<main.DashboardRejoinDTO>;
+export type DashboardLaunchBlockDTO = WailsDTO<main.DashboardLaunchBlockDTO>;
 export type ServerStatusDTO = WailsDTO<main.ServerStatusDTO>;
 export type ServerStatusSummaryDTO = WailsDTO<main.ServerStatusSummaryDTO>;
 export type ServerStatusComponentDTO = WailsDTO<main.ServerStatusComponentDTO>;
@@ -42,6 +43,14 @@ function emptyServerStatus(): ServerStatusDTO {
     components: [],
     incidents: [],
     maintenances: [],
+  };
+}
+
+function emptyDashboardLaunchBlock(): DashboardLaunchBlockDTO {
+  return {
+    profiles: [],
+    selectedProfileId: "",
+    rejoin: undefined,
   };
 }
 
@@ -247,8 +256,11 @@ export const App = {
       undefined,
     );
   },
-  async getInstanceRejoinSection(): Promise<InstanceRejoinSectionDTO | null> {
-    return callApp((a) => a.GetInstanceRejoinSection(), null);
+  async getDashboardLaunchBlock(): Promise<DashboardLaunchBlockDTO> {
+    return callApp(
+      (a) => a.GetDashboardLaunchBlock(),
+      emptyDashboardLaunchBlock(),
+    );
   },
   async getServerStatus(): Promise<ServerStatusDTO> {
     return callApp((a) => a.GetServerStatus(), emptyServerStatus());

@@ -54,8 +54,6 @@
     "secondLong": "seconds"
   },
   "dashboard": {
-    "launch": "Launch VRChat",
-    "launchWithProfile": "Launch VRChat ({name})",
     "quickStatus": "Quick status",
     "statusActive": "Online",
     "statusJoinMe": "Join Me",
@@ -70,11 +68,18 @@
     "templateAskWelcome": "Ask before joining",
     "statusUpdateSuccess": "Status updated",
     "statusUpdateError": "Failed to update status",
-    "instanceRejoinProfilePlaceholder": "Launch profile",
-    "instanceRejoinWithWorld": "Join {name}",
-    "instanceRejoinGeneric": "Rejoin last instance",
-    "instanceRejoinError": "Failed to launch rejoin to instance",
-    "instanceRejoinLoadError": "Failed to load rejoin section",
+    "launchBlock": {
+      "loading": "Loading launch block…",
+      "loadError": "Could not load launch block.",
+      "quickLaunch": "Launch VRChat",
+      "profilePlaceholder": "Launch profile",
+      "rejoinWithWorld": "Join {name}",
+      "rejoinGeneric": "Rejoin last instance",
+      "launchError": "Failed to launch VRChat",
+      "rejoinError": "Failed to launch rejoin to instance",
+      "emptyState": "No launch profiles yet.",
+      "goToLauncher": "Create in Launcher"
+    },
     "serverStatus": {
       "title": "VRChat server status",
       "summaryAllOperational": "All systems operational",

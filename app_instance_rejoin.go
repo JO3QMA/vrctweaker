@@ -37,32 +37,33 @@ func (a *App) setLastLaunchProfileOnSuccess(profileID string, launchErr error) e
 	return nil
 }
 
-// GetInstanceRejoinSection returns Dashboard Instance rejoin UI state, or nil when the section is hidden.
-func (a *App) GetInstanceRejoinSection() (*InstanceRejoinSectionDTO, error) {
-	target, err := a.activity.GetRejoinTarget(a.ctx)
-	if err != nil {
-		return nil, fmt.Errorf("instance rejoin: get target: %w", err)
-	}
-	if target == nil {
-		return nil, nil
-	}
+// GetDashboardLaunchBlock returns Dashboard launch block UI state (always shown when load succeeds).
+func (a *App) GetDashboardLaunchBlock() (*DashboardLaunchBlockDTO, error) {
 	profiles, err := a.launcher.ListProfiles(a.ctx)
 	if err != nil {
-		return nil, fmt.Errorf("instance rejoin: list profiles: %w", err)
-	}
-	if len(profiles) == 0 {
-		return nil, nil
+		return nil, fmt.Errorf("dashboard launch block: list profiles: %w", err)
 	}
 	lastID, err := a.settings.GetLastLaunchProfileID(a.ctx)
 	if err != nil {
-		return nil, fmt.Errorf("instance rejoin: get last launch profile: %w", err)
+		return nil, fmt.Errorf("dashboard launch block: get last launch profile: %w", err)
 	}
 	selectedID := usecase.ResolveInstanceRejoinProfileID(profiles, lastID)
-	return &InstanceRejoinSectionDTO{
-		PlaySessionID:     target.PlaySessionID,
-		WorldDisplayName:  target.WorldDisplayName,
+
+	var rejoin *DashboardRejoinDTO
+	target, err := a.activity.GetRejoinTarget(a.ctx)
+	if err != nil {
+		return nil, fmt.Errorf("dashboard launch block: get rejoin target: %w", err)
+	}
+	if target != nil {
+		rejoin = &DashboardRejoinDTO{
+			PlaySessionID:    target.PlaySessionID,
+			WorldDisplayName: target.WorldDisplayName,
+		}
+	}
+	return &DashboardLaunchBlockDTO{
 		Profiles:          toLaunchProfileDTOs(profiles),
 		SelectedProfileID: selectedID,
+		Rejoin:            rejoin,
 	}, nil
 }
 
