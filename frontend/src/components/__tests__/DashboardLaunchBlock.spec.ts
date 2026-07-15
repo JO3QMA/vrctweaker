@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createRouter, createMemoryHistory } from "vue-router";
-import { ElMessage } from "element-plus";
+import { ElMessage, ElSelect } from "element-plus";
 import DashboardLaunchBlock from "../DashboardLaunchBlock.vue";
 import type { LaunchProfileDTO } from "../../wails/app";
 
@@ -49,6 +49,13 @@ const defaultLaunchProfile: LaunchProfileDTO = {
   name: "Default",
   arguments: "",
   isDefault: true,
+};
+
+const otherLaunchProfile: LaunchProfileDTO = {
+  id: "p-other",
+  name: "Other",
+  arguments: "",
+  isDefault: false,
 };
 
 const router = createRouter({
@@ -237,6 +244,53 @@ describe("DashboardLaunchBlock", () => {
     );
     errorSpy.mockRestore();
     consoleSpy.mockRestore();
+  });
+
+  it("ignores duplicate quick launch clicks while launching", async () => {
+    let resolveLaunch: () => void = () => {};
+    mockGetDashboardLaunchBlock.mockResolvedValue({
+      profiles: [defaultLaunchProfile],
+      selectedProfileId: "p-default",
+      rejoin: null,
+    });
+    mockLaunchVRChat.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        resolveLaunch = resolve;
+      }),
+    );
+    const wrapper = mountBlock();
+    await flushPromises();
+    const quickBtn = wrapper.find('[data-testid="launch-block-quick-btn"]');
+    await quickBtn.trigger("click");
+    await quickBtn.trigger("click");
+    expect(mockLaunchVRChat).toHaveBeenCalledTimes(1);
+    resolveLaunch();
+    await flushPromises();
+  });
+
+  it("keeps user-selected profile across refresh", async () => {
+    vi.useFakeTimers();
+    mockGetDashboardLaunchBlock
+      .mockResolvedValueOnce({
+        profiles: [defaultLaunchProfile, otherLaunchProfile],
+        selectedProfileId: "p-default",
+        rejoin: null,
+      })
+      .mockResolvedValueOnce({
+        profiles: [defaultLaunchProfile, otherLaunchProfile],
+        selectedProfileId: "p-default",
+        rejoin: null,
+      });
+    const wrapper = mountBlock();
+    await flushPromises();
+    const select = wrapper.findComponent(ElSelect);
+    select.vm.$emit("update:modelValue", "p-other");
+    await flushPromises();
+    triggerEncountersChanged();
+    await vi.advanceTimersByTimeAsync(400);
+    await flushPromises();
+    expect(select.props("modelValue")).toBe("p-other");
+    vi.useRealTimers();
   });
 
   it("shows error on quick launch failure", async () => {

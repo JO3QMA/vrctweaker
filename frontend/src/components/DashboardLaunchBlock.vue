@@ -59,7 +59,8 @@
             type="primary"
             class="launch-block-quick-btn"
             data-testid="launch-block-quick-btn"
-            :disabled="isEmpty || !selectedProfileId"
+            :disabled="isEmpty || !selectedProfileId || launching"
+            :loading="launching"
             @click="launchQuick"
           >
             {{ t("dashboard.launchBlock.quickLaunch") }}
@@ -70,8 +71,12 @@
             class="launch-block-rejoin-btn"
             data-testid="launch-block-rejoin-btn"
             :disabled="
-              isEmpty || !selectedProfileId || !rejoin.playSessionId?.trim()
+              isEmpty ||
+              !selectedProfileId ||
+              !rejoin.playSessionId?.trim() ||
+              launching
             "
+            :loading="launching"
             @click="launchRejoin"
           >
             {{ rejoinButtonLabel }}
@@ -102,6 +107,7 @@ const { t } = useI18n();
 
 const loading = ref(true);
 const loadError = ref(false);
+const launching = ref(false);
 const profiles = ref<LaunchProfileDTO[]>([]);
 const selectedProfileId = ref("");
 const rejoin = ref<DashboardRejoinDTO | null>(null);
@@ -125,10 +131,12 @@ const rejoinButtonLabel = computed(() => {
   return t("dashboard.launchBlock.rejoinGeneric");
 });
 
-function applyBlock(dto: DashboardLaunchBlockDTO): void {
+function applyBlock(dto: DashboardLaunchBlockDTO, isInitial: boolean): void {
   profiles.value = dto.profiles ?? [];
-  selectedProfileId.value = dto.selectedProfileId ?? "";
   rejoin.value = dto.rejoin ?? null;
+  if (isInitial) {
+    selectedProfileId.value = dto.selectedProfileId ?? "";
+  }
 }
 
 async function load(): Promise<void> {
@@ -143,7 +151,7 @@ async function load(): Promise<void> {
     const dto = await App.getDashboardLaunchBlock();
     if (gen !== generation) return;
     loadError.value = false;
-    applyBlock(dto);
+    applyBlock(dto, !hasLoadedOnce);
     hasLoadedOnce = true;
   } catch (e) {
     if (gen !== generation) return;
@@ -179,22 +187,28 @@ function scheduleRefresh(): void {
 }
 
 async function launchQuick(): Promise<void> {
-  if (!selectedProfileId.value) return;
+  if (!selectedProfileId.value || launching.value) return;
+  launching.value = true;
   try {
     await App.launchVRChat(selectedProfileId.value);
   } catch (e) {
     ElMessage.error(formatError(e, t("dashboard.launchBlock.launchError")));
+  } finally {
+    launching.value = false;
   }
 }
 
 async function launchRejoin(): Promise<void> {
   const playSessionId = rejoin.value?.playSessionId?.trim();
-  if (!selectedProfileId.value || !playSessionId) return;
+  if (!selectedProfileId.value || !playSessionId || launching.value) return;
+  launching.value = true;
   try {
     await App.instanceRejoin(selectedProfileId.value, playSessionId);
   } catch (e) {
     ElMessage.error(formatError(e, t("dashboard.launchBlock.rejoinError")));
     void load();
+  } finally {
+    launching.value = false;
   }
 }
 
