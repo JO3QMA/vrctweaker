@@ -76,6 +76,82 @@ function emptyYTDLPMaintainStatus(): YTDLPMaintainStatusDTO {
 /** -999 = omit for process/main thread priority */
 export const PRIORITY_OMIT = -999;
 
+const EMPTY_LAUNCH_ARGS: LaunchArgsParsedDTO = {
+  noVr: false,
+  screenMode: "",
+  screenWidth: 0,
+  screenHeight: 0,
+  fps: 90,
+  skipRegistry: false,
+  processPriority: PRIORITY_OMIT,
+  mainThreadPriority: PRIORITY_OMIT,
+  monitor: 0,
+  profile: -1,
+  enableDebugGui: false,
+  enableSDKLogLevels: false,
+  enableUdonDebugLogging: false,
+  midi: "",
+  watchWorlds: false,
+  watchAvatars: false,
+  ignoreTrackers: "",
+  videoDecoding: "",
+  disableAMDStutterWorkaround: false,
+  osc: "",
+  affinity: "",
+  enforceWorldServerChecks: false,
+  custom: "",
+};
+
+const EMPTY_PATH_SETTINGS: PathSettingsDTO = {
+  vrchatPathWindows: "",
+  steamPathLinux: "",
+  outputLogPath: "",
+};
+
+const EMPTY_USER_CACHE: UserCacheDTO = {
+  vrcUserId: "",
+  displayName: "",
+  status: "",
+  isFavorite: false,
+  lastUpdated: "",
+};
+
+const EMPTY_VRCHAT_CURRENT_USER: VRChatCurrentUserDTO = {
+  id: "",
+  displayName: "",
+  username: "",
+  status: "",
+  statusDescription: "",
+  state: "",
+  currentAvatarThumbnailImageUrl: "",
+  userIcon: "",
+  profilePicOverrideThumbnail: "",
+};
+
+const EMPTY_ACTIVITY_STATS: ActivityStatsDTO = {
+  dailyPlaySeconds: [],
+  topWorlds: [],
+};
+
+const EMPTY_VRCHAT_CONFIG: VRChatConfigDTO = {
+  cameraResWidth: 0,
+  cameraResHeight: 0,
+  screenshotResWidth: 0,
+  screenshotResHeight: 0,
+  pictureOutputFolder: "",
+  pictureOutputSplitByDate: undefined,
+  fpvSteadycamFov: 0,
+  cacheDirectory: "",
+  cacheSize: 0,
+  cacheExpiryDelay: 0,
+  disableRichPresence: undefined,
+};
+
+const LOGIN_UNAVAILABLE: LoginResultDTO = {
+  ok: false,
+  error: "App not available",
+};
+
 /** Payload for Wails event gallery:scan-progress (usecase.ScanProgress). */
 export interface ScanProgressPayload {
   phase: string;
@@ -237,390 +313,259 @@ export async function callApp<T>(
   return fn(app);
 }
 
+/** Maps camelCase App API to a Wails binding with a static fallback. */
+function bindGo<TArgs extends unknown[], TResult>(
+  invoke: (app: AppBindings, ...args: TArgs) => Promise<TResult>,
+  fallback: TResult,
+): (...args: TArgs) => Promise<TResult> {
+  return (...args) => callApp((a) => invoke(a, ...args), fallback);
+}
+
+async function nullableStringDialog(
+  invoke: (app: AppBindings) => Promise<string>,
+): Promise<string | null> {
+  const result = await callApp(invoke, "");
+  return result && result !== "" ? result : null;
+}
+
+function emptyUserProfileNavigation(
+  vrcUserID: string,
+): UserProfileNavigationDTO {
+  return {
+    user: { ...EMPTY_USER_CACHE, vrcUserId: vrcUserID },
+    openInFriendsView: false,
+    openInSelfProfile: false,
+  };
+}
+
 export const App = {
-  async greet(name: string): Promise<string> {
-    return callApp((a) => a.Greet(name), `Hello ${name}, Welcome!`);
-  },
-  async launchProfiles(): Promise<LaunchProfileDTO[]> {
-    return callApp((a) => a.LaunchProfiles(), []);
-  },
-  async launchVRChat(profileID: string): Promise<void> {
-    return callApp((a) => a.LaunchVRChat(profileID), undefined);
-  },
-  async launchVRChatWithArgs(
-    args: string,
-    lastLaunchProfileID = "",
-  ): Promise<void> {
-    return callApp(
-      (a) => a.LaunchVRChatWithArgs(args, lastLaunchProfileID),
-      undefined,
-    );
-  },
-  async getDashboardLaunchBlock(): Promise<DashboardLaunchBlockDTO> {
-    return callApp(
-      (a) => a.GetDashboardLaunchBlock(),
-      emptyDashboardLaunchBlock(),
-    );
-  },
-  async getServerStatus(): Promise<ServerStatusDTO> {
-    return callApp((a) => a.GetServerStatus(), emptyServerStatus());
-  },
-  async instanceRejoin(
-    profileID: string,
-    playSessionID: string,
-  ): Promise<void> {
-    return callApp(
-      (a) => a.InstanceRejoin(profileID, playSessionID),
-      undefined,
-    );
-  },
-  async parseLaunchArgsForGUI(args: string): Promise<LaunchArgsParsedDTO> {
-    return callApp((a) => a.ParseLaunchArgsForGUI(args), {
-      noVr: false,
-      screenMode: "",
-      screenWidth: 0,
-      screenHeight: 0,
-      fps: 90,
-      skipRegistry: false,
-      processPriority: PRIORITY_OMIT,
-      mainThreadPriority: PRIORITY_OMIT,
-      monitor: 0,
-      profile: -1,
-      enableDebugGui: false,
-      enableSDKLogLevels: false,
-      enableUdonDebugLogging: false,
-      midi: "",
-      watchWorlds: false,
-      watchAvatars: false,
-      ignoreTrackers: "",
-      videoDecoding: "",
-      disableAMDStutterWorkaround: false,
-      osc: "",
-      affinity: "",
-      enforceWorldServerChecks: false,
-      custom: "",
-    });
-  },
-  async mergeLaunchArgsForGUI(dto: LaunchArgsParsedDTO): Promise<string> {
-    return callApp((a) => a.MergeLaunchArgsForGUI(dto), "");
-  },
-  async joinWorld(worldId: string): Promise<void> {
-    return callApp((a) => a.JoinWorld(worldId), undefined);
-  },
-  async joinWorldFromScreenshot(screenshotId: string): Promise<void> {
-    return callApp((a) => a.JoinWorldFromScreenshot(screenshotId), undefined);
-  },
-  async saveLaunchProfile(p: LaunchProfileDTO): Promise<void> {
-    return callApp((a) => a.SaveLaunchProfile(p), undefined);
-  },
-  async deleteLaunchProfile(id: string): Promise<void> {
-    return callApp((a) => a.DeleteLaunchProfile(id), undefined);
-  },
-  async getLogRetentionDays(): Promise<number> {
-    return callApp((a) => a.GetLogRetentionDays(), 30);
-  },
-  async setLogRetentionDays(days: number): Promise<void> {
-    return callApp((a) => a.SetLogRetentionDays(days), undefined);
-  },
-  async getLanguage(): Promise<string> {
-    return callApp((a) => a.GetLanguage(), "");
-  },
-  async setLanguage(lang: string): Promise<void> {
-    return callApp((a) => a.SetLanguage(lang), undefined);
-  },
-  async getSystemLocale(): Promise<string> {
-    return callApp((a) => a.GetSystemLocale(), "en");
-  },
-  async getPathSettings(): Promise<PathSettingsDTO> {
-    return callApp((a) => a.GetPathSettings(), {
-      vrchatPathWindows: "",
-      steamPathLinux: "",
-      outputLogPath: "",
-    });
-  },
-  async setPathSettings(dto: PathSettingsDTO): Promise<void> {
-    return callApp((a) => a.SetPathSettings(dto), undefined);
-  },
-  async getSuppressSleepWhileVRChat(): Promise<boolean> {
-    return callApp((a) => a.GetSuppressSleepWhileVRChat(), false);
-  },
-  async setSuppressSleepWhileVRChat(on: boolean): Promise<void> {
-    return callApp((a) => a.SetSuppressSleepWhileVRChat(on), undefined);
-  },
-  async runtimeIsWindows(): Promise<boolean> {
-    return callApp((a) => a.RuntimeIsWindows(), false);
-  },
-  async getYTDLPMaintainStatus(): Promise<YTDLPMaintainStatusDTO> {
-    return callApp(
-      (a) => a.GetYTDLPMaintainStatus(),
-      emptyYTDLPMaintainStatus(),
-    );
-  },
-  async acknowledgeYTDLPToolsReplaceRisk(): Promise<void> {
-    return callApp((a) => a.AcknowledgeYTDLPToolsReplaceRisk(), undefined);
-  },
-  async setYTDLPToolsReplaceMaintain(on: boolean): Promise<void> {
-    return callApp((a) => a.SetYTDLPToolsReplaceMaintain(on), undefined);
-  },
-  async checkYTDLPLatestRelease(): Promise<YTDLPMaintainStatusDTO> {
-    return callApp(
-      (a) => a.CheckYTDLPLatestRelease(),
-      emptyYTDLPMaintainStatus(),
-    );
-  },
-  async updateOfficialYTDLPCache(
-    downloadURL: string,
-    latestTag: string,
-  ): Promise<YTDLPMaintainStatusDTO> {
-    return callApp(
-      (a) => a.UpdateOfficialYTDLPCache(downloadURL, latestTag),
-      emptyYTDLPMaintainStatus(),
-    );
-  },
-  async openYTDLPCacheFolder(): Promise<void> {
-    return callApp((a) => a.OpenYTDLPCacheFolder(), undefined);
-  },
-  async openYTDLPToolsFolder(): Promise<void> {
-    return callApp((a) => a.OpenYTDLPToolsFolder(), undefined);
-  },
-  async validatePath(path: string): Promise<boolean> {
-    return callApp((a) => a.ValidatePath(path), false);
-  },
-  async validateOutputLogPath(path: string): Promise<boolean> {
-    return callApp((a) => a.ValidateOutputLogPath(path), false);
-  },
-  async openVRChatLogFolder(): Promise<void> {
-    return callApp((a) => a.OpenVRChatLogFolder(), undefined);
-  },
-  async openFileDialog(
-    title: string,
-    defaultDir: string,
-    filterPattern: string,
-  ): Promise<string | null> {
-    const result = await callApp(
-      (a) => a.OpenFileDialog(title, defaultDir, filterPattern),
-      "",
-    );
-    return result && result !== "" ? result : null;
-  },
-  async openDirectoryDialog(
-    title: string,
-    defaultDir: string,
-  ): Promise<string | null> {
-    const result = await callApp(
-      (a) => a.OpenDirectoryDialog(title, defaultDir),
-      "",
-    );
-    return result && result !== "" ? result : null;
-  },
-  async screenshots(worldId?: string): Promise<ScreenshotDTO[]> {
-    return callApp((a) => a.Screenshots(worldId || ""), []);
-  },
-  async searchScreenshots(
-    filter: ScreenshotSearchDTO,
-  ): Promise<ScreenshotDTO[]> {
-    return callApp((a) => a.SearchScreenshots(filter), []);
-  },
-  async getScreenshot(id: string): Promise<ScreenshotDTO | null> {
-    return callApp((a) => a.GetScreenshot(id), null);
-  },
-  async screenshotThumbnailDataURL(id: string): Promise<string> {
-    return callApp((a) => a.ScreenshotThumbnailDataURL(id), "");
-  },
-  async openScreenshotExternally(id: string): Promise<void> {
-    return callApp((a) => a.OpenScreenshotExternally(id), undefined);
-  },
-  async revealScreenshotInFileManager(id: string): Promise<void> {
-    return callApp((a) => a.RevealScreenshotInFileManager(id), undefined);
-  },
-  async scanScreenshotDir(path: string): Promise<number> {
-    return callApp((a) => a.ScanScreenshotDir(path), 0);
-  },
-  async isGalleryScanning(): Promise<boolean> {
-    return callApp((a) => a.IsGalleryScanning(), false);
-  },
-  async reindexScreenshotDir(path: string): Promise<number> {
-    return callApp((a) => a.ReindexScreenshotDir(path), 0);
-  },
-  async friends(): Promise<UserCacheDTO[]> {
-    return callApp((a) => a.Friends(), []);
-  },
-  async resolveUserProfileNavigation(
-    vrcUserID: string,
-  ): Promise<UserProfileNavigationDTO> {
-    return callApp<UserProfileNavigationDTO>(
+  greet: (name: string) =>
+    callApp((a) => a.Greet(name), `Hello ${name}, Welcome!`),
+
+  launchProfiles: bindGo((a) => a.LaunchProfiles(), []),
+  launchVRChat: bindGo(
+    (a, profileID: string) => a.LaunchVRChat(profileID),
+    undefined,
+  ),
+  launchVRChatWithArgs: bindGo(
+    (a, args: string, lastLaunchProfileID = "") =>
+      a.LaunchVRChatWithArgs(args, lastLaunchProfileID),
+    undefined,
+  ),
+  getDashboardLaunchBlock: bindGo(
+    (a) => a.GetDashboardLaunchBlock(),
+    emptyDashboardLaunchBlock(),
+  ),
+  getServerStatus: bindGo((a) => a.GetServerStatus(), emptyServerStatus()),
+  instanceRejoin: bindGo(
+    (a, profileID: string, playSessionID: string) =>
+      a.InstanceRejoin(profileID, playSessionID),
+    undefined,
+  ),
+  parseLaunchArgsForGUI: bindGo(
+    (a, args: string) => a.ParseLaunchArgsForGUI(args),
+    EMPTY_LAUNCH_ARGS,
+  ),
+  mergeLaunchArgsForGUI: bindGo(
+    (a, dto: LaunchArgsParsedDTO) => a.MergeLaunchArgsForGUI(dto),
+    "",
+  ),
+  joinWorld: bindGo((a, worldId: string) => a.JoinWorld(worldId), undefined),
+  joinWorldFromScreenshot: bindGo(
+    (a, screenshotId: string) => a.JoinWorldFromScreenshot(screenshotId),
+    undefined,
+  ),
+  saveLaunchProfile: bindGo(
+    (a, p: LaunchProfileDTO) => a.SaveLaunchProfile(p),
+    undefined,
+  ),
+  deleteLaunchProfile: bindGo(
+    (a, id: string) => a.DeleteLaunchProfile(id),
+    undefined,
+  ),
+  getLogRetentionDays: bindGo((a) => a.GetLogRetentionDays(), 30),
+  setLogRetentionDays: bindGo(
+    (a, days: number) => a.SetLogRetentionDays(days),
+    undefined,
+  ),
+  getLanguage: bindGo((a) => a.GetLanguage(), ""),
+  setLanguage: bindGo((a, lang: string) => a.SetLanguage(lang), undefined),
+  getSystemLocale: bindGo((a) => a.GetSystemLocale(), "en"),
+  getPathSettings: bindGo((a) => a.GetPathSettings(), EMPTY_PATH_SETTINGS),
+  setPathSettings: bindGo(
+    (a, dto: PathSettingsDTO) => a.SetPathSettings(dto),
+    undefined,
+  ),
+  getSuppressSleepWhileVRChat: bindGo(
+    (a) => a.GetSuppressSleepWhileVRChat(),
+    false,
+  ),
+  setSuppressSleepWhileVRChat: bindGo(
+    (a, on: boolean) => a.SetSuppressSleepWhileVRChat(on),
+    undefined,
+  ),
+  runtimeIsWindows: bindGo((a) => a.RuntimeIsWindows(), false),
+  getYTDLPMaintainStatus: bindGo(
+    (a) => a.GetYTDLPMaintainStatus(),
+    emptyYTDLPMaintainStatus(),
+  ),
+  acknowledgeYTDLPToolsReplaceRisk: bindGo(
+    (a) => a.AcknowledgeYTDLPToolsReplaceRisk(),
+    undefined,
+  ),
+  setYTDLPToolsReplaceMaintain: bindGo(
+    (a, on: boolean) => a.SetYTDLPToolsReplaceMaintain(on),
+    undefined,
+  ),
+  checkYTDLPLatestRelease: bindGo(
+    (a) => a.CheckYTDLPLatestRelease(),
+    emptyYTDLPMaintainStatus(),
+  ),
+  updateOfficialYTDLPCache: bindGo(
+    (a, downloadURL: string, latestTag: string) =>
+      a.UpdateOfficialYTDLPCache(downloadURL, latestTag),
+    emptyYTDLPMaintainStatus(),
+  ),
+  openYTDLPCacheFolder: bindGo((a) => a.OpenYTDLPCacheFolder(), undefined),
+  openYTDLPToolsFolder: bindGo((a) => a.OpenYTDLPToolsFolder(), undefined),
+  validatePath: bindGo((a, path: string) => a.ValidatePath(path), false),
+  validateOutputLogPath: bindGo(
+    (a, path: string) => a.ValidateOutputLogPath(path),
+    false,
+  ),
+  openVRChatLogFolder: bindGo((a) => a.OpenVRChatLogFolder(), undefined),
+  openFileDialog: (title: string, defaultDir: string, filterPattern: string) =>
+    nullableStringDialog((a) =>
+      a.OpenFileDialog(title, defaultDir, filterPattern),
+    ),
+  openDirectoryDialog: (title: string, defaultDir: string) =>
+    nullableStringDialog((a) => a.OpenDirectoryDialog(title, defaultDir)),
+  screenshots: bindGo(
+    (a, worldId?: string) => a.Screenshots(worldId || ""),
+    [],
+  ),
+  searchScreenshots: bindGo(
+    (a, filter: ScreenshotSearchDTO) => a.SearchScreenshots(filter),
+    [],
+  ),
+  getScreenshot: bindGo((a, id: string) => a.GetScreenshot(id), null),
+  screenshotThumbnailDataURL: bindGo(
+    (a, id: string) => a.ScreenshotThumbnailDataURL(id),
+    "",
+  ),
+  openScreenshotExternally: bindGo(
+    (a, id: string) => a.OpenScreenshotExternally(id),
+    undefined,
+  ),
+  revealScreenshotInFileManager: bindGo(
+    (a, id: string) => a.RevealScreenshotInFileManager(id),
+    undefined,
+  ),
+  scanScreenshotDir: bindGo((a, path: string) => a.ScanScreenshotDir(path), 0),
+  isGalleryScanning: bindGo((a) => a.IsGalleryScanning(), false),
+  reindexScreenshotDir: bindGo(
+    (a, path: string) => a.ReindexScreenshotDir(path),
+    0,
+  ),
+  friends: bindGo((a) => a.Friends(), []),
+  resolveUserProfileNavigation: (vrcUserID: string) =>
+    callApp<UserProfileNavigationDTO>(
       (a) =>
         a.ResolveUserProfileNavigation(
           vrcUserID,
         ) as Promise<UserProfileNavigationDTO>,
-      {
-        user: {
-          vrcUserId: vrcUserID,
-          displayName: "",
-          status: "",
-          isFavorite: false,
-          lastUpdated: "",
-        },
-        openInFriendsView: false,
-        openInSelfProfile: false,
-      },
-    );
-  },
-  async getSelfProfile(forceRefresh?: boolean): Promise<UserCacheDTO> {
-    return callApp((a) => a.GetSelfProfile(forceRefresh ?? false), {
-      vrcUserId: "",
-      displayName: "",
-      status: "",
-      isFavorite: false,
-      lastUpdated: "",
-    });
-  },
-  async setFavorite(vrcUserId: string, favorite: boolean): Promise<void> {
-    return callApp((a) => a.SetFavorite(vrcUserId, favorite), undefined);
-  },
-  async setStatus(status: string): Promise<void> {
-    return callApp((a) => a.SetStatus(status), undefined);
-  },
-  async setStatusDescription(description: string): Promise<void> {
-    return callApp((a) => a.SetStatusDescription(description), undefined);
-  },
-  async setStatusAndDescription(
-    status: string,
-    description: string,
-  ): Promise<void> {
-    return callApp(
-      (a) => a.SetStatusAndDescription(status, description),
-      undefined,
-    );
-  },
-  async login(
-    username: string,
-    password: string,
-    twoFactorCode?: string,
-  ): Promise<LoginResultDTO> {
-    return callApp((a) => a.Login(username, password, twoFactorCode ?? ""), {
-      ok: false,
-      error: "App not available",
-    });
-  },
-  async logout(): Promise<void> {
-    return callApp((a) => a.Logout(), undefined);
-  },
-  async isLoggedIn(): Promise<boolean> {
-    return callApp((a) => a.IsLoggedIn(), false);
-  },
-  async hasStoredCredential(): Promise<boolean> {
-    return callApp((a) => a.HasStoredCredential(), false);
-  },
-  async getCredentialBlob(): Promise<string> {
-    return callApp((a) => a.GetCredentialBlob(), "");
-  },
-  async unlockVRChatSession(token: string): Promise<void> {
-    return callApp((a) => a.UnlockVRChatSession(token), undefined);
-  },
-  async persistWrappedCredential(blob: string): Promise<void> {
-    return callApp((a) => a.PersistWrappedCredential(blob), undefined);
-  },
-  async clearStoredCredential(): Promise<void> {
-    return callApp((a) => a.ClearStoredCredential(), undefined);
-  },
-  async getVRChatCurrentUser(
-    forceRefresh?: boolean,
-  ): Promise<VRChatCurrentUserDTO> {
-    return callApp((a) => a.GetVRChatCurrentUser(forceRefresh ?? false), {
-      id: "",
-      displayName: "",
-      username: "",
-      status: "",
-      statusDescription: "",
-      state: "",
-      currentAvatarThumbnailImageUrl: "",
-      userIcon: "",
-      profilePicOverrideThumbnail: "",
-    });
-  },
-  async refreshFriends(): Promise<void> {
-    return callApp((a) => a.RefreshFriends(), undefined);
-  },
-  async reconcileVRChatSocialCache(): Promise<void> {
-    return callApp((a) => a.ReconcileVRChatSocialCache(), undefined);
-  },
-  async vacuumDb(): Promise<void> {
-    return callApp((a) => a.VacuumDb(), undefined);
-  },
-  async encounters(): Promise<UserEncounterDTO[]> {
-    return callApp((a) => a.Encounters(), []);
-  },
-  async encountersByVRCUserID(vrcUserID: string): Promise<UserEncounterDTO[]> {
-    return callApp((a) => a.EncountersByVRCUserID(vrcUserID), []);
-  },
-  async encountersByWorldID(worldID: string): Promise<UserEncounterDTO[]> {
-    return callApp((a) => a.EncountersByWorldID(worldID), []);
-  },
-  async clearEncounters(): Promise<number> {
-    return callApp((a) => a.ClearEncounters(), 0);
-  },
-  async getActivityStats(
-    fromISO: string,
-    toISO: string,
-  ): Promise<ActivityStatsDTO> {
-    return callApp<ActivityStatsDTO>(
-      (a) => a.GetActivityStats(fromISO, toISO) as Promise<ActivityStatsDTO>,
-      {
-        dailyPlaySeconds: [],
-        topWorlds: [],
-      },
-    );
-  },
-  async clearScreenshots(): Promise<number> {
-    return callApp((a) => a.ClearScreenshots(), 0);
-  },
-  async clearFriendsCache(): Promise<number> {
-    return callApp((a) => a.ClearFriendsCache(), 0);
-  },
-  async listAutomationRules(): Promise<AutomationRuleDTO[]> {
-    return callApp((a) => a.ListAutomationRules(), []);
-  },
-  async saveAutomationRule(rule: AutomationRuleDTO): Promise<void> {
-    return callApp((a) => a.SaveAutomationRule(rule), undefined);
-  },
-  async deleteAutomationRule(id: string): Promise<void> {
-    return callApp((a) => a.DeleteAutomationRule(id), undefined);
-  },
-  async toggleAutomationRule(id: string, enabled: boolean): Promise<void> {
-    return callApp((a) => a.ToggleAutomationRule(id, enabled), undefined);
-  },
-  async vrchatConfigExists(): Promise<boolean> {
-    return callApp((a) => a.VRChatConfigExists(), false);
-  },
+      emptyUserProfileNavigation(vrcUserID),
+    ),
+  getSelfProfile: bindGo(
+    (a, forceRefresh?: boolean) => a.GetSelfProfile(forceRefresh ?? false),
+    EMPTY_USER_CACHE,
+  ),
+  setFavorite: bindGo(
+    (a, vrcUserId: string, favorite: boolean) =>
+      a.SetFavorite(vrcUserId, favorite),
+    undefined,
+  ),
+  setStatus: bindGo((a, status: string) => a.SetStatus(status), undefined),
+  setStatusDescription: bindGo(
+    (a, description: string) => a.SetStatusDescription(description),
+    undefined,
+  ),
+  setStatusAndDescription: bindGo(
+    (a, status: string, description: string) =>
+      a.SetStatusAndDescription(status, description),
+    undefined,
+  ),
+  login: bindGo(
+    (a, username: string, password: string, twoFactorCode?: string) =>
+      a.Login(username, password, twoFactorCode ?? ""),
+    LOGIN_UNAVAILABLE,
+  ),
+  logout: bindGo((a) => a.Logout(), undefined),
+  isLoggedIn: bindGo((a) => a.IsLoggedIn(), false),
+  hasStoredCredential: bindGo((a) => a.HasStoredCredential(), false),
+  getCredentialBlob: bindGo((a) => a.GetCredentialBlob(), ""),
+  unlockVRChatSession: bindGo(
+    (a, token: string) => a.UnlockVRChatSession(token),
+    undefined,
+  ),
+  persistWrappedCredential: bindGo(
+    (a, blob: string) => a.PersistWrappedCredential(blob),
+    undefined,
+  ),
+  clearStoredCredential: bindGo((a) => a.ClearStoredCredential(), undefined),
+  getVRChatCurrentUser: bindGo(
+    (a, forceRefresh?: boolean) =>
+      a.GetVRChatCurrentUser(forceRefresh ?? false),
+    EMPTY_VRCHAT_CURRENT_USER,
+  ),
+  refreshFriends: bindGo((a) => a.RefreshFriends(), undefined),
+  reconcileVRChatSocialCache: bindGo(
+    (a) => a.ReconcileVRChatSocialCache(),
+    undefined,
+  ),
+  vacuumDb: bindGo((a) => a.VacuumDb(), undefined),
+  encounters: bindGo((a) => a.Encounters(), []),
+  encountersByVRCUserID: bindGo(
+    (a, vrcUserID: string) => a.EncountersByVRCUserID(vrcUserID),
+    [],
+  ),
+  encountersByWorldID: bindGo(
+    (a, worldID: string) => a.EncountersByWorldID(worldID),
+    [],
+  ),
+  clearEncounters: bindGo((a) => a.ClearEncounters(), 0),
+  getActivityStats: bindGo(
+    (a, fromISO: string, toISO: string) =>
+      a.GetActivityStats(fromISO, toISO) as Promise<ActivityStatsDTO>,
+    EMPTY_ACTIVITY_STATS,
+  ),
+  clearScreenshots: bindGo((a) => a.ClearScreenshots(), 0),
+  clearFriendsCache: bindGo((a) => a.ClearFriendsCache(), 0),
+  listAutomationRules: bindGo((a) => a.ListAutomationRules(), []),
+  saveAutomationRule: bindGo(
+    (a, rule: AutomationRuleDTO) => a.SaveAutomationRule(rule),
+    undefined,
+  ),
+  deleteAutomationRule: bindGo(
+    (a, id: string) => a.DeleteAutomationRule(id),
+    undefined,
+  ),
+  toggleAutomationRule: bindGo(
+    (a, id: string, enabled: boolean) => a.ToggleAutomationRule(id, enabled),
+    undefined,
+  ),
+  vrchatConfigExists: bindGo((a) => a.VRChatConfigExists(), false),
   /**
    * Reads VRChat `config.json` via the backend. Rejects if the Go method errors
    * (e.g. read/parse failure) when Wails is present. The empty DTO below is only
    * the `callApp` fallback when `App` bindings are unavailable — not a substitute
    * for successful resolution on error paths.
    */
-  async getVRChatConfig(): Promise<VRChatConfigDTO> {
-    return callApp((a) => a.GetVRChatConfig(), {
-      cameraResWidth: 0,
-      cameraResHeight: 0,
-      screenshotResWidth: 0,
-      screenshotResHeight: 0,
-      pictureOutputFolder: "",
-      pictureOutputSplitByDate: undefined,
-      fpvSteadycamFov: 0,
-      cacheDirectory: "",
-      cacheSize: 0,
-      cacheExpiryDelay: 0,
-      disableRichPresence: undefined,
-    });
-  },
-  async saveVRChatConfig(dto: VRChatConfigDTO): Promise<void> {
-    return callApp((a) => a.SaveVRChatConfig(dto), undefined);
-  },
-  async deleteVRChatConfig(): Promise<void> {
-    return callApp((a) => a.DeleteVRChatConfig(), undefined);
-  },
-  async defaultVRChatPictureFolder(): Promise<string> {
-    return callApp((a) => a.DefaultVRChatPictureFolder(), "");
-  },
+  getVRChatConfig: bindGo((a) => a.GetVRChatConfig(), EMPTY_VRCHAT_CONFIG),
+  saveVRChatConfig: bindGo(
+    (a, dto: VRChatConfigDTO) => a.SaveVRChatConfig(dto),
+    undefined,
+  ),
+  deleteVRChatConfig: bindGo((a) => a.DeleteVRChatConfig(), undefined),
+  defaultVRChatPictureFolder: bindGo((a) => a.DefaultVRChatPictureFolder(), ""),
 };
