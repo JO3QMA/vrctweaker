@@ -559,7 +559,8 @@ func (a *App) LaunchVRChat(profileID string) error {
 		steamPath = ps.SteamPathLinux
 		outputLogPath = ps.OutputLogPath
 	}
-	return a.launcher.LaunchVRChat(a.ctx, profileID, vrchatPath, steamPath, outputLogPath)
+	launchErr := a.launcher.LaunchVRChat(a.ctx, profileID, vrchatPath, steamPath, outputLogPath)
+	return a.setLastLaunchProfileOnSuccess(profileID, launchErr)
 }
 
 // JoinWorld launches VRChat into the specified world using default profile.

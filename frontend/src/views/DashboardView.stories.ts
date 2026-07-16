@@ -12,7 +12,12 @@ const meta = {
   },
   decorators: [
     withWailsApp({
-      LaunchProfiles: () => Promise.resolve([...sampleLaunchProfiles]),
+      GetDashboardLaunchBlock: () =>
+        Promise.resolve({
+          profiles: [...sampleLaunchProfiles],
+          selectedProfileId: sampleLaunchProfiles[0]?.id ?? "",
+          rejoin: null,
+        }),
       LaunchVRChat: () => Promise.resolve(),
       SetStatus: () => Promise.resolve(),
       SetStatusDescription: () => Promise.resolve(),

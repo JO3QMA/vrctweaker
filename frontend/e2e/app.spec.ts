@@ -10,6 +10,7 @@ test.describe("VRChat Tweaker", () => {
   test("shows dashboard", async ({ page }) => {
     await page.goto("/");
     await expect(page.locator("h1")).toContainText("ダッシュボード");
+    await expect(page.getByTestId("dashboard-launch-block")).toBeVisible();
   });
 
   test("navigates to launcher", async ({ page }) => {
@@ -37,9 +38,9 @@ test.describe("VRChat Tweaker", () => {
       await expect(page.locator("h1")).toContainText("ダッシュボード");
       await expect(page.getByTestId("server-status-section")).toBeVisible();
       await expect(page.getByTestId("server-status-summary")).toBeVisible();
-      // モックでデフォルトプロファイル1件を返すため、起動ボタンが有効になる
+      await expect(page.getByTestId("launch-block-quick-btn")).toBeVisible();
       await expect(
-        page.getByRole("button", { name: /VRChat 起動/ }),
+        page.getByTestId("launch-block-profile-select"),
       ).toBeVisible();
       // ラベルは i18n 依存のため data-testid でクイックステータス4種を検証する
       await expect(

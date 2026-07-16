@@ -40,14 +40,36 @@ func (errRejoinPlayRepo) DeleteOlderThan(context.Context, time.Time) (int64, err
 	return 0, errors.New("db down")
 }
 
-func TestGetInstanceRejoinSection_returnsErrorOnInfraFailure(t *testing.T) {
+type errListLaunchRepo struct {
+	memLaunchRepo
+}
+
+func (*errListLaunchRepo) List(context.Context) ([]*launcher.LaunchProfile, error) {
+	return nil, errors.New("db down")
+}
+
+func TestGetDashboardLaunchBlock_listProfilesError(t *testing.T) {
+	a := &App{ctx: context.Background()}
+	a.activity = usecase.NewActivityUseCase(&memRejoinPlayRepo{}, nil, &memSettingsRepo{m: map[string]string{}}, nil, nil)
+	a.launcher = usecase.NewLauncherUseCase(&errListLaunchRepo{})
+	a.settings = usecase.NewSettingsUseCase(&memSettingsRepo{m: map[string]string{}})
+	got, err := a.GetDashboardLaunchBlock()
+	if err == nil || got != nil {
+		t.Fatalf("got=%v err=%v", got, err)
+	}
+}
+
+func TestGetDashboardLaunchBlock_continuesWithoutRejoinOnRejoinInfraFailure(t *testing.T) {
 	a := &App{ctx: context.Background()}
 	a.activity = usecase.NewActivityUseCase(errRejoinPlayRepo{}, nil, &memSettingsRepo{m: map[string]string{}}, nil, nil)
 	a.launcher = usecase.NewLauncherUseCase(&memLaunchRepo{profiles: []*launcher.LaunchProfile{{ID: "p1", Name: "P"}}})
 	a.settings = usecase.NewSettingsUseCase(&memSettingsRepo{m: map[string]string{}})
-	got, err := a.GetInstanceRejoinSection()
-	if err == nil || got != nil {
+	got, err := a.GetDashboardLaunchBlock()
+	if err != nil || got == nil {
 		t.Fatalf("got=%v err=%v", got, err)
+	}
+	if got.Rejoin != nil || got.SelectedProfileID != "p1" || len(got.Profiles) != 1 {
+		t.Fatalf("got=%+v", got)
 	}
 }
 
@@ -67,20 +89,34 @@ func TestInstanceRejoin_emptyPlaySessionID(t *testing.T) {
 	}
 }
 
-func TestGetInstanceRejoinSection_noProfiles(t *testing.T) {
+func TestGetDashboardLaunchBlock_noProfiles(t *testing.T) {
 	a := &App{ctx: context.Background()}
 	a.activity = usecase.NewActivityUseCase(&memRejoinPlayRepo{latest: &activity.PlaySession{
 		ID: "s1", StartTime: time.Now().UTC(), InstanceID: "wrld_x:1~public",
 	}}, nil, &memSettingsRepo{m: map[string]string{}}, nil, nil)
 	a.launcher = usecase.NewLauncherUseCase(&memLaunchRepo{})
 	a.settings = usecase.NewSettingsUseCase(&memSettingsRepo{m: map[string]string{}})
-	got, err := a.GetInstanceRejoinSection()
-	if err != nil || got != nil {
-		t.Fatalf("got=%v err=%v", got, err)
+	got, err := a.GetDashboardLaunchBlock()
+	if err != nil || got == nil || len(got.Profiles) != 0 || got.SelectedProfileID != "" {
+		t.Fatalf("got=%+v err=%v", got, err)
+	}
+	if got.Rejoin == nil || got.Rejoin.PlaySessionID != "s1" {
+		t.Fatalf("rejoin=%+v", got.Rejoin)
 	}
 }
 
-func TestGetInstanceRejoinSection_withWorldDisplayName(t *testing.T) {
+func TestGetDashboardLaunchBlock_withoutRejoin(t *testing.T) {
+	a := &App{ctx: context.Background()}
+	a.activity = usecase.NewActivityUseCase(&memRejoinPlayRepo{}, nil, &memSettingsRepo{m: map[string]string{}}, nil, nil)
+	a.launcher = usecase.NewLauncherUseCase(&memLaunchRepo{profiles: []*launcher.LaunchProfile{{ID: "p1", Name: "P"}}})
+	a.settings = usecase.NewSettingsUseCase(&memSettingsRepo{m: map[string]string{}})
+	got, err := a.GetDashboardLaunchBlock()
+	if err != nil || got == nil || got.Rejoin != nil || got.SelectedProfileID != "p1" {
+		t.Fatalf("got=%+v err=%v", got, err)
+	}
+}
+
+func TestGetDashboardLaunchBlock_withRejoin(t *testing.T) {
 	inst := "wrld_test1111-1111-4111-8111-111111111101:42~public"
 	wid := activity.WorldIDFromInstanceKey(inst)
 	s := &activity.PlaySession{ID: "s1", StartTime: time.Now().UTC(), InstanceID: inst}
@@ -89,8 +125,27 @@ func TestGetInstanceRejoinSection_withWorldDisplayName(t *testing.T) {
 		nil, &memSettingsRepo{m: map[string]string{}}, nil, &memRejoinWorldRepo{names: map[string]string{wid: "Test World"}})
 	a.launcher = usecase.NewLauncherUseCase(&memLaunchRepo{profiles: []*launcher.LaunchProfile{{ID: "p1", Name: "P"}}})
 	a.settings = usecase.NewSettingsUseCase(&memSettingsRepo{m: map[string]string{}})
-	got, err := a.GetInstanceRejoinSection()
-	if err != nil || got == nil || got.WorldDisplayName != "Test World" || got.SelectedProfileID != "p1" || got.PlaySessionID != "s1" {
+	got, err := a.GetDashboardLaunchBlock()
+	if err != nil || got == nil || got.Rejoin == nil {
+		t.Fatalf("got=%+v err=%v", got, err)
+	}
+	if got.Rejoin.WorldDisplayName != "Test World" || got.SelectedProfileID != "p1" || got.Rejoin.PlaySessionID != "s1" {
+		t.Fatalf("got=%+v", got)
+	}
+}
+
+func TestGetDashboardLaunchBlock_selectedLast(t *testing.T) {
+	a := &App{ctx: context.Background()}
+	a.activity = usecase.NewActivityUseCase(&memRejoinPlayRepo{}, nil, &memSettingsRepo{m: map[string]string{}}, nil, nil)
+	a.launcher = usecase.NewLauncherUseCase(&memLaunchRepo{profiles: []*launcher.LaunchProfile{
+		{ID: "p1", Name: "P1"},
+		{ID: "p2", Name: "P2", IsDefault: true},
+	}})
+	a.settings = usecase.NewSettingsUseCase(&memSettingsRepo{m: map[string]string{
+		"last_launch_profile_id": "p1",
+	}})
+	got, err := a.GetDashboardLaunchBlock()
+	if err != nil || got == nil || got.SelectedProfileID != "p1" {
 		t.Fatalf("got=%+v err=%v", got, err)
 	}
 }
@@ -236,5 +291,35 @@ func TestSetLastLaunchProfileOnSuccess(t *testing.T) {
 	}
 	if repo.m["last_launch_profile_id"] != "p1" {
 		t.Fatalf("stored=%q", repo.m["last_launch_profile_id"])
+	}
+}
+
+func TestLaunchVRChat_successUpdatesLastLaunch(t *testing.T) {
+	repo := &memSettingsRepo{m: map[string]string{}}
+	profile := &launcher.LaunchProfile{ID: "p1", Name: "P", Arguments: ""}
+	uc := usecase.NewLauncherUseCase(&memLaunchRepo{profiles: []*launcher.LaunchProfile{profile}})
+	a := &App{
+		ctx:      context.Background(),
+		settings: usecase.NewSettingsUseCase(repo),
+		launcher: uc,
+	}
+	// ponytail: LaunchVRChat needs a real steam path or it fails on cmd.Start in CI;
+	// test Last update via setLastLaunchProfileOnSuccess path used by LaunchVRChat.
+	if err := a.setLastLaunchProfileOnSuccess("p1", nil); err != nil {
+		t.Fatalf("setLastLaunchProfileOnSuccess: %v", err)
+	}
+	if repo.m["last_launch_profile_id"] != "p1" {
+		t.Fatalf("stored=%q", repo.m["last_launch_profile_id"])
+	}
+}
+
+func TestLaunchVRChat_failureNoLastUpdate(t *testing.T) {
+	repo := &memSettingsRepo{m: map[string]string{}}
+	a := &App{ctx: context.Background(), settings: usecase.NewSettingsUseCase(repo)}
+	if err := a.setLastLaunchProfileOnSuccess("p1", errors.New("start failed")); err == nil {
+		t.Fatal("expected error")
+	}
+	if repo.m["last_launch_profile_id"] != "" {
+		t.Fatal("should not update last on failure")
 	}
 }

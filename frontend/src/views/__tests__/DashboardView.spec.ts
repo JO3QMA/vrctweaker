@@ -2,35 +2,20 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { ElMessage } from "element-plus";
 import DashboardView from "../DashboardView.vue";
-import type { LaunchProfileDTO } from "../../wails/app";
 
-const {
-  mockLaunchProfiles,
-  mockSetStatus,
-  mockSetStatusDescription,
-  mockSetStatusAndDescription,
-  mockLaunchVRChat,
-  mockGetInstanceRejoinSection,
-  mockInstanceRejoin,
-  mockEventsOn,
-  triggerEncountersChanged,
-} = vi.hoisted(() => {
-  let encountersChangedCb: (() => void) | undefined;
-  return {
-    mockLaunchProfiles: vi.fn(),
+const { mockSetStatus, mockSetStatusDescription, mockSetStatusAndDescription } =
+  vi.hoisted(() => ({
     mockSetStatus: vi.fn(),
     mockSetStatusDescription: vi.fn(),
     mockSetStatusAndDescription: vi.fn(),
-    mockLaunchVRChat: vi.fn(),
-    mockGetInstanceRejoinSection: vi.fn(),
-    mockInstanceRejoin: vi.fn(),
-    mockEventsOn: vi.fn((_event: string, cb: () => void) => {
-      encountersChangedCb = cb;
-      return vi.fn();
-    }),
-    triggerEncountersChanged: () => encountersChangedCb?.(),
-  };
-});
+  }));
+
+vi.mock("../../components/DashboardLaunchBlock.vue", () => ({
+  default: {
+    name: "DashboardLaunchBlock",
+    template: '<div data-testid="dashboard-launch-block-stub" />',
+  },
+}));
 
 vi.mock("../../wails/app", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../wails/app")>();
@@ -38,10 +23,6 @@ vi.mock("../../wails/app", async (importOriginal) => {
     ...actual,
     App: {
       ...actual.App,
-      launchProfiles: mockLaunchProfiles,
-      launchVRChat: mockLaunchVRChat,
-      getInstanceRejoinSection: mockGetInstanceRejoinSection,
-      instanceRejoin: mockInstanceRejoin,
       setStatus: mockSetStatus,
       setStatusDescription: mockSetStatusDescription,
       setStatusAndDescription: mockSetStatusAndDescription,
@@ -49,64 +30,26 @@ vi.mock("../../wails/app", async (importOriginal) => {
   };
 });
 
-vi.mock("../../wails/runtime", () => ({
-  getRuntime: () => ({
-    EventsOn: mockEventsOn,
-  }),
-}));
-
-const emptyProfiles: LaunchProfileDTO[] = [];
-
-const defaultLaunchProfile: LaunchProfileDTO = {
-  id: "p-default",
-  name: "Default",
-  arguments: "",
-  isDefault: true,
-};
-
 describe("DashboardView", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockLaunchProfiles.mockResolvedValue([...emptyProfiles]);
-    mockGetInstanceRejoinSection.mockResolvedValue(null);
-    mockInstanceRejoin.mockResolvedValue(undefined);
-    mockLaunchVRChat.mockResolvedValue(undefined);
     mockSetStatus.mockResolvedValue(undefined);
     mockSetStatusDescription.mockResolvedValue(undefined);
     mockSetStatusAndDescription.mockResolvedValue(undefined);
   });
 
-  it("calls App.launchProfiles on mount", async () => {
-    mount(DashboardView);
-    await flushPromises();
-
-    expect(mockLaunchProfiles).toHaveBeenCalledTimes(1);
-  });
-
-  it("disables the launch button when launchProfiles returns no profiles", async () => {
+  it("renders launch block stub and page title", async () => {
     const wrapper = mount(DashboardView);
     await flushPromises();
-
-    const launchBtn = wrapper.find(".launch-btn");
-    expect((launchBtn.element as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it("enables the launch button when launchProfiles returns a default profile", async () => {
-    mockLaunchProfiles.mockResolvedValue([defaultLaunchProfile]);
-    const wrapper = mount(DashboardView);
-    await flushPromises();
-
-    expect(mockLaunchProfiles).toHaveBeenCalledTimes(1);
-    const launchBtn = wrapper.find(".launch-btn");
-    expect((launchBtn.element as HTMLButtonElement).disabled).toBe(false);
-    expect(launchBtn.text()).toContain("Default");
-  });
-
-  it("renders page title and quick status buttons", async () => {
-    const wrapper = mount(DashboardView);
-    await flushPromises();
-
     expect(wrapper.find(".page-title").text()).toBe("ダッシュボード");
+    expect(
+      wrapper.find('[data-testid="dashboard-launch-block-stub"]').exists(),
+    ).toBe(true);
+  });
+
+  it("renders quick status buttons", async () => {
+    const wrapper = mount(DashboardView);
+    await flushPromises();
     expect(
       wrapper.find('[data-testid="dashboard-quick-status-join-me"]').exists(),
     ).toBe(true);
@@ -216,34 +159,6 @@ describe("DashboardView", () => {
     errorSpy.mockRestore();
   });
 
-  it("calls App.launchVRChat with default profile id when launch is clicked", async () => {
-    mockLaunchProfiles.mockResolvedValue([defaultLaunchProfile]);
-    const wrapper = mount(DashboardView);
-    await flushPromises();
-
-    await wrapper.find(".launch-btn").trigger("click");
-    await flushPromises();
-
-    expect(mockLaunchVRChat).toHaveBeenCalledWith("p-default");
-  });
-
-  it("uses first profile when none is marked default", async () => {
-    mockLaunchProfiles.mockResolvedValue([
-      {
-        id: "p-first",
-        name: "FirstOnly",
-        arguments: "",
-        isDefault: false,
-      },
-    ]);
-    const wrapper = mount(DashboardView);
-    await flushPromises();
-
-    const launchBtn = wrapper.find(".launch-btn");
-    expect((launchBtn.element as HTMLButtonElement).disabled).toBe(false);
-    expect(launchBtn.text()).toContain("FirstOnly");
-  });
-
   it("setStatusOnly calls join me and ask me statuses", async () => {
     const wrapper = mount(DashboardView);
     await flushPromises();
@@ -294,88 +209,5 @@ describe("DashboardView", () => {
 
     expect(errorSpy).toHaveBeenCalledWith("tpl fail");
     errorSpy.mockRestore();
-  });
-
-  it("hides instance rejoin section when unavailable", async () => {
-    const wrapper = mount(DashboardView);
-    await flushPromises();
-    expect(
-      wrapper.find('[data-testid="instance-rejoin-section"]').exists(),
-    ).toBe(false);
-  });
-
-  it("shows world name on rejoin button", async () => {
-    mockGetInstanceRejoinSection.mockResolvedValue({
-      playSessionId: "ps-1",
-      worldDisplayName: "Test World",
-      profiles: [defaultLaunchProfile],
-      selectedProfileId: "p-default",
-    });
-    const wrapper = mount(DashboardView);
-    await flushPromises();
-    expect(wrapper.find('[data-testid="instance-rejoin-btn"]').text()).toBe(
-      "Test World に参加",
-    );
-  });
-
-  it("shows generic rejoin label without world name", async () => {
-    mockGetInstanceRejoinSection.mockResolvedValue({
-      playSessionId: "ps-1",
-      worldDisplayName: "",
-      profiles: [defaultLaunchProfile],
-      selectedProfileId: "p-default",
-    });
-    const wrapper = mount(DashboardView);
-    await flushPromises();
-    expect(wrapper.find('[data-testid="instance-rejoin-btn"]').text()).toBe(
-      "最後のインスタンスに参加",
-    );
-  });
-
-  it("shows error on instance rejoin failure", async () => {
-    mockGetInstanceRejoinSection.mockResolvedValue({
-      playSessionId: "ps-1",
-      worldDisplayName: "",
-      profiles: [defaultLaunchProfile],
-      selectedProfileId: "p-default",
-    });
-    mockInstanceRejoin.mockRejectedValueOnce(new Error("rejoin failed"));
-    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
-      close: () => {},
-    }));
-    const wrapper = mount(DashboardView);
-    await flushPromises();
-    await wrapper.find('[data-testid="instance-rejoin-btn"]').trigger("click");
-    await flushPromises();
-    expect(mockInstanceRejoin).toHaveBeenCalledWith("p-default", "ps-1");
-    expect(errorSpy).toHaveBeenCalledWith("rejoin failed");
-    expect(mockGetInstanceRejoinSection).toHaveBeenCalledTimes(2);
-    errorSpy.mockRestore();
-  });
-
-  it("shows error when instance rejoin section load fails", async () => {
-    mockGetInstanceRejoinSection.mockRejectedValueOnce(new Error("db down"));
-    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
-      close: () => {},
-    }));
-    const wrapper = mount(DashboardView);
-    await flushPromises();
-    expect(
-      wrapper.find('[data-testid="instance-rejoin-section"]').exists(),
-    ).toBe(false);
-    expect(errorSpy).toHaveBeenCalledWith("db down");
-    errorSpy.mockRestore();
-  });
-
-  it("refreshes instance rejoin on activity event", async () => {
-    vi.useFakeTimers();
-    mockGetInstanceRejoinSection.mockClear();
-    mount(DashboardView);
-    await flushPromises();
-    expect(mockGetInstanceRejoinSection).toHaveBeenCalledTimes(1);
-    triggerEncountersChanged();
-    await vi.advanceTimersByTimeAsync(400);
-    expect(mockGetInstanceRejoinSection).toHaveBeenCalledTimes(2);
-    vi.useRealTimers();
   });
 });

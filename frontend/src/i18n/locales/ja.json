@@ -54,8 +54,6 @@
     "secondLong": "秒"
   },
   "dashboard": {
-    "launch": "VRChat 起動",
-    "launchWithProfile": "VRChat 起動 ({name})",
     "quickStatus": "クイックステータス",
     "statusActive": "オンライン",
     "statusJoinMe": "だれでもおいで",
@@ -70,11 +68,19 @@
     "templateAskWelcome": "声かけ歓迎",
     "statusUpdateSuccess": "ステータスを更新しました",
     "statusUpdateError": "ステータスの更新に失敗しました",
-    "instanceRejoinProfilePlaceholder": "起動プロファイル",
-    "instanceRejoinWithWorld": "{name} に参加",
-    "instanceRejoinGeneric": "最後のインスタンスに参加",
-    "instanceRejoinError": "インスタンスへの再参加起動に失敗しました",
-    "instanceRejoinLoadError": "再参加セクションの読み込みに失敗しました",
+    "launchBlock": {
+      "loading": "起動ブロックを読み込み中…",
+      "loadError": "起動ブロックを読み込めませんでした。",
+      "refreshError": "起動ブロックを更新できませんでした。",
+      "quickLaunch": "VRChat を起動",
+      "profilePlaceholder": "起動プロファイル",
+      "rejoinWithWorld": "{name} に参加",
+      "rejoinGeneric": "最後のインスタンスに参加",
+      "launchError": "VRChat の起動に失敗しました",
+      "rejoinError": "インスタンスへの再参加起動に失敗しました",
+      "emptyState": "起動プロファイルがありません。",
+      "goToLauncher": "Launcher で作成"
+    },
     "serverStatus": {
       "title": "VRChat サーバーステータス",
       "summaryAllOperational": "すべてのシステムが正常です",
