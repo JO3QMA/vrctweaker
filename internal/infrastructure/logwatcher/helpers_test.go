@@ -8,6 +8,14 @@ import (
 	"vrchat-tweaker/internal/domain/activity"
 )
 
+type testEventHandler func(activity.ParsedEvent)
+
+func (h testEventHandler) Handle(event activity.ParsedEvent) {
+	if h != nil {
+		h(event)
+	}
+}
+
 type stubParser struct {
 	events []activity.ParsedEvent
 	err    error

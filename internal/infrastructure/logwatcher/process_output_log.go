@@ -11,6 +11,14 @@ import (
 )
 
 // SessionCorrelatorWarmer rebuilds SessionCorrelator state from log lines without persisting commands.
+type fnEventHandler func(event activity.ParsedEvent)
+
+func (f fnEventHandler) Handle(event activity.ParsedEvent) {
+	if f != nil {
+		f(event)
+	}
+}
+
 type SessionCorrelatorWarmer interface {
 	WarmFromParsedEvent(event activity.ParsedEvent)
 }
@@ -62,7 +70,9 @@ func WarmSessionCorrelatorFromLogFile(ctx context.Context, path string, endOffse
 		}
 		lineTrimmed := trimNL(line)
 		if lineTrimmed != "" {
-			if _, parseErr := dispatchOutputLogLine(lineTrimmed, parser, EventHandlerFunc(warmer.WarmFromParsedEvent)); parseErr != nil {
+			if _, parseErr := dispatchOutputLogLine(lineTrimmed, parser, fnEventHandler(func(event activity.ParsedEvent) {
+				warmer.WarmFromParsedEvent(event)
+			})); parseErr != nil {
 				logDispatchLineErr(logger, parseErr,
 					"[logwatcher] warm parse error: %v", "[logwatcher] warm dispatch error: %v")
 			}
