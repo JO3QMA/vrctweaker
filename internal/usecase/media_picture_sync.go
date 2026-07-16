@@ -148,9 +148,9 @@ func (uc *MediaUseCase) reindexScreenshotFile(ctx context.Context, s *media.Scre
 
 	metaChanged := false
 	var meta media.ScreenshotMetadata
-	if needsMetaExtract && uc.extractor != nil {
+	if needsMetaExtract {
 		var exErr error
-		meta, exErr = uc.extractor.Extract(s.FilePath)
+		meta, exErr = extractScreenshotMetadata(s.FilePath)
 		if exErr != nil {
 			meta = media.ScreenshotMetadata{}
 		}

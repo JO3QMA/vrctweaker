@@ -14,8 +14,7 @@ import (
 var minimalEXIFJPEG []byte
 
 func TestDefaultMetadataExtractor_Extract_DoesNotUseFilenameWorldID(t *testing.T) {
-	extractor := NewDefaultMetadataExtractor()
-	got, err := extractor.Extract("/screenshots/VRChat_wrld_abc123def_456.png")
+	got, err := Extract("/screenshots/VRChat_wrld_abc123def_456.png")
 	if err != nil {
 		t.Fatalf("Extract() err = %v", err)
 	}
@@ -30,12 +29,10 @@ func TestDefaultMetadataExtractor_Extract_DoesNotUseAdjacentFile(t *testing.T) {
 	path := filepath.Join(dir, base+".png")
 	_ = os.WriteFile(path, []byte("dummy"), 0644)
 
-	extractor := NewDefaultMetadataExtractor()
-
 	// Adjacent .txt with wrld_
 	txtPath := filepath.Join(dir, base+".txt")
 	_ = os.WriteFile(txtPath, []byte("World: wrld_adjacent123\nName: Test World"), 0644)
-	got, err := extractor.Extract(path)
+	got, err := Extract(path)
 	if err != nil {
 		t.Fatalf("Extract() err = %v", err)
 	}
@@ -49,8 +46,7 @@ func TestDefaultMetadataExtractor_Extract_NoMatchReturnsEmpty(t *testing.T) {
 	path := filepath.Join(dir, "plain_screenshot.png")
 	_ = os.WriteFile(path, []byte("fake png"), 0644)
 
-	extractor := NewDefaultMetadataExtractor()
-	got, err := extractor.Extract(path)
+	got, err := Extract(path)
 	if err != nil {
 		t.Fatalf("Extract() err = %v", err)
 	}
@@ -69,8 +65,7 @@ func TestDefaultMetadataExtractor_Extract_DoesNotUsePNGTextWorldID(t *testing.T)
 		t.Fatalf("WriteFile() err = %v", err)
 	}
 
-	extractor := NewDefaultMetadataExtractor()
-	got, err := extractor.Extract(path)
+	got, err := Extract(path)
 	if err != nil {
 		t.Fatalf("Extract() err = %v", err)
 	}
@@ -135,8 +130,7 @@ func TestDefaultMetadataExtractor_Extract_JPEGWithXMP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	extractor := NewDefaultMetadataExtractor()
-	got, err := extractor.Extract(path)
+	got, err := Extract(path)
 	if err != nil {
 		t.Fatalf("Extract() err = %v", err)
 	}
@@ -163,8 +157,7 @@ func TestDefaultMetadataExtractor_Extract_PNGWithXMP(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	extractor := NewDefaultMetadataExtractor()
-	got, err := extractor.Extract(path)
+	got, err := Extract(path)
 	if err != nil {
 		t.Fatalf("Extract() err = %v", err)
 	}
@@ -183,8 +176,7 @@ func TestDefaultMetadataExtractor_Extract_JPEGEXIFFallback(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	extractor := NewDefaultMetadataExtractor()
-	got, err := extractor.Extract(path)
+	got, err := Extract(path)
 	if err != nil {
 		t.Fatalf("Extract() err = %v", err)
 	}
@@ -194,8 +186,7 @@ func TestDefaultMetadataExtractor_Extract_JPEGEXIFFallback(t *testing.T) {
 }
 
 func TestDefaultMetadataExtractor_Extract_MissingFile(t *testing.T) {
-	extractor := NewDefaultMetadataExtractor()
-	got, err := extractor.Extract(filepath.Join(t.TempDir(), "missing.jpg"))
+	got, err := Extract(filepath.Join(t.TempDir(), "missing.jpg"))
 	if err != nil {
 		t.Fatalf("Extract() err = %v", err)
 	}
@@ -210,8 +201,7 @@ func TestDefaultMetadataExtractor_Extract_UnsupportedExtension(t *testing.T) {
 	if err := os.WriteFile(path, []byte("hello"), 0644); err != nil {
 		t.Fatal(err)
 	}
-	extractor := NewDefaultMetadataExtractor()
-	got, err := extractor.Extract(path)
+	got, err := Extract(path)
 	if err != nil {
 		t.Fatalf("Extract() err = %v", err)
 	}

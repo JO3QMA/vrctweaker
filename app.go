@@ -112,10 +112,9 @@ func (a *App) startup(ctx context.Context) {
 	// decrypt the wrapped blob with Web Crypto, and then call UnlockVRChatSession.
 	apiClient := vrchatapi.NewClient("")
 
-	extractor := media.NewDefaultMetadataExtractor()
 	notifier := desktop.NewBeeepNotifier("VRChat Tweaker")
 	a.launcher = usecase.NewLauncherUseCase(launcherRepo)
-	a.media = usecase.NewMediaUseCase(mediaRepo, extractor, worldRepo, userCacheRepo)
+	a.media = usecase.NewMediaUseCase(mediaRepo, worldRepo, userCacheRepo)
 	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo)
 	a.identity = usecase.NewIdentityUseCase(userCacheRepo, apiClient, credStore, settingsRepo, notifier)
 	a.automation = usecase.NewAutomationUseCase(automationRepo, a.identity)
