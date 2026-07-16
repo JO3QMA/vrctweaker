@@ -23,7 +23,7 @@ func TestDispatchOutputLogLine_nilParser(t *testing.T) {
 
 func TestDispatchOutputLogLine_nilHandler(t *testing.T) {
 	t.Parallel()
-	_, err := dispatchOutputLogLine("line", stubParser{}, nil)
+	_, err := dispatchOutputLogLine("line", activity.NewLogParser(), nil)
 	if !errors.Is(err, errNilDispatchArg) {
 		t.Fatalf("err = %v, want %v", err, errNilDispatchArg)
 	}
