@@ -17,7 +17,6 @@ import (
 	"vrchat-tweaker/internal/domain/automation"
 	"vrchat-tweaker/internal/domain/launcher"
 	"vrchat-tweaker/internal/domain/media"
-	"vrchat-tweaker/internal/domain/vrchatconfig"
 	"vrchat-tweaker/internal/infrastructure/desktop"
 	"vrchat-tweaker/internal/infrastructure/diag"
 	"vrchat-tweaker/internal/infrastructure/filesystem"
@@ -45,7 +44,7 @@ type App struct {
 	dbMaintenance    *usecase.DBMaintenanceUseCase
 	ytdlp            *usecase.YTDLPMaintainUseCase
 	serverStatus     *statuspage.Client
-	vrchatConfigRepo vrchatconfig.ConfigRepository
+	vrchatConfigRepo *filesystem.VRChatConfigFileRepository
 
 	galleryScanMu     sync.Mutex
 	galleryScanCancel context.CancelFunc
