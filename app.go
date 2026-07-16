@@ -19,7 +19,6 @@ import (
 	"vrchat-tweaker/internal/domain/media"
 	"vrchat-tweaker/internal/domain/vrchatconfig"
 	"vrchat-tweaker/internal/infrastructure/desktop"
-	"vrchat-tweaker/internal/infrastructure/diag"
 	"vrchat-tweaker/internal/infrastructure/filesystem"
 	"vrchat-tweaker/internal/infrastructure/logwatcher"
 	"vrchat-tweaker/internal/infrastructure/picturewatcher"
@@ -474,7 +473,7 @@ func (a *App) startPictureFolderWatcher(ctx context.Context) {
 		return nil
 	}
 	log := pictureWatchLogger{ctx: ctx}
-	if err := picturewatcher.Start(ctx, root, ingest, diag.Logger(log.Printf)); err != nil {
+	if err := picturewatcher.Start(ctx, root, ingest, picturewatcher.Logger(log.Printf)); err != nil {
 		runtime.LogError(ctx, "failed to start picture folder watcher: "+err.Error())
 		return
 	}
@@ -495,9 +494,9 @@ func (logLogger) Printf(format string, args ...interface{}) {
 	log.Printf(format, args...)
 }
 
-func appDiagLogger() diag.Logger {
+func appDiagLogger() logwatcher.Logger {
 	ll := logLogger{}
-	return diag.Logger(ll.Printf)
+	return logwatcher.Logger(ll.Printf)
 }
 
 func getDataDir() (string, error) {

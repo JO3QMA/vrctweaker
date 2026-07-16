@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"vrchat-tweaker/internal/domain/activity"
-	"vrchat-tweaker/internal/infrastructure/diag"
 )
 
 // SessionCorrelatorWarmer rebuilds SessionCorrelator state from log lines without persisting commands.
@@ -28,7 +27,7 @@ func WarmSessionCorrelatorFromLogFile(ctx context.Context, path string, endOffse
 		return nil
 	}
 	if logger == nil {
-		logger = diag.Nop
+		logger = Nop
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -80,7 +79,7 @@ type ProgressCallback func(byteOffset int64, line string)
 // ProcessOutputLogFileFromOffset reads from startOffset and returns the final byte offset in the file.
 func ProcessOutputLogFileFromOffset(ctx context.Context, path string, startOffset int64, parser LogParser, handler EventHandler, logger Logger, onProgress ProgressCallback) (int64, error) {
 	if logger == nil {
-		logger = diag.Nop
+		logger = Nop
 	}
 	f, err := os.Open(path)
 	if err != nil {
