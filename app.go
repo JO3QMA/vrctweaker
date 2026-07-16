@@ -508,11 +508,6 @@ func getDataDir() (string, error) {
 	return filepath.Join(configDir, "vrchat-tweaker"), nil
 }
 
-// Greet returns a greeting (sample binding).
-func (a *App) Greet(name string) string {
-	return fmt.Sprintf("Hello %s, Welcome to VRChat Tweaker!", name)
-}
-
 // --- Launcher bindings ---
 
 // LaunchProfiles returns all launch profiles.

@@ -19,8 +19,11 @@ function setWindowGoApp(app: Partial<AppBindings>): void {
   window.go = { main: { App: app as AppBindings } };
 }
 
-function mockWithGreet(): { Greet: Mock<AppBindings["Greet"]> } {
-  return { Greet: vi.fn() };
+function mockWithProbe(): {
+  GetLanguage: Mock<AppBindings["GetLanguage"]>;
+  RuntimeIsWindows: Mock<AppBindings["RuntimeIsWindows"]>;
+} {
+  return { GetLanguage: vi.fn(), RuntimeIsWindows: vi.fn() };
 }
 
 describe("app exports", () => {
@@ -34,7 +37,7 @@ describe("isWailsRuntime", () => {
 
   beforeEach(() => {
     prevGo = window.go;
-    setWindowGoApp(mockWithGreet());
+    setWindowGoApp(mockWithProbe());
   });
 
   afterEach(() => {
@@ -52,12 +55,12 @@ describe("isWailsRuntime", () => {
 });
 
 describe("callApp", () => {
-  let mockBindings: ReturnType<typeof mockWithGreet>;
+  let mockBindings: ReturnType<typeof mockWithProbe>;
   let prevGo: typeof window.go;
 
   beforeEach(() => {
     prevGo = window.go;
-    mockBindings = mockWithGreet();
+    mockBindings = mockWithProbe();
     setWindowGoApp(mockBindings);
   });
 
@@ -72,27 +75,27 @@ describe("callApp", () => {
   });
 
   it("invokes fn with bindings and returns its result", async () => {
-    mockBindings.Greet.mockResolvedValue("from-go");
-    const out = await callApp((a) => a.Greet("Alice"), "fallback");
-    expect(mockBindings.Greet).toHaveBeenCalledWith("Alice");
-    expect(out).toBe("from-go");
+    mockBindings.GetLanguage.mockResolvedValue("ja");
+    const out = await callApp((a) => a.GetLanguage(), "fallback");
+    expect(mockBindings.GetLanguage).toHaveBeenCalled();
+    expect(out).toBe("ja");
   });
 
   it("propagates rejection from the binding", async () => {
-    mockBindings.Greet.mockRejectedValue(new Error("backend failed"));
-    await expect(callApp((a) => a.Greet("Bob"), "fallback")).rejects.toThrow(
+    mockBindings.GetLanguage.mockRejectedValue(new Error("backend failed"));
+    await expect(callApp((a) => a.GetLanguage(), "fallback")).rejects.toThrow(
       "backend failed",
     );
   });
 });
 
 describe("App", () => {
-  let mockBindings: ReturnType<typeof mockWithGreet>;
+  let mockBindings: ReturnType<typeof mockWithProbe>;
   let prevGo: typeof window.go;
 
   beforeEach(() => {
     prevGo = window.go;
-    mockBindings = mockWithGreet();
+    mockBindings = mockWithProbe();
     setWindowGoApp(mockBindings);
   });
 
@@ -100,10 +103,16 @@ describe("App", () => {
     window.go = prevGo;
   });
 
-  it("greet delegates to Greet binding via callApp", async () => {
-    mockBindings.Greet.mockResolvedValue("Hello");
-    await expect(App.greet("Alice")).resolves.toBe("Hello");
-    expect(mockBindings.Greet).toHaveBeenCalledWith("Alice");
+  it("getLanguage delegates to GetLanguage binding via callApp", async () => {
+    mockBindings.GetLanguage.mockResolvedValue("en");
+    await expect(App.getLanguage()).resolves.toBe("en");
+    expect(mockBindings.GetLanguage).toHaveBeenCalled();
+  });
+
+  it("runtimeIsWindows delegates to RuntimeIsWindows binding via callApp", async () => {
+    mockBindings.RuntimeIsWindows.mockResolvedValue(true);
+    await expect(App.runtimeIsWindows()).resolves.toBe(true);
+    expect(mockBindings.RuntimeIsWindows).toHaveBeenCalled();
   });
 });
 
@@ -119,8 +128,12 @@ describe("App fallbacks without bindings", () => {
     window.go = prevGo;
   });
 
-  it("greet returns Hello fallback", async () => {
-    await expect(App.greet("Bob")).resolves.toBe("Hello Bob, Welcome!");
+  it("getLanguage returns empty string fallback", async () => {
+    await expect(App.getLanguage()).resolves.toBe("");
+  });
+
+  it("runtimeIsWindows returns false fallback", async () => {
+    await expect(App.runtimeIsWindows()).resolves.toBe(false);
   });
 
   it("parseLaunchArgsForGUI returns default DTO with PRIORITY_OMIT", async () => {
@@ -184,8 +197,8 @@ describe("callApp DEV binding race recovery", () => {
     injectWailsScript();
     window.go = undefined;
 
-    const mockBindings = mockWithGreet();
-    mockBindings.Greet.mockResolvedValue("from-wait");
+    const mockBindings = mockWithProbe();
+    mockBindings.GetLanguage.mockResolvedValue("from-wait");
 
     let frames = 0;
     vi.spyOn(window, "requestAnimationFrame").mockImplementation((cb) => {
@@ -199,7 +212,7 @@ describe("callApp DEV binding race recovery", () => {
 
     const { callApp: freshCallApp } = await import("../app");
     await expect(
-      freshCallApp((a) => a.Greet("Wait"), "fallback"),
+      freshCallApp((a) => a.GetLanguage(), "fallback"),
     ).resolves.toBe("from-wait");
   });
 
