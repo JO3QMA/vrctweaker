@@ -348,7 +348,7 @@ export const App = {
     undefined,
   ),
   launchVRChatWithArgs: bindGo(
-    (a, args: string, lastLaunchProfileID = "") =>
+    (a, args: string, lastLaunchProfileID: string = "") =>
       a.LaunchVRChatWithArgs(args, lastLaunchProfileID),
     undefined,
   ),
