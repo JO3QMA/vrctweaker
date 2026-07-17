@@ -3,7 +3,17 @@ package logwatcher
 import (
 	"os"
 	"sync"
+
+	"vrchat-tweaker/internal/domain/activity"
 )
+
+type testEventHandler func(activity.ParsedEvent)
+
+func (h testEventHandler) Handle(event activity.ParsedEvent) {
+	if h != nil {
+		h(event)
+	}
+}
 
 type raceSafeLogBuffer struct {
 	mu   sync.Mutex

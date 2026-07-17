@@ -32,6 +32,16 @@ import (
 	"vrchat-tweaker/internal/usecase"
 )
 
+type activityLogDualHandler struct {
+	ingest  logwatcher.EventHandler
+	trigger logwatcher.EventHandler
+}
+
+func (h activityLogDualHandler) Handle(event activity.ParsedEvent) {
+	h.ingest.Handle(event)
+	h.trigger.Handle(event)
+}
+
 // App struct holds the application state and use cases.
 type App struct {
 	ctx              context.Context
@@ -413,7 +423,7 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 	watcher := logwatcher.NewMultiOutputLogWatcher(watchPath, parser, func(logPath string) logwatcher.EventHandler {
 		adapter := a.activityIngestAdapterForPath(ctx, logger, emitEncounters, logPath)
 		triggerHandler := logwatcher.NewAutomationTriggerHandler(a.automation, ctx, logger)
-		return logwatcher.NewMultiHandler(adapter, triggerHandler)
+		return activityLogDualHandler{ingest: adapter, trigger: triggerHandler}
 	}, logwatcher.MultiOutputLogWatcherCallbacks{
 		OnLogRotationHandoff: func(c context.Context, oldPath string) error {
 			return a.handleActivityLogRotationHandoff(c, watchDeps, oldPath)

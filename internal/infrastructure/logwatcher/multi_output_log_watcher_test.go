@@ -42,7 +42,7 @@ func TestMultiOutputLogWatcher_ParallelAppendTwoFiles(t *testing.T) {
 	byPath := map[string]int{}
 	handlerFactory := func(logPath string) EventHandler {
 		p := logPath
-		return EventHandlerFunc(func(activity.ParsedEvent) {
+		return testEventHandler(func(activity.ParsedEvent) {
 			mu.Lock()
 			byPath[p]++
 			mu.Unlock()
@@ -90,7 +90,7 @@ func TestMultiOutputLogWatcher_StallStopsTailWithoutHandoff(t *testing.T) {
 	var mu sync.Mutex
 	var count int
 	handlerFactory := func(string) EventHandler {
-		return EventHandlerFunc(func(activity.ParsedEvent) {
+		return testEventHandler(func(activity.ParsedEvent) {
 			mu.Lock()
 			count++
 			mu.Unlock()
@@ -172,7 +172,7 @@ func TestMultiOutputLogWatcher_RotationHandoff(t *testing.T) {
 	var handoffPaths []string
 	var handoffMu sync.Mutex
 	handlerFactory := func(string) EventHandler {
-		return EventHandlerFunc(func(activity.ParsedEvent) {})
+		return testEventHandler(func(activity.ParsedEvent) {})
 	}
 	callbacks := MultiOutputLogWatcherCallbacks{
 		OnLogRotationHandoff: func(_ context.Context, oldPath string) error {
@@ -242,7 +242,7 @@ func TestMultiOutputLogWatcher_NewFileAppears(t *testing.T) {
 	seen := map[string]bool{}
 	handlerFactory := func(logPath string) EventHandler {
 		p := logPath
-		return EventHandlerFunc(func(activity.ParsedEvent) {
+		return testEventHandler(func(activity.ParsedEvent) {
 			mu.Lock()
 			seen[p] = true
 			mu.Unlock()
@@ -285,7 +285,7 @@ func TestMultiOutputLogWatcher_StopsOnCancel(t *testing.T) {
 	}
 
 	w := newMultiWatcherForTest(t, dir, func(string) EventHandler {
-		return EventHandlerFunc(func(activity.ParsedEvent) {})
+		return testEventHandler(func(activity.ParsedEvent) {})
 	}, MultiOutputLogWatcherCallbacks{})
 	ctx, cancel := context.WithCancel(context.Background())
 	if err := w.Start(ctx); err != nil {
@@ -312,7 +312,7 @@ func TestMultiOutputLogWatcher_OnTailCheckpoint(t *testing.T) {
 		offset int64
 	}
 	handlerFactory := func(string) EventHandler {
-		return EventHandlerFunc(func(activity.ParsedEvent) {})
+		return testEventHandler(func(activity.ParsedEvent) {})
 	}
 	callbacks := MultiOutputLogWatcherCallbacks{
 		OnTailCheckpoint: func(_ context.Context, p string, offset int64, _ time.Time) {
@@ -369,7 +369,7 @@ func TestMultiOutputLogWatcher_TailGoroutineExitClearsTailing(t *testing.T) {
 	existingPath := filepath.Join(dir, "output_log_existing.txt")
 
 	w := newMultiWatcherForTest(t, dir, func(string) EventHandler {
-		return EventHandlerFunc(func(activity.ParsedEvent) {})
+		return testEventHandler(func(activity.ParsedEvent) {})
 	}, MultiOutputLogWatcherCallbacks{})
 
 	state := &trackedLogFile{}
