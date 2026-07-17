@@ -5,6 +5,8 @@ import (
 	"os"
 	"sync/atomic"
 	"time"
+
+	"vrchat-tweaker/internal/domain/activity"
 )
 
 const defaultActiveLogStallTimeout = 60 * time.Second
@@ -18,7 +20,7 @@ type MultiOutputLogWatcherCallbacks struct {
 // MultiOutputLogWatcher polls a log directory and tails every output_log*.txt that is growing.
 type MultiOutputLogWatcher struct {
 	watchDir       string
-	parser         LogParser
+	parser         *activity.LogParser
 	handlerFactory func(logPath string) EventHandler
 	callbacks      MultiOutputLogWatcherCallbacks
 	logger         Logger
@@ -40,7 +42,7 @@ type trackedLogFile struct {
 // NewMultiOutputLogWatcher creates a directory-only watcher for parallel output_log sources.
 func NewMultiOutputLogWatcher(
 	watchDir string,
-	parser LogParser,
+	parser *activity.LogParser,
 	handlerFactory func(logPath string) EventHandler,
 	callbacks MultiOutputLogWatcherCallbacks,
 	logger Logger,

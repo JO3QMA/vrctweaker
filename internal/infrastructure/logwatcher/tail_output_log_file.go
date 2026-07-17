@@ -6,6 +6,8 @@ import (
 	"io"
 	"os"
 	"time"
+
+	"vrchat-tweaker/internal/domain/activity"
 )
 
 const (
@@ -21,7 +23,7 @@ func tailOutputLogFile(
 	ctx context.Context,
 	path string,
 	startOffset int64,
-	parser LogParser,
+	parser *activity.LogParser,
 	handler EventHandler,
 	logger Logger,
 	checkpoint tailCheckpoint,

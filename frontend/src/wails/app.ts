@@ -238,9 +238,6 @@ export async function callApp<T>(
 }
 
 export const App = {
-  async greet(name: string): Promise<string> {
-    return callApp((a) => a.Greet(name), `Hello ${name}, Welcome!`);
-  },
   async launchProfiles(): Promise<LaunchProfileDTO[]> {
     return callApp((a) => a.LaunchProfiles(), []);
   },

@@ -12,12 +12,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gen2brain/beeep"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"vrchat-tweaker/internal/domain/activity"
 	"vrchat-tweaker/internal/domain/automation"
 	"vrchat-tweaker/internal/domain/launcher"
 	"vrchat-tweaker/internal/domain/media"
-	"vrchat-tweaker/internal/domain/vrchatconfig"
 	"vrchat-tweaker/internal/infrastructure/desktop"
 	"vrchat-tweaker/internal/infrastructure/filesystem"
 	"vrchat-tweaker/internal/infrastructure/logwatcher"
@@ -44,7 +44,7 @@ type App struct {
 	dbMaintenance    *usecase.DBMaintenanceUseCase
 	ytdlp            *usecase.YTDLPMaintainUseCase
 	serverStatus     *statuspage.Client
-	vrchatConfigRepo vrchatconfig.ConfigRepository
+	vrchatConfigRepo *filesystem.VRChatConfigFileRepository
 
 	galleryScanMu     sync.Mutex
 	galleryScanCancel context.CancelFunc
@@ -112,11 +112,17 @@ func (a *App) startup(ctx context.Context) {
 	apiClient := vrchatapi.NewClient("")
 
 	extractor := media.NewDefaultMetadataExtractor()
-	notifier := desktop.NewBeeepNotifier("VRChat Tweaker")
+	const defaultNotificationTitle = "VRChat Tweaker"
+	notify := func(title, message string) error {
+		if title == "" {
+			title = defaultNotificationTitle
+		}
+		return beeep.Notify(title, message, "")
+	}
 	a.launcher = usecase.NewLauncherUseCase(launcherRepo)
 	a.media = usecase.NewMediaUseCase(mediaRepo, extractor, worldRepo, userCacheRepo)
 	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo)
-	a.identity = usecase.NewIdentityUseCase(userCacheRepo, apiClient, credStore, settingsRepo, notifier)
+	a.identity = usecase.NewIdentityUseCase(userCacheRepo, apiClient, credStore, settingsRepo, notify)
 	a.automation = usecase.NewAutomationUseCase(automationRepo, a.identity)
 	a.settings = usecase.NewSettingsUseCase(settingsRepo)
 	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(db, encounterRepo, mediaRepo, userCacheRepo, settingsRepo)
@@ -505,11 +511,6 @@ func getDataDir() (string, error) {
 		return "", err
 	}
 	return filepath.Join(configDir, "vrchat-tweaker"), nil
-}
-
-// Greet returns a greeting (sample binding).
-func (a *App) Greet(name string) string {
-	return fmt.Sprintf("Hello %s, Welcome to VRChat Tweaker!", name)
 }
 
 // --- Launcher bindings ---
