@@ -120,32 +120,33 @@ func (m *mockScreenshotRepo) DeleteAll(ctx context.Context) (int64, error) {
 	return n, nil
 }
 
-// mockMetadataExtractor returns fixed values for testing.
-type mockMetadataExtractor struct {
-	worldID           string
-	worldName         string
-	authorVRCUserID   string
-	authorDisplayName string
+func stubScreenshotMetadata(worldID, worldName, authorVRCUserID, authorDisplayName string) func(string) (media.ScreenshotMetadata, error) {
+	return func(string) (media.ScreenshotMetadata, error) {
+		return media.ScreenshotMetadata{
+			WorldID:           worldID,
+			WorldDisplayName:  worldName,
+			AuthorVRCUserID:   authorVRCUserID,
+			AuthorDisplayName: authorDisplayName,
+		}, nil
+	}
 }
 
-func (m *mockMetadataExtractor) Extract(path string) (media.ScreenshotMetadata, error) {
-	return media.ScreenshotMetadata{
-		WorldID:           m.worldID,
-		WorldDisplayName:  m.worldName,
-		AuthorVRCUserID:   m.authorVRCUserID,
-		AuthorDisplayName: m.authorDisplayName,
-	}, nil
+func withScreenshotMetadataExtract(t *testing.T, fn func(string) (media.ScreenshotMetadata, error)) {
+	t.Helper()
+	old := extractScreenshotMetadata
+	extractScreenshotMetadata = fn
+	t.Cleanup(func() { extractScreenshotMetadata = old })
 }
 
-type countingMetadataExtractor struct {
-	inner   *mockMetadataExtractor
-	extract []string
+type extractCallCounter struct {
+	inner func(string) (media.ScreenshotMetadata, error)
+	paths []string
 }
 
-func (c *countingMetadataExtractor) Extract(path string) (media.ScreenshotMetadata, error) {
-	c.extract = append(c.extract, path)
+func (c *extractCallCounter) call(path string) (media.ScreenshotMetadata, error) {
+	c.paths = append(c.paths, path)
 	if c.inner != nil {
-		return c.inner.Extract(path)
+		return c.inner(path)
 	}
 	return media.ScreenshotMetadata{}, nil
 }
@@ -240,13 +241,8 @@ func TestMediaUseCase_IngestScreenshotFile_UpsertsAuthorInUserCache(t *testing.T
 	}
 	repo := newMockScreenshotRepo()
 	userRepo := &screenshotAuthorUserCacheMock{}
-	ext := &mockMetadataExtractor{
-		worldID:           "wrld_a",
-		worldName:         "W",
-		authorVRCUserID:   "usr_testauthor",
-		authorDisplayName: "Test Author",
-	}
-	uc := NewMediaUseCase(repo, ext, nil, userRepo)
+	withScreenshotMetadataExtract(t, stubScreenshotMetadata("wrld_a", "W", "usr_testauthor", "Test Author"))
+	uc := NewMediaUseCase(repo, nil, userRepo)
 	ctx := context.Background()
 	_, _, err := uc.IngestScreenshotFile(ctx, path)
 	if err != nil {
@@ -270,8 +266,8 @@ func TestMediaUseCase_ScanDirectory_WithExtractor(t *testing.T) {
 	_ = os.WriteFile(path, []byte("fake"), 0644)
 
 	repo := newMockScreenshotRepo()
-	extractor := &mockMetadataExtractor{worldID: "wrld_test123", worldName: "Test World"}
-	uc := NewMediaUseCase(repo, extractor, nil, nil)
+	withScreenshotMetadataExtract(t, stubScreenshotMetadata("wrld_test123", "Test World", "", ""))
+	uc := NewMediaUseCase(repo, nil, nil)
 	ctx := context.Background()
 
 	count, err := uc.ScanDirectory(ctx, dir, nil)
@@ -303,8 +299,7 @@ func TestMediaUseCase_ScanDirectory_ExtractorErrorContinues(t *testing.T) {
 	_ = os.WriteFile(path, []byte("fake"), 0644)
 
 	repo := newMockScreenshotRepo()
-	extractor := media.NewDefaultMetadataExtractor()
-	uc := NewMediaUseCase(repo, extractor, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 	ctx := context.Background()
 
 	count, err := uc.ScanDirectory(ctx, dir, nil)
@@ -331,7 +326,7 @@ func TestMediaUseCase_IngestScreenshotFile_NewThenSkip(t *testing.T) {
 		t.Fatalf("writeTestPNG: %v", err)
 	}
 	repo := newMockScreenshotRepo()
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 	ctx := context.Background()
 
 	s, created, err := uc.IngestScreenshotFile(ctx, path)
@@ -364,7 +359,7 @@ func TestMediaUseCase_IngestScreenshotFile_SkipsNonImage(t *testing.T) {
 		t.Fatal(err)
 	}
 	repo := newMockScreenshotRepo()
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 	s, created, err := uc.IngestScreenshotFile(context.Background(), txt)
 	if err != nil {
 		t.Fatalf("IngestScreenshotFile: %v", err)
@@ -391,7 +386,7 @@ func TestMediaUseCase_IngestUnderPictureRootSince_onlyNewerMtime(t *testing.T) {
 
 	since := time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)
 	repo := newMockScreenshotRepo()
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 	ctx := context.Background()
 
 	count, err := uc.IngestUnderPictureRootSince(ctx, dir, since)
@@ -415,7 +410,7 @@ func TestMediaUseCase_IngestUnderPictureRootSince_notADir(t *testing.T) {
 	if err := os.WriteFile(f, []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	uc := NewMediaUseCase(newMockScreenshotRepo(), nil, nil, nil)
+	uc := NewMediaUseCase(newMockScreenshotRepo(), nil, nil)
 	count, err := uc.IngestUnderPictureRootSince(context.Background(), f, time.Time{})
 	if err != nil {
 		t.Fatalf("IngestUnderPictureRootSince: %v", err)
@@ -433,7 +428,7 @@ func TestMediaUseCase_IngestUnderPictureRootSince_contextCancelDuringWalk(t *tes
 	_ = os.Chtimes(p, future, future)
 
 	repo := newMockScreenshotRepo()
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
@@ -460,8 +455,8 @@ func TestMediaUseCase_ReindexScreenshots(t *testing.T) {
 	}
 	_ = repo.Save(context.Background(), s)
 
-	extractor := &mockMetadataExtractor{worldID: "wrld_reindexed", worldName: "Reindexed World"}
-	uc := NewMediaUseCase(repo, extractor, nil, nil)
+	withScreenshotMetadataExtract(t, stubScreenshotMetadata("wrld_reindexed", "Reindexed World", "", ""))
+	uc := NewMediaUseCase(repo, nil, nil)
 	ctx := context.Background()
 
 	updated, err := uc.ReindexScreenshots(ctx, basePath)
@@ -489,8 +484,8 @@ func TestMediaUseCase_IngestScreenshotFile_UpsertsWorldInfo(t *testing.T) {
 	}
 	repo := newMockScreenshotRepo()
 	worldRepo := &mockWorldInfoRepo{}
-	extractor := &mockMetadataExtractor{worldID: "wrld_ingest", worldName: "Ingest World"}
-	uc := NewMediaUseCase(repo, extractor, worldRepo, nil)
+	withScreenshotMetadataExtract(t, stubScreenshotMetadata("wrld_ingest", "Ingest World", "", ""))
+	uc := NewMediaUseCase(repo, worldRepo, nil)
 	ctx := context.Background()
 
 	s, created, err := uc.IngestScreenshotFile(ctx, path)
@@ -523,8 +518,8 @@ func TestMediaUseCase_IngestScreenshotFile_UpsertsWorldVisitWhenNameEmpty(t *tes
 	}
 	repo := newMockScreenshotRepo()
 	worldRepo := &mockWorldInfoRepo{}
-	extractor := &mockMetadataExtractor{worldID: "wrld_noidname", worldName: ""}
-	uc := NewMediaUseCase(repo, extractor, worldRepo, nil)
+	withScreenshotMetadataExtract(t, stubScreenshotMetadata("wrld_noidname", "", "", ""))
+	uc := NewMediaUseCase(repo, worldRepo, nil)
 	ctx := context.Background()
 
 	_, created, err := uc.IngestScreenshotFile(ctx, path)
@@ -563,8 +558,8 @@ func TestMediaUseCase_ReindexScreenshots_UpsertsWorldInfo(t *testing.T) {
 	_ = repo.Save(context.Background(), s)
 
 	worldRepo := &mockWorldInfoRepo{}
-	extractor := &mockMetadataExtractor{worldID: "wrld_reidx", worldName: "Reidx World"}
-	uc := NewMediaUseCase(repo, extractor, worldRepo, nil)
+	withScreenshotMetadataExtract(t, stubScreenshotMetadata("wrld_reidx", "Reidx World", "", ""))
+	uc := NewMediaUseCase(repo, worldRepo, nil)
 	ctx := context.Background()
 
 	updated, err := uc.ReindexScreenshots(ctx, basePath)
@@ -591,7 +586,7 @@ func TestMediaUseCase_ScanDirectory_ProgressCallbacks(t *testing.T) {
 	_ = os.WriteFile(p2, []byte("fake2"), 0644)
 
 	repo := newMockScreenshotRepo()
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 	ctx := context.Background()
 
 	var got []ScanProgress
@@ -639,7 +634,7 @@ func TestMediaUseCase_ScanDirectory_ContextCancelDuringWalk(t *testing.T) {
 	_ = os.WriteFile(p1, []byte("fake1"), 0o644)
 
 	repo := newMockScreenshotRepo()
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
@@ -657,7 +652,7 @@ func TestMediaUseCase_ScanDirectory_ContextCancelDuringImport(t *testing.T) {
 	}
 
 	repo := newMockScreenshotRepo()
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 	ctx, cancel := context.WithCancel(context.Background())
 
 	_, err := uc.ScanDirectory(ctx, dir, func(p ScanProgress) {
@@ -673,7 +668,7 @@ func TestMediaUseCase_ScanDirectory_ContextCancelDuringImport(t *testing.T) {
 func TestMediaUseCase_ListScreenshotsInGalleryScope_emptyRoot(t *testing.T) {
 	repo := newMockScreenshotRepo()
 	_ = repo.Save(context.Background(), &media.Screenshot{ID: "s1", FilePath: "/any.png"})
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 
 	list, err := uc.ListScreenshotsInGalleryScope(context.Background(), "", nil)
 	if err != nil {
@@ -696,7 +691,7 @@ func TestMediaUseCase_ListScreenshotsInGalleryScope_excludesOutOfScopePaths(t *t
 	_ = repo.Save(context.Background(), &media.Screenshot{ID: "in", FilePath: inScope})
 	_ = repo.Save(context.Background(), &media.Screenshot{ID: "out", FilePath: outScope})
 
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 	list, err := uc.ListScreenshotsInGalleryScope(context.Background(), base, nil)
 	if err != nil {
 		t.Fatalf("ListScreenshotsInGalleryScope: %v", err)
@@ -721,7 +716,7 @@ func TestMediaUseCase_ListScreenshotsInGalleryScope_excludesMissingFiles(t *test
 	_ = repo.Save(context.Background(), &media.Screenshot{ID: "here", FilePath: existing})
 	_ = repo.Save(context.Background(), &media.Screenshot{ID: "gone", FilePath: missing})
 
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 	list, err := uc.ListScreenshotsInGalleryScope(context.Background(), base, nil)
 	if err != nil {
 		t.Fatalf("ListScreenshotsInGalleryScope: %v", err)
@@ -741,7 +736,7 @@ func TestMediaUseCase_ListScreenshotsInGalleryScope_preservesWorldFilter(t *test
 
 	repo := newMockScreenshotRepo()
 	_ = repo.Save(context.Background(), &media.Screenshot{ID: "a", FilePath: path, WorldID: "wrld_a"})
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 
 	_, err := uc.ListScreenshotsInGalleryScope(context.Background(), base, &media.ScreenshotFilter{WorldID: "wrld_a"})
 	if err != nil {
@@ -756,7 +751,7 @@ func TestMediaUseCase_ListGetDeleteScreenshot(t *testing.T) {
 	repo := newMockScreenshotRepo()
 	s := &media.Screenshot{ID: "s-del", FilePath: "/tmp/x.png"}
 	_ = repo.Save(context.Background(), s)
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 	ctx := context.Background()
 
 	list, err := uc.ListScreenshots(ctx, nil)
@@ -787,7 +782,7 @@ func TestMediaUseCase_ReindexScreenshots_updatesStaleFileSize(t *testing.T) {
 	s := &media.Screenshot{ID: "sz1", FilePath: path, FileSizeBytes: &oldSize}
 	_ = repo.Save(context.Background(), s)
 
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 	updated, err := uc.ReindexScreenshots(context.Background(), basePath)
 	if err != nil || updated != 1 {
 		t.Fatalf("updated = %d err=%v", updated, err)
@@ -818,7 +813,7 @@ func TestMediaUseCase_ReindexScreenshots_regeneratesStaleThumbnail(t *testing.T)
 		SourceModUnix: info.ModTime().Unix(),
 	})
 
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 	updated, err := uc.ReindexScreenshots(context.Background(), basePath)
 	if err != nil || updated != 1 {
 		t.Fatalf("updated = %d err=%v", updated, err)
@@ -837,7 +832,7 @@ func TestMediaUseCase_prepareScreenshotThumbnailJPEG_usesJpegSource(t *testing.T
 	repo := newMockScreenshotRepo()
 	s := &media.Screenshot{ID: "jpg1", FilePath: path}
 	_ = repo.Save(context.Background(), s)
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 	if err := uc.EnsureScreenshotThumbnail(context.Background(), "jpg1"); err != nil {
 		t.Fatalf("EnsureScreenshotThumbnail: %v", err)
 	}
@@ -861,7 +856,7 @@ func TestMediaUseCase_prepareScreenshotThumbnailJPEG_invalidCachedBlobRegenerate
 		SourceSize:    info.Size(),
 		SourceModUnix: info.ModTime().Unix(),
 	})
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 	if err := uc.EnsureScreenshotThumbnail(context.Background(), "badcache"); err != nil {
 		t.Fatal(err)
 	}
@@ -872,7 +867,7 @@ func TestMediaUseCase_prepareScreenshotThumbnailJPEG_invalidCachedBlobRegenerate
 
 func TestMediaUseCase_IngestScreenshotFile_skipsDirectory(t *testing.T) {
 	dir := t.TempDir()
-	uc := NewMediaUseCase(newMockScreenshotRepo(), nil, nil, nil)
+	uc := NewMediaUseCase(newMockScreenshotRepo(), nil, nil)
 	s, created, err := uc.IngestScreenshotFile(context.Background(), dir)
 	if err != nil {
 		t.Fatal(err)
@@ -905,7 +900,7 @@ func TestMediaUseCase_ReindexScreenshots_skipsMissingFileOnDisk(t *testing.T) {
 	repo := newMockScreenshotRepo()
 	sz := int64(1)
 	_ = repo.Save(context.Background(), &media.Screenshot{ID: "gone", FilePath: missing, FileSizeBytes: &sz})
-	uc := NewMediaUseCase(repo, nil, nil, nil)
+	uc := NewMediaUseCase(repo, nil, nil)
 	updated, err := uc.ReindexScreenshots(context.Background(), basePath)
 	if err != nil || updated != 0 {
 		t.Fatalf("updated = %d err=%v", updated, err)
@@ -931,8 +926,9 @@ func TestMediaUseCase_ReindexScreenshots_skipsExtractWhenMetadataCurrent(t *test
 		SourceModUnix: info.ModTime().Unix(),
 	})
 
-	counter := &countingMetadataExtractor{inner: &mockMetadataExtractor{worldID: "wrld_other"}}
-	uc := NewMediaUseCase(repo, counter, nil, nil)
+	counter := &extractCallCounter{inner: stubScreenshotMetadata("wrld_other", "", "", "")}
+	withScreenshotMetadataExtract(t, counter.call)
+	uc := NewMediaUseCase(repo, nil, nil)
 	updated, err := uc.ReindexScreenshots(context.Background(), basePath)
 	if err != nil {
 		t.Fatalf("ReindexScreenshots: %v", err)
@@ -940,8 +936,8 @@ func TestMediaUseCase_ReindexScreenshots_skipsExtractWhenMetadataCurrent(t *test
 	if updated != 0 {
 		t.Fatalf("updated = %d, want 0", updated)
 	}
-	if len(counter.extract) != 0 {
-		t.Fatalf("Extract calls = %d, want 0", len(counter.extract))
+	if len(counter.paths) != 0 {
+		t.Fatalf("Extract calls = %d, want 0", len(counter.paths))
 	}
 }
 
@@ -960,10 +956,9 @@ func TestMediaUseCase_SyncPictureFolder_ingestsAndReindexesEmptyWorldID(t *testi
 		ID: "old", FilePath: existingPath, WorldID: "",
 	})
 
-	counter := &countingMetadataExtractor{
-		inner: &mockMetadataExtractor{worldID: "wrld_sync", worldName: "Sync World"},
-	}
-	uc := NewMediaUseCase(repo, counter, nil, nil)
+	counter := &extractCallCounter{inner: stubScreenshotMetadata("wrld_sync", "Sync World", "", "")}
+	withScreenshotMetadataExtract(t, counter.call)
+	uc := NewMediaUseCase(repo, nil, nil)
 
 	total, err := uc.SyncPictureFolder(context.Background(), basePath, nil)
 	if err != nil {
@@ -982,7 +977,7 @@ func TestMediaUseCase_SyncPictureFolder_ingestsAndReindexesEmptyWorldID(t *testi
 	}
 	// New file: extract once on ingest only, not again on reindex skip list.
 	newExtracts := 0
-	for _, p := range counter.extract {
+	for _, p := range counter.paths {
 		if p == filepath.Clean(newPath) {
 			newExtracts++
 		}

@@ -339,9 +339,6 @@ function emptyUserProfileNavigation(
 }
 
 export const App = {
-  greet: (name: string) =>
-    callApp((a) => a.Greet(name), `Hello ${name}, Welcome!`),
-
   launchProfiles: bindGo((a) => a.LaunchProfiles(), []),
   launchVRChat: bindGo(
     (a, profileID: string) => a.LaunchVRChat(profileID),

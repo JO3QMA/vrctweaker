@@ -20,24 +20,24 @@ type IdentityUseCase struct {
 	apiClient     vrchatapi.VRChatAPIClient
 	credStore     vrchatapi.CredentialStore
 	settingsRepo  appSettingsRepo
-	notifier      identity.Notifier // optional; nil skips online notifications
+	notify        func(title, message string) error // optional; nil skips online notifications
 }
 
 // NewIdentityUseCase creates a new IdentityUseCase.
-// notifier is optional; pass nil to skip favorite-online notifications.
+// notify is optional; pass nil to skip favorite-online notifications.
 func NewIdentityUseCase(
 	userCacheRepo userCacheRepo,
 	apiClient vrchatapi.VRChatAPIClient,
 	credStore vrchatapi.CredentialStore,
 	settingsRepo appSettingsRepo,
-	notifier identity.Notifier,
+	notify func(title, message string) error,
 ) *IdentityUseCase {
 	return &IdentityUseCase{
 		userCacheRepo: userCacheRepo,
 		apiClient:     apiClient,
 		credStore:     credStore,
 		settingsRepo:  settingsRepo,
-		notifier:      notifier,
+		notify:        notify,
 	}
 }
 
@@ -341,9 +341,9 @@ func (uc *IdentityUseCase) RefreshFriends(ctx context.Context) error {
 		}
 	}
 	online := identity.DetectFavoriteOnlineTransitions(beforeMap, afterMap)
-	if uc.notifier != nil {
+	if uc.notify != nil {
 		for _, fc := range online {
-			_ = uc.notifier.NotifyFavoriteOnline("VRChat Tweaker", fc.DisplayName+" がオンラインになりました")
+			_ = uc.notify("VRChat Tweaker", fc.DisplayName+" がオンラインになりました")
 		}
 	}
 

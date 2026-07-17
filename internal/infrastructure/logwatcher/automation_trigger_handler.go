@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"vrchat-tweaker/internal/domain/activity"
-	"vrchat-tweaker/internal/infrastructure/diag"
 )
 
 // FriendJoinedAutomation runs automation when a friend joins the instance (log-derived).
@@ -17,13 +16,13 @@ type FriendJoinedAutomation interface {
 type AutomationTriggerHandler struct {
 	automation FriendJoinedAutomation
 	ctx        context.Context
-	logger     diag.Logger
+	logger     Logger
 }
 
 // NewAutomationTriggerHandler creates a handler that calls automation directly.
-func NewAutomationTriggerHandler(automation FriendJoinedAutomation, ctx context.Context, logger diag.Logger) *AutomationTriggerHandler {
+func NewAutomationTriggerHandler(automation FriendJoinedAutomation, ctx context.Context, logger Logger) *AutomationTriggerHandler {
 	if logger == nil {
-		logger = diag.Std()
+		logger = Std()
 	}
 	return &AutomationTriggerHandler{
 		automation: automation,

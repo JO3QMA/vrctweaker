@@ -37,18 +37,21 @@ type GalleryScanDone struct {
 	Cancelled bool   `json:"cancelled"`
 }
 
+// extractScreenshotMetadata reads embedded screenshot metadata.
+// Tests may replace this.
+var extractScreenshotMetadata = media.Extract
+
 // MediaUseCase handles screenshot scanning and management.
 type MediaUseCase struct {
 	repo          screenshotRepo
-	extractor     media.MetadataExtractor
 	worldRepo     worldInfoRepo
 	userCacheRepo userCacheRepo
 }
 
 // NewMediaUseCase creates a new MediaUseCase.
 // worldRepo and userCacheRepo may be nil; when set, extracted metadata is upserted into world_info and users_cache.
-func NewMediaUseCase(repo screenshotRepo, extractor media.MetadataExtractor, worldRepo worldInfoRepo, userCacheRepo userCacheRepo) *MediaUseCase {
-	return &MediaUseCase{repo: repo, extractor: extractor, worldRepo: worldRepo, userCacheRepo: userCacheRepo}
+func NewMediaUseCase(repo screenshotRepo, worldRepo worldInfoRepo, userCacheRepo userCacheRepo) *MediaUseCase {
+	return &MediaUseCase{repo: repo, worldRepo: worldRepo, userCacheRepo: userCacheRepo}
 }
 
 func (uc *MediaUseCase) upsertWorldInfo(ctx context.Context, worldID, worldName string, at time.Time) {
@@ -112,16 +115,12 @@ func (uc *MediaUseCase) IngestScreenshotFile(ctx context.Context, path string) (
 	}
 
 	takenAt := timePtr(info.ModTime())
-	meta := media.ScreenshotMetadata{}
-	if uc.extractor != nil {
-		var exErr error
-		meta, exErr = uc.extractor.Extract(path)
-		if exErr != nil {
-			meta = media.ScreenshotMetadata{}
-		}
-		if meta.TakenAt != nil {
-			takenAt = meta.TakenAt
-		}
+	meta, exErr := extractScreenshotMetadata(path)
+	if exErr != nil {
+		meta = media.ScreenshotMetadata{}
+	}
+	if meta.TakenAt != nil {
+		takenAt = meta.TakenAt
 	}
 	sz := info.Size()
 	s := &media.Screenshot{
