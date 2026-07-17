@@ -96,7 +96,7 @@ func TestProcessOutputLogFileFromOffset_ParseErrorContinues(t *testing.T) {
 	}
 	buf := &raceSafeLogBuffer{}
 	_, err := ProcessOutputLogFileFromOffset(
-context.Background(), path, 0, nil, testEventHandler(func(activity.ParsedEvent) {}),
+		context.Background(), path, 0, nil, testEventHandler(func(activity.ParsedEvent) {}),
 		buf.logger(),
 		nil,
 	)
@@ -116,7 +116,7 @@ func TestProcessOutputLogFileFromOffset_ContextCancel(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-_, err := ProcessOutputLogFileFromOffset(ctx, path, 0, activity.NewLogParser(), testEventHandler(func(activity.ParsedEvent) {}), nil, nil)
+	_, err := ProcessOutputLogFileFromOffset(ctx, path, 0, activity.NewLogParser(), testEventHandler(func(activity.ParsedEvent) {}), nil, nil)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("err = %v", err)
 	}
@@ -148,7 +148,7 @@ func TestProcessOutputLogFileFromOffset_openError(t *testing.T) {
 	_, err := ProcessOutputLogFileFromOffset(
 		context.Background(),
 		filepath.Join(t.TempDir(), "missing.txt"),
-0, activity.NewLogParser(), testEventHandler(func(activity.ParsedEvent) {}), nil, nil,
+		0, activity.NewLogParser(), testEventHandler(func(activity.ParsedEvent) {}), nil, nil,
 	)
 	if err == nil {
 		t.Fatal("expected open error")
@@ -162,7 +162,7 @@ func TestProcessOutputLogFileFromOffset_offsetBeyondSize(t *testing.T) {
 		t.Fatal(err)
 	}
 	pos, err := ProcessOutputLogFileFromOffset(
-context.Background(), path, 100, activity.NewLogParser(), testEventHandler(func(activity.ParsedEvent) {}), nil, nil,
+		context.Background(), path, 100, activity.NewLogParser(), testEventHandler(func(activity.ParsedEvent) {}), nil, nil,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -179,7 +179,7 @@ func TestProcessOutputLogFileFromOffset_readError(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := ProcessOutputLogFileFromOffset(
-context.Background(), path, 0, activity.NewLogParser(), testEventHandler(func(activity.ParsedEvent) {}), nil, nil,
+		context.Background(), path, 0, activity.NewLogParser(), testEventHandler(func(activity.ParsedEvent) {}), nil, nil,
 	)
 	if err == nil {
 		t.Fatal("expected read error on directory path")
@@ -193,7 +193,7 @@ func TestProcessOutputLogFileFromOffset_progressCallback(t *testing.T) {
 		t.Fatal(err)
 	}
 	pos, err := ProcessOutputLogFileFromOffset(
-context.Background(), path, 0, activity.NewLogParser(), testEventHandler(func(activity.ParsedEvent) {}), nil,
+		context.Background(), path, 0, activity.NewLogParser(), testEventHandler(func(activity.ParsedEvent) {}), nil,
 		func(offset int64, line string) {
 			if offset != 2 || line != "x" {
 				t.Fatalf("progress offset=%d line=%q", offset, line)
