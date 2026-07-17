@@ -69,9 +69,7 @@ func WarmSessionCorrelatorFromLogFile(ctx context.Context, path string, endOffse
 		}
 		lineTrimmed := trimNL(line)
 		if lineTrimmed != "" {
-			if _, parseErr := dispatchOutputLogLine(lineTrimmed, parser, fnEventHandler(func(event activity.ParsedEvent) {
-				warmer.WarmFromParsedEvent(event)
-			})); parseErr != nil {
+			if _, parseErr := dispatchOutputLogLine(lineTrimmed, parser, fnEventHandler(warmer.WarmFromParsedEvent)); parseErr != nil {
 				logDispatchLineErr(logger, parseErr,
 					"[logwatcher] warm parse error: %v", "[logwatcher] warm dispatch error: %v")
 			}
