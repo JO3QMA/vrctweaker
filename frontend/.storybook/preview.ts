@@ -5,7 +5,6 @@ import { createI18n } from "vue-i18n";
 import ElementPlus from "element-plus";
 import "element-plus/dist/index.css";
 import "element-plus/theme-chalk/dark/css-vars.css";
-import * as ElementPlusIconsVue from "@element-plus/icons-vue";
 import "../src/assets/style.css";
 import en from "../src/i18n/locales/en.json";
 import ja from "../src/i18n/locales/ja.json";
@@ -54,9 +53,6 @@ setup((app) => {
   app.use(router);
   app.use(storybookI18n);
   app.use(ElementPlus);
-  for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
-    app.component(key, component);
-  }
 });
 
 const preview: Preview = {

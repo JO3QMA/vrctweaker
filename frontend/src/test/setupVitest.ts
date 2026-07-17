@@ -1,6 +1,5 @@
 import { config } from "@vue/test-utils";
 import ElementPlus from "element-plus";
-import * as ElementPlusIconsVue from "@element-plus/icons-vue";
 import { createI18n } from "vue-i18n";
 import en from "../i18n/locales/en.json";
 import ja from "../i18n/locales/ja.json";
@@ -16,11 +15,8 @@ const testI18n = createI18n({
   globalInjection: true,
 });
 
-// テスト環境で Element Plus・vue-i18n・アイコンをグローバル登録
+// テスト環境で Element Plus・vue-i18n をグローバル登録
 config.global.plugins = [ElementPlus, testI18n];
-config.global.components = Object.fromEntries(
-  Object.entries(ElementPlusIconsVue),
-);
 
 /**
  * jsdom does not implement ResizeObserver; TanStack Virtual and the gallery grid rely on it.

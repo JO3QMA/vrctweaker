@@ -228,6 +228,7 @@
 </template>
 
 <script setup lang="ts">
+import { Search } from "@element-plus/icons-vue";
 import { useVirtualizer, type VirtualItem } from "@tanstack/vue-virtual";
 import {
   ref,
