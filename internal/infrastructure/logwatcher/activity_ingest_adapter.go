@@ -5,7 +5,6 @@ import (
 	"sync/atomic"
 
 	"vrchat-tweaker/internal/domain/activity"
-	"vrchat-tweaker/internal/infrastructure/diag"
 	"vrchat-tweaker/internal/usecase"
 )
 
@@ -13,7 +12,7 @@ import (
 type ActivityIngestAdapter struct {
 	uc               *usecase.ActivityUseCase
 	ctx              context.Context
-	logger           diag.Logger
+	logger           Logger
 	logSourcePath    string
 	correlator       activity.SessionCorrelator
 	onAfterEncounter func()
@@ -24,9 +23,9 @@ type ActivityIngestAdapter struct {
 // NewActivityIngestAdapter creates an adapter that correlates and persists log-derived activity.
 // logSourcePath is the normalized absolute path of the output_log file (empty for legacy single-file tests).
 // onAfterEncounter is optional (e.g. Wails EventsEmit after each encounter row).
-func NewActivityIngestAdapter(uc *usecase.ActivityUseCase, ctx context.Context, logger diag.Logger, onAfterEncounter func(), logSourcePath string) *ActivityIngestAdapter {
+func NewActivityIngestAdapter(uc *usecase.ActivityUseCase, ctx context.Context, logger Logger, onAfterEncounter func(), logSourcePath string) *ActivityIngestAdapter {
 	if logger == nil {
-		logger = diag.Std()
+		logger = Std()
 	}
 	return &ActivityIngestAdapter{
 		uc:               uc,

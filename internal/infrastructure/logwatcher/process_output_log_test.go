@@ -94,10 +94,9 @@ func TestProcessOutputLogFileFromOffset_ParseErrorContinues(t *testing.T) {
 	if err := writeTestFile(path, "bad line\n"); err != nil {
 		t.Fatal(err)
 	}
-	parser := stubParser{err: errors.New("parse fail")}
 	buf := &raceSafeLogBuffer{}
 	_, err := ProcessOutputLogFileFromOffset(
-		context.Background(), path, 0, parser, testEventHandler(func(activity.ParsedEvent) {}),
+context.Background(), path, 0, nil, testEventHandler(func(activity.ParsedEvent) {}),
 		buf.logger(),
 		nil,
 	)
@@ -117,7 +116,7 @@ func TestProcessOutputLogFileFromOffset_ContextCancel(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err := ProcessOutputLogFileFromOffset(ctx, path, 0, stubParser{}, testEventHandler(func(activity.ParsedEvent) {}), nil, nil)
+_, err := ProcessOutputLogFileFromOffset(ctx, path, 0, activity.NewLogParser(), testEventHandler(func(activity.ParsedEvent) {}), nil, nil)
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("err = %v", err)
 	}
@@ -126,10 +125,11 @@ func TestProcessOutputLogFileFromOffset_ContextCancel(t *testing.T) {
 func TestProcessOutputLogFileFromOffset_NegativeOffsetClamped(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "output_log.txt")
-	if err := writeTestFile(path, "only\n"); err != nil {
+	line := "2026.03.21 11:32:16 Debug      -  [Behaviour] OnPlayerJoined Alice (usr_abc)\n"
+	if err := writeTestFile(path, line); err != nil {
 		t.Fatal(err)
 	}
-	parser := stubParser{events: []activity.ParsedEvent{&activity.EncounterEvent{DisplayName: "X"}}}
+	parser := activity.NewLogParser()
 	var got activity.ParsedEvent
 	h := testEventHandler(func(ev activity.ParsedEvent) { got = ev })
 	pos, err := ProcessOutputLogFileFromOffset(context.Background(), path, -5, parser, h, nil, nil)
@@ -139,7 +139,7 @@ func TestProcessOutputLogFileFromOffset_NegativeOffsetClamped(t *testing.T) {
 	if got == nil {
 		t.Fatal("expected event")
 	}
-	if pos != int64(len("only\n")) {
+	if pos != int64(len(line)) {
 		t.Fatalf("pos = %d", pos)
 	}
 }
@@ -148,7 +148,7 @@ func TestProcessOutputLogFileFromOffset_openError(t *testing.T) {
 	_, err := ProcessOutputLogFileFromOffset(
 		context.Background(),
 		filepath.Join(t.TempDir(), "missing.txt"),
-		0, stubParser{}, testEventHandler(func(activity.ParsedEvent) {}), nil, nil,
+0, activity.NewLogParser(), testEventHandler(func(activity.ParsedEvent) {}), nil, nil,
 	)
 	if err == nil {
 		t.Fatal("expected open error")
@@ -162,7 +162,7 @@ func TestProcessOutputLogFileFromOffset_offsetBeyondSize(t *testing.T) {
 		t.Fatal(err)
 	}
 	pos, err := ProcessOutputLogFileFromOffset(
-		context.Background(), path, 100, stubParser{}, testEventHandler(func(activity.ParsedEvent) {}), nil, nil,
+context.Background(), path, 100, activity.NewLogParser(), testEventHandler(func(activity.ParsedEvent) {}), nil, nil,
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -179,7 +179,7 @@ func TestProcessOutputLogFileFromOffset_readError(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := ProcessOutputLogFileFromOffset(
-		context.Background(), path, 0, stubParser{}, testEventHandler(func(activity.ParsedEvent) {}), nil, nil,
+context.Background(), path, 0, activity.NewLogParser(), testEventHandler(func(activity.ParsedEvent) {}), nil, nil,
 	)
 	if err == nil {
 		t.Fatal("expected read error on directory path")
@@ -193,7 +193,7 @@ func TestProcessOutputLogFileFromOffset_progressCallback(t *testing.T) {
 		t.Fatal(err)
 	}
 	pos, err := ProcessOutputLogFileFromOffset(
-		context.Background(), path, 0, stubParser{}, testEventHandler(func(activity.ParsedEvent) {}), nil,
+context.Background(), path, 0, activity.NewLogParser(), testEventHandler(func(activity.ParsedEvent) {}), nil,
 		func(offset int64, line string) {
 			if offset != 2 || line != "x" {
 				t.Fatalf("progress offset=%d line=%q", offset, line)
