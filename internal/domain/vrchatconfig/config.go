@@ -37,11 +37,3 @@ type VRChatConfig struct {
 	DynamicBoneMaxAffectedTransformCount int `json:"dynamic_bone_max_affected_transform_count,omitempty"`
 	DynamicBoneMaxColliderCheckCount     int `json:"dynamic_bone_max_collider_check_count,omitempty"`
 }
-
-// ConfigRepository provides CRUD operations for VRChat config.json.
-type ConfigRepository interface {
-	Exists() (bool, error)
-	Read() (*VRChatConfig, error)
-	Write(cfg *VRChatConfig) error
-	Delete() error
-}

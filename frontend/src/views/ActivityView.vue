@@ -113,6 +113,7 @@
 </template>
 
 <script setup lang="ts">
+import { Search } from "@element-plus/icons-vue";
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";

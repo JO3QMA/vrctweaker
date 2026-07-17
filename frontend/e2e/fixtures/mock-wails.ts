@@ -188,7 +188,6 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
       window.go = window.go || {};
       window.go.main = window.go.main || {};
       window.go.main.App = {
-        Greet: () => Promise.resolve('Hello, Welcome!'),
         LaunchProfiles: () => Promise.resolve(launchProfiles),
         SaveLaunchProfile: (p) => {
           const idx = launchProfiles.findIndex(function(x) { return x.id === p.id; });

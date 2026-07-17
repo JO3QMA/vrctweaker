@@ -1387,20 +1387,13 @@ func TestIdentityUseCase_SetFavorite_existingAndNew(t *testing.T) {
 	}
 }
 
-type mockNotifier struct {
-	titles []string
-	bodies []string
-}
-
-func (m *mockNotifier) NotifyFavoriteOnline(title, body string) error {
-	m.titles = append(m.titles, title)
-	m.bodies = append(m.bodies, body)
-	return nil
-}
-
 func TestIdentityUseCase_RefreshFriends_notifiesFavoriteOnline(t *testing.T) {
 	ctx := context.Background()
-	notifier := &mockNotifier{}
+	var bodies []string
+	notify := func(title, body string) error {
+		bodies = append(bodies, body)
+		return nil
+	}
 	userRepo := &mockUserCacheRepo{
 		listFavorites: []*identity.UserCache{
 			{VRCUserID: "fav1", DisplayName: "Fav", IsFavorite: true, Status: "offline"},
@@ -1415,12 +1408,12 @@ func TestIdentityUseCase_RefreshFriends_notifiesFavoriteOnline(t *testing.T) {
 			{ID: "fav1", DisplayName: "Fav", Status: "active"},
 		},
 	}
-	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), notifier)
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), notify)
 	if err := uc.RefreshFriends(ctx); err != nil {
 		t.Fatal(err)
 	}
-	if len(notifier.bodies) != 1 || !strings.Contains(notifier.bodies[0], "Fav") {
-		t.Fatalf("notifier bodies = %v", notifier.bodies)
+	if len(bodies) != 1 || !strings.Contains(bodies[0], "Fav") {
+		t.Fatalf("notify bodies = %v", bodies)
 	}
 }
 

@@ -12,14 +12,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gen2brain/beeep"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"vrchat-tweaker/internal/domain/activity"
 	"vrchat-tweaker/internal/domain/automation"
 	"vrchat-tweaker/internal/domain/launcher"
 	"vrchat-tweaker/internal/domain/media"
-	"vrchat-tweaker/internal/domain/vrchatconfig"
 	"vrchat-tweaker/internal/infrastructure/desktop"
-	"vrchat-tweaker/internal/infrastructure/diag"
 	"vrchat-tweaker/internal/infrastructure/filesystem"
 	"vrchat-tweaker/internal/infrastructure/logwatcher"
 	"vrchat-tweaker/internal/infrastructure/picturewatcher"
@@ -33,6 +32,16 @@ import (
 	"vrchat-tweaker/internal/usecase"
 )
 
+type activityLogDualHandler struct {
+	ingest  logwatcher.EventHandler
+	trigger logwatcher.EventHandler
+}
+
+func (h activityLogDualHandler) Handle(event activity.ParsedEvent) {
+	h.ingest.Handle(event)
+	h.trigger.Handle(event)
+}
+
 // App struct holds the application state and use cases.
 type App struct {
 	ctx              context.Context
@@ -45,7 +54,7 @@ type App struct {
 	dbMaintenance    *usecase.DBMaintenanceUseCase
 	ytdlp            *usecase.YTDLPMaintainUseCase
 	serverStatus     *statuspage.Client
-	vrchatConfigRepo vrchatconfig.ConfigRepository
+	vrchatConfigRepo *filesystem.VRChatConfigFileRepository
 
 	galleryScanMu     sync.Mutex
 	galleryScanCancel context.CancelFunc
@@ -112,11 +121,17 @@ func (a *App) startup(ctx context.Context) {
 	// decrypt the wrapped blob with Web Crypto, and then call UnlockVRChatSession.
 	apiClient := vrchatapi.NewClient("")
 
-	notifier := desktop.NewBeeepNotifier("VRChat Tweaker")
+	const defaultNotificationTitle = "VRChat Tweaker"
+	notify := func(title, message string) error {
+		if title == "" {
+			title = defaultNotificationTitle
+		}
+		return beeep.Notify(title, message, "")
+	}
 	a.launcher = usecase.NewLauncherUseCase(launcherRepo)
 	a.media = usecase.NewMediaUseCase(mediaRepo, worldRepo, userCacheRepo)
 	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo)
-	a.identity = usecase.NewIdentityUseCase(userCacheRepo, apiClient, credStore, settingsRepo, notifier)
+	a.identity = usecase.NewIdentityUseCase(userCacheRepo, apiClient, credStore, settingsRepo, notify)
 	a.automation = usecase.NewAutomationUseCase(automationRepo, a.identity)
 	a.settings = usecase.NewSettingsUseCase(settingsRepo)
 	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(db, encounterRepo, mediaRepo, userCacheRepo, settingsRepo)
@@ -407,7 +422,7 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 	watcher := logwatcher.NewMultiOutputLogWatcher(watchPath, parser, func(logPath string) logwatcher.EventHandler {
 		adapter := a.activityIngestAdapterForPath(ctx, logger, emitEncounters, logPath)
 		triggerHandler := logwatcher.NewAutomationTriggerHandler(a.automation, ctx, logger)
-		return logwatcher.NewMultiHandler(adapter, triggerHandler)
+		return activityLogDualHandler{ingest: adapter, trigger: triggerHandler}
 	}, logwatcher.MultiOutputLogWatcherCallbacks{
 		OnLogRotationHandoff: func(c context.Context, oldPath string) error {
 			return a.handleActivityLogRotationHandoff(c, watchDeps, oldPath)
@@ -473,7 +488,7 @@ func (a *App) startPictureFolderWatcher(ctx context.Context) {
 		return nil
 	}
 	log := pictureWatchLogger{ctx: ctx}
-	if err := picturewatcher.Start(ctx, root, ingest, diag.Logger(log.Printf)); err != nil {
+	if err := picturewatcher.Start(ctx, root, ingest, picturewatcher.Logger(log.Printf)); err != nil {
 		runtime.LogError(ctx, "failed to start picture folder watcher: "+err.Error())
 		return
 	}
@@ -494,9 +509,9 @@ func (logLogger) Printf(format string, args ...interface{}) {
 	log.Printf(format, args...)
 }
 
-func appDiagLogger() diag.Logger {
+func appDiagLogger() logwatcher.Logger {
 	ll := logLogger{}
-	return diag.Logger(ll.Printf)
+	return logwatcher.Logger(ll.Printf)
 }
 
 func getDataDir() (string, error) {
@@ -505,11 +520,6 @@ func getDataDir() (string, error) {
 		return "", err
 	}
 	return filepath.Join(configDir, "vrchat-tweaker"), nil
-}
-
-// Greet returns a greeting (sample binding).
-func (a *App) Greet(name string) string {
-	return fmt.Sprintf("Hello %s, Welcome to VRChat Tweaker!", name)
 }
 
 // --- Launcher bindings ---

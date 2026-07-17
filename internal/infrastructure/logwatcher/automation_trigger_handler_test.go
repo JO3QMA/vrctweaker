@@ -60,28 +60,3 @@ func TestNewAutomationTriggerHandler_defaultLogger(t *testing.T) {
 		t.Fatal("expected default logger")
 	}
 }
-
-func TestMultiHandler_DelegatesToAll(t *testing.T) {
-	var count int
-	h1 := EventHandlerFunc(func(activity.ParsedEvent) { count++ })
-	h2 := EventHandlerFunc(func(activity.ParsedEvent) { count++ })
-	mh := NewMultiHandler(h1, h2)
-	mh.Handle(&activity.EncounterEvent{DisplayName: "A"})
-	if count != 2 {
-		t.Fatalf("calls = %d, want 2", count)
-	}
-}
-
-func TestEventHandlerFunc_Handle(t *testing.T) {
-	var called bool
-	EventHandlerFunc(func(activity.ParsedEvent) { called = true }).Handle(&activity.EncounterEvent{})
-	if !called {
-		t.Fatal("expected handle call")
-	}
-}
-
-func TestEventHandlerFunc_Handle_nilSafe(t *testing.T) {
-	var f EventHandlerFunc
-	var h EventHandler = f
-	h.Handle(&activity.EncounterEvent{}) // typed nil must not panic
-}

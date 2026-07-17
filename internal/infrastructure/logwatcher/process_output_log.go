@@ -7,28 +7,35 @@ import (
 	"os"
 
 	"vrchat-tweaker/internal/domain/activity"
-	"vrchat-tweaker/internal/infrastructure/diag"
 )
 
 // SessionCorrelatorWarmer rebuilds SessionCorrelator state from log lines without persisting commands.
+type fnEventHandler func(event activity.ParsedEvent)
+
+func (f fnEventHandler) Handle(event activity.ParsedEvent) {
+	if f != nil {
+		f(event)
+	}
+}
+
 type SessionCorrelatorWarmer interface {
 	WarmFromParsedEvent(event activity.ParsedEvent)
 }
 
 // ProcessOutputLogFile reads an entire output_log file from the beginning and dispatches parsed events.
-func ProcessOutputLogFile(ctx context.Context, path string, parser LogParser, handler EventHandler, logger Logger) error {
+func ProcessOutputLogFile(ctx context.Context, path string, parser *activity.LogParser, handler EventHandler, logger Logger) error {
 	_, err := ProcessOutputLogFileFromOffset(ctx, path, 0, parser, handler, logger, nil)
 	return err
 }
 
 // WarmSessionCorrelatorFromLogFile replays log lines in [0, endOffset) into correlator only.
 // Used before bootstrap resume so mid-file checkpoints keep correct world/instance context.
-func WarmSessionCorrelatorFromLogFile(ctx context.Context, path string, endOffset int64, parser LogParser, warmer SessionCorrelatorWarmer, logger Logger) error {
+func WarmSessionCorrelatorFromLogFile(ctx context.Context, path string, endOffset int64, parser *activity.LogParser, warmer SessionCorrelatorWarmer, logger Logger) error {
 	if endOffset <= 0 || warmer == nil {
 		return nil
 	}
 	if logger == nil {
-		logger = diag.Nop
+		logger = Nop
 	}
 	f, err := os.Open(path)
 	if err != nil {
@@ -62,7 +69,7 @@ func WarmSessionCorrelatorFromLogFile(ctx context.Context, path string, endOffse
 		}
 		lineTrimmed := trimNL(line)
 		if lineTrimmed != "" {
-			if _, parseErr := dispatchOutputLogLine(lineTrimmed, parser, EventHandlerFunc(warmer.WarmFromParsedEvent)); parseErr != nil {
+			if _, parseErr := dispatchOutputLogLine(lineTrimmed, parser, fnEventHandler(warmer.WarmFromParsedEvent)); parseErr != nil {
 				logDispatchLineErr(logger, parseErr,
 					"[logwatcher] warm parse error: %v", "[logwatcher] warm dispatch error: %v")
 			}
@@ -78,9 +85,9 @@ func WarmSessionCorrelatorFromLogFile(ctx context.Context, path string, endOffse
 type ProgressCallback func(byteOffset int64, line string)
 
 // ProcessOutputLogFileFromOffset reads from startOffset and returns the final byte offset in the file.
-func ProcessOutputLogFileFromOffset(ctx context.Context, path string, startOffset int64, parser LogParser, handler EventHandler, logger Logger, onProgress ProgressCallback) (int64, error) {
+func ProcessOutputLogFileFromOffset(ctx context.Context, path string, startOffset int64, parser *activity.LogParser, handler EventHandler, logger Logger, onProgress ProgressCallback) (int64, error) {
 	if logger == nil {
-		logger = diag.Nop
+		logger = Nop
 	}
 	f, err := os.Open(path)
 	if err != nil {
