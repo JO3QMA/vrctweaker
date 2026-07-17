@@ -1,8 +1,6 @@
 package logwatcher
 
 import (
-	"time"
-
 	"vrchat-tweaker/internal/domain/activity"
 	"vrchat-tweaker/internal/infrastructure/diag"
 )
@@ -23,9 +21,4 @@ func (f EventHandlerFunc) Handle(event activity.ParsedEvent) {
 	if f != nil {
 		f(event)
 	}
-}
-
-// LogParser parses a log line into events.
-type LogParser interface {
-	ParseLine(line string, baseTime time.Time) ([]activity.ParsedEvent, error)
 }
