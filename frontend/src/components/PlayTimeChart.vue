@@ -1,10 +1,6 @@
 <template>
   <div class="playtime-chart-wrap">
-    <canvas
-      ref="canvasRef"
-      @mousemove="onMove"
-      @mouseleave="hoverIndex = null"
-    />
+    <canvas ref="canvasRef" @mousemove="onMove" @mouseleave="onLeave" />
     <div
       v-if="hoverIndex != null && tip"
       class="playtime-chart-tip"
@@ -27,6 +23,7 @@ import {
 } from "vue";
 import { useI18n } from "vue-i18n";
 import { formatPlayDurationHMS } from "../utils/formatPlayDuration";
+import { clampCenteredTipX, syncCanvasBuffer } from "./playTimeChartGeometry";
 
 export interface PlayTimeDayPoint {
   date: string;
@@ -45,6 +42,18 @@ const hoverIndex = ref<number | null>(null);
 let resizeObserver: ResizeObserver | null = null;
 
 const PAD = { top: 36, left: 48, right: 14, bottom: 44 };
+/** Approximate tip width for translateX(-50%) edge clamping. */
+const TIP_WIDTH = 120;
+
+type PlotMetrics = {
+  cssW: number;
+  cssH: number;
+  plotW: number;
+  plotH: number;
+  maxY: number;
+};
+
+let plotCache: PlotMetrics | null = null;
 
 function readCssVar(name: string, fallback: string): string {
   const v = getComputedStyle(document.documentElement)
@@ -70,19 +79,19 @@ function niceMax(seconds: number): number {
   return Math.ceil(raw / step) * step;
 }
 
-function layout(canvas: HTMLCanvasElement) {
-  const dpr = window.devicePixelRatio || 1;
+/** Measure plot geometry without touching the canvas buffer. */
+function measurePlot(canvas: HTMLCanvasElement): PlotMetrics {
   const cssW = canvas.clientWidth || 300;
   const cssH = canvas.clientHeight || 280;
-  canvas.width = Math.floor(cssW * dpr);
-  canvas.height = Math.floor(cssH * dpr);
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   const plotW = cssW - PAD.left - PAD.right;
   const plotH = cssH - PAD.top - PAD.bottom;
   const maxY = niceMax(Math.max(0, ...props.series.map((s) => s.seconds)));
-  return { ctx, cssW, cssH, plotW, plotH, maxY };
+  return { cssW, cssH, plotW, plotH, maxY };
+}
+
+function refreshPlot(canvas: HTMLCanvasElement): PlotMetrics {
+  plotCache = measurePlot(canvas);
+  return plotCache;
 }
 
 function pointAt(
@@ -101,9 +110,14 @@ function pointAt(
 function draw(): void {
   const canvas = canvasRef.value;
   if (!canvas) return;
-  const L = layout(canvas);
-  if (!L) return;
-  const { ctx, cssW, cssH, plotW, plotH, maxY } = L;
+  const L = refreshPlot(canvas);
+  const dpr = window.devicePixelRatio || 1;
+  syncCanvasBuffer(canvas, L.cssW, L.cssH, dpr);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+  const { cssW, cssH, plotW, plotH, maxY } = L;
   const textMuted = readCssVar("--text-secondary", "#a0a0a0");
   const border = readCssVar("--border", "#333333");
   const accent = readCssVar("--accent", "#5b9bd5");
@@ -160,22 +174,18 @@ const tip = computed(() => {
   const i = hoverIndex.value;
   const canvas = canvasRef.value;
   if (i == null || !props.series[i] || !canvas) return null;
-  const cssW = canvas.clientWidth || 300;
-  const cssH = canvas.clientHeight || 280;
-  const plotW = cssW - PAD.left - PAD.right;
-  const plotH = cssH - PAD.top - PAD.bottom;
-  const maxY = niceMax(Math.max(0, ...props.series.map((s) => s.seconds)));
+  const L = plotCache ?? measurePlot(canvas);
   const p = props.series[i];
   const { x, y } = pointAt(
     i,
     props.series.length,
-    plotW,
-    plotH,
-    maxY,
+    L.plotW,
+    L.plotH,
+    L.maxY,
     p.seconds,
   );
   return {
-    x,
+    x: clampCenteredTipX(x, L.cssW, TIP_WIDTH, PAD.left, PAD.right),
     y: Math.max(8, y - 48),
     date: p.date,
     duration: formatPlayDurationHMS(p.seconds, {
@@ -192,8 +202,8 @@ function onMove(ev: MouseEvent): void {
     hoverIndex.value = null;
     return;
   }
-  const L = layout(canvas);
-  if (!L) return;
+  // Use cached metrics; never resize the buffer on mousemove.
+  const L = plotCache ?? refreshPlot(canvas);
   const rect = canvas.getBoundingClientRect();
   const mx = ev.clientX - rect.left;
   let best = 0;
@@ -213,12 +223,20 @@ function onMove(ev: MouseEvent): void {
       best = i;
     }
   });
-  hoverIndex.value = bestDist < 40 ? best : null;
+  const next = bestDist < 40 ? best : null;
+  if (hoverIndex.value === next) return;
+  hoverIndex.value = next;
+  draw();
+}
+
+function onLeave(): void {
+  if (hoverIndex.value == null) return;
+  hoverIndex.value = null;
   draw();
 }
 
 watch(
-  () => [props.series, locale.value, hoverIndex.value] as const,
+  () => [props.series, locale.value] as const,
   () => {
     void nextTick(() => draw());
   },
