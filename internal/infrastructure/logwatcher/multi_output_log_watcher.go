@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
-	"vrchat-tweaker/internal/infrastructure/diag"
 )
 
 const defaultActiveLogStallTimeout = 60 * time.Second
@@ -49,7 +48,7 @@ func NewMultiOutputLogWatcher(
 	logger Logger,
 ) *MultiOutputLogWatcher {
 	if logger == nil {
-		logger = diag.Nop
+		logger = Nop
 	}
 	return &MultiOutputLogWatcher{
 		watchDir:              watchDir,
