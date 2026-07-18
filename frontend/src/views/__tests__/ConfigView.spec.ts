@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createRouter, createWebHashHistory } from "vue-router";
-import { ElMessageBox, ElSlider } from "element-plus";
+import { ElMessageBox, ElSlider, ElMessage } from "element-plus";
 import ConfigView from "../ConfigView.vue";
 import { App } from "../../wails/app";
 import type { VRChatConfigDTO } from "../../wails/app";
@@ -612,5 +612,78 @@ describe("ConfigView browse and load", () => {
     expect(App.saveVRChatConfig).toHaveBeenCalledWith(
       expect.objectContaining({ cacheSize: 30 }),
     );
+  });
+});
+
+describe("ConfigView asset cache clear", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("skips asset cache clear when confirmation is cancelled", async () => {
+    vi.spyOn(App, "vrchatConfigExists").mockResolvedValue(false);
+    vi.spyOn(App, "saveVRChatConfig").mockResolvedValue(undefined);
+    vi.spyOn(App, "resolveVRChatAssetCachePath").mockResolvedValue(
+      "C:\\VRChat\\Cache",
+    );
+    const clearSpy = vi
+      .spyOn(App, "clearVRChatAssetCache")
+      .mockResolvedValue(0);
+    vi.spyOn(ElMessageBox, "confirm").mockRejectedValue("cancel");
+    const wrapper = await mountEditor();
+
+    await wrapper
+      .find("[data-testid='asset-cache-clear-btn']")
+      .trigger("click");
+    await flushPromises();
+
+    expect(App.resolveVRChatAssetCachePath).toHaveBeenCalled();
+    expect(clearSpy).not.toHaveBeenCalled();
+  });
+
+  it("shows asset cache clear success count", async () => {
+    vi.spyOn(App, "vrchatConfigExists").mockResolvedValue(false);
+    vi.spyOn(App, "saveVRChatConfig").mockResolvedValue(undefined);
+    vi.spyOn(App, "resolveVRChatAssetCachePath").mockResolvedValue(
+      "C:\\VRChat\\Cache",
+    );
+    vi.spyOn(App, "clearVRChatAssetCache").mockResolvedValue(12);
+    vi.spyOn(ElMessageBox, "confirm").mockResolvedValue(undefined as never);
+    const successSpy = vi
+      .spyOn(ElMessage, "success")
+      .mockImplementation(() => ({ close: () => {} }));
+    const wrapper = await mountEditor();
+
+    await wrapper
+      .find("[data-testid='asset-cache-clear-btn']")
+      .trigger("click");
+    await flushPromises();
+
+    expect(App.clearVRChatAssetCache).toHaveBeenCalled();
+    expect(successSpy).toHaveBeenCalled();
+    const msg = String(successSpy.mock.calls[0]?.[0] ?? "");
+    expect(msg).toContain("12");
+  });
+
+  it("shows asset cache clear blocked when vrchat running", async () => {
+    vi.spyOn(App, "vrchatConfigExists").mockResolvedValue(false);
+    vi.spyOn(App, "saveVRChatConfig").mockResolvedValue(undefined);
+    vi.spyOn(App, "resolveVRChatAssetCachePath").mockResolvedValue(
+      "C:\\VRChat\\Cache",
+    );
+    vi.spyOn(App, "clearVRChatAssetCache").mockRejectedValue(
+      new Error("vrchat is running"),
+    );
+    vi.spyOn(ElMessageBox, "confirm").mockResolvedValue(undefined as never);
+    const wrapper = await mountEditor();
+
+    await wrapper
+      .find("[data-testid='asset-cache-clear-btn']")
+      .trigger("click");
+    await flushPromises();
+
+    const alert = wrapper.find("[data-testid='asset-cache-clear-error']");
+    expect(alert.exists()).toBe(true);
+    expect(alert.text()).toMatch(/VRChat|起動|running/i);
   });
 });

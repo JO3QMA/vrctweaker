@@ -290,6 +290,28 @@
             />
           </el-form-item>
         </el-form>
+        <el-alert
+          v-if="assetCacheClearError"
+          :title="assetCacheClearError"
+          type="error"
+          :closable="false"
+          show-icon
+          style="margin: 0.75rem 0"
+          data-testid="asset-cache-clear-error"
+        />
+        <el-button
+          type="danger"
+          plain
+          :loading="assetCacheClearLoading"
+          data-testid="asset-cache-clear-btn"
+          @click="doClearAssetCache"
+        >
+          {{
+            assetCacheClearLoading
+              ? t("config.assetCacheClearRunning")
+              : t("config.assetCacheClear")
+          }}
+        </el-button>
       </el-card>
 
       <!-- Rich Presence -->
@@ -326,11 +348,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useI18n } from "vue-i18n";
-import { ElMessageBox } from "element-plus";
+import { ElMessageBox, ElMessage } from "element-plus";
 import { App } from "../wails/app";
 import type { VRChatConfigDTO } from "../wails/app";
+import { AssetCacheErr } from "../utils/assetCacheErrors";
 
 const { t } = useI18n();
 
@@ -360,6 +383,9 @@ const configExists = ref(false);
 const editing = ref(false);
 const saveError = ref("");
 const saveSuccess = ref(false);
+const assetCacheClearError = ref("");
+const assetCacheClearLoading = ref(false);
+let clearGeneration = 0;
 
 const CACHE_MIN = 30;
 const STEADYCAM_FOV_MIN = 30;
@@ -593,6 +619,81 @@ async function deleteConfig() {
     saveError.value = e instanceof Error ? e.message : t("config.errDelete");
   }
 }
+
+function classifyAssetCacheClearError(e: unknown): string {
+  // Match Go MsgAssetCache* / AssetCacheErr (exact). Unknown → generic; never show raw paths.
+  const msg =
+    e instanceof Error
+      ? e.message
+      : typeof e === "string"
+        ? e
+        : e && typeof e === "object" && "message" in e
+          ? String((e as { message: unknown }).message)
+          : "";
+  switch (msg) {
+    case AssetCacheErr.VRCHAT_RUNNING:
+      return t("config.assetCacheClearErrRunning");
+    case AssetCacheErr.VOLUME_ROOT:
+      return t("config.assetCacheClearErrVolumeRoot");
+    case AssetCacheErr.EQUALS_PICTURE_FOLDER:
+      return t("config.assetCacheClearErrPictureFolder");
+    case AssetCacheErr.EQUALS_VRCHAT_DATA_DIR:
+      return t("config.assetCacheClearErrDataDir");
+    case AssetCacheErr.PATH_MISSING:
+      return t("config.assetCacheClearErrMissing");
+    case AssetCacheErr.NOT_DIRECTORY:
+      return t("config.assetCacheClearErrNotDir");
+    case AssetCacheErr.EMPTY_PATH:
+    case AssetCacheErr.REMOVE_FAILED:
+    case AssetCacheErr.FAILED:
+      return t("config.assetCacheClearErrGeneric");
+    default:
+      return t("config.assetCacheClearErrGeneric");
+  }
+}
+
+async function doClearAssetCache() {
+  assetCacheClearError.value = "";
+  let resolvedPath: string;
+  try {
+    resolvedPath = await App.resolveVRChatAssetCachePath();
+  } catch (e) {
+    assetCacheClearError.value = classifyAssetCacheClearError(e);
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      t("config.assetCacheClearConfirm", { path: resolvedPath }),
+      t("common.confirm"),
+      {
+        confirmButtonText: t("common.execute"),
+        cancelButtonText: t("common.cancel"),
+        type: "warning",
+        confirmButtonClass: "el-button--danger",
+      },
+    );
+  } catch {
+    return;
+  }
+  const gen = ++clearGeneration;
+  assetCacheClearLoading.value = true;
+  try {
+    const n = await App.clearVRChatAssetCache();
+    if (gen !== clearGeneration) return;
+    ElMessage.success(t("config.assetCacheClearDone", { n: String(n ?? 0) }));
+  } catch (e) {
+    if (gen !== clearGeneration) return;
+    assetCacheClearError.value = classifyAssetCacheClearError(e);
+  } finally {
+    if (gen === clearGeneration) {
+      assetCacheClearLoading.value = false;
+    }
+  }
+}
+
+onBeforeUnmount(() => {
+  clearGeneration += 1;
+});
 </script>
 
 <style scoped>

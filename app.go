@@ -18,6 +18,7 @@ import (
 	"vrchat-tweaker/internal/domain/automation"
 	"vrchat-tweaker/internal/domain/launcher"
 	"vrchat-tweaker/internal/domain/media"
+	"vrchat-tweaker/internal/domain/vrchatconfig"
 	"vrchat-tweaker/internal/infrastructure/desktop"
 	"vrchat-tweaker/internal/infrastructure/filesystem"
 	"vrchat-tweaker/internal/infrastructure/logwatcher"
@@ -52,6 +53,7 @@ type App struct {
 	automation       *usecase.AutomationUseCase
 	settings         *usecase.SettingsUseCase
 	dbMaintenance    *usecase.DBMaintenanceUseCase
+	assetCache       *usecase.VRChatAssetCacheUseCase
 	ytdlp            *usecase.YTDLPMaintainUseCase
 	cookieLinkage    *usecase.CookieLinkageUseCase
 	serverStatus     *statuspage.Client
@@ -143,6 +145,15 @@ func (a *App) startup(ctx context.Context) {
 	configPath := getVRChatConfigPath()
 	configRepo := filesystem.NewVRChatConfigFileRepository(configPath)
 	a.vrchatConfigRepo = configRepo
+	a.assetCache = usecase.NewVRChatAssetCacheUseCase(
+		func() (*vrchatconfig.VRChatConfig, error) {
+			return a.vrchatConfigRepo.Read()
+		},
+		sleepsuppress.NewVRChatProcessChecker(),
+		usecase.DefaultVRChatAssetCacheFolder,
+		func() (string, error) { return a.DefaultVRChatPictureFolder() },
+		usecase.VRChatDataDir,
+	)
 
 	// Start output_log watcher if path is configured
 	a.startOutputLogWatcher(ctx)
@@ -1276,6 +1287,26 @@ func (a *App) ClearScreenshots() (int64, error) {
 // ClearFriendsCache deletes all cached friends. Returns affected row count.
 func (a *App) ClearFriendsCache() (int64, error) {
 	return a.dbMaintenance.ClearFriendsCache(a.ctx)
+}
+
+// --- VRChat Asset cache clear ---
+
+// ResolveVRChatAssetCachePath returns the absolute path Asset cache clear would target
+// (saved config.json; empty cache_directory → platform default Cache-WindowsPlayer).
+func (a *App) ResolveVRChatAssetCachePath() (string, error) {
+	if a.assetCache == nil {
+		return "", errors.New("asset cache not initialized")
+	}
+	return a.assetCache.ResolvePath()
+}
+
+// ClearVRChatAssetCache deletes all entries inside the resolved VRChat asset cache directory.
+// Returns the number of top-level entries removed. See ADR 0011.
+func (a *App) ClearVRChatAssetCache() (int64, error) {
+	if a.assetCache == nil {
+		return 0, errors.New("asset cache not initialized")
+	}
+	return a.assetCache.Clear()
 }
 
 // --- VRChat Config bindings ---
