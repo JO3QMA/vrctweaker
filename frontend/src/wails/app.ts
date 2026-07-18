@@ -36,6 +36,26 @@ export type ActivityStatsDTO = WailsDTO<activity.ActivityStats>;
 export type AutomationRuleDTO = WailsDTO<automation.AutomationRule>;
 export type VRChatConfigDTO = WailsDTO<main.VRChatConfigDTO>;
 
+/** Cookie linkage status (usecase.CookieLinkageStatus); defined locally until wails generate. */
+export type CookieLinkageStatusDTO = {
+  supported: boolean;
+  unsupportedReason?: string;
+  enabled: boolean;
+  sourceKind: string;
+  browser?: string;
+  cookiesFilePath?: string;
+  configPath?: string;
+  riskAcknowledged: boolean;
+};
+
+type CookieLinkageAppBindings = {
+  GetYTDLPCookieLinkageStatus: () => Promise<CookieLinkageStatusDTO>;
+  AcknowledgeYTDLPCookieLinkageRisk: () => Promise<void>;
+  SetYTDLPCookieLinkageBrowser: (browser: string) => Promise<void>;
+  SetYTDLPCookieLinkageCookiesFile: (path: string) => Promise<void>;
+  DisableYTDLPCookieLinkage: () => Promise<void>;
+};
+
 function emptyServerStatus(): ServerStatusDTO {
   return {
     fetchState: "unavailable",
@@ -71,6 +91,23 @@ function emptyYTDLPMaintainStatus(): YTDLPMaintainStatusDTO {
     latestDownloadUrl: "",
     latestError: "",
   };
+}
+
+function emptyCookieLinkageStatus(): CookieLinkageStatusDTO {
+  return {
+    supported: false,
+    unsupportedReason: "",
+    enabled: false,
+    sourceKind: "",
+    browser: "",
+    cookiesFilePath: "",
+    configPath: "",
+    riskAcknowledged: false,
+  };
+}
+
+function asCookieApp(a: AppBindings): AppBindings & CookieLinkageAppBindings {
+  return a as AppBindings & CookieLinkageAppBindings;
 }
 
 /** -999 = omit for process/main thread priority */
@@ -425,6 +462,26 @@ export const App = {
   ),
   openYTDLPCacheFolder: bindGo((a) => a.OpenYTDLPCacheFolder(), undefined),
   openYTDLPToolsFolder: bindGo((a) => a.OpenYTDLPToolsFolder(), undefined),
+  getYTDLPCookieLinkageStatus: bindGo(
+    (a) => asCookieApp(a).GetYTDLPCookieLinkageStatus(),
+    emptyCookieLinkageStatus(),
+  ),
+  acknowledgeYTDLPCookieLinkageRisk: bindGo(
+    (a) => asCookieApp(a).AcknowledgeYTDLPCookieLinkageRisk(),
+    undefined,
+  ),
+  setYTDLPCookieLinkageBrowser: bindGo(
+    (a, browser: string) => asCookieApp(a).SetYTDLPCookieLinkageBrowser(browser),
+    undefined,
+  ),
+  setYTDLPCookieLinkageCookiesFile: bindGo(
+    (a, path: string) => asCookieApp(a).SetYTDLPCookieLinkageCookiesFile(path),
+    undefined,
+  ),
+  disableYTDLPCookieLinkage: bindGo(
+    (a) => asCookieApp(a).DisableYTDLPCookieLinkage(),
+    undefined,
+  ),
   validatePath: bindGo((a, path: string) => a.ValidatePath(path), false),
   validateOutputLogPath: bindGo(
     (a, path: string) => a.ValidateOutputLogPath(path),

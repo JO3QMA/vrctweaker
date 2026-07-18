@@ -277,6 +277,22 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         },
         OpenYTDLPCacheFolder: () => Promise.resolve(),
         OpenYTDLPToolsFolder: () => Promise.resolve(),
+        GetYTDLPCookieLinkageStatus: function() {
+          return Promise.resolve({
+            supported: true,
+            unsupportedReason: '',
+            enabled: false,
+            sourceKind: '',
+            browser: 'chrome',
+            cookiesFilePath: '',
+            configPath: '',
+            riskAcknowledged: false,
+          });
+        },
+        AcknowledgeYTDLPCookieLinkageRisk: function() { return Promise.resolve(); },
+        SetYTDLPCookieLinkageBrowser: function(_browser) { return Promise.resolve(); },
+        SetYTDLPCookieLinkageCookiesFile: function(_path) { return Promise.resolve(); },
+        DisableYTDLPCookieLinkage: function() { return Promise.resolve(); },
         ValidatePath: () => Promise.resolve(true),
         ValidateOutputLogPath: () => Promise.resolve(true),
         OpenVRChatLogFolder: () => Promise.resolve(),

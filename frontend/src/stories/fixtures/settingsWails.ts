@@ -71,6 +71,34 @@ export function withSettingsWails(preset: SettingsViewWailsPreset): Decorator {
       OpenVRChatLogFolder: () => Promise.resolve(),
       OpenFileDialog: () => Promise.resolve(""),
       OpenDirectoryDialog: () => Promise.resolve(""),
+      GetYTDLPCookieLinkageStatus: () =>
+        Promise.resolve({
+          supported: true,
+          enabled: false,
+          sourceKind: "",
+          riskAcknowledged: false,
+          browser: "chrome",
+        }),
+      GetYTDLPMaintainStatus: () =>
+        Promise.resolve({
+          supported: true,
+          maintainDesired: false,
+          riskAcknowledged: true,
+          effectiveOfficial: true,
+          cachePresent: true,
+          cacheVersion: "",
+          toolsPath: "",
+          cachePath: "",
+          pendingError: "",
+          latestVersion: "",
+          latestTag: "",
+          latestDownloadUrl: "",
+          latestError: "",
+        }),
+      AcknowledgeYTDLPCookieLinkageRisk: () => Promise.resolve(),
+      SetYTDLPCookieLinkageBrowser: () => Promise.resolve(),
+      SetYTDLPCookieLinkageCookiesFile: () => Promise.resolve(),
+      DisableYTDLPCookieLinkage: () => Promise.resolve(),
       Login: () =>
         Promise.resolve({
           ok: false,

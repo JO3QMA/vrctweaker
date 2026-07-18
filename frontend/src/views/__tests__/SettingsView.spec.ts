@@ -12,6 +12,11 @@ const router = createRouter({
   routes: [
     { path: "/settings", component: SettingsView },
     { path: "/me", name: "me", component: { template: "<div>Me</div>" } },
+    {
+      path: "/video",
+      name: "video",
+      component: { template: "<div>Video</div>" },
+    },
     { path: "/licenses", component: { template: "<div>Licenses</div>" } },
   ],
 });
@@ -59,6 +64,35 @@ function setupAppMocks() {
   vi.spyOn(App, "clearScreenshots").mockResolvedValue(3);
   vi.spyOn(App, "clearFriendsCache").mockResolvedValue(2);
   vi.spyOn(App, "setLanguage").mockResolvedValue(undefined);
+  vi.spyOn(App, "getYTDLPCookieLinkageStatus").mockResolvedValue({
+    supported: false,
+    enabled: false,
+    sourceKind: "",
+    riskAcknowledged: false,
+  });
+  vi.spyOn(App, "getYTDLPMaintainStatus").mockResolvedValue({
+    supported: true,
+    maintainDesired: false,
+    riskAcknowledged: true,
+    effectiveOfficial: true,
+    cachePresent: true,
+    cacheVersion: "",
+    toolsPath: "",
+    cachePath: "",
+    pendingError: "",
+    latestVersion: "",
+    latestTag: "",
+    latestDownloadUrl: "",
+    latestError: "",
+  });
+  vi.spyOn(App, "acknowledgeYTDLPCookieLinkageRisk").mockResolvedValue(
+    undefined,
+  );
+  vi.spyOn(App, "setYTDLPCookieLinkageBrowser").mockResolvedValue(undefined);
+  vi.spyOn(App, "setYTDLPCookieLinkageCookiesFile").mockResolvedValue(
+    undefined,
+  );
+  vi.spyOn(App, "disableYTDLPCookieLinkage").mockResolvedValue(undefined);
 }
 
 describe("SettingsView", () => {
@@ -77,6 +111,47 @@ describe("SettingsView", () => {
     const wrapper = mountSettings();
     await flushPromises();
     expect(wrapper.find(".page-title").text()).toBe("設定");
+  });
+
+  it("shows cookie linkage section when supported", async () => {
+    vi.spyOn(App, "getYTDLPCookieLinkageStatus").mockResolvedValue({
+      supported: true,
+      enabled: false,
+      sourceKind: "",
+      riskAcknowledged: false,
+      browser: "chrome",
+    });
+    vi.spyOn(App, "getYTDLPMaintainStatus").mockResolvedValue({
+      supported: true,
+      maintainDesired: false,
+      riskAcknowledged: true,
+      effectiveOfficial: false,
+      cachePresent: false,
+      cacheVersion: "",
+      toolsPath: "",
+      cachePath: "",
+      pendingError: "",
+      latestVersion: "",
+      latestTag: "",
+      latestDownloadUrl: "",
+      latestError: "",
+    });
+    const wrapper = mountSettings();
+    await flushPromises();
+    expect(
+      wrapper.find('[data-testid="settings-cookie-linkage"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="settings-cookie-official-hint"]').exists(),
+    ).toBe(true);
+  });
+
+  it("hides cookie linkage section when unsupported", async () => {
+    const wrapper = mountSettings();
+    await flushPromises();
+    expect(
+      wrapper.find('[data-testid="settings-cookie-linkage"]').exists(),
+    ).toBe(false);
   });
 
   it("has link to OSS licenses page", async () => {
