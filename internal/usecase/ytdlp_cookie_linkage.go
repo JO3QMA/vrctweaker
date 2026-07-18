@@ -42,7 +42,7 @@ var cookieBrowsersV1 = map[string]struct{}{
 	"firefox": {},
 }
 
-// CookieLinkageStatus is the effective (+ ack) state for Settings.
+// CookieLinkageStatus is the effective (+ ack) state for the Video tab UI.
 type CookieLinkageStatus struct {
 	Supported         bool   `json:"supported"`
 	UnsupportedReason string `json:"unsupportedReason,omitempty"`

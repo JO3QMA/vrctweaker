@@ -26,10 +26,16 @@ describe("classifyCookieLinkageError", () => {
     ).toBe("configRead");
   });
 
+  it("does not treat bare config read as cookie linkage", () => {
+    expect(
+      classifyCookieLinkageError("failed to config read from remote"),
+    ).toBe("generic");
+  });
+
   it("handles empty", () => {
     expect(classifyCookieLinkageError(null)).toBe("generic");
     expect(cookieLinkageErrorI18nKey("x")).toBe(
-      "settings.cookieLinkage.errors.generic",
+      "video.cookieLinkage.errors.generic",
     );
   });
 });

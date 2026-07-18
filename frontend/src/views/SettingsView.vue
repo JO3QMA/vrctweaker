@@ -204,123 +204,6 @@
       }}</el-text>
     </el-card>
 
-    <!-- yt-dlp Cookie linkage（Windows） -->
-    <el-card
-      v-if="cookieSupported"
-      class="settings-card"
-      shadow="never"
-      data-testid="settings-cookie-linkage"
-    >
-      <template #header>
-        <span>{{ t("settings.cookieLinkage.section") }}</span>
-      </template>
-      <el-alert
-        type="warning"
-        :closable="false"
-        show-icon
-        class="cookie-always-warn"
-        :title="t('settings.cookieLinkage.alwaysWarn')"
-      />
-      <el-alert
-        v-if="!toolsEffectiveOfficial"
-        type="info"
-        :closable="false"
-        show-icon
-        class="cookie-official-hint"
-        data-testid="settings-cookie-official-hint"
-      >
-        <template #title>
-          {{ t("settings.cookieLinkage.officialHint") }}
-          <router-link :to="{ name: 'video' }" class="cookie-video-link">
-            {{ t("settings.cookieLinkage.openVideoTab") }}
-          </router-link>
-        </template>
-      </el-alert>
-      <el-alert
-        v-if="cookieSourceKind === 'unsupported'"
-        type="warning"
-        :closable="false"
-        show-icon
-        :title="t('settings.cookieLinkage.unsupportedForm')"
-      />
-      <el-alert
-        v-if="cookieActionError"
-        :title="cookieActionError"
-        type="error"
-        :closable="false"
-        show-icon
-        class="cookie-action-error"
-      />
-      <div class="setting-row power-setting-row">
-        <div class="power-toggle-label">
-          <span>{{ t("settings.cookieLinkage.enableLabel") }}</span>
-          <el-text type="info" size="small" class="hint block-hint">{{
-            t("settings.cookieLinkage.lockHint")
-          }}</el-text>
-        </div>
-        <el-switch
-          v-model="cookieEnabled"
-          class="power-switch"
-          data-testid="settings-cookie-enable"
-          :disabled="cookieBusy"
-          @change="onCookieEnableChange"
-        />
-      </div>
-      <el-form label-position="top" size="default" class="cookie-form">
-        <el-form-item :label="t('settings.cookieLinkage.sourceLabel')">
-          <el-radio-group
-            v-model="cookieDraftSource"
-            data-testid="settings-cookie-source"
-            :disabled="cookieBusy"
-            @change="onCookieSourceChange"
-          >
-            <el-radio-button value="browser">{{
-              t("settings.cookieLinkage.sourceBrowser")
-            }}</el-radio-button>
-            <el-radio-button value="file">{{
-              t("settings.cookieLinkage.sourceFile")
-            }}</el-radio-button>
-          </el-radio-group>
-        </el-form-item>
-        <el-form-item
-          v-if="cookieDraftSource === 'browser'"
-          :label="t('settings.cookieLinkage.browserLabel')"
-        >
-          <el-select
-            v-model="cookieDraftBrowser"
-            data-testid="settings-cookie-browser"
-            :disabled="cookieBusy"
-            @change="onCookieBrowserChange"
-          >
-            <el-option value="chrome" label="Chrome" />
-            <el-option value="edge" label="Edge" />
-            <el-option value="firefox" label="Firefox" />
-          </el-select>
-        </el-form-item>
-        <el-form-item
-          v-else
-          :label="t('settings.cookieLinkage.cookiesFileLabel')"
-        >
-          <div class="path-input-group">
-            <el-input
-              v-model="cookieDraftCookiesPath"
-              data-testid="settings-cookie-file-path"
-              :placeholder="t('settings.cookieLinkage.cookiesFilePh')"
-              :disabled="cookieBusy"
-              @change="onCookiePathChange"
-            />
-            <el-button
-              data-testid="settings-cookie-file-browse"
-              :disabled="cookieBusy"
-              @click="browseCookieFile"
-            >
-              {{ t("settings.cookieLinkage.browse") }}
-            </el-button>
-          </div>
-        </el-form-item>
-      </el-form>
-    </el-card>
-
     <!-- 電源（Windows） -->
     <el-card class="settings-card" shadow="never">
       <template #header>
@@ -436,15 +319,10 @@ import { ref, reactive, computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessageBox, ElMessage } from "element-plus";
 import { App } from "../wails/app";
-import type {
-  CookieLinkageStatusDTO,
-  PathSettingsDTO,
-  UserCacheDTO,
-} from "../wails/app";
+import type { PathSettingsDTO, UserCacheDTO } from "../wails/app";
 import { friendThumbUrl } from "../utils/vrcUserCacheDisplay";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
 import { isAppLocale, setLanguage } from "../i18n";
-import { cookieLinkageErrorI18nKey } from "./cookieLinkageErrors";
 
 const {
   state: unlockState,
@@ -454,7 +332,7 @@ const {
   handleLogout,
 } = useSessionUnlock();
 
-const { t, locale, te } = useI18n();
+const { t, locale } = useI18n();
 
 const isLoggedIn = ref(false);
 const selfProfile = ref<UserCacheDTO | null>(null);
@@ -560,163 +438,6 @@ async function onLanguageChange(v: string) {
   setLanguage(v);
 }
 
-const cookieSupported = ref(false);
-const cookieEnabled = ref(false);
-const cookieBusy = ref(false);
-const cookieActionError = ref("");
-const cookieRiskAcknowledged = ref(false);
-const cookieSourceKind = ref("");
-const cookieDraftSource = ref<"browser" | "file">("browser");
-const cookieDraftBrowser = ref("chrome");
-const cookieDraftCookiesPath = ref("");
-const toolsEffectiveOfficial = ref(true);
-let cookieViewGen = 0;
-
-function isCookieViewStale(gen: number): boolean {
-  return gen !== cookieViewGen;
-}
-
-function isMessageBoxDismiss(e: unknown): boolean {
-  return e === "cancel" || e === "close" || e === "backdrop";
-}
-
-function userFacingCookieError(raw: string): string {
-  if (!raw) return "";
-  if (te(`settings.cookieLinkage.${raw}`)) {
-    return t(`settings.cookieLinkage.${raw}`);
-  }
-  return t(cookieLinkageErrorI18nKey(raw));
-}
-
-function applyCookieStatus(st: CookieLinkageStatusDTO) {
-  cookieSupported.value = !!st.supported;
-  cookieEnabled.value = !!st.enabled;
-  cookieRiskAcknowledged.value = !!st.riskAcknowledged;
-  cookieSourceKind.value = st.sourceKind || "";
-  if (st.sourceKind === "browser" && st.browser) {
-    cookieDraftSource.value = "browser";
-    cookieDraftBrowser.value = st.browser;
-  } else if (st.sourceKind === "file" && st.cookiesFilePath) {
-    cookieDraftSource.value = "file";
-    cookieDraftCookiesPath.value = st.cookiesFilePath;
-  } else if (st.sourceKind === "unsupported") {
-    // keep draft; user picks v1 form to replace
-  }
-}
-
-async function refreshCookieStatus(gen: number) {
-  const st = await App.getYTDLPCookieLinkageStatus();
-  if (isCookieViewStale(gen)) return;
-  applyCookieStatus(st);
-  try {
-    const maintain = await App.getYTDLPMaintainStatus();
-    if (isCookieViewStale(gen)) return;
-    toolsEffectiveOfficial.value = !!maintain.effectiveOfficial;
-  } catch {
-    if (!isCookieViewStale(gen)) toolsEffectiveOfficial.value = true;
-  }
-}
-
-async function ensureCookieRiskAck(gen: number): Promise<boolean> {
-  if (cookieRiskAcknowledged.value) return true;
-  await ElMessageBox.confirm(
-    t("settings.cookieLinkage.riskAckBody"),
-    t("settings.cookieLinkage.riskAckTitle"),
-    {
-      confirmButtonText: t("settings.cookieLinkage.riskAckConfirm"),
-      cancelButtonText: t("common.cancel"),
-      type: "warning",
-    },
-  );
-  if (isCookieViewStale(gen)) return false;
-  await App.acknowledgeYTDLPCookieLinkageRisk();
-  if (isCookieViewStale(gen)) return false;
-  cookieRiskAcknowledged.value = true;
-  return true;
-}
-
-async function writeCookieFromDraft(gen: number) {
-  if (cookieDraftSource.value === "browser") {
-    await App.setYTDLPCookieLinkageBrowser(cookieDraftBrowser.value);
-  } else {
-    await App.setYTDLPCookieLinkageCookiesFile(cookieDraftCookiesPath.value);
-  }
-  if (isCookieViewStale(gen)) return;
-  await refreshCookieStatus(gen);
-}
-
-async function onCookieEnableChange(on: boolean | string | number) {
-  const desired = on === true || on === "true";
-  const gen = ++cookieViewGen;
-  cookieBusy.value = true;
-  cookieActionError.value = "";
-  try {
-    await ensureCookieRiskAck(gen);
-    if (isCookieViewStale(gen)) return;
-    if (desired) {
-      await writeCookieFromDraft(gen);
-    } else {
-      await App.disableYTDLPCookieLinkage();
-      if (isCookieViewStale(gen)) return;
-      await refreshCookieStatus(gen);
-    }
-  } catch (e) {
-    if (isCookieViewStale(gen)) return;
-    cookieEnabled.value = !desired;
-    if (isMessageBoxDismiss(e)) return;
-    cookieActionError.value = userFacingCookieError(
-      e instanceof Error ? e.message : String(e),
-    );
-  } finally {
-    if (!isCookieViewStale(gen)) cookieBusy.value = false;
-  }
-}
-
-async function onCookieSourceChange() {
-  if (!cookieEnabled.value) return;
-  const gen = ++cookieViewGen;
-  cookieBusy.value = true;
-  cookieActionError.value = "";
-  try {
-    await ensureCookieRiskAck(gen);
-    if (isCookieViewStale(gen)) return;
-    await writeCookieFromDraft(gen);
-  } catch (e) {
-    if (isCookieViewStale(gen)) return;
-    if (isMessageBoxDismiss(e)) return;
-    cookieActionError.value = userFacingCookieError(
-      e instanceof Error ? e.message : String(e),
-    );
-    await refreshCookieStatus(gen);
-  } finally {
-    if (!isCookieViewStale(gen)) cookieBusy.value = false;
-  }
-}
-
-async function onCookieBrowserChange() {
-  if (!cookieEnabled.value || cookieDraftSource.value !== "browser") return;
-  await onCookieSourceChange();
-}
-
-async function onCookiePathChange() {
-  if (!cookieEnabled.value || cookieDraftSource.value !== "file") return;
-  await onCookieSourceChange();
-}
-
-async function browseCookieFile() {
-  const gen = cookieViewGen;
-  const picked = await App.openFileDialog(
-    t("settings.cookieLinkage.browseTitle"),
-    dirOfPath(cookieDraftCookiesPath.value),
-    "*.txt",
-  );
-  if (!picked || isCookieViewStale(gen)) return;
-  cookieDraftCookiesPath.value = picked;
-  if (cookieEnabled.value) {
-    await onCookiePathChange();
-  }
-}
-
 onMounted(async () => {
   await beginStartupUnlock().catch(() => undefined);
   try {
@@ -733,13 +454,6 @@ onMounted(async () => {
   pathSettings.vrchatPathWindows = ps.vrchatPathWindows;
   pathSettings.steamPathLinux = ps.steamPathLinux;
   pathSettings.outputLogPath = ps.outputLogPath;
-  try {
-    await refreshCookieStatus(++cookieViewGen);
-  } catch (e) {
-    cookieActionError.value = userFacingCookieError(
-      e instanceof Error ? e.message : String(e),
-    );
-  }
 });
 
 async function loadSelfProfileSummary(forceRefresh = false) {
@@ -1069,20 +783,6 @@ function doClearFriendsCache() {
 .path-label {
   font-size: 0.95rem;
   color: var(--text-primary);
-}
-
-.cookie-always-warn,
-.cookie-official-hint,
-.cookie-action-error {
-  margin-bottom: 0.75rem;
-}
-
-.cookie-video-link {
-  margin-left: 0.35rem;
-}
-
-.cookie-form {
-  margin-top: 0.75rem;
 }
 
 .path-input-group {

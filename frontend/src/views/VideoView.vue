@@ -149,6 +149,8 @@
         </template>
       </template>
     </el-card>
+
+    <CookieLinkageSection />
   </div>
 </template>
 
@@ -157,6 +159,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
 import { CaretBottom, CaretRight, FolderOpened } from "@element-plus/icons-vue";
+import CookieLinkageSection from "../components/CookieLinkageSection.vue";
 import { App, type YTDLPMaintainStatusDTO } from "../wails/app";
 import { videoErrorI18nKey } from "./videoErrors";
 

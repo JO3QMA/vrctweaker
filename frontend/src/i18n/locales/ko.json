@@ -315,38 +315,6 @@
     "existsYes": "있습니다",
     "existsNo": "없습니다",
     "pathHint": "VRChat 실행 및 로그 감시에 사용합니다. launch.exe를 지정하세요. 비우면 기본 경로를 사용합니다. output_log는 로그 폴더를 지정하세요(비우면 기본 폴더). 폴더 안에서 증가 중인 output_log*.txt를 병렬로 감시합니다.",
-    "cookieLinkage": {
-      "section": "yt-dlp Cookie linkage",
-      "alwaysWarn": "Automated access may risk account restrictions under YouTube and similar ToS. Always use a throwaway (sub) account in the browser you select.",
-      "officialHint": "Cookie options may not help age-restricted playback unless Tools points at official yt-dlp.",
-      "openVideoTab": "Open Video tab",
-      "unsupportedForm": "yt-dlp config has an unsupported Cookie form. Choosing a option below and saving replaces it with a simple setting.",
-      "enableLabel": "Link browser login cookies to yt-dlp",
-      "lockHint": "With browser source, an open browser may lock the cookie store. Close the browser or use a cookies file instead.",
-      "sourceLabel": "Source",
-      "sourceBrowser": "From browser",
-      "sourceFile": "Cookies file",
-      "browserLabel": "Browser",
-      "cookiesFileLabel": "Cookies file path",
-      "cookiesFilePh": "C:\\path\\to\\cookies.txt",
-      "browse": "Browse",
-      "browseTitle": "Select cookies file",
-      "riskAckTitle": "Account restriction risk",
-      "riskAckBody": "Cookie linkage may risk account restrictions. A throwaway (sub) account is strongly recommended. Continue?",
-      "riskAckConfirm": "I understand",
-      "errorRiskAckRequired": "Acknowledge the risk before writing.",
-      "errorUnsupportedPlatform": "This feature is Windows-only.",
-      "errorCookiesFileMissing": "The cookies file was not found.",
-      "errorInvalidBrowser": "Only Chrome, Edge, and Firefox are supported.",
-      "errors": {
-        "riskAck": "Acknowledge the risk before writing.",
-        "unsupported": "This feature is Windows-only.",
-        "cookiesFileMissing": "The cookies file was not found.",
-        "invalidBrowser": "Only Chrome, Edge, and Firefox are supported.",
-        "configRead": "Could not read the yt-dlp user config file.",
-        "generic": "The operation failed. Try again later."
-      }
-    },
     "powerSection": "전원",
     "suppressSleep": "VRChat 실행 중 절전 방지",
     "suppressSleepHint": "VRChat.exe 실행 중 유휴 절전·디스플레이 끄기를 줄입니다 (Windows, Tweaker 실행 중만). 기본값 끔.",
@@ -896,6 +864,33 @@
     "reason": {
       "unsupportedPlatform": "This feature is Windows-only.",
       "notInitialized": "Video settings are not initialized yet."
+    },
+    "cookieLinkage": {
+      "section": "yt-dlp Cookie linkage",
+      "alwaysWarn": "Automated access may risk account restrictions under YouTube and similar ToS. Always use a throwaway (sub) account in the browser you select.",
+      "officialHint": "Cookie options may not help age-restricted playback unless Tools points at official yt-dlp. Enable Tools replace above.",
+      "unsupportedForm": "yt-dlp config has an unsupported Cookie form. Choosing a option below and saving replaces it with a simple setting.",
+      "enableLabel": "Link browser login cookies to yt-dlp",
+      "lockHint": "With browser source, an open browser may lock the cookie store. Close the browser or use a cookies file instead.",
+      "sourceLabel": "Source",
+      "sourceBrowser": "From browser",
+      "sourceFile": "Cookies file",
+      "browserLabel": "Browser",
+      "cookiesFileLabel": "Cookies file path",
+      "cookiesFilePh": "C:\\path\\to\\cookies.txt",
+      "browse": "Browse",
+      "browseTitle": "Select cookies file",
+      "riskAckTitle": "Account restriction risk",
+      "riskAckBody": "Cookie linkage may risk account restrictions. A throwaway (sub) account is strongly recommended. Continue?",
+      "riskAckConfirm": "I understand",
+      "errors": {
+        "riskAck": "Acknowledge the risk before writing.",
+        "unsupported": "This feature is Windows-only.",
+        "cookiesFileMissing": "The cookies file was not found.",
+        "invalidBrowser": "Only Chrome, Edge, and Firefox are supported.",
+        "configRead": "Could not read the yt-dlp user config file.",
+        "generic": "The operation failed. Try again later."
+      }
     },
     "detailsToggle": "상세 정보 표시"
   }

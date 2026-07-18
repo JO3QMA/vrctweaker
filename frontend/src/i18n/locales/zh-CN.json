@@ -315,38 +315,6 @@
     "existsYes": "存在",
     "existsNo": "不存在",
     "pathHint": "用于启动 VRChat 与监视日志。请指定 launch.exe。留空则使用默认路径。output_log 请指定日志文件夹（留空使用默认）。将并行监视文件夹内正在增长的 output_log*.txt。",
-    "cookieLinkage": {
-      "section": "yt-dlp Cookie linkage",
-      "alwaysWarn": "Automated access may risk account restrictions under YouTube and similar ToS. Always use a throwaway (sub) account in the browser you select.",
-      "officialHint": "Cookie options may not help age-restricted playback unless Tools points at official yt-dlp.",
-      "openVideoTab": "Open Video tab",
-      "unsupportedForm": "yt-dlp config has an unsupported Cookie form. Choosing a option below and saving replaces it with a simple setting.",
-      "enableLabel": "Link browser login cookies to yt-dlp",
-      "lockHint": "With browser source, an open browser may lock the cookie store. Close the browser or use a cookies file instead.",
-      "sourceLabel": "Source",
-      "sourceBrowser": "From browser",
-      "sourceFile": "Cookies file",
-      "browserLabel": "Browser",
-      "cookiesFileLabel": "Cookies file path",
-      "cookiesFilePh": "C:\\path\\to\\cookies.txt",
-      "browse": "Browse",
-      "browseTitle": "Select cookies file",
-      "riskAckTitle": "Account restriction risk",
-      "riskAckBody": "Cookie linkage may risk account restrictions. A throwaway (sub) account is strongly recommended. Continue?",
-      "riskAckConfirm": "I understand",
-      "errorRiskAckRequired": "Acknowledge the risk before writing.",
-      "errorUnsupportedPlatform": "This feature is Windows-only.",
-      "errorCookiesFileMissing": "The cookies file was not found.",
-      "errorInvalidBrowser": "Only Chrome, Edge, and Firefox are supported.",
-      "errors": {
-        "riskAck": "Acknowledge the risk before writing.",
-        "unsupported": "This feature is Windows-only.",
-        "cookiesFileMissing": "The cookies file was not found.",
-        "invalidBrowser": "Only Chrome, Edge, and Firefox are supported.",
-        "configRead": "Could not read the yt-dlp user config file.",
-        "generic": "The operation failed. Try again later."
-      }
-    },
     "powerSection": "电源",
     "suppressSleep": "VRChat 运行时防止睡眠",
     "suppressSleepHint": "VRChat.exe 运行时减少空闲睡眠与关闭显示器（仅 Windows，Tweaker 运行中）。默认关闭。",
@@ -896,6 +864,33 @@
     "reason": {
       "unsupportedPlatform": "This feature is Windows-only.",
       "notInitialized": "Video settings are not initialized yet."
+    },
+    "cookieLinkage": {
+      "section": "yt-dlp Cookie linkage",
+      "alwaysWarn": "Automated access may risk account restrictions under YouTube and similar ToS. Always use a throwaway (sub) account in the browser you select.",
+      "officialHint": "Cookie options may not help age-restricted playback unless Tools points at official yt-dlp. Enable Tools replace above.",
+      "unsupportedForm": "yt-dlp config has an unsupported Cookie form. Choosing a option below and saving replaces it with a simple setting.",
+      "enableLabel": "Link browser login cookies to yt-dlp",
+      "lockHint": "With browser source, an open browser may lock the cookie store. Close the browser or use a cookies file instead.",
+      "sourceLabel": "Source",
+      "sourceBrowser": "From browser",
+      "sourceFile": "Cookies file",
+      "browserLabel": "Browser",
+      "cookiesFileLabel": "Cookies file path",
+      "cookiesFilePh": "C:\\path\\to\\cookies.txt",
+      "browse": "Browse",
+      "browseTitle": "Select cookies file",
+      "riskAckTitle": "Account restriction risk",
+      "riskAckBody": "Cookie linkage may risk account restrictions. A throwaway (sub) account is strongly recommended. Continue?",
+      "riskAckConfirm": "I understand",
+      "errors": {
+        "riskAck": "Acknowledge the risk before writing.",
+        "unsupported": "This feature is Windows-only.",
+        "cookiesFileMissing": "The cookies file was not found.",
+        "invalidBrowser": "Only Chrome, Edge, and Firefox are supported.",
+        "configRead": "Could not read the yt-dlp user config file.",
+        "generic": "The operation failed. Try again later."
+      }
     },
     "detailsToggle": "显示详细信息"
   }
