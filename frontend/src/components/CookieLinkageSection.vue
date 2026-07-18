@@ -114,7 +114,7 @@ import { ElMessageBox } from "element-plus";
 import { App, type CookieLinkageStatusDTO } from "../wails/app";
 import { cookieLinkageErrorI18nKey } from "../views/cookieLinkageErrors";
 
-const { t, te } = useI18n();
+const { t } = useI18n();
 
 const cookieSupported = ref(false);
 const cookieEnabled = ref(false);
@@ -138,9 +138,6 @@ function isMessageBoxDismiss(e: unknown): boolean {
 
 function userFacingCookieError(raw: string): string {
   if (!raw) return "";
-  if (te(`video.cookieLinkage.${raw}`)) {
-    return t(`video.cookieLinkage.${raw}`);
-  }
   return t(cookieLinkageErrorI18nKey(raw));
 }
 
@@ -201,8 +198,8 @@ async function writeCookieFromDraft(gen: number) {
   await refreshCookieStatus(gen);
 }
 
-async function onCookieEnableChange(on: boolean | string | number) {
-  const desired = on === true || on === "true";
+async function onCookieEnableChange(on: boolean) {
+  const desired = on;
   const gen = ++cookieViewGen;
   cookieBusy.value = true;
   cookieActionError.value = "";
@@ -267,7 +264,7 @@ function dirOfPath(p: string): string {
 }
 
 async function browseCookieFile() {
-  const gen = cookieViewGen;
+  const gen = ++cookieViewGen;
   const picked = await App.openFileDialog(
     t("video.cookieLinkage.browseTitle"),
     dirOfPath(cookieDraftCookiesPath.value),

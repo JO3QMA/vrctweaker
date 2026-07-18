@@ -90,6 +90,7 @@ export const UnsupportedPlatform: Story = {
       supported: false,
       enabled: false,
       sourceKind: "",
+      browser: "",
       riskAcknowledged: false,
     }),
   ],
