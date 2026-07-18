@@ -1,36 +1,9 @@
 <template>
-  <el-card
-    v-if="cookieSupported"
-    class="cookie-card"
-    shadow="never"
+  <div
+    v-if="cookieSupported || cookieActionError"
+    class="cookie-section"
     data-testid="video-cookie-linkage"
   >
-    <template #header>
-      <span>{{ t("video.cookieLinkage.section") }}</span>
-    </template>
-    <el-alert
-      type="warning"
-      :closable="false"
-      show-icon
-      class="cookie-always-warn"
-      :title="t('video.cookieLinkage.alwaysWarn')"
-    />
-    <el-alert
-      v-if="!toolsEffectiveOfficial"
-      type="info"
-      :closable="false"
-      show-icon
-      class="cookie-official-hint"
-      data-testid="video-cookie-official-hint"
-      :title="t('video.cookieLinkage.officialHint')"
-    />
-    <el-alert
-      v-if="cookieSourceKind === 'unsupported'"
-      type="warning"
-      :closable="false"
-      show-icon
-      :title="t('video.cookieLinkage.unsupportedForm')"
-    />
     <el-alert
       v-if="cookieActionError"
       :title="cookieActionError"
@@ -39,72 +12,100 @@
       show-icon
       class="cookie-action-error"
     />
-    <div class="cookie-switch-row">
-      <div class="cookie-toggle-label">
-        <span>{{ t("video.cookieLinkage.enableLabel") }}</span>
-        <el-text type="info" size="small" class="hint block-hint">{{
-          t("video.cookieLinkage.lockHint")
-        }}</el-text>
-      </div>
-      <el-switch
-        v-model="cookieEnabled"
-        class="cookie-switch"
-        data-testid="video-cookie-enable"
-        :disabled="cookieBusy"
-        @change="onCookieEnableChange"
+    <el-card v-if="cookieSupported" class="cookie-card" shadow="never">
+      <template #header>
+        <span>{{ t("video.cookieLinkage.section") }}</span>
+      </template>
+      <el-alert
+        type="warning"
+        :closable="false"
+        show-icon
+        class="cookie-always-warn"
+        :title="t('video.cookieLinkage.alwaysWarn')"
       />
-    </div>
-    <el-form label-position="top" size="default" class="cookie-form">
-      <el-form-item :label="t('video.cookieLinkage.sourceLabel')">
-        <el-radio-group
-          v-model="cookieDraftSource"
-          data-testid="video-cookie-source"
-          :disabled="cookieBusy"
-          @change="onCookieSourceChange"
-        >
-          <el-radio-button value="browser">{{
-            t("video.cookieLinkage.sourceBrowser")
-          }}</el-radio-button>
-          <el-radio-button value="file">{{
-            t("video.cookieLinkage.sourceFile")
-          }}</el-radio-button>
-        </el-radio-group>
-      </el-form-item>
-      <el-form-item
-        v-if="cookieDraftSource === 'browser'"
-        :label="t('video.cookieLinkage.browserLabel')"
-      >
-        <el-select
-          v-model="cookieDraftBrowser"
-          data-testid="video-cookie-browser"
-          :disabled="cookieBusy"
-          @change="onCookieBrowserChange"
-        >
-          <el-option value="chrome" label="Chrome" />
-          <el-option value="edge" label="Edge" />
-          <el-option value="firefox" label="Firefox" />
-        </el-select>
-      </el-form-item>
-      <el-form-item v-else :label="t('video.cookieLinkage.cookiesFileLabel')">
-        <div class="path-input-group">
-          <el-input
-            v-model="cookieDraftCookiesPath"
-            data-testid="video-cookie-file-path"
-            :placeholder="t('video.cookieLinkage.cookiesFilePh')"
-            :disabled="cookieBusy"
-            @change="onCookiePathChange"
-          />
-          <el-button
-            data-testid="video-cookie-file-browse"
-            :disabled="cookieBusy"
-            @click="browseCookieFile"
-          >
-            {{ t("video.cookieLinkage.browse") }}
-          </el-button>
+      <el-alert
+        v-if="!toolsEffectiveOfficial"
+        type="info"
+        :closable="false"
+        show-icon
+        class="cookie-official-hint"
+        data-testid="video-cookie-official-hint"
+        :title="t('video.cookieLinkage.officialHint')"
+      />
+      <el-alert
+        v-if="cookieSourceKind === 'unsupported'"
+        type="warning"
+        :closable="false"
+        show-icon
+        :title="t('video.cookieLinkage.unsupportedForm')"
+      />
+      <div class="cookie-switch-row">
+        <div class="cookie-toggle-label">
+          <span>{{ t("video.cookieLinkage.enableLabel") }}</span>
+          <el-text type="info" size="small" class="hint block-hint">{{
+            t("video.cookieLinkage.lockHint")
+          }}</el-text>
         </div>
-      </el-form-item>
-    </el-form>
-  </el-card>
+        <el-switch
+          v-model="cookieEnabled"
+          class="cookie-switch"
+          data-testid="video-cookie-enable"
+          :disabled="cookieBusy"
+          @change="onCookieEnableChange"
+        />
+      </div>
+      <el-form label-position="top" size="default" class="cookie-form">
+        <el-form-item :label="t('video.cookieLinkage.sourceLabel')">
+          <el-radio-group
+            v-model="cookieDraftSource"
+            data-testid="video-cookie-source"
+            :disabled="cookieBusy"
+            @change="onCookieSourceChange"
+          >
+            <el-radio-button value="browser">{{
+              t("video.cookieLinkage.sourceBrowser")
+            }}</el-radio-button>
+            <el-radio-button value="file">{{
+              t("video.cookieLinkage.sourceFile")
+            }}</el-radio-button>
+          </el-radio-group>
+        </el-form-item>
+        <el-form-item
+          v-if="cookieDraftSource === 'browser'"
+          :label="t('video.cookieLinkage.browserLabel')"
+        >
+          <el-select
+            v-model="cookieDraftBrowser"
+            data-testid="video-cookie-browser"
+            :disabled="cookieBusy"
+            @change="onCookieBrowserChange"
+          >
+            <el-option value="chrome" label="Chrome" />
+            <el-option value="edge" label="Edge" />
+            <el-option value="firefox" label="Firefox" />
+          </el-select>
+        </el-form-item>
+        <el-form-item v-else :label="t('video.cookieLinkage.cookiesFileLabel')">
+          <div class="path-input-group">
+            <el-input
+              v-model="cookieDraftCookiesPath"
+              data-testid="video-cookie-file-path"
+              :placeholder="t('video.cookieLinkage.cookiesFilePh')"
+              :disabled="cookieBusy"
+              @change="onCookiePathChange"
+            />
+            <el-button
+              data-testid="video-cookie-file-browse"
+              :disabled="cookieBusy"
+              @click="browseCookieFile"
+            >
+              {{ t("video.cookieLinkage.browse") }}
+            </el-button>
+          </div>
+        </el-form-item>
+      </el-form>
+    </el-card>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -264,16 +265,21 @@ function dirOfPath(p: string): string {
 }
 
 async function browseCookieFile() {
-  const gen = ++cookieViewGen;
-  const picked = await App.openFileDialog(
-    t("video.cookieLinkage.browseTitle"),
-    dirOfPath(cookieDraftCookiesPath.value),
-    "*.txt",
-  );
-  if (!picked || isCookieViewStale(gen)) return;
-  cookieDraftCookiesPath.value = picked;
-  if (cookieEnabled.value) {
-    await onCookiePathChange();
+  const gen = cookieViewGen;
+  cookieBusy.value = true;
+  try {
+    const picked = await App.openFileDialog(
+      t("video.cookieLinkage.browseTitle"),
+      dirOfPath(cookieDraftCookiesPath.value),
+      "*.txt",
+    );
+    if (!picked || isCookieViewStale(gen)) return;
+    cookieDraftCookiesPath.value = picked;
+    if (cookieEnabled.value) {
+      await onCookiePathChange();
+    }
+  } finally {
+    if (!isCookieViewStale(gen)) cookieBusy.value = false;
   }
 }
 
@@ -293,8 +299,11 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.cookie-card {
+.cookie-section {
   margin-top: 1rem;
+  width: 100%;
+}
+.cookie-card {
   width: 100%;
 }
 .cookie-always-warn,

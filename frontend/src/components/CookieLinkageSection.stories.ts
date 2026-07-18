@@ -12,6 +12,8 @@ const cookieOff: CookieLinkageStatusDTO = {
   sourceKind: "",
   riskAcknowledged: false,
   browser: "chrome",
+  cookiesFilePath: "",
+  configPath: "",
 };
 
 const maintainOfficial: YTDLPMaintainStatusDTO = {
@@ -34,6 +36,7 @@ const maintainOfficial: YTDLPMaintainStatusDTO = {
 function withCookieWails(
   cookie: CookieLinkageStatusDTO = cookieOff,
   maintain: YTDLPMaintainStatusDTO = maintainOfficial,
+  overrides: Record<string, unknown> = {},
 ): Decorator {
   return withWailsApp({
     GetYTDLPCookieLinkageStatus: () => Promise.resolve(cookie),
@@ -43,6 +46,7 @@ function withCookieWails(
     SetYTDLPCookieLinkageCookiesFile: () => Promise.resolve(),
     DisableYTDLPCookieLinkage: () => Promise.resolve(),
     OpenFileDialog: () => Promise.resolve(""),
+    ...overrides,
   });
 }
 
@@ -75,7 +79,7 @@ export const OfficialHint: Story = {
 export const BrowserEnabled: Story = {
   decorators: [
     withCookieWails({
-      supported: true,
+      ...cookieOff,
       enabled: true,
       sourceKind: "browser",
       browser: "chrome",
@@ -87,11 +91,32 @@ export const BrowserEnabled: Story = {
 export const UnsupportedPlatform: Story = {
   decorators: [
     withCookieWails({
+      ...cookieOff,
       supported: false,
-      enabled: false,
-      sourceKind: "",
       browser: "",
-      riskAcknowledged: false,
+    }),
+  ],
+};
+
+export const UnsupportedSourceKind: Story = {
+  decorators: [
+    withCookieWails({
+      ...cookieOff,
+      enabled: true,
+      sourceKind: "unsupported",
+      riskAcknowledged: true,
+    }),
+  ],
+};
+
+/** cookieActionError is set from GetStatus failure (not maintain pendingError). */
+export const ConfigReadError: Story = {
+  decorators: [
+    withCookieWails(cookieOff, maintainOfficial, {
+      GetYTDLPCookieLinkageStatus: () =>
+        Promise.reject(
+          new Error("cookie linkage config read: permission denied"),
+        ),
     }),
   ],
 };
