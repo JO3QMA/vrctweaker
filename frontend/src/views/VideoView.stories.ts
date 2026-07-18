@@ -35,6 +35,19 @@ function withVideoWails(
     OpenYTDLPCacheFolder: () => Promise.resolve(),
     OpenYTDLPToolsFolder: () => Promise.resolve(),
     RuntimeIsWindows: () => Promise.resolve(true),
+    GetYTDLPCookieLinkageStatus: () =>
+      Promise.resolve({
+        supported: true,
+        enabled: false,
+        sourceKind: "",
+        riskAcknowledged: false,
+        browser: "chrome",
+      }),
+    AcknowledgeYTDLPCookieLinkageRisk: () => Promise.resolve(),
+    SetYTDLPCookieLinkageBrowser: () => Promise.resolve(),
+    SetYTDLPCookieLinkageCookiesFile: () => Promise.resolve(),
+    DisableYTDLPCookieLinkage: () => Promise.resolve(),
+    OpenFileDialog: () => Promise.resolve(""),
   });
 }
 

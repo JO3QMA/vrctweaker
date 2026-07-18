@@ -15,6 +15,12 @@ vi.mock("../../wails/app", () => ({
     updateOfficialYTDLPCache: vi.fn(),
     openYTDLPCacheFolder: vi.fn(),
     openYTDLPToolsFolder: vi.fn(),
+    getYTDLPCookieLinkageStatus: vi.fn(),
+    acknowledgeYTDLPCookieLinkageRisk: vi.fn(),
+    setYTDLPCookieLinkageBrowser: vi.fn(),
+    setYTDLPCookieLinkageCookiesFile: vi.fn(),
+    disableYTDLPCookieLinkage: vi.fn(),
+    openFileDialog: vi.fn(),
   },
 }));
 
@@ -56,6 +62,12 @@ describe("VideoView", () => {
     });
     vi.mocked(App.openYTDLPCacheFolder).mockResolvedValue(undefined);
     vi.mocked(App.openYTDLPToolsFolder).mockResolvedValue(undefined);
+    vi.mocked(App.getYTDLPCookieLinkageStatus).mockResolvedValue({
+      supported: false,
+      enabled: false,
+      sourceKind: "",
+      riskAcknowledged: false,
+    });
   });
 
   function mountView() {
@@ -173,5 +185,35 @@ describe("VideoView", () => {
       .trigger("click");
     await flushPromises();
     expect(App.openYTDLPCacheFolder).toHaveBeenCalled();
+  });
+
+  it("shows cookie linkage section when supported", async () => {
+    vi.mocked(App.getYTDLPCookieLinkageStatus).mockResolvedValue({
+      supported: true,
+      enabled: false,
+      sourceKind: "",
+      riskAcknowledged: false,
+      browser: "chrome",
+    });
+    vi.mocked(App.getYTDLPMaintainStatus).mockResolvedValue({
+      ...baseStatus,
+      effectiveOfficial: false,
+    });
+    const wrapper = mountView();
+    await flushPromises();
+    expect(wrapper.find('[data-testid="video-cookie-linkage"]').exists()).toBe(
+      true,
+    );
+    expect(
+      wrapper.find('[data-testid="video-cookie-official-hint"]').exists(),
+    ).toBe(true);
+  });
+
+  it("hides cookie linkage section when unsupported", async () => {
+    const wrapper = mountView();
+    await flushPromises();
+    expect(wrapper.find('[data-testid="video-cookie-linkage"]').exists()).toBe(
+      false,
+    );
   });
 });

@@ -29,7 +29,7 @@ describe("classifyCookieLinkageError", () => {
   it("handles empty", () => {
     expect(classifyCookieLinkageError(null)).toBe("generic");
     expect(cookieLinkageErrorI18nKey("x")).toBe(
-      "settings.cookieLinkage.errors.generic",
+      "video.cookieLinkage.errors.generic",
     );
   });
 });
