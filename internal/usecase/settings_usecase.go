@@ -159,6 +159,7 @@ const (
 	keyYTDLPToolsReplaceMaintain     = "ytdlp_tools_replace_maintain"
 	keyYTDLPToolsReplaceRiskAck      = "ytdlp_tools_replace_risk_ack"
 	keyYTDLPToolsReplacePendingError = "ytdlp_tools_replace_pending_error"
+	keyYTDLPCookieLinkageRiskAck     = "ytdlp_cookie_linkage_risk_ack"
 	keyYTDLPOfficialCacheTag         = "ytdlp_official_cache_tag"
 	keyYTDLPKnownLatestVersion       = "ytdlp_known_latest_version"
 	keyYTDLPKnownLatestTag           = "ytdlp_known_latest_tag"
@@ -257,6 +258,20 @@ func (uc *SettingsUseCase) GetYTDLPToolsReplaceRiskAck(ctx context.Context) (boo
 // SetYTDLPToolsReplaceRiskAck persists risk acknowledgment.
 func (uc *SettingsUseCase) SetYTDLPToolsReplaceRiskAck(ctx context.Context, ack bool) error {
 	return uc.repo.Set(ctx, keyYTDLPToolsReplaceRiskAck, strconv.FormatBool(ack))
+}
+
+// GetYTDLPCookieLinkageRiskAck returns whether Cookie linkage risk acknowledgment was recorded.
+func (uc *SettingsUseCase) GetYTDLPCookieLinkageRiskAck(ctx context.Context) (bool, error) {
+	v, err := uc.repo.Get(ctx, keyYTDLPCookieLinkageRiskAck)
+	if err != nil {
+		return false, err
+	}
+	return parseBoolSetting(v), nil
+}
+
+// SetYTDLPCookieLinkageRiskAck persists Cookie linkage risk acknowledgment.
+func (uc *SettingsUseCase) SetYTDLPCookieLinkageRiskAck(ctx context.Context, ack bool) error {
+	return uc.repo.Set(ctx, keyYTDLPCookieLinkageRiskAck, strconv.FormatBool(ack))
 }
 
 // GetYTDLPToolsReplacePendingError returns the last pending re-link error message (empty if none).
