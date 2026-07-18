@@ -10,6 +10,7 @@ import (
 	"runtime"
 	"strings"
 	"sync"
+	"unicode"
 )
 
 // Cookie source kinds for Cookie linkage effective state.
@@ -23,7 +24,7 @@ const (
 var (
 	// ErrCookieLinkageRiskAckRequired is returned when writing without risk acknowledgment.
 	ErrCookieLinkageRiskAckRequired = errors.New("cookie linkage risk acknowledgment required")
-	// ErrCookieLinkageUnsupportedPlatform is returned on non-Windows (unless ConfigDirOverride is set).
+	// ErrCookieLinkageUnsupportedPlatform is returned on non-Windows (unless configDirOverride is set).
 	ErrCookieLinkageUnsupportedPlatform = errors.New("yt-dlp Cookie linkage is Windows only")
 	// ErrCookieLinkageCookiesFileMissing is returned when the cookies file path does not exist.
 	ErrCookieLinkageCookiesFileMissing = errors.New("cookies file does not exist")
@@ -56,20 +57,20 @@ type CookieLinkageStatus struct {
 type CookieLinkageUseCase struct {
 	mu       sync.Mutex
 	settings *SettingsUseCase
-	// ConfigDirOverride replaces %APPDATA%/yt-dlp (tests). When set, skips Windows-only gate.
-	ConfigDirOverride string
+	// configDirOverride replaces %APPDATA%/yt-dlp (tests only). When set, skips Windows-only gate.
+	configDirOverride string
 }
 
 // NewCookieLinkageUseCase wires settings for risk acknowledgment persistence.
 func NewCookieLinkageUseCase(settings *SettingsUseCase) *CookieLinkageUseCase {
+	if settings == nil {
+		panic("usecase: NewCookieLinkageUseCase: settings is nil")
+	}
 	return &CookieLinkageUseCase{settings: settings}
 }
 
 // AcknowledgeRisk records Cookie linkage risk acknowledgment.
 func (uc *CookieLinkageUseCase) AcknowledgeRisk(ctx context.Context) error {
-	if uc.settings == nil {
-		return errors.New("settings not configured")
-	}
 	return uc.settings.SetYTDLPCookieLinkageRiskAck(ctx, true)
 }
 
@@ -101,7 +102,7 @@ func (uc *CookieLinkageUseCase) SetCookiesFileSource(ctx context.Context, path s
 	if path == "" {
 		return ErrCookieLinkageCookiesFileMissing
 	}
-	if strings.ContainsAny(path, "\n\r") {
+	if strings.ContainsAny(path, "\n\r\"'") {
 		return ErrCookieLinkageCookiesFileMissing
 	}
 	fi, err := os.Stat(path)
@@ -113,7 +114,7 @@ func (uc *CookieLinkageUseCase) SetCookiesFileSource(ctx context.Context, path s
 	if err := uc.requireWriteReady(ctx); err != nil {
 		return err
 	}
-	line := "--cookies " + path
+	line := "--cookies " + quoteConfigArg(path)
 	return uc.writeManagedLocked(ctx, line)
 }
 
@@ -131,9 +132,6 @@ func (uc *CookieLinkageUseCase) requireWriteReady(ctx context.Context) error {
 	if !uc.platformOK() {
 		return ErrCookieLinkageUnsupportedPlatform
 	}
-	if uc.settings == nil {
-		return errors.New("settings not configured")
-	}
 	ack, err := uc.settings.GetYTDLPCookieLinkageRiskAck(ctx)
 	if err != nil {
 		return err
@@ -145,7 +143,7 @@ func (uc *CookieLinkageUseCase) requireWriteReady(ctx context.Context) error {
 }
 
 func (uc *CookieLinkageUseCase) platformOK() bool {
-	if uc.ConfigDirOverride != "" {
+	if uc.configDirOverride != "" {
 		return true
 	}
 	return runtime.GOOS == "windows"
@@ -158,13 +156,11 @@ func (uc *CookieLinkageUseCase) getStatusLocked(ctx context.Context) (CookieLink
 		return st, nil
 	}
 	st.Supported = true
-	if uc.settings != nil {
-		ack, err := uc.settings.GetYTDLPCookieLinkageRiskAck(ctx)
-		if err != nil {
-			return st, err
-		}
-		st.RiskAcknowledged = ack
+	ack, err := uc.settings.GetYTDLPCookieLinkageRiskAck(ctx)
+	if err != nil {
+		return st, err
 	}
+	st.RiskAcknowledged = ack
 
 	path, err := uc.resolveConfigPathLocked()
 	if err != nil {
@@ -192,7 +188,10 @@ func (uc *CookieLinkageUseCase) getStatusLocked(ctx context.Context) (CookieLink
 		return CookieLinkageStatus{}, fmt.Errorf("cookie linkage config read: %w", err)
 	}
 
-	enabled, kind, browser, cookiesPath := parseManagedCookieOptions(string(raw))
+	enabled, kind, browser, cookiesPath, err := parseManagedCookieOptions(string(raw))
+	if err != nil {
+		return CookieLinkageStatus{}, fmt.Errorf("cookie linkage config read: %w", err)
+	}
 	st.Enabled = enabled
 	st.SourceKind = kind
 	st.Browser = browser
@@ -201,7 +200,11 @@ func (uc *CookieLinkageUseCase) getStatusLocked(ctx context.Context) (CookieLink
 }
 
 // resolveConfigPathLocked returns the existing target path, or "" if neither file exists
-// (caller will create config on write). Read failure for odd paths is handled by Stat/Read.
+// (caller will create config on write).
+//
+// yt-dlp User config loads the first existing candidate only (options.py:
+// next(filter(None, _load_from_config_dirs(...)))). Within %APPDATA%/yt-dlp the
+// order is config then config.txt — matching this preference when both exist.
 func (uc *CookieLinkageUseCase) resolveConfigPathLocked() (string, error) {
 	dir, err := uc.configDirLocked()
 	if err != nil {
@@ -250,8 +253,8 @@ func (uc *CookieLinkageUseCase) writeTargetPathLocked() (string, error) {
 }
 
 func (uc *CookieLinkageUseCase) configDirLocked() (string, error) {
-	if uc.ConfigDirOverride != "" {
-		return uc.ConfigDirOverride, nil
+	if uc.configDirOverride != "" {
+		return filepath.Clean(uc.configDirOverride), nil
 	}
 	appData := os.Getenv("APPDATA")
 	if appData == "" {
@@ -274,9 +277,9 @@ func (uc *CookieLinkageUseCase) writeManagedLocked(ctx context.Context, managedL
 	case statErr == nil && fi.IsDir():
 		return fmt.Errorf("cookie linkage config read: path is a directory")
 	case statErr == nil:
-		raw, err := os.ReadFile(target)
-		if err != nil {
-			return fmt.Errorf("cookie linkage config read: %w", err)
+		raw, readErr := os.ReadFile(target)
+		if readErr != nil {
+			return fmt.Errorf("cookie linkage config read: %w", readErr)
 		}
 		existing = string(raw)
 		existingMode = fi.Mode().Perm()
@@ -286,7 +289,10 @@ func (uc *CookieLinkageUseCase) writeManagedLocked(ctx context.Context, managedL
 		return fmt.Errorf("cookie linkage config read: %w", statErr)
 	}
 
-	next := upsertManagedCookieLines(existing, managedLine)
+	next, err := upsertManagedCookieLines(existing, managedLine)
+	if err != nil {
+		return fmt.Errorf("cookie linkage config read: %w", err)
+	}
 	if strings.TrimSpace(next) == "" {
 		if err := os.Remove(target); err != nil && !os.IsNotExist(err) {
 			return fmt.Errorf("remove empty yt-dlp user config: %w", err)
@@ -327,7 +333,7 @@ func atomicWriteFile(path string, data []byte, existingMode os.FileMode) error {
 	return nil
 }
 
-func parseManagedCookieOptions(content string) (enabled bool, kind, browser, cookiesPath string) {
+func parseManagedCookieOptions(content string) (enabled bool, kind, browser, cookiesPath string, err error) {
 	var browsers []string
 	var files []string
 	var unsupported bool
@@ -364,23 +370,26 @@ func parseManagedCookieOptions(content string) (enabled bool, kind, browser, coo
 			}
 		}
 	}
+	if err := sc.Err(); err != nil {
+		return false, "", "", "", err
+	}
 
 	if !enabled {
-		return false, CookieSourceNone, "", ""
+		return false, CookieSourceNone, "", "", nil
 	}
 	if unsupported || (len(browsers) > 0 && len(files) > 0) || len(browsers) > 1 || len(files) > 1 {
-		return true, CookieSourceUnsupported, "", ""
+		return true, CookieSourceUnsupported, "", "", nil
 	}
 	if len(browsers) == 1 {
-		return true, CookieSourceBrowser, browsers[0], ""
+		return true, CookieSourceBrowser, browsers[0], "", nil
 	}
 	if len(files) == 1 {
-		return true, CookieSourceFile, "", files[0]
+		return true, CookieSourceFile, "", files[0], nil
 	}
-	return true, CookieSourceUnsupported, "", ""
+	return true, CookieSourceUnsupported, "", "", nil
 }
 
-func upsertManagedCookieLines(content, managedLine string) string {
+func upsertManagedCookieLines(content, managedLine string) (string, error) {
 	var kept []string
 	sc := bufio.NewScanner(strings.NewReader(content))
 	for sc.Scan() {
@@ -399,6 +408,9 @@ func upsertManagedCookieLines(content, managedLine string) string {
 		}
 		kept = append(kept, line)
 	}
+	if err := sc.Err(); err != nil {
+		return "", err
+	}
 
 	// Drop trailing empty lines before append for stable files.
 	for len(kept) > 0 && strings.TrimSpace(kept[len(kept)-1]) == "" {
@@ -408,29 +420,45 @@ func upsertManagedCookieLines(content, managedLine string) string {
 		kept = append(kept, managedLine)
 	}
 	if len(kept) == 0 {
-		return ""
+		return "", nil
 	}
-	return strings.Join(kept, "\n") + "\n"
+	return strings.Join(kept, "\n") + "\n", nil
 }
 
 func splitConfigOption(line string) (opt, rest string, ok bool) {
 	line = strings.TrimSpace(line)
-	if line == "" {
+	if !strings.HasPrefix(line, "--") {
 		return "", "", false
 	}
-	if strings.HasPrefix(line, "--") {
-		if i := strings.IndexByte(line, '='); i > 0 {
-			return line[:i], line[i+1:], true
-		}
-		fields := strings.Fields(line)
-		if len(fields) == 0 {
-			return "", "", false
-		}
-		opt = fields[0]
-		if len(fields) > 1 {
-			rest = strings.Join(fields[1:], " ")
-		}
-		return opt, rest, true
+	// --opt=value only when '=' is not preceded by whitespace (paths may contain '=').
+	if i := strings.IndexByte(line, '='); i > 0 && !strings.ContainsAny(line[:i], " \t") {
+		return line[:i], unquoteConfigArg(line[i+1:]), true
 	}
-	return "", "", false
+	end := len(line)
+	for i, r := range line {
+		if unicode.IsSpace(r) {
+			end = i
+			break
+		}
+	}
+	opt = line[:end]
+	rest = unquoteConfigArg(strings.TrimSpace(line[end:]))
+	return opt, rest, true
+}
+
+func unquoteConfigArg(s string) string {
+	s = strings.TrimSpace(s)
+	if len(s) >= 2 {
+		if (s[0] == '"' && s[len(s)-1] == '"') || (s[0] == '\'' && s[len(s)-1] == '\'') {
+			return s[1 : len(s)-1]
+		}
+	}
+	return s
+}
+
+func quoteConfigArg(s string) string {
+	if strings.IndexFunc(s, unicode.IsSpace) >= 0 {
+		return `"` + s + `"`
+	}
+	return s
 }

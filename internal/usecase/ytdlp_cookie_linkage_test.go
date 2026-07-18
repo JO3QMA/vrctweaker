@@ -15,7 +15,7 @@ func newCookieUC(t *testing.T) (*CookieLinkageUseCase, *SettingsUseCase, string)
 	settings := NewSettingsUseCase(repo)
 	dir := t.TempDir()
 	uc := NewCookieLinkageUseCase(settings)
-	uc.ConfigDirOverride = dir
+	uc.configDirOverride = dir
 	return uc, settings, dir
 }
 
@@ -356,4 +356,88 @@ func TestWrite_preservesFileMode(t *testing.T) {
 	if fi.Mode().Perm() != 0o600 {
 		t.Fatalf("mode %o want 0600", fi.Mode().Perm())
 	}
+}
+
+func TestGet_quotedCookiesPathWithSpaces(t *testing.T) {
+	uc, _, dir := newCookieUC(t)
+	sub := filepath.Join(dir, "my cookies")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cookies := filepath.Join(sub, "file.txt")
+	if err := os.WriteFile(cookies, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	cfg := filepath.Join(dir, "config")
+	if err := os.WriteFile(cfg, []byte(`--cookies "`+cookies+`"`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	st, err := uc.GetStatus(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !st.Enabled || st.SourceKind != CookieSourceFile || st.CookiesFilePath != cookies {
+		t.Fatalf("status %+v", st)
+	}
+}
+
+func TestUpsert_cookiesPathWithSpaces(t *testing.T) {
+	uc, _, dir := newCookieUC(t)
+	sub := filepath.Join(dir, "my cookies")
+	if err := os.MkdirAll(sub, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	cookies := filepath.Join(sub, "file.txt")
+	if err := os.WriteFile(cookies, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ackCookie(t, uc)
+	if err := uc.SetCookiesFileSource(context.Background(), cookies); err != nil {
+		t.Fatal(err)
+	}
+	cfg := filepath.Join(dir, "config")
+	got, err := os.ReadFile(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(got)
+	if !strings.Contains(s, `"`+cookies+`"`) {
+		t.Fatalf("expected quoted path in config: %q", s)
+	}
+	st, err := uc.GetStatus(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.CookiesFilePath != cookies {
+		t.Fatalf("status %+v", st)
+	}
+}
+
+func TestParse_cookiesPathWithEquals(t *testing.T) {
+	path := `C:\Users\x\foo=bar.txt`
+	enabled, kind, _, cookiesPath, err := parseManagedCookieOptions("--cookies " + path + "\n")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !enabled || kind != CookieSourceFile || cookiesPath != path {
+		t.Fatalf("enabled=%v kind=%q path=%q", enabled, kind, cookiesPath)
+	}
+}
+
+func TestParse_scannerTokenTooLong(t *testing.T) {
+	// bufio.Scanner default max token is 64KiB; an oversized line must surface as error.
+	huge := "--cookies " + strings.Repeat("a", 70*1024)
+	_, _, _, _, err := parseManagedCookieOptions(huge + "\n")
+	if err == nil {
+		t.Fatal("expected scanner error")
+	}
+}
+
+func TestNewCookieLinkageUseCase_nilSettingsPanics(t *testing.T) {
+	defer func() {
+		if recover() == nil {
+			t.Fatal("expected panic")
+		}
+	}()
+	_ = NewCookieLinkageUseCase(nil)
 }
