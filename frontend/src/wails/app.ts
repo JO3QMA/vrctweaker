@@ -471,7 +471,8 @@ export const App = {
     undefined,
   ),
   setYTDLPCookieLinkageBrowser: bindGo(
-    (a, browser: string) => asCookieApp(a).SetYTDLPCookieLinkageBrowser(browser),
+    (a, browser: string) =>
+      asCookieApp(a).SetYTDLPCookieLinkageBrowser(browser),
     undefined,
   ),
   setYTDLPCookieLinkageCookiesFile: bindGo(
