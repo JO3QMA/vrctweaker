@@ -353,6 +353,7 @@ import { useI18n } from "vue-i18n";
 import { ElMessageBox, ElMessage } from "element-plus";
 import { App } from "../wails/app";
 import type { VRChatConfigDTO } from "../wails/app";
+import { AssetCacheErr } from "../utils/assetCacheErrors";
 
 const { t } = useI18n();
 
@@ -620,7 +621,7 @@ async function deleteConfig() {
 }
 
 function classifyAssetCacheClearError(e: unknown): string {
-  // Match stable Go sentinel Error() strings (exact). Unknown errors stay generic — no raw paths in UI.
+  // Match Go MsgAssetCache* / AssetCacheErr (exact). Unknown → generic; never show raw paths.
   const msg =
     e instanceof Error
       ? e.message
@@ -630,21 +631,21 @@ function classifyAssetCacheClearError(e: unknown): string {
           ? String((e as { message: unknown }).message)
           : "";
   switch (msg) {
-    case "vrchat is running":
+    case AssetCacheErr.VRCHAT_RUNNING:
       return t("config.assetCacheClearErrRunning");
-    case "cache path is volume root":
+    case AssetCacheErr.VOLUME_ROOT:
       return t("config.assetCacheClearErrVolumeRoot");
-    case "cache path equals picture folder":
+    case AssetCacheErr.EQUALS_PICTURE_FOLDER:
       return t("config.assetCacheClearErrPictureFolder");
-    case "cache path equals vrchat data directory":
+    case AssetCacheErr.EQUALS_VRCHAT_DATA_DIR:
       return t("config.assetCacheClearErrDataDir");
-    case "cache path does not exist":
+    case AssetCacheErr.PATH_MISSING:
       return t("config.assetCacheClearErrMissing");
-    case "cache path is not a directory":
+    case AssetCacheErr.NOT_DIRECTORY:
       return t("config.assetCacheClearErrNotDir");
-    case "cache path is empty":
-    case "cache remove failed":
-    case "asset cache clear failed":
+    case AssetCacheErr.EMPTY_PATH:
+    case AssetCacheErr.REMOVE_FAILED:
+    case AssetCacheErr.FAILED:
       return t("config.assetCacheClearErrGeneric");
     default:
       return t("config.assetCacheClearErrGeneric");

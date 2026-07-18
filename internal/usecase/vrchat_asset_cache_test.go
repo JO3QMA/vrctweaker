@@ -276,14 +276,21 @@ func TestIsVolumeRoot(t *testing.T) {
 	}
 }
 
-func TestSamePathFold(t *testing.T) {
+func TestSamePath(t *testing.T) {
 	a := filepath.Join(t.TempDir(), "Foo")
-	b := a
-	if runtime.GOOS == "windows" {
-		b = strings.ToUpper(a)
+	if !samePath(a, a) {
+		t.Fatalf("samePath(%q, %q) = false", a, a)
 	}
-	if !samePath(a, b) {
-		t.Fatalf("samePath(%q, %q) = false", a, b)
+	if runtime.GOOS == "windows" {
+		b := strings.ToUpper(a)
+		if !samePath(a, b) {
+			t.Fatalf("windows samePath(%q, %q) = false", a, b)
+		}
+	} else {
+		other := filepath.Join(filepath.Dir(a), "foo")
+		if samePath(a, other) && a != other {
+			t.Fatalf("unix samePath should be case-sensitive: %q vs %q", a, other)
+		}
 	}
 }
 

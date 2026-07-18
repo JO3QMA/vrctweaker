@@ -5,22 +5,36 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"vrchat-tweaker/internal/domain/vrchatconfig"
 )
 
+// Sentinel message strings for Asset cache clear (must stay in sync with frontend/src/utils/assetCacheErrors.ts).
+const (
+	MsgAssetCacheVRChatRunning       = "vrchat is running"
+	MsgAssetCacheVolumeRoot          = "cache path is volume root"
+	MsgAssetCacheNotDirectory        = "cache path is not a directory"
+	MsgAssetCachePathMissing         = "cache path does not exist"
+	MsgAssetCacheEqualsPictureFolder = "cache path equals picture folder"
+	MsgAssetCacheEqualsVRChatDataDir = "cache path equals vrchat data directory"
+	MsgAssetCacheEmptyPath           = "cache path is empty"
+	MsgAssetCacheRemoveFailed        = "cache remove failed"
+	MsgAssetCacheFailed              = "asset cache clear failed"
+)
+
 // Sentinel errors for Asset cache clear (stable English phrases for frontend mapping).
 var (
-	ErrAssetCacheVRChatRunning       = errors.New("vrchat is running")
-	ErrAssetCacheVolumeRoot          = errors.New("cache path is volume root")
-	ErrAssetCacheNotDirectory        = errors.New("cache path is not a directory")
-	ErrAssetCachePathMissing         = errors.New("cache path does not exist")
-	ErrAssetCacheEqualsPictureFolder = errors.New("cache path equals picture folder")
-	ErrAssetCacheEqualsVRChatDataDir = errors.New("cache path equals vrchat data directory")
-	ErrAssetCacheEmptyPath           = errors.New("cache path is empty")
-	ErrAssetCacheRemoveFailed        = errors.New("cache remove failed")
-	ErrAssetCacheFailed              = errors.New("asset cache clear failed")
+	ErrAssetCacheVRChatRunning       = errors.New(MsgAssetCacheVRChatRunning)
+	ErrAssetCacheVolumeRoot          = errors.New(MsgAssetCacheVolumeRoot)
+	ErrAssetCacheNotDirectory        = errors.New(MsgAssetCacheNotDirectory)
+	ErrAssetCachePathMissing         = errors.New(MsgAssetCachePathMissing)
+	ErrAssetCacheEqualsPictureFolder = errors.New(MsgAssetCacheEqualsPictureFolder)
+	ErrAssetCacheEqualsVRChatDataDir = errors.New(MsgAssetCacheEqualsVRChatDataDir)
+	ErrAssetCacheEmptyPath           = errors.New(MsgAssetCacheEmptyPath)
+	ErrAssetCacheRemoveFailed        = errors.New(MsgAssetCacheRemoveFailed)
+	ErrAssetCacheFailed              = errors.New(MsgAssetCacheFailed)
 )
 
 // VRChatRunningChecker reports whether the VRChat client process is running.
@@ -65,15 +79,16 @@ func (uc *VRChatAssetCacheUseCase) ResolvePath() (string, error) {
 }
 
 func (uc *VRChatAssetCacheUseCase) resolveFromConfig(cfg *vrchatconfig.VRChatConfig) (string, error) {
-	if cfg != nil {
-		if p := strings.TrimSpace(cfg.CacheDirectory); p != "" {
-			abs, err := filepath.Abs(filepath.Clean(p))
-			if err != nil {
-				log.Printf("asset cache: abs cache_directory: %v", err)
-				return "", ErrAssetCacheFailed
-			}
-			return abs, nil
+	if cfg == nil {
+		cfg = &vrchatconfig.VRChatConfig{}
+	}
+	if p := strings.TrimSpace(cfg.CacheDirectory); p != "" {
+		abs, err := filepath.Abs(filepath.Clean(p))
+		if err != nil {
+			log.Printf("asset cache: abs cache_directory: %v", err)
+			return "", ErrAssetCacheFailed
 		}
+		return abs, nil
 	}
 	def, err := uc.defaultCache()
 	if err != nil {
@@ -89,15 +104,16 @@ func (uc *VRChatAssetCacheUseCase) resolveFromConfig(cfg *vrchatconfig.VRChatCon
 }
 
 func (uc *VRChatAssetCacheUseCase) resolvePicturePath(cfg *vrchatconfig.VRChatConfig) (string, error) {
-	if cfg != nil {
-		if p := strings.TrimSpace(cfg.PictureOutputFolder); p != "" {
-			abs, err := filepath.Abs(filepath.Clean(p))
-			if err != nil {
-				log.Printf("asset cache: abs picture folder: %v", err)
-				return "", ErrAssetCacheFailed
-			}
-			return abs, nil
+	if cfg == nil {
+		cfg = &vrchatconfig.VRChatConfig{}
+	}
+	if p := strings.TrimSpace(cfg.PictureOutputFolder); p != "" {
+		abs, err := filepath.Abs(filepath.Clean(p))
+		if err != nil {
+			log.Printf("asset cache: abs picture folder: %v", err)
+			return "", ErrAssetCacheFailed
 		}
+		return abs, nil
 	}
 	def, err := uc.defaultPicture()
 	if err != nil {
@@ -239,5 +255,9 @@ func samePath(a, b string) bool {
 	if errB == nil {
 		b = bb
 	}
-	return strings.EqualFold(a, b)
+	// Windows paths are case-insensitive; elsewhere match matchAbsPaths (case-sensitive).
+	if runtime.GOOS == "windows" {
+		return strings.EqualFold(a, b)
+	}
+	return a == b
 }
