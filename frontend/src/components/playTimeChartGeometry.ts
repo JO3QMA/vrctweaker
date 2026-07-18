@@ -4,6 +4,25 @@ export type CanvasBuffer = {
   height: number;
 };
 
+export type ChartPad = {
+  top: number;
+  left: number;
+  right: number;
+  bottom: number;
+};
+
+/** Plot area size; never negative when the container is smaller than padding. */
+export function clampedPlotSize(
+  cssW: number,
+  cssH: number,
+  pad: ChartPad,
+): { plotW: number; plotH: number } {
+  return {
+    plotW: Math.max(0, cssW - pad.left - pad.right),
+    plotH: Math.max(0, cssH - pad.top - pad.bottom),
+  };
+}
+
 /**
  * Clamp tip center X so a translateX(-50%) tip of tipWidth stays inside the chart.
  */

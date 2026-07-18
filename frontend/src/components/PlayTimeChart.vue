@@ -23,7 +23,11 @@ import {
 } from "vue";
 import { useI18n } from "vue-i18n";
 import { formatPlayDurationHMS } from "../utils/formatPlayDuration";
-import { clampCenteredTipX, syncCanvasBuffer } from "./playTimeChartGeometry";
+import {
+  clampCenteredTipX,
+  clampedPlotSize,
+  syncCanvasBuffer,
+} from "./playTimeChartGeometry";
 
 export interface PlayTimeDayPoint {
   date: string;
@@ -83,8 +87,7 @@ function niceMax(seconds: number): number {
 function measurePlot(canvas: HTMLCanvasElement): PlotMetrics {
   const cssW = canvas.clientWidth || 300;
   const cssH = canvas.clientHeight || 280;
-  const plotW = cssW - PAD.left - PAD.right;
-  const plotH = cssH - PAD.top - PAD.bottom;
+  const { plotW, plotH } = clampedPlotSize(cssW, cssH, PAD);
   const maxY = niceMax(Math.max(0, ...props.series.map((s) => s.seconds)));
   return { cssW, cssH, plotW, plotH, maxY };
 }
