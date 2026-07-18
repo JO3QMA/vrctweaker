@@ -394,3 +394,33 @@ func TestMultiOutputLogWatcher_TailGoroutineExitClearsTailing(t *testing.T) {
 	cancel()
 	time.Sleep(50 * time.Millisecond)
 }
+
+// Exercises stopTail overlapping tail-goroutine exit (the DATA RACE on cancel seen in CI).
+// Requires `go test -race`; without a brief yield after startTail, stopTail usually wins the gen bump first.
+func TestMultiOutputLogWatcher_StopTailNoRaceWithTailExit(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "output_log_race.txt")
+	if err := writeTestFile(path, ""); err != nil {
+		t.Fatal(err)
+	}
+	w := newMultiWatcherForTest(t, dir, func(string) EventHandler {
+		return testEventHandler(func(activity.ParsedEvent) {})
+	}, MultiOutputLogWatcherCallbacks{})
+
+	for range 200 {
+		state := &trackedLogFile{}
+		ctx, cancel := context.WithCancel(context.Background())
+		w.startTail(ctx, path, state, 0)
+		// Let the tail goroutine enter tailOutputLogFile so cancel+stopTail can overlap its defer.
+		time.Sleep(10 * time.Microsecond)
+		cancel()
+		w.stopTail(state)
+		deadline := time.Now().Add(time.Second)
+		for state.tailing.Load() && time.Now().Before(deadline) {
+			time.Sleep(time.Millisecond)
+		}
+		if state.tailing.Load() {
+			t.Fatal("tailing stuck true after cancel+stopTail")
+		}
+	}
+}
