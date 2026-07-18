@@ -883,10 +883,6 @@
       "riskAckTitle": "Account restriction risk",
       "riskAckBody": "Cookie linkage may risk account restrictions. A throwaway (sub) account is strongly recommended. Continue?",
       "riskAckConfirm": "I understand",
-      "errorRiskAckRequired": "Acknowledge the risk before writing.",
-      "errorUnsupportedPlatform": "This feature is Windows-only.",
-      "errorCookiesFileMissing": "The cookies file was not found.",
-      "errorInvalidBrowser": "Only Chrome, Edge, and Firefox are supported.",
       "errors": {
         "riskAck": "Acknowledge the risk before writing.",
         "unsupported": "This feature is Windows-only.",

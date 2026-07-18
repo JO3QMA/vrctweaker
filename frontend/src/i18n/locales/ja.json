@@ -883,10 +883,6 @@
       "riskAckTitle": "アカウント制限のリスク確認",
       "riskAckBody": "Cookie 連携は YouTube などのアカウント制限リスクがあります。捨て垢（サブアカウント）の利用を強く推奨します。続行しますか？",
       "riskAckConfirm": "理解して続行",
-      "errorRiskAckRequired": "書き込む前にリスク確認が必要です。",
-      "errorUnsupportedPlatform": "この機能は Windows 版のみ利用できます。",
-      "errorCookiesFileMissing": "指定した cookies ファイルが見つかりません。",
-      "errorInvalidBrowser": "選べるブラウザは Chrome / Edge / Firefox のみです。",
       "errors": {
         "riskAck": "書き込む前にリスク確認が必要です。",
         "unsupported": "この機能は Windows 版のみ利用できます。",

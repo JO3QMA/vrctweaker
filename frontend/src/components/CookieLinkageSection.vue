@@ -199,6 +199,18 @@ async function writeCookieFromDraft(gen: number) {
   await refreshCookieStatus(gen);
 }
 
+async function refreshAfterError(gen: number) {
+  try {
+    await refreshCookieStatus(gen);
+  } catch (refreshErr) {
+    if (!isCookieViewStale(gen)) {
+      cookieActionError.value = userFacingCookieError(
+        refreshErr instanceof Error ? refreshErr.message : String(refreshErr),
+      );
+    }
+  }
+}
+
 async function onCookieEnableChange(on: boolean) {
   const desired = on;
   const gen = ++cookieViewGen;
@@ -241,7 +253,7 @@ async function onCookieSourceChange() {
     cookieActionError.value = userFacingCookieError(
       e instanceof Error ? e.message : String(e),
     );
-    await refreshCookieStatus(gen);
+    await refreshAfterError(gen);
   } finally {
     if (!isCookieViewStale(gen)) cookieBusy.value = false;
   }
@@ -265,8 +277,9 @@ function dirOfPath(p: string): string {
 }
 
 async function browseCookieFile() {
-  const gen = cookieViewGen;
+  const gen = ++cookieViewGen;
   cookieBusy.value = true;
+  cookieActionError.value = "";
   try {
     const picked = await App.openFileDialog(
       t("video.cookieLinkage.browseTitle"),
@@ -275,9 +288,17 @@ async function browseCookieFile() {
     );
     if (!picked || isCookieViewStale(gen)) return;
     cookieDraftCookiesPath.value = picked;
-    if (cookieEnabled.value) {
-      await onCookiePathChange();
-    }
+    if (!cookieEnabled.value || cookieDraftSource.value !== "file") return;
+    await ensureCookieRiskAck(gen);
+    if (isCookieViewStale(gen)) return;
+    await writeCookieFromDraft(gen);
+  } catch (e) {
+    if (isCookieViewStale(gen)) return;
+    if (isMessageBoxDismiss(e)) return;
+    cookieActionError.value = userFacingCookieError(
+      e instanceof Error ? e.message : String(e),
+    );
+    await refreshAfterError(gen);
   } finally {
     if (!isCookieViewStale(gen)) cookieBusy.value = false;
   }

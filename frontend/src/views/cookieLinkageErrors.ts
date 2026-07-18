@@ -36,7 +36,7 @@ export function classifyCookieLinkageError(
   if (s.includes("errorinvalidbrowser") || s.includes("unsupported browser")) {
     return "invalidBrowser";
   }
-  if (s.includes("cookie linkage config read") || s.includes("config read")) {
+  if (s.includes("cookie linkage config read")) {
     return "configRead";
   }
   return "generic";
