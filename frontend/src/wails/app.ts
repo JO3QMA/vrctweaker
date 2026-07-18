@@ -596,6 +596,11 @@ export const App = {
   ),
   clearScreenshots: bindGo((a) => a.ClearScreenshots(), 0),
   clearFriendsCache: bindGo((a) => a.ClearFriendsCache(), 0),
+  resolveVRChatAssetCachePath: bindGo(
+    (a) => a.ResolveVRChatAssetCachePath(),
+    "",
+  ),
+  clearVRChatAssetCache: bindGo((a) => a.ClearVRChatAssetCache(), 0),
   listAutomationRules: bindGo((a) => a.ListAutomationRules(), []),
   saveAutomationRule: bindGo(
     (a, rule: AutomationRuleDTO) => a.SaveAutomationRule(rule),

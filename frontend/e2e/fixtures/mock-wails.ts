@@ -377,6 +377,9 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         ClearEncounters: () => Promise.resolve(0),
         ClearScreenshots: () => Promise.resolve(0),
         ClearFriendsCache: () => Promise.resolve(0),
+        ResolveVRChatAssetCachePath: () =>
+          Promise.resolve('C:\\\\VRChat\\\\Cache'),
+        ClearVRChatAssetCache: () => Promise.resolve(0),
         ListAutomationRules: () => Promise.resolve(automationRules),
         SaveAutomationRule: () => Promise.resolve(),
         DeleteAutomationRule: () => Promise.resolve(),

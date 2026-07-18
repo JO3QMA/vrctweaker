@@ -290,6 +290,28 @@
             />
           </el-form-item>
         </el-form>
+        <el-alert
+          v-if="assetCacheClearError"
+          :title="assetCacheClearError"
+          type="error"
+          :closable="false"
+          show-icon
+          style="margin: 0.75rem 0"
+          data-testid="asset-cache-clear-error"
+        />
+        <el-button
+          type="danger"
+          plain
+          :loading="assetCacheClearLoading"
+          data-testid="asset-cache-clear-btn"
+          @click="doClearAssetCache"
+        >
+          {{
+            assetCacheClearLoading
+              ? t("config.assetCacheClearRunning")
+              : t("config.assetCacheClear")
+          }}
+        </el-button>
       </el-card>
 
       <!-- Rich Presence -->
@@ -326,9 +348,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useI18n } from "vue-i18n";
-import { ElMessageBox } from "element-plus";
+import { ElMessageBox, ElMessage } from "element-plus";
 import { App } from "../wails/app";
 import type { VRChatConfigDTO } from "../wails/app";
 
@@ -360,6 +382,9 @@ const configExists = ref(false);
 const editing = ref(false);
 const saveError = ref("");
 const saveSuccess = ref(false);
+const assetCacheClearError = ref("");
+const assetCacheClearLoading = ref(false);
+let clearGeneration = 0;
 
 const CACHE_MIN = 30;
 const STEADYCAM_FOV_MIN = 30;
@@ -593,6 +618,81 @@ async function deleteConfig() {
     saveError.value = e instanceof Error ? e.message : t("config.errDelete");
   }
 }
+
+function classifyAssetCacheClearError(e: unknown): string {
+  const msg =
+    e instanceof Error
+      ? e.message
+      : typeof e === "string"
+        ? e
+        : e && typeof e === "object" && "message" in e
+          ? String((e as { message: unknown }).message)
+          : "";
+  const lower = msg.toLowerCase();
+  if (lower.includes("vrchat is running")) {
+    return t("config.assetCacheClearErrRunning");
+  }
+  if (lower.includes("volume root")) {
+    return t("config.assetCacheClearErrVolumeRoot");
+  }
+  if (lower.includes("equals picture folder")) {
+    return t("config.assetCacheClearErrPictureFolder");
+  }
+  if (lower.includes("equals vrchat data directory")) {
+    return t("config.assetCacheClearErrDataDir");
+  }
+  if (lower.includes("does not exist")) {
+    return t("config.assetCacheClearErrMissing");
+  }
+  if (lower.includes("not a directory")) {
+    return t("config.assetCacheClearErrNotDir");
+  }
+  if (msg) return msg;
+  return t("config.assetCacheClearErrGeneric");
+}
+
+async function doClearAssetCache() {
+  assetCacheClearError.value = "";
+  let resolvedPath: string;
+  try {
+    resolvedPath = await App.resolveVRChatAssetCachePath();
+  } catch (e) {
+    assetCacheClearError.value = classifyAssetCacheClearError(e);
+    return;
+  }
+  try {
+    await ElMessageBox.confirm(
+      t("config.assetCacheClearConfirm", { path: resolvedPath }),
+      t("common.confirm"),
+      {
+        confirmButtonText: t("common.execute"),
+        cancelButtonText: t("common.cancel"),
+        type: "warning",
+        confirmButtonClass: "el-button--danger",
+      },
+    );
+  } catch {
+    return;
+  }
+  const gen = ++clearGeneration;
+  assetCacheClearLoading.value = true;
+  try {
+    const n = await App.clearVRChatAssetCache();
+    if (gen !== clearGeneration) return;
+    ElMessage.success(t("config.assetCacheClearDone", { n: String(n ?? 0) }));
+  } catch (e) {
+    if (gen !== clearGeneration) return;
+    assetCacheClearError.value = classifyAssetCacheClearError(e);
+  } finally {
+    if (gen === clearGeneration) {
+      assetCacheClearLoading.value = false;
+    }
+  }
+}
+
+onBeforeUnmount(() => {
+  clearGeneration += 1;
+});
 </script>
 
 <style scoped>
