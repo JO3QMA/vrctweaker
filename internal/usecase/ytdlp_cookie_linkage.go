@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -461,4 +462,31 @@ func quoteConfigArg(s string) string {
 		return `"` + s + `"`
 	}
 	return s
+}
+
+// WrapCookieLinkageAPIError maps sentinel Cookie linkage errors to stable i18n keys; other errors pass through.
+func WrapCookieLinkageAPIError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if key := cookieLinkageErrorI18nKey(err); key != "" {
+		return errors.New(key)
+	}
+	log.Printf("ytdlp cookie linkage: %v", err)
+	return err
+}
+
+func cookieLinkageErrorI18nKey(err error) string {
+	switch {
+	case errors.Is(err, ErrCookieLinkageRiskAckRequired):
+		return "errorRiskAckRequired"
+	case errors.Is(err, ErrCookieLinkageUnsupportedPlatform):
+		return "errorUnsupportedPlatform"
+	case errors.Is(err, ErrCookieLinkageCookiesFileMissing):
+		return "errorCookiesFileMissing"
+	case errors.Is(err, ErrCookieLinkageInvalidBrowser):
+		return "errorInvalidBrowser"
+	default:
+		return ""
+	}
 }

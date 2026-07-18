@@ -53,6 +53,7 @@ type App struct {
 	settings         *usecase.SettingsUseCase
 	dbMaintenance    *usecase.DBMaintenanceUseCase
 	ytdlp            *usecase.YTDLPMaintainUseCase
+	cookieLinkage    *usecase.CookieLinkageUseCase
 	serverStatus     *statuspage.Client
 	vrchatConfigRepo *filesystem.VRChatConfigFileRepository
 
@@ -136,6 +137,7 @@ func (a *App) startup(ctx context.Context) {
 	a.settings = usecase.NewSettingsUseCase(settingsRepo)
 	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(db, encounterRepo, mediaRepo, userCacheRepo, settingsRepo)
 	a.ytdlp = usecase.NewYTDLPMaintainUseCase(a.settings, usecase.NewYTDLPUpdater())
+	a.cookieLinkage = usecase.NewCookieLinkageUseCase(a.settings)
 	a.serverStatus = statuspage.NewClient()
 
 	configPath := getVRChatConfigPath()
@@ -1504,6 +1506,50 @@ func (a *App) OpenYTDLPCacheFolder() error {
 // OpenYTDLPToolsFolder opens VRChat's Tools directory (parent of yt-dlp.exe) in the file manager.
 func (a *App) OpenYTDLPToolsFolder() error {
 	return openYTDLPFolderInFileManager(usecase.VRChatYTDLPToolsPath)
+}
+
+// GetYTDLPCookieLinkageStatus returns Cookie linkage effective state (yt-dlp user config).
+func (a *App) GetYTDLPCookieLinkageStatus() (usecase.CookieLinkageStatus, error) {
+	if a.cookieLinkage == nil {
+		return usecase.CookieLinkageStatus{
+			Supported:         false,
+			UnsupportedReason: "notInitialized",
+			SourceKind:        usecase.CookieSourceNone,
+		}, nil
+	}
+	return a.cookieLinkage.GetStatus(a.ctx)
+}
+
+// AcknowledgeYTDLPCookieLinkageRisk records Cookie linkage risk acknowledgment.
+func (a *App) AcknowledgeYTDLPCookieLinkageRisk() error {
+	if a.cookieLinkage == nil {
+		return errors.New("notInitialized")
+	}
+	return a.cookieLinkage.AcknowledgeRisk(a.ctx)
+}
+
+// SetYTDLPCookieLinkageBrowser upserts Browser cookie source (chrome/edge/firefox).
+func (a *App) SetYTDLPCookieLinkageBrowser(browser string) error {
+	if a.cookieLinkage == nil {
+		return errors.New("notInitialized")
+	}
+	return usecase.WrapCookieLinkageAPIError(a.cookieLinkage.SetBrowserSource(a.ctx, browser))
+}
+
+// SetYTDLPCookieLinkageCookiesFile upserts Cookies file source.
+func (a *App) SetYTDLPCookieLinkageCookiesFile(path string) error {
+	if a.cookieLinkage == nil {
+		return errors.New("notInitialized")
+	}
+	return usecase.WrapCookieLinkageAPIError(a.cookieLinkage.SetCookiesFileSource(a.ctx, path))
+}
+
+// DisableYTDLPCookieLinkage removes Managed cookie options from yt-dlp user config.
+func (a *App) DisableYTDLPCookieLinkage() error {
+	if a.cookieLinkage == nil {
+		return errors.New("notInitialized")
+	}
+	return usecase.WrapCookieLinkageAPIError(a.cookieLinkage.Disable(a.ctx))
 }
 
 func openYTDLPFolderInFileManager(pathResolver func() (string, error)) error {
