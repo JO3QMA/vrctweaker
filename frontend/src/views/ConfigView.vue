@@ -620,6 +620,7 @@ async function deleteConfig() {
 }
 
 function classifyAssetCacheClearError(e: unknown): string {
+  // Match stable Go sentinel Error() strings (exact). Unknown errors stay generic — no raw paths in UI.
   const msg =
     e instanceof Error
       ? e.message
@@ -628,27 +629,26 @@ function classifyAssetCacheClearError(e: unknown): string {
         : e && typeof e === "object" && "message" in e
           ? String((e as { message: unknown }).message)
           : "";
-  const lower = msg.toLowerCase();
-  if (lower.includes("vrchat is running")) {
-    return t("config.assetCacheClearErrRunning");
+  switch (msg) {
+    case "vrchat is running":
+      return t("config.assetCacheClearErrRunning");
+    case "cache path is volume root":
+      return t("config.assetCacheClearErrVolumeRoot");
+    case "cache path equals picture folder":
+      return t("config.assetCacheClearErrPictureFolder");
+    case "cache path equals vrchat data directory":
+      return t("config.assetCacheClearErrDataDir");
+    case "cache path does not exist":
+      return t("config.assetCacheClearErrMissing");
+    case "cache path is not a directory":
+      return t("config.assetCacheClearErrNotDir");
+    case "cache path is empty":
+    case "cache remove failed":
+    case "asset cache clear failed":
+      return t("config.assetCacheClearErrGeneric");
+    default:
+      return t("config.assetCacheClearErrGeneric");
   }
-  if (lower.includes("volume root")) {
-    return t("config.assetCacheClearErrVolumeRoot");
-  }
-  if (lower.includes("equals picture folder")) {
-    return t("config.assetCacheClearErrPictureFolder");
-  }
-  if (lower.includes("equals vrchat data directory")) {
-    return t("config.assetCacheClearErrDataDir");
-  }
-  if (lower.includes("does not exist")) {
-    return t("config.assetCacheClearErrMissing");
-  }
-  if (lower.includes("not a directory")) {
-    return t("config.assetCacheClearErrNotDir");
-  }
-  if (msg) return msg;
-  return t("config.assetCacheClearErrGeneric");
 }
 
 async function doClearAssetCache() {

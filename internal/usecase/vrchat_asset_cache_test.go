@@ -86,6 +86,38 @@ func TestClearVRChatAssetCache_vrchatRunning(t *testing.T) {
 	}
 }
 
+func TestClearVRChatAssetCache_rechecksRunningBeforeDelete(t *testing.T) {
+	dir := t.TempDir()
+	_ = os.WriteFile(filepath.Join(dir, "a.bin"), []byte("x"), 0o644)
+	checks := 0
+	uc := &VRChatAssetCacheUseCase{
+		readConfig: func() (*vrchatconfig.VRChatConfig, error) {
+			return &vrchatconfig.VRChatConfig{CacheDirectory: dir}, nil
+		},
+		running: stubVRChatRunningFn(func() (bool, error) {
+			checks++
+			return checks >= 2, nil // second check reports running
+		}),
+		defaultCache:   func() (string, error) { return dir, nil },
+		defaultPicture: func() (string, error) { return filepath.Join(t.TempDir(), "pics"), nil },
+		vrchatDataDir:  func() (string, error) { return filepath.Join(t.TempDir(), "vrc"), nil },
+	}
+	_, err := uc.Clear()
+	if !errors.Is(err, ErrAssetCacheVRChatRunning) {
+		t.Fatalf("err = %v, want ErrAssetCacheVRChatRunning", err)
+	}
+	if checks < 2 {
+		t.Fatalf("VRChatRunning checks = %d, want >= 2", checks)
+	}
+	if _, err := os.Stat(filepath.Join(dir, "a.bin")); err != nil {
+		t.Fatalf("file should remain when recheck fails: %v", err)
+	}
+}
+
+type stubVRChatRunningFn func() (bool, error)
+
+func (f stubVRChatRunningFn) VRChatRunning() (bool, error) { return f() }
+
 func TestClearVRChatAssetCache_sameAsPictureFolder(t *testing.T) {
 	dir := t.TempDir()
 	_ = os.WriteFile(filepath.Join(dir, "a.bin"), []byte("x"), 0o644)
@@ -163,8 +195,8 @@ func TestClearVRChatAssetCache_partialFailure(t *testing.T) {
 
 	uc := newTestAssetCacheUC(t, dir, "", stubVRChatRunning{})
 	_, err := uc.Clear()
-	if err == nil {
-		t.Fatal("want error on partial failure")
+	if !errors.Is(err, ErrAssetCacheRemoveFailed) {
+		t.Fatalf("err = %v, want ErrAssetCacheRemoveFailed", err)
 	}
 	// Must not report success; ok.bin may or may not already be gone depending on ReadDir order.
 }

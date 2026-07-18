@@ -2,7 +2,7 @@ package usecase
 
 import (
 	"errors"
-	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,6 +19,8 @@ var (
 	ErrAssetCacheEqualsPictureFolder = errors.New("cache path equals picture folder")
 	ErrAssetCacheEqualsVRChatDataDir = errors.New("cache path equals vrchat data directory")
 	ErrAssetCacheEmptyPath           = errors.New("cache path is empty")
+	ErrAssetCacheRemoveFailed        = errors.New("cache remove failed")
+	ErrAssetCacheFailed              = errors.New("asset cache clear failed")
 )
 
 // VRChatRunningChecker reports whether the VRChat client process is running.
@@ -56,7 +58,8 @@ func NewVRChatAssetCacheUseCase(
 func (uc *VRChatAssetCacheUseCase) ResolvePath() (string, error) {
 	cfg, err := uc.readConfig()
 	if err != nil {
-		return "", fmt.Errorf("read vrchat config: %w", err)
+		log.Printf("asset cache: read vrchat config: %v", err)
+		return "", ErrAssetCacheFailed
 	}
 	return uc.resolveFromConfig(cfg)
 }
@@ -66,18 +69,21 @@ func (uc *VRChatAssetCacheUseCase) resolveFromConfig(cfg *vrchatconfig.VRChatCon
 		if p := strings.TrimSpace(cfg.CacheDirectory); p != "" {
 			abs, err := filepath.Abs(filepath.Clean(p))
 			if err != nil {
-				return "", err
+				log.Printf("asset cache: abs cache_directory: %v", err)
+				return "", ErrAssetCacheFailed
 			}
 			return abs, nil
 		}
 	}
 	def, err := uc.defaultCache()
 	if err != nil {
-		return "", err
+		log.Printf("asset cache: default cache path: %v", err)
+		return "", ErrAssetCacheFailed
 	}
 	abs, err := filepath.Abs(filepath.Clean(def))
 	if err != nil {
-		return "", err
+		log.Printf("asset cache: abs default cache: %v", err)
+		return "", ErrAssetCacheFailed
 	}
 	return abs, nil
 }
@@ -87,38 +93,52 @@ func (uc *VRChatAssetCacheUseCase) resolvePicturePath(cfg *vrchatconfig.VRChatCo
 		if p := strings.TrimSpace(cfg.PictureOutputFolder); p != "" {
 			abs, err := filepath.Abs(filepath.Clean(p))
 			if err != nil {
-				return "", err
+				log.Printf("asset cache: abs picture folder: %v", err)
+				return "", ErrAssetCacheFailed
 			}
 			return abs, nil
 		}
 	}
 	def, err := uc.defaultPicture()
 	if err != nil {
-		return "", err
+		log.Printf("asset cache: default picture folder: %v", err)
+		return "", ErrAssetCacheFailed
 	}
 	abs, err := filepath.Abs(filepath.Clean(def))
 	if err != nil {
-		return "", err
+		log.Printf("asset cache: abs default picture: %v", err)
+		return "", ErrAssetCacheFailed
 	}
 	return abs, nil
 }
 
+func (uc *VRChatAssetCacheUseCase) ensureVRChatNotRunning() error {
+	if uc.running == nil {
+		return nil
+	}
+	running, err := uc.running.VRChatRunning()
+	if err != nil {
+		log.Printf("asset cache: check vrchat running: %v", err)
+		return ErrAssetCacheFailed
+	}
+	if running {
+		return ErrAssetCacheVRChatRunning
+	}
+	return nil
+}
+
 // Clear deletes all entries inside the resolved VRChat asset cache directory.
 // The directory itself remains. Returns the number of top-level entries removed.
+// Returned errors are path-free sentinels suitable for UI mapping.
 func (uc *VRChatAssetCacheUseCase) Clear() (int64, error) {
-	if uc.running != nil {
-		running, err := uc.running.VRChatRunning()
-		if err != nil {
-			return 0, fmt.Errorf("check vrchat running: %w", err)
-		}
-		if running {
-			return 0, ErrAssetCacheVRChatRunning
-		}
+	if err := uc.ensureVRChatNotRunning(); err != nil {
+		return 0, err
 	}
 
 	cfg, err := uc.readConfig()
 	if err != nil {
-		return 0, fmt.Errorf("read vrchat config: %w", err)
+		log.Printf("asset cache: read vrchat config: %v", err)
+		return 0, ErrAssetCacheFailed
 	}
 	cachePath, err := uc.resolveFromConfig(cfg)
 	if err != nil {
@@ -133,7 +153,7 @@ func (uc *VRChatAssetCacheUseCase) Clear() (int64, error) {
 
 	picPath, err := uc.resolvePicturePath(cfg)
 	if err != nil {
-		return 0, fmt.Errorf("resolve picture folder: %w", err)
+		return 0, err
 	}
 	if samePath(cachePath, picPath) {
 		return 0, ErrAssetCacheEqualsPictureFolder
@@ -142,7 +162,8 @@ func (uc *VRChatAssetCacheUseCase) Clear() (int64, error) {
 	if uc.vrchatDataDir != nil {
 		dataDir, dataErr := uc.vrchatDataDir()
 		if dataErr != nil {
-			return 0, fmt.Errorf("resolve vrchat data dir: %w", dataErr)
+			log.Printf("asset cache: resolve vrchat data dir: %v", dataErr)
+			return 0, ErrAssetCacheFailed
 		}
 		if dataAbs, absErr := filepath.Abs(filepath.Clean(dataDir)); absErr == nil && samePath(cachePath, dataAbs) {
 			return 0, ErrAssetCacheEqualsVRChatDataDir
@@ -154,21 +175,29 @@ func (uc *VRChatAssetCacheUseCase) Clear() (int64, error) {
 		if os.IsNotExist(err) {
 			return 0, ErrAssetCachePathMissing
 		}
-		return 0, err
+		log.Printf("asset cache: lstat %s: %v", cachePath, err)
+		return 0, ErrAssetCacheFailed
 	}
 	if !info.IsDir() {
 		return 0, ErrAssetCacheNotDirectory
 	}
 
+	// Re-check after path resolution / before mutation (narrow TOCTOU window).
+	if runErr := uc.ensureVRChatNotRunning(); runErr != nil {
+		return 0, runErr
+	}
+
 	entries, err := os.ReadDir(cachePath)
 	if err != nil {
-		return 0, err
+		log.Printf("asset cache: readdir %s: %v", cachePath, err)
+		return 0, ErrAssetCacheFailed
 	}
 	var n int64
 	for _, e := range entries {
 		child := filepath.Join(cachePath, e.Name())
 		if err := removeCacheEntry(child); err != nil {
-			return n, fmt.Errorf("remove %s: %w", child, err)
+			log.Printf("asset cache: remove %s: %v", child, err)
+			return n, ErrAssetCacheRemoveFailed
 		}
 		n++
 	}
@@ -176,13 +205,13 @@ func (uc *VRChatAssetCacheUseCase) Clear() (int64, error) {
 }
 
 // removeCacheEntry removes one top-level entry.
-// Symlinks are removed with os.Remove (do not follow into the target).
+// Symlinks and Windows reparse points (junctions) use os.Remove so the target tree is not walked.
 func removeCacheEntry(path string) error {
 	fi, err := os.Lstat(path)
 	if err != nil {
 		return err
 	}
-	if fi.Mode()&os.ModeSymlink != 0 {
+	if fi.Mode()&os.ModeSymlink != 0 || isReparsePoint(path) {
 		return os.Remove(path)
 	}
 	return os.RemoveAll(path)
@@ -196,7 +225,7 @@ func isVolumeRoot(path string) bool {
 		rest = strings.Trim(rest, `/\`)
 		return rest == ""
 	}
-	return clean == string(os.PathSeparator) || clean == "/"
+	return clean == string(os.PathSeparator)
 }
 
 func samePath(a, b string) bool {
