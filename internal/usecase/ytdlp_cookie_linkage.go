@@ -101,6 +101,9 @@ func (uc *CookieLinkageUseCase) SetCookiesFileSource(ctx context.Context, path s
 	if path == "" {
 		return ErrCookieLinkageCookiesFileMissing
 	}
+	if strings.ContainsAny(path, "\n\r") {
+		return ErrCookieLinkageCookiesFileMissing
+	}
 	fi, err := os.Stat(path)
 	if err != nil || fi.IsDir() {
 		return ErrCookieLinkageCookiesFileMissing
@@ -265,6 +268,7 @@ func (uc *CookieLinkageUseCase) writeManagedLocked(ctx context.Context, managedL
 	}
 	// Read failure must block writes (do not treat as empty).
 	var existing string
+	var existingMode os.FileMode
 	fi, statErr := os.Stat(target)
 	switch {
 	case statErr == nil && fi.IsDir():
@@ -275,6 +279,7 @@ func (uc *CookieLinkageUseCase) writeManagedLocked(ctx context.Context, managedL
 			return fmt.Errorf("cookie linkage config read: %w", err)
 		}
 		existing = string(raw)
+		existingMode = fi.Mode().Perm()
 	case os.IsNotExist(statErr):
 		existing = ""
 	default:
@@ -292,10 +297,10 @@ func (uc *CookieLinkageUseCase) writeManagedLocked(ctx context.Context, managedL
 	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 		return fmt.Errorf("create yt-dlp config dir: %w", err)
 	}
-	return atomicWriteFile(target, []byte(next))
+	return atomicWriteFile(target, []byte(next), existingMode)
 }
 
-func atomicWriteFile(path string, data []byte) error {
+func atomicWriteFile(path string, data []byte, existingMode os.FileMode) error {
 	dir := filepath.Dir(path)
 	tmp, err := os.CreateTemp(dir, ".ytdlp-config-*.tmp")
 	if err != nil {
@@ -313,6 +318,11 @@ func atomicWriteFile(path string, data []byte) error {
 	}
 	if err := renameFile(tmpName, path); err != nil {
 		return fmt.Errorf("replace yt-dlp user config: %w", err)
+	}
+	if existingMode != 0 {
+		if err := os.Chmod(path, existingMode); err != nil {
+			return fmt.Errorf("chmod yt-dlp user config: %w", err)
+		}
 	}
 	return nil
 }
@@ -412,10 +422,13 @@ func splitConfigOption(line string) (opt, rest string, ok bool) {
 		if i := strings.IndexByte(line, '='); i > 0 {
 			return line[:i], line[i+1:], true
 		}
-		fields := strings.SplitN(line, " ", 2)
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			return "", "", false
+		}
 		opt = fields[0]
-		if len(fields) == 2 {
-			rest = fields[1]
+		if len(fields) > 1 {
+			rest = strings.Join(fields[1:], " ")
 		}
 		return opt, rest, true
 	}

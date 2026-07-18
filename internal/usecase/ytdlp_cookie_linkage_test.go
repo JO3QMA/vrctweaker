@@ -292,3 +292,68 @@ func TestWrite_requiresRiskAck(t *testing.T) {
 		t.Fatalf("got %v", err)
 	}
 }
+
+func TestUpsert_cookiesFileRejectsNewline(t *testing.T) {
+	uc, _, dir := newCookieUC(t)
+	// Create a real file so Stat would pass if we only checked existence;
+	// the newline must be rejected before write.
+	real := filepath.Join(dir, "cookies.txt")
+	if err := os.WriteFile(real, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ackCookie(t, uc)
+	evil := real + "\n--exec=calc.exe"
+	err := uc.SetCookiesFileSource(context.Background(), evil)
+	if !errors.Is(err, ErrCookieLinkageCookiesFileMissing) {
+		t.Fatalf("got %v", err)
+	}
+}
+
+func TestUpsert_tabSeparatedManagedLine(t *testing.T) {
+	uc, _, dir := newCookieUC(t)
+	cfg := filepath.Join(dir, "config")
+	if err := os.WriteFile(cfg, []byte("--cookies-from-browser\tfirefox\n--sleep-requests 1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	st, err := uc.GetStatus(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !st.Enabled || st.SourceKind != CookieSourceBrowser || st.Browser != "firefox" {
+		t.Fatalf("status %+v", st)
+	}
+	ackCookie(t, uc)
+	if setErr := uc.SetBrowserSource(context.Background(), "chrome"); setErr != nil {
+		t.Fatal(setErr)
+	}
+	got, err := os.ReadFile(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s := string(got)
+	if strings.Contains(s, "firefox") || strings.Count(s, "cookies-from-browser") != 1 {
+		t.Fatalf("got %q", s)
+	}
+	if !strings.Contains(s, "--sleep-requests 1") {
+		t.Fatalf("lost other line: %q", s)
+	}
+}
+
+func TestWrite_preservesFileMode(t *testing.T) {
+	uc, _, dir := newCookieUC(t)
+	cfg := filepath.Join(dir, "config")
+	if err := os.WriteFile(cfg, []byte("--cookies-from-browser chrome\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	ackCookie(t, uc)
+	if err := uc.SetBrowserSource(context.Background(), "edge"); err != nil {
+		t.Fatal(err)
+	}
+	fi, err := os.Stat(cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fi.Mode().Perm() != 0o600 {
+		t.Fatalf("mode %o want 0600", fi.Mode().Perm())
+	}
+}
