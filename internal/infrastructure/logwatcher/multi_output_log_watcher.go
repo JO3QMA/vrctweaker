@@ -216,13 +216,18 @@ func (w *MultiOutputLogWatcher) startTail(ctx context.Context, path string, stat
 	state.readOffset.Store(startOffset)
 	tailCtx, cancel := context.WithCancel(ctx)
 	myGen := state.tailGen.Add(1)
+	// cancel is owned only by the poll loop (startTail/stopTail from run()). Tail defer must not clear it.
+	if state.cancel != nil {
+		state.cancel()
+	}
 	state.cancel = cancel
 	state.tailing.Store(true)
 
 	handler := w.handlerFactory(path)
 	if handler == nil {
-		state.tailing.Store(false)
+		state.cancel()
 		state.cancel = nil
+		state.tailing.Store(false)
 		return
 	}
 	go func() {
@@ -232,7 +237,6 @@ func (w *MultiOutputLogWatcher) startTail(ctx context.Context, path string, stat
 			}
 			if state.tailGen.Load() == myGen {
 				state.tailing.Store(false)
-				state.cancel = nil
 			}
 		}()
 		tailOutputLogFile(tailCtx, path, startOffset, w.parser, handler, w.logger, func(offset int64, lineTime time.Time) {
