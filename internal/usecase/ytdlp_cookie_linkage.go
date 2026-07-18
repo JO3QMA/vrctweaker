@@ -93,7 +93,7 @@ func (uc *CookieLinkageUseCase) SetBrowserSource(ctx context.Context, browser st
 		return err
 	}
 	line := "--cookies-from-browser " + browser
-	return uc.writeManagedLocked(ctx, line)
+	return uc.writeManagedLocked(line)
 }
 
 // SetCookiesFileSource upserts --cookies <path>; path must exist (empty file OK).
@@ -115,7 +115,7 @@ func (uc *CookieLinkageUseCase) SetCookiesFileSource(ctx context.Context, path s
 		return err
 	}
 	line := "--cookies " + quoteConfigArg(path)
-	return uc.writeManagedLocked(ctx, line)
+	return uc.writeManagedLocked(line)
 }
 
 // Disable removes Managed cookie options only.
@@ -125,7 +125,7 @@ func (uc *CookieLinkageUseCase) Disable(ctx context.Context) error {
 	if err := uc.requireWriteReady(ctx); err != nil {
 		return err
 	}
-	return uc.writeManagedLocked(ctx, "")
+	return uc.writeManagedLocked("")
 }
 
 func (uc *CookieLinkageUseCase) requireWriteReady(ctx context.Context) error {
@@ -216,7 +216,7 @@ func (uc *CookieLinkageUseCase) resolveConfigPathLocked() (string, error) {
 	cfgInfo, cfgErr := os.Stat(cfg)
 	if cfgErr == nil {
 		if cfgInfo.IsDir() {
-			return cfg, nil // GetStatus will error on read
+			return "", fmt.Errorf("cookie linkage config read: path is a directory")
 		}
 		return cfg, nil
 	}
@@ -227,7 +227,7 @@ func (uc *CookieLinkageUseCase) resolveConfigPathLocked() (string, error) {
 	txtInfo, txtErr := os.Stat(txt)
 	if txtErr == nil {
 		if txtInfo.IsDir() {
-			return txt, nil
+			return "", fmt.Errorf("cookie linkage config read: path is a directory")
 		}
 		return txt, nil
 	}
@@ -263,8 +263,7 @@ func (uc *CookieLinkageUseCase) configDirLocked() (string, error) {
 	return filepath.Join(appData, "yt-dlp"), nil
 }
 
-func (uc *CookieLinkageUseCase) writeManagedLocked(ctx context.Context, managedLine string) error {
-	_ = ctx
+func (uc *CookieLinkageUseCase) writeManagedLocked(managedLine string) error {
 	target, err := uc.writeTargetPathLocked()
 	if err != nil {
 		return err
@@ -291,7 +290,7 @@ func (uc *CookieLinkageUseCase) writeManagedLocked(ctx context.Context, managedL
 
 	next, err := upsertManagedCookieLines(existing, managedLine)
 	if err != nil {
-		return fmt.Errorf("cookie linkage config read: %w", err)
+		return fmt.Errorf("cookie linkage config update: %w", err)
 	}
 	if strings.TrimSpace(next) == "" {
 		if err := os.Remove(target); err != nil && !os.IsNotExist(err) {
@@ -319,16 +318,17 @@ func atomicWriteFile(path string, data []byte, existingMode os.FileMode) error {
 		_ = tmp.Close()
 		return fmt.Errorf("write temp config: %w", err)
 	}
+	if existingMode != 0 {
+		if err := tmp.Chmod(existingMode); err != nil {
+			_ = tmp.Close()
+			return fmt.Errorf("chmod temp config: %w", err)
+		}
+	}
 	if err := tmp.Close(); err != nil {
 		return fmt.Errorf("close temp config: %w", err)
 	}
 	if err := renameFile(tmpName, path); err != nil {
 		return fmt.Errorf("replace yt-dlp user config: %w", err)
-	}
-	if existingMode != 0 {
-		if err := os.Chmod(path, existingMode); err != nil {
-			return fmt.Errorf("chmod yt-dlp user config: %w", err)
-		}
 	}
 	return nil
 }
