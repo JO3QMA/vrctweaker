@@ -14,6 +14,7 @@ import {
   E2E_SELF_USER_ID,
   E2E_TEST_USER_ID,
   SEED_ACTIVITY_STATS,
+  SEED_AUTOMATION_ITEMS,
   SEED_AUTOMATION_RULES,
   SEED_ENCOUNTERS,
   SEED_FRIENDS,
@@ -40,6 +41,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
   const friendsJson = JSON.stringify(SEED_FRIENDS);
   const activityStatsJson = JSON.stringify(SEED_ACTIVITY_STATS);
   const automationRulesJson = JSON.stringify(SEED_AUTOMATION_RULES);
+  const automationItemsJson = JSON.stringify(SEED_AUTOMATION_ITEMS);
   const vrchatConfigJson = JSON.stringify(SEED_VRCHAT_CONFIG);
   const e2eTestUserIdJson = JSON.stringify(E2E_TEST_USER_ID);
   const e2eSelfUserIdJson = JSON.stringify(E2E_SELF_USER_ID);
@@ -87,6 +89,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
       const friends = ${friendsJson};
       const activityStats = ${activityStatsJson};
       const automationRules = ${automationRulesJson};
+      const automationItems = ${automationItemsJson};
       const vrchatConfig = ${vrchatConfigJson};
       const e2eTestUserId = ${e2eTestUserIdJson};
       const e2eSelfUserId = ${e2eSelfUserIdJson};
@@ -384,6 +387,14 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         SaveAutomationRule: () => Promise.resolve(),
         DeleteAutomationRule: () => Promise.resolve(),
         ToggleAutomationRule: () => Promise.resolve(),
+        ListAutomationItems: () => Promise.resolve(automationItems),
+        SaveAutomationItem: () => Promise.resolve(),
+        DeleteAutomationItem: () => Promise.resolve(),
+        ToggleAutomationItem: () => Promise.resolve(),
+        GetAutomationRunLog: () => Promise.resolve([]),
+        GetAutomationRuntimeStatus: () =>
+          Promise.resolve({ available: true, reasonKey: '' }),
+        ListDetectedPowerPlans: () => Promise.resolve([]),
         VRChatConfigExists: () => Promise.resolve(true),
         GetVRChatConfig: () => Promise.resolve(vrchatConfig),
         SaveVRChatConfig: () => Promise.resolve(),

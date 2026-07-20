@@ -65,6 +65,18 @@ export interface SeedActivityStats {
   topWorlds: SeedTopWorld[];
 }
 
+export interface SeedAutomationItem {
+  id: string;
+  name: string;
+  kind: string;
+  isEnabled: boolean;
+  triggerType?: string;
+  scheduleJson?: string;
+  conditionsJson?: string;
+  actionsJson?: string;
+  scriptSource?: string;
+}
+
 export interface SeedAutomationRule {
   id: string;
   name: string;
@@ -234,6 +246,20 @@ export const SEED_SELF_PROFILE: SeedFriend & {
   statusDescription: "E2E 自己プロフィール",
   bio: "E2E ログイン中ユーザーです。",
 };
+
+export const SEED_AUTOMATION_ITEMS: SeedAutomationItem[] = [
+  {
+    id: "rule_e2e_001",
+    name: "E2E AFK → Busy",
+    kind: "rule",
+    isEnabled: true,
+    triggerType: "friend_joined",
+    conditionsJson: "[]",
+    actionsJson: JSON.stringify([
+      { type: "change_status", payload: { status: "busy" } },
+    ]),
+  },
+];
 
 export const SEED_AUTOMATION_RULES: SeedAutomationRule[] = [
   {

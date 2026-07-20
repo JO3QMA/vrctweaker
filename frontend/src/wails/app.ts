@@ -34,6 +34,11 @@ export type DailyPlaySecondsDTO = WailsDTO<activity.DailyPlaySeconds>;
 export type TopWorldDTO = WailsDTO<activity.TopWorldSummary>;
 export type ActivityStatsDTO = WailsDTO<activity.ActivityStats>;
 export type AutomationRuleDTO = WailsDTO<automation.AutomationRule>;
+export type AutomationItemDTO = WailsDTO<main.AutomationItemDTO>;
+export type AutomationRunLogEntryDTO = WailsDTO<main.AutomationRunLogEntryDTO>;
+export type AutomationRuntimeStatusDTO =
+  WailsDTO<main.AutomationRuntimeStatusDTO>;
+export type DetectedPowerPlanDTO = WailsDTO<main.DetectedPowerPlanDTO>;
 export type VRChatConfigDTO = WailsDTO<main.VRChatConfigDTO>;
 
 /** Cookie linkage status (usecase.CookieLinkageStatus); defined locally until wails generate. */
@@ -614,6 +619,24 @@ export const App = {
     (a, id: string, enabled: boolean) => a.ToggleAutomationRule(id, enabled),
     undefined,
   ),
+  listAutomationItems: bindGo((a) => a.ListAutomationItems(), []),
+  saveAutomationItem: bindGo(
+    (a, item: AutomationItemDTO) => a.SaveAutomationItem(item),
+    undefined,
+  ),
+  deleteAutomationItem: bindGo(
+    (a, id: string) => a.DeleteAutomationItem(id),
+    undefined,
+  ),
+  toggleAutomationItem: bindGo(
+    (a, id: string, enabled: boolean) => a.ToggleAutomationItem(id, enabled),
+    undefined,
+  ),
+  getAutomationRunLog: bindGo((a) => a.GetAutomationRunLog(), []),
+  getAutomationRuntimeStatus: bindGo((a) => a.GetAutomationRuntimeStatus(), {
+    available: true,
+  }),
+  listDetectedPowerPlans: bindGo((a) => a.ListDetectedPowerPlans(), []),
   vrchatConfigExists: bindGo((a) => a.VRChatConfigExists(), false),
   /**
    * Reads VRChat `config.json` via the backend. Rejects if the Go method errors
