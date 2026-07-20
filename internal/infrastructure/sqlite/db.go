@@ -84,6 +84,10 @@ func applySchema(db *sql.DB) error {
 		return err
 	}
 
+	if err := MigrateAutomationRules(context.Background(), db); err != nil {
+		return fmt.Errorf("migrate automation items: %w", err)
+	}
+
 	return applyDataMigrations(db)
 }
 
@@ -221,6 +225,17 @@ func schemaStatements() []string {
 			action_type TEXT NOT NULL,
 			action_payload TEXT,
 			is_enabled INTEGER DEFAULT 1
+		)`,
+		`CREATE TABLE IF NOT EXISTS automation_items (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			kind TEXT NOT NULL,
+			is_enabled INTEGER DEFAULT 1,
+			trigger_type TEXT,
+			schedule_json TEXT,
+			conditions_json TEXT,
+			actions_json TEXT,
+			script_source TEXT
 		)`,
 		`CREATE TABLE IF NOT EXISTS app_settings (
 			key TEXT PRIMARY KEY,
