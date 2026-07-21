@@ -32,7 +32,7 @@ test.describe("Automation", () => {
 
     const nameInput = page
       .locator(".rule-editor .el-form-item")
-      .filter({ hasText: "ルール名" })
+      .filter({ hasText: "名前" })
       .locator("input")
       .first();
     await expect(nameInput).toHaveValue("E2E AFK → Busy");
