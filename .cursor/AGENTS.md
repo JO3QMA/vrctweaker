@@ -78,6 +78,7 @@ GitHub Issue の URL・番号、または `docs/ai_dlc/issues/` 等の Issue ド
 
 - `.cursor/rules/post-change-fmt.mdc`: コード変更後は `make fmt`（常時適用）
 - `.cursor/rules/tdd-workflow.mdc`: TDD と検証ループ（常時適用）
+- `.cursor/rules/ocr-review-prevention.mdc`: 直近 OCR/PR 指摘の再発予防（実装完了前セルフチェック、常時適用）
 - `.cursor/rules/go-conventions.mdc`: Go の規約
 - `.cursor/rules/vue-conventions.mdc`: Vue/TypeScript の規約
 - `.cursor/rules/element-plus-ui.mdc`: Element Plus を UI フレームワークとして使う方針（`frontend` の Vue/TS）

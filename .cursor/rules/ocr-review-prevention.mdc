@@ -1,0 +1,40 @@
+---
+description: >-
+  Prevent recurring OCR/PR review findings at implement time (concurrency,
+  FS/TOCTOU, nil/SQL contracts, Vue error UI). Harvested from recent reviews.
+alwaysApply: true
+---
+
+# OCR review prevention (implement before PR)
+
+Catch the patterns OCR keeps filing. Design-time depth: user skill
+`grill-review-ready`. This rule is the short implement-time gate.
+
+## Go / usecase / sqlite
+
+- [ ] No I/O or Settings calls while holding `uc.mu` (copy state, unlock, then call)
+- [ ] Channel lifecycle: close and send cannot race; Start→Stop→Start recreates channels and clears limiter maps
+- [ ] Cancellable work uses `context` (not bare `time.After` that leaks the worker)
+- [ ] After `bufio.Scanner`, check `sc.Err()`
+- [ ] Reject `\n` / `\r` inside paths or config lines before persist (TrimSpace is not enough)
+- [ ] Atomic replace preserves previous file mode when replacing an existing file
+- [ ] `json.Marshal` errors checked; `sql.NullString` uses `.Valid`
+- [ ] Delete/Update: treat `RowsAffected == 0` as not-found (not silent success)
+- [ ] Migrate / claim-next runs in a transaction
+- [ ] `(nil, nil)` vs error vs empty DTO is consistent through usecase → Wails for sibling methods
+- [ ] Validate JSON blobs and domain ranges (e.g. schedule hour/minute) before store
+- [ ] Junction / reparse ≠ symlink; do not `RemoveAll` through junctions as plain dirs
+- [ ] No `ponytail:` markers in committed code (TODO/FIXME or delete)
+
+## Vue / i18n / Storybook
+
+- [ ] Generation counter only for state-changing async; dialog-only ops capture, do not bump
+- [ ] Error classifiers match fixed backend prefixes / sentinels — not broad `includes(...)`
+- [ ] Never put raw backend errors (paths, OS detail) into `te()` or user-visible alerts
+- [ ] Async handlers: unmount / gen guard; `ElMessageBox` cancel/close/Error all handled
+- [ ] Storybook + E2E mocks match DTO/bindings; cover error/unsupported UI branches
+- [ ] Remove dead i18n keys when classifiers or labels move; keep all locales in sync
+
+## Before declaring done
+
+Diff the change set against this checklist. Failures → fix now, do not defer to PR review.
