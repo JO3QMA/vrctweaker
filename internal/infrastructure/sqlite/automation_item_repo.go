@@ -168,17 +168,30 @@ func MigrateAutomationRules(ctx context.Context, db *sql.DB) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = rows.Close() }()
 
-	skipped := 0
+	type legacyRow struct {
+		rule automation.AutomationRule
+	}
+	var pending []legacyRow
 	for rows.Next() {
 		var rule automation.AutomationRule
 		var isEnabled int
-		if err := rows.Scan(&rule.ID, &rule.Name, &rule.TriggerType, &rule.ConditionJSON, &rule.ActionType, &rule.ActionPayload, &isEnabled); err != nil {
-			return err
+		if scanErr := rows.Scan(&rule.ID, &rule.Name, &rule.TriggerType, &rule.ConditionJSON, &rule.ActionType, &rule.ActionPayload, &isEnabled); scanErr != nil {
+			_ = rows.Close()
+			return scanErr
 		}
 		rule.IsEnabled = isEnabled == 1
-		item := automation.RuleToItem(&rule)
+		pending = append(pending, legacyRow{rule: rule})
+	}
+	err = rows.Err()
+	_ = rows.Close()
+	if err != nil {
+		return err
+	}
+
+	skipped := 0
+	for _, row := range pending {
+		item := automation.RuleToItem(&row.rule)
 		if item == nil {
 			skipped++
 			continue
@@ -197,9 +210,6 @@ func MigrateAutomationRules(ctx context.Context, db *sql.DB) error {
 			item.ConditionsJSON, item.ActionsJSON, item.ScriptSource); err != nil {
 			return err
 		}
-	}
-	if err := rows.Err(); err != nil {
-		return err
 	}
 	if skipped > 0 {
 		log.Printf("automation migrate: skipped %d legacy rules", skipped)

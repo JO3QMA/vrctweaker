@@ -14,23 +14,23 @@ import (
 
 // PowerPlanService sets the active OS power plan.
 type PowerPlanService interface {
-	ListDetected() ([]powerplan.Plan, error)
-	SetActive(guid string) error
-	ResolvePreset(preset string) (string, error)
+	ListDetected(ctx context.Context) ([]powerplan.Plan, error)
+	SetActive(ctx context.Context, guid string) error
+	ResolvePreset(ctx context.Context, preset string) (string, error)
 }
 
 type realPowerPlanService struct{}
 
-func (realPowerPlanService) ListDetected() ([]powerplan.Plan, error) {
-	return powerplan.ListDetected()
+func (realPowerPlanService) ListDetected(ctx context.Context) ([]powerplan.Plan, error) {
+	return powerplan.ListDetected(ctx)
 }
 
-func (realPowerPlanService) SetActive(guid string) error {
-	return powerplan.SetActive(guid)
+func (realPowerPlanService) SetActive(ctx context.Context, guid string) error {
+	return powerplan.SetActive(ctx, guid)
 }
 
-func (realPowerPlanService) ResolvePreset(preset string) (string, error) {
-	return powerplan.ResolvePreset(preset)
+func (realPowerPlanService) ResolvePreset(ctx context.Context, preset string) (string, error) {
+	return powerplan.ResolvePreset(ctx, preset)
 }
 
 type scriptRunner struct {
@@ -105,14 +105,19 @@ func (r *scriptRunner) runUnsafe(ctx context.Context, L *lua.LState, source stri
 			return 0
 		}
 		actionType := L.CheckString(1)
-		payload := luaTableToMap(L.CheckTable(2))
-		// ponytail: blocking OS calls (e.g. powercfg) ignore Lua SetContext; race them against deadline.
+		payload, err := luaTableToMap(L.CheckTable(2))
+		if err != nil {
+			L.RaiseError("%s", err.Error())
+			return 0
+		}
+		// Blocking OS calls observe ctx via CommandContext; wait so we do not leak goroutines.
 		done := make(chan error, 1)
 		go func() {
 			done <- r.runAction(ctx, actionType, payload)
 		}()
 		select {
 		case <-ctx.Done():
+			<-done
 			L.RaiseError("lua execution timeout")
 			return 0
 		case err := <-done:
@@ -173,52 +178,78 @@ func openSafeLuaLibs(L *lua.LState) {
 		L.Push(lua.LString(lib.name))
 		L.Call(1, 0)
 	}
-	// Strip FS loaders and other DoS / escape hatches from base.
+	// Strip FS loaders, module loaders, and stdout helpers from base.
 	for _, name := range []string{
 		"dofile", "loadfile", "load", "loadstring",
 		"collectgarbage", "coroutine", "debug",
+		"require", "module", "package", "print",
 	} {
 		L.SetGlobal(name, lua.LNil)
 	}
 }
 
-func luaTableToMap(t *lua.LTable) map[string]interface{} {
-	out := make(map[string]interface{})
-	t.ForEach(func(k, v lua.LValue) {
-		switch key := k.(type) {
-		case lua.LString:
-			out[string(key)] = luaValueToGo(v)
-		case lua.LNumber:
-			out[fmt.Sprintf("%v", float64(key))] = luaValueToGo(v)
-		}
-	})
-	return out
+func luaTableToMap(t *lua.LTable) (map[string]interface{}, error) {
+	return luaTableToMapVisited(t, map[*lua.LTable]struct{}{})
 }
 
-func luaValueToGo(v lua.LValue) interface{} {
+func luaTableToMapVisited(t *lua.LTable, seen map[*lua.LTable]struct{}) (map[string]interface{}, error) {
+	if t == nil {
+		return nil, nil
+	}
+	if _, ok := seen[t]; ok {
+		return nil, fmt.Errorf("cyclic lua table")
+	}
+	seen[t] = struct{}{}
+	defer delete(seen, t)
+
+	out := make(map[string]interface{})
+	var walkErr error
+	t.ForEach(func(k, v lua.LValue) {
+		if walkErr != nil {
+			return
+		}
+		val, err := luaValueToGo(v, seen)
+		if err != nil {
+			walkErr = err
+			return
+		}
+		switch key := k.(type) {
+		case lua.LString:
+			out[string(key)] = val
+		case lua.LNumber:
+			out[fmt.Sprintf("%v", float64(key))] = val
+		}
+	})
+	if walkErr != nil {
+		return nil, walkErr
+	}
+	return out, nil
+}
+
+func luaValueToGo(v lua.LValue, seen map[*lua.LTable]struct{}) (interface{}, error) {
 	switch v.Type() {
 	case lua.LTNil:
-		return nil
+		return nil, nil
 	case lua.LTString:
 		if s, ok := v.(lua.LString); ok {
-			return string(s)
+			return string(s), nil
 		}
 	case lua.LTBool:
 		if b, ok := v.(lua.LBool); ok {
-			return bool(b)
+			return bool(b), nil
 		}
 	case lua.LTNumber:
 		if n, ok := v.(lua.LNumber); ok {
-			return float64(n)
+			return float64(n), nil
 		}
 	case lua.LTTable:
 		if t, ok := v.(*lua.LTable); ok {
-			return luaTableToMap(t)
+			return luaTableToMapVisited(t, seen)
 		}
 	default:
-		return v.String()
+		return v.String(), nil
 	}
-	return v.String()
+	return v.String(), nil
 }
 
 func mapToLuaTable(L *lua.LState, m map[string]interface{}) *lua.LTable {

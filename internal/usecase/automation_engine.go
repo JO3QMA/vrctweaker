@@ -202,14 +202,14 @@ func (uc *AutomationUseCase) runSetPowerPlan(ctx context.Context, payload map[st
 		return fmt.Errorf("set_power_plan: empty payload")
 	}
 	if preset, _ := payload["preset"].(string); preset != "" {
-		guid, err := uc.powerPlan.ResolvePreset(preset)
+		guid, err := uc.powerPlan.ResolvePreset(ctx, preset)
 		if err != nil {
 			return err
 		}
-		return uc.powerPlan.SetActive(guid)
+		return uc.powerPlan.SetActive(ctx, guid)
 	}
 	if guid, _ := payload["guid"].(string); guid != "" {
-		return uc.powerPlan.SetActive(guid)
+		return uc.powerPlan.SetActive(ctx, guid)
 	}
 	return fmt.Errorf("set_power_plan: preset or guid required")
 }
