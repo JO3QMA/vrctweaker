@@ -347,33 +347,13 @@ import {
   type UserCacheDTO,
 } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
+import {
+  defaultAction,
+  dtoToEditor,
+  type EditorState,
+} from "./automationEditorMapping";
 
 const { t } = useI18n();
-
-type ActionEditor = {
-  type: string;
-  status: string;
-  powerPlanMode: "preset" | "guid";
-  powerPlanPreset: string;
-  powerPlanGuid: string;
-  continueOnError: boolean;
-};
-
-type EditorState = {
-  id: string;
-  name: string;
-  kind: "rule" | "script";
-  isEnabled: boolean;
-  isNew?: boolean;
-  triggerType: string;
-  scheduleWeekdays: number[];
-  scheduleHour: number;
-  scheduleMinute: number;
-  vrchatRunning: boolean;
-  friendUserId: string;
-  actions: ActionEditor[];
-  scriptSource: string;
-};
 
 const items = ref<AutomationItemDTO[]>([]);
 const editor = ref<EditorState | null>(null);
@@ -387,6 +367,7 @@ const powerPlans = ref<DetectedPowerPlanDTO[]>([]);
 const friends = ref<UserCacheDTO[]>([]);
 const saving = ref(false);
 let loadGen = 0;
+let runLogGen = 0;
 let eventsOff: (() => void) | undefined;
 
 const isDirty = computed(
@@ -426,86 +407,6 @@ const actionOptions = computed(() => [
     disabled: powerPlans.value.length === 0,
   },
 ]);
-
-function defaultAction(): ActionEditor {
-  return {
-    type: "change_status",
-    status: "busy",
-    powerPlanMode: "preset",
-    powerPlanPreset: "balanced",
-    powerPlanGuid: "",
-    continueOnError: false,
-  };
-}
-
-function dtoToEditor(dto: AutomationItemDTO): EditorState {
-  const state: EditorState = {
-    id: dto.id,
-    name: dto.name,
-    kind: dto.kind === "script" ? "script" : "rule",
-    isEnabled: dto.isEnabled,
-    triggerType: dto.triggerType || "friend_joined",
-    scheduleWeekdays: [],
-    scheduleHour: 0,
-    scheduleMinute: 0,
-    vrchatRunning: false,
-    friendUserId: "",
-    actions: [defaultAction()],
-    scriptSource: dto.scriptSource || "",
-  };
-  if (dto.scheduleJson) {
-    try {
-      const s = JSON.parse(dto.scheduleJson) as {
-        weekdays?: number[];
-        hour?: number;
-        minute?: number;
-      };
-      state.scheduleWeekdays = s.weekdays ?? [];
-      state.scheduleHour = s.hour ?? 0;
-      state.scheduleMinute = s.minute ?? 0;
-    } catch {
-      /* ignore */
-    }
-  }
-  if (dto.conditionsJson) {
-    try {
-      const conds = JSON.parse(dto.conditionsJson) as Array<{
-        type?: string;
-        vrcUserId?: string;
-      }>;
-      for (const c of conds) {
-        if (c.type === "vrchat_running") state.vrchatRunning = true;
-        if (c.type === "friend_is" && c.vrcUserId) {
-          state.friendUserId = c.vrcUserId;
-        }
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-  if (dto.actionsJson) {
-    try {
-      const steps = JSON.parse(dto.actionsJson) as Array<{
-        type?: string;
-        payload?: Record<string, string>;
-        continueOnError?: boolean;
-      }>;
-      if (steps.length) {
-        state.actions = steps.map((step) => ({
-          type: step.type || "change_status",
-          status: step.payload?.status ?? "busy",
-          powerPlanMode: step.payload?.guid ? "guid" : "preset",
-          powerPlanPreset: step.payload?.preset ?? "balanced",
-          powerPlanGuid: step.payload?.guid ?? "",
-          continueOnError: !!step.continueOnError,
-        }));
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-  return state;
-}
 
 function editorToDto(state: EditorState): AutomationItemDTO {
   const dto: AutomationItemDTO = {
@@ -573,7 +474,10 @@ async function loadItems() {
 }
 
 async function loadRunLog() {
-  runLog.value = await App.getAutomationRunLog();
+  const gen = ++runLogGen;
+  const log = await App.getAutomationRunLog();
+  if (gen !== runLogGen) return;
+  runLog.value = log;
 }
 
 async function loadRuntime() {
@@ -645,8 +549,12 @@ onBeforeRouteLeave(async () => {
 
 async function selectItem(item: AutomationItemDTO) {
   if (!(await guardUnsaved())) return;
-  editor.value = dtoToEditor(item);
-  captureSnapshot();
+  try {
+    editor.value = dtoToEditor(item);
+    captureSnapshot();
+  } catch {
+    ElMessage.error(t("automation.itemParseError"));
+  }
 }
 
 function addRule() {
@@ -725,8 +633,13 @@ async function save(): Promise<boolean> {
       await loadItems();
       const match = items.value.find((it) => it.id === dto.id);
       if (match) {
-        editor.value = dtoToEditor(match);
-        editor.value.isNew = false;
+        try {
+          editor.value = dtoToEditor(match);
+          editor.value.isNew = false;
+        } catch {
+          editor.value.isNew = false;
+          ElMessage.error(t("automation.itemParseError"));
+        }
       } else {
         editor.value.isNew = false;
       }
