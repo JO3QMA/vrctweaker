@@ -1,7 +1,8 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   AutomationItemParseError,
   dtoToEditor,
+  newAutomationId,
 } from "../automationEditorMapping";
 import type { AutomationItemDTO } from "../../wails/app";
 
@@ -39,7 +40,25 @@ describe("dtoToEditor", () => {
     );
   });
 
-  it("throws on invalid conditionsJson", () => {
+  it("throws when actionsJson is not an array", () => {
+    expect(() => dtoToEditor({ ...base, actionsJson: "null" })).toThrow(
+      AutomationItemParseError,
+    );
+    expect(() => dtoToEditor({ ...base, actionsJson: "{}" })).toThrow(
+      AutomationItemParseError,
+    );
+  });
+
+  it("throws when conditionsJson is not an array", () => {
+    expect(() => dtoToEditor({ ...base, conditionsJson: "null" })).toThrow(
+      AutomationItemParseError,
+    );
+    expect(() => dtoToEditor({ ...base, conditionsJson: "{}" })).toThrow(
+      AutomationItemParseError,
+    );
+  });
+
+  it("throws on invalid conditionsJson syntax", () => {
     expect(() =>
       dtoToEditor({ ...base, conditionsJson: "not-array{" }),
     ).toThrow(AutomationItemParseError);
@@ -48,6 +67,36 @@ describe("dtoToEditor", () => {
   it("throws on invalid scheduleJson", () => {
     expect(() => dtoToEditor({ ...base, scheduleJson: "{bad" })).toThrow(
       AutomationItemParseError,
+    );
+    expect(() => dtoToEditor({ ...base, scheduleJson: "[]" })).toThrow(
+      AutomationItemParseError,
+    );
+  });
+
+  it("throws on unknown kind", () => {
+    expect(() =>
+      dtoToEditor({ ...base, kind: "workflow" as AutomationItemDTO["kind"] }),
+    ).toThrow(AutomationItemParseError);
+  });
+});
+
+describe("newAutomationId", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("uses crypto.randomUUID when available", () => {
+    vi.stubGlobal("crypto", {
+      randomUUID: () => "11111111-1111-4111-8111-111111111111",
+    });
+    expect(newAutomationId()).toBe("11111111-1111-4111-8111-111111111111");
+  });
+
+  it("falls back when randomUUID is missing", () => {
+    vi.stubGlobal("crypto", {});
+    const id = newAutomationId();
+    expect(id).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
     );
   });
 });
