@@ -265,7 +265,12 @@
           </template>
 
           <div class="editor-actions">
-            <el-button type="primary" :loading="saving" @click="save">
+            <el-button
+              type="primary"
+              data-testid="save-item"
+              :loading="saving"
+              @click="save"
+            >
               {{ t("automation.save") }}
             </el-button>
             <el-button
@@ -374,7 +379,10 @@ const items = ref<AutomationItemDTO[]>([]);
 const editor = ref<EditorState | null>(null);
 const savedSnapshot = ref("");
 const runLog = ref<AutomationRunLogEntryDTO[]>([]);
-const runtime = ref<AutomationRuntimeStatusDTO>({ available: true });
+const runtime = ref<AutomationRuntimeStatusDTO>({
+  available: false,
+  reasonKey: "subsystemUnavailable",
+});
 const powerPlans = ref<DetectedPowerPlanDTO[]>([]);
 const friends = ref<UserCacheDTO[]>([]);
 const saving = ref(false);
@@ -581,16 +589,20 @@ async function loadFriends() {
 }
 
 onMounted(async () => {
-  await Promise.all([
-    loadItems(),
-    loadRunLog(),
-    loadRuntime(),
-    loadPowerPlans(),
-    loadFriends(),
-  ]);
+  try {
+    await Promise.all([
+      loadItems(),
+      loadRunLog(),
+      loadRuntime(),
+      loadPowerPlans(),
+      loadFriends(),
+    ]);
+  } catch {
+    // Keep whatever succeeded; runtime defaults to unavailable until loadRuntime wins.
+  }
   const rt = getRuntime();
   eventsOff = rt?.EventsOn?.("automation:run-log-changed", () => {
-    void loadRunLog();
+    void loadRunLog().catch(() => {});
   });
 });
 
@@ -623,7 +635,7 @@ async function guardUnsaved(): Promise<boolean> {
   if (!isDirty.value) return true;
   const choice = await promptUnsavedChoice();
   if (choice === "cancel") return false;
-  if (choice === "save") await save();
+  if (choice === "save") return await save();
   return true;
 }
 
@@ -699,28 +711,34 @@ function removeAction(idx: number) {
   editor.value?.actions.splice(idx, 1);
 }
 
-async function save() {
-  if (!editor.value || saving.value) return;
+async function save(): Promise<boolean> {
+  if (!editor.value || saving.value) return false;
   saving.value = true;
   try {
     const dto = editorToDto(editor.value);
+    if (!dto.id) {
+      dto.id = crypto.randomUUID();
+      editor.value.id = dto.id;
+    }
     await App.saveAutomationItem(dto);
-    await loadItems();
-    const match = items.value.find(
-      (it) =>
-        it.id === dto.id ||
-        (dto.id === "" &&
-          it.name === dto.name &&
-          it.kind === dto.kind &&
-          it.triggerType === dto.triggerType),
-    );
-    if (match) {
-      editor.value = dtoToEditor(match);
+    try {
+      await loadItems();
+      const match = items.value.find((it) => it.id === dto.id);
+      if (match) {
+        editor.value = dtoToEditor(match);
+        editor.value.isNew = false;
+      } else {
+        editor.value.isNew = false;
+      }
+    } catch {
+      // Persist succeeded; list refresh is best-effort.
       editor.value.isNew = false;
     }
     captureSnapshot();
+    return true;
   } catch {
     ElMessage.error(t("automation.saveError"));
+    return false;
   } finally {
     saving.value = false;
   }
