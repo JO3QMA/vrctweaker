@@ -8,6 +8,13 @@ import (
 
 var errAutomationNotInitialized = errors.New("automation not initialized")
 
+func (a *App) requireAutomation() error {
+	if a == nil || a.automation == nil || a.ctx == nil {
+		return errAutomationNotInitialized
+	}
+	return nil
+}
+
 // AutomationItemDTO is a Wails-facing automation item.
 type AutomationItemDTO struct {
 	ID             string `json:"id"`
@@ -91,8 +98,8 @@ func toRunLogDTOs(entries []automation.RunLogEntry) []AutomationRunLogEntryDTO {
 
 // ListAutomationItems returns all automation items.
 func (a *App) ListAutomationItems() ([]AutomationItemDTO, error) {
-	if a.automation == nil {
-		return nil, errAutomationNotInitialized
+	if err := a.requireAutomation(); err != nil {
+		return nil, err
 	}
 	items, err := a.automation.ListItems(a.ctx)
 	if err != nil {
@@ -103,8 +110,8 @@ func (a *App) ListAutomationItems() ([]AutomationItemDTO, error) {
 
 // SaveAutomationItem persists an automation item.
 func (a *App) SaveAutomationItem(item AutomationItemDTO) error {
-	if a.automation == nil {
-		return errAutomationNotInitialized
+	if err := a.requireAutomation(); err != nil {
+		return err
 	}
 	return a.automation.SaveItem(a.ctx, &automation.AutomationItem{
 		ID:             item.ID,
@@ -121,31 +128,31 @@ func (a *App) SaveAutomationItem(item AutomationItemDTO) error {
 
 // DeleteAutomationItem removes an automation item.
 func (a *App) DeleteAutomationItem(id string) error {
-	if a.automation == nil {
-		return errAutomationNotInitialized
+	if err := a.requireAutomation(); err != nil {
+		return err
 	}
 	return a.automation.DeleteItem(a.ctx, id)
 }
 
 // ToggleAutomationItem enables or disables an item.
 func (a *App) ToggleAutomationItem(id string, enabled bool) error {
-	if a.automation == nil {
-		return errAutomationNotInitialized
+	if err := a.requireAutomation(); err != nil {
+		return err
 	}
 	return a.automation.ToggleItem(a.ctx, id, enabled)
 }
 
 // GetAutomationRunLog returns recent run log entries.
 func (a *App) GetAutomationRunLog() ([]AutomationRunLogEntryDTO, error) {
-	if a.automation == nil {
-		return nil, errAutomationNotInitialized
+	if err := a.requireAutomation(); err != nil {
+		return nil, err
 	}
 	return toRunLogDTOs(a.automation.GetRunLog()), nil
 }
 
 // GetAutomationRuntimeStatus returns automation subsystem availability.
 func (a *App) GetAutomationRuntimeStatus() (AutomationRuntimeStatusDTO, error) {
-	if a.automation == nil {
+	if a == nil || a.automation == nil {
 		return AutomationRuntimeStatusDTO{Available: false, ReasonKey: "not_initialized"}, nil
 	}
 	st := a.automation.RuntimeStatus()
@@ -154,8 +161,8 @@ func (a *App) GetAutomationRuntimeStatus() (AutomationRuntimeStatusDTO, error) {
 
 // ListDetectedPowerPlans returns OS power plans (empty off Windows).
 func (a *App) ListDetectedPowerPlans() ([]DetectedPowerPlanDTO, error) {
-	if a.automation == nil {
-		return nil, errAutomationNotInitialized
+	if err := a.requireAutomation(); err != nil {
+		return nil, err
 	}
 	plans, err := a.automation.ListDetectedPowerPlans()
 	if err != nil {

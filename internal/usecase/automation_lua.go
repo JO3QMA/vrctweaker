@@ -218,6 +218,8 @@ func luaTableToMapVisited(t *lua.LTable, seen map[*lua.LTable]struct{}) (map[str
 			out[string(key)] = val
 		case lua.LNumber:
 			out[fmt.Sprintf("%v", float64(key))] = val
+		default:
+			walkErr = fmt.Errorf("unsupported lua table key type %s", k.Type())
 		}
 	})
 	if walkErr != nil {
@@ -253,17 +255,26 @@ func luaValueToGo(v lua.LValue, seen map[*lua.LTable]struct{}) (interface{}, err
 }
 
 func mapToLuaTable(L *lua.LState, m map[string]interface{}) *lua.LTable {
+	return mapToLuaTableDepth(L, m, 0)
+}
+
+const maxGoToLuaDepth = 32
+
+func mapToLuaTableDepth(L *lua.LState, m map[string]interface{}, depth int) *lua.LTable {
 	t := L.NewTable()
-	if m == nil {
+	if m == nil || depth > maxGoToLuaDepth {
 		return t
 	}
 	for k, v := range m {
-		L.SetField(t, k, goToLua(L, v))
+		L.SetField(t, k, goToLuaDepth(L, v, depth+1))
 	}
 	return t
 }
 
-func goToLua(L *lua.LState, v interface{}) lua.LValue {
+func goToLuaDepth(L *lua.LState, v interface{}, depth int) lua.LValue {
+	if depth > maxGoToLuaDepth {
+		return lua.LNil
+	}
 	switch x := v.(type) {
 	case nil:
 		return lua.LNil
@@ -280,11 +291,11 @@ func goToLua(L *lua.LState, v interface{}) lua.LValue {
 	case int64:
 		return lua.LNumber(x)
 	case map[string]interface{}:
-		return mapToLuaTable(L, x)
+		return mapToLuaTableDepth(L, x, depth)
 	case []interface{}:
 		t := L.NewTable()
 		for i, elem := range x {
-			L.RawSetInt(t, i+1, goToLua(L, elem))
+			L.RawSetInt(t, i+1, goToLuaDepth(L, elem, depth+1))
 		}
 		return t
 	case []string:

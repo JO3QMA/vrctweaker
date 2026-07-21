@@ -25,6 +25,36 @@ Power Scheme GUID: a1841308-3541-4fab-bc81-f71556f20b4a  (Power saver)
 	}
 }
 
+func TestParseListOutput_localeHeaderAndTabs(t *testing.T) {
+	raw := "電源スキーム GUID:\t381b4222-f694-41f0-9685-ff5bb260df2e\t(バランス)\n" +
+		"何か GUID: 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c  (高パフォーマンス) *\n"
+	plans, err := parseListOutput(raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(plans) != 2 {
+		t.Fatalf("want 2, got %d %#v", len(plans), plans)
+	}
+	if plans[0].GUID != "381b4222-f694-41f0-9685-ff5bb260df2e" || plans[0].Name != "バランス" {
+		t.Fatalf("plan0=%#v", plans[0])
+	}
+	if plans[1].Name != "高パフォーマンス" {
+		t.Fatalf("name=%q", plans[1].Name)
+	}
+}
+
+func TestValidGUID(t *testing.T) {
+	if !ValidGUID("381b4222-f694-41f0-9685-ff5bb260df2e") {
+		t.Fatal("want valid")
+	}
+	if ValidGUID("381b4222-f694-41f0-9685-ff5bb260df2e; notepad") {
+		t.Fatal("must reject junk")
+	}
+	if ValidGUID("") || ValidGUID("x") {
+		t.Fatal("must reject empty/short")
+	}
+}
+
 func TestResolvePresetFromPlans_knownGUID(t *testing.T) {
 	plans := []Plan{
 		{GUID: "381b4222-f694-41f0-9685-ff5bb260df2e", Name: "バランス"},

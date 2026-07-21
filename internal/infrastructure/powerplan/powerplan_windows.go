@@ -36,8 +36,8 @@ func ListDetected(ctx context.Context) ([]Plan, error) {
 // SetActive activates a scheme by GUID.
 func SetActive(ctx context.Context, guid string) error {
 	guid = strings.TrimSpace(guid)
-	if guid == "" {
-		return fmt.Errorf("empty power plan guid")
+	if !ValidGUID(guid) {
+		return fmt.Errorf("invalid power plan guid")
 	}
 	ctx, cancel := withPowercfgTimeout(ctx)
 	defer cancel()

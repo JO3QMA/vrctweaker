@@ -49,10 +49,10 @@ func (uc *AutomationUseCase) stopPlatform() {
 	}
 	ch := uc.events
 	uc.events = nil
-	uc.eventsMu.Unlock()
 	if ch != nil {
 		close(ch)
 	}
+	uc.eventsMu.Unlock()
 	uc.workerWG.Wait()
 	uc.schedulerWG.Wait()
 	uc.processWG.Wait()
