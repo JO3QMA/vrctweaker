@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"sync"
 	"time"
 
 	"vrchat-tweaker/internal/domain/automation"
@@ -53,32 +52,27 @@ func (r *scriptRunner) run(ctx context.Context, source string, ev automation.Eve
 	runCtx, cancel := context.WithTimeout(ctx, r.execTimeout)
 	defer cancel()
 
-	L := lua.NewState(lua.Options{
-		SkipOpenLibs:        true,
-		CallStackSize:       64,
-		RegistrySize:        256,
-		MinimizeStackMemory: true,
-	})
-	L.SetContext(runCtx)
-
-	var closeOnce sync.Once
-	closeL := func() { closeOnce.Do(func() { L.Close() }) }
-
 	done := make(chan error, 1)
 	go func() {
+		L := lua.NewState(lua.Options{
+			SkipOpenLibs:        true,
+			CallStackSize:       64,
+			RegistrySize:        256,
+			MinimizeStackMemory: true,
+		})
+		defer L.Close()
+		L.SetContext(runCtx)
 		done <- r.runUnsafe(runCtx, L, source, ev)
 	}()
 
 	select {
 	case err := <-done:
-		closeL()
 		if runCtx.Err() != nil {
 			return fmt.Errorf("lua execution timeout")
 		}
 		return err
 	case <-runCtx.Done():
-		// SetContext aborts Lua bytecode loops; Close forces exit if still stuck.
-		closeL()
+		// SetContext aborts bytecode loops; wait for the VM owner goroutine to Close.
 		<-done
 		return fmt.Errorf("lua execution timeout")
 	}
