@@ -554,6 +554,8 @@ async function selectItem(item: AutomationItemDTO) {
     editor.value = dtoToEditor(item);
     captureSnapshot();
   } catch {
+    editor.value = null;
+    savedSnapshot.value = "";
     ElMessage.error(t("automation.itemParseError"));
   }
 }

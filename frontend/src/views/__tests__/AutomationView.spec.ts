@@ -126,4 +126,36 @@ describe("AutomationView unsaved guard", () => {
 
     errorSpy.mockRestore();
   });
+
+  it("clears the editor when selecting an item with invalid JSON", async () => {
+    const broken: AutomationItemDTO = {
+      id: "broken_1",
+      name: "Broken",
+      kind: "rule",
+      isEnabled: true,
+      triggerType: "friend_joined",
+      conditionsJson: "[]",
+      actionsJson: "null",
+    };
+    mockListAutomationItems.mockResolvedValue([seeded, broken]);
+
+    const wrapper = mount(AutomationView);
+    await flushPromises();
+
+    await wrapper.findAll(".rule-card")[0]?.trigger("click");
+    await flushPromises();
+    expect(wrapper.find(".rule-editor").exists()).toBe(true);
+
+    const errorSpy = vi
+      .spyOn(ElMessage, "error")
+      .mockImplementation(() => ({ close: () => {} }) as never);
+
+    await wrapper.findAll(".rule-card")[1]?.trigger("click");
+    await flushPromises();
+
+    expect(errorSpy).toHaveBeenCalled();
+    expect(wrapper.find(".rule-editor").exists()).toBe(false);
+
+    errorSpy.mockRestore();
+  });
 });
