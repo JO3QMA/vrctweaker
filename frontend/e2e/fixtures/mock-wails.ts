@@ -390,8 +390,8 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         ListAutomationItems: () => Promise.resolve(automationItems),
         SaveAutomationItem: () => Promise.resolve(),
         DeleteAutomationItem: () => Promise.resolve(),
-        ToggleAutomationItem: function(id, enabled) {
-          var item = automationItems.find(function(x) { return x.id === id; });
+        ToggleAutomationItem: (id, enabled) => {
+          const item = automationItems.find((x) => x.id === id);
           if (item) item.isEnabled = !!enabled;
           return Promise.resolve();
         },
