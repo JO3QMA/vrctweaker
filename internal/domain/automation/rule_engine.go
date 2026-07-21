@@ -5,17 +5,12 @@ import (
 	"fmt"
 )
 
-// TriggerTypes and ActionTypes for validation.
-const (
-	TriggerAFKDetected  = "afk_detected"
-	TriggerFriendJoined = "friend_joined"
-	ActionChangeStatus  = "change_status"
-)
-
 // EvalContext provides data for rule evaluation.
 type EvalContext struct {
-	TriggerType string
-	Payload     map[string]interface{}
+	TriggerType     string
+	Payload         map[string]interface{}
+	VRChatRunning   bool
+	VRChatRunningOK bool
 }
 
 // EvalResult represents the outcome of rule evaluation.

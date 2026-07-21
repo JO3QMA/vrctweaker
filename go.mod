@@ -9,6 +9,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	github.com/wailsapp/wails/v2 v2.13.0
+	github.com/yuin/gopher-lua v1.1.1
 	github.com/zalando/go-keyring v0.2.8
 	golang.org/x/image v0.44.0
 	golang.org/x/sys v0.47.0

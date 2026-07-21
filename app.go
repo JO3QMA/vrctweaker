@@ -114,7 +114,7 @@ func (a *App) startup(ctx context.Context) {
 	encounterRepo := sqlite.NewUserEncounterRepository(db)
 	userCacheRepo := sqlite.NewUserCacheRepository(db)
 	worldRepo := sqlite.NewWorldInfoRepository(db)
-	automationRepo := sqlite.NewAutomationRuleRepository(db)
+	automationRepo := sqlite.NewAutomationItemRepository(db)
 	settingsRepo := sqlite.NewAppSettingsRepository(db)
 
 	credStore := vrchatapi.NewAutoCredentialStore(dataDir, func(msg string) {
@@ -135,7 +135,11 @@ func (a *App) startup(ctx context.Context) {
 	a.media = usecase.NewMediaUseCase(mediaRepo, worldRepo, userCacheRepo)
 	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo)
 	a.identity = usecase.NewIdentityUseCase(userCacheRepo, apiClient, credStore, settingsRepo, notify)
-	a.automation = usecase.NewAutomationUseCase(automationRepo, a.identity)
+	a.automation = usecase.NewAutomationUseCase(automationRepo, a.identity, sleepsuppress.NewVRChatProcessChecker())
+	a.automation.SetRunLogChangedHook(func() {
+		runtime.EventsEmit(a.ctx, "automation:run-log-changed", nil)
+	})
+	a.automation.Start(ctx)
 	a.settings = usecase.NewSettingsUseCase(settingsRepo)
 	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(db, encounterRepo, mediaRepo, userCacheRepo, settingsRepo)
 	a.ytdlp = usecase.NewYTDLPMaintainUseCase(a.settings, usecase.NewYTDLPUpdater())
@@ -167,6 +171,9 @@ func (a *App) startup(ctx context.Context) {
 // onShutdown persists state before the process exits (Wails lifecycle).
 func (a *App) onShutdown(ctx context.Context) {
 	a.stopVRChatActivityMonitor()
+	if a.automation != nil {
+		a.automation.Stop()
+	}
 	a.stopSleepSuppressLoop()
 	a.stopYTDLPMaintainLoop()
 	if a.settings == nil {
