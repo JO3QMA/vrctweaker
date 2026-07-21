@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"log"
 
 	"vrchat-tweaker/internal/domain/automation"
 )
@@ -154,12 +155,22 @@ func MigrateAutomationRules(ctx context.Context, db *sql.DB) error {
 		return tx.Commit()
 	}
 
+	var legacyExists int
+	err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='automation_rules'`).Scan(&legacyExists)
+	if err != nil {
+		return err
+	}
+	if legacyExists == 0 {
+		return tx.Commit()
+	}
+
 	rows, err := tx.QueryContext(ctx, `SELECT id, name, trigger_type, condition_json, action_type, action_payload, is_enabled FROM automation_rules`)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = rows.Close() }()
 
+	skipped := 0
 	for rows.Next() {
 		var rule automation.AutomationRule
 		var isEnabled int
@@ -169,6 +180,7 @@ func MigrateAutomationRules(ctx context.Context, db *sql.DB) error {
 		rule.IsEnabled = isEnabled == 1
 		item := automation.RuleToItem(&rule)
 		if item == nil {
+			skipped++
 			continue
 		}
 		en := 0
@@ -189,6 +201,9 @@ func MigrateAutomationRules(ctx context.Context, db *sql.DB) error {
 	if err := rows.Err(); err != nil {
 		return err
 	}
+	if skipped > 0 {
+		log.Printf("automation migrate: skipped %d legacy rules", skipped)
+	}
 	return tx.Commit()
 }
 
@@ -197,27 +212,22 @@ func ItemToLegacyRule(item *automation.AutomationItem) *automation.AutomationRul
 	if item == nil || item.Kind != automation.KindRule {
 		return nil
 	}
-	steps, err := automation.ParseActions(item.ActionsJSON)
-	if err != nil || len(steps) == 0 {
-		return &automation.AutomationRule{
-			ID: item.ID, Name: item.Name, TriggerType: item.TriggerType,
-			ConditionJSON: item.ConditionsJSON, IsEnabled: item.IsEnabled,
-		}
-	}
-	payload, err := json.Marshal(steps[0].Payload)
-	if err != nil {
-		return &automation.AutomationRule{
-			ID: item.ID, Name: item.Name, TriggerType: item.TriggerType,
-			ConditionJSON: item.ConditionsJSON, ActionType: steps[0].Type, IsEnabled: item.IsEnabled,
-		}
-	}
-	return &automation.AutomationRule{
+	r := &automation.AutomationRule{
 		ID:            item.ID,
 		Name:          item.Name,
 		TriggerType:   item.TriggerType,
 		ConditionJSON: item.ConditionsJSON,
-		ActionType:    steps[0].Type,
-		ActionPayload: string(payload),
 		IsEnabled:     item.IsEnabled,
 	}
+	steps, err := automation.ParseActions(item.ActionsJSON)
+	if err != nil || len(steps) == 0 {
+		return r
+	}
+	r.ActionType = steps[0].Type
+	payload, err := json.Marshal(steps[0].Payload)
+	if err != nil {
+		return r
+	}
+	r.ActionPayload = string(payload)
+	return r
 }

@@ -1,5 +1,3 @@
-//go:build windows
-
 package powerplan
 
 // Plan is an OS power scheme.
