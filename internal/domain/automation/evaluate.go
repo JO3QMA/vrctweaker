@@ -23,6 +23,9 @@ func EvalItem(item *AutomationItem, ctx *EvalContext) (bool, error) {
 	if item == nil || !item.IsEnabled || item.Kind != KindRule {
 		return false, nil
 	}
+	if ctx == nil {
+		return false, fmt.Errorf("eval context is nil")
+	}
 	if item.TriggerType != ctx.TriggerType {
 		return false, nil
 	}
@@ -96,10 +99,6 @@ func matchOneCondition(c Condition, ctx *EvalContext) bool {
 		got, _ := ctx.Payload["vrc_user_id"].(string)
 		return got == c.VRCUserID
 	default:
-		// Legacy: key match in payload for migrated rules.
-		if ctx.Payload == nil {
-			return false
-		}
 		// ponytail: unknown preset types fail closed.
 		return false
 	}
@@ -149,16 +148,20 @@ func RuleToItem(rule *AutomationRule) *AutomationItem {
 	if rule == nil {
 		return nil
 	}
-	actions := []ActionStep{{
-		Type:    rule.ActionType,
-		Payload: map[string]interface{}{},
-	}}
+	payload := map[string]interface{}{}
 	if rule.ActionPayload != "" {
 		var p map[string]interface{}
-		_ = json.Unmarshal([]byte(rule.ActionPayload), &p)
-		actions[0].Payload = p
+		if err := json.Unmarshal([]byte(rule.ActionPayload), &p); err == nil && p != nil {
+			payload = p
+		}
 	}
-	actionsJSON, _ := json.Marshal(actions)
+	// Always emit payload key so omitempty cannot drop an empty map to nil on reload.
+	actionsJSON, err := json.Marshal([]map[string]interface{}{
+		{"type": rule.ActionType, "payload": payload},
+	})
+	if err != nil {
+		actionsJSON = []byte("[]")
+	}
 	var conds []Condition
 	if rule.ConditionJSON != "" {
 		var legacy map[string]interface{}
@@ -172,7 +175,10 @@ func RuleToItem(rule *AutomationRule) *AutomationItem {
 			}
 		}
 	}
-	condsJSON, _ := json.Marshal(conds)
+	condsJSON, err := json.Marshal(conds)
+	if err != nil {
+		condsJSON = []byte("[]")
+	}
 	return &AutomationItem{
 		ID:             rule.ID,
 		Name:           rule.Name,
