@@ -26,7 +26,9 @@ func withPowercfgTimeout(ctx context.Context) (context.Context, context.CancelFu
 func ListDetected(ctx context.Context) ([]Plan, error) {
 	ctx, cancel := withPowercfgTimeout(ctx)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "powercfg", "/list").CombinedOutput()
+	cmd := exec.CommandContext(ctx, "powercfg", "/list")
+	hideConsoleWindow(cmd)
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("powercfg /list failed: %w (output: %s)", err, strings.TrimSpace(string(out)))
 	}
@@ -41,7 +43,9 @@ func SetActive(ctx context.Context, guid string) error {
 	}
 	ctx, cancel := withPowercfgTimeout(ctx)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, "powercfg", "/setactive", guid).CombinedOutput()
+	cmd := exec.CommandContext(ctx, "powercfg", "/setactive", guid)
+	hideConsoleWindow(cmd)
+	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("powercfg /setactive %s failed: %w (output: %s)", guid, err, strings.TrimSpace(string(out)))
 	}
