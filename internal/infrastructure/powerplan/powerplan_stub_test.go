@@ -2,10 +2,13 @@
 
 package powerplan
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 func TestListDetected_stub(t *testing.T) {
-	plans, err := ListDetected()
+	plans, err := ListDetected(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -15,13 +18,13 @@ func TestListDetected_stub(t *testing.T) {
 }
 
 func TestSetActive_stub(t *testing.T) {
-	if err := SetActive("x"); err == nil {
+	if err := SetActive(context.Background(), "x"); err == nil {
 		t.Fatal("want error")
 	}
 }
 
 func TestResolvePreset_stub(t *testing.T) {
-	if _, err := ResolvePreset("balanced"); err == nil {
+	if _, err := ResolvePreset(context.Background(), "balanced"); err == nil {
 		t.Fatal("want error")
 	}
 }

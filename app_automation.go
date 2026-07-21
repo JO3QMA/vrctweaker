@@ -1,8 +1,19 @@
 package main
 
 import (
+	"errors"
+
 	"vrchat-tweaker/internal/domain/automation"
 )
+
+var errAutomationNotInitialized = errors.New("automation not initialized")
+
+func (a *App) requireAutomation() error {
+	if a == nil || a.automation == nil || a.ctx == nil {
+		return errAutomationNotInitialized
+	}
+	return nil
+}
 
 // AutomationItemDTO is a Wails-facing automation item.
 type AutomationItemDTO struct {
@@ -87,6 +98,9 @@ func toRunLogDTOs(entries []automation.RunLogEntry) []AutomationRunLogEntryDTO {
 
 // ListAutomationItems returns all automation items.
 func (a *App) ListAutomationItems() ([]AutomationItemDTO, error) {
+	if err := a.requireAutomation(); err != nil {
+		return nil, err
+	}
 	items, err := a.automation.ListItems(a.ctx)
 	if err != nil {
 		return nil, err
@@ -96,6 +110,9 @@ func (a *App) ListAutomationItems() ([]AutomationItemDTO, error) {
 
 // SaveAutomationItem persists an automation item.
 func (a *App) SaveAutomationItem(item AutomationItemDTO) error {
+	if err := a.requireAutomation(); err != nil {
+		return err
+	}
 	return a.automation.SaveItem(a.ctx, &automation.AutomationItem{
 		ID:             item.ID,
 		Name:           item.Name,
@@ -111,27 +128,42 @@ func (a *App) SaveAutomationItem(item AutomationItemDTO) error {
 
 // DeleteAutomationItem removes an automation item.
 func (a *App) DeleteAutomationItem(id string) error {
+	if err := a.requireAutomation(); err != nil {
+		return err
+	}
 	return a.automation.DeleteItem(a.ctx, id)
 }
 
 // ToggleAutomationItem enables or disables an item.
 func (a *App) ToggleAutomationItem(id string, enabled bool) error {
+	if err := a.requireAutomation(); err != nil {
+		return err
+	}
 	return a.automation.ToggleItem(a.ctx, id, enabled)
 }
 
 // GetAutomationRunLog returns recent run log entries.
 func (a *App) GetAutomationRunLog() ([]AutomationRunLogEntryDTO, error) {
+	if err := a.requireAutomation(); err != nil {
+		return nil, err
+	}
 	return toRunLogDTOs(a.automation.GetRunLog()), nil
 }
 
 // GetAutomationRuntimeStatus returns automation subsystem availability.
 func (a *App) GetAutomationRuntimeStatus() (AutomationRuntimeStatusDTO, error) {
+	if a == nil || a.automation == nil {
+		return AutomationRuntimeStatusDTO{Available: false, ReasonKey: "not_initialized"}, nil
+	}
 	st := a.automation.RuntimeStatus()
 	return AutomationRuntimeStatusDTO{Available: st.Available, ReasonKey: st.ReasonKey}, nil
 }
 
 // ListDetectedPowerPlans returns OS power plans (empty off Windows).
 func (a *App) ListDetectedPowerPlans() ([]DetectedPowerPlanDTO, error) {
+	if err := a.requireAutomation(); err != nil {
+		return nil, err
+	}
 	plans, err := a.automation.ListDetectedPowerPlans()
 	if err != nil {
 		return nil, err

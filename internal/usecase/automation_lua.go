@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"vrchat-tweaker/internal/domain/automation"
@@ -14,23 +15,23 @@ import (
 
 // PowerPlanService sets the active OS power plan.
 type PowerPlanService interface {
-	ListDetected() ([]powerplan.Plan, error)
-	SetActive(guid string) error
-	ResolvePreset(preset string) (string, error)
+	ListDetected(ctx context.Context) ([]powerplan.Plan, error)
+	SetActive(ctx context.Context, guid string) error
+	ResolvePreset(ctx context.Context, preset string) (string, error)
 }
 
 type realPowerPlanService struct{}
 
-func (realPowerPlanService) ListDetected() ([]powerplan.Plan, error) {
-	return powerplan.ListDetected()
+func (realPowerPlanService) ListDetected(ctx context.Context) ([]powerplan.Plan, error) {
+	return powerplan.ListDetected(ctx)
 }
 
-func (realPowerPlanService) SetActive(guid string) error {
-	return powerplan.SetActive(guid)
+func (realPowerPlanService) SetActive(ctx context.Context, guid string) error {
+	return powerplan.SetActive(ctx, guid)
 }
 
-func (realPowerPlanService) ResolvePreset(preset string) (string, error) {
-	return powerplan.ResolvePreset(preset)
+func (realPowerPlanService) ResolvePreset(ctx context.Context, preset string) (string, error) {
+	return powerplan.ResolvePreset(ctx, preset)
 }
 
 type scriptRunner struct {
@@ -105,14 +106,19 @@ func (r *scriptRunner) runUnsafe(ctx context.Context, L *lua.LState, source stri
 			return 0
 		}
 		actionType := L.CheckString(1)
-		payload := luaTableToMap(L.CheckTable(2))
-		// ponytail: blocking OS calls (e.g. powercfg) ignore Lua SetContext; race them against deadline.
+		payload, err := luaTableToMap(L.CheckTable(2))
+		if err != nil {
+			L.RaiseError("%s", err.Error())
+			return 0
+		}
+		// Blocking OS calls observe ctx via CommandContext; wait so we do not leak goroutines.
 		done := make(chan error, 1)
 		go func() {
 			done <- r.runAction(ctx, actionType, payload)
 		}()
 		select {
 		case <-ctx.Done():
+			<-done
 			L.RaiseError("lua execution timeout")
 			return 0
 		case err := <-done:
@@ -173,66 +179,125 @@ func openSafeLuaLibs(L *lua.LState) {
 		L.Push(lua.LString(lib.name))
 		L.Call(1, 0)
 	}
-	// Strip FS loaders and other DoS / escape hatches from base.
+	// Strip FS loaders, module loaders, and stdout helpers from base.
 	for _, name := range []string{
 		"dofile", "loadfile", "load", "loadstring",
 		"collectgarbage", "coroutine", "debug",
+		"require", "module", "package", "print",
 	} {
 		L.SetGlobal(name, lua.LNil)
 	}
+	// ponytail: gopher-lua SetMx calls os.Exit on OOM — bound string.rep instead.
+	if strLib, ok := L.GetGlobal(lua.StringLibName).(*lua.LTable); ok {
+		L.SetField(strLib, "rep", L.NewFunction(safeStringRep))
+	}
 }
 
-func luaTableToMap(t *lua.LTable) map[string]interface{} {
+func safeStringRep(L *lua.LState) int {
+	s := L.CheckString(1)
+	n := L.CheckInt(2)
+	if n < 0 {
+		L.ArgError(2, "negative repeat count")
+		return 0
+	}
+	if n > 0 && len(s) > 0 {
+		maxN := automation.MaxLuaStringRepBytes / len(s)
+		if n > maxN {
+			L.RaiseError("string.rep: result exceeds %d bytes", automation.MaxLuaStringRepBytes)
+			return 0
+		}
+	}
+	L.Push(lua.LString(strings.Repeat(s, n)))
+	return 1
+}
+
+func luaTableToMap(t *lua.LTable) (map[string]interface{}, error) {
+	return luaTableToMapVisited(t, map[*lua.LTable]struct{}{})
+}
+
+func luaTableToMapVisited(t *lua.LTable, seen map[*lua.LTable]struct{}) (map[string]interface{}, error) {
+	if t == nil {
+		return nil, nil
+	}
+	if _, ok := seen[t]; ok {
+		return nil, fmt.Errorf("cyclic lua table")
+	}
+	seen[t] = struct{}{}
+	defer delete(seen, t)
+
 	out := make(map[string]interface{})
+	var walkErr error
 	t.ForEach(func(k, v lua.LValue) {
+		if walkErr != nil {
+			return
+		}
+		val, err := luaValueToGo(v, seen)
+		if err != nil {
+			walkErr = err
+			return
+		}
 		switch key := k.(type) {
 		case lua.LString:
-			out[string(key)] = luaValueToGo(v)
+			out[string(key)] = val
 		case lua.LNumber:
-			out[fmt.Sprintf("%v", float64(key))] = luaValueToGo(v)
+			out[fmt.Sprintf("%v", float64(key))] = val
+		default:
+			walkErr = fmt.Errorf("unsupported lua table key type %s", k.Type())
 		}
 	})
-	return out
+	if walkErr != nil {
+		return nil, walkErr
+	}
+	return out, nil
 }
 
-func luaValueToGo(v lua.LValue) interface{} {
+func luaValueToGo(v lua.LValue, seen map[*lua.LTable]struct{}) (interface{}, error) {
 	switch v.Type() {
 	case lua.LTNil:
-		return nil
+		return nil, nil
 	case lua.LTString:
 		if s, ok := v.(lua.LString); ok {
-			return string(s)
+			return string(s), nil
 		}
 	case lua.LTBool:
 		if b, ok := v.(lua.LBool); ok {
-			return bool(b)
+			return bool(b), nil
 		}
 	case lua.LTNumber:
 		if n, ok := v.(lua.LNumber); ok {
-			return float64(n)
+			return float64(n), nil
 		}
 	case lua.LTTable:
 		if t, ok := v.(*lua.LTable); ok {
-			return luaTableToMap(t)
+			return luaTableToMapVisited(t, seen)
 		}
 	default:
-		return v.String()
+		return v.String(), nil
 	}
-	return v.String()
+	return v.String(), nil
 }
 
 func mapToLuaTable(L *lua.LState, m map[string]interface{}) *lua.LTable {
+	return mapToLuaTableDepth(L, m, 0)
+}
+
+const maxGoToLuaDepth = 32
+
+func mapToLuaTableDepth(L *lua.LState, m map[string]interface{}, depth int) *lua.LTable {
 	t := L.NewTable()
-	if m == nil {
+	if m == nil || depth > maxGoToLuaDepth {
 		return t
 	}
 	for k, v := range m {
-		L.SetField(t, k, goToLua(L, v))
+		L.SetField(t, k, goToLuaDepth(L, v, depth+1))
 	}
 	return t
 }
 
-func goToLua(L *lua.LState, v interface{}) lua.LValue {
+func goToLuaDepth(L *lua.LState, v interface{}, depth int) lua.LValue {
+	if depth > maxGoToLuaDepth {
+		return lua.LNil
+	}
 	switch x := v.(type) {
 	case nil:
 		return lua.LNil
@@ -249,11 +314,11 @@ func goToLua(L *lua.LState, v interface{}) lua.LValue {
 	case int64:
 		return lua.LNumber(x)
 	case map[string]interface{}:
-		return mapToLuaTable(L, x)
+		return mapToLuaTableDepth(L, x, depth)
 	case []interface{}:
 		t := L.NewTable()
 		for i, elem := range x {
-			L.RawSetInt(t, i+1, goToLua(L, elem))
+			L.RawSetInt(t, i+1, goToLuaDepth(L, elem, depth+1))
 		}
 		return t
 	case []string:

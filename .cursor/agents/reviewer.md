@@ -11,6 +11,7 @@ description: >-
 
 ## レビュー観点
 
+- **OCR 再発予防（Critical 優先）**: `.cursor/rules/ocr-review-prevention.mdc` — mutex+I/O、channel ライフサイクル、Scanner/Marshal/RowsAffected、パス改行・junction、`(nil,nil)` 契約、Vue gen/raw エラー/`includes` 過広、死んだ i18n
 - **正確性**: ロジックの誤り、エッジケースの考慮
 - **セキュリティ**: 認証情報の露出、入力検証、インジェクション
 - **可読性**: 命名、コメント、構造

@@ -2,6 +2,7 @@ package powerplan
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -12,35 +13,54 @@ var presetGUIDs = map[string]string{
 	"high_performance": "8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c",
 }
 
+// GUID pattern used by powercfg (locale-independent).
+var schemeGUIDRE = regexp.MustCompile(`(?i)[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}`)
+
+var exactGUIDRE = regexp.MustCompile(`(?i)^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
+// ValidGUID reports whether s is a bare Windows power-scheme GUID.
+func ValidGUID(s string) bool {
+	return exactGUIDRE.MatchString(strings.TrimSpace(s))
+}
+
 func parseListOutput(s string) ([]Plan, error) {
 	var plans []Plan
+	seen := map[string]struct{}{}
 	for _, line := range strings.Split(s, "\n") {
 		line = strings.TrimSpace(line)
-		if !strings.Contains(line, "Power Scheme GUID:") {
+		loc := schemeGUIDRE.FindStringIndex(line)
+		if loc == nil {
 			continue
 		}
-		i := strings.Index(line, ":")
-		if i < 0 {
+		guid := line[loc[0]:loc[1]]
+		key := strings.ToLower(guid)
+		if _, ok := seen[key]; ok {
 			continue
 		}
-		rest := strings.TrimSpace(line[i+1:])
-		parts := strings.SplitN(rest, "  ", 2)
-		guid := strings.TrimSpace(parts[0])
-		name := ""
-		if len(parts) > 1 {
-			name = strings.TrimSpace(parts[1])
-			name = strings.TrimSuffix(name, " *")
-			name = strings.TrimSpace(name)
-			name = strings.Trim(name, "()")
-		}
-		if guid != "" {
-			plans = append(plans, Plan{GUID: guid, Name: name})
-		}
+		seen[key] = struct{}{}
+		name := extractPlanName(line[loc[1]:])
+		plans = append(plans, Plan{GUID: guid, Name: name})
 	}
 	if len(plans) == 0 {
 		return nil, fmt.Errorf("no power plans found")
 	}
 	return plans, nil
+}
+
+func extractPlanName(rest string) string {
+	rest = strings.TrimSpace(rest)
+	if i := strings.Index(rest, "("); i >= 0 {
+		if j := strings.Index(rest[i+1:], ")"); j >= 0 {
+			return strings.TrimSpace(rest[i+1 : i+1+j])
+		}
+	}
+	fields := strings.Fields(rest)
+	if len(fields) == 0 {
+		return ""
+	}
+	name := strings.Join(fields, " ")
+	name = strings.TrimSuffix(name, "*")
+	return strings.TrimSpace(name)
 }
 
 func resolvePresetFromPlans(preset string, plans []Plan) (string, error) {

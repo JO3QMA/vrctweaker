@@ -163,9 +163,14 @@ func RuleToItem(rule *AutomationRule) *AutomationItem {
 		actionsJSON = []byte("[]")
 	}
 	var conds []Condition
+	brokenCond := false
 	if rule.ConditionJSON != "" {
 		var legacy map[string]interface{}
-		if json.Unmarshal([]byte(rule.ConditionJSON), &legacy) == nil {
+		if unmarshalErr := json.Unmarshal([]byte(rule.ConditionJSON), &legacy); unmarshalErr != nil {
+			// Empty [] would MatchConditions as always-true; fail closed instead.
+			brokenCond = true
+			conds = []Condition{{Type: "migration_invalid"}}
+		} else {
 			for k, v := range legacy {
 				if k == "vrc_user_id" {
 					if s, ok := v.(string); ok {
@@ -177,13 +182,14 @@ func RuleToItem(rule *AutomationRule) *AutomationItem {
 	}
 	condsJSON, err := json.Marshal(conds)
 	if err != nil {
-		condsJSON = []byte("[]")
+		condsJSON = []byte(`[{"type":"migration_invalid"}]`)
+		brokenCond = true
 	}
 	return &AutomationItem{
 		ID:             rule.ID,
 		Name:           rule.Name,
 		Kind:           KindRule,
-		IsEnabled:      rule.IsEnabled,
+		IsEnabled:      rule.IsEnabled && !brokenCond,
 		TriggerType:    rule.TriggerType,
 		ConditionsJSON: string(condsJSON),
 		ActionsJSON:    string(actionsJSON),

@@ -176,7 +176,7 @@ func (uc *AutomationUseCase) ListDetectedPowerPlans() ([]automation.DetectedPowe
 	if uc.powerPlan == nil {
 		return nil, nil
 	}
-	plans, err := uc.powerPlan.ListDetected()
+	plans, err := uc.powerPlan.ListDetected(context.Background())
 	if err != nil {
 		return nil, err
 	}
