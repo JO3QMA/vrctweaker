@@ -88,7 +88,14 @@ func (uc *AutomationUseCase) workerLoop(ctx context.Context) {
 			if !ok {
 				return
 			}
-			uc.handleEvent(ctx, ev)
+			func() {
+				defer func() {
+					if rec := recover(); rec != nil {
+						log.Printf("automation: worker panic: %v", rec)
+					}
+				}()
+				uc.handleEvent(ctx, ev)
+			}()
 		}
 	}
 }
@@ -224,6 +231,9 @@ func (uc *AutomationUseCase) recordSuccess(item *automation.AutomationItem, ev a
 }
 
 func (uc *AutomationUseCase) recordFailure(item *automation.AutomationItem, ev automation.Event, completed, total int, ctxLabel string, err error, at time.Time) {
+	if err == nil {
+		err = fmt.Errorf("unknown error")
+	}
 	if uc.failLimiter != nil && uc.failLimiter.allow(item.ID, at) {
 		log.Printf("automation: item %q event %s: %v", item.Name, ev.Type, err)
 	}
@@ -260,12 +270,19 @@ func (uc *AutomationUseCase) schedulerLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case t := <-ticker.C:
-			key := t.Format("2006-01-02T15:04")
-			if key == lastKey {
-				continue
-			}
-			lastKey = key
-			uc.fireScheduleTick(ctx, t)
+			func() {
+				defer func() {
+					if rec := recover(); rec != nil {
+						log.Printf("automation: scheduler panic: %v", rec)
+					}
+				}()
+				key := t.Format("2006-01-02T15:04")
+				if key == lastKey {
+					return
+				}
+				lastKey = key
+				uc.fireScheduleTick(ctx, t)
+			}()
 		}
 	}
 }
@@ -299,31 +316,41 @@ func (uc *AutomationUseCase) processMonitorLoop(ctx context.Context) {
 	}
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
-	var last *bool
+	var (
+		hasLast     bool
+		lastRunning bool
+	)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			running, err := uc.procChecker.VRChatRunning()
-			if err != nil {
-				continue
-			}
-			if last != nil && *last == running {
-				continue
-			}
-			lastVal := running
-			last = &lastVal
-			state := "stopped"
-			if running {
-				state = "running"
-			}
-			uc.PublishEvent(automation.Event{
-				Type: automation.EventVRChatProcess,
-				Payload: map[string]interface{}{
-					"state": state,
-				},
-			})
+			func() {
+				defer func() {
+					if rec := recover(); rec != nil {
+						log.Printf("automation: process monitor panic: %v", rec)
+					}
+				}()
+				running, err := uc.procChecker.VRChatRunning()
+				if err != nil {
+					return
+				}
+				if hasLast && lastRunning == running {
+					return
+				}
+				hasLast = true
+				lastRunning = running
+				state := "stopped"
+				if running {
+					state = "running"
+				}
+				uc.PublishEvent(automation.Event{
+					Type: automation.EventVRChatProcess,
+					Payload: map[string]interface{}{
+						"state": state,
+					},
+				})
+			}()
 		}
 	}
 }

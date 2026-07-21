@@ -3,6 +3,8 @@ package usecase
 import (
 	"context"
 	"fmt"
+	"log"
+	"sync"
 	"time"
 
 	"vrchat-tweaker/internal/domain/automation"
@@ -50,15 +52,6 @@ func (r *scriptRunner) run(ctx context.Context, source string, ev automation.Eve
 	}
 	runCtx, cancel := context.WithTimeout(ctx, r.execTimeout)
 	defer cancel()
-	return r.runUnsafe(runCtx, source, ev)
-}
-
-func (r *scriptRunner) runUnsafe(ctx context.Context, source string, ev automation.Event) (err error) {
-	defer func() {
-		if rec := recover(); rec != nil {
-			err = fmt.Errorf("lua script panicked")
-		}
-	}()
 
 	L := lua.NewState(lua.Options{
 		SkipOpenLibs:        true,
@@ -66,8 +59,39 @@ func (r *scriptRunner) runUnsafe(ctx context.Context, source string, ev automati
 		RegistrySize:        256,
 		MinimizeStackMemory: true,
 	})
-	defer L.Close()
-	L.SetContext(ctx)
+	L.SetContext(runCtx)
+
+	var closeOnce sync.Once
+	closeL := func() { closeOnce.Do(func() { L.Close() }) }
+
+	done := make(chan error, 1)
+	go func() {
+		done <- r.runUnsafe(runCtx, L, source, ev)
+	}()
+
+	select {
+	case err := <-done:
+		closeL()
+		if runCtx.Err() != nil {
+			return fmt.Errorf("lua execution timeout")
+		}
+		return err
+	case <-runCtx.Done():
+		// SetContext aborts Lua bytecode loops; Close forces exit if still stuck.
+		closeL()
+		<-done
+		return fmt.Errorf("lua execution timeout")
+	}
+}
+
+func (r *scriptRunner) runUnsafe(ctx context.Context, L *lua.LState, source string, ev automation.Event) (err error) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Printf("automation: lua panic: %v", rec)
+			err = fmt.Errorf("lua script panicked")
+		}
+	}()
+
 	openSafeLuaLibs(L)
 
 	subscriptions := make(map[string][]*lua.LFunction)
@@ -88,13 +112,21 @@ func (r *scriptRunner) runUnsafe(ctx context.Context, source string, ev automati
 		}
 		actionType := L.CheckString(1)
 		payload := luaTableToMap(L.CheckTable(2))
-		if err := r.runAction(ctx, actionType, payload); err != nil {
-			L.RaiseError("%s", err.Error())
-		}
-		if ctx.Err() != nil {
+		// ponytail: blocking OS calls (e.g. powercfg) ignore Lua SetContext; race them against deadline.
+		done := make(chan error, 1)
+		go func() {
+			done <- r.runAction(ctx, actionType, payload)
+		}()
+		select {
+		case <-ctx.Done():
 			L.RaiseError("lua execution timeout")
+			return 0
+		case err := <-done:
+			if err != nil {
+				L.RaiseError("%s", err.Error())
+			}
+			return 0
 		}
-		return 0
 	}))
 	L.SetField(tweaker, "actions", actions)
 	L.SetGlobal("tweaker", tweaker)
@@ -159,17 +191,20 @@ func openSafeLuaLibs(L *lua.LState) {
 func luaTableToMap(t *lua.LTable) map[string]interface{} {
 	out := make(map[string]interface{})
 	t.ForEach(func(k, v lua.LValue) {
-		key, ok := k.(lua.LString)
-		if !ok {
-			return
+		switch key := k.(type) {
+		case lua.LString:
+			out[string(key)] = luaValueToGo(v)
+		case lua.LNumber:
+			out[fmt.Sprintf("%v", float64(key))] = luaValueToGo(v)
 		}
-		out[string(key)] = luaValueToGo(v)
 	})
 	return out
 }
 
 func luaValueToGo(v lua.LValue) interface{} {
 	switch v.Type() {
+	case lua.LTNil:
+		return nil
 	case lua.LTString:
 		if s, ok := v.(lua.LString); ok {
 			return string(s)
@@ -205,13 +240,19 @@ func mapToLuaTable(L *lua.LState, m map[string]interface{}) *lua.LTable {
 
 func goToLua(L *lua.LState, v interface{}) lua.LValue {
 	switch x := v.(type) {
+	case nil:
+		return lua.LNil
 	case string:
 		return lua.LString(x)
 	case bool:
 		return lua.LBool(x)
 	case float64:
 		return lua.LNumber(x)
+	case float32:
+		return lua.LNumber(x)
 	case int:
+		return lua.LNumber(x)
+	case int64:
 		return lua.LNumber(x)
 	case map[string]interface{}:
 		return mapToLuaTable(L, x)
@@ -219,6 +260,12 @@ func goToLua(L *lua.LState, v interface{}) lua.LValue {
 		t := L.NewTable()
 		for i, elem := range x {
 			L.RawSetInt(t, i+1, goToLua(L, elem))
+		}
+		return t
+	case []string:
+		t := L.NewTable()
+		for i, elem := range x {
+			L.RawSetInt(t, i+1, lua.LString(elem))
 		}
 		return t
 	default:
