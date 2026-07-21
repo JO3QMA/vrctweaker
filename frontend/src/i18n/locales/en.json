@@ -318,6 +318,7 @@
     "saveAndContinue": "Save and continue",
     "discardAndContinue": "Discard and continue",
     "saveError": "Could not save",
+    "itemParseError": "This item has invalid data and cannot be edited safely",
     "toggleError": "Could not toggle item",
     "deleteConfirm": "Delete “{name}”?",
     "weekday0": "Sun",

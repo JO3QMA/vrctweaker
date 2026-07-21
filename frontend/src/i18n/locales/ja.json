@@ -318,6 +318,7 @@
     "saveAndContinue": "保存して続行",
     "discardAndContinue": "破棄して続行",
     "saveError": "保存に失敗しました",
+    "itemParseError": "データが壊れているため、安全に編集できません",
     "toggleError": "有効／無効の切り替えに失敗しました",
     "deleteConfirm": "「{name}」を削除しますか？",
     "weekday0": "日",
