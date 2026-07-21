@@ -2,6 +2,7 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
@@ -30,7 +31,7 @@ type automationItemRepo interface {
 }
 
 var (
-	ErrAutomationItemNotFound = errors.New("automation item not found")
+	ErrAutomationItemNotFound = automation.ErrItemNotFound
 	ErrAutomationInvalidItem  = errors.New("automation item invalid")
 )
 
@@ -41,6 +42,7 @@ type AutomationUseCase struct {
 	procChecker      automation.VRChatProcessChecker
 	powerPlan        PowerPlanService
 	displayNamer     UserDisplayNamer
+	eventsMu         sync.RWMutex
 	events           chan automation.Event
 	runLog           *runLogStore
 	failLimiter      *failureLogLimiter
@@ -48,7 +50,7 @@ type AutomationUseCase struct {
 	onRunLogChanged  func()
 	runtimeAvailable bool
 	shutdown         atomic.Bool
-	stopOnce         sync.Once
+	runCancel        context.CancelFunc
 
 	workerWG    sync.WaitGroup
 	schedulerWG sync.WaitGroup
@@ -98,13 +100,20 @@ func (uc *AutomationUseCase) OnFriendJoined(ctx context.Context, vrcUserID strin
 	if vrcUserID == "" {
 		return nil
 	}
+	if uc.shutdown.Load() {
+		return nil
+	}
 	ev := automation.Event{
 		Type: automation.EventFriendJoined,
 		Payload: map[string]interface{}{
 			"vrc_user_id": vrcUserID,
 		},
 	}
-	if uc.events == nil {
+	uc.eventsMu.RLock()
+	started := uc.events != nil
+	uc.eventsMu.RUnlock()
+	if !started {
+		// Tests / pre-Start: evaluate synchronously.
 		uc.handleEvent(ctx, ev)
 		return nil
 	}
@@ -117,6 +126,7 @@ func (uc *AutomationUseCase) ListItems(ctx context.Context) ([]*automation.Autom
 	return uc.itemRepo.List(ctx)
 }
 
+// GetItem returns one item.
 // GetItem returns one item.
 func (uc *AutomationUseCase) GetItem(ctx context.Context, id string) (*automation.AutomationItem, error) {
 	return uc.itemRepo.GetByID(ctx, id)
@@ -135,7 +145,13 @@ func (uc *AutomationUseCase) SaveItem(ctx context.Context, item *automation.Auto
 
 // DeleteItem removes an item.
 func (uc *AutomationUseCase) DeleteItem(ctx context.Context, id string) error {
-	return uc.itemRepo.Delete(ctx, id)
+	if err := uc.itemRepo.Delete(ctx, id); err != nil {
+		return err
+	}
+	if uc.failLimiter != nil {
+		uc.failLimiter.remove(id)
+	}
+	return nil
 }
 
 // ToggleItem enables or disables an item.
@@ -143,9 +159,6 @@ func (uc *AutomationUseCase) ToggleItem(ctx context.Context, id string, enabled 
 	item, err := uc.itemRepo.GetByID(ctx, id)
 	if err != nil {
 		return err
-	}
-	if item == nil {
-		return ErrAutomationItemNotFound
 	}
 	item.IsEnabled = enabled
 	return uc.itemRepo.Save(ctx, item)
@@ -193,7 +206,7 @@ func (uc *AutomationUseCase) ListRules(ctx context.Context) ([]*automation.Autom
 
 func (uc *AutomationUseCase) GetRule(ctx context.Context, id string) (*automation.AutomationRule, error) {
 	item, err := uc.itemRepo.GetByID(ctx, id)
-	if err != nil || item == nil {
+	if err != nil {
 		return nil, err
 	}
 	return itemToLegacyRule(item), nil
@@ -214,7 +227,11 @@ func (uc *AutomationUseCase) DeleteRule(ctx context.Context, id string) error {
 
 func (uc *AutomationUseCase) ToggleRule(ctx context.Context, id string, enabled bool) error {
 	item, err := uc.itemRepo.GetByID(ctx, id)
-	if err != nil || item == nil {
+	if err != nil {
+		// Legacy silent no-op for unknown id.
+		if errors.Is(err, ErrAutomationItemNotFound) {
+			return nil
+		}
 		return err
 	}
 	item.IsEnabled = enabled
@@ -225,6 +242,7 @@ func itemToLegacyRule(item *automation.AutomationItem) *automation.AutomationRul
 	if item == nil || item.Kind != automation.KindRule {
 		return nil
 	}
+	// Legacy API exposes only the first action step.
 	steps, _ := automation.ParseActions(item.ActionsJSON)
 	r := &automation.AutomationRule{
 		ID:            item.ID,
@@ -236,8 +254,10 @@ func itemToLegacyRule(item *automation.AutomationItem) *automation.AutomationRul
 	if len(steps) > 0 {
 		r.ActionType = steps[0].Type
 		if steps[0].Payload != nil {
-			b, _ := jsonMarshal(steps[0].Payload)
-			r.ActionPayload = string(b)
+			b, err := json.Marshal(steps[0].Payload)
+			if err == nil {
+				r.ActionPayload = string(b)
+			}
 		}
 	}
 	return r
@@ -255,11 +275,23 @@ func validateAutomationItem(item *automation.AutomationItem) error {
 		if item.TriggerType == "" {
 			return fmt.Errorf("%w: trigger required", ErrAutomationInvalidItem)
 		}
-		if item.TriggerType == automation.EventScheduleTick && item.ScheduleJSON == "" {
-			return fmt.Errorf("%w: schedule required", ErrAutomationInvalidItem)
+		if item.TriggerType == automation.EventScheduleTick {
+			if item.ScheduleJSON == "" {
+				return fmt.Errorf("%w: schedule required", ErrAutomationInvalidItem)
+			}
+			if _, err := automation.ParseSchedule(item.ScheduleJSON); err != nil {
+				return fmt.Errorf("%w: %v", ErrAutomationInvalidItem, err)
+			}
+		} else if item.ScheduleJSON != "" {
+			if _, err := automation.ParseSchedule(item.ScheduleJSON); err != nil {
+				return fmt.Errorf("%w: %v", ErrAutomationInvalidItem, err)
+			}
+		}
+		if _, err := automation.ParseConditions(item.ConditionsJSON); err != nil {
+			return fmt.Errorf("%w: conditions: %v", ErrAutomationInvalidItem, err)
 		}
 		if _, err := automation.ParseActions(item.ActionsJSON); err != nil {
-			return err
+			return fmt.Errorf("%w: actions: %v", ErrAutomationInvalidItem, err)
 		}
 	case automation.KindScript:
 		if len(item.ScriptSource) > automation.MaxScriptBytes {
@@ -313,10 +345,16 @@ func (uc *AutomationUseCase) EvalRules(ctx context.Context, triggerType string, 
 			continue
 		}
 		ok, err := automation.EvalItem(item, evalCtx)
-		if err != nil || !ok {
+		if err != nil {
+			return nil, err
+		}
+		if !ok {
 			continue
 		}
-		steps, _ := automation.ParseActions(item.ActionsJSON)
+		steps, err := automation.ParseActions(item.ActionsJSON)
+		if err != nil {
+			return nil, err
+		}
 		if len(steps) == 0 {
 			continue
 		}
@@ -335,11 +373,9 @@ func (uc *AutomationUseCase) RunActions(ctx context.Context, results []*automati
 		if res == nil || !res.ShouldFire {
 			continue
 		}
-		_ = uc.runActionStep(ctx, res.ActionType, res.ActionPayload)
+		if err := uc.runActionStep(ctx, res.ActionType, res.ActionPayload); err != nil {
+			return err
+		}
 	}
 	return nil
-}
-
-func jsonMarshal(v interface{}) ([]byte, error) {
-	return jsonMarshalStd(v)
 }

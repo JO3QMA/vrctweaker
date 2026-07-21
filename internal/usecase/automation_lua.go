@@ -48,64 +48,49 @@ func (r *scriptRunner) run(ctx context.Context, source string, ev automation.Eve
 	if len(source) > automation.MaxScriptBytes {
 		return fmt.Errorf("script exceeds %d bytes", automation.MaxScriptBytes)
 	}
-	done := make(chan error, 1)
-	go func() {
-		done <- r.runUnsafe(source, ev)
-	}()
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case err := <-done:
-		return err
-	case <-time.After(r.execTimeout):
-		return fmt.Errorf("lua execution timeout")
-	}
+	runCtx, cancel := context.WithTimeout(ctx, r.execTimeout)
+	defer cancel()
+	return r.runUnsafe(runCtx, source, ev)
 }
 
-func (r *scriptRunner) runUnsafe(source string, ev automation.Event) (err error) {
+func (r *scriptRunner) runUnsafe(ctx context.Context, source string, ev automation.Event) (err error) {
 	defer func() {
 		if rec := recover(); rec != nil {
-			err = fmt.Errorf("lua panic: %v", rec)
+			err = fmt.Errorf("lua script panicked")
 		}
 	}()
-	L := lua.NewState(lua.Options{SkipOpenLibs: false})
+
+	L := lua.NewState(lua.Options{SkipOpenLibs: true})
 	defer L.Close()
+	L.SetContext(ctx)
+	openSafeLuaLibs(L)
 
 	subscriptions := make(map[string][]*lua.LFunction)
-
-	L.PreloadModule("tweaker", func(L *lua.LState) int {
-		t := L.NewTable()
-		L.SetFuncs(t, map[string]lua.LGFunction{
-			"subscribe": func(L *lua.LState) int {
-				name := L.CheckString(1)
-				fn := L.CheckFunction(2)
-				subscriptions[name] = append(subscriptions[name], fn)
-				return 0
-			},
-			"actions": func(L *lua.LState) int {
-				// placeholder table; run set below
-				return 0
-			},
-		})
-		actions := L.NewTable()
-		L.SetField(actions, "run", L.NewFunction(func(L *lua.LState) int {
-			actionType := L.CheckString(1)
-			payload := luaTableToMap(L.CheckTable(2))
-			err := r.runAction(context.Background(), actionType, payload)
-			if err != nil {
-				L.RaiseError("%s", err.Error())
-			}
+	tweaker := L.NewTable()
+	L.SetFuncs(tweaker, map[string]lua.LGFunction{
+		"subscribe": func(L *lua.LState) int {
+			name := L.CheckString(1)
+			fn := L.CheckFunction(2)
+			subscriptions[name] = append(subscriptions[name], fn)
 			return 0
-		}))
-		L.SetField(t, "actions", actions)
-		L.Push(t)
-		return 1
+		},
 	})
+	actions := L.NewTable()
+	L.SetField(actions, "run", L.NewFunction(func(L *lua.LState) int {
+		actionType := L.CheckString(1)
+		payload := luaTableToMap(L.CheckTable(2))
+		if err := r.runAction(ctx, actionType, payload); err != nil {
+			L.RaiseError("%s", err.Error())
+		}
+		return 0
+	}))
+	L.SetField(tweaker, "actions", actions)
+	L.SetGlobal("tweaker", tweaker)
 
-	if err := L.DoString(`tweaker = require("tweaker")`); err != nil {
-		return err
-	}
 	if err := L.DoString(source); err != nil {
+		if ctx.Err() != nil {
+			return fmt.Errorf("lua execution timeout")
+		}
 		return err
 	}
 
@@ -120,14 +105,40 @@ func (r *scriptRunner) runUnsafe(source string, ev automation.Event) (err error)
 	}
 	payloadTable := mapToLuaTable(L, ev.Payload)
 	for _, fn := range refs {
+		if ctx.Err() != nil {
+			return fmt.Errorf("lua execution timeout")
+		}
 		L.Push(fn)
 		L.Push(lua.LString(ev.Type))
 		L.Push(payloadTable)
 		if err := L.PCall(2, 0, nil); err != nil {
+			if ctx.Err() != nil {
+				return fmt.Errorf("lua execution timeout")
+			}
 			return err
 		}
 	}
 	return nil
+}
+
+func openSafeLuaLibs(L *lua.LState) {
+	for _, lib := range []struct {
+		name string
+		fn   lua.LGFunction
+	}{
+		{lua.BaseLibName, lua.OpenBase},
+		{lua.TabLibName, lua.OpenTable},
+		{lua.StringLibName, lua.OpenString},
+		{lua.MathLibName, lua.OpenMath},
+	} {
+		L.Push(L.NewFunction(lib.fn))
+		L.Push(lua.LString(lib.name))
+		L.Call(1, 0)
+	}
+	// Base opens load/dofile/loadfile; strip FS and arbitrary code loaders.
+	for _, name := range []string{"dofile", "loadfile", "load", "loadstring"} {
+		L.SetGlobal(name, lua.LNil)
+	}
 }
 
 func luaTableToMap(t *lua.LTable) map[string]interface{} {
@@ -156,6 +167,10 @@ func luaValueToGo(v lua.LValue) interface{} {
 		if n, ok := v.(lua.LNumber); ok {
 			return float64(n)
 		}
+	case lua.LTTable:
+		if t, ok := v.(*lua.LTable); ok {
+			return luaTableToMap(t)
+		}
 	default:
 		return v.String()
 	}
@@ -183,6 +198,14 @@ func goToLua(L *lua.LState, v interface{}) lua.LValue {
 		return lua.LNumber(x)
 	case int:
 		return lua.LNumber(x)
+	case map[string]interface{}:
+		return mapToLuaTable(L, x)
+	case []interface{}:
+		t := L.NewTable()
+		for i, elem := range x {
+			L.RawSetInt(t, i+1, goToLua(L, elem))
+		}
+		return t
 	default:
 		return lua.LString(fmt.Sprint(v))
 	}

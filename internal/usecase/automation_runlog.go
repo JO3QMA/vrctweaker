@@ -52,3 +52,9 @@ func (l *failureLogLimiter) allow(itemID string, now time.Time) bool {
 	l.last[itemID] = now
 	return true
 }
+
+func (l *failureLogLimiter) remove(itemID string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	delete(l.last, itemID)
+}
