@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"vrchat-tweaker/internal/domain/automation"
@@ -186,6 +187,28 @@ func openSafeLuaLibs(L *lua.LState) {
 	} {
 		L.SetGlobal(name, lua.LNil)
 	}
+	// ponytail: gopher-lua SetMx calls os.Exit on OOM — bound string.rep instead.
+	if strLib, ok := L.GetGlobal(lua.StringLibName).(*lua.LTable); ok {
+		L.SetField(strLib, "rep", L.NewFunction(safeStringRep))
+	}
+}
+
+func safeStringRep(L *lua.LState) int {
+	s := L.CheckString(1)
+	n := L.CheckInt(2)
+	if n < 0 {
+		L.ArgError(2, "negative repeat count")
+		return 0
+	}
+	if n > 0 && len(s) > 0 {
+		maxN := automation.MaxLuaStringRepBytes / len(s)
+		if n > maxN {
+			L.RaiseError("string.rep: result exceeds %d bytes", automation.MaxLuaStringRepBytes)
+			return 0
+		}
+	}
+	L.Push(lua.LString(strings.Repeat(s, n)))
+	return 1
 }
 
 func luaTableToMap(t *lua.LTable) (map[string]interface{}, error) {

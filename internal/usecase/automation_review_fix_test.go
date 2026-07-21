@@ -81,6 +81,22 @@ end
 	}
 }
 
+func TestAutomation_script_luaStringRepLimited(t *testing.T) {
+	r := newScriptRunner(func(context.Context, string, map[string]interface{}) error { return nil })
+	err := r.run(context.Background(), `local x = ("a"):rep(100000000)`, automation.Event{Type: "x"})
+	if err == nil {
+		t.Fatal("expected oversized string.rep to fail")
+	}
+	err = r.run(context.Background(), `
+function on_event(ev, payload)
+  if ("ab"):rep(3) ~= "ababab" then error("rep broken") end
+end
+`, automation.Event{Type: "x"})
+	if err != nil {
+		t.Fatalf("small string.rep should work: %v", err)
+	}
+}
+
 func TestAutomation_script_luaTimeout(t *testing.T) {
 	r := newScriptRunner(func(context.Context, string, map[string]interface{}) error { return nil })
 	r.execTimeout = 50 * time.Millisecond
