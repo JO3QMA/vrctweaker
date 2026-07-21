@@ -56,7 +56,7 @@ func (r *AutomationItemRepository) ListEnabled(ctx context.Context) ([]*automati
 	return list, rows.Err()
 }
 
-// GetByID returns one item.
+// GetByID returns one item, or (nil, automation.ErrItemNotFound).
 func (r *AutomationItemRepository) GetByID(ctx context.Context, id string) (*automation.AutomationItem, error) {
 	row := r.db.QueryRowContext(ctx, `SELECT `+automationItemCols+` FROM automation_items WHERE id = ?`, id)
 	return scanAutomationItemRow(row)
@@ -81,8 +81,18 @@ func (r *AutomationItemRepository) Save(ctx context.Context, item *automation.Au
 
 // Delete removes an item.
 func (r *AutomationItemRepository) Delete(ctx context.Context, id string) error {
-	_, err := r.db.ExecContext(ctx, `DELETE FROM automation_items WHERE id = ?`, id)
-	return err
+	res, err := r.db.ExecContext(ctx, `DELETE FROM automation_items WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return automation.ErrItemNotFound
+	}
+	return nil
 }
 
 func scanAutomationItem(rows *sql.Rows) (*automation.AutomationItem, error) {
@@ -109,7 +119,7 @@ func scanAutomationItemRow(row *sql.Row) (*automation.AutomationItem, error) {
 	var isEnabled int
 	err := row.Scan(&id, &name, &kind, &isEnabled, &triggerType, &scheduleJSON, &conditionsJSON, &actionsJSON, &scriptSource)
 	if err == sql.ErrNoRows {
-		return nil, nil
+		return nil, automation.ErrItemNotFound
 	}
 	if err != nil {
 		return nil, err
@@ -129,19 +139,27 @@ func scanAutomationItemRow(row *sql.Row) (*automation.AutomationItem, error) {
 
 // MigrateAutomationRules copies legacy automation_rules into automation_items once.
 func MigrateAutomationRules(ctx context.Context, db *sql.DB) error {
+	tx, err := db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+
 	var n int
-	if err := db.QueryRowContext(ctx, `SELECT COUNT(*) FROM automation_items`).Scan(&n); err != nil {
+	err = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM automation_items`).Scan(&n)
+	if err != nil {
 		return err
 	}
 	if n > 0 {
-		return nil
+		return tx.Commit()
 	}
-	rows, err := db.QueryContext(ctx, `SELECT id, name, trigger_type, condition_json, action_type, action_payload, is_enabled FROM automation_rules`)
+
+	rows, err := tx.QueryContext(ctx, `SELECT id, name, trigger_type, condition_json, action_type, action_payload, is_enabled FROM automation_rules`)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = rows.Close() }()
-	repo := NewAutomationItemRepository(db)
+
 	for rows.Next() {
 		var rule automation.AutomationRule
 		var isEnabled int
@@ -153,11 +171,25 @@ func MigrateAutomationRules(ctx context.Context, db *sql.DB) error {
 		if item == nil {
 			continue
 		}
-		if err := repo.Save(ctx, item); err != nil {
+		en := 0
+		if item.IsEnabled {
+			en = 1
+		}
+		if _, err := tx.ExecContext(ctx, `INSERT INTO automation_items (id, name, kind, is_enabled, trigger_type, schedule_json, conditions_json, actions_json, script_source)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET
+			name = excluded.name, kind = excluded.kind, is_enabled = excluded.is_enabled,
+			trigger_type = excluded.trigger_type, schedule_json = excluded.schedule_json,
+			conditions_json = excluded.conditions_json, actions_json = excluded.actions_json,
+			script_source = excluded.script_source`,
+			item.ID, item.Name, item.Kind, en, item.TriggerType, item.ScheduleJSON,
+			item.ConditionsJSON, item.ActionsJSON, item.ScriptSource); err != nil {
 			return err
 		}
 	}
-	return rows.Err()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
 
 // ItemToLegacyRule maps a rule item to the old DTO for compat bindings.
@@ -172,7 +204,13 @@ func ItemToLegacyRule(item *automation.AutomationItem) *automation.AutomationRul
 			ConditionJSON: item.ConditionsJSON, IsEnabled: item.IsEnabled,
 		}
 	}
-	payload, _ := json.Marshal(steps[0].Payload)
+	payload, err := json.Marshal(steps[0].Payload)
+	if err != nil {
+		return &automation.AutomationRule{
+			ID: item.ID, Name: item.Name, TriggerType: item.TriggerType,
+			ConditionJSON: item.ConditionsJSON, ActionType: steps[0].Type, IsEnabled: item.IsEnabled,
+		}
+	}
 	return &automation.AutomationRule{
 		ID:            item.ID,
 		Name:          item.Name,

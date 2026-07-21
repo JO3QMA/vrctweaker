@@ -1,5 +1,7 @@
 package automation
 
+import "fmt"
+
 // Item kinds.
 const (
 	KindRule   = "rule"
@@ -56,6 +58,22 @@ type ScheduleRule struct {
 	Weekdays []int `json:"weekdays"` // 0=Sunday .. 6=Saturday
 	Hour     int   `json:"hour"`
 	Minute   int   `json:"minute"`
+}
+
+// Validate checks schedule field ranges.
+func (s ScheduleRule) Validate() error {
+	if s.Hour < 0 || s.Hour > 23 {
+		return fmt.Errorf("hour must be 0-23")
+	}
+	if s.Minute < 0 || s.Minute > 59 {
+		return fmt.Errorf("minute must be 0-59")
+	}
+	for _, d := range s.Weekdays {
+		if d < 0 || d > 6 {
+			return fmt.Errorf("weekdays must be 0-6")
+		}
+	}
+	return nil
 }
 
 // RunLogEntry is one automation execution record for the UI.

@@ -12,9 +12,13 @@ import (
 var errUnsupportedPowerPlan = fmt.Errorf("set_power_plan: unsupported platform")
 
 func (uc *AutomationUseCase) startPlatform(ctx context.Context) {
-	if uc.events == nil {
-		uc.events = make(chan automation.Event, automation.EventQueueCapacity)
-	}
+	runCtx, cancel := context.WithCancel(ctx)
+	uc.eventsMu.Lock()
+	uc.shutdown.Store(false)
+	uc.runCancel = cancel
+	uc.events = make(chan automation.Event, automation.EventQueueCapacity)
+	uc.eventsMu.Unlock()
+
 	if uc.runLog == nil {
 		uc.runLog = newRunLogStore()
 	}
@@ -27,28 +31,38 @@ func (uc *AutomationUseCase) startPlatform(ctx context.Context) {
 	uc.runtimeAvailable = true
 
 	uc.workerWG.Add(1)
-	go uc.workerLoop(ctx)
+	go uc.workerLoop(runCtx)
 
 	uc.schedulerWG.Add(1)
-	go uc.schedulerLoop(ctx)
+	go uc.schedulerLoop(runCtx)
 
 	uc.processWG.Add(1)
-	go uc.processMonitorLoop(ctx)
+	go uc.processMonitorLoop(runCtx)
 }
 
 func (uc *AutomationUseCase) stopPlatform() {
-	uc.stopOnce.Do(func() {
-		if uc.events != nil {
-			close(uc.events)
-		}
-	})
+	uc.shutdown.Store(true)
+	uc.eventsMu.Lock()
+	if uc.runCancel != nil {
+		uc.runCancel()
+		uc.runCancel = nil
+	}
+	ch := uc.events
+	uc.events = nil
+	uc.eventsMu.Unlock()
+	if ch != nil {
+		close(ch)
+	}
 	uc.workerWG.Wait()
 	uc.schedulerWG.Wait()
 	uc.processWG.Wait()
 }
 
 func (uc *AutomationUseCase) PublishEvent(ev automation.Event) {
-	if uc.events == nil || uc.shutdown.Load() {
+	// Hold RLock across send so stopPlatform cannot close mid-send.
+	uc.eventsMu.RLock()
+	defer uc.eventsMu.RUnlock()
+	if uc.shutdown.Load() || uc.events == nil {
 		return
 	}
 	select {
@@ -60,11 +74,17 @@ func (uc *AutomationUseCase) PublishEvent(ev automation.Event) {
 
 func (uc *AutomationUseCase) workerLoop(ctx context.Context) {
 	defer uc.workerWG.Done()
+	uc.eventsMu.RLock()
+	ch := uc.events
+	uc.eventsMu.RUnlock()
+	if ch == nil {
+		return
+	}
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case ev, ok := <-uc.events:
+		case ev, ok := <-ch:
 			if !ok {
 				return
 			}
@@ -93,8 +113,10 @@ func (uc *AutomationUseCase) buildEvalContext(ctx context.Context, ev automation
 	}
 	if uc.procChecker != nil {
 		running, err := uc.procChecker.VRChatRunning()
-		ec.VRChatRunningOK = err == nil
-		ec.VRChatRunning = running
+		if err == nil {
+			ec.VRChatRunningOK = true
+			ec.VRChatRunning = running
+		}
 	}
 	return ec
 }
@@ -202,7 +224,7 @@ func (uc *AutomationUseCase) recordSuccess(item *automation.AutomationItem, ev a
 }
 
 func (uc *AutomationUseCase) recordFailure(item *automation.AutomationItem, ev automation.Event, completed, total int, ctxLabel string, err error, at time.Time) {
-	if uc.failLimiter.allow(item.ID, at) {
+	if uc.failLimiter != nil && uc.failLimiter.allow(item.ID, at) {
 		log.Printf("automation: item %q event %s: %v", item.Name, ev.Type, err)
 	}
 	if total == 0 {
@@ -263,6 +285,7 @@ func (uc *AutomationUseCase) fireScheduleTick(ctx context.Context, t time.Time) 
 			continue
 		}
 		if automation.ScheduleMatches(sched, t) {
+			// One schedule.tick per minute; handleEvent evaluates all matching items.
 			uc.PublishEvent(automation.Event{Type: automation.EventScheduleTick, Payload: nil})
 			return
 		}

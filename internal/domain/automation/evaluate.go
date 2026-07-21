@@ -69,6 +69,9 @@ func ParseSchedule(raw string) (*ScheduleRule, error) {
 	if err := json.Unmarshal([]byte(raw), &s); err != nil {
 		return nil, err
 	}
+	if err := s.Validate(); err != nil {
+		return nil, err
+	}
 	return &s, nil
 }
 

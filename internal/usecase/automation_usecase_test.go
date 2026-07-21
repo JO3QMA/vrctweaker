@@ -96,7 +96,7 @@ func (m *mockAutomationItemRepo) GetByID(_ context.Context, id string) (*automat
 			return &cpy, nil
 		}
 	}
-	return nil, nil
+	return nil, automation.ErrItemNotFound
 }
 
 func (m *mockAutomationItemRepo) Save(_ context.Context, item *automation.AutomationItem) error {
@@ -123,13 +123,19 @@ func (m *mockAutomationItemRepo) Delete(_ context.Context, id string) error {
 	if m.deleteErr != nil {
 		return m.deleteErr
 	}
-	m.lastDeleted = append(m.lastDeleted, id)
+	found := false
 	var next []*automation.AutomationItem
 	for _, it := range m.items {
-		if it == nil || it.ID != id {
-			next = append(next, it)
+		if it != nil && it.ID == id {
+			found = true
+			continue
 		}
+		next = append(next, it)
 	}
+	if !found {
+		return automation.ErrItemNotFound
+	}
+	m.lastDeleted = append(m.lastDeleted, id)
 	m.items = next
 	return nil
 }
