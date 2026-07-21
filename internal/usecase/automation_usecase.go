@@ -127,7 +127,6 @@ func (uc *AutomationUseCase) ListItems(ctx context.Context) ([]*automation.Autom
 }
 
 // GetItem returns one item.
-// GetItem returns one item.
 func (uc *AutomationUseCase) GetItem(ctx context.Context, id string) (*automation.AutomationItem, error) {
 	return uc.itemRepo.GetByID(ctx, id)
 }
@@ -208,6 +207,9 @@ func (uc *AutomationUseCase) GetRule(ctx context.Context, id string) (*automatio
 	item, err := uc.itemRepo.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+	if item == nil {
+		return nil, ErrAutomationItemNotFound
 	}
 	return itemToLegacyRule(item), nil
 }

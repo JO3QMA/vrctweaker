@@ -60,7 +60,12 @@ func (r *scriptRunner) runUnsafe(ctx context.Context, source string, ev automati
 		}
 	}()
 
-	L := lua.NewState(lua.Options{SkipOpenLibs: true})
+	L := lua.NewState(lua.Options{
+		SkipOpenLibs:        true,
+		CallStackSize:       64,
+		RegistrySize:        256,
+		MinimizeStackMemory: true,
+	})
 	defer L.Close()
 	L.SetContext(ctx)
 	openSafeLuaLibs(L)
@@ -77,10 +82,17 @@ func (r *scriptRunner) runUnsafe(ctx context.Context, source string, ev automati
 	})
 	actions := L.NewTable()
 	L.SetField(actions, "run", L.NewFunction(func(L *lua.LState) int {
+		if ctx.Err() != nil {
+			L.RaiseError("lua execution timeout")
+			return 0
+		}
 		actionType := L.CheckString(1)
 		payload := luaTableToMap(L.CheckTable(2))
 		if err := r.runAction(ctx, actionType, payload); err != nil {
 			L.RaiseError("%s", err.Error())
+		}
+		if ctx.Err() != nil {
+			L.RaiseError("lua execution timeout")
 		}
 		return 0
 	}))
@@ -135,8 +147,11 @@ func openSafeLuaLibs(L *lua.LState) {
 		L.Push(lua.LString(lib.name))
 		L.Call(1, 0)
 	}
-	// Base opens load/dofile/loadfile; strip FS and arbitrary code loaders.
-	for _, name := range []string{"dofile", "loadfile", "load", "loadstring"} {
+	// Strip FS loaders and other DoS / escape hatches from base.
+	for _, name := range []string{
+		"dofile", "loadfile", "load", "loadstring",
+		"collectgarbage", "coroutine", "debug",
+	} {
 		L.SetGlobal(name, lua.LNil)
 	}
 }

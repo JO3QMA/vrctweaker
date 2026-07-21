@@ -85,7 +85,7 @@ func applySchema(db *sql.DB) error {
 	}
 
 	if err := MigrateAutomationRules(context.Background(), db); err != nil {
-		return fmt.Errorf("migrate automation items: %w", err)
+		return fmt.Errorf("migrate automation rules: %w", err)
 	}
 
 	return applyDataMigrations(db)

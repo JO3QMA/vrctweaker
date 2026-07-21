@@ -17,6 +17,14 @@ func TestAutomation_script_luaSandboxNoIO(t *testing.T) {
 	}
 }
 
+func TestAutomation_script_luaSandboxNoCollectgarbage(t *testing.T) {
+	r := newScriptRunner(func(context.Context, string, map[string]interface{}) error { return nil })
+	err := r.run(context.Background(), `collectgarbage("stop")`, automation.Event{Type: "x"})
+	if err == nil {
+		t.Fatal("expected collectgarbage to fail in sandbox")
+	}
+}
+
 func TestAutomation_script_luaTimeout(t *testing.T) {
 	r := newScriptRunner(func(context.Context, string, map[string]interface{}) error { return nil })
 	r.execTimeout = 50 * time.Millisecond

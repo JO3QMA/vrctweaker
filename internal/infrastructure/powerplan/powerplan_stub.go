@@ -4,13 +4,7 @@ package powerplan
 
 import "fmt"
 
-// Plan is an OS power scheme.
-type Plan struct {
-	GUID string
-	Name string
-}
-
-// ListDetected is unsupported off Windows.
+// ListDetected returns an empty list off Windows (not an error; ADR: unsupported is normal).
 func ListDetected() ([]Plan, error) {
 	return nil, nil
 }
