@@ -77,7 +77,7 @@ docs/features の機能仕様を読み、実装計画→実装→レビュー→
 2. `mcp_task` を呼ぶ:
    - `subagent_type`: `generalPurpose`
    - `description`: `Code review of implementation changes`
-   - `prompt`: [reviewer.md の本文] + 改行 + `git diff で変更を確認し、 Critical/Suggestion/Nice でレビューせよ。`
+   - `prompt`: [reviewer.md の本文] + 改行 + `git diff で変更を確認し、.cursor/rules/ocr-review-prevention.mdc を必須観点に含めて Critical/Suggestion/Nice でレビューせよ。`
 
 ### Step 4: QA（品質保証・検証ループ）
 

@@ -45,4 +45,5 @@ description: >-
 
 ## 実装完了後
 
-実装が終わったら、QA エージェントまたは `make fmt && make test && make lint` で検証する。エラー時は修正し、全てパスするまで繰り返す。
+1. **`.cursor/rules/ocr-review-prevention.mdc` を自己チェック**し、該当する指摘パターンが残っていれば先に直す
+2. QA エージェントまたは `make fmt && make test && make lint` で検証する。エラー時は修正し、全てパスするまで繰り返す
