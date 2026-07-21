@@ -43,6 +43,20 @@ export function defaultAction(): ActionEditor {
   };
 }
 
+/** UUID for new items; falls back when crypto.randomUUID is unavailable. */
+export function newAutomationId(): string {
+  const c = globalThis.crypto as Crypto | undefined;
+  if (c && typeof c.randomUUID === "function") {
+    return c.randomUUID();
+  }
+  // ponytail: non-crypto fallback for older WebViews / odd test hosts.
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (ch) => {
+    const r = (Math.random() * 16) | 0;
+    const v = ch === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 function parseJsonField<T>(raw: string, field: string): T {
   try {
     return JSON.parse(raw) as T;
@@ -51,12 +65,23 @@ function parseJsonField<T>(raw: string, field: string): T {
   }
 }
 
+function parseJsonArray<T>(raw: string, field: string): T[] {
+  const value = parseJsonField<unknown>(raw, field);
+  if (!Array.isArray(value)) {
+    throw new AutomationItemParseError(field);
+  }
+  return value as T[];
+}
+
 /** Maps a persisted item into editor state. Throws AutomationItemParseError on bad JSON. */
 export function dtoToEditor(dto: AutomationItemDTO): EditorState {
+  if (dto.kind !== "script" && dto.kind !== "rule") {
+    throw new AutomationItemParseError("kind");
+  }
   const state: EditorState = {
     id: dto.id,
     name: dto.name,
-    kind: dto.kind === "script" ? "script" : "rule",
+    kind: dto.kind,
     isEnabled: dto.isEnabled,
     triggerType: dto.triggerType || "friend_joined",
     scheduleWeekdays: [],
@@ -73,12 +98,15 @@ export function dtoToEditor(dto: AutomationItemDTO): EditorState {
       hour?: number;
       minute?: number;
     }>(dto.scheduleJson, "scheduleJson");
+    if (s === null || typeof s !== "object" || Array.isArray(s)) {
+      throw new AutomationItemParseError("scheduleJson");
+    }
     state.scheduleWeekdays = s.weekdays ?? [];
     state.scheduleHour = s.hour ?? 0;
     state.scheduleMinute = s.minute ?? 0;
   }
   if (dto.conditionsJson) {
-    const conds = parseJsonField<Array<{ type?: string; vrcUserId?: string }>>(
+    const conds = parseJsonArray<{ type?: string; vrcUserId?: string }>(
       dto.conditionsJson,
       "conditionsJson",
     );
@@ -90,13 +118,11 @@ export function dtoToEditor(dto: AutomationItemDTO): EditorState {
     }
   }
   if (dto.actionsJson) {
-    const steps = parseJsonField<
-      Array<{
-        type?: string;
-        payload?: Record<string, string>;
-        continueOnError?: boolean;
-      }>
-    >(dto.actionsJson, "actionsJson");
+    const steps = parseJsonArray<{
+      type?: string;
+      payload?: Record<string, string>;
+      continueOnError?: boolean;
+    }>(dto.actionsJson, "actionsJson");
     if (steps.length) {
       state.actions = steps.map((step) => ({
         type: step.type || "change_status",

@@ -350,6 +350,7 @@ import { getRuntime } from "../wails/runtime";
 import {
   defaultAction,
   dtoToEditor,
+  newAutomationId,
   type EditorState,
 } from "./automationEditorMapping";
 
@@ -625,7 +626,7 @@ async function save(): Promise<boolean> {
   try {
     const dto = editorToDto(editor.value);
     if (!dto.id) {
-      dto.id = crypto.randomUUID();
+      dto.id = newAutomationId();
       editor.value.id = dto.id;
     }
     await App.saveAutomationItem(dto);
