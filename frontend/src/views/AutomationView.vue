@@ -727,11 +727,13 @@ async function save() {
 }
 
 async function toggleItem(item: AutomationItemDTO, enabled: boolean) {
+  const previous = item.isEnabled;
   try {
     await App.toggleAutomationItem(item.id, enabled);
     item.isEnabled = enabled;
     await loadItems();
   } catch {
+    item.isEnabled = previous;
     ElMessage.error(t("automation.toggleError"));
   }
 }
