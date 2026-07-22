@@ -629,9 +629,10 @@ async function save(): Promise<boolean> {
     const dto = editorToDto(editor.value);
     if (!dto.id) {
       dto.id = newAutomationId();
-      editor.value.id = dto.id;
     }
     await App.saveAutomationItem(dto);
+    // Commit id only after successful persist (avoid retry-as-update on failure).
+    editor.value.id = dto.id;
     try {
       await loadItems();
       const match = items.value.find((it) => it.id === dto.id);

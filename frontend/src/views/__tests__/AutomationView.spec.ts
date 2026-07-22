@@ -158,4 +158,49 @@ describe("AutomationView unsaved guard", () => {
 
     errorSpy.mockRestore();
   });
+
+  it("does not keep a generated id on the editor when save fails", async () => {
+    const wrapper = mount(AutomationView);
+    await flushPromises();
+
+    await wrapper.find('[data-testid="add-rule"]').trigger("click");
+    await flushPromises();
+    await wrapper.find(".rule-editor input").setValue("Will fail");
+    await flushPromises();
+
+    mockSaveAutomationItem.mockRejectedValueOnce(new Error("save failed"));
+    const errorSpy = vi
+      .spyOn(ElMessage, "error")
+      .mockImplementation(() => ({ close: () => {} }) as never);
+
+    await wrapper.find('[data-testid="save-item"]').trigger("click");
+    await flushPromises();
+
+    const firstId = (
+      mockSaveAutomationItem.mock.calls[0]?.[0] as AutomationItemDTO
+    ).id;
+    expect(firstId).toBeTruthy();
+    expect(errorSpy).toHaveBeenCalled();
+    expect(wrapper.find('[data-testid="unsaved-banner"]').exists()).toBe(true);
+
+    mockSaveAutomationItem.mockResolvedValueOnce(undefined);
+    mockListAutomationItems.mockResolvedValueOnce([
+      {
+        ...seeded,
+        id: "retry-id",
+        name: "Will fail",
+      },
+    ]);
+    await wrapper.find('[data-testid="save-item"]').trigger("click");
+    await flushPromises();
+
+    const secondId = (
+      mockSaveAutomationItem.mock.calls[1]?.[0] as AutomationItemDTO
+    ).id;
+    // Retry must mint a new id (editor did not keep the failed attempt's UUID).
+    expect(secondId).toBeTruthy();
+    expect(secondId).not.toBe(firstId);
+
+    errorSpy.mockRestore();
+  });
 });
