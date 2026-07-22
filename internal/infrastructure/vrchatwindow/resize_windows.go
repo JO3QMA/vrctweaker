@@ -4,6 +4,7 @@ package vrchatwindow
 
 import (
 	"strings"
+	"sync"
 	"syscall"
 	"unsafe"
 
@@ -19,6 +20,13 @@ var (
 	procMonitorFromWindow = modUser32.NewProc("MonitorFromWindow")
 	procGetMonitorInfoW   = modUser32.NewProc("GetMonitorInfoW")
 	procGetWindow         = modUser32.NewProc("GetWindow")
+
+	resizeMu sync.Mutex
+
+	// Registered once — NewCallback allocates permanently.
+	enumWindowsCB = sync.OnceValue(func() uintptr {
+		return syscall.NewCallback(enumWindowsProc)
+	})
 )
 
 const (
@@ -40,7 +48,16 @@ type monitorInfo struct {
 	DwFlags   uint32
 }
 
+type enumData struct {
+	want     map[uint32]struct{}
+	bestHWND windows.HWND
+	bestArea int64
+}
+
 func resize(width, height int) error {
+	resizeMu.Lock()
+	defer resizeMu.Unlock()
+
 	pids, err := vrchatPIDs()
 	if err != nil {
 		return err
@@ -48,19 +65,26 @@ func resize(width, height int) error {
 	if len(pids) == 0 {
 		return ErrNotRunning
 	}
+	if len(pids) > 1 {
+		return ErrMultipleInstances
+	}
 	hwnd, ok := findMainWindow(pids)
 	if !ok {
 		return ErrNoWindow
 	}
 	if isZoomed(hwnd) {
+		// ShowWindow's return value is previous visibility, not success/failure.
 		showWindow(hwnd, swRestore)
+		if isZoomed(hwnd) {
+			return ErrResizeFailed
+		}
 	}
 	var before rect
 	if err := getWindowRect(hwnd, &before); err != nil {
 		return err
 	}
 	if err := setWindowPos(hwnd, before.Left, before.Top, int32(width), int32(height)); err != nil {
-		// Exclusive fullscreen often rejects SetWindowPos — treat as skip.
+		// Exclusive fullscreen often rejects SetWindowPos — skip only then.
 		if coversMonitor(hwnd) {
 			return nil
 		}
@@ -73,10 +97,6 @@ func resize(width, height int) error {
 	gotW := int(after.Right - after.Left)
 	gotH := int(after.Bottom - after.Top)
 	if gotW == width && gotH == height {
-		return nil
-	}
-	// Size unchanged while still covering the monitor → exclusive fullscreen skip.
-	if coversMonitor(hwnd) {
 		return nil
 	}
 	return ErrResizeFailed
@@ -116,42 +136,43 @@ func findMainWindow(pids []uint32) (windows.HWND, bool) {
 	for _, p := range pids {
 		want[p] = struct{}{}
 	}
-	type cand struct {
-		hwnd windows.HWND
-		area int64
-	}
-	var best cand
-	cb := syscall.NewCallback(func(hwnd windows.HWND, _ uintptr) uintptr {
-		if !windows.IsWindowVisible(hwnd) {
-			return 1
-		}
-		// Skip owned windows (dialogs); prefer top-level.
-		owner, _, _ := procGetWindow.Call(uintptr(hwnd), gwOwner)
-		if owner != 0 {
-			return 1
-		}
-		var pid uint32
-		_, _ = windows.GetWindowThreadProcessId(hwnd, &pid)
-		if _, ok := want[pid]; !ok {
-			return 1
-		}
-		var r rect
-		if getWindowRect(hwnd, &r) != nil {
-			return 1
-		}
-		w := int64(r.Right - r.Left)
-		h := int64(r.Bottom - r.Top)
-		if w <= 0 || h <= 0 {
-			return 1
-		}
-		area := w * h
-		if area > best.area {
-			best = cand{hwnd: hwnd, area: area}
-		}
+	data := &enumData{want: want}
+	_ = windows.EnumWindows(enumWindowsCB(), unsafe.Pointer(data))
+	return data.bestHWND, data.bestHWND != 0
+}
+
+func enumWindowsProc(hwnd windows.HWND, lparam uintptr) uintptr {
+	if lparam == 0 {
 		return 1
-	})
-	_ = windows.EnumWindows(cb, unsafe.Pointer(nil))
-	return best.hwnd, best.hwnd != 0
+	}
+	data := (*enumData)(unsafe.Pointer(lparam))
+	if !windows.IsWindowVisible(hwnd) {
+		return 1
+	}
+	owner, _, _ := procGetWindow.Call(uintptr(hwnd), gwOwner)
+	if owner != 0 {
+		return 1
+	}
+	var pid uint32
+	_, _ = windows.GetWindowThreadProcessId(hwnd, &pid)
+	if _, ok := data.want[pid]; !ok {
+		return 1
+	}
+	var r rect
+	if getWindowRect(hwnd, &r) != nil {
+		return 1
+	}
+	w := int64(r.Right - r.Left)
+	h := int64(r.Bottom - r.Top)
+	if w <= 0 || h <= 0 {
+		return 1
+	}
+	area := w * h
+	if area > data.bestArea {
+		data.bestHWND = hwnd
+		data.bestArea = area
+	}
+	return 1
 }
 
 func coversMonitor(hwnd windows.HWND) bool {
@@ -201,7 +222,7 @@ func setWindowPos(hwnd windows.HWND, x, y, cx, cy int32) error {
 		uintptr(y),
 		uintptr(cx),
 		uintptr(cy),
-		flags,
+		uintptr(flags),
 	)
 	if ret == 0 {
 		return err

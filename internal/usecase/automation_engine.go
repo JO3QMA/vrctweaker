@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"math"
 	"time"
 
 	"vrchat-tweaker/internal/domain/automation"
@@ -192,7 +193,7 @@ func (uc *AutomationUseCase) runActionStep(ctx context.Context, actionType strin
 	case automation.ActionSetPowerPlan:
 		return uc.runSetPowerPlan(ctx, payload)
 	case automation.ActionSetVRChatWindowSize:
-		return uc.runSetVRChatWindowSize(payload)
+		return uc.runSetVRChatWindowSize(ctx, payload)
 	default:
 		return fmt.Errorf("unknown action %q", actionType)
 	}
@@ -229,12 +230,18 @@ func (realVRChatWindowResizer) Resize(width, height int) error {
 	return vrchatwindow.Resize(width, height)
 }
 
-func (uc *AutomationUseCase) runSetVRChatWindowSize(payload map[string]interface{}) error {
+func (uc *AutomationUseCase) runSetVRChatWindowSize(ctx context.Context, payload map[string]interface{}) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if uc.windowResizer == nil {
 		return vrchatwindow.ErrUnsupported
 	}
 	w, h, err := parseWindowSizePayload(payload)
 	if err != nil {
+		return err
+	}
+	if err := ctx.Err(); err != nil {
 		return err
 	}
 	return uc.windowResizer.Resize(w, h)
@@ -249,7 +256,7 @@ func parseWindowSizePayload(payload map[string]interface{}) (width, height int, 
 	if !okW || !okH {
 		return 0, 0, fmt.Errorf("set_vrchat_window_size: width and height required")
 	}
-	if w <= 0 || h <= 0 {
+	if w <= 0 || h <= 0 || w > vrchatwindow.MaxDimension || h > vrchatwindow.MaxDimension {
 		return 0, 0, vrchatwindow.ErrInvalidSize
 	}
 	return w, h, nil
@@ -260,27 +267,32 @@ func payloadInt(payload map[string]interface{}, key string) (int, bool) {
 	if !ok || v == nil {
 		return 0, false
 	}
-	switch n := v.(type) {
+	var n int64
+	switch x := v.(type) {
 	case int:
-		return n, true
+		n = int64(x)
 	case int32:
-		return int(n), true
+		n = int64(x)
 	case int64:
-		return int(n), true
+		n = x
 	case float64:
-		if n != float64(int(n)) {
+		if x != math.Trunc(x) || x < math.MinInt64 || x > math.MaxInt64 {
 			return 0, false
 		}
-		return int(n), true
+		n = int64(x)
 	case json.Number:
-		i, err := n.Int64()
+		i, err := x.Int64()
 		if err != nil {
 			return 0, false
 		}
-		return int(i), true
+		n = i
 	default:
 		return 0, false
 	}
+	if n < math.MinInt || n > math.MaxInt {
+		return 0, false
+	}
+	return int(n), true
 }
 
 func (uc *AutomationUseCase) recordSuccess(item *automation.AutomationItem, ev automation.Event, completed, total int, ctxLabel string, at time.Time) {

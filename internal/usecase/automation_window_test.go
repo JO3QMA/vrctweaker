@@ -27,9 +27,21 @@ func TestParseWindowSizePayload(t *testing.T) {
 	if err != nil || w != 1280 || h != 720 {
 		t.Fatalf("got %d×%d err=%v", w, h, err)
 	}
+	w, h, err = parseWindowSizePayload(map[string]interface{}{"width": json.Number("1920"), "height": json.Number("1080")})
+	if err != nil || w != 1920 || h != 1080 {
+		t.Fatalf("json.Number got %d×%d err=%v", w, h, err)
+	}
 	_, _, err = parseWindowSizePayload(map[string]interface{}{"width": 0, "height": 720})
 	if !errors.Is(err, vrchatwindow.ErrInvalidSize) {
 		t.Fatalf("want ErrInvalidSize, got %v", err)
+	}
+	_, _, err = parseWindowSizePayload(map[string]interface{}{"width": float64(1.5), "height": float64(720)})
+	if err == nil {
+		t.Fatal("want reject non-integer float")
+	}
+	_, _, err = parseWindowSizePayload(map[string]interface{}{"width": int64(vrchatwindow.MaxDimension) + 1, "height": int64(720)})
+	if !errors.Is(err, vrchatwindow.ErrInvalidSize) {
+		t.Fatalf("want ErrInvalidSize for MaxInt32+1, got %v", err)
 	}
 	_, _, err = parseWindowSizePayload(nil)
 	if err == nil {
@@ -88,8 +100,7 @@ func TestAutomation_setVRChatWindowSize_notRunning(t *testing.T) {
 	}
 }
 
-func TestAutomation_setVRChatWindowSize_exclusiveSkip(t *testing.T) {
-	// Exclusive fullscreen is implemented as resizer returning nil (no-op success).
+func TestAutomation_setVRChatWindowSize_resizeFailed(t *testing.T) {
 	ctx := context.Background()
 	actions, _ := json.Marshal([]automation.ActionStep{{
 		Type:    automation.ActionSetVRChatWindowSize,
@@ -101,17 +112,25 @@ func TestAutomation_setVRChatWindowSize_exclusiveSkip(t *testing.T) {
 		TriggerType: automation.EventFriendJoined,
 		ActionsJSON: string(actions),
 	}}
-	resizer := &mockWindowResizer{} // nil err = success/skip
+	resizer := &mockWindowResizer{err: vrchatwindow.ErrResizeFailed}
 	uc := newTestAutomationUseCase(repo, nil)
 	uc.windowResizer = resizer
 	if err := uc.OnFriendJoined(ctx, "usr_x"); err != nil {
 		t.Fatal(err)
 	}
-	if resizer.calls != 1 {
-		t.Fatalf("calls=%d", resizer.calls)
-	}
 	logs := uc.GetRunLog()
-	if len(logs) != 1 || !logs[0].Success {
-		t.Fatalf("want success (skip), got %#v", logs)
+	if len(logs) != 1 || logs[0].Success {
+		t.Fatalf("want failure, got %#v", logs)
+	}
+}
+
+func TestAutomation_setVRChatWindowSize_ctxCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	uc := newTestAutomationUseCase(&mockAutomationItemRepo{}, nil)
+	uc.windowResizer = &mockWindowResizer{}
+	err := uc.runSetVRChatWindowSize(ctx, map[string]interface{}{"width": 1280, "height": 720})
+	if !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want Canceled", err)
 	}
 }
