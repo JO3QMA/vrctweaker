@@ -241,9 +241,6 @@ func (uc *AutomationUseCase) runSetVRChatWindowSize(ctx context.Context, payload
 	if err != nil {
 		return err
 	}
-	if err := ctx.Err(); err != nil {
-		return err
-	}
 	return uc.windowResizer.Resize(w, h)
 }
 
@@ -276,7 +273,10 @@ func payloadInt(payload map[string]interface{}, key string) (int, bool) {
 	case int64:
 		n = x
 	case float64:
-		if x != math.Trunc(x) || x < math.MinInt64 || x > math.MaxInt64 {
+		// Cap to MaxDimension in float space to avoid MaxInt64 rounding holes.
+		maxF := float64(vrchatwindow.MaxDimension)
+		minF := float64(math.MinInt32)
+		if x != math.Trunc(x) || x < minF || x > maxF {
 			return 0, false
 		}
 		n = int64(x)
@@ -289,7 +289,7 @@ func payloadInt(payload map[string]interface{}, key string) (int, bool) {
 	default:
 		return 0, false
 	}
-	if n < math.MinInt || n > math.MaxInt {
+	if n < math.MinInt32 || n > int64(vrchatwindow.MaxDimension) {
 		return 0, false
 	}
 	return int(n), true

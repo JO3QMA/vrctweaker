@@ -6,20 +6,19 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
 
 var (
-	modUser32             = windows.NewLazySystemDLL("user32.dll")
-	procGetWindowRect     = modUser32.NewProc("GetWindowRect")
-	procSetWindowPos      = modUser32.NewProc("SetWindowPos")
-	procShowWindow        = modUser32.NewProc("ShowWindow")
-	procIsZoomed          = modUser32.NewProc("IsZoomed")
-	procMonitorFromWindow = modUser32.NewProc("MonitorFromWindow")
-	procGetMonitorInfoW   = modUser32.NewProc("GetMonitorInfoW")
-	procGetWindow         = modUser32.NewProc("GetWindow")
+	modUser32         = windows.NewLazySystemDLL("user32.dll")
+	procGetWindowRect = modUser32.NewProc("GetWindowRect")
+	procSetWindowPos  = modUser32.NewProc("SetWindowPos")
+	procShowWindow    = modUser32.NewProc("ShowWindow")
+	procIsZoomed      = modUser32.NewProc("IsZoomed")
+	procGetWindow     = modUser32.NewProc("GetWindow")
 
 	resizeMu sync.Mutex
 
@@ -30,28 +29,27 @@ var (
 )
 
 const (
-	swRestore             = 9
-	swpNoZOrder           = 0x0004
-	swpNoActivate         = 0x0010
-	monitorDefaultNearest = 2
-	gwOwner               = 4
+	swRestore     = 9
+	swpNoZOrder   = 0x0004
+	swpNoActivate = 0x0010
+	gwOwner       = 4
+
+	restorePollInterval = 10 * time.Millisecond
+	restorePollTimeout  = 500 * time.Millisecond
 )
 
 type rect struct {
 	Left, Top, Right, Bottom int32
 }
 
-type monitorInfo struct {
-	CbSize    uint32
-	RcMonitor rect
-	RcWork    rect
-	DwFlags   uint32
+type windowCand struct {
+	hwnd windows.HWND
+	area int64
 }
 
 type enumData struct {
-	want     map[uint32]struct{}
-	bestHWND windows.HWND
-	bestArea int64
+	want      map[uint32]struct{}
+	bestByPID map[uint32]windowCand
 }
 
 func resize(width, height int) error {
@@ -65,18 +63,15 @@ func resize(width, height int) error {
 	if len(pids) == 0 {
 		return ErrNotRunning
 	}
-	if len(pids) > 1 {
-		return ErrMultipleInstances
-	}
-	hwnd, ok := findMainWindow(pids)
-	if !ok {
-		return ErrNoWindow
+	hwnd, err := findMainWindow(pids)
+	if err != nil {
+		return err
 	}
 	if isZoomed(hwnd) {
-		// ShowWindow's return value is previous visibility, not success/failure.
+		// ShowWindow return is previous visibility, not success/failure.
 		showWindow(hwnd, swRestore)
-		if isZoomed(hwnd) {
-			return ErrResizeFailed
+		if err := waitUntilNotZoomed(hwnd); err != nil {
+			return err
 		}
 	}
 	var before rect
@@ -84,10 +79,8 @@ func resize(width, height int) error {
 		return err
 	}
 	if err := setWindowPos(hwnd, before.Left, before.Top, int32(width), int32(height)); err != nil {
-		// Exclusive fullscreen often rejects SetWindowPos — skip only then.
-		if coversMonitor(hwnd) {
-			return nil
-		}
+		// Do not treat covers-monitor + failure as silent success:
+		// borderless fullscreen looks the same and must not be skipped.
 		return err
 	}
 	var after rect
@@ -100,6 +93,19 @@ func resize(width, height int) error {
 		return nil
 	}
 	return ErrResizeFailed
+}
+
+func waitUntilNotZoomed(hwnd windows.HWND) error {
+	deadline := time.Now().Add(restorePollTimeout)
+	for {
+		if !isZoomed(hwnd) {
+			return nil
+		}
+		if time.Now().After(deadline) {
+			return ErrResizeFailed
+		}
+		time.Sleep(restorePollInterval)
+	}
 }
 
 func vrchatPIDs() ([]uint32, error) {
@@ -131,14 +137,27 @@ func vrchatPIDs() ([]uint32, error) {
 	return pids, nil
 }
 
-func findMainWindow(pids []uint32) (windows.HWND, bool) {
+func findMainWindow(pids []uint32) (windows.HWND, error) {
 	want := make(map[uint32]struct{}, len(pids))
 	for _, p := range pids {
 		want[p] = struct{}{}
 	}
-	data := &enumData{want: want}
+	data := &enumData{
+		want:      want,
+		bestByPID: make(map[uint32]windowCand),
+	}
 	_ = windows.EnumWindows(enumWindowsCB(), unsafe.Pointer(data))
-	return data.bestHWND, data.bestHWND != 0
+	switch len(data.bestByPID) {
+	case 0:
+		return 0, ErrNoWindow
+	case 1:
+		for _, c := range data.bestByPID {
+			return c.hwnd, nil
+		}
+		return 0, ErrNoWindow
+	default:
+		return 0, ErrMultipleInstances
+	}
 }
 
 func enumWindowsProc(hwnd windows.HWND, lparam uintptr) uintptr {
@@ -149,6 +168,7 @@ func enumWindowsProc(hwnd windows.HWND, lparam uintptr) uintptr {
 	if !windows.IsWindowVisible(hwnd) {
 		return 1
 	}
+	// GetWindow: ignore Call's last-error — it is often stale on success.
 	owner, _, _ := procGetWindow.Call(uintptr(hwnd), gwOwner)
 	if owner != 0 {
 		return 1
@@ -168,32 +188,10 @@ func enumWindowsProc(hwnd windows.HWND, lparam uintptr) uintptr {
 		return 1
 	}
 	area := w * h
-	if area > data.bestArea {
-		data.bestHWND = hwnd
-		data.bestArea = area
+	if prev, ok := data.bestByPID[pid]; !ok || area > prev.area {
+		data.bestByPID[pid] = windowCand{hwnd: hwnd, area: area}
 	}
 	return 1
-}
-
-func coversMonitor(hwnd windows.HWND) bool {
-	var wr rect
-	if getWindowRect(hwnd, &wr) != nil {
-		return false
-	}
-	mon, _, _ := procMonitorFromWindow.Call(uintptr(hwnd), monitorDefaultNearest)
-	if mon == 0 {
-		return false
-	}
-	var mi monitorInfo
-	mi.CbSize = uint32(unsafe.Sizeof(mi))
-	r1, _, _ := procGetMonitorInfoW.Call(mon, uintptr(unsafe.Pointer(&mi)))
-	if r1 == 0 {
-		return false
-	}
-	return wr.Left == mi.RcMonitor.Left &&
-		wr.Top == mi.RcMonitor.Top &&
-		wr.Right == mi.RcMonitor.Right &&
-		wr.Bottom == mi.RcMonitor.Bottom
 }
 
 func isZoomed(hwnd windows.HWND) bool {

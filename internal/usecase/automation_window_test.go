@@ -39,9 +39,13 @@ func TestParseWindowSizePayload(t *testing.T) {
 	if err == nil {
 		t.Fatal("want reject non-integer float")
 	}
+	_, _, err = parseWindowSizePayload(map[string]interface{}{"width": float64(vrchatwindow.MaxDimension) + 1, "height": float64(720)})
+	if err == nil {
+		t.Fatal("want reject float above MaxDimension")
+	}
 	_, _, err = parseWindowSizePayload(map[string]interface{}{"width": int64(vrchatwindow.MaxDimension) + 1, "height": int64(720)})
-	if !errors.Is(err, vrchatwindow.ErrInvalidSize) {
-		t.Fatalf("want ErrInvalidSize for MaxInt32+1, got %v", err)
+	if err == nil {
+		t.Fatal("want reject MaxDimension+1")
 	}
 	_, _, err = parseWindowSizePayload(nil)
 	if err == nil {
