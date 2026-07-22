@@ -13,12 +13,14 @@ import (
 )
 
 var (
-	modUser32         = windows.NewLazySystemDLL("user32.dll")
-	procGetWindowRect = modUser32.NewProc("GetWindowRect")
-	procSetWindowPos  = modUser32.NewProc("SetWindowPos")
-	procShowWindow    = modUser32.NewProc("ShowWindow")
-	procIsZoomed      = modUser32.NewProc("IsZoomed")
-	procGetWindow     = modUser32.NewProc("GetWindow")
+	modUser32          = windows.NewLazySystemDLL("user32.dll")
+	procGetWindowRect  = modUser32.NewProc("GetWindowRect")
+	procSetWindowPos   = modUser32.NewProc("SetWindowPos")
+	procShowWindow     = modUser32.NewProc("ShowWindow")
+	procIsZoomed       = modUser32.NewProc("IsZoomed")
+	procGetWindow      = modUser32.NewProc("GetWindow")
+	procGetClassNameW  = modUser32.NewProc("GetClassNameW")
+	procGetWindowTextW = modUser32.NewProc("GetWindowTextW")
 
 	resizeMu sync.Mutex
 
@@ -34,6 +36,7 @@ const (
 	swpNoActivate = 0x0010
 	gwOwner       = 4
 
+	minWindowArea       = int64(640 * 480)
 	restorePollInterval = 10 * time.Millisecond
 	restorePollTimeout  = 500 * time.Millisecond
 )
@@ -53,34 +56,47 @@ type enumData struct {
 }
 
 func resize(width, height int) error {
+	if err := unmaximizeIfNeeded(); err != nil {
+		return err
+	}
+
 	resizeMu.Lock()
 	defer resizeMu.Unlock()
 
-	pids, err := vrchatPIDs()
-	if err != nil {
-		return err
-	}
-	if len(pids) == 0 {
-		return ErrNotRunning
-	}
-	hwnd, err := findMainWindow(pids)
+	hwnd, err := resolveMainHWND()
 	if err != nil {
 		return err
 	}
 	if isZoomed(hwnd) {
-		// ShowWindow return is previous visibility, not success/failure.
-		showWindow(hwnd, swRestore)
-		if err := waitUntilNotZoomed(hwnd); err != nil {
-			return err
-		}
+		return ErrResizeFailed
 	}
+	return applySize(hwnd, width, height)
+}
+
+// unmaximizeIfNeeded restores a maximized main window. The poll waits without holding resizeMu.
+func unmaximizeIfNeeded() error {
+	resizeMu.Lock()
+	hwnd, err := resolveMainHWND()
+	if err != nil {
+		resizeMu.Unlock()
+		return err
+	}
+	if !isZoomed(hwnd) {
+		resizeMu.Unlock()
+		return nil
+	}
+	// ShowWindow return is previous visibility, not success/failure.
+	showWindow(hwnd, swRestore)
+	resizeMu.Unlock()
+	return waitUntilNotZoomed(hwnd)
+}
+
+func applySize(hwnd windows.HWND, width, height int) error {
 	var before rect
 	if err := getWindowRect(hwnd, &before); err != nil {
 		return err
 	}
 	if err := setWindowPos(hwnd, before.Left, before.Top, int32(width), int32(height)); err != nil {
-		// Do not treat covers-monitor + failure as silent success:
-		// borderless fullscreen looks the same and must not be skipped.
 		return err
 	}
 	var after rect
@@ -106,6 +122,17 @@ func waitUntilNotZoomed(hwnd windows.HWND) error {
 		}
 		time.Sleep(restorePollInterval)
 	}
+}
+
+func resolveMainHWND() (windows.HWND, error) {
+	pids, err := vrchatPIDs()
+	if err != nil {
+		return 0, err
+	}
+	if len(pids) == 0 {
+		return 0, ErrNotRunning
+	}
+	return findMainWindow(pids)
 }
 
 func vrchatPIDs() ([]uint32, error) {
@@ -173,6 +200,9 @@ func enumWindowsProc(hwnd windows.HWND, lparam uintptr) uintptr {
 	if owner != 0 {
 		return 1
 	}
+	if !isLikelyVRChatGameWindow(hwnd) {
+		return 1
+	}
 	var pid uint32
 	_, _ = windows.GetWindowThreadProcessId(hwnd, &pid)
 	if _, ok := data.want[pid]; !ok {
@@ -184,14 +214,36 @@ func enumWindowsProc(hwnd windows.HWND, lparam uintptr) uintptr {
 	}
 	w := int64(r.Right - r.Left)
 	h := int64(r.Bottom - r.Top)
-	if w <= 0 || h <= 0 {
+	area := w * h
+	if area < minWindowArea {
 		return 1
 	}
-	area := w * h
 	if prev, ok := data.bestByPID[pid]; !ok || area > prev.area {
 		data.bestByPID[pid] = windowCand{hwnd: hwnd, area: area}
 	}
 	return 1
+}
+
+func isLikelyVRChatGameWindow(hwnd windows.HWND) bool {
+	return classOrTitleLooksLikeVRChat(windowClassName(hwnd), windowTitle(hwnd))
+}
+
+func windowClassName(hwnd windows.HWND) string {
+	buf := make([]uint16, 256)
+	n, _, _ := procGetClassNameW.Call(uintptr(hwnd), uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+	if n == 0 {
+		return ""
+	}
+	return windows.UTF16ToString(buf[:n])
+}
+
+func windowTitle(hwnd windows.HWND) string {
+	buf := make([]uint16, 256)
+	n, _, _ := procGetWindowTextW.Call(uintptr(hwnd), uintptr(unsafe.Pointer(&buf[0])), uintptr(len(buf)))
+	if n == 0 {
+		return ""
+	}
+	return windows.UTF16ToString(buf[:n])
 }
 
 func isZoomed(hwnd windows.HWND) bool {
