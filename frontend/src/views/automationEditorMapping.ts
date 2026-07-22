@@ -6,6 +6,8 @@ export type ActionEditor = {
   powerPlanMode: "preset" | "guid";
   powerPlanPreset: string;
   powerPlanGuid: string;
+  windowWidth: number;
+  windowHeight: number;
   continueOnError: boolean;
 };
 
@@ -39,6 +41,8 @@ export function defaultAction(): ActionEditor {
     powerPlanMode: "preset",
     powerPlanPreset: "balanced",
     powerPlanGuid: "",
+    windowWidth: 1280,
+    windowHeight: 720,
     continueOnError: false,
   };
 }
@@ -120,16 +124,18 @@ export function dtoToEditor(dto: AutomationItemDTO): EditorState {
   if (dto.actionsJson) {
     const steps = parseJsonArray<{
       type?: string;
-      payload?: Record<string, string>;
+      payload?: Record<string, unknown>;
       continueOnError?: boolean;
     }>(dto.actionsJson, "actionsJson");
     if (steps.length) {
       state.actions = steps.map((step) => ({
         type: step.type || "change_status",
-        status: step.payload?.status ?? "busy",
+        status: String(step.payload?.status ?? "busy"),
         powerPlanMode: step.payload?.guid ? "guid" : "preset",
-        powerPlanPreset: step.payload?.preset ?? "balanced",
-        powerPlanGuid: step.payload?.guid ?? "",
+        powerPlanPreset: String(step.payload?.preset ?? "balanced"),
+        powerPlanGuid: String(step.payload?.guid ?? ""),
+        windowWidth: Number(step.payload?.width ?? 1280) || 1280,
+        windowHeight: Number(step.payload?.height ?? 720) || 720,
         continueOnError: !!step.continueOnError,
       }));
     }

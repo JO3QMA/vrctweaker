@@ -41,6 +41,7 @@ type AutomationUseCase struct {
 	statusSetter     StatusSetter
 	procChecker      automation.VRChatProcessChecker
 	powerPlan        PowerPlanService
+	windowResizer    VRChatWindowResizer
 	displayNamer     UserDisplayNamer
 	eventsMu         sync.RWMutex
 	events           chan automation.Event
@@ -60,12 +61,13 @@ type AutomationUseCase struct {
 // NewAutomationUseCase creates a new AutomationUseCase.
 func NewAutomationUseCase(itemRepo automationItemRepo, statusSetter StatusSetter, procChecker automation.VRChatProcessChecker) *AutomationUseCase {
 	uc := &AutomationUseCase{
-		itemRepo:     itemRepo,
-		statusSetter: statusSetter,
-		procChecker:  procChecker,
-		powerPlan:    realPowerPlanService{},
-		runLog:       newRunLogStore(),
-		failLimiter:  newFailureLogLimiter(automation.FailureLogRateLimit),
+		itemRepo:      itemRepo,
+		statusSetter:  statusSetter,
+		procChecker:   procChecker,
+		powerPlan:     realPowerPlanService{},
+		windowResizer: realVRChatWindowResizer{},
+		runLog:        newRunLogStore(),
+		failLimiter:   newFailureLogLimiter(automation.FailureLogRateLimit),
 	}
 	uc.scripts = newScriptRunner(uc.runActionStep)
 	return uc
