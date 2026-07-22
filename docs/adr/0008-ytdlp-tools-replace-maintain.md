@@ -41,5 +41,5 @@
 ## Consequences
 
 - #9 の製品スコープは「維持（symlink＋watcher）」であり、起動前ワンショット適用ボタン alone ではない
-- #8 は Official yt-dlp cache（symlink 経由）で Cookie オプションが使えることを確認してから再開する（ADR 0007）
+- #8（Cookie linkage）は ADR 0007 に従い製品実装済み。制限付き再生には本 ADR の Official cache 経由が前提
 - 動画タブと Settings の Cookie セクションは別画面・別概念のまま
