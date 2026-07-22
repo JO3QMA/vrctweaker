@@ -15,10 +15,11 @@ const (
 	EventVRChatProcess = "vrchat.process"
 )
 
-// Action names (catalog v1).
+// Action names (catalog).
 const (
-	ActionChangeStatus = "change_status"
-	ActionSetPowerPlan = "set_power_plan"
+	ActionChangeStatus        = "change_status"
+	ActionSetPowerPlan        = "set_power_plan"
+	ActionSetVRChatWindowSize = "set_vrchat_window_size"
 )
 
 // Legacy trigger constants (friend_joined matches EventFriendJoined).

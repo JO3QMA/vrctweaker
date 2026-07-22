@@ -34,6 +34,21 @@ describe("dtoToEditor", () => {
     expect(state.actions[0]?.status).toBe("busy");
   });
 
+  it("maps set_vrchat_window_size width/height", () => {
+    const state = dtoToEditor({
+      ...base,
+      actionsJson: JSON.stringify([
+        {
+          type: "set_vrchat_window_size",
+          payload: { width: 960, height: 540 },
+        },
+      ]),
+    });
+    expect(state.actions[0]?.type).toBe("set_vrchat_window_size");
+    expect(state.actions[0]?.windowWidth).toBe(960);
+    expect(state.actions[0]?.windowHeight).toBe(540);
+  });
+
   it("throws on invalid actionsJson instead of silently defaulting", () => {
     expect(() => dtoToEditor({ ...base, actionsJson: "{not-json" })).toThrow(
       AutomationItemParseError,

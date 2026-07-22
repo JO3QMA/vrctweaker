@@ -229,6 +229,24 @@
                   </el-select>
                 </el-form-item>
               </template>
+              <template v-if="action.type === 'set_vrchat_window_size'">
+                <el-form-item :label="t('automation.windowWidth')">
+                  <el-input-number
+                    v-model="action.windowWidth"
+                    :min="1"
+                    :max="7680"
+                    data-testid="window-width-input"
+                  />
+                </el-form-item>
+                <el-form-item :label="t('automation.windowHeight')">
+                  <el-input-number
+                    v-model="action.windowHeight"
+                    :min="1"
+                    :max="4320"
+                    data-testid="window-height-input"
+                  />
+                </el-form-item>
+              </template>
               <el-checkbox v-model="action.continueOnError">
                 {{ t("automation.continueOnError") }}
               </el-checkbox>
@@ -407,6 +425,10 @@ const actionOptions = computed(() => [
     label: t("automation.actionSetPowerPlan"),
     disabled: powerPlans.value.length === 0,
   },
+  {
+    value: "set_vrchat_window_size",
+    label: t("automation.actionSetVRChatWindowSize"),
+  },
 ]);
 
 function editorToDto(state: EditorState): AutomationItemDTO {
@@ -436,7 +458,7 @@ function editorToDto(state: EditorState): AutomationItemDTO {
   dto.conditionsJson = JSON.stringify(conds);
   dto.actionsJson = JSON.stringify(
     state.actions.map((a) => {
-      const payload: Record<string, string> = {};
+      const payload: Record<string, string | number> = {};
       if (a.type === "change_status") payload.status = a.status;
       if (a.type === "set_power_plan") {
         if (a.powerPlanMode === "guid" && a.powerPlanGuid) {
@@ -444,6 +466,10 @@ function editorToDto(state: EditorState): AutomationItemDTO {
         } else {
           payload.preset = a.powerPlanPreset;
         }
+      }
+      if (a.type === "set_vrchat_window_size") {
+        payload.width = a.windowWidth;
+        payload.height = a.windowHeight;
       }
       return {
         type: a.type,

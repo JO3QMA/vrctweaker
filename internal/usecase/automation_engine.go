@@ -2,11 +2,13 @@ package usecase
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
 	"time"
 
 	"vrchat-tweaker/internal/domain/automation"
+	"vrchat-tweaker/internal/infrastructure/vrchatwindow"
 )
 
 var errUnsupportedPowerPlan = fmt.Errorf("set_power_plan: unsupported platform")
@@ -189,6 +191,8 @@ func (uc *AutomationUseCase) runActionStep(ctx context.Context, actionType strin
 		return uc.runChangeStatus(ctx, payload)
 	case automation.ActionSetPowerPlan:
 		return uc.runSetPowerPlan(ctx, payload)
+	case automation.ActionSetVRChatWindowSize:
+		return uc.runSetVRChatWindowSize(payload)
 	default:
 		return fmt.Errorf("unknown action %q", actionType)
 	}
@@ -212,6 +216,71 @@ func (uc *AutomationUseCase) runSetPowerPlan(ctx context.Context, payload map[st
 		return uc.powerPlan.SetActive(ctx, guid)
 	}
 	return fmt.Errorf("set_power_plan: preset or guid required")
+}
+
+// VRChatWindowResizer resizes the running VRChat client window.
+type VRChatWindowResizer interface {
+	Resize(width, height int) error
+}
+
+type realVRChatWindowResizer struct{}
+
+func (realVRChatWindowResizer) Resize(width, height int) error {
+	return vrchatwindow.Resize(width, height)
+}
+
+func (uc *AutomationUseCase) runSetVRChatWindowSize(payload map[string]interface{}) error {
+	if uc.windowResizer == nil {
+		return vrchatwindow.ErrUnsupported
+	}
+	w, h, err := parseWindowSizePayload(payload)
+	if err != nil {
+		return err
+	}
+	return uc.windowResizer.Resize(w, h)
+}
+
+func parseWindowSizePayload(payload map[string]interface{}) (width, height int, err error) {
+	if payload == nil {
+		return 0, 0, fmt.Errorf("set_vrchat_window_size: empty payload")
+	}
+	w, okW := payloadInt(payload, "width")
+	h, okH := payloadInt(payload, "height")
+	if !okW || !okH {
+		return 0, 0, fmt.Errorf("set_vrchat_window_size: width and height required")
+	}
+	if w <= 0 || h <= 0 {
+		return 0, 0, vrchatwindow.ErrInvalidSize
+	}
+	return w, h, nil
+}
+
+func payloadInt(payload map[string]interface{}, key string) (int, bool) {
+	v, ok := payload[key]
+	if !ok || v == nil {
+		return 0, false
+	}
+	switch n := v.(type) {
+	case int:
+		return n, true
+	case int32:
+		return int(n), true
+	case int64:
+		return int(n), true
+	case float64:
+		if n != float64(int(n)) {
+			return 0, false
+		}
+		return int(n), true
+	case json.Number:
+		i, err := n.Int64()
+		if err != nil {
+			return 0, false
+		}
+		return int(i), true
+	default:
+		return 0, false
+	}
 }
 
 func (uc *AutomationUseCase) recordSuccess(item *automation.AutomationItem, ev automation.Event, completed, total int, ctxLabel string, at time.Time) {
