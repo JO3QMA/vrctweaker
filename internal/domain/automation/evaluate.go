@@ -11,6 +11,8 @@ import (
 type Event struct {
 	Type    string
 	Payload map[string]interface{}
+	// At is the evaluation wall time (schedule ticks). Zero means time.Now at eval.
+	At time.Time
 }
 
 // VRChatProcessChecker reports whether VRChat is running.
@@ -29,11 +31,46 @@ func EvalItem(item *AutomationItem, ctx *EvalContext) (bool, error) {
 	if item.TriggerType != ctx.TriggerType {
 		return false, nil
 	}
+	if item.TriggerType == EventScheduleTick {
+		sched, err := ParseSchedule(item.ScheduleJSON)
+		if err != nil {
+			return false, err
+		}
+		now := ctx.Now
+		if now.IsZero() {
+			now = time.Now()
+		}
+		if !ScheduleMatches(sched, now) {
+			return false, nil
+		}
+	}
 	conds, err := ParseConditions(item.ConditionsJSON)
 	if err != nil {
 		return false, err
 	}
+	conds = CompatibleConditions(item.TriggerType, conds)
 	return MatchConditions(conds, ctx), nil
+}
+
+// CompatibleConditions drops conditions that cannot apply to the trigger
+// (e.g. leftover friend_is after switching a rule to schedule.tick).
+// Always returns a non-nil slice so callers can json.Marshal to "[]" not "null".
+func CompatibleConditions(trigger string, conds []Condition) []Condition {
+	out := make([]Condition, 0, len(conds))
+	for _, c := range conds {
+		if c.Type == "friend_is" && trigger != EventFriendJoined {
+			continue
+		}
+		out = append(out, c)
+	}
+	return out
+}
+
+// NextMinuteBoundary returns the start of the next wall-clock minute after now.
+// Truncate operates on the absolute instant; for minute resolution this matches
+// local clock minutes in every fixed-offset zone.
+func NextMinuteBoundary(now time.Time) time.Time {
+	return now.Truncate(ScheduleTickResolution).Add(ScheduleTickResolution)
 }
 
 // ParseConditions decodes conditions JSON.

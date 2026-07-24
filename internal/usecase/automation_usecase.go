@@ -135,7 +135,7 @@ func (uc *AutomationUseCase) GetItem(ctx context.Context, id string) (*automatio
 
 // SaveItem validates and persists an item.
 func (uc *AutomationUseCase) SaveItem(ctx context.Context, item *automation.AutomationItem) error {
-	if err := validateAutomationItem(item); err != nil {
+	if err := sanitizeAndValidateAutomationItem(item); err != nil {
 		return err
 	}
 	if item.ID == "" {
@@ -267,7 +267,9 @@ func itemToLegacyRule(item *automation.AutomationItem) *automation.AutomationRul
 	return r
 }
 
-func validateAutomationItem(item *automation.AutomationItem) error {
+// sanitizeAndValidateAutomationItem validates an item and normalizes fields
+// that must be consistent on disk (e.g. strips incompatible conditions).
+func sanitizeAndValidateAutomationItem(item *automation.AutomationItem) error {
 	if item == nil {
 		return ErrAutomationInvalidItem
 	}
@@ -291,9 +293,16 @@ func validateAutomationItem(item *automation.AutomationItem) error {
 				return fmt.Errorf("%w: %v", ErrAutomationInvalidItem, err)
 			}
 		}
-		if _, err := automation.ParseConditions(item.ConditionsJSON); err != nil {
+		conds, err := automation.ParseConditions(item.ConditionsJSON)
+		if err != nil {
 			return fmt.Errorf("%w: conditions: %v", ErrAutomationInvalidItem, err)
 		}
+		conds = automation.CompatibleConditions(item.TriggerType, conds)
+		b, err := json.Marshal(conds)
+		if err != nil {
+			return fmt.Errorf("%w: conditions: %v", ErrAutomationInvalidItem, err)
+		}
+		item.ConditionsJSON = string(b)
 		if _, err := automation.ParseActions(item.ActionsJSON); err != nil {
 			return fmt.Errorf("%w: actions: %v", ErrAutomationInvalidItem, err)
 		}

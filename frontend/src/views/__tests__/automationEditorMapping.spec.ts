@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 import {
   AutomationItemParseError,
+  defaultAction,
   dtoToEditor,
+  editorToDto,
   newAutomationId,
+  type EditorState,
 } from "../automationEditorMapping";
 import type { AutomationItemDTO } from "../../wails/app";
 
@@ -17,6 +20,24 @@ const base: AutomationItemDTO = {
     { type: "change_status", payload: { status: "busy" } },
   ]),
 };
+
+function baseEditor(overrides: Partial<EditorState> = {}): EditorState {
+  return {
+    id: "1",
+    name: "n",
+    kind: "rule",
+    isEnabled: true,
+    triggerType: "friend_joined",
+    scheduleWeekdays: [1, 2, 3, 4, 5],
+    scheduleHour: 0,
+    scheduleMinute: 0,
+    vrchatRunning: false,
+    friendUserId: "",
+    actions: [defaultAction()],
+    scriptSource: "",
+    ...overrides,
+  };
+}
 
 describe("dtoToEditor", () => {
   it("maps valid JSON fields", () => {
@@ -113,5 +134,37 @@ describe("newAutomationId", () => {
     expect(id).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
     );
+  });
+});
+
+describe("editorToDto", () => {
+  it("omits friend_is when trigger is schedule.tick", () => {
+    const dto = editorToDto(
+      baseEditor({
+        triggerType: "schedule.tick",
+        friendUserId: "usr_leftover",
+        scheduleHour: 9,
+        scheduleMinute: 30,
+      }),
+    );
+    expect(dto.triggerType).toBe("schedule.tick");
+    expect(JSON.parse(dto.scheduleJson ?? "{}")).toEqual({
+      weekdays: [1, 2, 3, 4, 5],
+      hour: 9,
+      minute: 30,
+    });
+    expect(JSON.parse(dto.conditionsJson ?? "[]")).toEqual([]);
+  });
+
+  it("keeps friend_is for friend_joined", () => {
+    const dto = editorToDto(
+      baseEditor({
+        triggerType: "friend_joined",
+        friendUserId: "usr_x",
+      }),
+    );
+    expect(JSON.parse(dto.conditionsJson ?? "[]")).toEqual([
+      { type: "friend_is", vrcUserId: "usr_x" },
+    ]);
   });
 });

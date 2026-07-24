@@ -140,6 +140,81 @@ func TestAutomation_schedule_wrongWeekday(t *testing.T) {
 	}
 }
 
+func TestAutomation_scheduleTick_runsMatchingRule(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.Local) // Friday
+	sched, err := json.Marshal(automation.ScheduleRule{Weekdays: []int{5}, Hour: 12, Minute: 0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	conds, err := json.Marshal([]automation.Condition{{Type: "friend_is", VRCUserID: "usr_leftover"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo := &mockAutomationItemRepo{}
+	repo.items = []*automation.AutomationItem{{
+		ID: "a", Name: "sched", Kind: automation.KindRule, IsEnabled: true,
+		TriggerType:    automation.EventScheduleTick,
+		ScheduleJSON:   string(sched),
+		ConditionsJSON: string(conds),
+		ActionsJSON:    `[{"type":"change_status","payload":{"status":"busy"}}]`,
+	}}
+	setter := &mockStatusSetter{}
+	uc := newTestAutomationUseCase(repo, setter)
+	uc.handleEvent(ctx, automation.Event{Type: automation.EventScheduleTick, At: now})
+	if got := setter.getCalled(); len(got) != 1 || got[0] != "busy" {
+		t.Fatalf("want [busy], got %v", got)
+	}
+}
+
+func TestAutomation_scheduleTick_skipsNonMatchingItem(t *testing.T) {
+	ctx := context.Background()
+	now := time.Date(2026, 7, 24, 12, 0, 0, 0, time.Local)
+	matchSched, _ := json.Marshal(automation.ScheduleRule{Weekdays: []int{5}, Hour: 12, Minute: 0})
+	otherSched, _ := json.Marshal(automation.ScheduleRule{Weekdays: []int{5}, Hour: 18, Minute: 0})
+	repo := &mockAutomationItemRepo{}
+	repo.items = []*automation.AutomationItem{
+		{
+			ID: "noon", Name: "noon", Kind: automation.KindRule, IsEnabled: true,
+			TriggerType: automation.EventScheduleTick, ScheduleJSON: string(matchSched),
+			ActionsJSON: `[{"type":"change_status","payload":{"status":"busy"}}]`,
+		},
+		{
+			ID: "eve", Name: "eve", Kind: automation.KindRule, IsEnabled: true,
+			TriggerType: automation.EventScheduleTick, ScheduleJSON: string(otherSched),
+			ActionsJSON: `[{"type":"change_status","payload":{"status":"ask me"}}]`,
+		},
+	}
+	setter := &mockStatusSetter{}
+	uc := newTestAutomationUseCase(repo, setter)
+	uc.handleEvent(ctx, automation.Event{Type: automation.EventScheduleTick, At: now})
+	if got := setter.getCalled(); len(got) != 1 || got[0] != "busy" {
+		t.Fatalf("want only noon rule, got %v", got)
+	}
+}
+
+func TestAutomation_save_emptyConditionsJSONIsArray(t *testing.T) {
+	ctx := context.Background()
+	repo := &mockAutomationItemRepo{}
+	uc := newTestAutomationUseCase(repo, nil)
+	sched, err := json.Marshal(automation.ScheduleRule{Weekdays: []int{1}, Hour: 9, Minute: 0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	item := &automation.AutomationItem{
+		ID: "s1", Name: "sched", Kind: automation.KindRule, IsEnabled: true,
+		TriggerType:  automation.EventScheduleTick,
+		ScheduleJSON: string(sched),
+		ActionsJSON:  `[{"type":"change_status","payload":{"status":"busy"}}]`,
+	}
+	if err := uc.SaveItem(ctx, item); err != nil {
+		t.Fatal(err)
+	}
+	if item.ConditionsJSON != "[]" {
+		t.Fatalf("ConditionsJSON=%q, want []", item.ConditionsJSON)
+	}
+}
+
 func mustParseSchedule(raw string) *automation.ScheduleRule {
 	s, err := automation.ParseSchedule(raw)
 	if err != nil {

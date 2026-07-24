@@ -3,6 +3,7 @@ package automation
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
 // EvalContext provides data for rule evaluation.
@@ -11,6 +12,7 @@ type EvalContext struct {
 	Payload         map[string]interface{}
 	VRChatRunning   bool
 	VRChatRunningOK bool
+	Now             time.Time // wall time for schedule matching; zero → time.Now
 }
 
 // EvalResult represents the outcome of rule evaluation.
