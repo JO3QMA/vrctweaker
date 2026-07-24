@@ -193,9 +193,13 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
       window.go.main.App = {
         LaunchProfiles: () => Promise.resolve(launchProfiles),
         SaveLaunchProfile: (p) => {
-          const idx = launchProfiles.findIndex(function(x) { return x.id === p.id; });
-          if (idx >= 0) launchProfiles[idx] = p;
-          else launchProfiles.push(p);
+          var next = Object.assign({}, p);
+          if (!next.id) {
+            next.id = "profile-" + String(launchProfiles.length + 1);
+          }
+          var idx = launchProfiles.findIndex(function(x) { return x.id === next.id; });
+          if (idx >= 0) launchProfiles[idx] = next;
+          else launchProfiles.push(next);
           return Promise.resolve();
         },
         DeleteLaunchProfile: (id) => {

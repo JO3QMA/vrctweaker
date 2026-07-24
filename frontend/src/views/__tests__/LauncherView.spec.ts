@@ -444,27 +444,73 @@ describe("LauncherView", () => {
     confirmSpy.mockRestore();
   });
 
-  it("does not show overflow menu for new unsaved profile", async () => {
-    const wrapper = mount(LauncherView);
-    await flushPromises();
+  it("addNew saves immediately and shows overflow menu", async () => {
+    const created: LaunchProfileDTO = {
+      id: "new-1",
+      name: "新しいプロファイル",
+      arguments: "",
+      isDefault: false,
+    };
+    mockSaveLaunchProfile.mockImplementation(async (p: LaunchProfileDTO) => {
+      expect(p).toEqual(
+        expect.objectContaining({
+          id: "",
+          name: "新しいプロファイル",
+          arguments: "",
+          isDefault: false,
+        }),
+      );
+    });
+    mockLaunchProfiles
+      .mockResolvedValueOnce([...sampleProfiles])
+      .mockResolvedValueOnce([...sampleProfiles, created]);
 
-    const addBtn = wrapper.find(".btn-add");
-    await addBtn.trigger("click");
-    await flushPromises();
-
-    expect(wrapper.find('[data-testid="profile-overflow-btn"]').exists()).toBe(
-      false,
-    );
-  });
-
-  it("addNew creates first profile as default when list is empty", async () => {
-    mockLaunchProfiles.mockResolvedValue([]);
     const wrapper = mount(LauncherView);
     await flushPromises();
 
     await wrapper.find(".btn-add").trigger("click");
     await flushPromises();
 
+    expect(mockSaveLaunchProfile).toHaveBeenCalled();
+    expect(wrapper.findAll(".profile-card")).toHaveLength(3);
+    expect(wrapper.find('[data-testid="profile-overflow-btn"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.find('[data-testid="unsaved-banner"]').exists()).toBe(false);
+    expect(
+      (
+        wrapper.find(".profile-editor .el-input input")
+          .element as HTMLInputElement
+      ).value,
+    ).toBe("新しいプロファイル");
+  });
+
+  it("addNew creates first profile as default when list is empty", async () => {
+    const created: LaunchProfileDTO = {
+      id: "new-1",
+      name: "新しいプロファイル",
+      arguments: "",
+      isDefault: true,
+    };
+    mockLaunchProfiles
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([created]);
+    mockSaveLaunchProfile.mockResolvedValue(undefined);
+
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    await wrapper.find(".btn-add").trigger("click");
+    await flushPromises();
+
+    expect(mockSaveLaunchProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "",
+        name: "新しいプロファイル",
+        isDefault: true,
+        arguments: "",
+      }),
+    );
     const defaultLabel = wrapper
       .findAll(".el-checkbox")
       .find((c) => c.text().includes("デフォルトに設定"));
@@ -472,11 +518,63 @@ describe("LauncherView", () => {
     expect((defaultInput?.element as HTMLInputElement).checked).toBe(true);
   });
 
-  it("saves a new profile via merge and saveLaunchProfile", async () => {
+  it("addNew uses numbered default name when base name exists", async () => {
+    const withBase = [
+      ...sampleProfiles,
+      {
+        id: "3",
+        name: "新しいプロファイル",
+        arguments: "",
+        isDefault: false,
+      },
+    ];
+    const created: LaunchProfileDTO = {
+      id: "new-1",
+      name: "新しいプロファイル 2",
+      arguments: "",
+      isDefault: false,
+    };
+    mockLaunchProfiles
+      .mockResolvedValueOnce(withBase)
+      .mockResolvedValueOnce([...withBase, created]);
+    mockSaveLaunchProfile.mockResolvedValue(undefined);
+
     const wrapper = mount(LauncherView);
     await flushPromises();
 
     await wrapper.find(".btn-add").trigger("click");
+    await flushPromises();
+
+    expect(mockSaveLaunchProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "新しいプロファイル 2" }),
+    );
+  });
+
+  it("shows ElMessage.error when save fails", async () => {
+    const { ElMessage } = await import("element-plus");
+    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
+      close: () => {},
+    }));
+    mockSaveLaunchProfile.mockRejectedValue(new Error("db locked"));
+
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+    await wrapper.find(".profile-editor .el-input input").setValue("Renamed");
+    await wrapper.find(".btn-save").trigger("click");
+    await flushPromises();
+
+    expect(errorSpy).toHaveBeenCalled();
+    errorSpy.mockRestore();
+  });
+
+  it("saves edits on an existing profile via merge and saveLaunchProfile", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
     await flushPromises();
 
     await wrapper
@@ -492,7 +590,7 @@ describe("LauncherView", () => {
     );
     expect(mockSaveLaunchProfile).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: "",
+        id: "1",
         name: "My Custom Profile",
         arguments: "-no-vr",
       }),
@@ -790,7 +888,17 @@ describe("LauncherView", () => {
   });
 
   it("mounts without profiles and opens editor only after add", async () => {
-    mockLaunchProfiles.mockResolvedValue([]);
+    const created: LaunchProfileDTO = {
+      id: "new-1",
+      name: "新しいプロファイル",
+      arguments: "",
+      isDefault: true,
+    };
+    mockLaunchProfiles
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([created]);
+    mockSaveLaunchProfile.mockResolvedValue(undefined);
+
     const wrapper = mount(LauncherView);
     await flushPromises();
 

@@ -162,7 +162,8 @@
     "saveAndContinue": "保存して続行",
     "discardAndContinue": "破棄",
     "toggleSidebar": "プロファイル一覧の表示切替",
-    "moreActions": "その他の操作"
+    "moreActions": "その他の操作",
+    "errSave": "プロファイルの保存に失敗しました"
   },
   "gallery": {
     "title": "ギャラリー",
