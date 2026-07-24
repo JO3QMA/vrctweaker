@@ -291,10 +291,10 @@ func validateAutomationItem(item *automation.AutomationItem) error {
 				return fmt.Errorf("%w: %v", ErrAutomationInvalidItem, err)
 			}
 		}
-		if _, err := automation.ParseConditions(item.ConditionsJSON); err != nil {
+		conds, err := automation.ParseConditions(item.ConditionsJSON)
+		if err != nil {
 			return fmt.Errorf("%w: conditions: %v", ErrAutomationInvalidItem, err)
 		}
-		conds, _ := automation.ParseConditions(item.ConditionsJSON)
 		conds = automation.CompatibleConditions(item.TriggerType, conds)
 		b, err := json.Marshal(conds)
 		if err != nil {
