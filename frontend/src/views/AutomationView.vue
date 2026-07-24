@@ -116,7 +116,7 @@
                 <el-checkbox
                   v-for="d in weekdayOptions"
                   :key="d.value"
-                  :label="d.value"
+                  :value="d.value"
                 >
                   {{ d.label }}
                 </el-checkbox>
@@ -368,6 +368,7 @@ import { getRuntime } from "../wails/runtime";
 import {
   defaultAction,
   dtoToEditor,
+  editorToDto,
   newAutomationId,
   type EditorState,
 } from "./automationEditorMapping";
@@ -430,56 +431,6 @@ const actionOptions = computed(() => [
     label: t("automation.actionSetVRChatWindowSize"),
   },
 ]);
-
-function editorToDto(state: EditorState): AutomationItemDTO {
-  const dto: AutomationItemDTO = {
-    id: state.id,
-    name: state.name,
-    kind: state.kind,
-    isEnabled: state.isEnabled,
-  };
-  if (state.kind === "script") {
-    dto.scriptSource = state.scriptSource;
-    return dto;
-  }
-  dto.triggerType = state.triggerType;
-  if (state.triggerType === "schedule.tick") {
-    dto.scheduleJson = JSON.stringify({
-      weekdays: state.scheduleWeekdays,
-      hour: state.scheduleHour,
-      minute: state.scheduleMinute,
-    });
-  }
-  const conds: Array<{ type: string; vrcUserId?: string }> = [];
-  if (state.vrchatRunning) conds.push({ type: "vrchat_running" });
-  if (state.friendUserId) {
-    conds.push({ type: "friend_is", vrcUserId: state.friendUserId });
-  }
-  dto.conditionsJson = JSON.stringify(conds);
-  dto.actionsJson = JSON.stringify(
-    state.actions.map((a) => {
-      const payload: Record<string, string | number> = {};
-      if (a.type === "change_status") payload.status = a.status;
-      if (a.type === "set_power_plan") {
-        if (a.powerPlanMode === "guid" && a.powerPlanGuid) {
-          payload.guid = a.powerPlanGuid;
-        } else {
-          payload.preset = a.powerPlanPreset;
-        }
-      }
-      if (a.type === "set_vrchat_window_size") {
-        payload.width = a.windowWidth;
-        payload.height = a.windowHeight;
-      }
-      return {
-        type: a.type,
-        payload,
-        continueOnError: a.continueOnError || undefined,
-      };
-    }),
-  );
-  return dto;
-}
 
 function captureSnapshot() {
   savedSnapshot.value = editor.value ? JSON.stringify(editor.value) : "";

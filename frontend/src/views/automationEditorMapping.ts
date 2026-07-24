@@ -77,6 +77,58 @@ function parseJsonArray<T>(raw: string, field: string): T[] {
   return value as T[];
 }
 
+/** Maps editor state into a persistable item DTO. */
+export function editorToDto(state: EditorState): AutomationItemDTO {
+  const dto: AutomationItemDTO = {
+    id: state.id,
+    name: state.name,
+    kind: state.kind,
+    isEnabled: state.isEnabled,
+  };
+  if (state.kind === "script") {
+    dto.scriptSource = state.scriptSource;
+    return dto;
+  }
+  dto.triggerType = state.triggerType;
+  if (state.triggerType === "schedule.tick") {
+    dto.scheduleJson = JSON.stringify({
+      weekdays: state.scheduleWeekdays,
+      hour: state.scheduleHour,
+      minute: state.scheduleMinute,
+    });
+  }
+  const conds: Array<{ type: string; vrcUserId?: string }> = [];
+  if (state.vrchatRunning) conds.push({ type: "vrchat_running" });
+  // friend_is only applies to friend_joined; leftover picker state must not block schedule/process.
+  if (state.triggerType === "friend_joined" && state.friendUserId) {
+    conds.push({ type: "friend_is", vrcUserId: state.friendUserId });
+  }
+  dto.conditionsJson = JSON.stringify(conds);
+  dto.actionsJson = JSON.stringify(
+    state.actions.map((a) => {
+      const payload: Record<string, string | number> = {};
+      if (a.type === "change_status") payload.status = a.status;
+      if (a.type === "set_power_plan") {
+        if (a.powerPlanMode === "guid" && a.powerPlanGuid) {
+          payload.guid = a.powerPlanGuid;
+        } else {
+          payload.preset = a.powerPlanPreset;
+        }
+      }
+      if (a.type === "set_vrchat_window_size") {
+        payload.width = a.windowWidth;
+        payload.height = a.windowHeight;
+      }
+      return {
+        type: a.type,
+        payload,
+        continueOnError: a.continueOnError || undefined,
+      };
+    }),
+  );
+  return dto;
+}
+
 /** Maps a persisted item into editor state. Throws AutomationItemParseError on bad JSON. */
 export function dtoToEditor(dto: AutomationItemDTO): EditorState {
   if (dto.kind !== "script" && dto.kind !== "rule") {

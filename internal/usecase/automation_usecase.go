@@ -294,6 +294,13 @@ func validateAutomationItem(item *automation.AutomationItem) error {
 		if _, err := automation.ParseConditions(item.ConditionsJSON); err != nil {
 			return fmt.Errorf("%w: conditions: %v", ErrAutomationInvalidItem, err)
 		}
+		conds, _ := automation.ParseConditions(item.ConditionsJSON)
+		conds = automation.CompatibleConditions(item.TriggerType, conds)
+		b, err := json.Marshal(conds)
+		if err != nil {
+			return fmt.Errorf("%w: conditions: %v", ErrAutomationInvalidItem, err)
+		}
+		item.ConditionsJSON = string(b)
 		if _, err := automation.ParseActions(item.ActionsJSON); err != nil {
 			return fmt.Errorf("%w: actions: %v", ErrAutomationInvalidItem, err)
 		}

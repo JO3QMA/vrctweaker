@@ -120,6 +120,10 @@ func (uc *AutomationUseCase) buildEvalContext(ctx context.Context, ev automation
 	ec := &automation.EvalContext{
 		TriggerType: ev.Type,
 		Payload:     ev.Payload,
+		Now:         ev.At,
+	}
+	if ec.Now.IsZero() {
+		ec.Now = time.Now()
 	}
 	if uc.procChecker != nil {
 		running, err := uc.procChecker.VRChatRunning()
@@ -343,26 +347,28 @@ func (uc *AutomationUseCase) appendRunLog(e automation.RunLogEntry) {
 
 func (uc *AutomationUseCase) schedulerLoop(ctx context.Context) {
 	defer uc.schedulerWG.Done()
-	ticker := time.NewTicker(automation.ScheduleTickResolution)
-	defer ticker.Stop()
 	var lastKey string
 	for {
+		now := time.Now()
+		next := automation.NextMinuteBoundary(now)
+		timer := time.NewTimer(time.Until(next))
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return
-		case t := <-ticker.C:
+		case <-timer.C:
 			func() {
 				defer func() {
 					if rec := recover(); rec != nil {
 						log.Printf("automation: scheduler panic: %v", rec)
 					}
 				}()
-				key := t.Format("2006-01-02T15:04")
+				key := next.Format("2006-01-02T15:04")
 				if key == lastKey {
 					return
 				}
 				lastKey = key
-				uc.fireScheduleTick(ctx, t)
+				uc.fireScheduleTick(ctx, next)
 			}()
 		}
 	}
@@ -383,8 +389,8 @@ func (uc *AutomationUseCase) fireScheduleTick(ctx context.Context, t time.Time) 
 			continue
 		}
 		if automation.ScheduleMatches(sched, t) {
-			// One schedule.tick per minute; handleEvent evaluates all matching items.
-			uc.PublishEvent(automation.Event{Type: automation.EventScheduleTick, Payload: nil})
+			// One schedule.tick per minute; handleEvent re-checks each item's schedule.
+			uc.PublishEvent(automation.Event{Type: automation.EventScheduleTick, At: t})
 			return
 		}
 	}

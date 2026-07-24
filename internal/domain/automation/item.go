@@ -69,6 +69,9 @@ func (s ScheduleRule) Validate() error {
 	if s.Minute < 0 || s.Minute > 59 {
 		return fmt.Errorf("minute must be 0-59")
 	}
+	if len(s.Weekdays) == 0 {
+		return fmt.Errorf("weekdays required")
+	}
 	seen := make(map[int]struct{}, len(s.Weekdays))
 	for _, d := range s.Weekdays {
 		if d < 0 || d > 6 {
