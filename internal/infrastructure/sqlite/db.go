@@ -67,14 +67,15 @@ func applySchema(db *sql.DB) error {
 		return err
 	}
 
-	// Seed default launch profile if none exist
+	// Seed Desktop + VR launch profiles when none exist (no backfill for existing DBs).
 	var count int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM launch_profiles`).Scan(&count); err != nil {
 		return err
 	}
 	if count == 0 {
-		_, err := db.Exec(`INSERT INTO launch_profiles (id, name, arguments, is_default, created_at, updated_at)
-			VALUES ('default-desktop', 'Desktop', '--no-vr', 1, datetime('now'), datetime('now'))`)
+		_, err := db.Exec(`INSERT INTO launch_profiles (id, name, arguments, is_default, created_at, updated_at) VALUES
+			('default-desktop', 'Desktop', '--no-vr', 1, datetime('now'), datetime('now')),
+			('default-vr', 'VR', '', 0, datetime('now'), datetime('now'))`)
 		if err != nil {
 			return err
 		}
