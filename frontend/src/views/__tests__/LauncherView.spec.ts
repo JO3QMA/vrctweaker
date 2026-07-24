@@ -567,6 +567,16 @@ describe("LauncherView", () => {
     await flushPromises();
 
     expect(errorSpy).toHaveBeenCalled();
+    expect(mockSaveLaunchProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "1",
+        name: "Renamed",
+      }),
+    );
+    // selected.arguments must stay at the pre-save server value on failure
+    expect(mockSaveLaunchProfile.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ arguments: expect.any(String) }),
+    );
     errorSpy.mockRestore();
   });
 

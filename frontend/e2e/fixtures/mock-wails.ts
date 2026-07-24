@@ -195,7 +195,11 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         SaveLaunchProfile: (p) => {
           const next = Object.assign({}, p);
           if (!next.id) {
-            next.id = "profile-" + String(launchProfiles.length + 1);
+            const maxId = launchProfiles.reduce(function(max, cur) {
+              const num = Number(String(cur.id || "").replace(/^profile-/, ""));
+              return Math.max(max, Number.isNaN(num) ? 0 : num);
+            }, 0);
+            next.id = "profile-" + String(maxId + 1);
           }
           const idx = launchProfiles.findIndex(function(x) { return x.id === next.id; });
           if (idx >= 0) launchProfiles[idx] = next;

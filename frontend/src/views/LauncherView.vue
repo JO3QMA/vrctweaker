@@ -845,19 +845,30 @@ async function requestAddNew() {
       profiles.value.find((p) => p.name === name);
     if (created) {
       await openProfile(created);
+      if (gen !== profileSaveGen) return;
     } else if (profiles.value.length > 0) {
       const fallback =
         profiles.value.find((p) => p.isDefault) ?? profiles.value[0];
       await openProfile(fallback);
+      if (gen !== profileSaveGen) return;
     }
   } catch (e) {
     if (gen !== profileSaveGen) return;
     showSaveError(e);
-    profiles.value = await App.launchProfiles();
+    try {
+      profiles.value = await App.launchProfiles();
+    } catch (listErr) {
+      if (gen !== profileSaveGen) return;
+      showSaveError(listErr);
+      return;
+    }
     if (gen !== profileSaveGen) return;
     if (!previousId) return;
     const prev = profiles.value.find((p) => p.id === previousId);
-    if (prev) await openProfile(prev);
+    if (prev) {
+      await openProfile(prev);
+      if (gen !== profileSaveGen) return;
+    }
   }
 }
 
@@ -902,8 +913,10 @@ async function save(): Promise<boolean> {
     const argsStr = await App.mergeLaunchArgsForGUI(
       sanitizeLaunchArgs(launchArgs.value),
     );
-    selected.value.arguments = argsStr;
-    await App.saveLaunchProfile(selected.value);
+    await App.saveLaunchProfile({
+      ...selected.value,
+      arguments: argsStr,
+    });
     if (gen !== profileSaveGen) return false;
     profiles.value = await App.launchProfiles();
     if (gen !== profileSaveGen) return false;
@@ -916,6 +929,7 @@ async function save(): Promise<boolean> {
       return false;
     }
     await openProfile(refreshed);
+    if (gen !== profileSaveGen) return false;
     return true;
   } catch (e) {
     if (gen !== profileSaveGen) return false;
