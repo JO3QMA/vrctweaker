@@ -57,11 +57,7 @@
             <el-button class="btn-save" type="primary" @click="save">
               {{ t("launcher.save") }}
             </el-button>
-            <el-dropdown
-              v-if="selected.id"
-              trigger="click"
-              @command="onOverflowCommand"
-            >
+            <el-dropdown trigger="click" @command="onOverflowCommand">
               <el-button
                 data-testid="profile-overflow-btn"
                 :aria-label="t('launcher.moreActions')"
@@ -541,10 +537,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted } from "vue";
+import { ref, reactive, computed, onMounted, onBeforeUnmount } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { ElMessageBox } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import { Expand, Fold } from "@element-plus/icons-vue";
 import {
   App,
@@ -556,12 +552,14 @@ import {
   defaultValueOptionsEnabled,
   hasAdvancedLaunchOptionsEnabled,
   isLaunchProfileEditDirty,
+  nextDefaultLaunchProfileName,
   readSidebarOpenPreference,
   syncValueOptionsEnabled,
   writeSidebarOpenPreference,
   type LaunchProfileEditSnapshot,
   type ValueOptionsEnabled,
 } from "./launcher/launcherProfileEdits";
+import { formatError } from "../utils/formatError";
 
 const { t } = useI18n();
 
@@ -615,7 +613,12 @@ const valueOptionsEnabled = reactive<ValueOptionsEnabled>(
 const savedSnapshot = ref<LaunchProfileEditSnapshot | null>(null);
 const sidebarOpen = ref(readSidebarOpenPreference());
 const advancedCollapseActive = ref<string[]>([]);
+/** Bumped on state-changing save/create; skip post-await updates after unmount. */
+let profileSaveGen = 0;
 
+function showSaveError(e: unknown) {
+  ElMessage.error(formatError(e, t("launcher.errSave")));
+}
 const currentSnapshot = computed((): LaunchProfileEditSnapshot | null => {
   if (!selected.value) return null;
   return {
@@ -687,7 +690,7 @@ async function guardUnsavedEdits(): Promise<boolean> {
   if (!isDirty.value) return true;
   const choice = await promptUnsavedChoice();
   if (choice === "cancel") return false;
-  if (choice === "save") await save();
+  if (choice === "save") return await save();
   return true;
 }
 
@@ -805,27 +808,68 @@ onMounted(async () => {
   }
 });
 
+onBeforeUnmount(() => {
+  profileSaveGen += 1;
+});
+
 async function requestSelect(p: LaunchProfileDTO) {
-  if (selected.value?.id === p.id && selected.value.name === p.name) return;
+  if (selected.value?.id === p.id && selected.value?.name === p.name) return;
   const ok = await guardUnsavedEdits();
   if (!ok) return;
   await openProfile(p);
 }
 
 async function requestAddNew() {
+  const previousId = selected.value?.id ?? "";
   const ok = await guardUnsavedEdits();
   if (!ok) return;
-  selected.value = {
-    id: "",
-    name: t("launcher.newProfileDefaultName"),
-    arguments: "",
-    isDefault: profiles.value.length === 0,
-  };
-  launchArgs.value = defaultLaunchArgs();
-  Object.assign(valueOptionsEnabled, defaultValueOptionsEnabled());
-  resolutionPreset.value = "FHD";
-  syncAdvancedCollapseOpenState();
-  captureSnapshot();
+
+  const beforeIds = new Set(profiles.value.map((p) => p.id));
+  const name = nextDefaultLaunchProfileName(
+    t("launcher.newProfileDefaultName"),
+    profiles.value.map((p) => p.name),
+  );
+  const gen = ++profileSaveGen;
+  try {
+    await App.saveLaunchProfile({
+      id: "",
+      name,
+      arguments: "",
+      isDefault: profiles.value.length === 0,
+    });
+    if (gen !== profileSaveGen) return;
+    profiles.value = await App.launchProfiles();
+    if (gen !== profileSaveGen) return;
+    const created =
+      profiles.value.find((p) => !beforeIds.has(p.id)) ??
+      profiles.value.find((p) => p.name === name);
+    if (created) {
+      await openProfile(created);
+      if (gen !== profileSaveGen) return;
+    } else if (profiles.value.length > 0) {
+      const fallback =
+        profiles.value.find((p) => p.isDefault) ?? profiles.value[0];
+      await openProfile(fallback);
+      if (gen !== profileSaveGen) return;
+    }
+  } catch (e) {
+    if (gen !== profileSaveGen) return;
+    showSaveError(e);
+    try {
+      profiles.value = await App.launchProfiles();
+    } catch (listErr) {
+      if (gen !== profileSaveGen) return;
+      showSaveError(listErr);
+      return;
+    }
+    if (gen !== profileSaveGen) return;
+    if (!previousId) return;
+    const prev = profiles.value.find((p) => p.id === previousId);
+    if (prev) {
+      await openProfile(prev);
+      if (gen !== profileSaveGen) return;
+    }
+  }
 }
 
 function sanitizeLaunchArgs(a: LaunchArgsParsedDTO): LaunchArgsParsedDTO {
@@ -862,20 +906,36 @@ function sanitizeLaunchArgs(a: LaunchArgsParsedDTO): LaunchArgsParsedDTO {
   return base;
 }
 
-async function save() {
-  if (!selected.value) return;
-  const argsStr = await App.mergeLaunchArgsForGUI(
-    sanitizeLaunchArgs(launchArgs.value),
-  );
-  selected.value.arguments = argsStr;
-  await App.saveLaunchProfile(selected.value);
-  profiles.value = await App.launchProfiles();
-  const id = selected.value.id;
-  const refreshed =
-    profiles.value.find((p) =>
+async function save(): Promise<boolean> {
+  if (!selected.value) return false;
+  const gen = ++profileSaveGen;
+  try {
+    const argsStr = await App.mergeLaunchArgsForGUI(
+      sanitizeLaunchArgs(launchArgs.value),
+    );
+    await App.saveLaunchProfile({
+      ...selected.value,
+      arguments: argsStr,
+    });
+    if (gen !== profileSaveGen) return false;
+    profiles.value = await App.launchProfiles();
+    if (gen !== profileSaveGen) return false;
+    const id = selected.value.id;
+    const refreshed = profiles.value.find((p) =>
       id ? p.id === id : p.name === selected.value!.name,
-    ) ?? selected.value;
-  await openProfile(refreshed);
+    );
+    if (!refreshed) {
+      showSaveError(new Error(t("launcher.errProfileNotFound")));
+      return false;
+    }
+    await openProfile(refreshed);
+    if (gen !== profileSaveGen) return false;
+    return true;
+  } catch (e) {
+    if (gen !== profileSaveGen) return false;
+    showSaveError(e);
+    return false;
+  }
 }
 
 async function launch() {
@@ -929,9 +989,8 @@ onBeforeRouteLeave(async (_to, _from, next) => {
     return;
   }
   if (choice === "save") {
-    try {
-      await save();
-    } catch {
+    const saved = await save();
+    if (!saved) {
       next(false);
       return;
     }

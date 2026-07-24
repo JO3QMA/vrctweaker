@@ -162,7 +162,9 @@
     "saveAndContinue": "Save and continue",
     "discardAndContinue": "Discard",
     "toggleSidebar": "Toggle profile list",
-    "moreActions": "More actions"
+    "moreActions": "More actions",
+    "errSave": "Failed to save launch profile",
+    "errProfileNotFound": "Saved profile was not found in the list"
   },
   "gallery": {
     "title": "Gallery",

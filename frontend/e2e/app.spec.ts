@@ -84,6 +84,13 @@ test.describe("VRChat Tweaker", () => {
       await expect(page.locator('input[type="text"]').first()).toHaveValue(
         "新しいプロファイル",
       );
+      await expect(
+        page
+          .locator(".profiles-list .profile-name")
+          .getByText("新しいプロファイル"),
+      ).toBeVisible();
+      await expect(page.getByTestId("unsaved-banner")).toHaveCount(0);
+      await expect(page.getByTestId("profile-overflow-btn")).toBeVisible();
     });
 
     test("can edit profile and click save", async ({ page }) => {

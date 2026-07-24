@@ -162,7 +162,9 @@
     "saveAndContinue": "저장하고 계속",
     "discardAndContinue": "버리기",
     "toggleSidebar": "프로필 목록 표시 전환",
-    "moreActions": "기타 작업"
+    "moreActions": "기타 작업",
+    "errSave": "프로필 저장에 실패했습니다",
+    "errProfileNotFound": "저장한 프로필을 목록에서 찾을 수 없습니다"
   },
   "gallery": {
     "title": "갤러리",

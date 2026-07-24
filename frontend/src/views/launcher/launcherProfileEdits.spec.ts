@@ -6,6 +6,7 @@ import {
   hasAdvancedLaunchOptionsEnabled,
   isLaunchProfileEditDirty,
   launchProfileEditsEqual,
+  nextDefaultLaunchProfileName,
   syncValueOptionsEnabled,
   type LaunchProfileEditSnapshot,
 } from "./launcherProfileEdits";
@@ -84,5 +85,33 @@ describe("launcherProfileEdits", () => {
     const saved = snapshot();
     const current = snapshot({ name: "Renamed" });
     expect(isLaunchProfileEditDirty(saved, current)).toBe(true);
+  });
+
+  describe("nextDefaultLaunchProfileName", () => {
+    const base = "新しいプロファイル";
+
+    it("uses the base name when free", () => {
+      expect(nextDefaultLaunchProfileName(base, ["Desktop"])).toBe(base);
+    });
+
+    it("uses 2 when the base name is taken", () => {
+      expect(nextDefaultLaunchProfileName(base, [base])).toBe(`${base} 2`);
+    });
+
+    it("picks the smallest free n when base and 2 are taken", () => {
+      expect(nextDefaultLaunchProfileName(base, [base, `${base} 2`])).toBe(
+        `${base} 3`,
+      );
+    });
+
+    it("fills a gap when only numbered names exist", () => {
+      expect(nextDefaultLaunchProfileName(base, [`${base} 2`])).toBe(base);
+    });
+
+    it("ignores names outside the base + space + n pattern", () => {
+      expect(
+        nextDefaultLaunchProfileName(base, [base, `${base}2`, `${base} 02`]),
+      ).toBe(`${base} 2`);
+    });
   });
 });

@@ -149,3 +149,16 @@ export function writeSidebarOpenPreference(open: boolean): void {
   if (typeof localStorage === "undefined") return;
   localStorage.setItem(LAUNCHER_SIDEBAR_OPEN_KEY, open ? "1" : "0");
 }
+
+/** Next free default display name: base, then `base 2`, `base 3`, … */
+export function nextDefaultLaunchProfileName(
+  base: string,
+  existingNames: readonly string[],
+): string {
+  const taken = new Set(existingNames);
+  if (!taken.has(base)) return base;
+  for (let n = 2; ; n++) {
+    const candidate = `${base} ${n}`;
+    if (!taken.has(candidate)) return candidate;
+  }
+}

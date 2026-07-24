@@ -82,6 +82,22 @@ test.describe("Launcher redesign", () => {
     await expect(page.locator("h1")).toContainText("ダッシュボード");
   });
 
+  test("creates and selects a saved profile from new profile button", async ({
+    page,
+  }) => {
+    await page.getByRole("button", { name: "+ 新規プロファイル" }).click();
+
+    await expect(
+      page
+        .locator(".profiles-list .profile-name")
+        .getByText("新しいプロファイル"),
+    ).toBeVisible();
+    await expect(
+      page.locator('.profile-editor input[type="text"]').first(),
+    ).toHaveValue("新しいプロファイル");
+    await expect(page.getByTestId("unsaved-banner")).toHaveCount(0);
+  });
+
   test("deletes saved profile from overflow menu", async ({ page }) => {
     await page.getByTestId("profile-card-profile-2").click();
     await expect(
