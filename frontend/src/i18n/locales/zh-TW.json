@@ -162,7 +162,9 @@
     "saveAndContinue": "儲存並繼續",
     "discardAndContinue": "捨棄",
     "toggleSidebar": "切換設定檔清單",
-    "moreActions": "其他操作"
+    "moreActions": "其他操作",
+    "errSave": "無法儲存啟動設定檔",
+    "errProfileNotFound": "找不到已儲存的啟動設定檔"
   },
   "gallery": {
     "title": "相簿",
