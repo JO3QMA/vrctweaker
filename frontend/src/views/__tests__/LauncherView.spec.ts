@@ -570,6 +570,72 @@ describe("LauncherView", () => {
     errorSpy.mockRestore();
   });
 
+  it("shows error when save succeeds but profile is missing from list", async () => {
+    const { ElMessage } = await import("element-plus");
+    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
+      close: () => {},
+    }));
+    mockSaveLaunchProfile.mockResolvedValue(undefined);
+    mockLaunchProfiles
+      .mockResolvedValueOnce([...sampleProfiles])
+      .mockResolvedValueOnce([]);
+
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    await wrapper.find(".profile-editor .el-input input").setValue("Renamed");
+    await wrapper.find(".btn-save").trigger("click");
+    await flushPromises();
+
+    expect(errorSpy).toHaveBeenCalled();
+    expect(
+      (
+        wrapper.find(".profile-editor .el-input input")
+          .element as HTMLInputElement
+      ).value,
+    ).toBe("Renamed");
+    errorSpy.mockRestore();
+  });
+
+  it("falls back to default profile when created row cannot be resolved", async () => {
+    mockSaveLaunchProfile.mockResolvedValue(undefined);
+    mockLaunchProfiles
+      .mockResolvedValueOnce([...sampleProfiles])
+      .mockResolvedValueOnce([...sampleProfiles]);
+
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    await wrapper.find(".btn-add").trigger("click");
+    await flushPromises();
+
+    expect(
+      (
+        wrapper.find(".profile-editor .el-input input")
+          .element as HTMLInputElement
+      ).value,
+    ).toBe("Default");
+  });
+
+  it("refreshes profile list after create failure even with empty selection", async () => {
+    const { ElMessage } = await import("element-plus");
+    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
+      close: () => {},
+    }));
+    mockLaunchProfiles.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    mockSaveLaunchProfile.mockRejectedValue(new Error("db locked"));
+
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    await wrapper.find(".btn-add").trigger("click");
+    await flushPromises();
+
+    expect(errorSpy).toHaveBeenCalled();
+    expect(mockLaunchProfiles.mock.calls.length).toBeGreaterThanOrEqual(2);
+    errorSpy.mockRestore();
+  });
+
   it("saves edits on an existing profile via merge and saveLaunchProfile", async () => {
     const wrapper = mount(LauncherView);
     await flushPromises();

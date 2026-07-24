@@ -163,7 +163,8 @@
     "discardAndContinue": "破棄",
     "toggleSidebar": "プロファイル一覧の表示切替",
     "moreActions": "その他の操作",
-    "errSave": "プロファイルの保存に失敗しました"
+    "errSave": "プロファイルの保存に失敗しました",
+    "errProfileNotFound": "保存したプロファイルが一覧に見つかりません"
   },
   "gallery": {
     "title": "ギャラリー",

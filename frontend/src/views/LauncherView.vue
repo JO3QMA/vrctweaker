@@ -845,17 +845,18 @@ async function requestAddNew() {
       profiles.value.find((p) => p.name === name);
     if (created) {
       await openProfile(created);
+    } else if (profiles.value.length > 0) {
+      const fallback =
+        profiles.value.find((p) => p.isDefault) ?? profiles.value[0];
+      await openProfile(fallback);
     }
   } catch (e) {
     if (gen !== profileSaveGen) return;
     showSaveError(e);
+    profiles.value = await App.launchProfiles();
+    if (gen !== profileSaveGen) return;
     if (!previousId) return;
-    let prev = profiles.value.find((p) => p.id === previousId);
-    if (!prev) {
-      profiles.value = await App.launchProfiles();
-      if (gen !== profileSaveGen) return;
-      prev = profiles.value.find((p) => p.id === previousId);
-    }
+    const prev = profiles.value.find((p) => p.id === previousId);
     if (prev) await openProfile(prev);
   }
 }
@@ -907,10 +908,13 @@ async function save(): Promise<boolean> {
     profiles.value = await App.launchProfiles();
     if (gen !== profileSaveGen) return false;
     const id = selected.value.id;
-    const refreshed =
-      profiles.value.find((p) =>
-        id ? p.id === id : p.name === selected.value!.name,
-      ) ?? selected.value;
+    const refreshed = profiles.value.find((p) =>
+      id ? p.id === id : p.name === selected.value!.name,
+    );
+    if (!refreshed) {
+      showSaveError(new Error(t("launcher.errProfileNotFound")));
+      return false;
+    }
     await openProfile(refreshed);
     return true;
   } catch (e) {

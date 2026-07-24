@@ -163,7 +163,8 @@
     "discardAndContinue": "放弃",
     "toggleSidebar": "切换配置列表",
     "moreActions": "更多操作",
-    "errSave": "无法保存启动配置"
+    "errSave": "无法保存启动配置",
+    "errProfileNotFound": "在列表中找不到已保存的配置"
   },
   "gallery": {
     "title": "相册",

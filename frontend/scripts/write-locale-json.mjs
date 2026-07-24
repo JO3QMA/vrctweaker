@@ -163,6 +163,7 @@ const en = {
     toggleSidebar: "Toggle profile list",
     moreActions: "More actions",
     errSave: "Failed to save launch profile",
+    errProfileNotFound: "Saved profile was not found in the list",
   },
   gallery: {
     title: "Gallery",
@@ -566,6 +567,7 @@ const ja = deepMerge(en, {
     toggleSidebar: "プロファイル一覧の表示切替",
     moreActions: "その他の操作",
     errSave: "プロファイルの保存に失敗しました",
+    errProfileNotFound: "保存したプロファイルが一覧に見つかりません",
   },
   gallery: {
     title: "ギャラリー",
@@ -962,6 +964,7 @@ const ko = deepMerge(en, {
     toggleSidebar: "프로필 목록 표시 전환",
     moreActions: "기타 작업",
     errSave: "프로필 저장에 실패했습니다",
+    errProfileNotFound: "저장한 프로필을 목록에서 찾을 수 없습니다",
   },
   gallery: {
     title: "갤러리",
@@ -1336,6 +1339,7 @@ const zhTW = deepMerge(en, {
     toggleSidebar: "切換設定檔清單",
     moreActions: "其他操作",
     errSave: "無法儲存啟動設定檔",
+    errProfileNotFound: "找不到已儲存的啟動設定檔",
   },
   gallery: {
     title: "相簿",
@@ -1705,6 +1709,7 @@ const zhCN = deepMerge(en, {
     toggleSidebar: "切换配置列表",
     moreActions: "更多操作",
     errSave: "无法保存启动配置",
+    errProfileNotFound: "在列表中找不到已保存的配置",
   },
   gallery: {
     title: "相册",
