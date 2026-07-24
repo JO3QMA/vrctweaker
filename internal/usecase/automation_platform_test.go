@@ -193,6 +193,28 @@ func TestAutomation_scheduleTick_skipsNonMatchingItem(t *testing.T) {
 	}
 }
 
+func TestAutomation_save_emptyConditionsJSONIsArray(t *testing.T) {
+	ctx := context.Background()
+	repo := &mockAutomationItemRepo{}
+	uc := newTestAutomationUseCase(repo, nil)
+	sched, err := json.Marshal(automation.ScheduleRule{Weekdays: []int{1}, Hour: 9, Minute: 0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	item := &automation.AutomationItem{
+		ID: "s1", Name: "sched", Kind: automation.KindRule, IsEnabled: true,
+		TriggerType:  automation.EventScheduleTick,
+		ScheduleJSON: string(sched),
+		ActionsJSON:  `[{"type":"change_status","payload":{"status":"busy"}}]`,
+	}
+	if err := uc.SaveItem(ctx, item); err != nil {
+		t.Fatal(err)
+	}
+	if item.ConditionsJSON != "[]" {
+		t.Fatalf("ConditionsJSON=%q, want []", item.ConditionsJSON)
+	}
+}
+
 func mustParseSchedule(raw string) *automation.ScheduleRule {
 	s, err := automation.ParseSchedule(raw)
 	if err != nil {

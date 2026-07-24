@@ -79,3 +79,13 @@ func TestNextMinuteBoundary(t *testing.T) {
 		t.Fatalf("got %v want %v", got, want)
 	}
 }
+
+func TestCompatibleConditions_emptyIsNonNil(t *testing.T) {
+	got := CompatibleConditions(EventScheduleTick, nil)
+	if got == nil {
+		t.Fatal("want non-nil empty slice for json.Marshal to []")
+	}
+	if len(got) != 0 {
+		t.Fatalf("len=%d", len(got))
+	}
+}

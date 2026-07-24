@@ -135,7 +135,7 @@ func (uc *AutomationUseCase) GetItem(ctx context.Context, id string) (*automatio
 
 // SaveItem validates and persists an item.
 func (uc *AutomationUseCase) SaveItem(ctx context.Context, item *automation.AutomationItem) error {
-	if err := validateAutomationItem(item); err != nil {
+	if err := sanitizeAndValidateAutomationItem(item); err != nil {
 		return err
 	}
 	if item.ID == "" {
@@ -267,7 +267,9 @@ func itemToLegacyRule(item *automation.AutomationItem) *automation.AutomationRul
 	return r
 }
 
-func validateAutomationItem(item *automation.AutomationItem) error {
+// sanitizeAndValidateAutomationItem validates an item and normalizes fields
+// that must be consistent on disk (e.g. strips incompatible conditions).
+func sanitizeAndValidateAutomationItem(item *automation.AutomationItem) error {
 	if item == nil {
 		return ErrAutomationInvalidItem
 	}

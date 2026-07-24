@@ -54,10 +54,8 @@ func EvalItem(item *AutomationItem, ctx *EvalContext) (bool, error) {
 
 // CompatibleConditions drops conditions that cannot apply to the trigger
 // (e.g. leftover friend_is after switching a rule to schedule.tick).
+// Always returns a non-nil slice so callers can json.Marshal to "[]" not "null".
 func CompatibleConditions(trigger string, conds []Condition) []Condition {
-	if len(conds) == 0 {
-		return conds
-	}
 	out := make([]Condition, 0, len(conds))
 	for _, c := range conds {
 		if c.Type == "friend_is" && trigger != EventFriendJoined {
@@ -69,6 +67,8 @@ func CompatibleConditions(trigger string, conds []Condition) []Condition {
 }
 
 // NextMinuteBoundary returns the start of the next wall-clock minute after now.
+// Truncate operates on the absolute instant; for minute resolution this matches
+// local clock minutes in every fixed-offset zone.
 func NextMinuteBoundary(now time.Time) time.Time {
 	return now.Truncate(ScheduleTickResolution).Add(ScheduleTickResolution)
 }
