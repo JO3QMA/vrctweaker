@@ -176,9 +176,81 @@ func TestOpen_seedsDefaults(t *testing.T) {
 	}
 
 	launcherRepo := NewLauncherProfileRepository(db)
+	list, err := launcherRepo.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 2 {
+		t.Fatalf("seed profiles count=%d want 2: %#v", len(list), list)
+	}
+
+	desktop, err := launcherRepo.GetByID(ctx, "default-desktop")
+	if err != nil || desktop == nil {
+		t.Fatalf("default-desktop: %#v err=%v", desktop, err)
+	}
+	if desktop.Name != "Desktop" || desktop.Arguments != "--no-vr" || !desktop.IsDefault {
+		t.Fatalf("default-desktop fields: %#v", desktop)
+	}
+
+	vr, err := launcherRepo.GetByID(ctx, "default-vr")
+	if err != nil || vr == nil {
+		t.Fatalf("default-vr: %#v err=%v", vr, err)
+	}
+	if vr.Name != "VR" || vr.Arguments != "" || vr.IsDefault {
+		t.Fatalf("default-vr fields: %#v", vr)
+	}
+
 	def, err := launcherRepo.GetDefault(ctx)
-	if err != nil || def == nil || def.Name != "Desktop" {
-		t.Fatalf("seed profile: %#v err=%v", def, err)
+	if err != nil || def == nil || def.ID != "default-desktop" {
+		t.Fatalf("GetDefault: %#v err=%v", def, err)
+	}
+}
+
+func TestOpen_doesNotAddVRWhenProfilesExist(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := filepath.Join(dir, "vrchat-tweaker.db")
+	db, err := sql.Open("sqlite", dbPath+"?_pragma=foreign_keys(1)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if applyErr := applySchema(db); applyErr != nil {
+		t.Fatal(applyErr)
+	}
+	if _, delErr := db.Exec(`DELETE FROM launch_profiles`); delErr != nil {
+		t.Fatal(delErr)
+	}
+	if _, insErr := db.Exec(`INSERT INTO launch_profiles (id, name, arguments, is_default, created_at, updated_at)
+		VALUES ('legacy-desktop', 'Desktop', '--no-vr', 1, datetime('now'), datetime('now'))`); insErr != nil {
+		t.Fatal(insErr)
+	}
+	if closeErr := db.Close(); closeErr != nil {
+		t.Fatal(closeErr)
+	}
+
+	reopened, err := Open(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = reopened.Close() })
+
+	ctx := context.Background()
+	repo := NewLauncherProfileRepository(reopened)
+	list, err := repo.List(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 {
+		t.Fatalf("expected no backfill, got %d profiles: %#v", len(list), list)
+	}
+	if list[0].ID != "legacy-desktop" {
+		t.Fatalf("unexpected profile: %#v", list[0])
+	}
+	vr, err := repo.GetByID(ctx, "default-vr")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if vr != nil {
+		t.Fatalf("default-vr must not be added to existing DB: %#v", vr)
 	}
 }
 
@@ -194,6 +266,14 @@ func TestApplySchema_idempotent(t *testing.T) {
 	}
 	if err := applySchema(db); err != nil {
 		t.Fatalf("second applySchema: %v", err)
+	}
+
+	var count int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM launch_profiles`).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Fatalf("launch_profiles count=%d want 2 after idempotent applySchema", count)
 	}
 }
 
