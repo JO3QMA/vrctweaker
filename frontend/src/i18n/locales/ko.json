@@ -206,7 +206,8 @@
     "colJoin": "입장",
     "colLeave": "퇴장",
     "colDisplayName": "표시 이름",
-    "colWorldName": "월드 이름"
+    "colWorldName": "월드 이름",
+    "friendMark": "친구"
   },
   "encounterHistory": {
     "titleUser": "사용자별 조우 기록",

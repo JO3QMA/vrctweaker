@@ -222,6 +222,10 @@ _Avoid_: 匿名ユーザー, 不明ユーザー（VRChat の匿名インスタ�
 Activity に並べる User encounter の時系列一覧。画面上の見出しは「遭遇ログ」。入室・退室・表示名・ワールド名の4列（インスタンス ID は含めない）。入室時刻の新しい順が既定。表示名での絞り込みと、ユーザー・ワールド別の深掘りへの導線を持つ。
 _Avoid_: 遭遇履歴（ユーザー／ワールド別の絞り込み画面全体を指す場合があるため）, ログ, タイムライン
 
+**Encounter friend mark**:
+Encounter log 上で、当該 User encounter の相手が **Encounter log の再取得時点**で Listable friend であることを示す印。遭遇当時のフレンド関係のスナップショットではない（解除後は過去行からも消え、後から Listable friend になった相手は過去行にも付く）。Friends 同期だけでは Encounter log を再取得せず、マークも更新しない。未ログイン・キャッシュ未同期・users_cache に行が無いとき、および判定不能のときは付かない。印は表示名テキストを書き換えない（列の表示名は User encounter＝ログ由来のまま）。表示名の左に固定幅のスロットを取り、非 Listable friend 行は空にして名前の左端を揃える。v1 では Encounter log のみ（Encounter history には付けない）。
+_Avoid_: フレンドマーク（Friends のお気に入り★と混同しやすいため）, 遭遇時フレンド（当時スナップショットを含意するため）, フレンドアイコン（表示形式の俗称）, リアルタイムフレンド印（Friends 同期即時反映を含意するため）
+
 **Display name filter**:
 Encounter log 上の唯一の絞り込み。表示名の部分一致のみ（クライアント側）。ワールドや期間での絞り込みは Encounter history 側に任せる。
 _Avoid_: 検索, フィルタ（Gallery の World search や Date range filter と混同しやすいため）

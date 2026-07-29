@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
+	"vrchat-tweaker/internal/domain/identity"
 )
 
 // PlaySessionRepository persists play sessions in SQLite.
@@ -233,7 +234,7 @@ func (r *UserEncounterRepository) List(ctx context.Context, filter *activity.Enc
 // ListWithContext returns encounters with world display name and user cache timestamps.
 func (r *UserEncounterRepository) ListWithContext(ctx context.Context, filter *activity.EncounterFilter) ([]*activity.EncounterWithContext, error) {
 	query := `SELECT e.id, e.vrc_user_id, e.display_name, e.instance_id, e.world_id, e.joined_at, e.left_at, IFNULL(e.log_source_path, ''),
-		w.display_name, u.first_seen_at, u.last_contact_at
+		w.display_name, u.first_seen_at, u.last_contact_at, u.user_kind, u.display_name
 		FROM user_encounters e
 		LEFT JOIN world_info w ON w.world_id = e.world_id
 		LEFT JOIN users_cache u ON u.vrc_user_id = e.vrc_user_id
@@ -607,9 +608,9 @@ func buildUserEncounter(id, vrcUserID, displayName string, instanceID, worldID s
 func scanEncounterWithContextRow(rows *sql.Rows) (*activity.EncounterWithContext, error) {
 	var id, vrcUserID, displayName, joinedAtStr, logSource string
 	var instanceID, worldID, leftAt sql.NullString
-	var worldDN, firstSeen, lastContact sql.NullString
+	var worldDN, firstSeen, lastContact, userKind, cacheDisplayName sql.NullString
 	if err := rows.Scan(&id, &vrcUserID, &displayName, &instanceID, &worldID, &joinedAtStr, &leftAt, &logSource,
-		&worldDN, &firstSeen, &lastContact); err != nil {
+		&worldDN, &firstSeen, &lastContact, &userKind, &cacheDisplayName); err != nil {
 		return nil, err
 	}
 	jt, _ := time.Parse(time.RFC3339, joinedAtStr)
@@ -658,5 +659,13 @@ func scanEncounterWithContextRow(rows *sql.Rows) (*activity.EncounterWithContext
 			out.IsFirstEncounter = true
 		}
 	}
+	cache := &identity.UserCache{}
+	if userKind.Valid {
+		cache.UserKind = identity.UserKind(userKind.String)
+	}
+	if cacheDisplayName.Valid {
+		cache.DisplayName = cacheDisplayName.String
+	}
+	out.IsListableFriend = identity.IsListableFriend(cache)
 	return out, nil
 }

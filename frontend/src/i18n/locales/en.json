@@ -206,7 +206,8 @@
     "colJoin": "Joined",
     "colLeave": "Left",
     "colDisplayName": "Display name",
-    "colWorldName": "World name"
+    "colWorldName": "World name",
+    "friendMark": "Friend"
   },
   "encounterHistory": {
     "titleUser": "Encounters by user",

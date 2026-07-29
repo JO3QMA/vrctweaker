@@ -32,6 +32,8 @@ type EncounterWithContext struct {
 	UserFirstSeenAt   *time.Time
 	UserLastContactAt *time.Time
 	IsFirstEncounter  bool
+	// IsListableFriend is true when users_cache marks the user as a Listable friend at list time.
+	IsListableFriend bool
 }
 
 // EncounterFilter provides optional filtering for encounter list queries.

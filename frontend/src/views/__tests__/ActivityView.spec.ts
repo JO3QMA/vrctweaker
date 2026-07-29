@@ -379,6 +379,44 @@ describe("ActivityView", () => {
     });
   });
 
+  it("shows encounter friend mark only for listable friends", async () => {
+    mockEncounters.mockResolvedValue([
+      {
+        id: "1",
+        vrcUserId: "u1",
+        displayName: "FriendUser",
+        instanceId: "inst",
+        joinedAt: "2024-01-01T12:00:00.000Z",
+        isListableFriend: true,
+      },
+      {
+        id: "2",
+        vrcUserId: "u2",
+        displayName: "Stranger",
+        instanceId: "inst",
+        joinedAt: "2024-01-02T12:00:00.000Z",
+        isListableFriend: false,
+      },
+      {
+        id: "3",
+        vrcUserId: "",
+        displayName: "Anonymous",
+        instanceId: "inst",
+        joinedAt: "2024-01-03T12:00:00.000Z",
+        isListableFriend: false,
+      },
+    ]);
+    const { wrapper } = await mountActivity();
+
+    const slots = wrapper.findAll(".encounter-friend-mark-slot");
+    expect(slots).toHaveLength(3);
+
+    const marks = wrapper.findAll('[data-testid="encounter-friend-mark"]');
+    expect(marks).toHaveLength(1);
+    expect(marks[0]!.attributes("aria-label")).toBe("フレンド");
+    expect(marks[0]!.attributes("title")).toBe("フレンド");
+  });
+
   it("loads encounters, stats, and retention days on mount", async () => {
     await mountActivity();
     expect(mockEncounters).toHaveBeenCalled();
