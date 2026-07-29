@@ -22,6 +22,7 @@ const sampleEncounter: UserEncounterDTO = {
   joinedAt: "2025-01-01T12:00:00Z",
   leftAt: "2025-01-01T13:00:00Z",
   isFirstEncounter: false,
+  isListableFriend: false,
 };
 
 describe("EncounterHistoryDetailView", () => {

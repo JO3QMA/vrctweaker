@@ -64,18 +64,32 @@
             min-width="120"
           >
             <template #default="{ row }">
-              <el-button
-                v-if="row.vrcUserId"
-                link
-                type="primary"
-                class="timeline-link"
-                @click="openUserFromEncounter(row)"
-              >
-                {{ row.displayName }}
-              </el-button>
-              <span v-else class="timeline-name-muted">{{
-                row.displayName
-              }}</span>
+              <div class="encounter-name-cell">
+                <span class="encounter-friend-mark-slot">
+                  <el-icon
+                    v-if="row.isListableFriend"
+                    class="encounter-friend-mark"
+                    data-testid="encounter-friend-mark"
+                    role="img"
+                    :title="t('activity.friendMark')"
+                    :aria-label="t('activity.friendMark')"
+                  >
+                    <UserFilled />
+                  </el-icon>
+                </span>
+                <el-button
+                  v-if="row.vrcUserId"
+                  link
+                  type="primary"
+                  class="timeline-link"
+                  @click="openUserFromEncounter(row)"
+                >
+                  {{ row.displayName }}
+                </el-button>
+                <span v-else class="timeline-name-muted">{{
+                  row.displayName
+                }}</span>
+              </div>
             </template>
           </el-table-column>
           <el-table-column :label="t('activity.colWorldName')" min-width="120">
@@ -113,7 +127,7 @@
 </template>
 
 <script setup lang="ts">
-import { Search } from "@element-plus/icons-vue";
+import { Search, UserFilled } from "@element-plus/icons-vue";
 import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
@@ -443,9 +457,32 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 100%;
+  min-width: 0;
 }
 
 .timeline-name-muted {
+  color: var(--text-secondary);
+}
+
+.encounter-name-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.encounter-friend-mark-slot {
+  flex: 0 0 12px;
+  width: 12px;
+  height: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.encounter-friend-mark {
+  font-size: 12px;
   color: var(--text-secondary);
 }
 </style>

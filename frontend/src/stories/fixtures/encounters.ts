@@ -11,6 +11,19 @@ export const sampleActivityEncounters: UserEncounterDTO[] = [
     joinedAt: new Date(Date.now() - 3_600_000).toISOString(),
     leftAt: new Date(Date.now() - 1_800_000).toISOString(),
     isFirstEncounter: false,
+    isListableFriend: true,
+  },
+  {
+    id: "story-2",
+    vrcUserId: "usr_story_stranger",
+    displayName: "通りすがり",
+    instanceId: "inst_story",
+    worldId: "wrld_story",
+    worldDisplayName: "Sample World",
+    joinedAt: new Date(Date.now() - 7_200_000).toISOString(),
+    leftAt: new Date(Date.now() - 5_400_000).toISOString(),
+    isFirstEncounter: false,
+    isListableFriend: false,
   },
 ];
 
@@ -25,6 +38,7 @@ export const encounterByUserSample: UserEncounterDTO[] = [
     joinedAt: "2026-03-01T12:00:00+09:00",
     leftAt: "2026-03-01T13:00:00+09:00",
     isFirstEncounter: false,
+    isListableFriend: false,
   },
 ];
 
@@ -39,6 +53,7 @@ export const encounterByWorldSample: UserEncounterDTO[] = [
     joinedAt: "2026-03-02T09:00:00+09:00",
     leftAt: "2026-03-02T10:30:00+09:00",
     isFirstEncounter: false,
+    isListableFriend: false,
   },
 ];
 
@@ -53,5 +68,6 @@ export const userProfileEncounters: UserEncounterDTO[] = [
     joinedAt: "2026-02-01T10:00:00+09:00",
     leftAt: "2026-02-01T11:00:00+09:00",
     isFirstEncounter: false,
+    isListableFriend: false,
   },
 ];

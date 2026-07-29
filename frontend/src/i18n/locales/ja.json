@@ -206,7 +206,8 @@
     "colJoin": "入室",
     "colLeave": "退室",
     "colDisplayName": "表示名",
-    "colWorldName": "ワールド名"
+    "colWorldName": "ワールド名",
+    "friendMark": "フレンド"
   },
   "encounterHistory": {
     "titleUser": "ユーザー別 遭遇履歴",

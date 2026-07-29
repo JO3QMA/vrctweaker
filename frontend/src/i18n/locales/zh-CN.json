@@ -206,7 +206,8 @@
     "colJoin": "进入",
     "colLeave": "离开",
     "colDisplayName": "显示名称",
-    "colWorldName": "世界名称"
+    "colWorldName": "世界名称",
+    "friendMark": "好友"
   },
   "encounterHistory": {
     "titleUser": "按用户的相遇记录",

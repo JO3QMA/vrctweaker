@@ -319,6 +319,77 @@ func TestUserEncounterRepository_ListWithContext_joinsWorldAndUserCache(t *testi
 	if !row.IsFirstEncounter {
 		t.Fatal("expected IsFirstEncounter")
 	}
+	if !row.IsListableFriend {
+		t.Fatal("expected IsListableFriend for user_kind=friend with display name")
+	}
+}
+
+func TestUserEncounterRepository_ListWithContext_isListableFriend(t *testing.T) {
+	ctx := context.Background()
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if schemaErr := applySchema(db); schemaErr != nil {
+		t.Fatal(schemaErr)
+	}
+
+	userRepo := NewUserCacheRepository(db)
+	encRepo := NewUserEncounterRepository(db)
+	t0 := time.Date(2024, 6, 1, 12, 0, 0, 0, time.UTC)
+
+	if saveErr := userRepo.Save(ctx, &identity.UserCache{
+		VRCUserID: "usr_friend", DisplayName: "FriendName", Status: "active",
+		UserKind: identity.UserKindFriend, LastUpdated: t0,
+	}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+	if saveErr := userRepo.Save(ctx, &identity.UserCache{
+		VRCUserID: "usr_contact", DisplayName: "ContactName", Status: "active",
+		UserKind: identity.UserKindContact, LastUpdated: t0,
+	}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+	if saveErr := userRepo.Save(ctx, &identity.UserCache{
+		VRCUserID: "usr_empty_friend", DisplayName: "   ", Status: "active",
+		UserKind: identity.UserKindFriend, LastUpdated: t0,
+	}); saveErr != nil {
+		t.Fatal(saveErr)
+	}
+
+	cases := []struct {
+		id, vrcUserID, displayName string
+		want                       bool
+	}{
+		{"enc_friend", "usr_friend", "FriendName", true},
+		{"enc_contact", "usr_contact", "ContactName", false},
+		{"enc_empty", "usr_empty_friend", "LoggedName", false},
+		{"enc_miss", "usr_missing", "NoCache", false},
+	}
+	for _, tc := range cases {
+		if encErr := encRepo.Save(ctx, &activity.UserEncounter{
+			ID: tc.id, VRCUserID: tc.vrcUserID, DisplayName: tc.displayName,
+			InstanceID: "i", WorldID: "w", JoinedAt: t0,
+		}); encErr != nil {
+			t.Fatal(encErr)
+		}
+	}
+
+	list, err := encRepo.ListWithContext(ctx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]bool{}
+	for _, row := range list {
+		got[row.Encounter.ID] = row.IsListableFriend
+	}
+	for _, tc := range cases {
+		if got[tc.id] != tc.want {
+			t.Errorf("%s: IsListableFriend=%v, want %v", tc.id, got[tc.id], tc.want)
+		}
+	}
 }
 
 func TestUserEncounterRepository_ListWithContext_firstEncounterWithinOneSecond(t *testing.T) {

@@ -155,6 +155,7 @@ type UserEncounterDTO struct {
 	UserFirstSeenAt   string `json:"userFirstSeenAt,omitempty"`
 	UserLastContactAt string `json:"userLastContactAt,omitempty"`
 	IsFirstEncounter  bool   `json:"isFirstEncounter"`
+	IsListableFriend  bool   `json:"isListableFriend"`
 	JoinedAt          string `json:"joinedAt"`
 	LeftAt            string `json:"leftAt,omitempty"`
 }
@@ -171,6 +172,7 @@ func toEncounterDTOsFromContext(list []*activity.EncounterWithContext) []UserEnc
 			WorldID:          e.WorldID,
 			WorldDisplayName: row.WorldDisplayName,
 			IsFirstEncounter: row.IsFirstEncounter,
+			IsListableFriend: row.IsListableFriend,
 			JoinedAt:         formatRFC3339(e.JoinedAt),
 		}
 		if e.LeftAt != nil {
