@@ -55,9 +55,9 @@
   },
   "dashboard": {
     "presenceChange": {
-      "title": "プレゼンス変更",
-      "loading": "プレゼンスを読み込み中…",
-      "loadError": "プレゼンスを読み込めませんでした。",
+      "title": "ステータス変更",
+      "loading": "ステータスを読み込み中…",
+      "loadError": "ステータスを読み込めませんでした。",
       "retry": "再試行",
       "loginRequired": "VRChat にログインするとステータスを変更できます。",
       "goToSettings": "設定へ",

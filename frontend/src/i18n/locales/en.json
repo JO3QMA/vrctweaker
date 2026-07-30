@@ -55,9 +55,9 @@
   },
   "dashboard": {
     "presenceChange": {
-      "title": "Presence",
-      "loading": "Loading presence…",
-      "loadError": "Could not load presence.",
+      "title": "Status",
+      "loading": "Loading status…",
+      "loadError": "Could not load status.",
       "retry": "Retry",
       "loginRequired": "Log in to VRChat to change your status.",
       "goToSettings": "Settings",

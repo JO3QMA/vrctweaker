@@ -55,9 +55,9 @@
   },
   "dashboard": {
     "presenceChange": {
-      "title": "線上狀態",
-      "loading": "正在載入線上狀態…",
-      "loadError": "無法載入線上狀態。",
+      "title": "狀態",
+      "loading": "正在載入狀態…",
+      "loadError": "無法載入狀態。",
       "retry": "重試",
       "loginRequired": "登入 VRChat 後可變更狀態。",
       "goToSettings": "設定",

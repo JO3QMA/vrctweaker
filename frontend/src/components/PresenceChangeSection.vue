@@ -373,13 +373,18 @@ onUnmounted(() => {
 .presence-color-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  gap: 0.35rem;
+  margin-bottom: 0.5rem;
+}
+
+.presence-color-buttons :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
 .presence-color-btn {
   border: 1px solid transparent;
   color: #fff !important;
+  flex: 0 0 auto;
 }
 
 .presence-color-btn:hover,
@@ -415,17 +420,26 @@ onUnmounted(() => {
 
 .presence-description-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 0.5rem;
-  align-items: flex-start;
+  align-items: center;
+}
+
+.presence-description-row :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
 .presence-description-input {
-  flex: 1 1 200px;
+  flex: 1 1 auto;
   min-width: 0;
+  width: 100%;
+}
+
+.presence-description-input :deep(.el-input) {
+  width: 100%;
 }
 
 .presence-apply-btn {
-  flex-shrink: 0;
+  flex: 0 0 auto;
 }
 </style>
