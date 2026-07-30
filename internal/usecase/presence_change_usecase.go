@@ -136,7 +136,8 @@ func (uc *PresenceChangeUseCase) loadHistory(ctx context.Context) ([]string, err
 	}
 	var history []string
 	if err := json.Unmarshal([]byte(raw), &history); err != nil {
-		return nil, fmt.Errorf("parse history json: %w", err)
+		log.Printf("presence change: corrupt history json, ignoring: %v", err)
+		return nil, nil
 	}
 	if len(history) > maxPresenceDescriptionHistory {
 		history = history[:maxPresenceDescriptionHistory]

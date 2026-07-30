@@ -59,6 +59,7 @@
       "loading": "상태를 불러오는 중…",
       "loadError": "상태를 불러오지 못했습니다.",
       "retry": "다시 시도",
+      "refreshError": "상태를 업데이트하지 못했습니다.",
       "loginRequired": "VRChat에 로그인하면 상태를 변경할 수 있습니다.",
       "goToSettings": "설정",
       "colorGroupLabel": "상태 색",

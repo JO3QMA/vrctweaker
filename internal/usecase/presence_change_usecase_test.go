@@ -187,6 +187,21 @@ func TestPresenceChangeUseCase_Apply_selfRefreshFailureReturnsAppliedValues(t *t
 	}
 }
 
+func TestPresenceChangeUseCase_GetSection_corruptHistoryIgnored(t *testing.T) {
+	ctx := context.Background()
+	settings := newMockSettingsRepo()
+	settings.m[PresenceDescriptionHistoryKey] = `{not-json`
+	idUC := newPresenceTestIdentity(t, true)
+	uc := NewPresenceChangeUseCase(idUC.uc, settings)
+	got, err := uc.GetSection(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.LoggedIn || len(got.History) != 0 {
+		t.Fatalf("got=%+v", got)
+	}
+}
+
 func TestPresenceChangeUseCase_Apply_invalidStatus(t *testing.T) {
 	ctx := context.Background()
 	uc := NewPresenceChangeUseCase(newPresenceTestIdentity(t, true).uc, newMockSettingsRepo())

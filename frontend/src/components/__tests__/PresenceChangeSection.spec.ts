@@ -246,6 +246,21 @@ describe("PresenceChangeSection", () => {
     errorSpy.mockRestore();
   });
 
+  it("shows warning when refresh fails after initial load", async () => {
+    vi.useFakeTimers();
+    const warnSpy = vi
+      .spyOn(ElMessage, "warning")
+      .mockImplementation(() => ({ close: () => {} }));
+    mountSection();
+    await flushPromises();
+    mockGetPresenceChangeSection.mockRejectedValueOnce(new Error("db down"));
+    eventHandlers["identity:self-cache-changed"]?.();
+    await vi.advanceTimersByTimeAsync(300);
+    await flushPromises();
+    expect(warnSpy).toHaveBeenCalledWith("ステータスを更新できませんでした。");
+    warnSpy.mockRestore();
+  });
+
   it("reloads on self cache changed when not dirty", async () => {
     vi.useFakeTimers();
     mountSection();

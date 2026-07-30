@@ -59,6 +59,7 @@
       "loading": "Loading status…",
       "loadError": "Could not load status.",
       "retry": "Retry",
+      "refreshError": "Could not refresh status.",
       "loginRequired": "Log in to VRChat to change your status.",
       "goToSettings": "Settings",
       "colorGroupLabel": "Status color",

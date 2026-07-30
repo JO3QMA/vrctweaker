@@ -125,16 +125,34 @@ const draftDescription = ref("");
 const snapshotStatus = ref<PresenceStatus>("active");
 const snapshotDescription = ref("");
 
+type LoadOptions = {
+  onlyIfNotDirty?: boolean;
+  skipSnapshotUpdate?: boolean;
+};
+
 let selfCacheDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let unsubscribeSelfCacheChanged: (() => void) | undefined;
 // Load mutex + pending queue: inFlight blocks overlap; pendingRefresh replays one
-// deferred load in finally. pendingRefreshOnlyIfNotDirty is OR-merged so any queued
-// onlyIfNotDirty request makes the replay conservative. generation drops stale responses.
+// deferred load in finally. pendingLoadOptions OR-merges onlyIfNotDirty and
+// skipSnapshotUpdate across queued calls. generation drops stale responses.
 let generation = 0;
 let inFlight = false;
 let pendingRefresh = false;
-let pendingRefreshOnlyIfNotDirty = false;
+let pendingLoadOptions: LoadOptions | undefined;
 let hasLoadedOnce = false;
+
+function mergePendingLoadOptions(
+  queued: LoadOptions | undefined,
+  incoming: LoadOptions | undefined,
+): LoadOptions {
+  return {
+    onlyIfNotDirty:
+      Boolean(queued?.onlyIfNotDirty) || Boolean(incoming?.onlyIfNotDirty),
+    skipSnapshotUpdate:
+      Boolean(queued?.skipSnapshotUpdate) ||
+      Boolean(incoming?.skipSnapshotUpdate),
+  };
+}
 
 const colorOptions = computed(() => [
   {
@@ -204,19 +222,13 @@ function normalizeStatus(status: string): PresenceStatus {
   }
 }
 
-type LoadOptions = {
-  onlyIfNotDirty?: boolean;
-  skipSnapshotUpdate?: boolean;
-};
-
 async function load(options?: LoadOptions): Promise<void> {
   if (options?.onlyIfNotDirty && isDirty.value) {
     return;
   }
   if (inFlight) {
     pendingRefresh = true;
-    pendingRefreshOnlyIfNotDirty =
-      pendingRefreshOnlyIfNotDirty || Boolean(options?.onlyIfNotDirty);
+    pendingLoadOptions = mergePendingLoadOptions(pendingLoadOptions, options);
     return;
   }
   inFlight = true;
@@ -241,6 +253,8 @@ async function load(options?: LoadOptions): Promise<void> {
       loadError.value = true;
       loggedIn.value = false;
       history.value = [];
+    } else {
+      ElMessage.warning(t("dashboard.presenceChange.refreshError"));
     }
   } finally {
     inFlight = false;
@@ -248,10 +262,10 @@ async function load(options?: LoadOptions): Promise<void> {
       loading.value = false;
     }
     if (pendingRefresh && gen === generation) {
-      const nextOnlyIfNotDirty = pendingRefreshOnlyIfNotDirty;
+      const nextOptions = pendingLoadOptions;
       pendingRefresh = false;
-      pendingRefreshOnlyIfNotDirty = false;
-      void load({ onlyIfNotDirty: nextOnlyIfNotDirty });
+      pendingLoadOptions = undefined;
+      void load(nextOptions);
     }
   }
 }

@@ -1173,9 +1173,12 @@ func (a *App) ClearStoredCredential() error {
 // GetVRChatCurrentUser returns the logged-in user's profile from the VRChat API.
 // When forceRefresh is true, bypasses the local self-profile cache and refetches from the API.
 func (a *App) GetVRChatCurrentUser(forceRefresh bool) (VRChatCurrentUserDTO, error) {
-	u, _, err := a.identity.GetCurrentUser(a.ctx, forceRefresh)
+	u, refreshed, err := a.identity.GetCurrentUser(a.ctx, forceRefresh)
 	if err != nil {
 		return VRChatCurrentUserDTO{}, err
+	}
+	if refreshed {
+		runtime.EventsEmit(a.ctx, selfCacheChangedEvent, struct{}{})
 	}
 	if u == nil {
 		return VRChatCurrentUserDTO{}, errors.New("empty current user")

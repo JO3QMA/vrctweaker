@@ -59,6 +59,7 @@
       "loading": "正在載入狀態…",
       "loadError": "無法載入狀態。",
       "retry": "重試",
+      "refreshError": "無法更新狀態。",
       "loginRequired": "登入 VRChat 後可變更狀態。",
       "goToSettings": "設定",
       "colorGroupLabel": "狀態顏色",
