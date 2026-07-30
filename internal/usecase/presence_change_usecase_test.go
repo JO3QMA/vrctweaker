@@ -38,9 +38,13 @@ func TestPrependUniqueHistory(t *testing.T) {
 	if len(got) != 2 || got[0] != "a" || got[1] != "b" {
 		t.Fatalf("dedupe move: %v", got)
 	}
+	got = prependUniqueHistory([]string{"b", "a", "b"}, "c")
+	if len(got) != 3 || got[0] != "c" || got[1] != "b" || got[2] != "a" {
+		t.Fatalf("dedupe existing: %v", got)
+	}
 	long := make([]string, 25)
 	for i := range long {
-		long[i] = "x"
+		long[i] = fmt.Sprintf("item%d", i)
 	}
 	got = prependUniqueHistory(long, "new")
 	if len(got) != maxPresenceDescriptionHistory || got[0] != "new" {
@@ -165,6 +169,21 @@ func TestPresenceChangeUseCase_recordHistory_concurrent(t *testing.T) {
 		if _, ok := seen[want]; !ok {
 			t.Fatalf("missing history entry %q in %v", want, hist)
 		}
+	}
+}
+
+func TestPresenceChangeUseCase_Apply_selfRefreshFailureReturnsAppliedValues(t *testing.T) {
+	ctx := context.Background()
+	settings := newMockSettingsRepo()
+	idUC := newPresenceTestIdentity(t, true)
+	idUC.userRepo.getSelfFailAfter = 2
+	uc := NewPresenceChangeUseCase(idUC.uc, settings)
+	res, err := uc.Apply(ctx, "busy", "focus")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res.Status != "busy" || res.StatusDescription != "focus" {
+		t.Fatalf("res=%+v", res)
 	}
 }
 

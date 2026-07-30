@@ -54,6 +54,7 @@ func NormalizePresenceStatus(status string) string {
 	if _, ok := validPresenceStatuses[s]; ok {
 		return s
 	}
+	log.Printf("presence: unknown status %q, falling back to 'active'", status)
 	return "active"
 }
 
@@ -110,7 +111,11 @@ func (uc *PresenceChangeUseCase) Apply(ctx context.Context, status, description 
 	}
 	self, err := uc.identity.GetSelfProfile(ctx, true)
 	if err != nil {
-		return nil, fmt.Errorf("presence change apply: self profile: %w", err)
+		log.Printf("presence change apply: self profile refresh failed after successful status update: %v", err)
+		return &PresenceChangeApplyResult{
+			Status:            NormalizePresenceStatus(status),
+			StatusDescription: description,
+		}, nil
 	}
 	return &PresenceChangeApplyResult{
 		Status:            NormalizePresenceStatus(self.Status),
@@ -159,12 +164,17 @@ func (uc *PresenceChangeUseCase) recordHistory(ctx context.Context, description 
 
 func prependUniqueHistory(history []string, item string) []string {
 	out := make([]string, 0, len(history)+1)
-	out = append(out, item)
-	for _, h := range history {
-		if h == item {
-			continue
+	seen := make(map[string]struct{}, len(history)+1)
+	add := func(entry string) {
+		if _, ok := seen[entry]; ok {
+			return
 		}
-		out = append(out, h)
+		seen[entry] = struct{}{}
+		out = append(out, entry)
+	}
+	add(item)
+	for _, h := range history {
+		add(h)
 		if len(out) >= maxPresenceDescriptionHistory {
 			break
 		}

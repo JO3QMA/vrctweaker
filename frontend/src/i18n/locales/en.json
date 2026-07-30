@@ -58,6 +58,7 @@
       "title": "Presence",
       "loading": "Loading presence…",
       "loadError": "Could not load presence.",
+      "retry": "Retry",
       "loginRequired": "Log in to VRChat to change your status.",
       "goToSettings": "Settings",
       "colorGroupLabel": "Status color",

@@ -58,6 +58,7 @@
       "title": "在线状态",
       "loading": "正在加载在线状态…",
       "loadError": "无法加载在线状态。",
+      "retry": "重试",
       "loginRequired": "登录 VRChat 后可更改状态。",
       "goToSettings": "设置",
       "colorGroupLabel": "状态颜色",

@@ -23,7 +23,16 @@
       class="presence-change-message"
       data-testid="presence-change-load-error"
     >
-      {{ t("dashboard.presenceChange.loadError") }}
+      <p class="presence-change-error-text">
+        {{ t("dashboard.presenceChange.loadError") }}
+      </p>
+      <el-button
+        size="small"
+        data-testid="presence-change-retry"
+        @click="retryLoad"
+      >
+        {{ t("dashboard.presenceChange.retry") }}
+      </el-button>
     </div>
 
     <template v-else>
@@ -91,18 +100,20 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessage } from "element-plus";
 import { App, type PresenceChangeSectionDTO } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
 import { formatError } from "../utils/formatError";
+import { useSessionUnlock } from "../composables/useSessionUnlock";
 
 const SELF_CACHE_CHANGED_DEBOUNCE_MS = 300;
 
 type PresenceStatus = "join me" | "active" | "ask me" | "busy";
 
 const { t } = useI18n();
+const { state: unlockState } = useSessionUnlock();
 
 const loading = ref(true);
 const loadError = ref(false);
@@ -116,6 +127,9 @@ const snapshotDescription = ref("");
 
 let selfCacheDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let unsubscribeSelfCacheChanged: (() => void) | undefined;
+// Load mutex + pending queue: inFlight blocks overlap; pendingRefresh replays one
+// deferred load in finally. pendingRefreshOnlyIfNotDirty is OR-merged so any queued
+// onlyIfNotDirty request makes the replay conservative. generation drops stale responses.
 let generation = 0;
 let inFlight = false;
 let pendingRefresh = false;
@@ -155,15 +169,18 @@ const isDirty = computed(
     draftDescription.value !== snapshotDescription.value,
 );
 
-function applySection(dto: PresenceChangeSectionDTO, isInitial: boolean): void {
+function applySection(
+  dto: PresenceChangeSectionDTO,
+  options: { isInitial?: boolean; skipSnapshotUpdate?: boolean } = {},
+): void {
   history.value = dto.history ?? [];
   loggedIn.value = dto.loggedIn;
-  if (!dto.loggedIn) {
+  if (!dto.loggedIn || options.skipSnapshotUpdate) {
     return;
   }
   const status = normalizeStatus(dto.status);
   const description = dto.statusDescription ?? "";
-  if (isInitial || !isDirty.value) {
+  if (options.isInitial || !isDirty.value) {
     draftStatus.value = status;
     draftDescription.value = description;
     snapshotStatus.value = status;
@@ -179,11 +196,20 @@ function normalizeStatus(status: string): PresenceStatus {
     case "busy":
       return status;
     default:
+      console.warn(
+        "PresenceChangeSection: unexpected status, falling back to active:",
+        status,
+      );
       return "active";
   }
 }
 
-async function load(options?: { onlyIfNotDirty?: boolean }): Promise<void> {
+type LoadOptions = {
+  onlyIfNotDirty?: boolean;
+  skipSnapshotUpdate?: boolean;
+};
+
+async function load(options?: LoadOptions): Promise<void> {
   if (options?.onlyIfNotDirty && isDirty.value) {
     return;
   }
@@ -196,13 +222,17 @@ async function load(options?: { onlyIfNotDirty?: boolean }): Promise<void> {
   inFlight = true;
   pendingRefresh = false;
   const onlyIfNotDirty = Boolean(options?.onlyIfNotDirty);
+  const skipSnapshotUpdate = Boolean(options?.skipSnapshotUpdate);
   const gen = generation;
   try {
     const dto = await App.getPresenceChangeSection();
     if (gen !== generation) return;
     if (onlyIfNotDirty && isDirty.value) return;
     loadError.value = false;
-    applySection(dto, !hasLoadedOnce);
+    applySection(dto, {
+      isInitial: !hasLoadedOnce,
+      skipSnapshotUpdate,
+    });
     hasLoadedOnce = true;
   } catch (e) {
     if (gen !== generation) return;
@@ -224,6 +254,12 @@ async function load(options?: { onlyIfNotDirty?: boolean }): Promise<void> {
       void load({ onlyIfNotDirty: nextOnlyIfNotDirty });
     }
   }
+}
+
+async function retryLoad(): Promise<void> {
+  loading.value = true;
+  loadError.value = false;
+  await load();
 }
 
 function scheduleSelfCacheRefresh(): void {
@@ -273,7 +309,7 @@ async function applyPresenceChange(): Promise<void> {
     );
     syncSnapshotFromApply(result.status, result.statusDescription);
     ElMessage.success(t("dashboard.presenceChange.applySuccess"));
-    void load();
+    void load({ skipSnapshotUpdate: true });
   } catch (e) {
     ElMessage.error(formatError(e, t("dashboard.presenceChange.applyError")));
   } finally {
@@ -289,6 +325,12 @@ onMounted(async () => {
   });
   if (typeof off === "function") {
     unsubscribeSelfCacheChanged = off;
+  }
+});
+
+watch(unlockState, (state) => {
+  if (state === "unlocked" && loadError.value) {
+    void retryLoad();
   }
 });
 
@@ -318,6 +360,10 @@ onUnmounted(() => {
   font-size: 0.9rem;
   color: var(--text-secondary);
   margin: 0 0 0.75rem;
+}
+
+.presence-change-error-text {
+  margin: 0 0 0.5rem;
 }
 
 .presence-change-settings-link {

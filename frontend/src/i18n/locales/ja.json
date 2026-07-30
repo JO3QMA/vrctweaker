@@ -58,6 +58,7 @@
       "title": "プレゼンス変更",
       "loading": "プレゼンスを読み込み中…",
       "loadError": "プレゼンスを読み込めませんでした。",
+      "retry": "再試行",
       "loginRequired": "VRChat にログインするとステータスを変更できます。",
       "goToSettings": "設定へ",
       "colorGroupLabel": "ステータス色",

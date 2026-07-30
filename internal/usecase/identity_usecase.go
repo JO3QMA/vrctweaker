@@ -502,6 +502,9 @@ func (uc *IdentityUseCase) GetSelfProfile(ctx context.Context, forceRefresh bool
 	if err != nil {
 		return nil, err
 	}
+	if refreshed {
+		uc.emitSelfCacheChanged()
+	}
 	token := uc.apiClient.GetAuthToken()
 	fp := identity.AuthTokenFingerprint(token)
 	row, err := uc.userCacheRepo.GetSelfBySessionFingerprint(ctx, fp)
@@ -510,9 +513,6 @@ func (uc *IdentityUseCase) GetSelfProfile(ctx context.Context, forceRefresh bool
 	}
 	if row == nil {
 		return nil, errors.New("self profile not in cache")
-	}
-	if refreshed {
-		uc.emitSelfCacheChanged()
 	}
 	return row, nil
 }

@@ -8,7 +8,9 @@ const {
   mockApplyPresenceChange,
   mockEventsOn,
   eventHandlers,
+  unlockState,
 } = vi.hoisted(() => {
+  const { ref } = require("vue") as typeof import("vue");
   const eventHandlers: Record<string, () => void> = {};
   return {
     mockGetPresenceChangeSection: vi.fn(),
@@ -20,8 +22,15 @@ const {
       };
     }),
     eventHandlers,
+    unlockState: ref<
+      "idle" | "unlocking" | "unlocked" | "needs-relogin" | "error"
+    >("idle"),
   };
 });
+
+vi.mock("../../composables/useSessionUnlock", () => ({
+  useSessionUnlock: () => ({ state: unlockState }),
+}));
 
 vi.mock("../../wails/runtime", () => ({
   getRuntime: () => ({ EventsOn: mockEventsOn }),
@@ -82,6 +91,7 @@ function expectApplyDisabled(wrapper: VueWrapper, disabled: boolean) {
 describe("PresenceChangeSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    unlockState.value = "idle";
     for (const key of Object.keys(eventHandlers)) {
       delete eventHandlers[key];
     }
@@ -143,6 +153,44 @@ describe("PresenceChangeSection", () => {
     await flushPromises();
     expect(
       wrapper.find('[data-testid="presence-change-load-error"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="presence-change-retry"]').exists(),
+    ).toBe(true);
+  });
+
+  it("retries load when retry button is clicked", async () => {
+    mockGetPresenceChangeSection
+      .mockRejectedValueOnce(new Error("db down"))
+      .mockResolvedValueOnce(loggedInSection());
+    const wrapper = mountSection();
+    await flushPromises();
+    await wrapper.find('[data-testid="presence-change-retry"]').trigger("click");
+    await flushPromises();
+    expect(mockGetPresenceChangeSection).toHaveBeenCalledTimes(2);
+    expect(
+      wrapper.find('[data-testid="presence-change-load-error"]').exists(),
+    ).toBe(false);
+  });
+
+  it("retries load when session becomes unlocked after load error", async () => {
+    mockGetPresenceChangeSection
+      .mockRejectedValueOnce(new Error("db down"))
+      .mockResolvedValueOnce(loggedInSection());
+    const wrapper = mountSection();
+    await flushPromises();
+    expect(
+      wrapper.find('[data-testid="presence-change-load-error"]').exists(),
+    ).toBe(true);
+    mockGetPresenceChangeSection.mockReset();
+    mockGetPresenceChangeSection.mockResolvedValue(loggedInSection());
+    unlockState.value = "unlocked";
+    await flushPromises();
+    expect(
+      wrapper.find('[data-testid="presence-change-load-error"]').exists(),
+    ).toBe(false);
+    expect(
+      wrapper.find('[data-testid="presence-change-color-active"]').exists(),
     ).toBe(true);
   });
 

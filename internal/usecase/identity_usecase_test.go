@@ -56,6 +56,8 @@ type mockUserCacheRepo struct {
 	lastSaveBatch                    []*identity.UserCache
 	getSelfRow                       *identity.UserCache
 	getSelfErr                       error
+	getSelfFailAfter                 int
+	getSelfCalls                     int
 	upsertSelfErr                    error
 	deleteSelfCount                  int
 	deleteSelfErr                    error
@@ -122,6 +124,10 @@ func (m *mockUserCacheRepo) DeleteAll(_ context.Context) (int64, error) {
 }
 
 func (m *mockUserCacheRepo) GetSelfBySessionFingerprint(_ context.Context, fp string) (*identity.UserCache, error) {
+	m.getSelfCalls++
+	if m.getSelfFailAfter > 0 && m.getSelfCalls >= m.getSelfFailAfter {
+		return nil, errors.New("self profile read failed")
+	}
 	if m.getSelfErr != nil {
 		return nil, m.getSelfErr
 	}
