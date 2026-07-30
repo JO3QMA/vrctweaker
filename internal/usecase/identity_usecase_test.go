@@ -56,6 +56,8 @@ type mockUserCacheRepo struct {
 	lastSaveBatch                    []*identity.UserCache
 	getSelfRow                       *identity.UserCache
 	getSelfErr                       error
+	getSelfFailAfter                 int
+	getSelfCalls                     int
 	upsertSelfErr                    error
 	deleteSelfCount                  int
 	deleteSelfErr                    error
@@ -122,6 +124,10 @@ func (m *mockUserCacheRepo) DeleteAll(_ context.Context) (int64, error) {
 }
 
 func (m *mockUserCacheRepo) GetSelfBySessionFingerprint(_ context.Context, fp string) (*identity.UserCache, error) {
+	m.getSelfCalls++
+	if m.getSelfFailAfter > 0 && m.getSelfCalls >= m.getSelfFailAfter {
+		return nil, errors.New("self profile read failed")
+	}
 	if m.getSelfErr != nil {
 		return nil, m.getSelfErr
 	}
@@ -133,6 +139,10 @@ func (m *mockUserCacheRepo) GetSelfBySessionFingerprint(_ context.Context, fp st
 
 func (m *mockUserCacheRepo) UpsertSelf(_ context.Context, u *identity.UserCache) error {
 	m.lastUpsertSelf = u
+	if u != nil {
+		cpy := *u
+		m.getSelfRow = &cpy
+	}
 	return m.upsertSelfErr
 }
 
@@ -443,7 +453,7 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 		credStore := vrchatapi.NewStubCredentialStore()
 		apiClient := &mockAPIClient{}
 		uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo, nil)
-		_, err := uc.GetCurrentUser(ctx, false)
+		_, _, err := uc.GetCurrentUser(ctx, false)
 		if err != vrchatapi.ErrNotAuthenticated {
 			t.Fatalf("err = %v, want ErrNotAuthenticated", err)
 		}
@@ -454,12 +464,15 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 		apiClient := &mockAPIClient{token: "tok", getCurrentUser: prof}
 		repo := &mockUserCacheRepo{}
 		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
-		got, err := uc.GetCurrentUser(ctx, false)
+		got, refreshed, err := uc.GetCurrentUser(ctx, false)
 		if err != nil {
 			t.Fatalf("GetCurrentUser: %v", err)
 		}
 		if got != prof {
 			t.Fatal("profile pointer mismatch")
+		}
+		if refreshed != true {
+			t.Errorf("refreshed = %v, want true", refreshed)
 		}
 		if apiClient.getCurrentUserCalls != 1 {
 			t.Errorf("GetCurrentUser API calls want 1, got %d", apiClient.getCurrentUserCalls)
@@ -496,12 +509,15 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 		}
 		apiClient := &mockAPIClient{token: "tok", getCurrentUser: &vrchatapi.CurrentUserProfile{ID: "wrong"}}
 		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
-		got, err := uc.GetCurrentUser(ctx, false)
+		got, refreshed, err := uc.GetCurrentUser(ctx, false)
 		if err != nil {
 			t.Fatalf("GetCurrentUser: %v", err)
 		}
 		if got.ID != "usr_cached" || got.DisplayName != "Cached" {
 			t.Fatalf("got %+v", got)
+		}
+		if refreshed != false {
+			t.Errorf("refreshed = %v, want false", refreshed)
 		}
 		if apiClient.getCurrentUserCalls != 0 {
 			t.Errorf("API should not be called, got %d calls", apiClient.getCurrentUserCalls)
@@ -512,7 +528,7 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 		repo := &mockUserCacheRepo{upsertSelfErr: errors.New("disk full")}
 		apiClient := &mockAPIClient{token: "tok", getCurrentUser: &vrchatapi.CurrentUserProfile{ID: "u1"}}
 		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
-		_, err := uc.GetCurrentUser(ctx, false)
+		_, _, err := uc.GetCurrentUser(ctx, false)
 		if err == nil {
 			t.Fatal("want error from UpsertSelf")
 		}
@@ -532,18 +548,50 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 		}
 		apiClient := &mockAPIClient{token: "tok", getCurrentUser: fresh}
 		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
-		got, err := uc.GetCurrentUser(ctx, true)
+		got, refreshed, err := uc.GetCurrentUser(ctx, true)
 		if err != nil {
 			t.Fatalf("GetCurrentUser: %v", err)
 		}
 		if got.ID != "usr_fresh" || got.DisplayName != "Fresh" {
 			t.Fatalf("got %+v, want fresh profile from API", got)
 		}
+		if refreshed != true {
+			t.Errorf("refreshed = %v, want true", refreshed)
+		}
 		if apiClient.getCurrentUserCalls != 1 {
 			t.Errorf("API calls want 1, got %d", apiClient.getCurrentUserCalls)
 		}
 		if repo.lastUpsertSelf == nil || repo.lastUpsertSelf.VRCUserID != "usr_fresh" {
 			t.Fatalf("UpsertSelf want usr_fresh, got %+v", repo.lastUpsertSelf)
+		}
+	})
+
+	t.Run("cache_stale_refreshes_when_forceRefresh_false", func(t *testing.T) {
+		fp := identity.AuthTokenFingerprint("tok")
+		fresh := &vrchatapi.CurrentUserProfile{ID: "usr_fresh", DisplayName: "Fresh"}
+		repo := &mockUserCacheRepo{
+			getSelfRow: &identity.UserCache{
+				VRCUserID:          "usr_cached",
+				DisplayName:        "Cached",
+				UserKind:           identity.UserKindSelf,
+				LastUpdated:        time.Now().Add(-identity.UserCacheTTL - time.Minute),
+				SessionFingerprint: fp,
+			},
+		}
+		apiClient := &mockAPIClient{token: "tok", getCurrentUser: fresh}
+		uc := NewIdentityUseCase(repo, apiClient, vrchatapi.NewStubCredentialStore(), settingsRepo, nil)
+		got, refreshed, err := uc.GetCurrentUser(ctx, false)
+		if err != nil {
+			t.Fatalf("GetCurrentUser: %v", err)
+		}
+		if got.ID != "usr_fresh" {
+			t.Fatalf("got %+v", got)
+		}
+		if !refreshed {
+			t.Fatal("refreshed want true for stale cache")
+		}
+		if apiClient.getCurrentUserCalls != 1 {
+			t.Errorf("API calls want 1, got %d", apiClient.getCurrentUserCalls)
 		}
 	})
 
@@ -559,7 +607,7 @@ func TestIdentityUseCase_GetCurrentUser(t *testing.T) {
 		}
 		repo := &mockUserCacheRepo{}
 		uc := NewIdentityUseCase(repo, apiClient, credStore, settingsRepo, nil)
-		_, err := uc.GetCurrentUser(ctx, true)
+		_, _, err := uc.GetCurrentUser(ctx, true)
 		if !errors.Is(err, vrchatapi.ErrSessionExpired) {
 			t.Fatalf("want ErrSessionExpired, got %v", err)
 		}
@@ -1323,6 +1371,39 @@ func TestIdentityUseCase_GetSelfProfile_ok(t *testing.T) {
 	}
 	if got.VRCUserID != "usr_me" || got.UserKind != identity.UserKindSelf {
 		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestIdentityUseCase_GetSelfProfile_emitsOnStaleRefresh(t *testing.T) {
+	ctx := context.Background()
+	fp := identity.AuthTokenFingerprint("tok")
+	selfRow := &identity.UserCache{
+		VRCUserID:          "usr_me",
+		DisplayName:        "Self",
+		UserKind:           identity.UserKindSelf,
+		SessionFingerprint: fp,
+		LastUpdated:        time.Now().Add(-identity.UserCacheTTL - time.Minute),
+	}
+	userRepo := &mockUserCacheRepo{getSelfRow: selfRow}
+	apiClient := &mockAPIClient{
+		token: "tok",
+		getCurrentUser: &vrchatapi.CurrentUserProfile{
+			ID:          "usr_me",
+			DisplayName: "Self",
+		},
+	}
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	var emitted bool
+	uc.SetSelfCacheChangedHook(func() { emitted = true })
+	got, err := uc.GetSelfProfile(ctx, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.VRCUserID != "usr_me" {
+		t.Fatalf("got %+v", got)
+	}
+	if !emitted {
+		t.Fatal("expected self cache changed hook on stale refresh")
 	}
 }
 

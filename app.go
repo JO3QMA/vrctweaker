@@ -52,6 +52,7 @@ type App struct {
 	identity         *usecase.IdentityUseCase
 	automation       *usecase.AutomationUseCase
 	settings         *usecase.SettingsUseCase
+	presenceChange   *usecase.PresenceChangeUseCase
 	dbMaintenance    *usecase.DBMaintenanceUseCase
 	assetCache       *usecase.VRChatAssetCacheUseCase
 	ytdlp            *usecase.YTDLPMaintainUseCase
@@ -89,6 +90,8 @@ func NewApp() *App {
 }
 
 // startup is called when the app starts.
+const selfCacheChangedEvent = "identity:self-cache-changed"
+
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
@@ -135,6 +138,10 @@ func (a *App) startup(ctx context.Context) {
 	a.media = usecase.NewMediaUseCase(mediaRepo, worldRepo, userCacheRepo)
 	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo)
 	a.identity = usecase.NewIdentityUseCase(userCacheRepo, apiClient, credStore, settingsRepo, notify)
+	a.identity.SetSelfCacheChangedHook(func() {
+		runtime.EventsEmit(a.ctx, selfCacheChangedEvent, struct{}{})
+	})
+	a.presenceChange = usecase.NewPresenceChangeUseCase(a.identity, settingsRepo)
 	a.automation = usecase.NewAutomationUseCase(automationRepo, a.identity, sleepsuppress.NewVRChatProcessChecker())
 	a.automation.SetRunLogChangedHook(func() {
 		runtime.EventsEmit(a.ctx, "automation:run-log-changed", nil)
@@ -1166,9 +1173,12 @@ func (a *App) ClearStoredCredential() error {
 // GetVRChatCurrentUser returns the logged-in user's profile from the VRChat API.
 // When forceRefresh is true, bypasses the local self-profile cache and refetches from the API.
 func (a *App) GetVRChatCurrentUser(forceRefresh bool) (VRChatCurrentUserDTO, error) {
-	u, err := a.identity.GetCurrentUser(a.ctx, forceRefresh)
+	u, refreshed, err := a.identity.GetCurrentUser(a.ctx, forceRefresh)
 	if err != nil {
 		return VRChatCurrentUserDTO{}, err
+	}
+	if refreshed {
+		runtime.EventsEmit(a.ctx, selfCacheChangedEvent, struct{}{})
 	}
 	if u == nil {
 		return VRChatCurrentUserDTO{}, errors.New("empty current user")
@@ -1234,21 +1244,6 @@ func (a *App) GetSelfProfile(forceRefresh bool) (UserCacheDTO, error) {
 // SetFavorite updates a friend's favorite flag.
 func (a *App) SetFavorite(vrcUserID string, favorite bool) error {
 	return a.identity.SetFavorite(a.ctx, vrcUserID, favorite)
-}
-
-// SetStatus changes the user's VRChat status.
-func (a *App) SetStatus(status string) error {
-	return a.identity.SetStatus(a.ctx, status)
-}
-
-// SetStatusDescription updates the current user's VRChat status description text.
-func (a *App) SetStatusDescription(description string) error {
-	return a.identity.SetStatusDescription(a.ctx, description)
-}
-
-// SetStatusAndDescription updates VRChat status and description in one request.
-func (a *App) SetStatusAndDescription(status, description string) error {
-	return a.identity.SetStatusAndDescription(a.ctx, status, description)
 }
 
 // --- Automation bindings ---

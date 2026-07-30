@@ -16,6 +16,16 @@ type WailsDTO<T> = Omit<T, "convertValues">;
 export type LaunchProfileDTO = WailsDTO<main.LaunchProfileDTO>;
 export type DashboardRejoinDTO = WailsDTO<main.DashboardRejoinDTO>;
 export type DashboardLaunchBlockDTO = WailsDTO<main.DashboardLaunchBlockDTO>;
+export type PresenceChangeSectionDTO = {
+  loggedIn: boolean;
+  status: string;
+  statusDescription: string;
+  history: string[];
+};
+export type PresenceChangeApplyResultDTO = {
+  status: string;
+  statusDescription: string;
+};
 export type ServerStatusDTO = WailsDTO<main.ServerStatusDTO>;
 export type ServerStatusSummaryDTO = WailsDTO<main.ServerStatusSummaryDTO>;
 export type ServerStatusComponentDTO = WailsDTO<main.ServerStatusComponentDTO>;
@@ -76,6 +86,22 @@ function emptyDashboardLaunchBlock(): DashboardLaunchBlockDTO {
     profiles: [],
     selectedProfileId: "",
     rejoin: undefined,
+  };
+}
+
+function emptyPresenceChangeSection(): PresenceChangeSectionDTO {
+  return {
+    loggedIn: false,
+    status: "",
+    statusDescription: "",
+    history: [],
+  };
+}
+
+function emptyPresenceChangeApplyResult(): PresenceChangeApplyResultDTO {
+  return {
+    status: "",
+    statusDescription: "",
   };
 }
 
@@ -395,6 +421,27 @@ export const App = {
     (a) => a.GetDashboardLaunchBlock(),
     emptyDashboardLaunchBlock(),
   ),
+  getPresenceChangeSection: bindGo(
+    (a) =>
+      (
+        a as AppBindings & {
+          GetPresenceChangeSection: () => Promise<PresenceChangeSectionDTO>;
+        }
+      ).GetPresenceChangeSection(),
+    emptyPresenceChangeSection(),
+  ),
+  applyPresenceChange: bindGo(
+    (a, status: string, description: string) =>
+      (
+        a as AppBindings & {
+          ApplyPresenceChange: (
+            status: string,
+            description: string,
+          ) => Promise<PresenceChangeApplyResultDTO>;
+        }
+      ).ApplyPresenceChange(status, description),
+    emptyPresenceChangeApplyResult(),
+  ),
   getServerStatus: bindGo((a) => a.GetServerStatus(), emptyServerStatus()),
   instanceRejoin: bindGo(
     (a, profileID: string, playSessionID: string) =>
@@ -543,16 +590,6 @@ export const App = {
   setFavorite: bindGo(
     (a, vrcUserId: string, favorite: boolean) =>
       a.SetFavorite(vrcUserId, favorite),
-    undefined,
-  ),
-  setStatus: bindGo((a, status: string) => a.SetStatus(status), undefined),
-  setStatusDescription: bindGo(
-    (a, description: string) => a.SetStatusDescription(description),
-    undefined,
-  ),
-  setStatusAndDescription: bindGo(
-    (a, status: string, description: string) =>
-      a.SetStatusAndDescription(status, description),
     undefined,
   ),
   login: bindGo(

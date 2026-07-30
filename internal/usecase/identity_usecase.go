@@ -16,11 +16,12 @@ import (
 
 // IdentityUseCase handles VRChat auth, friends, and status.
 type IdentityUseCase struct {
-	userCacheRepo userCacheRepo
-	apiClient     vrchatapi.VRChatAPIClient
-	credStore     vrchatapi.CredentialStore
-	settingsRepo  appSettingsRepo
-	notify        func(title, message string) error // optional; nil skips online notifications
+	userCacheRepo      userCacheRepo
+	apiClient          vrchatapi.VRChatAPIClient
+	credStore          vrchatapi.CredentialStore
+	settingsRepo       appSettingsRepo
+	notify             func(title, message string) error // optional; nil skips online notifications
+	onSelfCacheChanged func()
 }
 
 // NewIdentityUseCase creates a new IdentityUseCase.
@@ -38,6 +39,17 @@ func NewIdentityUseCase(
 		credStore:     credStore,
 		settingsRepo:  settingsRepo,
 		notify:        notify,
+	}
+}
+
+// SetSelfCacheChangedHook registers a callback when the self users_cache row may have changed.
+func (uc *IdentityUseCase) SetSelfCacheChangedHook(h func()) {
+	uc.onSelfCacheChanged = h
+}
+
+func (uc *IdentityUseCase) emitSelfCacheChanged() {
+	if uc.onSelfCacheChanged != nil {
+		uc.onSelfCacheChanged()
 	}
 }
 
@@ -188,27 +200,28 @@ func currentUserProfileToSelfCache(p *vrchatapi.CurrentUserProfile, fingerprint 
 
 // GetCurrentUser returns the logged-in VRChat user profile (cached up to UserCacheTTL).
 // When forceRefresh is true, the API is always called and the cache is updated.
+// The second return value is true when the self cache row was refreshed from the API.
 // Requires UnlockSession to have been called first; returns ErrNotAuthenticated otherwise.
-func (uc *IdentityUseCase) GetCurrentUser(ctx context.Context, forceRefresh bool) (*vrchatapi.CurrentUserProfile, error) {
+func (uc *IdentityUseCase) GetCurrentUser(ctx context.Context, forceRefresh bool) (*vrchatapi.CurrentUserProfile, bool, error) {
 	token := uc.apiClient.GetAuthToken()
 	if token == "" {
-		return nil, vrchatapi.ErrNotAuthenticated
+		return nil, false, vrchatapi.ErrNotAuthenticated
 	}
 	fp := identity.AuthTokenFingerprint(token)
 	if !forceRefresh && fp != "" {
 		row, gerr := uc.userCacheRepo.GetSelfBySessionFingerprint(ctx, fp)
 		if gerr != nil {
-			return nil, gerr
+			return nil, false, gerr
 		}
 		if row != nil && time.Since(row.LastUpdated) < identity.UserCacheTTL {
-			return userCacheToCurrentProfile(row), nil
+			return userCacheToCurrentProfile(row), false, nil
 		}
 	}
 	u, err := uc.fetchAndUpsertCurrentUser(ctx, fp)
 	if err != nil {
-		return nil, uc.handleSessionError(err)
+		return nil, false, uc.handleSessionError(err)
 	}
-	return u, nil
+	return u, true, nil
 }
 
 // Login authenticates with VRChat and returns the plaintext auth token for the frontend
@@ -362,7 +375,7 @@ func validateVRChatStatusDescription(description string) error {
 
 // SetStatus changes the current user's status via API.
 func (uc *IdentityUseCase) SetStatus(ctx context.Context, status string) error {
-	u, err := uc.GetCurrentUser(ctx, false)
+	u, _, err := uc.GetCurrentUser(ctx, false)
 	if err != nil {
 		return err
 	}
@@ -378,7 +391,7 @@ func (uc *IdentityUseCase) SetStatusDescription(ctx context.Context, description
 	if err := validateVRChatStatusDescription(description); err != nil {
 		return err
 	}
-	u, err := uc.GetCurrentUser(ctx, false)
+	u, _, err := uc.GetCurrentUser(ctx, false)
 	if err != nil {
 		return err
 	}
@@ -394,7 +407,7 @@ func (uc *IdentityUseCase) SetStatusAndDescription(ctx context.Context, status, 
 	if err := validateVRChatStatusDescription(description); err != nil {
 		return err
 	}
-	u, err := uc.GetCurrentUser(ctx, false)
+	u, _, err := uc.GetCurrentUser(ctx, false)
 	if err != nil {
 		return err
 	}
@@ -483,10 +496,14 @@ func (uc *IdentityUseCase) isLoggedInSelfID(ctx context.Context, vrcUserID strin
 	return row.VRCUserID == vrcUserID, nil
 }
 
-// GetSelfProfile returns the cached self row for the active session, refreshing from the API when forceRefresh is true.
+// GetSelfProfile returns the cached self row for the active session, refreshing from the API when forceRefresh is true or the cache is stale.
 func (uc *IdentityUseCase) GetSelfProfile(ctx context.Context, forceRefresh bool) (*identity.UserCache, error) {
-	if _, err := uc.GetCurrentUser(ctx, forceRefresh); err != nil {
+	_, refreshed, err := uc.GetCurrentUser(ctx, forceRefresh)
+	if err != nil {
 		return nil, err
+	}
+	if refreshed {
+		uc.emitSelfCacheChanged()
 	}
 	token := uc.apiClient.GetAuthToken()
 	fp := identity.AuthTokenFingerprint(token)

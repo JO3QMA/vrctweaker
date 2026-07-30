@@ -221,6 +221,24 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
               "",
             rejoin: null,
           }),
+        GetPresenceChangeSection: () =>
+          Promise.resolve({
+            loggedIn: loggedIn,
+            status: selfProfile.status || "active",
+            statusDescription: selfProfile.statusDescription || "",
+            history: [],
+          }),
+        ApplyPresenceChange: (status, description) => {
+          if (!loggedIn) {
+            return Promise.reject(new Error("E2E mock: not logged in"));
+          }
+          selfProfile.status = status;
+          selfProfile.statusDescription = description;
+          return Promise.resolve({
+            status: status,
+            statusDescription: description,
+          });
+        },
         GetServerStatus: () => Promise.resolve(serverStatus),
         InstanceRejoin: (_profileId, _playSessionId) => Promise.resolve(),
         ParseLaunchArgsForGUI: () =>
@@ -344,9 +362,6 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         ResolveUserProfileNavigation: (id) =>
           Promise.resolve(resolveUserProfileNavigation(id)),
         SetFavorite: () => Promise.resolve(),
-        SetStatus: () => Promise.resolve(),
-        SetStatusDescription: () => Promise.resolve(),
-        SetStatusAndDescription: () => Promise.resolve(),
         Login: () => Promise.resolve({ ok: false, error: 'E2E mock' }),
         Logout: () => Promise.resolve(),
         IsLoggedIn: () => Promise.resolve(loggedIn),
