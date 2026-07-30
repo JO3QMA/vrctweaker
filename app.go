@@ -52,6 +52,7 @@ type App struct {
 	identity         *usecase.IdentityUseCase
 	automation       *usecase.AutomationUseCase
 	settings         *usecase.SettingsUseCase
+	presenceChange   *usecase.PresenceChangeUseCase
 	dbMaintenance    *usecase.DBMaintenanceUseCase
 	assetCache       *usecase.VRChatAssetCacheUseCase
 	ytdlp            *usecase.YTDLPMaintainUseCase
@@ -135,6 +136,10 @@ func (a *App) startup(ctx context.Context) {
 	a.media = usecase.NewMediaUseCase(mediaRepo, worldRepo, userCacheRepo)
 	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo)
 	a.identity = usecase.NewIdentityUseCase(userCacheRepo, apiClient, credStore, settingsRepo, notify)
+	a.identity.SetSelfCacheChangedHook(func() {
+		runtime.EventsEmit(a.ctx, selfCacheChangedEvent, struct{}{})
+	})
+	a.presenceChange = usecase.NewPresenceChangeUseCase(a.identity, settingsRepo)
 	a.automation = usecase.NewAutomationUseCase(automationRepo, a.identity, sleepsuppress.NewVRChatProcessChecker())
 	a.automation.SetRunLogChangedHook(func() {
 		runtime.EventsEmit(a.ctx, "automation:run-log-changed", nil)
@@ -1234,21 +1239,6 @@ func (a *App) GetSelfProfile(forceRefresh bool) (UserCacheDTO, error) {
 // SetFavorite updates a friend's favorite flag.
 func (a *App) SetFavorite(vrcUserID string, favorite bool) error {
 	return a.identity.SetFavorite(a.ctx, vrcUserID, favorite)
-}
-
-// SetStatus changes the user's VRChat status.
-func (a *App) SetStatus(status string) error {
-	return a.identity.SetStatus(a.ctx, status)
-}
-
-// SetStatusDescription updates the current user's VRChat status description text.
-func (a *App) SetStatusDescription(description string) error {
-	return a.identity.SetStatusDescription(a.ctx, description)
-}
-
-// SetStatusAndDescription updates VRChat status and description in one request.
-func (a *App) SetStatusAndDescription(status, description string) error {
-	return a.identity.SetStatusAndDescription(a.ctx, status, description)
 }
 
 // --- Automation bindings ---

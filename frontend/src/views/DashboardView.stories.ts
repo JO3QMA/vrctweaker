@@ -18,10 +18,16 @@ const meta = {
           selectedProfileId: sampleLaunchProfiles[0]?.id ?? "",
           rejoin: null,
         }),
+      GetPresenceChangeSection: () =>
+        Promise.resolve({
+          loggedIn: true,
+          status: "active",
+          statusDescription: "",
+          history: [],
+        }),
+      ApplyPresenceChange: (status: string, description: string) =>
+        Promise.resolve({ status, statusDescription: description }),
       LaunchVRChat: () => Promise.resolve(),
-      SetStatus: () => Promise.resolve(),
-      SetStatusDescription: () => Promise.resolve(),
-      SetStatusAndDescription: () => Promise.resolve(),
     }),
   ],
 } satisfies Meta<typeof DashboardView>;

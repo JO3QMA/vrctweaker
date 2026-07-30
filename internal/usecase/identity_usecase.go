@@ -16,11 +16,12 @@ import (
 
 // IdentityUseCase handles VRChat auth, friends, and status.
 type IdentityUseCase struct {
-	userCacheRepo userCacheRepo
-	apiClient     vrchatapi.VRChatAPIClient
-	credStore     vrchatapi.CredentialStore
-	settingsRepo  appSettingsRepo
-	notify        func(title, message string) error // optional; nil skips online notifications
+	userCacheRepo      userCacheRepo
+	apiClient          vrchatapi.VRChatAPIClient
+	credStore          vrchatapi.CredentialStore
+	settingsRepo       appSettingsRepo
+	notify             func(title, message string) error // optional; nil skips online notifications
+	onSelfCacheChanged func()
 }
 
 // NewIdentityUseCase creates a new IdentityUseCase.
@@ -38,6 +39,17 @@ func NewIdentityUseCase(
 		credStore:     credStore,
 		settingsRepo:  settingsRepo,
 		notify:        notify,
+	}
+}
+
+// SetSelfCacheChangedHook registers a callback when the self users_cache row may have changed.
+func (uc *IdentityUseCase) SetSelfCacheChangedHook(h func()) {
+	uc.onSelfCacheChanged = h
+}
+
+func (uc *IdentityUseCase) emitSelfCacheChanged() {
+	if uc.onSelfCacheChanged != nil {
+		uc.onSelfCacheChanged()
 	}
 }
 
@@ -496,6 +508,9 @@ func (uc *IdentityUseCase) GetSelfProfile(ctx context.Context, forceRefresh bool
 	}
 	if row == nil {
 		return nil, errors.New("self profile not in cache")
+	}
+	if forceRefresh {
+		uc.emitSelfCacheChanged()
 	}
 	return row, nil
 }

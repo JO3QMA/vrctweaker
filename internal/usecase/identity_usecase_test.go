@@ -133,6 +133,10 @@ func (m *mockUserCacheRepo) GetSelfBySessionFingerprint(_ context.Context, fp st
 
 func (m *mockUserCacheRepo) UpsertSelf(_ context.Context, u *identity.UserCache) error {
 	m.lastUpsertSelf = u
+	if u != nil {
+		cpy := *u
+		m.getSelfRow = &cpy
+	}
 	return m.upsertSelfErr
 }
 

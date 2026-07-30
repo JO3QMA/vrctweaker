@@ -58,6 +58,20 @@ type DashboardLaunchBlockDTO struct {
 	Rejoin            *DashboardRejoinDTO `json:"rejoin"`
 }
 
+// PresenceChangeSectionDTO is the Dashboard presence change section.
+type PresenceChangeSectionDTO struct {
+	LoggedIn          bool     `json:"loggedIn"`
+	Status            string   `json:"status"`
+	StatusDescription string   `json:"statusDescription"`
+	History           []string `json:"history"`
+}
+
+// PresenceChangeApplyResultDTO is returned after ApplyPresenceChange succeeds.
+type PresenceChangeApplyResultDTO struct {
+	Status            string `json:"status"`
+	StatusDescription string `json:"statusDescription"`
+}
+
 // ServerStatusDTO is the Dashboard Server status section (status.vrchat.com).
 type ServerStatusDTO struct {
 	FetchState   string                     `json:"fetchState"`

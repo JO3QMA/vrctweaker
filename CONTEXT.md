@@ -66,12 +66,12 @@ _Avoid_: 手動スキャン, 更新ボタン（一覧再取得だけを指す場
 
 ## Dashboard
 
-起動・自分のプレゼンス変更・公式サービス健全性をまとめるホーム画面体験の用語。**Server status**（[Issue #10](https://github.com/JO3QMA/vrctweaker/issues/10)、[ADR 0009](docs/adr/0009-dashboard-server-status.md)）は grill-with-docs / grill-review-ready で合意済み。実装契約は ADR を正本とする。
+起動・自分のプレゼンス変更・公式サービス健全性をまとめるホーム画面体験の用語。**Server status**（[Issue #10](https://github.com/JO3QMA/vrctweaker/issues/10)、[ADR 0009](docs/adr/0009-dashboard-server-status.md)）は grill-with-docs / grill-review-ready で合意済み。**Presence change section**（[Issue #174](https://github.com/JO3QMA/vrctweaker/issues/174)、[ADR 0014](docs/adr/0014-dashboard-presence-change.md)）は grill-with-docs で合意済み。実装契約は各 ADR を正本とする。
 
 ### Language
 
 **Dashboard**:
-サイドバー先頭（`/`）のホーム画面体験。**Dashboard launch block**、自分のプレゼンス変更（Quick status 等）、**Server status** を置く。
+サイドバー先頭（`/`）のホーム画面体験。**Dashboard launch block**、**Presence change section**、**Server status** を置く。
 _Avoid_: ダッシュボード画面, ホーム（他アプリのホームと混同しやすいため）
 
 **Server status**:
@@ -118,8 +118,60 @@ _Avoid_: Quick status ボタン色（個人プレゼンス用の独自パレッ�
 Issue #10 で最初に届ける Server status の範囲。Dashboard の Server status section（取得・表示・外部リンク）に限定する。v1 では含めないもの: 障害時 OS 通知、Settings でのオンオフやポーリング間隔変更、リージョン絞り込み、Dashboard 以外への常設表示、取得結果のローカル履歴・グラフ。
 _Avoid_: Server status（v1 機能全体を指すときは section とセットで書く）, 将来拡張（スコープ外リストの総称として曖昧なため）
 
+**Presence change section**:
+Dashboard 上でログイン中ユーザー自身の VRChat プレゼンス（色＋ステータス文章）をまとめて編集・反映する UI ブロック（[Issue #174](https://github.com/JO3QMA/vrctweaker/issues/174)）。**Presence change draft**（色選択・文章入力）と反映操作を 1 か所に置く。旧 Quick status / Custom status / Templates の 3 カード構成は置き換える。**Server status** とは無関係。
+_Avoid_: Quick status パネル（旧称・3 分割構成を含意するため）, ステータスカード（Server status section と混同しやすいため）, クイックステータス（インフラ健全性と混同しやすいため）
+
+**Presence change draft**:
+Presence change section 内の、反映前の編集中状態。選択中のプレゼンス色（join me / active / ask me / busy のいずれか）とステータス文章（`statusDescription`）の 2 フィールドのみ。Quick status・Custom status・Templates がそれぞれ独立した状態を持たない。色の選択操作は draft の色だけを更新し、**VRChat API には送らない**（即時反映しない）。
+_Avoid_: クイックステータス, カスタムステータス, テンプレート状態（旧 UI の分割を含意するため）
+
+**Status description history**:
+Presence change section の文章入力で選べる、過去に **Presence change apply** で反映したカスタム文章（trim 後非空）の一覧。`app_settings` の JSON 配列（キー例: `presence_description_history`）に永続化する。完全一致は重複排除し、最新を先頭に、最大 20 件。色（`status`）は履歴に含めない。旧 Dashboard Templates（i18n 固定 3 件）は廃止し、初回シードもしない。
+_Avoid_: テンプレート, Templates パネル（独立 UI・色付きボタン群を含意するため）, ステータス履歴（色＋文章のセットを含意しうるため）
+
+**Status description suggestions**:
+Status description history を Presence change draft の文章欄へ提示する UI。入力欄の候補ドロップダウン（例: `el-autocomplete`）で、フォーカス時または入力時に履歴を示す。候補を選んでも **draft の文章だけ** を更新し、色は変えない。反映は **Presence change apply** まで送らない。
+_Avoid_: テンプレートボタン, クイック入力（色と文章を同時に適用する旧 Templates を含意するため）
+
+**Presence change sync snapshot**:
+Presence change section が「変更なし」とみなす基準となる、最後に draft に取り込んだ self 行の `status` と `statusDescription` の組。**Presence change prefill**（マウント時）と **Presence change apply** 成功後の再取得で更新する。draft がこのスナップショットと一致するとき **Presence change apply** は無効（disabled）。
+_Avoid_: プリフィル（初回だけを指す印象）, 現行ステータス（編集中 draft と混同しやすいため）
+
+**Presence change draft dirty**:
+ユーザーが色または文章を操作して、**Presence change sync snapshot** から draft がずれた状態。dirty の間は Pipeline 等による self 行の外部更新で draft を上書きしない。dirty でなければ self 行の更新で draft とスナップショットを再同期してよい。
+_Avoid_: Unsaved edits（Launcher や Config の未保存編集と混同しやすいため）, テンプレート選択中（旧 UI）
+
+**Presence change labeling**:
+Presence change section の UI 文言の i18n キー名前空間。`dashboard.presenceChange.*` に統一する。旧 `dashboard.quickStatus` / `customStatus` / `templates*` は削除し、全ロケールを同期する。プレゼンス色のラベルは VRChat クライアントに近い表記（Join Me / Active / Ask Me / Busy 等）をロケールごとに示す。
+_Avoid_: dashboard.quickStatus（旧 UI・旧称）, ステータス（Server status と混同しやすいため）
+
+**Presence change self-cache sync**:
+Cached VRChat user（self 行）が **Presence change section** 外で更新されたとき、**Presence change draft dirty** でなければ **Presence change section fetch** で draft と **Presence change sync snapshot** を再同期する。契機はバックエンドが self 行を書き換えたとき（Pipeline の self `user-update`、**Presence change apply** 成功、**Self profile refresh** 等）に発火する Wails イベントをフロントが購読し、debounce して再取得する（目安 300ms）。dirty の間は再同期しない。
+_Avoid_: ポーリング, vrchat:friends-changed（フレンド一覧更新と混同しやすいため）, 常時上書き（draft dirty 無視）
+
+**Presence change section fetch**:
+Presence change section の初期表示と再同期用データ取得。**1 回のバックエンド呼び出し**で、ログイン可否・self の `status` / `statusDescription`・**Status description history** をまとめて返す（**Dashboard launch block** の読み取りと同型）。infra 失敗時は **Presence change fetch failure**。
+_Avoid_: isLoggedIn の単独問い合わせ＋履歴の別 API（呼び出しが分散するため）, GetCurrentUser（汎用プロフィール取得の俗称）
+
+**Presence change apply**:
+Presence change draft の色と文章を VRChat へ送る操作（反映ボタン）。バックエンドの **1 メソッド**で VRChat API 更新（`status` + `statusDescription`）と、成功時のみの **Status description history** 追記（trim 後非空・重複排除・最大 20 件）を行う。文章欄が空白（trim 後）のときは `statusDescription` に **空文字** を送り、VRChat クライアントの色別既定表示に任せる。成功後は返却または再取得で draft と **Presence change sync snapshot** を同期する。draft がスナップショットと同一のときは操作不可（disabled）。操作失敗時は **`ElMessage.error`**（Launch block の起動失敗と同型）。読み取り失敗とは別契約。
+_Avoid_: setStatus / setStatusDescription の Dashboard からの分割呼び出し, フロントのみでの履歴永続化, デフォルト文言の明示送信
+
+**Presence change fetch failure**:
+ログイン済みなのに Cached VRChat user（self 行）の取得に失敗したときの扱い。Presence change section は残し、カード内に取得できなかった旨だけを示す（**Dashboard launch block** の loadError と同型）。loading 中は取得中メッセージを示す。失敗時はフォームを出さない（またはすべて disabled）。`ElMessage` は出さない。再試行は Dashboard 再表示（`onMounted`）やログイン／プロフィール更新後の再取得に委ね、v1 では手動リトライボタンは置かない。
+_Avoid_: 空フォームでの編集, ElMessage のみ（他 Dashboard ブロックと表現がずれるため）, Server status fetch failure（別データ源）
+
+**Presence change visibility**:
+Presence change section の表示条件。Dashboard を開けば **常にセクションを表示**する（**Server status visibility** と同様、未ログインでも非表示にしない）。未ログイン時は色・文章・反映をすべて無効化し、カード内に短い説明と **Settings** への導線を示す。ログイン済みのときだけ **Presence change prefill** と操作を有効にする。
+_Avoid_: ログイン時のみ表示（Server status との並びが崩れるため）, 非表示（機能の存在が分からないため）
+
+**Presence change prefill**:
+Presence change section 表示時に **Presence change draft** と **Presence change sync snapshot** を Cached VRChat user（self 行）の現状で初期化すること（ログイン済みのみ）。色は `status`、文章欄は `statusDescription` をそのまま示す。API 上 `statusDescription` が空のときは文章欄も空（VRChat 既定文言の表示は欄に埋めない）。反映成功後は self 行を再取得して draft とスナップショットを同期する。
+_Avoid_: 空の下書き, テンプレート初期値（旧 Templates カードの固定 3 件を含意するため）
+
 **Quick status**:
-Dashboard 上でログイン中ユーザー自身の VRChat プレゼンス（join me / active / ask me / busy）を API 経由で変更する操作群。Custom status・Templates と併置する。**Server status** とは無関係。
+（旧称）Dashboard 上のプレゼンス即時変更ボタン群。Issue #174 以降は **Presence change section** に統合し、単独の用語としては使わない。
 _Avoid_: ステータス, Server status, クイックステータス（インフラ健全性と混同しやすいため）
 
 ## Launcher

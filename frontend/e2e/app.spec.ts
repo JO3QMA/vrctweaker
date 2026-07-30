@@ -33,34 +33,36 @@ test.describe("VRChat Tweaker", () => {
   });
 
   test.describe("Dashboard", () => {
-    test("displays default profile and status buttons", async ({ page }) => {
+    test("displays presence change section", async ({ page }) => {
       await page.goto("/");
       await expect(page.locator("h1")).toContainText("ダッシュボード");
       await expect(page.getByTestId("server-status-section")).toBeVisible();
-      await expect(page.getByTestId("server-status-summary")).toBeVisible();
       await expect(page.getByTestId("launch-block-quick-btn")).toBeVisible();
       await expect(
         page.getByTestId("launch-block-profile-select"),
       ).toBeVisible();
-      // ラベルは i18n 依存のため data-testid でクイックステータス4種を検証する
+      await expect(page.getByTestId("presence-change-section")).toBeVisible();
       await expect(
-        page.getByTestId("dashboard-quick-status-join-me"),
+        page.getByTestId("presence-change-color-join-me"),
       ).toBeVisible();
       await expect(
-        page.getByTestId("dashboard-quick-status-active"),
+        page.getByTestId("presence-change-color-active"),
       ).toBeVisible();
       await expect(
-        page.getByTestId("dashboard-quick-status-ask-me"),
+        page.getByTestId("presence-change-color-ask-me"),
       ).toBeVisible();
       await expect(
-        page.getByTestId("dashboard-quick-status-busy"),
+        page.getByTestId("presence-change-color-busy"),
       ).toBeVisible();
     });
 
-    test("can click status button", async ({ page }) => {
+    test("can select color without immediate apply when logged in", async ({
+      page,
+    }) => {
+      await page.addInitScript(getMockWailsInitScript({ loggedIn: true }));
       await page.goto("/");
-      await page.getByTestId("dashboard-quick-status-ask-me").click();
-      // クリック後も画面が正常であることを確認
+      await page.getByTestId("presence-change-color-ask-me").click();
+      await expect(page.getByTestId("presence-change-apply")).toBeEnabled();
       await expect(page.locator("h1")).toContainText("ダッシュボード");
     });
   });

@@ -272,7 +272,11 @@ func (uc *IdentityUseCase) pipelineUserUpdate(ctx context.Context, payload []byt
 		body.User.DisplayName, body.User.Status, body.User.StatusDescription, body.User.Username,
 		body.User.CurrentAvatarThumbnailImageURL, body.User.UserIcon, body.User.ProfilePicOverrideThumbnail,
 	)
-	return uc.userCacheRepo.UpsertSelf(ctx, self)
+	if err := uc.userCacheRepo.UpsertSelf(ctx, self); err != nil {
+		return err
+	}
+	uc.emitSelfCacheChanged()
+	return nil
 }
 
 func (uc *IdentityUseCase) pipelineUserLocation(ctx context.Context, payload []byte, now time.Time) error {
