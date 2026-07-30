@@ -2,15 +2,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
 import { ElMessage } from "element-plus";
 import PresenceChangeSection from "../PresenceChangeSection.vue";
+import { unlockState } from "./sessionUnlockTestState";
 
 const {
   mockGetPresenceChangeSection,
   mockApplyPresenceChange,
   mockEventsOn,
   eventHandlers,
-  unlockState,
 } = vi.hoisted(() => {
-  const { ref } = require("vue") as typeof import("vue");
   const eventHandlers: Record<string, () => void> = {};
   return {
     mockGetPresenceChangeSection: vi.fn(),
@@ -22,15 +21,15 @@ const {
       };
     }),
     eventHandlers,
-    unlockState: ref<
-      "idle" | "unlocking" | "unlocked" | "needs-relogin" | "error"
-    >("idle"),
   };
 });
 
-vi.mock("../../composables/useSessionUnlock", () => ({
-  useSessionUnlock: () => ({ state: unlockState }),
-}));
+vi.mock("../../composables/useSessionUnlock", async () => {
+  const { unlockState: state } = await import("./sessionUnlockTestState");
+  return {
+    useSessionUnlock: () => ({ state }),
+  };
+});
 
 vi.mock("../../wails/runtime", () => ({
   getRuntime: () => ({ EventsOn: mockEventsOn }),
