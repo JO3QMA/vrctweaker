@@ -100,9 +100,9 @@ describe("PresenceChangeSection", () => {
     const wrapper = mountSection();
     await flushPromises();
     expect(mockGetPresenceChangeSection).toHaveBeenCalledTimes(1);
-    expect(wrapper.find('[data-testid="presence-change-section"]').exists()).toBe(
-      true,
-    );
+    expect(
+      wrapper.find('[data-testid="presence-change-section"]').exists(),
+    ).toBe(true);
   });
 
   it("shows presence change form with four color buttons", async () => {

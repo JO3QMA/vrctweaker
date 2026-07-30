@@ -12,7 +12,7 @@ import (
 func TestGetPresenceChangeSection_notLoggedIn(t *testing.T) {
 	a := &App{ctx: context.Background()}
 	a.presenceChange = usecase.NewPresenceChangeUseCase(
-		newAppPresenceIdentity(t, false),
+		newAppPresenceIdentity(t, false).uc,
 		&memSettingsRepo{m: map[string]string{}},
 	)
 	got, err := a.GetPresenceChangeSection()
