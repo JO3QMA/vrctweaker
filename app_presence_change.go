@@ -4,8 +4,6 @@ import (
 	"fmt"
 )
 
-const selfCacheChangedEvent = "identity:self-cache-changed"
-
 // GetPresenceChangeSection returns Dashboard presence change section state.
 func (a *App) GetPresenceChangeSection() (*PresenceChangeSectionDTO, error) {
 	if a.presenceChange == nil {

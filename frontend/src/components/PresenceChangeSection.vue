@@ -155,10 +155,6 @@ const isDirty = computed(
     draftDescription.value !== snapshotDescription.value,
 );
 
-function isDraftDirty(): boolean {
-  return isDirty.value;
-}
-
 function applySection(dto: PresenceChangeSectionDTO, isInitial: boolean): void {
   history.value = dto.history ?? [];
   loggedIn.value = dto.loggedIn;
@@ -167,7 +163,7 @@ function applySection(dto: PresenceChangeSectionDTO, isInitial: boolean): void {
   }
   const status = normalizeStatus(dto.status);
   const description = dto.statusDescription ?? "";
-  if (isInitial || !isDraftDirty()) {
+  if (isInitial || !isDirty.value) {
     draftStatus.value = status;
     draftDescription.value = description;
     snapshotStatus.value = status;
@@ -188,7 +184,7 @@ function normalizeStatus(status: string): PresenceStatus {
 }
 
 async function load(options?: { onlyIfNotDirty?: boolean }): Promise<void> {
-  if (options?.onlyIfNotDirty && isDraftDirty()) {
+  if (options?.onlyIfNotDirty && isDirty.value) {
     return;
   }
   if (inFlight) {
@@ -204,7 +200,7 @@ async function load(options?: { onlyIfNotDirty?: boolean }): Promise<void> {
   try {
     const dto = await App.getPresenceChangeSection();
     if (gen !== generation) return;
-    if (onlyIfNotDirty && isDraftDirty()) return;
+    if (onlyIfNotDirty && isDirty.value) return;
     loadError.value = false;
     applySection(dto, !hasLoadedOnce);
     hasLoadedOnce = true;

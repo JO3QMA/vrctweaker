@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 )
 
 const (
@@ -37,8 +38,9 @@ type PresenceChangeApplyResult struct {
 
 // PresenceChangeUseCase handles Dashboard presence change section logic.
 type PresenceChangeUseCase struct {
-	identity *IdentityUseCase
-	settings appSettingsRepo
+	identity  *IdentityUseCase
+	settings  appSettingsRepo
+	historyMu sync.Mutex
 }
 
 // NewPresenceChangeUseCase creates a PresenceChangeUseCase.
@@ -106,11 +108,7 @@ func (uc *PresenceChangeUseCase) Apply(ctx context.Context, status, description 
 			log.Printf("presence change: record history: %v", err)
 		}
 	}
-	if _, err := uc.identity.GetCurrentUser(ctx, true); err != nil {
-		return nil, fmt.Errorf("presence change apply: refresh self: %w", err)
-	}
-	uc.identity.emitSelfCacheChanged()
-	self, err := uc.identity.GetSelfProfile(ctx, false)
+	self, err := uc.identity.GetSelfProfile(ctx, true)
 	if err != nil {
 		return nil, fmt.Errorf("presence change apply: self profile: %w", err)
 	}
@@ -142,6 +140,8 @@ func (uc *PresenceChangeUseCase) loadHistory(ctx context.Context) ([]string, err
 }
 
 func (uc *PresenceChangeUseCase) recordHistory(ctx context.Context, description string) error {
+	uc.historyMu.Lock()
+	defer uc.historyMu.Unlock()
 	if uc.settings == nil {
 		return nil
 	}

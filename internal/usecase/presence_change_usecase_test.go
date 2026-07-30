@@ -4,7 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -128,6 +130,41 @@ func TestPresenceChangeUseCase_Apply_emptyDescriptionNoHistory(t *testing.T) {
 	raw, _ := settings.Get(ctx, PresenceDescriptionHistoryKey)
 	if strings.TrimSpace(raw) != "" {
 		t.Fatalf("history=%q", raw)
+	}
+}
+
+func TestPresenceChangeUseCase_recordHistory_concurrent(t *testing.T) {
+	ctx := context.Background()
+	settings := newMockSettingsRepo()
+	uc := NewPresenceChangeUseCase(newPresenceTestIdentity(t, true).uc, settings)
+	var wg sync.WaitGroup
+	for i := 0; i < 10; i++ {
+		wg.Add(1)
+		go func(n int) {
+			defer wg.Done()
+			desc := fmt.Sprintf("desc%d", n)
+			if err := uc.recordHistory(ctx, desc); err != nil {
+				t.Errorf("recordHistory(%q): %v", desc, err)
+			}
+		}(i)
+	}
+	wg.Wait()
+	hist, err := uc.loadHistory(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hist) != 10 {
+		t.Fatalf("history len=%d want 10: %v", len(hist), hist)
+	}
+	seen := make(map[string]struct{}, len(hist))
+	for _, item := range hist {
+		seen[item] = struct{}{}
+	}
+	for i := 0; i < 10; i++ {
+		want := fmt.Sprintf("desc%d", i)
+		if _, ok := seen[want]; !ok {
+			t.Fatalf("missing history entry %q in %v", want, hist)
+		}
 	}
 }
 

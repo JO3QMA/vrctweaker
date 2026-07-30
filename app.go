@@ -90,6 +90,8 @@ func NewApp() *App {
 }
 
 // startup is called when the app starts.
+const selfCacheChangedEvent = "identity:self-cache-changed"
+
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
@@ -1171,7 +1173,7 @@ func (a *App) ClearStoredCredential() error {
 // GetVRChatCurrentUser returns the logged-in user's profile from the VRChat API.
 // When forceRefresh is true, bypasses the local self-profile cache and refetches from the API.
 func (a *App) GetVRChatCurrentUser(forceRefresh bool) (VRChatCurrentUserDTO, error) {
-	u, err := a.identity.GetCurrentUser(a.ctx, forceRefresh)
+	u, _, err := a.identity.GetCurrentUser(a.ctx, forceRefresh)
 	if err != nil {
 		return VRChatCurrentUserDTO{}, err
 	}
