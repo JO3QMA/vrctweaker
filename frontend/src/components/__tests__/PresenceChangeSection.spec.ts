@@ -154,9 +154,9 @@ describe("PresenceChangeSection", () => {
     expect(
       wrapper.find('[data-testid="presence-change-load-error"]').exists(),
     ).toBe(true);
-    expect(
-      wrapper.find('[data-testid="presence-change-retry"]').exists(),
-    ).toBe(true);
+    expect(wrapper.find('[data-testid="presence-change-retry"]').exists()).toBe(
+      true,
+    );
   });
 
   it("retries load when retry button is clicked", async () => {
@@ -165,7 +165,9 @@ describe("PresenceChangeSection", () => {
       .mockResolvedValueOnce(loggedInSection());
     const wrapper = mountSection();
     await flushPromises();
-    await wrapper.find('[data-testid="presence-change-retry"]').trigger("click");
+    await wrapper
+      .find('[data-testid="presence-change-retry"]')
+      .trigger("click");
     await flushPromises();
     expect(mockGetPresenceChangeSection).toHaveBeenCalledTimes(2);
     expect(
