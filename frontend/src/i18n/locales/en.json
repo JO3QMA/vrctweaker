@@ -153,6 +153,7 @@
     "setAsDefault": "Set as default",
     "save": "Save",
     "launchWithThis": "Launch with this profile",
+    "duplicate": "Duplicate",
     "delete": "Delete",
     "newProfileDefaultName": "New profile",
     "deleteConfirm": "Delete “{name}”?",
@@ -166,7 +167,6 @@
     "saveAndContinue": "Save and continue",
     "discardAndContinue": "Discard",
     "toggleSidebar": "Toggle profile list",
-    "moreActions": "More actions",
     "errSave": "Failed to save launch profile",
     "errProfileNotFound": "Saved profile was not found in the list"
   },

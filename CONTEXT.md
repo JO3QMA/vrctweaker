@@ -181,7 +181,7 @@ VRChat の起動引数を名前付きで保存し、起動に使うための用�
 ### Language
 
 **Launcher**:
-Launch profile を一覧・作成・編集・保存する画面体験。主目的は起動引数の編集と保存であり、VRChat の起動（Profile launch）は副次の導線。
+Launch profile を一覧・作成・複製・編集・保存・削除する画面体験。主目的は起動引数の編集と保存であり、VRChat の起動（Profile launch）は副次の導線。
 _Avoid_: ランチャー画面, 起動画面（Quick launch / Profile launch と混同しやすいため）
 
 **Launch profile**:
@@ -193,8 +193,16 @@ Launcher 上でまだ DB に保存していない Launch profile（`id` が空�
 _Avoid_: 新規プロファイル, 仮プロファイル（保存済みとの境界が曖昧なため）
 
 **Launch profile create**:
-Launcher の「+ 新規プロファイル」押下で、既定の表示名と起動引数をもつ **Launch profile を即保存する**こと（[ADR 0013](docs/adr/0013-launch-profile-create.md)、[Issue #210](https://github.com/JO3QMA/vrctweaker/issues/210)）。作成直後は一覧に現れ選択状態になり、Unsaved launch profile edits／Draft launch profile にはならない。作成後の名前や引数の変更は、既存 Launch profile の編集と同じく明示保存。既定の表示名はロケールの既定文字列（例: 「新しいプロファイル」）を使い、同名が既にあれば「… 2」「… 3」…と連番を付けてぶつからない名前にする（1 件目に番号は付けない。空きは既定名 → `既定名 + " " + n`（n≥2）の最小）。名前の一意制約は設けない（手動リネームでの同名は許す）。起動引数の初期値は空／GUI 既定（Primary・Advanced ほぼオフ）とし、Default launch profile や選択中 profile の複製はしない。保存に失敗したときは作成されなかったものとして扱い、一覧に新行は出さず選択も変えない（エラーはユーザーに示す）。保存成功時のトーストは出さない。保存済み Launch profile が 0 件のときは、作成する 1 件目を **Default launch profile**（`isDefault` 真）にする。既に 1 件以上あるときの作成では既定フラグは付けない。
-_Avoid_: Draft launch profile（未保存新規）, 新規ドラフト, プロファイル複製
+Launcher の「+ 新規プロファイル」押下で、既定の表示名と起動引数をもつ **Launch profile を即保存する**こと（[ADR 0013](docs/adr/0013-launch-profile-create.md)、[Issue #210](https://github.com/JO3QMA/vrctweaker/issues/210)）。作成直後は一覧に現れ選択状態になり、Unsaved launch profile edits／Draft launch profile にはならない。作成後の名前や引数の変更は、既存 Launch profile の編集と同じく明示保存。既定の表示名はロケールの既定文字列（例: 「新しいプロファイル」）を使い、同名が既にあれば「… 2」「… 3」…と連番を付けてぶつからない名前にする（1 件目に番号は付けない。空きは既定名 → `既定名 + " " + n`（n≥2）の最小）。名前の一意制約は設けない（手動リネームでの同名は許す）。起動引数の初期値は空／GUI 既定（Primary・Advanced ほぼオフ）とし、Default launch profile や選択中 profile の複製はしない（引き継ぎは **Launch profile duplicate**）。保存に失敗したときは作成されなかったものとして扱い、一覧に新行は出さず選択も変えない（エラーはユーザーに示す）。保存成功時のトーストは出さない。保存済み Launch profile が 0 件のときは、作成する 1 件目を **Default launch profile**（`isDefault` 真）にする。既に 1 件以上あるときの作成では既定フラグは付けない。
+_Avoid_: Draft launch profile（未保存新規）, 新規ドラフト, create 経路での複製（**Launch profile duplicate** と混同しない）
+
+**Launch profile duplicate**:
+Launcher で選択中の **Launch profile** の設定を引き継ぎ、新しい Launch profile として即保存すること（[ADR 0015](docs/adr/0015-launch-profile-duplicate.md)、[Issue #209](https://github.com/JO3QMA/vrctweaker/issues/209)）。**Launch profile create**（空／GUI 既定からの新規）とは別操作。複製直後は一覧に現れ選択状態になり、編集可能な状態になる。Unsaved launch profile edits／Draft launch profile にはならない（作成＝保存と同型）。**Unsaved launch profile edits** があるときは **Launch profile create** や切替と同じく、先に保存／破棄／キャンセルを求める。キャンセルなら複製しない。解決後は選択中 profile の**保存済み内容**（表示名・起動引数＝Primary / Advanced）を引き継ぐ。表示名は元の表示名を基点にし、**Launch profile create** と同じ連番ルール（基点が空いていればそのまま、埋まっていれば `基点名 + " " + n`、n≥2 の最小）でぶつからない名前にする。複製先の `isDefault` は**常に偽**（元が Default launch profile でも既定は移さない・付けない）。削除のような追加の確認ダイアログは出さない（未保存ガード以外）。保存成功時のトーストは出さない（一覧出現・選択がフィードバック）。保存に失敗したときは複製されなかったものとして扱い、一覧に新行は出さず選択も変えない。エラー表示は **Launch profile create**／明示保存と同じ（`ElMessage.error`）。
+_Avoid_: Launch profile create, コピー（表示名の接尾辞だけを指す印象）, プロファイル複製（create との境界が曖昧なため）, 未保存のまま複製（create／切替と未保存ガードがずれるため）, 複製で Default を付け替える, 複製の確認ダイアログ（削除と混同しやすいため）
+
+**Launch profile editor actions**:
+選択中の Launch profile があるとき、エディタ上部に並べるラベル付き操作。左から **Profile launch**・明示保存・**Launch profile duplicate**・削除。削除は破壊操作として区別して示す。「⋯」オーバーフローは使わない（削除・複製を隠さない）。
+_Avoid_: ⋯ メニュー, more actions（削除・複製を隠す導線）
 
 **Default launch profile**:
 `isDefault` が真の Launch profile。profile を指定しない World join が使う引数の出所。Dashboard の起動ブロックで Last launch profile が無効なときのフォールバック解決にも使う。同時に存在できるのは高々 1 件。削除や既定フラグの解除後、どの Launch profile も `isDefault` でない状態があり得る。初回シードでは Non-VR（`--no-vr`）の Launch profile が既定になる（VR 側は既定にしない）。
@@ -217,7 +225,7 @@ Launcher エディタで、最後の保存または読み込み以降に加え�
 _Avoid_: dirty 状態, 未保存（他画面の編集と混同しやすいため）
 
 **Discard launch profile edits**:
-Unsaved launch profile edits を保存せず、直前に保存または読み込みした内容に戻すこと。別 Launch profile への切り替え、**Launch profile create**、Launcher 以外の画面への移動の前に確認できる。
+Unsaved launch profile edits を保存せず、直前に保存または読み込みした内容に戻すこと。別 Launch profile への切り替え、**Launch profile create**、**Launch profile duplicate**、Launcher 以外の画面への移動の前に確認できる。
 _Avoid_: リセット, クリア（カスタム引数フィールドの空欄化と混同しやすいため）
 
 **Quick launch**:

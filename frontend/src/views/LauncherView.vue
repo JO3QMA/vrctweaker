@@ -57,22 +57,20 @@
             <el-button class="btn-save" type="primary" @click="save">
               {{ t("launcher.save") }}
             </el-button>
-            <el-dropdown trigger="click" @command="onOverflowCommand">
-              <el-button
-                data-testid="profile-overflow-btn"
-                :aria-label="t('launcher.moreActions')"
-              >
-                ⋯
-              </el-button>
-              <template #dropdown>
-                <el-dropdown-item
-                  command="delete"
-                  data-testid="delete-profile-btn"
-                >
-                  {{ t("launcher.delete") }}
-                </el-dropdown-item>
-              </template>
-            </el-dropdown>
+            <el-button
+              data-testid="duplicate-profile-btn"
+              @click="requestDuplicate"
+            >
+              {{ t("launcher.duplicate") }}
+            </el-button>
+            <el-button
+              type="danger"
+              plain
+              data-testid="delete-profile-btn"
+              @click="confirmDelete"
+            >
+              {{ t("launcher.delete") }}
+            </el-button>
           </div>
         </div>
 
@@ -946,6 +944,70 @@ async function launch() {
   await App.launchVRChatWithArgs(argsStr, selected.value.id ?? "");
 }
 
+async function requestDuplicate() {
+  if (!selected.value?.id) return;
+  const sourceId = selected.value.id;
+  const ok = await guardUnsavedEdits();
+  if (!ok) return;
+
+  const source = profiles.value.find((p) => p.id === sourceId);
+  if (!source) {
+    showSaveError(new Error(t("launcher.errProfileNotFound")));
+    return;
+  }
+
+  const beforeIds = new Set(profiles.value.map((p) => p.id));
+  const name = nextDefaultLaunchProfileName(
+    source.name,
+    profiles.value.map((p) => p.name),
+  );
+  const gen = ++profileSaveGen;
+  try {
+    await App.saveLaunchProfile({
+      id: "",
+      name,
+      arguments: source.arguments,
+      isDefault: false,
+    });
+    if (gen !== profileSaveGen) return;
+    profiles.value = await App.launchProfiles();
+    if (gen !== profileSaveGen) return;
+    const created =
+      profiles.value.find((p) => !beforeIds.has(p.id)) ??
+      profiles.value.find((p) => p.name === name);
+    if (created) {
+      await openProfile(created);
+      if (gen !== profileSaveGen) return;
+    } else if (profiles.value.length > 0) {
+      const fallback =
+        profiles.value.find((p) => p.isDefault) ?? profiles.value[0];
+      await openProfile(fallback);
+      if (gen !== profileSaveGen) return;
+    }
+  } catch (e) {
+    if (gen !== profileSaveGen) return;
+    showSaveError(e);
+    try {
+      profiles.value = await App.launchProfiles();
+    } catch (listErr) {
+      if (gen !== profileSaveGen) return;
+      showSaveError(listErr);
+      return;
+    }
+    if (gen !== profileSaveGen) return;
+    const prev = profiles.value.find((p) => p.id === sourceId);
+    if (prev) {
+      await openProfile(prev);
+      if (gen !== profileSaveGen) return;
+    } else if (profiles.value.length > 0) {
+      const fallback =
+        profiles.value.find((p) => p.isDefault) ?? profiles.value[0];
+      await openProfile(fallback);
+      if (gen !== profileSaveGen) return;
+    }
+  }
+}
+
 async function confirmDelete() {
   if (!selected.value?.id) return;
   try {
@@ -972,10 +1034,6 @@ async function confirmDelete() {
     const p = profiles.value.find((pr) => pr.isDefault) ?? profiles.value[0];
     await openProfile(p);
   }
-}
-
-function onOverflowCommand(command: string) {
-  if (command === "delete") void confirmDelete();
 }
 
 onBeforeRouteLeave(async (_to, _from, next) => {
