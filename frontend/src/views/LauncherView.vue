@@ -999,6 +999,11 @@ async function requestDuplicate() {
     if (prev) {
       await openProfile(prev);
       if (gen !== profileSaveGen) return;
+    } else if (profiles.value.length > 0) {
+      const fallback =
+        profiles.value.find((p) => p.isDefault) ?? profiles.value[0];
+      await openProfile(fallback);
+      if (gen !== profileSaveGen) return;
     }
   }
 }
