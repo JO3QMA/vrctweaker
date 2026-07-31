@@ -153,6 +153,7 @@
     "setAsDefault": "デフォルトに設定",
     "save": "保存",
     "launchWithThis": "この設定で起動",
+    "duplicate": "複製",
     "delete": "削除",
     "newProfileDefaultName": "新しいプロファイル",
     "deleteConfirm": "「{name}」を削除しますか？",
@@ -166,7 +167,6 @@
     "saveAndContinue": "保存して続行",
     "discardAndContinue": "破棄",
     "toggleSidebar": "プロファイル一覧の表示切替",
-    "moreActions": "その他の操作",
     "errSave": "プロファイルの保存に失敗しました",
     "errProfileNotFound": "保存したプロファイルが一覧に見つかりません"
   },

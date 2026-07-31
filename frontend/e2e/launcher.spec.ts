@@ -98,20 +98,37 @@ test.describe("Launcher redesign", () => {
     await expect(page.getByTestId("unsaved-banner")).toHaveCount(0);
   });
 
-  test("deletes saved profile from overflow menu", async ({ page }) => {
+  test("deletes saved profile from labeled button", async ({ page }) => {
     await page.getByTestId("profile-card-profile-2").click();
     await expect(
       page.locator('.profile-editor input[type="text"]').first(),
     ).toHaveValue("デスクトップ用");
 
-    await page.getByTestId("profile-overflow-btn").click();
     await page.getByTestId("delete-profile-btn").click();
 
     const dialog = page.locator(".el-message-box");
     await expect(dialog).toContainText("デスクトップ用");
-    await page.getByRole("button", { name: "削除" }).click();
+    await dialog.getByRole("button", { name: "削除" }).click();
     await expect(dialog).toBeHidden();
 
     await expect(page.getByTestId("profile-card-profile-2")).toHaveCount(0);
+  });
+
+  test("duplicates selected profile with numbered name", async ({ page }) => {
+    await page.getByTestId("profile-card-profile-2").click();
+    await expect(
+      page.locator('.profile-editor input[type="text"]').first(),
+    ).toHaveValue("デスクトップ用");
+
+    await page.getByTestId("duplicate-profile-btn").click();
+    await expect(
+      page.locator('.profile-editor input[type="text"]').first(),
+    ).toHaveValue("デスクトップ用 2");
+    await expect(
+      page
+        .locator(".profiles-list .profile-name")
+        .getByText("デスクトップ用 2"),
+    ).toBeVisible();
+    await expect(page.getByTestId("unsaved-banner")).toHaveCount(0);
   });
 });

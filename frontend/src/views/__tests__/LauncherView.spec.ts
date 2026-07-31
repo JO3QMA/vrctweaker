@@ -78,14 +78,8 @@ async function openAdvancedCollapse(wrapper: ReturnType<typeof mount>) {
   }
 }
 
-async function clickDeleteFromOverflow(wrapper: ReturnType<typeof mount>) {
-  await wrapper.find('[data-testid="profile-overflow-btn"]').trigger("click");
-  await flushPromises();
-  const deleteItem = document.querySelector(
-    '[data-testid="delete-profile-btn"]',
-  );
-  expect(deleteItem).toBeTruthy();
-  await (deleteItem as HTMLElement).click();
+async function clickDeleteProfile(wrapper: ReturnType<typeof mount>) {
+  await wrapper.find('[data-testid="delete-profile-btn"]').trigger("click");
   await flushPromises();
 }
 
@@ -394,7 +388,7 @@ describe("LauncherView", () => {
     );
   });
 
-  it("shows delete in overflow menu for saved profiles and deletes on confirm", async () => {
+  it("shows labeled delete and duplicate without overflow menu", async () => {
     const wrapper = mount(LauncherView);
     await flushPromises();
 
@@ -403,8 +397,29 @@ describe("LauncherView", () => {
     await flushPromises();
 
     expect(wrapper.find('[data-testid="profile-overflow-btn"]').exists()).toBe(
+      false,
+    );
+    expect(wrapper.find('[data-testid="delete-profile-btn"]').exists()).toBe(
       true,
     );
+    expect(wrapper.find('[data-testid="duplicate-profile-btn"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.find('[data-testid="duplicate-profile-btn"]').text()).toBe(
+      "複製",
+    );
+    expect(wrapper.find('[data-testid="delete-profile-btn"]').text()).toBe(
+      "削除",
+    );
+  });
+
+  it("deletes saved profile on confirm from labeled button", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    const card = wrapper.findAll(".profile-card")[0];
+    await card?.trigger("click");
+    await flushPromises();
 
     mockDeleteLaunchProfile.mockResolvedValue(undefined);
     const confirmSpy = vi
@@ -412,7 +427,7 @@ describe("LauncherView", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .mockResolvedValue("confirm" as any);
 
-    await clickDeleteFromOverflow(wrapper);
+    await clickDeleteProfile(wrapper);
 
     expect(confirmSpy).toHaveBeenCalledWith(
       "「Default」を削除しますか？",
@@ -438,13 +453,119 @@ describe("LauncherView", () => {
       .spyOn(ElMessageBox, "confirm")
       .mockRejectedValue("cancel");
 
-    await clickDeleteFromOverflow(wrapper);
+    await clickDeleteProfile(wrapper);
 
     expect(mockDeleteLaunchProfile).not.toHaveBeenCalled();
     confirmSpy.mockRestore();
   });
 
-  it("addNew saves immediately and shows overflow menu", async () => {
+  it("duplicates selected profile with numbered name and saved arguments", async () => {
+    const created: LaunchProfileDTO = {
+      id: "dup-1",
+      name: "Default 2",
+      arguments: "-screen-fullscreen 1",
+      isDefault: false,
+    };
+    mockLaunchProfiles
+      .mockResolvedValueOnce([...sampleProfiles])
+      .mockResolvedValueOnce([...sampleProfiles, created]);
+    mockSaveLaunchProfile.mockResolvedValue(undefined);
+
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+
+    await wrapper
+      .find('[data-testid="duplicate-profile-btn"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(mockSaveLaunchProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "",
+        name: "Default 2",
+        arguments: "-screen-fullscreen 1",
+        isDefault: false,
+      }),
+    );
+    expect(wrapper.findAll(".profile-card")).toHaveLength(3);
+    expect(wrapper.find('[data-testid="unsaved-banner"]').exists()).toBe(false);
+    expect(
+      (
+        wrapper.find(".profile-editor .el-input input")
+          .element as HTMLInputElement
+      ).value,
+    ).toBe("Default 2");
+    const defaultLabel = wrapper
+      .findAll(".el-checkbox")
+      .find((c) => c.text().includes("デフォルトに設定"));
+    const defaultInput = defaultLabel?.find("input");
+    expect((defaultInput?.element as HTMLInputElement).checked).toBe(false);
+  });
+
+  it("duplicates uses saved arguments when unsaved edits are discarded", async () => {
+    const created: LaunchProfileDTO = {
+      id: "dup-1",
+      name: "Default 2",
+      arguments: "-screen-fullscreen 1",
+      isDefault: false,
+    };
+    mockLaunchProfiles
+      .mockResolvedValueOnce([...sampleProfiles])
+      .mockResolvedValueOnce([...sampleProfiles, created]);
+    mockSaveLaunchProfile.mockResolvedValue(undefined);
+
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+
+    await checkInput(wrapper, "no-vr-checkbox").setValue(true);
+    await flushPromises();
+
+    const confirmSpy = vi
+      .spyOn(ElMessageBox, "confirm")
+      .mockRejectedValue("cancel");
+
+    await wrapper
+      .find('[data-testid="duplicate-profile-btn"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(mockSaveLaunchProfile).toHaveBeenCalledWith(
+      expect.objectContaining({
+        arguments: "-screen-fullscreen 1",
+        isDefault: false,
+      }),
+    );
+    confirmSpy.mockRestore();
+  });
+
+  it("does not duplicate when unsaved prompt is cancelled", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+
+    await checkInput(wrapper, "no-vr-checkbox").setValue(true);
+    await flushPromises();
+
+    const confirmSpy = vi
+      .spyOn(ElMessageBox, "confirm")
+      .mockRejectedValue("close");
+
+    await wrapper
+      .find('[data-testid="duplicate-profile-btn"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(mockSaveLaunchProfile).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it("addNew saves immediately and shows labeled delete and duplicate", async () => {
     const created: LaunchProfileDTO = {
       id: "new-1",
       name: "新しいプロファイル",
@@ -474,6 +595,12 @@ describe("LauncherView", () => {
     expect(mockSaveLaunchProfile).toHaveBeenCalled();
     expect(wrapper.findAll(".profile-card")).toHaveLength(3);
     expect(wrapper.find('[data-testid="profile-overflow-btn"]').exists()).toBe(
+      false,
+    );
+    expect(wrapper.find('[data-testid="duplicate-profile-btn"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.find('[data-testid="delete-profile-btn"]').exists()).toBe(
       true,
     );
     expect(wrapper.find('[data-testid="unsaved-banner"]').exists()).toBe(false);
@@ -1115,7 +1242,7 @@ describe("LauncherView", () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .mockResolvedValue("confirm" as any);
 
-    await clickDeleteFromOverflow(wrapper);
+    await clickDeleteProfile(wrapper);
     await flushPromises();
 
     expect(mockDeleteLaunchProfile).toHaveBeenCalledWith("1");

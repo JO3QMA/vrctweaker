@@ -53,7 +53,7 @@ Accepted（grill-with-docs で合意、[Issue #210](https://github.com/JO3QMA/vr
 | 新規は Draft のまま | 却下 | Issue の期待と不一致 |
 | 作成時に名前入力ダイアログ | 却下 | ワンアクション作成から外れる |
 | 既定名は常に同一（同名許可のみ） | 却下 | 連番の方が一覧で見分けやすい |
-| Default／選択中の複製として新規 | 却下 | 複製導線の追加であり Issue 範囲外 |
+| Default／選択中の複製として新規 | 却下 | 複製導線の追加であり Issue #210 範囲外。複製は別操作として [ADR 0015](0015-launch-profile-duplicate.md)／Issue #209 |
 
 ## Consequences
 

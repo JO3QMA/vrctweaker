@@ -153,6 +153,7 @@
     "setAsDefault": "設為預設",
     "save": "儲存",
     "launchWithThis": "以此設定檔啟動",
+    "duplicate": "複製",
     "delete": "刪除",
     "newProfileDefaultName": "新設定檔",
     "deleteConfirm": "要刪除「{name}」嗎？",
@@ -166,7 +167,6 @@
     "saveAndContinue": "儲存並繼續",
     "discardAndContinue": "捨棄",
     "toggleSidebar": "切換設定檔清單",
-    "moreActions": "其他操作",
     "errSave": "無法儲存啟動設定檔",
     "errProfileNotFound": "找不到已儲存的啟動設定檔"
   },

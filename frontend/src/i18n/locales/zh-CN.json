@@ -153,6 +153,7 @@
     "setAsDefault": "设为默认",
     "save": "保存",
     "launchWithThis": "使用此配置启动",
+    "duplicate": "复制",
     "delete": "删除",
     "newProfileDefaultName": "新配置",
     "deleteConfirm": "要删除「{name}」吗？",
@@ -166,7 +167,6 @@
     "saveAndContinue": "保存并继续",
     "discardAndContinue": "放弃",
     "toggleSidebar": "切换配置列表",
-    "moreActions": "更多操作",
     "errSave": "无法保存启动配置",
     "errProfileNotFound": "在列表中找不到已保存的配置"
   },
