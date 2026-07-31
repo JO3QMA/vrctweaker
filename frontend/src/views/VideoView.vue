@@ -97,155 +97,170 @@
       </p>
     </el-card>
 
-    <el-card class="video-card" shadow="never">
+    <el-card
+      class="video-card"
+      shadow="never"
+      data-testid="ytdlp-experimental-features"
+    >
       <template #header>
-        <span>{{ t("video.maintainSection") }}</span>
+        <span>{{ t("video.experimentalFeatures") }}</span>
       </template>
 
-      <div v-if="loading" class="muted">{{ t("common.loading") }}</div>
-      <template v-else>
-        <!-- 1. 注意・エラー（タイトル直下・1箇所） -->
-        <div class="video-alerts" data-testid="ytdlp-alert-area">
-          <el-alert
-            v-if="actionError"
-            type="error"
-            :closable="false"
-            show-icon
-            class="block-hint"
-            data-testid="ytdlp-error-banner"
-            :title="actionError"
-          />
-          <el-alert
-            v-else-if="!status.supported"
-            type="warning"
-            :closable="false"
-            show-icon
-            :title="userFacingReason(status.unsupportedReason ?? '')"
-          />
-          <template v-else>
+      <section
+        data-testid="ytdlp-replace-section"
+        aria-labelledby="ytdlp-replace-heading"
+      >
+        <h2 id="ytdlp-replace-heading" class="video-block-title">
+          {{ t("video.replaceLabel") }}
+        </h2>
+
+        <div v-if="loading" class="muted">{{ t("common.loading") }}</div>
+        <template v-else>
+          <!-- 1. 注意・エラー（置換ブロック直下・1箇所） -->
+          <div class="video-alerts" data-testid="ytdlp-alert-area">
             <el-alert
-              type="warning"
-              :closable="false"
-              show-icon
-              class="block-hint"
-              :title="t('video.alwaysWarn')"
-            />
-            <el-alert
-              v-if="bannerError"
+              v-if="actionError"
               type="error"
               :closable="false"
               show-icon
               class="block-hint"
               data-testid="ytdlp-error-banner"
-              :title="bannerError"
+              :title="actionError"
             />
-          </template>
-        </div>
-
-        <template v-if="status.supported">
-          <!-- 2. 操作エリア -->
-          <section class="video-ops" data-testid="ytdlp-ops">
-            <div class="video-switch-row">
-              <span class="switch-label">{{ t("video.replaceLabel") }}</span>
-              <el-switch
-                v-model="maintainOn"
-                data-testid="ytdlp-maintain-switch"
-                :disabled="busy"
-                @change="onMaintainChange"
+            <el-alert
+              v-else-if="!status.supported"
+              type="warning"
+              :closable="false"
+              show-icon
+              :title="userFacingReason(status.unsupportedReason ?? '')"
+            />
+            <template v-else>
+              <el-alert
+                type="warning"
+                :closable="false"
+                show-icon
+                class="block-hint"
+                :title="t('video.alwaysWarn')"
               />
-              <span class="switch-status" data-testid="ytdlp-effective-inline">
-                {{ t("video.statusPrefix") }}{{ effectiveStatusText }}
-              </span>
-            </div>
+              <el-alert
+                v-if="bannerError"
+                type="error"
+                :closable="false"
+                show-icon
+                class="block-hint"
+                data-testid="ytdlp-error-banner"
+                :title="bannerError"
+              />
+            </template>
+          </div>
 
-            <div class="video-actions" data-testid="ytdlp-action-grid">
-              <el-button
-                data-testid="ytdlp-check-latest"
-                :loading="checkLoading"
-                :disabled="busy"
-                @click="checkLatest"
-              >
-                {{ t("video.checkLatest") }}
-              </el-button>
-              <el-button
-                type="primary"
-                data-testid="ytdlp-update-cache"
-                :loading="updateLoading"
-                :disabled="busy"
-                @click="updateCache"
-              >
-                {{ t("video.updateCache") }}
-              </el-button>
-              <el-button
-                data-testid="ytdlp-open-cache-folder"
-                :disabled="busy"
-                @click="openCacheFolder"
-              >
-                <el-icon class="btn-icon"><FolderOpened /></el-icon>
-                {{ t("video.openCacheFolder") }}
-              </el-button>
-              <el-button
-                data-testid="ytdlp-open-tools-folder"
-                :disabled="busy"
-                @click="openToolsFolder"
-              >
-                <el-icon class="btn-icon"><FolderOpened /></el-icon>
-                {{ t("video.openToolsFolder") }}
-              </el-button>
-            </div>
+          <template v-if="status.supported">
+            <!-- 2. 操作エリア -->
+            <section class="video-ops" data-testid="ytdlp-ops">
+              <div class="video-switch-row">
+                <el-switch
+                  v-model="maintainOn"
+                  data-testid="ytdlp-maintain-switch"
+                  :disabled="busy"
+                  @change="onMaintainChange"
+                />
+                <span
+                  class="switch-status"
+                  data-testid="ytdlp-effective-inline"
+                >
+                  {{ t("video.statusPrefix") }}{{ effectiveStatusText }}
+                </span>
+              </div>
 
-            <p
-              v-if="flashOk"
-              class="flash flash-ok"
-              data-testid="ytdlp-flash-ok"
-            >
-              {{ flashOk }}
-            </p>
-          </section>
+              <div class="video-actions" data-testid="ytdlp-action-grid">
+                <el-button
+                  data-testid="ytdlp-check-latest"
+                  :loading="checkLoading"
+                  :disabled="busy"
+                  @click="checkLatest"
+                >
+                  {{ t("video.checkLatest") }}
+                </el-button>
+                <el-button
+                  type="primary"
+                  data-testid="ytdlp-update-cache"
+                  :loading="updateLoading"
+                  :disabled="busy"
+                  @click="updateCache"
+                >
+                  {{ t("video.updateCache") }}
+                </el-button>
+                <el-button
+                  data-testid="ytdlp-open-cache-folder"
+                  :disabled="busy"
+                  @click="openCacheFolder"
+                >
+                  <el-icon class="btn-icon"><FolderOpened /></el-icon>
+                  {{ t("video.openCacheFolder") }}
+                </el-button>
+                <el-button
+                  data-testid="ytdlp-open-tools-folder"
+                  :disabled="busy"
+                  @click="openToolsFolder"
+                >
+                  <el-icon class="btn-icon"><FolderOpened /></el-icon>
+                  {{ t("video.openToolsFolder") }}
+                </el-button>
+              </div>
 
-          <!-- 3. 詳細（バージョンのみ・初期は折りたたみ） -->
-          <section class="video-status" data-testid="ytdlp-status">
-            <button
-              type="button"
-              class="details-toggle"
-              data-testid="ytdlp-details-toggle"
-              :aria-expanded="detailsExpanded"
-              :aria-controls="detailsPanelId"
-              @click="detailsExpanded = !detailsExpanded"
-            >
-              <el-icon class="details-toggle-icon" aria-hidden="true">
-                <CaretBottom v-if="detailsExpanded" />
-                <CaretRight v-else />
-              </el-icon>
-              <span>{{ t("video.detailsToggle") }}</span>
-            </button>
-            <div
-              v-show="detailsExpanded"
-              :id="detailsPanelId"
-              class="details-panel"
-              role="region"
-            >
-              <dl class="video-dl">
-                <dt>{{ t("video.cacheVersion") }}</dt>
-                <dd data-testid="ytdlp-cache-version">
-                  {{ status.cacheVersion || t("video.cacheMissing") }}
-                </dd>
-                <dt>{{ t("video.latest") }}</dt>
-                <dd data-testid="ytdlp-latest-version">
-                  {{
-                    status.latestVersion
-                      ? status.latestVersion
-                      : t("video.latestUnchecked")
-                  }}
-                </dd>
-              </dl>
-            </div>
-          </section>
+              <p
+                v-if="flashOk"
+                class="flash flash-ok"
+                data-testid="ytdlp-flash-ok"
+              >
+                {{ flashOk }}
+              </p>
+            </section>
+
+            <!-- 3. 詳細（バージョンのみ・初期は折りたたみ） -->
+            <section class="video-status" data-testid="ytdlp-status">
+              <button
+                type="button"
+                class="details-toggle"
+                data-testid="ytdlp-details-toggle"
+                :aria-expanded="detailsExpanded"
+                :aria-controls="detailsPanelId"
+                @click="detailsExpanded = !detailsExpanded"
+              >
+                <el-icon class="details-toggle-icon" aria-hidden="true">
+                  <CaretBottom v-if="detailsExpanded" />
+                  <CaretRight v-else />
+                </el-icon>
+                <span>{{ t("video.detailsToggle") }}</span>
+              </button>
+              <div
+                v-show="detailsExpanded"
+                :id="detailsPanelId"
+                class="details-panel"
+                role="region"
+              >
+                <dl class="video-dl">
+                  <dt>{{ t("video.cacheVersion") }}</dt>
+                  <dd data-testid="ytdlp-cache-version">
+                    {{ status.cacheVersion || t("video.cacheMissing") }}
+                  </dd>
+                  <dt>{{ t("video.latest") }}</dt>
+                  <dd data-testid="ytdlp-latest-version">
+                    {{
+                      status.latestVersion
+                        ? status.latestVersion
+                        : t("video.latestUnchecked")
+                    }}
+                  </dd>
+                </dl>
+              </div>
+            </section>
+          </template>
         </template>
-      </template>
-    </el-card>
+      </section>
 
-    <CookieLinkageSection />
+      <CookieLinkageSection />
+    </el-card>
   </div>
 </template>
 
@@ -656,6 +671,11 @@ onUnmounted(() => {
   white-space: nowrap;
   min-width: 0;
 }
+.video-block-title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
 .video-alerts {
   margin-bottom: 1rem;
 }
@@ -671,9 +691,6 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.75rem 1rem;
   margin-bottom: 1rem;
-}
-.switch-label {
-  font-weight: 600;
 }
 .switch-status {
   color: var(--text-secondary);

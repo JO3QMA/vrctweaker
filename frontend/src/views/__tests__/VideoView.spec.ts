@@ -112,6 +112,36 @@ describe("VideoView", () => {
     });
   }
 
+  it("groups replace and cookie under one experimental features card", async () => {
+    vi.mocked(App.getYTDLPCookieLinkageStatus).mockResolvedValue({
+      supported: true,
+      enabled: false,
+      sourceKind: "",
+      riskAcknowledged: false,
+      browser: "chrome",
+    });
+    const wrapper = mountView();
+    await flushPromises();
+    const card = wrapper.get('[data-testid="ytdlp-experimental-features"]');
+    expect(card.text()).toContain("yt-dlp (実験的機能)");
+    expect(card.text()).toContain("yt-dlp の置換");
+    expect(card.text()).toContain("Cookie を利用する");
+    expect(card.find('[data-testid="ytdlp-replace-section"]').exists()).toBe(
+      true,
+    );
+    expect(card.find('[data-testid="video-cookie-linkage"]').exists()).toBe(
+      true,
+    );
+    // History card + one experimental-features card (cookie inside, no nested card)
+    expect(wrapper.findAll(".el-card").length).toBe(2);
+    expect(wrapper.get("#ytdlp-replace-heading").text()).toBe("yt-dlp の置換");
+    expect(wrapper.get("#ytdlp-cookie-heading").text()).toBe(
+      "Cookie を利用する",
+    );
+    // No switch-side feature name label (hint may still mention 置換)
+    expect(wrapper.find(".switch-label").exists()).toBe(false);
+  });
+
   it("loads without paths, ON/OFF labels, or duplicate detail rows", async () => {
     const wrapper = mountView();
     await flushPromises();
@@ -129,6 +159,8 @@ describe("VideoView", () => {
       wrapper.find('[data-testid="ytdlp-cache-version"]').isVisible(),
     ).toBe(false);
     expect(wrapper.text()).not.toContain("置き換え設定");
+    expect(wrapper.text()).not.toContain("yt-dlp を置き換える");
+    expect(wrapper.text()).not.toContain("yt-dlp Cookie 連携");
   });
 
   it("uses a 2x2 action grid", async () => {
