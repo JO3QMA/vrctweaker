@@ -1078,7 +1078,8 @@ func TestActivityUseCase_logSourceScopedClose(t *testing.T) {
 }
 
 type memVideoPlaybackRepo struct {
-	rows []*activity.VideoPlaybackAttempt
+	rows       []*activity.VideoPlaybackAttempt
+	worldNames map[string]string
 }
 
 func (m *memVideoPlaybackRepo) Save(_ context.Context, a *activity.VideoPlaybackAttempt) error {
@@ -1127,7 +1128,15 @@ func (m *memVideoPlaybackRepo) CompleteSuccess(_ context.Context, logSource, url
 func (m *memVideoPlaybackRepo) ListWithContext(_ context.Context) ([]*activity.VideoPlaybackWithContext, error) {
 	out := make([]*activity.VideoPlaybackWithContext, 0, len(m.rows))
 	for i := len(m.rows) - 1; i >= 0; i-- {
-		out = append(out, &activity.VideoPlaybackWithContext{Attempt: m.rows[i]})
+		a := m.rows[i]
+		worldName := ""
+		if m.worldNames != nil && a.WorldID != "" {
+			worldName = m.worldNames[a.WorldID]
+		}
+		out = append(out, &activity.VideoPlaybackWithContext{
+			Attempt:          a,
+			WorldDisplayName: worldName,
+		})
 	}
 	return out, nil
 }
@@ -1148,13 +1157,10 @@ func (m *memVideoPlaybackRepo) DeleteOlderThan(_ context.Context, before time.Ti
 
 func TestActivityUseCase_VideoPlayback_applyCommandsAndList(t *testing.T) {
 	ctx := context.Background()
-	video := &memVideoPlaybackRepo{}
-	world := &worldInfoLookupRepo{
-		byWorld: map[string]*activity.WorldInfo{
-			"wrld_v": {WorldID: "wrld_v", DisplayName: "Clip World"},
-		},
+	video := &memVideoPlaybackRepo{
+		worldNames: map[string]string{"wrld_v": "Clip World"},
 	}
-	uc := NewActivityUseCase(&fakePlaySessionRepo{}, &memEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, world).
+	uc := NewActivityUseCase(&fakePlaySessionRepo{}, &memEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil).
 		WithVideoPlaybackRepo(video)
 	at := time.Date(2026, 3, 18, 12, 0, 0, 0, time.UTC)
 	const logSrc = "/logs/a.txt"

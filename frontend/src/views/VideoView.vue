@@ -282,6 +282,7 @@ import { appLocaleToBcp47 } from "../i18n";
 import { videoErrorI18nKey } from "./videoErrors";
 
 const VIDEO_PLAYBACK_CHANGED_DEBOUNCE_MS = 400;
+const HISTORY_COPY_FLASH_MS = 2000;
 
 const { t, te, locale } = useI18n();
 
@@ -326,6 +327,7 @@ function isViewStale(gen: number): boolean {
 }
 
 let historyChangedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let historyCopyFlashTimer: ReturnType<typeof setTimeout> | null = null;
 let unsubscribeVideoPlaybackChanged: (() => void) | undefined;
 
 function formatAttemptAt(iso: string): string {
@@ -369,6 +371,13 @@ async function copyAttemptUrl(url: string): Promise<void> {
   if (!url) return;
   await copyDisplayName(url);
   historyCopyFlash.value = t("video.historyCopyOk");
+  if (historyCopyFlashTimer !== null) {
+    clearTimeout(historyCopyFlashTimer);
+  }
+  historyCopyFlashTimer = setTimeout(() => {
+    historyCopyFlash.value = "";
+    historyCopyFlashTimer = null;
+  }, HISTORY_COPY_FLASH_MS);
 }
 
 const effectiveStatusText = computed(() =>
@@ -637,6 +646,10 @@ onUnmounted(() => {
   if (historyChangedDebounceTimer !== null) {
     clearTimeout(historyChangedDebounceTimer);
     historyChangedDebounceTimer = null;
+  }
+  if (historyCopyFlashTimer !== null) {
+    clearTimeout(historyCopyFlashTimer);
+    historyCopyFlashTimer = null;
   }
   unsubscribeVideoPlaybackChanged?.();
 });

@@ -367,6 +367,33 @@ describe("VideoView", () => {
     ).toContain("URL をコピーしました");
   });
 
+  it("clears copy flash after a short delay", async () => {
+    vi.useFakeTimers();
+    mockVideoPlaybackHistory.mockResolvedValue([
+      {
+        id: "copy-flash",
+        attemptedAt: "2026-03-18T12:00:00.000Z",
+        url: "https://example.com/flash",
+        outcome: "success",
+        failureReason: "",
+      },
+    ]);
+    const wrapper = mountView();
+    await flushPromises();
+    await wrapper
+      .find('[data-testid="video-history-copy-url"]')
+      .trigger("click");
+    await flushPromises();
+    expect(wrapper.find('[data-testid="video-history-copy-ok"]').exists()).toBe(
+      true,
+    );
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(wrapper.find('[data-testid="video-history-copy-ok"]').exists()).toBe(
+      false,
+    );
+    vi.useRealTimers();
+  });
+
   it("debounces history refresh on activity:video-playback-changed", async () => {
     vi.useFakeTimers();
     await mountView();

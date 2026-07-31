@@ -653,19 +653,6 @@ func (uc *ActivityUseCase) ListVideoPlaybackHistory(ctx context.Context) ([]*act
 	if rows == nil {
 		return []*activity.VideoPlaybackWithContext{}, nil
 	}
-	if uc.worldRepo == nil {
-		return rows, nil
-	}
-	for _, row := range rows {
-		if row.WorldDisplayName != "" || row.Attempt == nil || row.Attempt.WorldID == "" {
-			continue
-		}
-		wi, err := uc.worldRepo.GetByWorldID(ctx, row.Attempt.WorldID)
-		if err != nil || wi == nil || wi.DisplayName == "" {
-			continue
-		}
-		row.WorldDisplayName = wi.DisplayName
-	}
 	return rows, nil
 }
 
