@@ -42,3 +42,11 @@ type worldInfoRepo interface {
 	UpsertDisplayName(ctx context.Context, worldID, displayName string, at time.Time) error
 	GetByWorldID(ctx context.Context, worldID string) (*activity.WorldInfo, error)
 }
+
+type videoPlaybackRepo interface {
+	Save(ctx context.Context, a *activity.VideoPlaybackAttempt) error
+	CompleteFailure(ctx context.Context, logSource, url, failureReason string, at time.Time) (int64, error)
+	CompleteSuccess(ctx context.Context, logSource, url, resolvedURL string, at time.Time) (int64, error)
+	ListWithContext(ctx context.Context) ([]*activity.VideoPlaybackWithContext, error)
+	DeleteOlderThan(ctx context.Context, before time.Time) (int64, error)
+}

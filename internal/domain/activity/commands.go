@@ -48,3 +48,26 @@ type UpsertWorldRoomNameCmd struct {
 	RoomName string
 	At       time.Time
 }
+
+// RecordVideoPlaybackAttemptCmd opens a Video playback attempt row.
+type RecordVideoPlaybackAttemptCmd struct {
+	URL     string
+	WorldID string // sessionWorldID at attempt time; empty if no Open play session
+	At      time.Time
+}
+
+// CompleteVideoPlaybackFailureCmd marks the matching Open attempt as failure.
+// URL empty means match the oldest Open on this Log source (ERROR lines often omit URL).
+type CompleteVideoPlaybackFailureCmd struct {
+	URL           string
+	FailureReason string
+	At            time.Time
+}
+
+// CompleteVideoPlaybackSuccessCmd marks the oldest Open attempt with URL as success,
+// only if still open (ERROR-first: already-failed rows are not overwritten).
+type CompleteVideoPlaybackSuccessCmd struct {
+	URL         string
+	ResolvedURL string
+	At          time.Time
+}

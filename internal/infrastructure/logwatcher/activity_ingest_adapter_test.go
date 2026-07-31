@@ -411,3 +411,45 @@ func TestActivityIngestAdapter_DefaultLoggerOnUpsertError(t *testing.T) {
 	h := NewActivityIngestAdapter(uc, ctx, nil, nil, testLogSource)
 	h.Handle(&activity.DestinationSetEvent{WorldID: testWorldID, OccurredAt: time.Now()})
 }
+
+type stubVideoPlaybackRepo struct{}
+
+func (stubVideoPlaybackRepo) Save(context.Context, *activity.VideoPlaybackAttempt) error { return nil }
+func (s *stubVideoPlaybackRepo) CompleteFailure(context.Context, string, string, string, time.Time) (int64, error) {
+	return 1, nil
+}
+func (s *stubVideoPlaybackRepo) CompleteSuccess(context.Context, string, string, string, time.Time) (int64, error) {
+	return 1, nil
+}
+func (stubVideoPlaybackRepo) ListWithContext(context.Context) ([]*activity.VideoPlaybackWithContext, error) {
+	return nil, nil
+}
+func (stubVideoPlaybackRepo) DeleteOlderThan(context.Context, time.Time) (int64, error) {
+	return 0, nil
+}
+
+func TestActivityIngestAdapter_VideoPlaybackNotify(t *testing.T) {
+	ctx := context.Background()
+	base := time.Date(2026, 3, 18, 0, 10, 0, 0, time.UTC)
+	var videoCalls, encCalls int
+	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, stubEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil).
+		WithVideoPlaybackRepo(&stubVideoPlaybackRepo{})
+	a := NewActivityIngestAdapter(uc, ctx, nil, func() { encCalls++ }, testLogSource)
+	a.SetOnAfterVideoPlayback(func() { videoCalls++ })
+
+	a.SetSuppressEncounterNotify(true)
+	a.Handle(&activity.VideoPlaybackEvent{URL: "https://youtu.be/boot", OccurredAt: base})
+	if videoCalls != 0 {
+		t.Fatalf("video notify while suppressed = %d", videoCalls)
+	}
+
+	a.SetSuppressEncounterNotify(false)
+	a.Handle(&activity.VideoPlaybackEvent{URL: "https://youtu.be/live", OccurredAt: base.Add(time.Second)})
+	a.Handle(&activity.VideoPlaybackErrorEvent{Message: "boom", OccurredAt: base.Add(2 * time.Second)})
+	if videoCalls != 2 {
+		t.Fatalf("videoCalls = %d, want 2 (attempt + failure)", videoCalls)
+	}
+	if encCalls != 0 {
+		t.Fatalf("encCalls = %d, want 0", encCalls)
+	}
+}

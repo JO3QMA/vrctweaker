@@ -1,7 +1,7 @@
 import type { Decorator, Meta, StoryObj } from "@storybook/vue3-vite";
 import VideoView from "./VideoView.vue";
 import { withWailsApp } from "../stories/wailsDecorator";
-import type { YTDLPMaintainStatusDTO } from "../wails/app";
+import type { VideoPlaybackDTO, YTDLPMaintainStatusDTO } from "../wails/app";
 
 const status: YTDLPMaintainStatusDTO = {
   supported: true,
@@ -22,8 +22,34 @@ const status: YTDLPMaintainStatusDTO = {
   latestError: "",
 };
 
+const samplePlaybackHistory: VideoPlaybackDTO[] = [
+  {
+    id: "vp-open",
+    attemptedAt: "2026-03-18T14:00:00.000Z",
+    url: "https://example.com/video/open",
+    outcome: "",
+    worldDisplayName: "Sample World",
+  },
+  {
+    id: "vp-ok",
+    attemptedAt: "2026-03-18T13:00:00.000Z",
+    url: "https://example.com/video/ok",
+    outcome: "success",
+    resolvedUrl: "https://cdn.example.com/stream.mp4",
+  },
+  {
+    id: "vp-fail",
+    attemptedAt: "2026-03-18T12:00:00.000Z",
+    url: "https://example.com/video/fail",
+    outcome: "failure",
+    failureReason:
+      "[youtube] example-id: Requested format is not available. Use --list-formats for a list of available formats",
+  },
+];
+
 function withVideoWails(
   overrides: Partial<YTDLPMaintainStatusDTO> = {},
+  historyRows: VideoPlaybackDTO[] = [],
 ): Decorator {
   const st = { ...status, ...overrides };
   return withWailsApp({
@@ -35,6 +61,8 @@ function withVideoWails(
     OpenYTDLPCacheFolder: () => Promise.resolve(),
     OpenYTDLPToolsFolder: () => Promise.resolve(),
     RuntimeIsWindows: () => Promise.resolve(true),
+    GetLogRetentionDays: () => Promise.resolve(30),
+    VideoPlaybackHistory: () => Promise.resolve(historyRows),
     GetYTDLPCookieLinkageStatus: () =>
       Promise.resolve({
         supported: true,
@@ -65,6 +93,10 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   decorators: [withVideoWails()],
+};
+
+export const HistoryWithRows: Story = {
+  decorators: [withVideoWails({}, samplePlaybackHistory)],
 };
 
 export const BundledEffective: Story = {

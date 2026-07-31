@@ -34,6 +34,18 @@ export type LaunchArgsParsedDTO = WailsDTO<launcher.LaunchArgsParsed>;
 export type ScreenshotDTO = WailsDTO<main.ScreenshotDTO>;
 export type ScreenshotSearchDTO = WailsDTO<main.ScreenshotSearchDTO>;
 export type UserEncounterDTO = WailsDTO<main.UserEncounterDTO>;
+/** Video playback history row (bindings.VideoPlaybackDTO); local until wails generate. */
+export type VideoPlaybackDTO = {
+  id: string;
+  attemptedAt: string;
+  url: string;
+  outcome: string;
+  failureReason?: string;
+  resolvedUrl?: string;
+  worldId?: string;
+  worldDisplayName?: string;
+  completedAt?: string;
+};
 export type UserCacheDTO = WailsDTO<main.UserCacheDTO>;
 export type UserProfileNavigationDTO = WailsDTO<main.UserProfileNavigationDTO>;
 export type PathSettingsDTO = WailsDTO<usecase.PathSettings>;
@@ -622,6 +634,15 @@ export const App = {
   ),
   vacuumDb: bindGo((a) => a.VacuumDb(), undefined),
   encounters: bindGo((a) => a.Encounters(), []),
+  videoPlaybackHistory: bindGo(
+    (a) =>
+      (
+        a as AppBindings & {
+          VideoPlaybackHistory?: () => Promise<VideoPlaybackDTO[]>;
+        }
+      ).VideoPlaybackHistory?.() ?? Promise.resolve([]),
+    [],
+  ),
   encountersByVRCUserID: bindGo(
     (a, vrcUserID: string) => a.EncountersByVRCUserID(vrcUserID),
     [],

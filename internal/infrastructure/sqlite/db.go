@@ -218,6 +218,18 @@ func schemaStatements() []string {
 			display_name TEXT,
 			last_visited_at TEXT NOT NULL
 		)`,
+		`CREATE TABLE IF NOT EXISTS video_playback_history (
+			id TEXT PRIMARY KEY,
+			attempted_at TEXT NOT NULL,
+			url TEXT NOT NULL,
+			outcome TEXT NOT NULL DEFAULT '',
+			failure_reason TEXT,
+			resolved_url TEXT,
+			world_id TEXT,
+			log_source_path TEXT,
+			completed_at TEXT
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_video_playback_attempted_at ON video_playback_history(attempted_at)`,
 		`CREATE TABLE IF NOT EXISTS automation_rules (
 			id TEXT PRIMARY KEY,
 			name TEXT NOT NULL,

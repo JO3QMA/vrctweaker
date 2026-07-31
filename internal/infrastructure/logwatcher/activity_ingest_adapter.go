@@ -10,14 +10,15 @@ import (
 
 // ActivityIngestAdapter bridges parsed log events to SessionCorrelator and ActivityUseCase.
 type ActivityIngestAdapter struct {
-	uc               *usecase.ActivityUseCase
-	ctx              context.Context
-	logger           Logger
-	logSourcePath    string
-	correlator       activity.SessionCorrelator
-	onAfterEncounter func()
-	// suppressEncounterNotify skips onAfterEncounter (e.g. during historical log bootstrap).
-	suppressEncounterNotify atomic.Bool
+	uc                   *usecase.ActivityUseCase
+	ctx                  context.Context
+	logger               Logger
+	logSourcePath        string
+	correlator           activity.SessionCorrelator
+	onAfterEncounter     func()
+	onAfterVideoPlayback func()
+	// suppressNotify skips UI callbacks during historical log bootstrap / replay.
+	suppressNotify atomic.Bool
 }
 
 // NewActivityIngestAdapter creates an adapter that correlates and persists log-derived activity.
@@ -36,14 +37,19 @@ func NewActivityIngestAdapter(uc *usecase.ActivityUseCase, ctx context.Context, 
 	}
 }
 
+// SetOnAfterVideoPlayback sets the optional callback for video playback history refresh.
+func (a *ActivityIngestAdapter) SetOnAfterVideoPlayback(fn func()) {
+	a.onAfterVideoPlayback = fn
+}
+
 // LogSourcePath returns the bound output_log absolute path.
 func (a *ActivityIngestAdapter) LogSourcePath() string {
 	return a.logSourcePath
 }
 
-// SetSuppressEncounterNotify when true skips onAfterEncounter for encounter commands (e.g. bulk bootstrap).
+// SetSuppressEncounterNotify when true skips UI callbacks for encounter and video commands (e.g. bulk bootstrap).
 func (a *ActivityIngestAdapter) SetSuppressEncounterNotify(suppress bool) {
-	a.suppressEncounterNotify.Store(suppress)
+	a.suppressNotify.Store(suppress)
 }
 
 // ResetSessionContextForNewLogFile clears correlator state before reading a new output_log file.
@@ -64,8 +70,14 @@ func (a *ActivityIngestAdapter) Handle(event activity.ParsedEvent) {
 		}
 		switch cmd.(type) {
 		case activity.RecordEncounterJoinCmd, activity.RecordEncounterLeaveCmd:
-			if !a.suppressEncounterNotify.Load() && a.onAfterEncounter != nil {
+			if !a.suppressNotify.Load() && a.onAfterEncounter != nil {
 				a.onAfterEncounter()
+			}
+		case activity.RecordVideoPlaybackAttemptCmd,
+			activity.CompleteVideoPlaybackFailureCmd,
+			activity.CompleteVideoPlaybackSuccessCmd:
+			if !a.suppressNotify.Load() && a.onAfterVideoPlayback != nil {
+				a.onAfterVideoPlayback()
 			}
 		}
 	}

@@ -8,7 +8,7 @@ import (
 
 // activityIngestAdapterForPath returns a per–log-source ingest adapter reused across bootstrap and live tail.
 // SessionCorrelator state must survive from bootstrap replay into tailOutputLogFile.
-func (a *App) activityIngestAdapterForPath(ctx context.Context, logger logwatcher.Logger, emitEncounters func(), filePath string) *logwatcher.ActivityIngestAdapter {
+func (a *App) activityIngestAdapterForPath(ctx context.Context, logger logwatcher.Logger, emitEncounters, emitVideoPlayback func(), filePath string) *logwatcher.ActivityIngestAdapter {
 	abs := absLogPath(filePath)
 	a.activityIngestMu.Lock()
 	defer a.activityIngestMu.Unlock()
@@ -19,6 +19,7 @@ func (a *App) activityIngestAdapterForPath(ctx context.Context, logger logwatche
 		return ad
 	}
 	ad := logwatcher.NewActivityIngestAdapter(a.activity, ctx, logger, emitEncounters, abs)
+	ad.SetOnAfterVideoPlayback(emitVideoPlayback)
 	a.activityIngestAdapters[abs] = ad
 	return ad
 }

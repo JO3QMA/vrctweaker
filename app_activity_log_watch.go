@@ -14,10 +14,11 @@ import (
 )
 
 type activityLogWatchDeps struct {
-	watchPath      string
-	parser         *activity.LogParser
-	logger         logwatcher.Logger
-	emitEncounters func()
+	watchPath         string
+	parser            *activity.LogParser
+	logger            logwatcher.Logger
+	emitEncounters    func()
+	emitVideoPlayback func()
 }
 
 func (a *App) finalizeOpenActivityForLogSource(ctx context.Context, logPath string) {

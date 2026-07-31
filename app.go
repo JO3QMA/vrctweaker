@@ -115,6 +115,7 @@ func (a *App) startup(ctx context.Context) {
 	mediaRepo := sqlite.NewScreenshotRepository(db)
 	playRepo := sqlite.NewPlaySessionRepository(db)
 	encounterRepo := sqlite.NewUserEncounterRepository(db)
+	videoPlaybackRepo := sqlite.NewVideoPlaybackRepository(db)
 	userCacheRepo := sqlite.NewUserCacheRepository(db)
 	worldRepo := sqlite.NewWorldInfoRepository(db)
 	automationRepo := sqlite.NewAutomationItemRepository(db)
@@ -136,7 +137,8 @@ func (a *App) startup(ctx context.Context) {
 	}
 	a.launcher = usecase.NewLauncherUseCase(launcherRepo)
 	a.media = usecase.NewMediaUseCase(mediaRepo, worldRepo, userCacheRepo)
-	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo)
+	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo).
+		WithVideoPlaybackRepo(videoPlaybackRepo)
 	a.identity = usecase.NewIdentityUseCase(userCacheRepo, apiClient, credStore, settingsRepo, notify)
 	a.identity.SetSelfCacheChangedHook(func() {
 		runtime.EventsEmit(a.ctx, selfCacheChangedEvent, struct{}{})
@@ -278,7 +280,7 @@ func (a *App) resolveEffectiveOutputLogWatchPath(ctx context.Context) (string, e
 	return absDir, nil
 }
 
-func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, parser *activity.LogParser, logger logwatcher.Logger, emitEncounters func()) {
+func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, parser *activity.LogParser, logger logwatcher.Logger, emitEncounters, emitVideoPlayback func()) {
 	info, err := os.Stat(absWatch)
 	if err != nil {
 		runtime.LogWarning(ctx, "activity log bootstrap skipped: "+err.Error())
@@ -297,7 +299,7 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 	live := bootstrapLiveLogFiles(files)
 	for _, fp := range files {
 		finalize := live == nil || !live[fp]
-		a.ingestOneActivityLogBootstrap(ctx, absWatch, fp, parser, logger, emitEncounters, cp, finalize, nil)
+		a.ingestOneActivityLogBootstrap(ctx, absWatch, fp, parser, logger, emitEncounters, emitVideoPlayback, cp, finalize, nil)
 	}
 }
 
@@ -337,14 +339,14 @@ func (a *App) ingestOneActivityLogBootstrap(
 	absWatch, filePath string,
 	parser *activity.LogParser,
 	logger logwatcher.Logger,
-	emitEncounters func(),
+	emitEncounters, emitVideoPlayback func(),
 	cp *usecase.ActivityLogCheckpoint,
 	finalizeAtEnd bool,
 	ingestAdapter *logwatcher.ActivityIngestAdapter,
 ) {
 	absFile := absLogPath(filePath)
 	if ingestAdapter == nil {
-		ingestAdapter = a.activityIngestAdapterForPath(ctx, logger, emitEncounters, filePath)
+		ingestAdapter = a.activityIngestAdapterForPath(ctx, logger, emitEncounters, emitVideoPlayback, filePath)
 	}
 	off := int64(0)
 	if cp != nil && matchAbsPaths(cp.WatchPath, absWatch) {
@@ -429,9 +431,12 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 	emitEncounters := func() {
 		runtime.EventsEmit(a.ctx, activityEncountersChangedEvent, struct{}{})
 	}
+	emitVideoPlayback := func() {
+		runtime.EventsEmit(a.ctx, activityVideoPlaybackChangedEvent, struct{}{})
+	}
 
 	a.resetActivityIngestAdapterCache()
-	a.ingestActivityLogsBootstrap(ctx, watchPath, parser, logger, emitEncounters)
+	a.ingestActivityLogsBootstrap(ctx, watchPath, parser, logger, emitEncounters, emitVideoPlayback)
 	if _, dedupeErr := a.activity.DeduplicateEncounters(ctx); dedupeErr != nil {
 		runtime.LogWarning(ctx, "activity encounter dedupe: "+dedupeErr.Error())
 	}
@@ -440,14 +445,15 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 	}
 
 	watchDeps := activityLogWatchDeps{
-		watchPath:      watchPath,
-		parser:         parser,
-		logger:         logger,
-		emitEncounters: emitEncounters,
+		watchPath:         watchPath,
+		parser:            parser,
+		logger:            logger,
+		emitEncounters:    emitEncounters,
+		emitVideoPlayback: emitVideoPlayback,
 	}
 
 	watcher := logwatcher.NewMultiOutputLogWatcher(watchPath, parser, func(logPath string) logwatcher.EventHandler {
-		adapter := a.activityIngestAdapterForPath(ctx, logger, emitEncounters, logPath)
+		adapter := a.activityIngestAdapterForPath(ctx, logger, emitEncounters, emitVideoPlayback, logPath)
 		triggerHandler := logwatcher.NewAutomationTriggerHandler(a.automation, ctx, logger)
 		return activityLogDualHandler{ingest: adapter, trigger: triggerHandler}
 	}, logwatcher.MultiOutputLogWatcherCallbacks{
@@ -835,6 +841,9 @@ const galleryScreenshotsChangedEvent = "gallery:screenshots-changed"
 // activityEncountersChangedEvent is emitted when a new encounter row is written from the log watcher.
 const activityEncountersChangedEvent = "activity:encounters-changed"
 
+// activityVideoPlaybackChangedEvent is emitted when video playback history is updated from the log watcher.
+const activityVideoPlaybackChangedEvent = "activity:video-playback-changed"
+
 // friendsChangedEvent is emitted when the friends cache may have changed (Pipeline or REST reconcile).
 const friendsChangedEvent = "vrchat:friends-changed"
 
@@ -967,6 +976,15 @@ func (a *App) Encounters() ([]UserEncounterDTO, error) {
 		return nil, err
 	}
 	return toEncounterDTOsFromContext(list), nil
+}
+
+// VideoPlaybackHistory returns video playback attempts for the video tab (newest first).
+func (a *App) VideoPlaybackHistory() ([]VideoPlaybackDTO, error) {
+	list, err := a.activity.ListVideoPlaybackHistory(a.ctx)
+	if err != nil {
+		return nil, err
+	}
+	return toVideoPlaybackDTOs(list), nil
 }
 
 // EncountersByVRCUserID returns encounters for the given VRChat user id. Empty id yields an empty slice.

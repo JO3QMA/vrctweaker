@@ -203,6 +203,44 @@ func toEncounterDTOsFromContext(list []*activity.EncounterWithContext) []UserEnc
 	return out
 }
 
+// VideoPlaybackDTO is the frontend-facing video playback attempt row.
+type VideoPlaybackDTO struct {
+	ID               string `json:"id"`
+	AttemptedAt      string `json:"attemptedAt"`
+	URL              string `json:"url"`
+	Outcome          string `json:"outcome"` // "" | "success" | "failure"
+	FailureReason    string `json:"failureReason,omitempty"`
+	ResolvedURL      string `json:"resolvedUrl,omitempty"`
+	WorldID          string `json:"worldId,omitempty"`
+	WorldDisplayName string `json:"worldDisplayName,omitempty"`
+	CompletedAt      string `json:"completedAt,omitempty"`
+}
+
+func toVideoPlaybackDTOs(list []*activity.VideoPlaybackWithContext) []VideoPlaybackDTO {
+	out := make([]VideoPlaybackDTO, 0, len(list))
+	for _, row := range list {
+		if row == nil || row.Attempt == nil {
+			continue
+		}
+		a := row.Attempt
+		dto := VideoPlaybackDTO{
+			ID:               a.ID,
+			AttemptedAt:      formatRFC3339(a.AttemptedAt),
+			URL:              a.URL,
+			Outcome:          a.Outcome,
+			FailureReason:    a.FailureReason,
+			ResolvedURL:      a.ResolvedURL,
+			WorldID:          a.WorldID,
+			WorldDisplayName: row.WorldDisplayName,
+		}
+		if a.CompletedAt != nil {
+			dto.CompletedAt = formatRFC3339(*a.CompletedAt)
+		}
+		out = append(out, dto)
+	}
+	return out
+}
+
 // UserCacheDTO is the frontend-facing users_cache row for the friends list (user_kind=friend).
 type UserCacheDTO struct {
 	VRCUserID     string `json:"vrcUserId"`

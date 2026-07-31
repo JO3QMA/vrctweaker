@@ -17,6 +17,8 @@ const (
 	EventKindRoomName
 	EventKindAvatarSwitch
 	EventKindVideoPlayback
+	EventKindVideoPlaybackError
+	EventKindVideoPlaybackResolved
 )
 
 // EncounterAction represents join or leave.
@@ -91,7 +93,7 @@ type AvatarSwitchEvent struct {
 // Kind implements ParsedEvent.
 func (AvatarSwitchEvent) Kind() EventKind { return EventKindAvatarSwitch }
 
-// VideoPlaybackEvent is emitted when a video URL is resolved.
+// VideoPlaybackEvent is emitted for Attempting/Resolving URL attempt lines.
 type VideoPlaybackEvent struct {
 	URL        string
 	OccurredAt time.Time
@@ -99,6 +101,27 @@ type VideoPlaybackEvent struct {
 
 // Kind implements ParsedEvent.
 func (VideoPlaybackEvent) Kind() EventKind { return EventKindVideoPlayback }
+
+// VideoPlaybackErrorEvent is emitted for [Video Playback] ERROR: lines.
+// URL is often empty — real ERROR lines typically omit the attempt URL.
+type VideoPlaybackErrorEvent struct {
+	URL        string // optional; empty when the ERROR line has no URL
+	Message    string // text after "ERROR:"
+	OccurredAt time.Time
+}
+
+// Kind implements ParsedEvent.
+func (VideoPlaybackErrorEvent) Kind() EventKind { return EventKindVideoPlaybackError }
+
+// VideoPlaybackResolvedEvent is emitted for URL 'x' resolved to 'y' lines.
+type VideoPlaybackResolvedEvent struct {
+	URL         string
+	ResolvedURL string
+	OccurredAt  time.Time
+}
+
+// Kind implements ParsedEvent.
+func (VideoPlaybackResolvedEvent) Kind() EventKind { return EventKindVideoPlaybackResolved }
 
 // LogParser parses VRChat output_log.txt lines into events.
 type LogParser struct {
@@ -108,6 +131,8 @@ type LogParser struct {
 	roomNameRE        *regexp.Regexp
 	avatarRE          *regexp.Regexp
 	videoRE           *regexp.Regexp
+	videoErrorRE      *regexp.Regexp
+	videoResolvedRE   *regexp.Regexp
 }
 
 type encounterPattern struct {
@@ -153,6 +178,10 @@ var (
 	avatarSwitchRE = regexp.MustCompile(`(?i)\[Behaviour\]\s+Switching\s+(.+?)\s+to\s+avatar\s+(.+)$`)
 
 	videoPlaybackRE = regexp.MustCompile(`(?i)\[Video Playback\]\s+(?:Attempting to resolve URL|Resolving URL)\s+'([^']+)'`)
+
+	videoPlaybackErrorRE = regexp.MustCompile(`(?i)\[Video Playback\]\s+ERROR:\s*(.+)$`)
+
+	videoPlaybackResolvedRE = regexp.MustCompile(`(?i)\[Video Playback\]\s+URL\s+'([^']+)'\s+resolved to\s+'([^']+)'`)
 )
 
 // vrchatLineTimeRE matches the leading local timestamp in output_log.txt lines.
@@ -182,10 +211,12 @@ func NewLogParser() *LogParser {
 			{sessionStartWrldRE, SessionEventStart},
 			{sessionEndRE, SessionEventEnd},
 		},
-		destinationRE: destinationSetRE,
-		roomNameRE:    roomNameRE,
-		avatarRE:      avatarSwitchRE,
-		videoRE:       videoPlaybackRE,
+		destinationRE:   destinationSetRE,
+		roomNameRE:      roomNameRE,
+		avatarRE:        avatarSwitchRE,
+		videoRE:         videoPlaybackRE,
+		videoErrorRE:    videoPlaybackErrorRE,
+		videoResolvedRE: videoPlaybackResolvedRE,
 	}
 }
 
@@ -254,6 +285,21 @@ func (p *LogParser) ParseLine(line string, baseTime time.Time) ([]ParsedEvent, e
 		u := strings.TrimSpace(m[1])
 		if u != "" {
 			return []ParsedEvent{&VideoPlaybackEvent{URL: u, OccurredAt: baseTime}}, nil
+		}
+	}
+
+	if m := p.videoResolvedRE.FindStringSubmatch(line); len(m) >= 3 {
+		u := strings.TrimSpace(m[1])
+		resolved := strings.TrimSpace(m[2])
+		if u != "" {
+			return []ParsedEvent{&VideoPlaybackResolvedEvent{URL: u, ResolvedURL: resolved, OccurredAt: baseTime}}, nil
+		}
+	}
+
+	if m := p.videoErrorRE.FindStringSubmatch(line); len(m) >= 2 {
+		msg := strings.TrimSpace(m[1])
+		if msg != "" {
+			return []ParsedEvent{&VideoPlaybackErrorEvent{Message: msg, OccurredAt: baseTime}}, nil
 		}
 	}
 
