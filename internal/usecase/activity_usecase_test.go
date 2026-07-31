@@ -1076,3 +1076,138 @@ func TestActivityUseCase_logSourceScopedClose(t *testing.T) {
 		}
 	}
 }
+
+type memVideoPlaybackRepo struct {
+	rows []*activity.VideoPlaybackAttempt
+}
+
+func (m *memVideoPlaybackRepo) Save(_ context.Context, a *activity.VideoPlaybackAttempt) error {
+	cp := *a
+	m.rows = append(m.rows, &cp)
+	return nil
+}
+
+func (m *memVideoPlaybackRepo) CompleteFailure(_ context.Context, logSource, url, failureReason string, at time.Time) (int64, error) {
+	for _, r := range m.rows {
+		if r.Outcome != "" {
+			continue
+		}
+		if logSource != "" && r.LogSourcePath != logSource {
+			continue
+		}
+		if url != "" && r.URL != url {
+			continue
+		}
+		r.Outcome = activity.VideoPlaybackOutcomeFailure
+		r.FailureReason = failureReason
+		ct := at
+		r.CompletedAt = &ct
+		return 1, nil
+	}
+	return 0, nil
+}
+
+func (m *memVideoPlaybackRepo) CompleteSuccess(_ context.Context, logSource, url, resolvedURL string, at time.Time) (int64, error) {
+	for _, r := range m.rows {
+		if r.Outcome != "" || r.URL != url {
+			continue
+		}
+		if logSource != "" && r.LogSourcePath != logSource {
+			continue
+		}
+		r.Outcome = activity.VideoPlaybackOutcomeSuccess
+		r.ResolvedURL = resolvedURL
+		ct := at
+		r.CompletedAt = &ct
+		return 1, nil
+	}
+	return 0, nil
+}
+
+func (m *memVideoPlaybackRepo) ListWithContext(_ context.Context) ([]*activity.VideoPlaybackWithContext, error) {
+	out := make([]*activity.VideoPlaybackWithContext, 0, len(m.rows))
+	for i := len(m.rows) - 1; i >= 0; i-- {
+		out = append(out, &activity.VideoPlaybackWithContext{Attempt: m.rows[i]})
+	}
+	return out, nil
+}
+
+func (m *memVideoPlaybackRepo) DeleteOlderThan(_ context.Context, before time.Time) (int64, error) {
+	keep := m.rows[:0]
+	var n int64
+	for _, r := range m.rows {
+		if r.AttemptedAt.Before(before) {
+			n++
+			continue
+		}
+		keep = append(keep, r)
+	}
+	m.rows = keep
+	return n, nil
+}
+
+func TestActivityUseCase_VideoPlayback_applyCommandsAndList(t *testing.T) {
+	ctx := context.Background()
+	video := &memVideoPlaybackRepo{}
+	world := &worldInfoLookupRepo{
+		byWorld: map[string]*activity.WorldInfo{
+			"wrld_v": {WorldID: "wrld_v", DisplayName: "Clip World"},
+		},
+	}
+	uc := NewActivityUseCase(&fakePlaySessionRepo{}, &memEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, world).
+		WithVideoPlaybackRepo(video)
+	at := time.Date(2026, 3, 18, 12, 0, 0, 0, time.UTC)
+	const logSrc = "/logs/a.txt"
+
+	if err := uc.ApplyCommand(ctx, logSrc, activity.RecordVideoPlaybackAttemptCmd{
+		URL: "https://youtu.be/x", WorldID: "wrld_v", At: at,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := uc.ApplyCommand(ctx, logSrc, activity.CompleteVideoPlaybackFailureCmd{
+		URL: "https://youtu.be/x", FailureReason: "no format", At: at.Add(time.Second),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := uc.ApplyCommand(ctx, logSrc, activity.CompleteVideoPlaybackSuccessCmd{
+		URL: "https://youtu.be/x", ResolvedURL: "https://cdn", At: at.Add(2 * time.Second),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	rows, err := uc.ListVideoPlaybackHistory(ctx)
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("list = %+v err=%v", rows, err)
+	}
+	if rows[0].Attempt.Outcome != activity.VideoPlaybackOutcomeFailure {
+		t.Fatalf("outcome = %q, want failure (no overwrite)", rows[0].Attempt.Outcome)
+	}
+	if rows[0].WorldDisplayName != "Clip World" {
+		t.Fatalf("world = %q", rows[0].WorldDisplayName)
+	}
+}
+
+func TestActivityUseCase_RotateEncounters_alsoDeletesVideoPlayback(t *testing.T) {
+	ctx := context.Background()
+	settings := &fakeAppSettingsRepo{m: map[string]string{"log_retention_days": "7"}}
+	video := &memVideoPlaybackRepo{
+		rows: []*activity.VideoPlaybackAttempt{
+			{ID: "old", AttemptedAt: time.Now().UTC().AddDate(0, 0, -30), URL: "https://a"},
+			{ID: "new", AttemptedAt: time.Now().UTC(), URL: "https://b"},
+		},
+	}
+	uc := NewActivityUseCase(&fakePlaySessionRepo{}, &memEncounterRepo{}, settings, nil, nil).
+		WithVideoPlaybackRepo(video)
+	n, err := uc.RotateEncounters(ctx)
+	if err != nil || n != 1 || len(video.rows) != 1 || video.rows[0].ID != "new" {
+		t.Fatalf("n=%d rows=%+v err=%v", n, video.rows, err)
+	}
+}
+
+func TestActivityUseCase_ListVideoPlaybackHistory_nilRepo(t *testing.T) {
+	uc := NewActivityUseCase(&fakePlaySessionRepo{}, &memEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil)
+	rows, err := uc.ListVideoPlaybackHistory(context.Background())
+	if err != nil || rows == nil || len(rows) != 0 {
+		t.Fatalf("rows=%v err=%v", rows, err)
+	}
+}

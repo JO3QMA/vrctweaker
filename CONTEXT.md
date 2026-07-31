@@ -291,7 +291,7 @@ Encounter log 上の唯一の絞り込み。表示名の部分一致のみ（ク
 _Avoid_: 検索, フィルタ（Gallery の World search や Date range filter と混同しやすいため）
 
 **Activity retention**:
-Output log 由来の Activity データの保存上限。設定の保存期間（日）を過ぎた User encounter と Play session は自動削除される。Activity 画面ではページ全体（タイトル付近）に 1 回だけ期間を示すヒント文を置き、空状態だけに頼らない。
+Output log 由来の Activity データの保存上限。設定の保存期間（日）を過ぎた User encounter・Play session・**Video playback attempt** は自動削除される。Activity 画面ではページ全体（タイトル付近）に 1 回だけ期間を示すヒント文を置き、空状態だけに頼らない。Video playback history では履歴カード内に同じ日数の短いヒントを 1 行置く。
 _Avoid_: Encounter retention（User encounter だけを指す印象）, ログ保持, データ削除（プレイ時間やスクリーンショットと混同しやすいため）
 
 **Output log ingest**:
@@ -315,7 +315,7 @@ _Avoid_: ログ切替, ファイルスイッチ（MultiOutputLogWatcher の実�
 _Avoid_: タイムアウト, アイドル切断（ネットワーク切断と混同しやすいため）
 
 **Log replay**:
-Output log ingest のうち、すでにディスク上にある行を offset から読み直して Activity の相関状態を再構築すること。起動時 bootstrap を含む。User encounter・Play session の更新のみ行い、Friend joined などの automation は発火しない（automation は追記監視の live tail に限る）。
+Output log ingest のうち、すでにディスク上にある行を offset から読み直して Activity の相関状態を再構築すること。起動時 bootstrap を含む。User encounter・Play session・**Video playback attempt** の更新を行い、Friend joined などの automation は発火しない（automation は追記監視の live tail に限る）。Video playback history 向けの変更通知も replay / bootstrap 中は抑制してよい（完了後の再取得に委ねる）。
 _Avoid_: ログ再処理, catch-up ingest（live tail との境界が曖昧なため）, bootstrap（起動時だけを指す印象）
 
 **VRChat instance key**:
@@ -353,6 +353,42 @@ _Avoid_: プレイ時間（UI セクション名だけを指すとき）, 滞在
 **Play time chart**:
 Activity 上の副次セクション。Play time の日別合計を棒グラフで示す。表示する暦日数は 14 日と Activity retention の日数の小さい方（保存期間が 14 日未満のときは軸も短くする）。見出しもその日数（例: 直近7日）を反映する。遭遇ログの補助情報であり、Activity の主目的ではない。既定では折りたたみ、遭遇ログより下に置く。
 _Avoid_: プレイ時間画面, アクティビティ統計（遭遇ログ全体を指す語と混同しやすいため）
+
+**Video playback attempt**:
+output_log の `[Video Playback]` 由来で、ある URL の resolve を 1 回試みた記録（[Issue #176](https://github.com/JO3QMA/vrctweaker/issues/176)）。`Attempting to resolve URL` / `Resolving URL` で始まり、同じ URL に対する成功（`resolved to`）または失敗（`ERROR`）で結果が付く。結果の正は **Video playback outcome**。結果が未観測の間は Open。試行時点に Open play session があればそのワールドを文脈として付与し、無ければワールドは空（試行自体は残す）。直近の終了済み Play session には遡らない。属する Log source を持つ（UI には出さない）。User encounter や Play session と同じく Output log ingest の対象であり、Activity 画面には出さない。
+_Avoid_: 再生履歴（一覧全体を指す語）, VideoPlaybackEvent（実装型名）, 再生セッション（Play session と混同しやすいため）, 動画ログ
+
+**Open video playback attempt**:
+結果（成功・失敗）が未確定の Video playback attempt。一覧では結果列に未解決ラベルで示す（成功／失敗／欠損の空表示とは区別する）。Open encounter / Open play session と同型。Log rotation handoff やクライアント終了だけでは自動で失敗扱いにしない（結果行が来るまで、または Activity retention で削除されるまで Open のまま）。
+_Avoid_: 進行中再生, pending（実装語）, タイムアウト失敗（未観測を失敗と同一視しないため）
+
+**Video playback world context**:
+Video playback attempt に付く、試行時点の Open play session 由来のワールド情報。一覧の主表示はワールド表示名（`world_info` 等）。`wrld_*` や VRChat instance key は Encounter log と同様、一覧の主列には出さない。Open play session が無いときの空欄は「不明」ではなく文脈なし。
+_Avoid_: ワールド文脈（曖昧なままの Issue 俗称）, 最後のワールド（終了済み session へのフォールバックを含意するため）, インスタンス（Log source や instance key と混同しやすいため）
+
+**Video playback outcome**:
+Video playback attempt の結果区分。成功・失敗・未解決（Open）の三値。同じ試行 URL に対し `[Video Playback] ERROR:` が一度でも付いたら失敗とし、その後の `URL '…' resolved to '…'`（入力と同一 URL へのフォールバックを含む）では成功に上書きしない。ERROR が無く `resolved to` だけなら成功。失敗時の理由文は ERROR 行の文言。成功時は解決先 URL を保持してよい。
+_Avoid_: 再生結果（プレイヤー再生完了と混同しやすいため）, resolved＝常に成功（ERROR 後の同 URL resolve を成功と誤るため）
+
+**Video playback failure reason**:
+失敗した Video playback attempt に付く、ログ上の ERROR 文言。`[Video Playback] ERROR:` 以降のテキスト。**全文を保持し、UI にも全文を出す**（折り返しやツールチップは可。先頭省略や i18n 分類は v1 ではしない）。Public contribution artifact には載せない。
+_Avoid_: エラーコード, yt-dlp 終了コード（NativeProcess 行は Video playback attempt の正本にしないため）
+
+**Video playback correlation**:
+同一 Log source 内で、試行行（`Attempting` / `Resolving`）と結果行（`ERROR` / `resolved to`）を URL で対応づけること。結果は同じ URL の Open video playback attempt のうち最も古い 1 件に付与する（FIFO）。対応する Open が無い結果行は捨て、結果だけの行は作らない。別 URL の Open は互いに取り違えない。相関状態は Log source ごとに分離し、Open play session と同じ session 相関の寿命を共有する（[ADR 0016](docs/adr/0016-video-playback-history.md)）。
+_Avoid_: pending URL（実装語だけ）, セッション相関（Play session / encounter 全体と混同しやすいため）
+
+**Video playback history**:
+動画タブ上の、Video playback attempt の時系列一覧。画面見出しは「再生履歴」など。列は時刻・試行 URL・Video playback outcome・Video playback failure reason・Video playback world context（表示名）。**全 Log source の行を試行時刻で混ぜて 1 一覧**とし、Log source 列は出さない（Encounter log と同型）。**Activity retention 内を一括取得して表示**する（Encounter log と同様、v1 ではサーバ側ページングは持たない）。既定は試行時刻の新しい順。ページ上はタイトル直下に置き、yt-dlp Tools replace maintain / Cookie linkage より上（診断を先に見せる）。履歴カード内に Activity retention と同じ保存日数を示す短いヒントを 1 行置く。行からの操作は **試行 URL のコピーのみ**（再試行・外部ブラウザ起動・解決先 URL コピーは持たない）。Activity 画面には置かない。
+_Avoid_: 動画ログ, Encounter log（Activity の遭遇一覧と混同しやすいため）, 再生セッション一覧
+
+**Video playback history refresh**:
+Video playback history の再取得。Output log ingest が Video playback attempt を更新したあと、専用の変更通知（Encounter 用の `activity:encounters-changed` とは別）で、動画タブ表示中のみ debounce して行う。v1 では手動更新ボタンは置かない（マウント時取得＋上記の自動再取得）。
+_Avoid_: Activity refresh（Encounter log / Play time chart 向けと混同しやすいため）, encounters-changed 相乗り
+
+**Video playback history fetch failure**:
+Video playback history の一覧取得に失敗したときの扱い。履歴カードは残し、カード内に取得できなかった旨だけを示す（Encounter log / Dashboard launch block と同型）。`ElMessage` は出さない。Output log ingest 中の単一行の永続化失敗は、ログに残してその行だけスキップし、ingest 全体や他種別（User encounter 等）は止めない。
+_Avoid_: 履歴非表示, ingest 全体停止, ElMessage のみ
 
 ## User detail
 

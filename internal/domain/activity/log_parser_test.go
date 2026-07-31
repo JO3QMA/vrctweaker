@@ -115,6 +115,8 @@ func TestParsedEventKind(t *testing.T) {
 		{"room name", &RoomNameEvent{OccurredAt: at}, EventKindRoomName},
 		{"avatar switch", &AvatarSwitchEvent{OccurredAt: at}, EventKindAvatarSwitch},
 		{"video playback", &VideoPlaybackEvent{OccurredAt: at}, EventKindVideoPlayback},
+		{"video playback error", &VideoPlaybackErrorEvent{OccurredAt: at}, EventKindVideoPlaybackError},
+		{"video playback resolved", &VideoPlaybackResolvedEvent{OccurredAt: at}, EventKindVideoPlaybackResolved},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -409,6 +411,55 @@ func TestLogParser_ParseLine_DestinationRoomAvatarVideo(t *testing.T) {
 		}
 		if v.URL != "https://example.com/vid" {
 			t.Errorf("URL = %q", v.URL)
+		}
+	})
+
+	t.Run("Video playback ERROR without URL", func(t *testing.T) {
+		line := "2026.03.18 00:01:13 Debug      -  [Video Playback] ERROR: [youtube] CHt6VsK9STk: Requested format is not available. Use --list-formats for a list of available formats"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("got %d events", len(events))
+		}
+		v, ok := events[0].(*VideoPlaybackErrorEvent)
+		if !ok {
+			t.Fatalf("type %T", events[0])
+		}
+		if v.URL != "" {
+			t.Errorf("URL = %q, want empty (ERROR lines often omit URL)", v.URL)
+		}
+		wantMsg := "[youtube] CHt6VsK9STk: Requested format is not available. Use --list-formats for a list of available formats"
+		if v.Message != wantMsg {
+			t.Errorf("Message = %q, want %q", v.Message, wantMsg)
+		}
+		if v.Kind() != EventKindVideoPlaybackError {
+			t.Errorf("Kind() = %v", v.Kind())
+		}
+	})
+
+	t.Run("Video playback resolved to", func(t *testing.T) {
+		line := "2026.03.18 00:01:14 Debug      -  [Video Playback] URL 'https://youtu.be/abc' resolved to 'https://cdn.example/x.mp4'"
+		events, err := p.ParseLine(line, base)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(events) != 1 {
+			t.Fatalf("got %d events", len(events))
+		}
+		v, ok := events[0].(*VideoPlaybackResolvedEvent)
+		if !ok {
+			t.Fatalf("type %T", events[0])
+		}
+		if v.URL != "https://youtu.be/abc" {
+			t.Errorf("URL = %q", v.URL)
+		}
+		if v.ResolvedURL != "https://cdn.example/x.mp4" {
+			t.Errorf("ResolvedURL = %q", v.ResolvedURL)
+		}
+		if v.Kind() != EventKindVideoPlaybackResolved {
+			t.Errorf("Kind() = %v", v.Kind())
 		}
 	})
 }

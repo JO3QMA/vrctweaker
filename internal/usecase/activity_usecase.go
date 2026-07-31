@@ -92,6 +92,7 @@ type ActivityUseCase struct {
 	settingsRepo  appSettingsRepo
 	userCacheRepo userCacheRepo
 	worldRepo     worldInfoRepo
+	videoRepo     videoPlaybackRepo
 	checkpointMu  sync.Mutex
 }
 
@@ -110,6 +111,12 @@ func NewActivityUseCase(
 		userCacheRepo: userCacheRepo,
 		worldRepo:     worldRepo,
 	}
+}
+
+// WithVideoPlaybackRepo attaches the video playback history repository.
+func (uc *ActivityUseCase) WithVideoPlaybackRepo(r videoPlaybackRepo) *ActivityUseCase {
+	uc.videoRepo = r
+	return uc
 }
 
 // ListEncounters returns user encounters with optional filter.
@@ -167,6 +174,12 @@ func (uc *ActivityUseCase) ApplyCommand(ctx context.Context, logSource string, c
 		return uc.UpsertWorldVisit(ctx, c.WorldID, c.At)
 	case activity.UpsertWorldRoomNameCmd:
 		return uc.UpsertWorldRoomName(ctx, c.WorldID, c.RoomName, c.At)
+	case activity.RecordVideoPlaybackAttemptCmd:
+		return uc.RecordVideoPlaybackAttempt(ctx, logSource, c.URL, c.WorldID, c.At)
+	case activity.CompleteVideoPlaybackFailureCmd:
+		return uc.CompleteVideoPlaybackFailure(ctx, logSource, c.URL, c.FailureReason, c.At)
+	case activity.CompleteVideoPlaybackSuccessCmd:
+		return uc.CompleteVideoPlaybackSuccess(ctx, logSource, c.URL, c.ResolvedURL, c.At)
 	default:
 		return nil
 	}
@@ -604,7 +617,7 @@ func (uc *ActivityUseCase) DeduplicateEncounters(ctx context.Context) (int64, er
 	return uc.encounterRepo.DeduplicateEncounters(ctx)
 }
 
-// RotateEncounters deletes encounters and play sessions older than Activity retention days.
+// RotateEncounters deletes encounters, play sessions, and video playback attempts older than Activity retention days.
 func (uc *ActivityUseCase) RotateEncounters(ctx context.Context) (int64, error) {
 	before, err := uc.activityRetentionCutoff(ctx)
 	if err != nil {
@@ -618,5 +631,72 @@ func (uc *ActivityUseCase) RotateEncounters(ctx context.Context) (int64, error) 
 	if err != nil {
 		return 0, err
 	}
-	return encDeleted + playDeleted, nil
+	var videoDeleted int64
+	if uc.videoRepo != nil {
+		videoDeleted, err = uc.videoRepo.DeleteOlderThan(ctx, before)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return encDeleted + playDeleted + videoDeleted, nil
+}
+
+// ListVideoPlaybackHistory returns video playback attempts with world display names (newest first).
+func (uc *ActivityUseCase) ListVideoPlaybackHistory(ctx context.Context) ([]*activity.VideoPlaybackWithContext, error) {
+	if uc.videoRepo == nil {
+		return []*activity.VideoPlaybackWithContext{}, nil
+	}
+	rows, err := uc.videoRepo.ListWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if rows == nil {
+		return []*activity.VideoPlaybackWithContext{}, nil
+	}
+	if uc.worldRepo == nil {
+		return rows, nil
+	}
+	for _, row := range rows {
+		if row.WorldDisplayName != "" || row.Attempt == nil || row.Attempt.WorldID == "" {
+			continue
+		}
+		wi, err := uc.worldRepo.GetByWorldID(ctx, row.Attempt.WorldID)
+		if err != nil || wi == nil || wi.DisplayName == "" {
+			continue
+		}
+		row.WorldDisplayName = wi.DisplayName
+	}
+	return rows, nil
+}
+
+// RecordVideoPlaybackAttempt inserts an Open video playback attempt.
+func (uc *ActivityUseCase) RecordVideoPlaybackAttempt(ctx context.Context, logSource, url, worldID string, at time.Time) error {
+	if uc.videoRepo == nil || url == "" {
+		return nil
+	}
+	return uc.videoRepo.Save(ctx, &activity.VideoPlaybackAttempt{
+		ID:            uuid.New().String(),
+		AttemptedAt:   at,
+		URL:           url,
+		WorldID:       worldID,
+		LogSourcePath: logSource,
+	})
+}
+
+// CompleteVideoPlaybackFailure marks the matching Open attempt as failure.
+func (uc *ActivityUseCase) CompleteVideoPlaybackFailure(ctx context.Context, logSource, url, reason string, at time.Time) error {
+	if uc.videoRepo == nil {
+		return nil
+	}
+	_, err := uc.videoRepo.CompleteFailure(ctx, logSource, url, reason, at)
+	return err
+}
+
+// CompleteVideoPlaybackSuccess marks the matching Open attempt as success if still open.
+func (uc *ActivityUseCase) CompleteVideoPlaybackSuccess(ctx context.Context, logSource, url, resolvedURL string, at time.Time) error {
+	if uc.videoRepo == nil {
+		return nil
+	}
+	_, err := uc.videoRepo.CompleteSuccess(ctx, logSource, url, resolvedURL, at)
+	return err
 }

@@ -214,8 +214,131 @@ func TestSessionCorrelator_UnhandledParsedEventsReturnNil(t *testing.T) {
 	if cmds := c.Apply(&AvatarSwitchEvent{DisplayName: "A", AvatarName: "B", OccurredAt: base}); cmds != nil {
 		t.Fatalf("AvatarSwitch commands = %+v, want nil", cmds)
 	}
-	if cmds := c.Apply(&VideoPlaybackEvent{URL: "https://example.com", OccurredAt: base}); cmds != nil {
-		t.Fatalf("VideoPlayback commands = %+v, want nil", cmds)
+}
+
+func TestSessionCorrelator_VideoPlayback_attemptOpenAndSuccess(t *testing.T) {
+	base := time.Date(2026, 3, 18, 0, 1, 0, 0, time.UTC)
+	const url = "https://youtu.be/abc"
+	c := &SessionCorrelator{}
+	c.Apply(&SessionEvent{Type: SessionEventStart, InstanceID: testFullInstance, OccurredAt: base})
+
+	openCmds := c.Apply(&VideoPlaybackEvent{URL: url, OccurredAt: base})
+	if len(openCmds) != 1 {
+		t.Fatalf("attempt cmds = %+v", openCmds)
+	}
+	att := openCmds[0].(RecordVideoPlaybackAttemptCmd)
+	if att.URL != url || att.WorldID != testWorldID {
+		t.Fatalf("attempt = %+v, want world %q", att, testWorldID)
+	}
+
+	okCmds := c.Apply(&VideoPlaybackResolvedEvent{URL: url, ResolvedURL: "https://cdn/x", OccurredAt: base.Add(time.Second)})
+	if len(okCmds) != 1 {
+		t.Fatalf("resolved cmds = %+v", okCmds)
+	}
+	ok := okCmds[0].(CompleteVideoPlaybackSuccessCmd)
+	if ok.URL != url || ok.ResolvedURL != "https://cdn/x" {
+		t.Fatalf("success = %+v", ok)
+	}
+}
+
+func TestSessionCorrelator_VideoPlayback_errorPreferredOverResolved(t *testing.T) {
+	base := time.Date(2026, 3, 18, 0, 2, 0, 0, time.UTC)
+	const url = "https://youtu.be/fail"
+	c := &SessionCorrelator{}
+	c.Apply(&VideoPlaybackEvent{URL: url, OccurredAt: base})
+
+	failCmds := c.Apply(&VideoPlaybackErrorEvent{
+		Message:    "[youtube] id: Requested format is not available",
+		OccurredAt: base.Add(time.Second),
+	})
+	if len(failCmds) != 1 {
+		t.Fatalf("error cmds = %+v", failCmds)
+	}
+	fail := failCmds[0].(CompleteVideoPlaybackFailureCmd)
+	if fail.URL != url || fail.FailureReason == "" {
+		t.Fatalf("failure = %+v", fail)
+	}
+
+	// resolved after ERROR must be orphan (pending already cleared) — do not emit success
+	if cmds := c.Apply(&VideoPlaybackResolvedEvent{URL: url, ResolvedURL: "https://cdn/x", OccurredAt: base.Add(2 * time.Second)}); cmds != nil {
+		t.Fatalf("resolved after ERROR = %+v, want nil", cmds)
+	}
+}
+
+func TestSessionCorrelator_VideoPlayback_openOnlyPersisted(t *testing.T) {
+	c := &SessionCorrelator{}
+	base := time.Now()
+	cmds := c.Apply(&VideoPlaybackEvent{URL: "https://example.com/a", OccurredAt: base})
+	att := cmds[0].(RecordVideoPlaybackAttemptCmd)
+	if att.WorldID != "" {
+		t.Errorf("world without session = %q, want empty", att.WorldID)
+	}
+	if len(c.pendingVideo) != 1 {
+		t.Fatalf("pending = %v", c.pendingVideo)
+	}
+}
+
+func TestSessionCorrelator_VideoPlayback_fifoSameURL(t *testing.T) {
+	base := time.Date(2026, 3, 18, 0, 3, 0, 0, time.UTC)
+	const url = "https://same.example/v"
+	c := &SessionCorrelator{}
+	c.Apply(&VideoPlaybackEvent{URL: url, OccurredAt: base})
+	c.Apply(&VideoPlaybackEvent{URL: url, OccurredAt: base.Add(time.Second)})
+
+	first := c.Apply(&VideoPlaybackErrorEvent{Message: "first fail", OccurredAt: base.Add(2 * time.Second)})
+	if first[0].(CompleteVideoPlaybackFailureCmd).FailureReason != "first fail" {
+		t.Fatalf("first = %+v", first)
+	}
+	second := c.Apply(&VideoPlaybackResolvedEvent{URL: url, ResolvedURL: "https://cdn/ok", OccurredAt: base.Add(3 * time.Second)})
+	if _, ok := second[0].(CompleteVideoPlaybackSuccessCmd); !ok {
+		t.Fatalf("second = %+v, want success for younger open", second)
+	}
+}
+
+func TestSessionCorrelator_VideoPlayback_orphanResultsDropped(t *testing.T) {
+	c := &SessionCorrelator{}
+	base := time.Now()
+	if cmds := c.Apply(&VideoPlaybackErrorEvent{Message: "orphan", OccurredAt: base}); cmds != nil {
+		t.Fatalf("orphan error = %+v", cmds)
+	}
+	if cmds := c.Apply(&VideoPlaybackResolvedEvent{URL: "https://x", ResolvedURL: "https://y", OccurredAt: base}); cmds != nil {
+		t.Fatalf("orphan resolved = %+v", cmds)
+	}
+}
+
+func TestSessionCorrelator_VideoPlayback_errorWithoutURL_matchesOldestOpen(t *testing.T) {
+	base := time.Date(2026, 3, 18, 0, 4, 0, 0, time.UTC)
+	c := &SessionCorrelator{}
+	c.Apply(&VideoPlaybackEvent{URL: "https://a.example", OccurredAt: base})
+	c.Apply(&VideoPlaybackEvent{URL: "https://b.example", OccurredAt: base.Add(time.Second)})
+
+	cmds := c.Apply(&VideoPlaybackErrorEvent{Message: "no url in line", OccurredAt: base.Add(2 * time.Second)})
+	fail := cmds[0].(CompleteVideoPlaybackFailureCmd)
+	if fail.URL != "https://a.example" {
+		t.Fatalf("matched %q, want oldest open https://a.example", fail.URL)
+	}
+}
+
+func TestSessionCorrelator_VideoPlayback_worldContextNotLastLeft(t *testing.T) {
+	base := time.Date(2026, 3, 18, 0, 5, 0, 0, time.UTC)
+	c := &SessionCorrelator{}
+	c.Apply(&SessionEvent{Type: SessionEventStart, InstanceID: testFullInstance, OccurredAt: base})
+	c.Apply(&SessionEvent{Type: SessionEventEnd, OccurredAt: base.Add(time.Second)})
+
+	cmds := c.Apply(&VideoPlaybackEvent{URL: "https://after-leave", OccurredAt: base.Add(2 * time.Second)})
+	att := cmds[0].(RecordVideoPlaybackAttemptCmd)
+	if att.WorldID != "" {
+		t.Fatalf("world after session end = %q, must not use lastLeft", att.WorldID)
+	}
+}
+
+func TestSessionCorrelator_VideoPlayback_ResetClearsPending(t *testing.T) {
+	c := &SessionCorrelator{}
+	base := time.Now()
+	c.Apply(&VideoPlaybackEvent{URL: "https://pending", OccurredAt: base})
+	c.Reset()
+	if cmds := c.Apply(&VideoPlaybackErrorEvent{Message: "x", OccurredAt: base}); cmds != nil {
+		t.Fatalf("after Reset pending must be empty, got %+v", cmds)
 	}
 }
 

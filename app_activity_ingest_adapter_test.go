@@ -37,9 +37,9 @@ func Test_activityIngestAdapterForPath_tailAfterBootstrap_hasWorldContext(t *tes
 	app.resetActivityIngestAdapterCache()
 	parser := activity.NewLogParser()
 	logger := appDiagLogger()
-	app.ingestActivityLogsBootstrap(ctx, absDir, parser, logger, nil)
+	app.ingestActivityLogsBootstrap(ctx, absDir, parser, logger, nil, nil)
 
-	tailAdapter := app.activityIngestAdapterForPath(ctx, logger, nil, logPath)
+	tailAdapter := app.activityIngestAdapterForPath(ctx, logger, nil, nil, logPath)
 	joinLine := "2026.07.02 21:49:04 Debug      -  [Behaviour] OnPlayerJoined Alice (" + testBootstrapUserID + ")"
 	events, err := parser.ParseLine(joinLine, time.Time{})
 	if err != nil {
@@ -75,13 +75,13 @@ func Test_activityIngestAdapterForPath_sameInstanceAcrossCalls(t *testing.T) {
 	}
 
 	app.resetActivityIngestAdapterCache()
-	a1 := app.activityIngestAdapterForPath(ctx, logger, nil, path)
-	a2 := app.activityIngestAdapterForPath(ctx, logger, nil, path)
+	a1 := app.activityIngestAdapterForPath(ctx, logger, nil, nil, path)
+	a2 := app.activityIngestAdapterForPath(ctx, logger, nil, nil, path)
 	if a1 != a2 {
 		t.Fatal("expected same adapter instance for one log source path")
 	}
 	app.evictActivityIngestAdapter(path)
-	a3 := app.activityIngestAdapterForPath(ctx, logger, nil, path)
+	a3 := app.activityIngestAdapterForPath(ctx, logger, nil, nil, path)
 	if a3 == a1 {
 		t.Fatal("expected new adapter after evict")
 	}

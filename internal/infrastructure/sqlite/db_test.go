@@ -84,6 +84,16 @@ func TestApplySchema_canonicalColumns(t *testing.T) {
 		t.Fatal("user_encounters should not use legacy action/encountered_at columns")
 	}
 
+	video := columnNames(t, db, "video_playback_history")
+	for _, col := range []string{
+		"id", "attempted_at", "url", "outcome", "failure_reason", "resolved_url",
+		"world_id", "log_source_path", "completed_at",
+	} {
+		if !video[col] {
+			t.Fatalf("video_playback_history missing column %q", col)
+		}
+	}
+
 	thumbs := columnNames(t, db, "screenshot_thumbnails")
 	if !thumbs["jpeg_blob"] || thumbs["webp_blob"] {
 		t.Fatalf("screenshot_thumbnails: want jpeg_blob only, got %#v", thumbs)

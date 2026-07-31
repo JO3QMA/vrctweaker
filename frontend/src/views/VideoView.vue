@@ -2,6 +2,101 @@
   <div class="video-view">
     <h1 class="page-title">{{ t("video.title") }}</h1>
 
+    <el-card
+      class="video-card video-history-card"
+      shadow="never"
+      data-testid="video-playback-history"
+    >
+      <template #header>
+        <span>{{ t("video.historySection") }}</span>
+      </template>
+      <p class="history-retention-hint">
+        {{ t("video.historyRetentionHint", { days: logRetentionDays }) }}
+      </p>
+      <el-alert
+        v-if="historyFetchError"
+        type="error"
+        :closable="false"
+        show-icon
+        class="block-hint"
+        data-testid="video-history-fetch-error"
+        :title="t('video.historyFetchError')"
+      />
+      <div v-else-if="historyLoading" class="muted">
+        {{ t("common.loading") }}
+      </div>
+      <div
+        v-else-if="historyRows.length === 0"
+        class="muted"
+        data-testid="video-history-empty"
+      >
+        {{ t("video.historyEmpty") }}
+      </div>
+      <el-table
+        v-else
+        :data="historyRows"
+        stripe
+        class="history-table"
+        data-testid="video-history-table"
+      >
+        <el-table-column :label="t('video.historyColTime')" min-width="140">
+          <template #default="{ row }">
+            {{ formatAttemptAt(row.attemptedAt) }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          :label="t('video.historyColUrl')"
+          min-width="200"
+          show-overflow-tooltip
+        >
+          <template #default="{ row }">
+            <div class="url-cell">
+              <span class="url-text">{{ row.url }}</span>
+              <el-button
+                link
+                type="primary"
+                size="small"
+                data-testid="video-history-copy-url"
+                @click="copyAttemptUrl(row.url)"
+              >
+                {{ t("video.historyCopyUrl") }}
+              </el-button>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column :label="t('video.historyColOutcome')" min-width="90">
+          <template #default="{ row }">
+            {{ outcomeLabel(row.outcome) }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          :label="t('video.historyColFailureReason')"
+          min-width="180"
+          show-overflow-tooltip
+        >
+          <template #default="{ row }">
+            {{ row.failureReason || t("common.dash") }}
+          </template>
+        </el-table-column>
+        <el-table-column
+          :label="t('video.historyColWorld')"
+          min-width="120"
+          show-overflow-tooltip
+        >
+          <template #default="{ row }">
+            {{ row.worldDisplayName || t("common.dash") }}
+          </template>
+        </el-table-column>
+      </el-table>
+      <p
+        v-if="historyCopyFlash"
+        class="flash flash-ok"
+        data-testid="video-history-copy-ok"
+      >
+        {{ historyCopyFlash }}
+      </p>
+    </el-card>
+
     <el-card class="video-card" shadow="never">
       <template #header>
         <span>{{ t("video.maintainSection") }}</span>
@@ -155,15 +250,25 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, onUnmounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
 import { CaretBottom, CaretRight, FolderOpened } from "@element-plus/icons-vue";
 import CookieLinkageSection from "../components/CookieLinkageSection.vue";
-import { App, type YTDLPMaintainStatusDTO } from "../wails/app";
+import {
+  App,
+  type VideoPlaybackDTO,
+  type YTDLPMaintainStatusDTO,
+} from "../wails/app";
+import { getRuntime } from "../wails/runtime";
+import { formatEncounteredAt } from "../utils/formatEncounteredAt";
+import { copyDisplayName } from "../utils/vrcUserCacheDisplay";
+import { appLocaleToBcp47 } from "../i18n";
 import { videoErrorI18nKey } from "./videoErrors";
 
-const { t, te } = useI18n();
+const VIDEO_PLAYBACK_CHANGED_DEBOUNCE_MS = 400;
+
+const { t, te, locale } = useI18n();
 
 const emptyStatus = (): YTDLPMaintainStatusDTO => ({
   supported: false,
@@ -194,9 +299,61 @@ const actionError = ref("");
 const detailsExpanded = ref(false);
 const detailsPanelId = "ytdlp-details-panel";
 
+const historyRows = ref<VideoPlaybackDTO[]>([]);
+const historyLoading = ref(true);
+const historyFetchError = ref(false);
+const logRetentionDays = ref(30);
+const historyCopyFlash = ref("");
+
 let viewGeneration = 0;
 function isViewStale(gen: number): boolean {
   return gen !== viewGeneration;
+}
+
+let historyChangedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let unsubscribeVideoPlaybackChanged: (() => void) | undefined;
+
+function formatAttemptAt(iso: string): string {
+  return formatEncounteredAt(iso, appLocaleToBcp47(String(locale.value)));
+}
+
+function outcomeLabel(outcome: string): string {
+  if (outcome === "success") return t("video.historyOutcomeSuccess");
+  if (outcome === "failure") return t("video.historyOutcomeFailure");
+  return t("video.historyOutcomeOpen");
+}
+
+async function loadHistory(gen: number): Promise<void> {
+  historyLoading.value = true;
+  historyFetchError.value = false;
+  try {
+    if (isViewStale(gen)) return;
+    const rows = await App.videoPlaybackHistory();
+    if (isViewStale(gen)) return;
+    historyRows.value = rows ?? [];
+  } catch {
+    if (isViewStale(gen)) return;
+    historyFetchError.value = true;
+    historyRows.value = [];
+  } finally {
+    if (!isViewStale(gen)) historyLoading.value = false;
+  }
+}
+
+function scheduleHistoryRefresh(): void {
+  if (historyChangedDebounceTimer !== null) {
+    clearTimeout(historyChangedDebounceTimer);
+  }
+  historyChangedDebounceTimer = setTimeout(() => {
+    historyChangedDebounceTimer = null;
+    void loadHistory(viewGeneration);
+  }, VIDEO_PLAYBACK_CHANGED_DEBOUNCE_MS);
+}
+
+async function copyAttemptUrl(url: string): Promise<void> {
+  if (!url) return;
+  await copyDisplayName(url);
+  historyCopyFlash.value = t("video.historyCopyOk");
 }
 
 const effectiveStatusText = computed(() =>
@@ -446,7 +603,27 @@ onBeforeUnmount(() => {
 });
 
 onMounted(() => {
+  const gen = viewGeneration;
   void refresh();
+  void loadHistory(gen);
+  void App.getLogRetentionDays().then((days) => {
+    if (!isViewStale(gen)) logRetentionDays.value = days;
+  });
+  const rt = getRuntime();
+  const off = rt?.EventsOn?.("activity:video-playback-changed", () => {
+    scheduleHistoryRefresh();
+  });
+  if (typeof off === "function") {
+    unsubscribeVideoPlaybackChanged = off;
+  }
+});
+
+onUnmounted(() => {
+  if (historyChangedDebounceTimer !== null) {
+    clearTimeout(historyChangedDebounceTimer);
+    historyChangedDebounceTimer = null;
+  }
+  unsubscribeVideoPlaybackChanged?.();
 });
 </script>
 
@@ -458,6 +635,26 @@ onMounted(() => {
 .video-card {
   margin-top: 1rem;
   width: 100%;
+}
+.history-retention-hint {
+  margin: 0 0 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+.history-table {
+  width: 100%;
+}
+.url-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.url-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 .video-alerts {
   margin-bottom: 1rem;

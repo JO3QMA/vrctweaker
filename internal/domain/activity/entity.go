@@ -45,3 +45,29 @@ type EncounterFilter struct {
 	From        *time.Time
 	To          *time.Time
 }
+
+// Video playback outcome values persisted on VideoPlaybackAttempt.Outcome.
+const (
+	VideoPlaybackOutcomeOpen    = ""
+	VideoPlaybackOutcomeSuccess = "success"
+	VideoPlaybackOutcomeFailure = "failure"
+)
+
+// VideoPlaybackAttempt is one URL resolve try from [Video Playback] logs.
+type VideoPlaybackAttempt struct {
+	ID            string
+	AttemptedAt   time.Time
+	URL           string
+	Outcome       string // VideoPlaybackOutcome*
+	FailureReason string
+	ResolvedURL   string
+	WorldID       string
+	LogSourcePath string
+	CompletedAt   *time.Time
+}
+
+// VideoPlaybackWithContext is a video playback attempt plus world display name for the UI.
+type VideoPlaybackWithContext struct {
+	Attempt          *VideoPlaybackAttempt
+	WorldDisplayName string
+}
