@@ -29,6 +29,7 @@ test.describe("VRChat Tweaker", () => {
     await page.goto("/");
     await page.getByRole("menuitem", { name: "動画" }).click();
     await expect(page.locator("h1")).toContainText("動画");
+    await expect(page.getByTestId("ytdlp-experimental-features")).toBeVisible();
     await expect(page.getByTestId("ytdlp-maintain-switch")).toBeVisible();
   });
 

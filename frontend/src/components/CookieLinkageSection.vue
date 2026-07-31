@@ -1,8 +1,9 @@
 <template>
-  <div
+  <section
     v-if="cookieSupported || cookieActionError"
-    class="cookie-section"
+    class="cookie-section video-block"
     data-testid="video-cookie-linkage"
+    :aria-labelledby="cookieSupported ? 'ytdlp-cookie-heading' : undefined"
   >
     <el-alert
       v-if="cookieActionError"
@@ -12,10 +13,10 @@
       show-icon
       class="cookie-action-error"
     />
-    <el-card v-if="cookieSupported" class="cookie-card" shadow="never">
-      <template #header>
-        <span>{{ t("video.cookieLinkage.section") }}</span>
-      </template>
+    <template v-if="cookieSupported">
+      <h2 id="ytdlp-cookie-heading" class="video-block-title">
+        {{ t("video.cookieLinkage.section") }}
+      </h2>
       <el-alert
         type="warning"
         :closable="false"
@@ -104,8 +105,8 @@
           </div>
         </el-form-item>
       </el-form>
-    </el-card>
-  </div>
+    </template>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -321,11 +322,15 @@ onMounted(async () => {
 
 <style scoped>
 .cookie-section {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--border);
   width: 100%;
 }
-.cookie-card {
-  width: 100%;
+.video-block-title {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  font-weight: 600;
 }
 .cookie-always-warn,
 .cookie-official-hint,
