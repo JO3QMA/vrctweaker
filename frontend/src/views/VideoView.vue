@@ -12,7 +12,6 @@
       </template>
 
       <section
-        class="video-block"
         data-testid="ytdlp-replace-section"
         aria-labelledby="ytdlp-replace-heading"
       >

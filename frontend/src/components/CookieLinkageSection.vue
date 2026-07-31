@@ -1,7 +1,7 @@
 <template>
   <section
     v-if="cookieSupported || cookieActionError"
-    class="cookie-section video-block"
+    class="cookie-section"
     data-testid="video-cookie-linkage"
     :aria-labelledby="cookieSupported ? 'ytdlp-cookie-heading' : undefined"
   >
