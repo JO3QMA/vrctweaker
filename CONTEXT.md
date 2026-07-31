@@ -426,9 +426,17 @@ _Avoid_: バッジ, タグ一覧（行全体のラベル付きセクションと
 
 ## yt-dlp
 
-VRChat の動画プレイヤーが裏で使う yt-dlp 向けの用語。**yt-dlp Tools replace maintain**（[Issue #9](https://github.com/JO3QMA/vrctweaker/issues/9)、[ADR 0008](docs/adr/0008-ytdlp-tools-replace-maintain.md)）は Accepted・製品実装済み。**yt-dlp Cookie linkage**（[Issue #8](https://github.com/JO3QMA/vrctweaker/issues/8)、[ADR 0007](docs/adr/0007-ytdlp-cookie-linkage.md)）は Accepted・製品実装済み（制限付き再生には Official yt-dlp cache 経由が前提。同梱版単体では Cookie オプション非対応）。起動前ワンショットの直置き試作は [PR #40](https://github.com/JO3QMA/vrctweaker/pull/40)（望む動作に未達）。
+VRChat の動画プレイヤーが裏で使う yt-dlp 向けの用語。**yt-dlp Tools replace maintain**（[Issue #9](https://github.com/JO3QMA/vrctweaker/issues/9)、[ADR 0008](docs/adr/0008-ytdlp-tools-replace-maintain.md)）は Accepted・製品実装済み。**yt-dlp Cookie linkage**（[Issue #8](https://github.com/JO3QMA/vrctweaker/issues/8)、[ADR 0007](docs/adr/0007-ytdlp-cookie-linkage.md)）は Accepted・製品実装済み（制限付き再生には Official yt-dlp cache 経由が前提。同梱版単体では Cookie オプション非対応）。起動前ワンショットの直置き試作は [PR #40](https://github.com/JO3QMA/vrctweaker/pull/40)（望む動作に未達）。動画タブ上の両機能の UI 括りは **yt-dlp experimental features**（[Issue #220](https://github.com/JO3QMA/vrctweaker/issues/220)。用語・レイアウト合意は本 CONTEXT。新規 ADR は作らない）。
 
 ### Language
+
+**yt-dlp experimental features**:
+動画タブ上で **yt-dlp Tools replace maintain** と **yt-dlp Cookie linkage** をまとめる 1 つの UI カード（外側のみ `el-card`。内側はネストしたカードにせず、`<section>` ＋小見出しで区切る）。外側の見出しは日本語「yt-dlp (実験的機能)」／英語 `yt-dlp (Experimental features)`（他ロケールも同趣旨）。カード内は上から **置換（小見出し: 日本語「yt-dlp の置換」／英語 `yt-dlp replacement`）→ Cookie（小見出し: 日本語「Cookie を利用する」／英語 `Use cookies`）** の順。置換ブロックのスイッチ横には機能名ラベル（旧 `replaceLabel`＝「yt-dlp の置換」）を出さない（小見出しと重複させない。effective 状態表示は残す）。初期ロードはブロック単位: 置換の loading は置換ブロックだけを覆い、Cookie は独立に取得・表示する（カード全体の共通 loading や API 結合はしない）。旧カード見出し「yt-dlp を置き換える」「yt-dlp Cookie 連携」／英語旧 `Replace yt-dlp`・`yt-dlp Cookie linkage` は使わない。表示条件は現状どおり: 外側カードは動画タブで常に出し、置換ブロックは非対応時も警告を示し、Cookie ブロックは対応環境（または操作エラー表示が必要なとき）だけ出す。各ブロック直下の常時警告（置換の公式差し替え非推奨文・Cookie の BAN／捨て垢文）は統合せず現状どおり残す。各機能の意味・操作・risk acknowledgment・effective state・**Cookie linkage official hint** の振る舞いは変えない（レイアウトと小見出し文言の直し）。
+_Avoid_: 実験的機能（単独・対象が曖昧なため）, yt-dlp section（実験性を落とすため）, Settings / Config（載せない）, yt-dlp を置き換える / yt-dlp Cookie 連携（旧小見出し）, Cookie を上・置換を下（official hint の「上の」前提が崩れるため）, 内側のネスト `el-card`（二重枠）, 両方未対応で外側ごと隠す（置換の非対応案内が消えるため）, カード先頭への警告統合（機能別リスクが曖昧になるため）, 小見出しとスイッチ横の「yt-dlp の置換」二重表示, 外側カード全体を置換 loading で隠す（Cookie 表示を遅らせるため）
+
+**yt-dlp experimental features v1 scope**:
+[Issue #220](https://github.com/JO3QMA/vrctweaker/issues/220) で届ける範囲。動画タブの **yt-dlp experimental features** 1 カード化（小見出し・i18n・hint 呼び揃え・スイッチ横機能名ラベル削除・Vitest／Storybook／E2E 追随・死キー整理）に限定する。v1 では含めないもの: Go／usecase／Wails 契約の変更、risk acknowledgment や effective state の意味変更、Settings／Config への移設、常時警告の統合、loading／API の共通化、機能の追加・削除、新規 ADR、ADR 0007／0008 の製品方針書き換え。
+_Avoid_: yt-dlp experimental features（v1 範囲を指すときは scope とセットで書く）, 将来拡張（スコープ外リストの総称として曖昧なため）
 
 **VRChat-bundled yt-dlp**:
 VRChat が Tools 配下に置く yt-dlp 実行ファイル。公式 yt-dlp を削った／独自オプション付きのビルドであり、調査時点では `--cookies` / `--cookies-from-browser` を受け付けない。起動やログインの過程で Tools 上の差し替えを同梱版へ戻しうることがある。
@@ -459,8 +467,8 @@ Tweaker が yt-dlp user config へ Cookie 参照オプションを書き込み�
 _Avoid_: Cookie 同期, ログイン連携（VRChat 認証と混同しやすいため）, yt-dlp 実行, Config（VRChat config.json 編集と混同しやすいため）, yt-dlp Tools replace / maintain（別問題）, Settings（Cookie は載せない）
 
 **Cookie linkage official hint**:
-Cookie linkage の UI 上で、Tools replace effective state が偽のときに出す案内。Official（Cookie 対応）exe が Tools から参照されていないと制限付き再生の目的を満たせない旨と、同一画面の Tools replace 操作への案内。有効化や yt-dlp user config への書き込みは妨げない。
-_Avoid_: 必須ゲート, maintain 必須（ハード依存を連想させるため）, Cookie linkage risk acknowledgment（BAN 警告とは別）
+Cookie linkage の UI 上で、Tools replace effective state が偽のときに出す案内。Official（Cookie 対応）exe が Tools から参照されていないと制限付き再生の目的を満たせない旨と、同一 **yt-dlp experimental features** カード内の置換ブロック（小見出し「yt-dlp の置換」／英語 `yt-dlp replacement`）への案内。有効化や yt-dlp user config への書き込みは妨げない。hint 文言内の呼び方は当該小見出しに揃える（英語旧 `Tools replace` 呼びは使わない）。
+_Avoid_: 必須ゲート, maintain 必須（ハード依存を連想させるため）, Cookie linkage risk acknowledgment（BAN 警告とは別）, Tools replace（hint 内の旧呼び）
 
 **yt-dlp user config**:
 yt-dlp が読むユーザー向け設定ファイル。Cookie 参照オプションの置き場。Windows での書き込み正本は `%APPDATA%\yt-dlp\config`（拡張子なし）。`config` が無く `%APPDATA%\yt-dlp\config.txt` だけがあるときは、そのファイルを Effective／upsert の対象とする（新規作成時は常に `config`）。VRChat の `config.json`（Config 画面の対象）とは別物。無ければ親ディレクトリごと作成してよい。Managed cookie options 削除後に他行が無く空ならファイル自体を削除してよい。

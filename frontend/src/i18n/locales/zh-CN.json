@@ -899,11 +899,10 @@
   },
   "video": {
     "title": "视频",
-    "maintainSection": "替换 yt-dlp",
+    "experimentalFeatures": "yt-dlp（实验性功能）",
     "unsupported": "Not available in this environment.",
     "alwaysWarn": "Replacing VRChat’s bundled yt-dlp with the official yt-dlp build may be unsupported by VRChat. Enable at your own risk. This feature may require Windows Developer Mode or running as administrator.",
     "replaceLabel": "yt-dlp 替换",
-    "switchOff": "OFF",
     "statusPrefix": "Status: ",
     "effectiveOfficial": "Using official yt-dlp latest",
     "effectiveBundled": "VRChat bundled build",
@@ -941,9 +940,9 @@
       "notInitialized": "Video settings are not initialized yet."
     },
     "cookieLinkage": {
-      "section": "yt-dlp Cookie linkage",
+      "section": "使用 Cookie",
       "alwaysWarn": "Automated access may risk account restrictions under YouTube and similar ToS. Always use a throwaway (sub) account in the browser you select.",
-      "officialHint": "Cookie options may not help age-restricted playback unless Tools points at official yt-dlp. Enable Tools replace above.",
+      "officialHint": "Cookie options may not help age-restricted playback unless Tools points at official yt-dlp. Enable yt-dlp replacement above.",
       "unsupportedForm": "yt-dlp config has an unsupported Cookie form. Choosing a option below and saving replaces it with a simple setting.",
       "enableLabel": "Link browser login cookies to yt-dlp",
       "lockHint": "With browser source, an open browser may lock the cookie store. Close the browser or use a cookies file instead.",
