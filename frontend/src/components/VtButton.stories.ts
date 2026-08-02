@@ -1,5 +1,10 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
 import VtButton from "./VtButton.vue";
+import "./VtButton.stories.css";
+
+const catalogParameters = {
+  controls: { disable: true },
+};
 
 const meta = {
   title: "Components/VtButton",
@@ -66,11 +71,11 @@ export const DangerPlain: Story = {
 };
 
 export const DisabledStates: Story = {
-  args: { variant: "primary" },
+  parameters: catalogParameters,
   render: () => ({
     components: { VtButton },
     template: `
-      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+      <div class="vt-button-story-row">
         <VtButton variant="primary" disabled>Primary</VtButton>
         <VtButton variant="secondary" disabled>Secondary</VtButton>
         <VtButton variant="tertiary" disabled>Tertiary</VtButton>
@@ -81,11 +86,11 @@ export const DisabledStates: Story = {
 };
 
 export const LoadingStates: Story = {
-  args: { variant: "primary" },
+  parameters: catalogParameters,
   render: () => ({
     components: { VtButton },
     template: `
-      <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center;">
+      <div class="vt-button-story-row">
         <VtButton variant="primary" loading>Primary</VtButton>
         <VtButton variant="secondary" loading>Secondary</VtButton>
         <VtButton variant="tertiary" loading>Tertiary</VtButton>
@@ -97,11 +102,11 @@ export const LoadingStates: Story = {
 
 export const ActionGroupPrimarySecondary: Story = {
   name: "Action group: Primary + Secondary",
-  args: { variant: "primary" },
+  parameters: catalogParameters,
   render: () => ({
     components: { VtButton },
     template: `
-      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+      <div class="vt-button-story-actions">
         <VtButton variant="secondary">Launch</VtButton>
         <VtButton variant="primary">Save</VtButton>
       </div>
@@ -111,11 +116,11 @@ export const ActionGroupPrimarySecondary: Story = {
 
 export const ActionGroupDangerConfirm: Story = {
   name: "Action group: Danger confirm + Secondary cancel",
-  args: { variant: "danger" },
+  parameters: catalogParameters,
   render: () => ({
     components: { VtButton },
     template: `
-      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+      <div class="vt-button-story-actions">
         <VtButton variant="secondary">Cancel</VtButton>
         <VtButton variant="danger">Delete</VtButton>
       </div>
@@ -125,11 +130,11 @@ export const ActionGroupDangerConfirm: Story = {
 
 export const ActionGroupPrimaryDangerPlain: Story = {
   name: "Action group: Primary + Danger plain",
-  args: { variant: "primary" },
+  parameters: catalogParameters,
   render: () => ({
     components: { VtButton },
     template: `
-      <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+      <div class="vt-button-story-actions-wrap">
         <VtButton variant="primary">Refresh profile</VtButton>
         <VtButton variant="danger" plain>Logout</VtButton>
       </div>
