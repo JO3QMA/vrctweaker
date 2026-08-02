@@ -70,8 +70,15 @@
   border-radius: var(--radius);
 }
 
-.spacing-story-layout-block + .spacing-story-layout-block {
-  margin-top: 0;
+.spacing-story-layout-block-text {
+  margin: var(--space-block) 0 0;
+}
+
+.spacing-story-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-form-field);
+  margin-top: var(--space-block);
 }
 
 .spacing-story-action-group {

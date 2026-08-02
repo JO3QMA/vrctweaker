@@ -76,11 +76,11 @@ export const LayoutExample: Story = {
         <div class="spacing-story-layout-demo">
           <div class="spacing-story-layout-block">
             <strong>Section block</strong>
-            <p style="margin: var(--space-block) 0 0">Content with block spacing below the title.</p>
+            <p class="spacing-story-layout-block-text">Content with block spacing below the title.</p>
           </div>
           <div class="spacing-story-layout-block">
             <strong>Form field spacing</strong>
-            <div style="display: flex; flex-direction: column; gap: var(--space-form-field); margin-top: var(--space-block)">
+            <div class="spacing-story-field-group">
               <div class="spacing-story-action-chip">Field A</div>
               <div class="spacing-story-action-chip">Field B</div>
             </div>
