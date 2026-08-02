@@ -88,7 +88,7 @@
 }
 
 .spacing-story-action-chip {
-  padding: var(--space-inline-tight) var(--space-form-field);
+  padding: var(--space-4) var(--space-form-field);
   background: var(--bg-primary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
