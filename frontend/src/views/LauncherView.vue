@@ -558,6 +558,10 @@ import {
   type ValueOptionsEnabled,
 } from "./launcher/launcherProfileEdits";
 import { formatError } from "../utils/formatError";
+import {
+  VT_BUTTON_DANGER_CONFIRM_CLASS,
+  VT_BUTTON_SECONDARY_CANCEL_CLASS,
+} from "../components/vtButtonClasses";
 
 const { t } = useI18n();
 
@@ -1018,7 +1022,8 @@ async function confirmDelete() {
         confirmButtonText: t("launcher.deleteOk"),
         cancelButtonText: t("common.cancel"),
         type: "warning",
-        confirmButtonClass: "el-button--danger",
+        confirmButtonClass: VT_BUTTON_DANGER_CONFIRM_CLASS,
+        cancelButtonClass: VT_BUTTON_SECONDARY_CANCEL_CLASS,
       },
     );
   } catch {

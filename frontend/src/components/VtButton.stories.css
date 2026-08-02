@@ -1,0 +1,18 @@
+.vt-button-story-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.vt-button-story-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.vt-button-story-actions-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

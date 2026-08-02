@@ -26,13 +26,14 @@
       <p class="presence-change-error-text">
         {{ t("dashboard.presenceChange.loadError") }}
       </p>
-      <el-button
+      <VtButton
+        variant="secondary"
         size="small"
         data-testid="presence-change-retry"
         @click="retryLoad"
       >
         {{ t("dashboard.presenceChange.retry") }}
-      </el-button>
+      </VtButton>
     </div>
 
     <template v-else>
@@ -84,8 +85,8 @@
           :disabled="!loggedIn || applying"
           @select="onDescriptionSelect"
         />
-        <el-button
-          type="primary"
+        <VtButton
+          variant="primary"
           class="presence-apply-btn"
           data-testid="presence-change-apply"
           :disabled="!loggedIn || !isDirty || applying"
@@ -93,7 +94,7 @@
           @click="applyPresenceChange"
         >
           {{ t("dashboard.presenceChange.apply") }}
-        </el-button>
+        </VtButton>
       </div>
     </template>
   </el-card>
@@ -107,6 +108,7 @@ import { App, type PresenceChangeSectionDTO } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
 import { formatError } from "../utils/formatError";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
+import VtButton from "./VtButton.vue";
 
 const SELF_CACHE_CHANGED_DEBOUNCE_MS = 300;
 

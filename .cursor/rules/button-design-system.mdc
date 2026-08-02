@@ -1,0 +1,51 @@
+---
+description: VtButton 4 variant ボタンデザインシステム（ADR 0017）。新規・改修で触った画面は VtButton を使う
+globs: "frontend/**/*.{vue,ts}"
+alwaysApply: false
+---
+
+# Button design system (VtButton)
+
+正本: [ADR 0017](../docs/adr/0017-button-design-system-vtbutton.md)、用語: [`CONTEXT.md`](../CONTEXT.md) Design system 節。
+
+## 使うもの
+
+- 画面の操作ボタン: **`VtButton`**（`frontend/src/components/VtButton.vue`）
+- **`variant` は必須**: `primary` | `secondary` | `tertiary` | `danger`
+- `disabled` / `loading` / `size` / `data-testid` 等はそのまま渡す（透過）
+- Danger + 同一 Action group に Primary があるときだけ `plain`（例: ログアウト）
+
+## variant の意味
+
+| variant | いつ | Element Plus 内部 |
+|---------|------|-------------------|
+| `primary` | Action group の主操作（**1 つだけ**） | `type="primary"` |
+| `secondary` | 起動・更新・複製・参照・非破棄キャンセル | 無指定（中立塗り） |
+| `tertiary` | 再読み込み・パネル閉じ・下書き行の除去 | `text` |
+| `danger` | 永続データの破壊・破壊確認の OK | `type="danger"`（`plain` 可） |
+
+## 状態
+
+- **disabled**: 様式ではない。`:disabled="true"`
+- **loading**: 押したボタンのみ `:loading="true"`
+
+## 例外（VtButton にしない）
+
+- **Semantic button**: Presence 色ボタンなど色がドメイン意味を持つ UI
+- **`ElMessageBox`**: `frontend/src/components/vtButtonClasses.ts` の定数を使う
+  - `VT_BUTTON_DANGER_CONFIRM_CLASS` — 破壊確認 OK
+  - `VT_BUTTON_SECONDARY_CANCEL_CLASS` — キャンセル（空 = 既定 Secondary 見た目）
+
+## 移行
+
+- 新規・改修で触ったファイルは **VtButton** へ。未触りの `el-button` 直書きは一括置換しない
+- ESLint 禁止は v1 では入れない
+
+## Storybook
+
+`VtButton.stories.ts` が見た目の正本。変更時はストーリーも更新する。
+
+## 関連
+
+- Element Plus 一般: `.cursor/rules/element-plus-ui.mdc`
+- Storybook: `.cursor/rules/storybook-wails-ui.mdc`
