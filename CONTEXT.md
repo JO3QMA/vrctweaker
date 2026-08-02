@@ -692,7 +692,7 @@ _Avoid_: 常時実行, バックグラウンドサービス（v1 で含意しな
 
 ## Design system
 
-ボタン様式などアプリ横断 UI 部品の用語。**VtButton** と 4 **Button variant**（[ADR 0017](docs/adr/0017-button-design-system-vtbutton.md)）は grill-with-docs で合意済み。実装契約は ADR を正本とする。色コード・個別 props など実装詳細はここに書かない。
+ボタン様式・余白などアプリ横断 UI 部品の用語。**VtButton** と 4 **Button variant**（[ADR 0017](docs/adr/0017-button-design-system-vtbutton.md)）は grill-with-docs で合意済み。**Spacing**（余白ルール）（[ADR 0018](docs/adr/0018-spacing-design-system.md)）は grill-with-docs で合意済み。実装契約は各 ADR を正本とする。色コード・個別 props など実装詳細はここに書かない。
 
 ### Language
 
@@ -751,6 +751,46 @@ _Avoid_: Loading ボタン（様式名）, 画面全体ロック（ボタン状�
 **Semantic button**:
 色や形状そのものがドメイン上の意味を伝えるボタン。4 様式（Primary / Secondary / Tertiary / Danger）の配置ルールは当てはめない。**Button disabled state** とアクセシビリティ（ラベル・`aria-label` 等）は当てはめる。例: **Presence change section** のプレゼンス色ボタン（Join Me / Active / Ask Me / Busy）。お気に入りトグルやアイコンのみの追加ボタンは Semantic button にせず、Tertiary または Secondary に寄せる。
 _Avoid_: カラーボタン（装飾だけを指す印象）, 例外ボタン（ルール逃れの総称）
+
+**Spacing**:
+アプリ横断の余白ルール。`margin`・`padding`・`gap`（Flex/Grid）に使う数値スケールと、セクション間・カード内・フォーム項目間など繰り返し現れるレイアウト間隔の命名パターンを含む。アイコン寸法・アバターサイズ・行高・最小タップ領域などコンテンツ固有の寸法（Sizing）や角丸（**Border radius**）は含めない。
+_Avoid_: マージン（CSS プロパティ名だけを指す印象）, レイアウト（グリッド列数・ブレークポイント等の総称）
+
+**Spacing scale**:
+Spacing で使ってよい余白の段階列。最小単位は 4px。許容値は **4, 8, 12, 16, 24, 32, 48, 64**（px）のみ。20 など中間値は持たず、最寄りの段階へ寄せる。新規・改修ではこの列以外の任意 px / rem 余白を増やさない（**Spacing adoption**）。
+_Avoid_: 8 の倍数ルール（4 と 12 を含むため）, 連続スケール（任意の 4px 刻みすべてを許す印象）
+
+**Spacing token**:
+Spacing scale の各段階を表す CSS カスタムプロパティ。値は **px リテラル**（例: `--space-16: 16px`）。`rem` や `em` でスケールを表現しない。トークン名は段階の px 数と一致させる（`--space-4` … `--space-64`）。アプリの `font-size`（現行 14px ルート）を Spacing のために変更しない。
+_Avoid_: rem トークン（14px ルートと噛み合わないため）, spacing-md（数値と名前がずれるため）
+
+**Spacing pattern**:
+繰り返し現れるレイアウト間隔に付ける意味別の名前。**Spacing token** のセマンティック・エイリアスとして定義し、実体は必ず `--space-*` へ委譲する（二重の px 値を持たない）。新規・改修では用途に合う pattern があれば数値トークンの直書きより pattern を優先する。
+_Avoid_: ユーティリティクラス（`.gap-8` 等のクラス体系を含意するため）, マジックナンバー（pattern なしの任意余白）
+
+**Spacing pattern catalog**:
+v1 で定義する **Spacing pattern** の公式一覧（いずれも CSS 変数）。`--space-inline-tight` → 4px、`--space-action-group` → 8px、`--space-form-field` → 12px、`--space-block` → 16px、`--space-section` → 24px、`--space-page` → 32px。48px / 64px は `--space-48` / `--space-64` の数値トークンのみ（pattern 名なし）。
+_Avoid_: gap ユーティリティ, 全間隔の pattern 化（低頻度の 48 / 64 は v1 で名前を付けない）
+
+**Spacing adoption**:
+Spacing トークン・pattern への移行方針。新規画面・改修で触ったファイルでは **Spacing token** または **Spacing pattern catalog** を使う。未着手の既存 `rem` / 任意 px 余白は一括置換しない（触ったところから順次）。共有スタイル（`style.css` の `.page-title`、`.section-card` 等）は v1 でトークンへ寄せる。遵守は `.cursor/rules/` で案内し、移行期は ESLint では強制しない。
+_Avoid_: 全面置換, rem 禁止の CI 強制（即時一括・CI 強制を含意するため）
+
+**Spacing v1 scope**:
+Spacing の最初の届け範囲。`style.css` への **Spacing token**・**Spacing pattern catalog** 定義、共有クラスのトークン化、`.cursor/rules/`、ADR、**Spacing Storybook catalog** に限定する。含めないもの: 全 View 一括トークン化、Element Plus 内部余白の上書き、ESLint 強制、Sizing / **Border radius** の再設計、48 / 64 の pattern 名付け。
+_Avoid_: Spacing（v1 範囲を指すときは scope とセットで書く）, 将来拡張（スコープ外リストの総称として曖昧なため）
+
+**Spacing Storybook catalog**:
+Spacing の Storybook 一覧。数値スケール（4〜64）・**Spacing pattern catalog** の対応表・レイアウト使用例を載せ、見た目と使い方の正本とする（**VtButton Storybook catalog** と同型）。
+_Avoid_: 全画面 Storybook, デザイントークン一覧（色・タイポ等の総称）
+
+**Spacing migration rounding**:
+既存の `rem` や任意 px 余白を **Spacing token** へ置き換えるとき、スケールに無い値は **四捨五入で最寄りの段階**へ寄せる（例: 14px → 16、21px → 24、10.5px → 12、7px → 8）。Sizing 用寸法・意図的な負の margin・非余白の配置は対象外。
+_Avoid_: 目視のみ（置換ごとに判断がぶれるため）, 切り上げ／切り捨て固定（文脈で最適が変わる中間値は四捨五入が既定）
+
+**Border radius**:
+角丸の半径。既存の `--radius` トークンで扱う。**Spacing** スケールとは別カテゴリ。v1 では Spacing 策定と同時に値や命名を変えない。
+_Avoid_: Spacing（余白と混同しやすいため）, 角丸ルール（Border radius 用語と重複）
 
 ## Agent contribution
 

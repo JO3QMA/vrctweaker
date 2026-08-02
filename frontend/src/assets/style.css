@@ -14,6 +14,24 @@
   --border: #3d4f66;
   --radius: 8px;
   --sidebar-width: 220px;
+
+  /* Spacing scale (ADR 0018) */
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-48: 48px;
+  --space-64: 64px;
+
+  /* Spacing pattern catalog */
+  --space-inline-tight: var(--space-4);
+  --space-action-group: var(--space-8);
+  --space-form-field: var(--space-12);
+  --space-block: var(--space-16);
+  --space-section: var(--space-24);
+  --space-page: var(--space-32);
 }
 
 /* ─── Element Plus dark theme CSS variable overrides ───────────── */
@@ -178,7 +196,7 @@ a:hover {
 
 /* Page title shared style */
 .page-title {
-  margin: 0 0 1rem;
+  margin: 0 0 var(--space-block);
   font-size: 1.4rem;
   font-weight: 600;
   color: var(--text-primary);
@@ -190,14 +208,14 @@ a:hover {
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 0;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-section);
 }
 
 /* 折りたたみ（CollapsibleSectionCard および手動でクラスを付けた .section-card 用） */
 .section-card__toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-action-group);
   width: 100%;
   margin: 0;
   padding: 0;
