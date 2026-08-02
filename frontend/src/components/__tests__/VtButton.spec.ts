@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
-import VtButton, { type VtButtonProps } from "../VtButton.vue";
+import VtButton from "../VtButton.vue";
+import { type VtButtonProps } from "../vtButtonVariants";
 
 describe("VtButton", () => {
   it("maps primary variant to el-button--primary", () => {

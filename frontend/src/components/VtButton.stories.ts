@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
 import VtButton from "./VtButton.vue";
+import { VT_BUTTON_VARIANTS, type VtButtonProps } from "./vtButtonVariants";
 import "./VtButton.stories.css";
 
 const catalogParameters = {
@@ -16,7 +17,7 @@ const meta = {
   argTypes: {
     variant: {
       control: "select",
-      options: ["primary", "secondary", "tertiary", "danger"],
+      options: [...VT_BUTTON_VARIANTS],
     },
     plain: { control: "boolean" },
   },
@@ -25,50 +26,25 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-export const Primary: Story = {
-  args: { variant: "primary" },
-  render: (args) => ({
-    components: { VtButton },
-    setup: () => ({ args }),
-    template: `<VtButton v-bind="args">Primary</VtButton>`,
-  }),
-};
+function variantStory(label: string, args: VtButtonProps): Story {
+  return {
+    args,
+    render: (storyArgs) => ({
+      components: { VtButton },
+      setup: () => ({ args: storyArgs }),
+      template: `<VtButton v-bind="args">${label}</VtButton>`,
+    }),
+  };
+}
 
-export const Secondary: Story = {
-  args: { variant: "secondary" },
-  render: (args) => ({
-    components: { VtButton },
-    setup: () => ({ args }),
-    template: `<VtButton v-bind="args">Secondary</VtButton>`,
-  }),
-};
-
-export const Tertiary: Story = {
-  args: { variant: "tertiary" },
-  render: (args) => ({
-    components: { VtButton },
-    setup: () => ({ args }),
-    template: `<VtButton v-bind="args">Tertiary</VtButton>`,
-  }),
-};
-
-export const Danger: Story = {
-  args: { variant: "danger" },
-  render: (args) => ({
-    components: { VtButton },
-    setup: () => ({ args }),
-    template: `<VtButton v-bind="args">Danger</VtButton>`,
-  }),
-};
-
-export const DangerPlain: Story = {
-  args: { variant: "danger", plain: true },
-  render: (args) => ({
-    components: { VtButton },
-    setup: () => ({ args }),
-    template: `<VtButton v-bind="args">Danger plain</VtButton>`,
-  }),
-};
+export const Primary = variantStory("Primary", { variant: "primary" });
+export const Secondary = variantStory("Secondary", { variant: "secondary" });
+export const Tertiary = variantStory("Tertiary", { variant: "tertiary" });
+export const Danger = variantStory("Danger", { variant: "danger" });
+export const DangerPlain = variantStory("Danger plain", {
+  variant: "danger",
+  plain: true,
+});
 
 export const DisabledStates: Story = {
   parameters: catalogParameters,

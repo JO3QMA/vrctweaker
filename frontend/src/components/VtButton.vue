@@ -1,15 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue";
-
-export type VtButtonVariant = "primary" | "secondary" | "tertiary" | "danger";
-
-export type VtButtonProps =
-  | { variant: "primary" | "secondary" | "tertiary" }
-  | {
-      variant: "danger";
-      /** Outline when a Primary button is in the same action group. */
-      plain?: boolean;
-    };
+import type { VtButtonProps } from "./vtButtonVariants";
 
 const props = defineProps<VtButtonProps>();
 

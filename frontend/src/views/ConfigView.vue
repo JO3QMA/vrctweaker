@@ -354,7 +354,10 @@ import { ElMessageBox, ElMessage } from "element-plus";
 import { App } from "../wails/app";
 import type { VRChatConfigDTO } from "../wails/app";
 import { AssetCacheErr } from "../utils/assetCacheErrors";
-import { VT_BUTTON_DANGER_CONFIRM_CLASS } from "../components/vtButtonClasses";
+import {
+  VT_BUTTON_DANGER_CONFIRM_CLASS,
+  VT_BUTTON_SECONDARY_CANCEL_CLASS,
+} from "../components/vtButtonClasses";
 
 const { t } = useI18n();
 
@@ -593,6 +596,7 @@ async function deleteConfig() {
       cancelButtonText: t("common.cancel"),
       type: "warning",
       confirmButtonClass: VT_BUTTON_DANGER_CONFIRM_CLASS,
+      cancelButtonClass: VT_BUTTON_SECONDARY_CANCEL_CLASS,
     });
   } catch {
     return;
@@ -671,6 +675,7 @@ async function doClearAssetCache() {
         cancelButtonText: t("common.cancel"),
         type: "warning",
         confirmButtonClass: VT_BUTTON_DANGER_CONFIRM_CLASS,
+        cancelButtonClass: VT_BUTTON_SECONDARY_CANCEL_CLASS,
       },
     );
   } catch {
