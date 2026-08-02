@@ -3,11 +3,15 @@ import { computed } from "vue";
 
 export type VtButtonVariant = "primary" | "secondary" | "tertiary" | "danger";
 
-const props = defineProps<{
-  variant: VtButtonVariant;
-  /** Danger only: outline when a Primary button is in the same action group. */
-  plain?: boolean;
-}>();
+export type VtButtonProps =
+  | { variant: "primary" | "secondary" | "tertiary" }
+  | {
+      variant: "danger";
+      /** Outline when a Primary button is in the same action group. */
+      plain?: boolean;
+    };
+
+const props = defineProps<VtButtonProps>();
 
 defineOptions({
   inheritAttrs: false,

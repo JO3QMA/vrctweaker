@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
-import VtButton from "../VtButton.vue";
+import VtButton, { type VtButtonProps } from "../VtButton.vue";
 
 describe("VtButton", () => {
   it("maps primary variant to el-button--primary", () => {
@@ -42,7 +42,7 @@ describe("VtButton", () => {
 
   it("maps danger plain when plain prop is set", () => {
     const wrapper = mount(VtButton, {
-      props: { variant: "danger", plain: true },
+      props: { variant: "danger", plain: true } satisfies VtButtonProps,
       slots: { default: "Logout" },
     });
     expect(wrapper.find(".el-button--danger").exists()).toBe(true);
