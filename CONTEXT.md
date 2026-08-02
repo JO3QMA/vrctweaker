@@ -690,6 +690,68 @@ _Avoid_: Activity ログ, output_log（遭遇ログや生ログと混同しや�
 Automation が評価・実行される前提条件。v1 では **VRCTweaker プロセスが起動している間のみ**有効（トレイ常駐を含む）。OS サービスやスケジューラ単体でのバックグラウンド実行は v1 スコープ外とし、UI では起動中のみ有効である旨を示す。将来のサービス化は別判断。
 _Avoid_: 常時実行, バックグラウンドサービス（v1 で含意しないため）, Tweaker 終了後も動く（誤期待を招くため）
 
+## Design system
+
+ボタン様式などアプリ横断 UI 部品の用語。**VtButton** と 4 **Button variant**（[ADR 0017](docs/adr/0017-button-design-system-vtbutton.md)）は grill-with-docs で合意済み。実装契約は ADR を正本とする。色コード・個別 props など実装詳細はここに書かない。
+
+### Language
+
+**VtButton**:
+VRCTweaker の標準操作ボタンコンポーネント。画面に置く **Primary / Secondary / Tertiary / Danger** は VtButton の `variant` で指定する（**必須**。省略時の暗黙既定は持たない）。`el-button` の直接利用は新規・改修時に VtButton へ寄せる。**Semantic button** は VtButton の variant に含めない（専用 UI を別に持つ）。
+_Avoid_: ボタン（`<button>` 素要素や `el-button` 直呼びと混同しやすいため）, Button component（汎用 React/Vue の俗称）
+
+**Button variant**:
+VtButton で選ぶ 4 様式のいずれか: `primary` / `secondary` / `tertiary` / `danger`。**Primary button** 等の用語と 1 対 1 で対応する。
+_Avoid_: type（Element Plus の `type` prop と混同しやすいため）, スタイル（CSS クラスだけを指す印象）
+
+**VtButton adoption**:
+VtButton への移行方針。新規画面・改修で触ったファイルでは **VtButton を使う**。**Semantic button** は専用 UI のまま移行対象外。未着手の既存 `el-button` 直書きは一括置換しない（触ったところから順次）。遵守は `.cursor/rules/` で案内し、移行期は ESLint では強制しない。見た目の正本は **VtButton Storybook catalog**。
+_Avoid_: 全面置換, el-button 禁止（即時一括・CI 強制を含意するため）
+
+**VtButton Storybook catalog**:
+VtButton の Storybook 一覧。4 **Button variant** それぞれについて通常・**Button disabled state**・**Button loading state** を載せ、Action group の並び例（例: Primary + Secondary、Danger 確認 + Secondary キャンセル）も 1 ストーリー以上含める。
+_Avoid_: ボタン一覧（Semantic button を含意しうるため）, 全画面 Storybook（コンポーネントカタログに限定）
+
+**Dialog confirm button**:
+`ElMessageBox` 等、テンプレートに **VtButton** を置けない確認ダイアログのボタン。**Danger button** / **Secondary button** の見た目に、VtButton 実装と共有する class 定数で揃える。**VtButton adoption** の対象外。
+_Avoid_: モーダルボタン（将来の自作ダイアログ置換を含意しうるため）, MessageBox（実装 API 名だけを指す印象）
+
+**Action group**:
+画面上でひとまとまりに並ぶ操作ボタンの群。ダイアログのフッター、フォーム下部のボタン列、ツールバー、カード内のアクション行など。**Primary button** の「高々 1 つ」は Action group 単位で数える。
+_Avoid_: 画面全体, ツールバー（Action group の一例に過ぎないため）
+
+**Primary button**:
+Action group 内で主として進めたい操作を示すボタン様式。同一 Action group には高々 1 つだけ置く。見た目は強調色の塗り。
+_Avoid_: メインボタン（色だけを指す印象）, CTA（マーケ用語）
+
+**Secondary button**:
+Action group 内の実行操作を示すボタン様式。Primary より優先度は低いが、押すと状態が変わる・処理が走る操作に使う（起動、更新、複製、参照、編集を破棄しないキャンセルなど）。見た目は中立色の塗り。
+_Avoid_: サブボタン（見た目だけを指す印象）, デフォルトボタン（実装語）
+
+**Tertiary button**:
+補助・低優先の操作を示すボタン様式。テキストリンクに近い軽さでよい。一覧内の軽操作、ログの再読み込み、編集パネルを閉じるだけの操作、**Draft row removal** など。**Danger button** に当たる削除は含めない。見た目は背景なし（テキストリンクに近い）。
+_Avoid_: ゴーストボタン（見た目だけを指す印象）, リンク（`router-link` や `<a>` と混同しやすいため）
+
+**Danger button**:
+**永続データ**に対する取り消しが難しい破壊操作を示すボタン様式。プロファイル削除、ルール削除、ログアウト、キャッシュ全消去、DB クリアなど。破壊を主目的とする確認ダイアログでは、確認側を Danger としキャンセルを Secondary とする。その Action group には **Primary button** を置かない（Danger が強調）。見た目は警告色の塗り。同一 Action group に **Primary button** があるときは枠線のみの弱い強調も可。
+_Avoid_: 警告ボタン（非破壊の注意喚起と混同しやすいため）, 赤ボタン（色だけを指す印象）
+
+**Draft row removal**:
+保存前の下書き（フォーム編集中の一覧行など）から 1 行を外す操作。永続ストアからはまだ消えない。**Tertiary button** でよい。確認ダイアログは原則不要。
+_Avoid_: 削除（**Danger button** の永続削除と混同しやすいため）, 行削除（永続か下書きかが分からないため）
+
+**Button disabled state**:
+操作できない／させたくないボタンに付ける状態。ボタン様式（Primary / Secondary / Tertiary / Danger）ではなく、いずれの様式にも重ねる。実装では標準の `disabled` 属性（または同等）で表す。未ログイン、変更なし、対象なしなど。無効理由はラベル・ツールチップ・周辺文言で伝える。
+_Avoid_: Disabled ボタン（第 5 の様式名）, Disabled 様式
+
+**Button loading state**:
+非同期処理中に、**押したボタンだけ**に付ける一時状態。処理完了までそのボタンは操作できなくなる（**Button disabled state** と同型の扱い）。別様式にはしない。Action group 内の他ボタンまで一括で無効化するのは原則としない。
+_Avoid_: Loading ボタン（様式名）, 画面全体ロック（ボタン状態の話と混同しやすいため）
+
+**Semantic button**:
+色や形状そのものがドメイン上の意味を伝えるボタン。4 様式（Primary / Secondary / Tertiary / Danger）の配置ルールは当てはめない。**Button disabled state** とアクセシビリティ（ラベル・`aria-label` 等）は当てはめる。例: **Presence change section** のプレゼンス色ボタン（Join Me / Active / Ask Me / Busy）。お気に入りトグルやアイコンのみの追加ボタンは Semantic button にせず、Tertiary または Secondary に寄せる。
+_Avoid_: カラーボタン（装飾だけを指す印象）, 例外ボタン（ルール逃れの総称）
+
 ## Agent contribution
 
 Issue・PR・コミットなど Git に残るテキストを書くときの用語。

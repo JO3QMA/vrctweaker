@@ -15,6 +15,7 @@ alwaysApply: false
 ## 実装の指針
 
 - ボタン・フォーム・ダイアログ・テーブル・タグなどは **Element Plus コンポーネントを優先**し、素の HTML で同等物を作らない（デザインと挙動の一貫性のため）。
+- **操作ボタン**は **`VtButton`** を使う（`.cursor/rules/button-design-system.mdc`、ADR 0017）。`el-button` 直書きは移行期のみ併存可。
 - 仕様・props・スロットは **[Element Plus 公式ドキュメント](https://element-plus.org/)** を正とする（バージョンは `frontend/package.json` の依存に合わせる）。
 
 ## DOM とセレクタ（テスト・E2E）
