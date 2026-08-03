@@ -159,15 +159,15 @@ function isBrowserFileKindSwitch(priorEffectiveKind: string): boolean {
 
 function revertDraftToEffective(
   priorEffectiveKind: string,
-  priorBrowser: string,
-  priorPath: string,
+  priorDraftBrowser: string,
+  priorDraftPath: string,
 ) {
-  if (priorEffectiveKind === "file" && priorPath) {
+  if (priorEffectiveKind === "file") {
     cookieDraftSource.value = "file";
-    cookieDraftCookiesPath.value = priorPath;
+    cookieDraftCookiesPath.value = priorDraftPath;
   } else if (priorEffectiveKind === "browser") {
     cookieDraftSource.value = "browser";
-    if (priorBrowser) cookieDraftBrowser.value = priorBrowser;
+    if (priorDraftBrowser) cookieDraftBrowser.value = priorDraftBrowser;
   }
 }
 
@@ -270,8 +270,8 @@ async function onCookieEnableChange(on: boolean) {
 async function onCookieSourceChange() {
   if (!cookieEnabled.value) return;
   const priorEffectiveKind = cookieSourceKind.value;
-  const priorEffectiveBrowser = cookieDraftBrowser.value;
-  const priorEffectivePath = cookieDraftCookiesPath.value;
+  const priorDraftBrowser = cookieDraftBrowser.value;
+  const priorDraftPath = cookieDraftCookiesPath.value;
   const gen = ++cookieViewGen;
   cookieBusy.value = true;
   cookieActionError.value = "";
@@ -294,8 +294,8 @@ async function onCookieSourceChange() {
     if (isMessageBoxDismiss(e)) {
       revertDraftToEffective(
         priorEffectiveKind,
-        priorEffectiveBrowser,
-        priorEffectivePath,
+        priorDraftBrowser,
+        priorDraftPath,
       );
       return;
     }
@@ -309,8 +309,8 @@ async function onCookieSourceChange() {
     ) {
       revertDraftToEffective(
         priorEffectiveKind,
-        priorEffectiveBrowser,
-        priorEffectivePath,
+        priorDraftBrowser,
+        priorDraftPath,
       );
     } else {
       await refreshAfterError(gen);

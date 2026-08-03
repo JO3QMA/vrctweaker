@@ -129,6 +129,34 @@ describe("CookieLinkageSection source kind switch", () => {
     expect(isSwitchOn(wrapper)).toBe(true);
   });
 
+  it("reverts to file source when browser write fails after file to browser switch", async () => {
+    vi.mocked(App.getYTDLPCookieLinkageStatus).mockResolvedValue({
+      supported: true,
+      enabled: true,
+      sourceKind: "file",
+      cookiesFilePath: "C:\\cookies.txt",
+      riskAcknowledged: true,
+      browser: "chrome",
+    });
+    vi.mocked(App.setYTDLPCookieLinkageBrowser).mockRejectedValue(
+      new Error("cookie linkage config read: permission denied"),
+    );
+
+    const wrapper = mountSection();
+    await flushPromises();
+
+    await selectCookieSource(wrapper, "browser");
+
+    expect(wrapper.text()).toContain(
+      "yt-dlp の設定ファイルを読めませんでした。",
+    );
+    expect(isSwitchOn(wrapper)).toBe(true);
+    const fileRadio = wrapper
+      .get('[data-testid="video-cookie-source"]')
+      .findAll(".el-radio-button")[1]!;
+    expect(fileRadio.classes()).toContain("is-active");
+  });
+
   it("reverts source radio on disable failure when switching to file with empty path", async () => {
     vi.mocked(App.getYTDLPCookieLinkageStatus).mockResolvedValue({
       supported: true,
