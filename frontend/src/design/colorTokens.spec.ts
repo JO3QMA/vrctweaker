@@ -2,10 +2,12 @@ import { describe, expect, it } from "vitest";
 import {
   BRAND_COLOR_TOKENS,
   COLOR_LEGACY_ALIASES,
+  hasLegacyAlias,
   NEUTRAL_COLOR_TOKENS,
   PRESENCE_COLOR_TOKENS,
   SEMANTIC_COLOR_TOKENS,
   SERVER_STATUS_COLOR_TOKENS,
+  type SimpleColorToken,
 } from "./colorTokens";
 
 describe("colorTokens", () => {
@@ -71,16 +73,15 @@ describe("colorTokens", () => {
   });
 
   it("derives COLOR_LEGACY_ALIASES from token legacyAlias fields", () => {
-    const expected = [
+    const tokens: SimpleColorToken[] = [
       ...BRAND_COLOR_TOKENS,
       ...NEUTRAL_COLOR_TOKENS,
       ...SEMANTIC_COLOR_TOKENS,
-    ]
-      .filter((token) => token.legacyAlias != null)
-      .map((token) => ({
-        legacy: token.legacyAlias,
-        target: token.varName,
-      }));
+    ];
+    const expected = tokens.filter(hasLegacyAlias).map((token) => ({
+      legacy: token.legacyAlias,
+      target: token.varName,
+    }));
     expect(COLOR_LEGACY_ALIASES).toEqual(expected);
   });
 });

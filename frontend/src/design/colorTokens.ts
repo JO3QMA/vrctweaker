@@ -11,14 +11,19 @@ export type ColorLegacyAlias = {
   target: ColorVarName;
 };
 
+export function hasLegacyAlias(
+  token: SimpleColorToken,
+): token is SimpleColorToken & { legacyAlias: string } {
+  return token.legacyAlias != null;
+}
+
 function legacyAliasesFrom(
   tokens: ReadonlyArray<SimpleColorToken>,
 ): ColorLegacyAlias[] {
-  return tokens.flatMap((token) =>
-    token.legacyAlias
-      ? [{ legacy: token.legacyAlias, target: token.varName }]
-      : [],
-  );
+  return tokens.filter(hasLegacyAlias).map((token) => ({
+    legacy: token.legacyAlias,
+    target: token.varName,
+  }));
 }
 
 /** Brand color tokens (ADR 0019). */
