@@ -45,7 +45,7 @@
   font-family: ui-monospace, monospace;
   font-size: 0.8rem;
   color: var(--color-text-secondary);
-  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .color-story-table {

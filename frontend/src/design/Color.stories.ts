@@ -110,6 +110,11 @@ export const Presence: Story = {
       <div class="color-story">
         <h2>Presence color</h2>
         <p>Domain colors for Presence change Semantic buttons.</p>
+        <p>
+          Chips use <code>--color-text-inverse</code> on every state, matching the production
+          Presence change section (ADR 0019 v1 visual policy). Ask-me contrast is below WCAG AA;
+          per-state text colors are a follow-up, not this tokenize PR.
+        </p>
         <div class="color-story-presence-row">
           <div
             v-for="row in rows"
