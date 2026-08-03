@@ -94,13 +94,10 @@ describe("CookieLinkageSection source kind switch", () => {
     expect(App.disableYTDLPCookieLinkage).toHaveBeenCalledTimes(1);
     expect(App.setYTDLPCookieLinkageCookiesFile).not.toHaveBeenCalled();
     expect(isSwitchOn(wrapper)).toBe(false);
-    expect(
-      wrapper
-        .get('[data-testid="video-cookie-source"]')
-        .findAll(".el-radio-button")
-        .at(1)!
-        .classes(),
-    ).toContain("is-active");
+    const fileRadio = wrapper
+      .get('[data-testid="video-cookie-source"]')
+      .findAll(".el-radio-button")[1]!;
+    expect(fileRadio.classes()).toContain("is-active");
   });
 
   it("writes browser source when switching file to browser while enabled", async () => {
@@ -154,12 +151,9 @@ describe("CookieLinkageSection source kind switch", () => {
       "yt-dlp の設定ファイルを読めませんでした。",
     );
     expect(isSwitchOn(wrapper)).toBe(true);
-    expect(
-      wrapper
-        .get('[data-testid="video-cookie-source"]')
-        .findAll(".el-radio-button")
-        .at(0)!
-        .classes(),
-    ).toContain("is-active");
+    const browserRadio = wrapper
+      .get('[data-testid="video-cookie-source"]')
+      .findAll(".el-radio-button")[0]!;
+    expect(browserRadio.classes()).toContain("is-active");
   });
 });
