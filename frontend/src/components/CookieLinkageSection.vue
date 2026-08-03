@@ -108,6 +108,14 @@
         </el-form-item>
       </el-form>
     </template>
+    <el-alert
+      v-else-if="cookieActionError"
+      :title="cookieActionError"
+      type="error"
+      :closable="false"
+      show-icon
+      class="cookie-action-error cookie-unsupported-error"
+    />
   </section>
 </template>
 
@@ -167,7 +175,7 @@ function revertDraftToEffective(
     cookieDraftCookiesPath.value = priorDraftPath;
   } else if (priorEffectiveKind === "browser") {
     cookieDraftSource.value = "browser";
-    if (priorDraftBrowser) cookieDraftBrowser.value = priorDraftBrowser;
+    cookieDraftBrowser.value = priorDraftBrowser;
   }
 }
 
@@ -399,6 +407,9 @@ onMounted(async () => {
   margin-bottom: 0.75rem;
 }
 .cookie-alerts .el-alert:last-child {
+  margin-bottom: 0;
+}
+.cookie-unsupported-error {
   margin-bottom: 0;
 }
 .cookie-switch-row {

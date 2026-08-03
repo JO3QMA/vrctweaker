@@ -185,3 +185,27 @@ describe("CookieLinkageSection source kind switch", () => {
     expect(browserRadio.classes()).toContain("is-active");
   });
 });
+
+describe("CookieLinkageSection unsupported platform", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(App.getYTDLPMaintainStatus).mockResolvedValue(maintainOfficial);
+  });
+
+  it("shows action error when status fetch fails on unsupported platform", async () => {
+    vi.mocked(App.getYTDLPCookieLinkageStatus).mockRejectedValue(
+      new Error("cookie linkage config read: permission denied"),
+    );
+
+    const wrapper = mountSection();
+    await flushPromises();
+
+    expect(wrapper.find(".cookie-unsupported-error").exists()).toBe(true);
+    expect(wrapper.text()).toContain(
+      "yt-dlp の設定ファイルを読めませんでした。",
+    );
+    expect(wrapper.find('[data-testid="video-cookie-enable"]').exists()).toBe(
+      false,
+    );
+  });
+});
