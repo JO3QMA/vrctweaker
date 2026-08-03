@@ -21,7 +21,7 @@ export type SpacingPattern = {
 };
 
 /** Spacing pattern catalog (v1). Each pattern delegates to a scale token. */
-export const SPACING_PATTERNS: readonly SpacingPattern[] = [
+export const SPACING_PATTERNS = [
   {
     name: "inline-tight",
     varName: "--space-inline-tight",
@@ -58,4 +58,4 @@ export const SPACING_PATTERNS: readonly SpacingPattern[] = [
     px: 32,
     scaleVar: spacingScaleVar(32),
   },
-] as const;
+] as const satisfies readonly SpacingPattern[];
