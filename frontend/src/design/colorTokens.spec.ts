@@ -16,6 +16,18 @@ describe("colorTokens", () => {
     ]);
   });
 
+  it("uses name for all simple token rows", () => {
+    for (const row of [
+      ...BRAND_COLOR_TOKENS,
+      ...NEUTRAL_COLOR_TOKENS,
+      ...SEMANTIC_COLOR_TOKENS,
+      ...SERVER_STATUS_COLOR_TOKENS,
+    ]) {
+      expect(row.name.length).toBeGreaterThan(0);
+      expect(row.varName.startsWith("--color-")).toBe(true);
+    }
+  });
+
   it("defines neutral surface and text tokens", () => {
     const names = NEUTRAL_COLOR_TOKENS.map((t) => t.varName);
     expect(names).toContain("--color-bg-base");
@@ -32,8 +44,8 @@ describe("colorTokens", () => {
     ]);
   });
 
-  it("defines server status domain keys", () => {
-    expect(SERVER_STATUS_COLOR_TOKENS.map((t) => t.key)).toEqual([
+  it("defines server status domain names", () => {
+    expect(SERVER_STATUS_COLOR_TOKENS.map((t) => t.name)).toEqual([
       "operational",
       "degraded",
       "partial",
@@ -45,6 +57,7 @@ describe("colorTokens", () => {
 
   it("defines presence domain bg and border pairs", () => {
     for (const row of PRESENCE_COLOR_TOKENS) {
+      expect(row.name.length).toBeGreaterThan(0);
       expect(row.borderVar).toBe(`${row.bgVar}-border`);
     }
   });

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
+import type { SimpleColorToken } from "./colorTokens";
 import {
   BRAND_COLOR_TOKENS,
   NEUTRAL_COLOR_TOKENS,
@@ -24,7 +25,7 @@ type Story = StoryObj<typeof meta>;
 function swatchStory(
   title: string,
   description: string,
-  rows: ReadonlyArray<{ label: string; varName: string }>,
+  rows: ReadonlyArray<Pick<SimpleColorToken, "varName">>,
 ): Story {
   return {
     name: title,
@@ -52,7 +53,7 @@ function swatchStory(
 export const Brand: Story = swatchStory(
   "Brand color",
   "Main accent. Primary button fill and links use --color-brand.",
-  BRAND_COLOR_TOKENS.map((t) => ({ label: t.name, varName: t.varName })),
+  BRAND_COLOR_TOKENS,
 );
 
 export const Neutral: Story = {
@@ -66,12 +67,12 @@ export const Neutral: Story = {
         <div class="color-story-grid">
           <div v-for="row in rows" :key="row.varName" class="color-story-swatch">
             <div
-              v-if="row.role.startsWith('text-')"
+              v-if="row.name.startsWith('text-')"
               class="color-story-swatch-chip color-story-swatch-chip--text"
               :style="{ color: 'var(' + row.varName + ')' }"
             >Aa</div>
             <div
-              v-else-if="row.role === 'border'"
+              v-else-if="row.name === 'border'"
               class="color-story-swatch-chip"
               :style="{ background: 'var(--color-bg-base)', border: '3px solid var(' + row.varName + ')' }"
             />
@@ -92,16 +93,13 @@ export const Neutral: Story = {
 export const Semantic: Story = swatchStory(
   "Semantic color catalog",
   "Feedback for tags, messages, and validation. Not for Server status or Presence.",
-  SEMANTIC_COLOR_TOKENS.map((t) => ({ label: t.name, varName: t.varName })),
+  SEMANTIC_COLOR_TOKENS,
 );
 
 export const ServerStatus: Story = swatchStory(
   "Server status color",
   "Domain colors for Dashboard Server status. Do not reuse as Semantic feedback.",
-  SERVER_STATUS_COLOR_TOKENS.map((t) => ({
-    label: t.key,
-    varName: t.varName,
-  })),
+  SERVER_STATUS_COLOR_TOKENS,
 );
 
 export const Presence: Story = {
@@ -115,21 +113,21 @@ export const Presence: Story = {
         <div class="color-story-presence-row">
           <div
             v-for="row in rows"
-            :key="row.key"
+            :key="row.name"
             class="color-story-presence-chip"
             :style="{
               background: 'var(' + row.bgVar + ')',
               borderColor: 'var(' + row.borderVar + ')',
             }"
-          >{{ row.key }}</div>
+          >{{ row.name }}</div>
         </div>
         <table class="color-story-table">
           <thead>
-            <tr><th>Key</th><th>Background</th><th>Border</th></tr>
+            <tr><th>Name</th><th>Background</th><th>Border</th></tr>
           </thead>
           <tbody>
-            <tr v-for="row in rows" :key="row.key">
-              <td>{{ row.key }}</td>
+            <tr v-for="row in rows" :key="row.name">
+              <td>{{ row.name }}</td>
               <td><code>{{ row.bgVar }}</code></td>
               <td><code>{{ row.borderVar }}</code></td>
             </tr>
