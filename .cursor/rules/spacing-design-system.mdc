@@ -1,0 +1,55 @@
+---
+description: Spacing 余白デザインシステム（ADR 0018）。新規・改修で触った画面は Spacing token / pattern を使う
+globs: "frontend/**/*.{vue,ts,css}"
+alwaysApply: false
+---
+
+# Spacing design system
+
+正本: [ADR 0018](../docs/adr/0018-spacing-design-system.md)、用語: [`CONTEXT.md`](../CONTEXT.md) Design system 節。
+
+## トークン
+
+`frontend/src/assets/style.css` の `:root` で定義。
+
+**数値トークン**（px）: `--space-4` … `--space-64`（4, 8, 12, 16, 24, 32, 48, 64 のみ）
+
+**Spacing pattern**（用途別エイリアス）:
+
+| 変数 | 値 | 用途 |
+|------|-----|------|
+| `--space-inline-tight` | 4px | チップ横・インライン詰め |
+| `--space-action-group` | 8px | Action group / ツールバー `gap` |
+| `--space-form-field` | 12px | フォーム項目間 |
+| `--space-block` | 16px | 見出し下・段落間 |
+| `--space-section` | 24px | セクションカード間 |
+| `--space-page` | 32px | ページ外周 |
+
+用途に合う pattern があれば `--space-16` 直書きより pattern を優先する。
+
+## 使い方
+
+```css
+gap: var(--space-action-group);
+margin-bottom: var(--space-block);
+padding: var(--space-form-field);
+```
+
+- `rem` / 任意 px の新規余白は増やさない
+- Sizing（アイコン寸法など）・負の margin・`--radius` は Spacing 対象外
+
+## 移行（Spacing adoption）
+
+- 新規・改修で触ったファイルはトークン化する
+- 未触りの既存 `rem` は一括置換しない
+- 置換時は **四捨五入で最寄りトークン**（14px → `--space-block`、21px → `--space-section`）
+- ESLint 禁止は v1 では入れない
+
+## Storybook
+
+`frontend/src/design/Spacing.stories.ts` が見た目とマッピング表の正本。変更時はストーリーも更新する。
+
+## 関連
+
+- ボタン: `.cursor/rules/button-design-system.mdc`
+- Element Plus 一般: `.cursor/rules/element-plus-ui.mdc`
