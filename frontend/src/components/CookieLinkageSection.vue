@@ -5,41 +5,43 @@
     data-testid="video-cookie-linkage"
     :aria-labelledby="cookieSupported ? 'ytdlp-cookie-heading' : undefined"
   >
-    <el-alert
-      v-if="cookieActionError"
-      :title="cookieActionError"
-      type="error"
-      :closable="false"
-      show-icon
-      class="cookie-action-error"
-    />
     <template v-if="cookieSupported">
       <h2 id="ytdlp-cookie-heading" class="video-block-title">
         {{ t("video.cookieLinkage.section") }}
       </h2>
-      <el-alert
-        type="warning"
-        :closable="false"
-        show-icon
-        class="cookie-always-warn"
-        :title="t('video.cookieLinkage.alwaysWarn')"
-      />
-      <el-alert
-        v-if="!toolsEffectiveOfficial"
-        type="info"
-        :closable="false"
-        show-icon
-        class="cookie-official-hint"
-        data-testid="video-cookie-official-hint"
-        :title="t('video.cookieLinkage.officialHint')"
-      />
-      <el-alert
-        v-if="cookieSourceKind === 'unsupported'"
-        type="warning"
-        :closable="false"
-        show-icon
-        :title="t('video.cookieLinkage.unsupportedForm')"
-      />
+      <div class="cookie-alerts">
+        <el-alert
+          v-if="cookieActionError"
+          :title="cookieActionError"
+          type="error"
+          :closable="false"
+          show-icon
+          class="cookie-action-error"
+        />
+        <el-alert
+          type="warning"
+          :closable="false"
+          show-icon
+          class="cookie-always-warn"
+          :title="t('video.cookieLinkage.alwaysWarn')"
+        />
+        <el-alert
+          v-if="!toolsEffectiveOfficial"
+          type="info"
+          :closable="false"
+          show-icon
+          class="cookie-official-hint"
+          data-testid="video-cookie-official-hint"
+          :title="t('video.cookieLinkage.officialHint')"
+        />
+        <el-alert
+          v-if="cookieSourceKind === 'unsupported'"
+          type="warning"
+          :closable="false"
+          show-icon
+          :title="t('video.cookieLinkage.unsupportedForm')"
+        />
+      </div>
       <div class="cookie-switch-row">
         <div class="cookie-toggle-label">
           <span>{{ t("video.cookieLinkage.enableLabel") }}</span>
@@ -106,6 +108,14 @@
         </el-form-item>
       </el-form>
     </template>
+    <el-alert
+      v-else-if="cookieActionError"
+      :title="cookieActionError"
+      type="error"
+      :closable="false"
+      show-icon
+      class="cookie-action-error cookie-unsupported-error"
+    />
   </section>
 </template>
 
@@ -141,6 +151,32 @@ function isMessageBoxDismiss(e: unknown): boolean {
 function userFacingCookieError(raw: string): string {
   if (!raw) return "";
   return t(cookieLinkageErrorI18nKey(raw));
+}
+
+function isFileDraftReadyForWrite(): boolean {
+  return cookieDraftCookiesPath.value.trim() !== "";
+}
+
+function isBrowserFileKindSwitch(priorEffectiveKind: string): boolean {
+  const to = cookieDraftSource.value;
+  return (
+    (priorEffectiveKind === "browser" && to === "file") ||
+    (priorEffectiveKind === "file" && to === "browser")
+  );
+}
+
+function revertDraftToEffective(
+  priorEffectiveKind: string,
+  priorDraftBrowser: string,
+  priorDraftPath: string,
+) {
+  if (priorEffectiveKind === "file") {
+    cookieDraftSource.value = "file";
+    cookieDraftCookiesPath.value = priorDraftPath;
+  } else if (priorEffectiveKind === "browser") {
+    cookieDraftSource.value = "browser";
+    cookieDraftBrowser.value = priorDraftBrowser;
+  }
 }
 
 function applyCookieStatus(st: CookieLinkageStatusDTO) {
@@ -241,20 +277,52 @@ async function onCookieEnableChange(on: boolean) {
 
 async function onCookieSourceChange() {
   if (!cookieEnabled.value) return;
+  const priorEffectiveKind = cookieSourceKind.value;
+  const priorDraftBrowser = cookieDraftBrowser.value;
+  const priorDraftPath = cookieDraftCookiesPath.value;
   const gen = ++cookieViewGen;
   cookieBusy.value = true;
   cookieActionError.value = "";
   try {
     await ensureCookieRiskAck(gen);
     if (isCookieViewStale(gen)) return;
+    if (
+      isBrowserFileKindSwitch(priorEffectiveKind) &&
+      cookieDraftSource.value === "file" &&
+      !isFileDraftReadyForWrite()
+    ) {
+      await App.disableYTDLPCookieLinkage();
+      if (isCookieViewStale(gen)) return;
+      await refreshCookieStatus(gen);
+      return;
+    }
     await writeCookieFromDraft(gen);
   } catch (e) {
     if (isCookieViewStale(gen)) return;
-    if (isMessageBoxDismiss(e)) return;
+    if (isMessageBoxDismiss(e)) {
+      revertDraftToEffective(
+        priorEffectiveKind,
+        priorDraftBrowser,
+        priorDraftPath,
+      );
+      return;
+    }
     cookieActionError.value = userFacingCookieError(
       e instanceof Error ? e.message : String(e),
     );
-    await refreshAfterError(gen);
+    if (
+      isBrowserFileKindSwitch(priorEffectiveKind) &&
+      cookieDraftSource.value === "file" &&
+      !isFileDraftReadyForWrite()
+    ) {
+      revertDraftToEffective(
+        priorEffectiveKind,
+        priorDraftBrowser,
+        priorDraftPath,
+      );
+    } else {
+      await refreshAfterError(gen);
+    }
   } finally {
     if (!isCookieViewStale(gen)) cookieBusy.value = false;
   }
@@ -332,10 +400,17 @@ onMounted(async () => {
   font-size: 1rem;
   font-weight: 600;
 }
-.cookie-always-warn,
-.cookie-official-hint,
-.cookie-action-error {
+.cookie-alerts {
   margin-bottom: 0.75rem;
+}
+.cookie-alerts .el-alert {
+  margin-bottom: 0.75rem;
+}
+.cookie-alerts .el-alert:last-child {
+  margin-bottom: 0;
+}
+.cookie-unsupported-error {
+  margin-bottom: 0;
 }
 .cookie-switch-row {
   display: flex;
