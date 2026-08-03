@@ -410,28 +410,28 @@ onUnmounted(() => {
 }
 
 .presence-color-btn--selected {
-  outline: 2px solid var(--text-primary);
+  outline: 2px solid var(--color-text-primary);
   outline-offset: 2px;
 }
 
 .presence-color-btn--join-me {
-  background: #2b7fd9 !important;
-  border-color: #256bb8 !important;
+  background: var(--color-presence-join-me) !important;
+  border-color: var(--color-presence-join-me-border) !important;
 }
 
 .presence-color-btn--active {
-  background: #2e9f4a !important;
-  border-color: #267d3c !important;
+  background: var(--color-presence-active) !important;
+  border-color: var(--color-presence-active-border) !important;
 }
 
 .presence-color-btn--ask-me {
-  background: #e8943c !important;
-  border-color: #c97d2e !important;
+  background: var(--color-presence-ask-me) !important;
+  border-color: var(--color-presence-ask-me-border) !important;
 }
 
 .presence-color-btn--busy {
-  background: #d94a4a !important;
-  border-color: #b83c3c !important;
+  background: var(--color-presence-busy) !important;
+  border-color: var(--color-presence-busy-border) !important;
 }
 
 .presence-description-row {

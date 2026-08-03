@@ -1,17 +1,56 @@
 /* VRChat Tweaker - Dark theme base + Element Plus dark mode overrides */
 
-/* ─── App color tokens ─────────────────────────────────────────── */
+/* ─── App color tokens (ADR 0019) ──────────────────────────────── */
 :root {
-  --bg-primary: #1b2636;
-  --bg-secondary: #243447;
-  --bg-tertiary: #2d3f54;
-  --text-primary: #e8eaed;
-  --text-secondary: #9aa0a6;
-  --accent: #5c9ce6;
-  --accent-hover: #7ab3f0;
-  --danger: #e57373;
-  --success: #81c784;
-  --border: #3d4f66;
+  /* Brand */
+  --color-brand: #5c9ce6;
+  --color-brand-hover: #7ab3f0;
+
+  /* Neutral */
+  --color-bg-base: #1b2636;
+  --color-bg-elevated: #243447;
+  --color-bg-muted: #2d3f54;
+  --color-text-primary: #e8eaed;
+  --color-text-secondary: #9aa0a6;
+  --color-text-muted: #6b7280;
+  --color-border: #3d4f66;
+
+  /* Semantic */
+  --color-danger: #e57373;
+  --color-success: #81c784;
+  --color-warning: #ffb74d;
+  --color-info: #9aa0a6;
+
+  /* Server status (domain) */
+  --color-status-operational: #2e9f4a;
+  --color-status-degraded: #d4a017;
+  --color-status-partial: #e8943c;
+  --color-status-major: #d94a4a;
+  --color-status-maintenance: #2b7fd9;
+  --color-status-unknown: var(--color-text-secondary);
+
+  /* Presence (domain) */
+  --color-presence-join-me: #2b7fd9;
+  --color-presence-join-me-border: #256bb8;
+  --color-presence-active: #2e9f4a;
+  --color-presence-active-border: #267d3c;
+  --color-presence-ask-me: #e8943c;
+  --color-presence-ask-me-border: #c97d2e;
+  --color-presence-busy: #d94a4a;
+  --color-presence-busy-border: #b83c3c;
+
+  /* Legacy aliases (Color adoption; delegate only) */
+  --bg-primary: var(--color-bg-base);
+  --bg-secondary: var(--color-bg-elevated);
+  --bg-tertiary: var(--color-bg-muted);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --accent: var(--color-brand);
+  --accent-hover: var(--color-brand-hover);
+  --danger: var(--color-danger);
+  --success: var(--color-success);
+  --border: var(--color-border);
+
   --radius: 8px;
   --sidebar-width: 220px;
 
@@ -36,44 +75,44 @@
 
 /* ─── Element Plus dark theme CSS variable overrides ───────────── */
 html.dark {
-  --el-bg-color-page: #1b2636;
-  --el-bg-color: #243447;
-  --el-bg-color-overlay: #2d3f54;
+  --el-bg-color-page: var(--color-bg-base);
+  --el-bg-color: var(--color-bg-elevated);
+  --el-bg-color-overlay: var(--color-bg-muted);
 
-  --el-color-primary: #5c9ce6;
-  --el-color-primary-light-3: #7ab3f0;
+  --el-color-primary: var(--color-brand);
+  --el-color-primary-light-3: var(--color-brand-hover);
   --el-color-primary-light-5: #8ec4f5;
   --el-color-primary-light-7: #a8d3f7;
   --el-color-primary-light-8: #b8dcf9;
   --el-color-primary-light-9: #d0eafc;
   --el-color-primary-dark-2: #4a88d0;
 
-  --el-color-success: #81c784;
-  --el-color-warning: #ffb74d;
-  --el-color-danger: #e57373;
-  --el-color-error: #e57373;
-  --el-color-info: #9aa0a6;
+  --el-color-success: var(--color-success);
+  --el-color-warning: var(--color-warning);
+  --el-color-danger: var(--color-danger);
+  --el-color-error: var(--color-danger);
+  --el-color-info: var(--color-info);
 
-  --el-text-color-primary: #e8eaed;
+  --el-text-color-primary: var(--color-text-primary);
   --el-text-color-regular: #c8cbd0;
-  --el-text-color-secondary: #9aa0a6;
-  --el-text-color-placeholder: #6b7280;
+  --el-text-color-secondary: var(--color-text-secondary);
+  --el-text-color-placeholder: var(--color-text-muted);
   --el-text-color-disabled: #4b5563;
 
-  --el-border-color: #3d4f66;
+  --el-border-color: var(--color-border);
   --el-border-color-light: #334155;
-  --el-border-color-lighter: #2d3f54;
-  --el-border-color-extra-light: #243447;
+  --el-border-color-lighter: var(--color-bg-muted);
+  --el-border-color-extra-light: var(--color-bg-elevated);
   --el-border-color-dark: #4a5f7a;
   --el-border-color-darker: #5a7090;
 
-  --el-fill-color: #2d3f54;
-  --el-fill-color-light: #243447;
+  --el-fill-color: var(--color-bg-muted);
+  --el-fill-color-light: var(--color-bg-elevated);
   --el-fill-color-lighter: #1f2e40;
-  --el-fill-color-extra-light: #1b2636;
+  --el-fill-color-extra-light: var(--color-bg-base);
   --el-fill-color-dark: #374d66;
   --el-fill-color-darker: #3f5573;
-  --el-fill-color-blank: #243447;
+  --el-fill-color-blank: var(--color-bg-elevated);
 
   --el-mask-color: rgba(0, 0, 0, 0.6);
   --el-mask-color-extra-light: rgba(0, 0, 0, 0.3);
@@ -84,54 +123,54 @@ html.dark {
   --el-box-shadow-dark: 0 4px 16px rgba(0, 0, 0, 0.5);
 
   /* Menu */
-  --el-menu-bg-color: #243447;
-  --el-menu-hover-bg-color: #2d3f54;
-  --el-menu-text-color: #9aa0a6;
-  --el-menu-active-color: #5c9ce6;
-  --el-menu-border-color: #3d4f66;
+  --el-menu-bg-color: var(--color-bg-elevated);
+  --el-menu-hover-bg-color: var(--color-bg-muted);
+  --el-menu-text-color: var(--color-text-secondary);
+  --el-menu-active-color: var(--color-brand);
+  --el-menu-border-color: var(--color-border);
 
   /* Table */
-  --el-table-bg-color: #243447;
-  --el-table-tr-bg-color: #243447;
+  --el-table-bg-color: var(--color-bg-elevated);
+  --el-table-tr-bg-color: var(--color-bg-elevated);
   --el-table-header-bg-color: #1f2e40;
-  --el-table-header-text-color: #9aa0a6;
-  --el-table-text-color: #e8eaed;
-  --el-table-row-hover-bg-color: #2d3f54;
-  --el-table-border-color: #3d4f66;
+  --el-table-header-text-color: var(--color-text-secondary);
+  --el-table-text-color: var(--color-text-primary);
+  --el-table-row-hover-bg-color: var(--color-bg-muted);
+  --el-table-border-color: var(--color-border);
   --el-table-fixed-box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
 
   /* Input */
-  --el-input-bg-color: #2d3f54;
-  --el-input-text-color: #e8eaed;
-  --el-input-placeholder-color: #6b7280;
-  --el-input-hover-border-color: #5c9ce6;
-  --el-input-focus-border-color: #5c9ce6;
-  --el-input-border-color: #3d4f66;
+  --el-input-bg-color: var(--color-bg-muted);
+  --el-input-text-color: var(--color-text-primary);
+  --el-input-placeholder-color: var(--color-text-muted);
+  --el-input-hover-border-color: var(--color-brand);
+  --el-input-focus-border-color: var(--color-brand);
+  --el-input-border-color: var(--color-border);
 
   /* Button */
-  --el-button-bg-color: #2d3f54;
-  --el-button-text-color: #e8eaed;
-  --el-button-hover-text-color: #e8eaed;
+  --el-button-bg-color: var(--color-bg-muted);
+  --el-button-text-color: var(--color-text-primary);
+  --el-button-hover-text-color: var(--color-text-primary);
   --el-button-hover-bg-color: #374d66;
-  --el-button-hover-border-color: #5c9ce6;
-  --el-button-active-text-color: #e8eaed;
+  --el-button-hover-border-color: var(--color-brand);
+  --el-button-active-text-color: var(--color-text-primary);
   --el-button-disabled-text-color: #4b5563;
   --el-button-disabled-bg-color: #1f2e40;
-  --el-button-disabled-border-color: #2d3f54;
+  --el-button-disabled-border-color: var(--color-bg-muted);
 
   /* Switch */
-  --el-switch-off-color: #3d4f66;
-  --el-switch-on-color: #5c9ce6;
+  --el-switch-off-color: var(--color-border);
+  --el-switch-on-color: var(--color-brand);
 
   /* Dropdown */
-  --el-dropdown-menuItem-hover-fill: #2d3f54;
-  --el-dropdown-menuItem-hover-color: #e8eaed;
+  --el-dropdown-menuItem-hover-fill: var(--color-bg-muted);
+  --el-dropdown-menuItem-hover-color: var(--color-text-primary);
 
   /* Scrollbar */
   --el-scrollbar-opacity: 0.5;
-  --el-scrollbar-bg-color: #3d4f66;
+  --el-scrollbar-bg-color: var(--color-border);
   --el-scrollbar-hover-opacity: 0.8;
-  --el-scrollbar-hover-bg-color: #5c9ce6;
+  --el-scrollbar-hover-bg-color: var(--color-brand);
 }
 
 /* ─── Base resets ──────────────────────────────────────────────── */
@@ -152,8 +191,8 @@ body {
     -apple-system,
     BlinkMacSystemFont,
     sans-serif;
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  background: var(--color-bg-base);
+  color: var(--color-text-primary);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
@@ -174,12 +213,12 @@ textarea {
 }
 
 a {
-  color: var(--accent);
+  color: var(--color-brand);
   text-decoration: none;
 }
 
 a:hover {
-  color: var(--accent-hover);
+  color: var(--color-brand-hover);
 }
 
 /* ─── Element Plus component tweaks ───────────────────────────── */
@@ -199,13 +238,13 @@ a:hover {
   margin: 0 0 var(--space-block);
   font-size: 1.4rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--color-text-primary);
 }
 
 /* Shared section card */
 .section-card {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: 0;
   margin-bottom: var(--space-section);
@@ -223,13 +262,13 @@ a:hover {
   background: none;
   font: inherit;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   cursor: pointer;
   text-align: left;
 }
 
 .section-card__toggle:hover {
-  color: var(--text-primary);
+  color: var(--color-text-primary);
 }
 
 .section-card__toggle-icon {

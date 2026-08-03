@@ -1,5 +1,5 @@
 .spacing-story {
-  color: var(--text-primary);
+  color: var(--color-text-primary);
   font-size: 14px;
 }
 
@@ -13,7 +13,7 @@
   margin: var(--space-24) 0 var(--space-12);
   font-size: 0.95rem;
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .spacing-story-table {
@@ -25,12 +25,12 @@
 .spacing-story-table th,
 .spacing-story-table td {
   padding: var(--space-12) var(--space-16);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--color-border);
   text-align: left;
 }
 
 .spacing-story-table th {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-weight: 600;
 }
 
@@ -44,12 +44,12 @@
 .spacing-story-scale-bar {
   flex-shrink: 0;
   height: var(--space-8);
-  background: var(--accent);
+  background: var(--color-brand);
   border-radius: 2px;
 }
 
 .spacing-story-scale-label {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-family: ui-monospace, monospace;
   font-size: 0.85rem;
 }
@@ -59,14 +59,14 @@
   flex-direction: column;
   gap: var(--space-section);
   padding: var(--space-page);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border);
+  background: var(--color-bg-elevated);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
 }
 
 .spacing-story-layout-block {
   padding: var(--space-block);
-  background: var(--bg-tertiary);
+  background: var(--color-bg-muted);
   border-radius: var(--radius);
 }
 
@@ -89,8 +89,8 @@
 
 .spacing-story-action-chip {
   padding: var(--space-4) var(--space-8);
-  background: var(--bg-primary);
-  border: 1px solid var(--border);
+  background: var(--color-bg-base);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
   font-size: 0.85rem;
 }

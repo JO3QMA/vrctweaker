@@ -245,30 +245,30 @@ onUnmounted(() => {
 
 .server-status-link {
   font-size: 0.85rem;
-  color: var(--el-color-primary);
+  color: var(--color-brand);
 }
 
 .server-status--operational {
-  color: #2e9f4a;
+  color: var(--color-status-operational);
 }
 
 .server-status--degraded {
-  color: #d4a017;
+  color: var(--color-status-degraded);
 }
 
 .server-status--partial {
-  color: #e8943c;
+  color: var(--color-status-partial);
 }
 
 .server-status--major {
-  color: #d94a4a;
+  color: var(--color-status-major);
 }
 
 .server-status--maintenance {
-  color: #2b7fd9;
+  color: var(--color-status-maintenance);
 }
 
 .server-status--unknown {
-  color: var(--text-secondary);
+  color: var(--color-status-unknown);
 }
 </style>

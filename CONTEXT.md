@@ -692,7 +692,7 @@ _Avoid_: 常時実行, バックグラウンドサービス（v1 で含意しな
 
 ## Design system
 
-ボタン様式・余白などアプリ横断 UI 部品の用語。**VtButton** と 4 **Button variant**（[ADR 0017](docs/adr/0017-button-design-system-vtbutton.md)）は grill-with-docs で合意済み。**Spacing**（余白ルール）（[ADR 0018](docs/adr/0018-spacing-design-system.md)）は grill-with-docs で合意済み。実装契約は各 ADR を正本とする。色コード・個別 props など実装詳細はここに書かない。
+ボタン様式・余白・色などアプリ横断 UI 部品の用語。**VtButton** と 4 **Button variant**（[ADR 0017](docs/adr/0017-button-design-system-vtbutton.md)）は grill-with-docs で合意済み。**Spacing**（余白ルール）（[ADR 0018](docs/adr/0018-spacing-design-system.md)）は grill-with-docs で合意済み。**Color**（カラーパレット）（[ADR 0019](docs/adr/0019-color-design-system.md)）は grill-with-docs で合意済み。実装契約は各 ADR を正本とする。色コード・hex 値・個別 props など実装詳細はここに書かない。
 
 ### Language
 
@@ -791,6 +791,101 @@ _Avoid_: 目視のみ（置換ごとに判断がぶれるため）, 切り上げ
 **Border radius**:
 角丸の半径。既存の `--radius` トークンで扱う。**Spacing** スケールとは別カテゴリ。v1 では Spacing 策定と同時に値や命名を変えない。
 _Avoid_: Spacing（余白と混同しやすいため）, 角丸ルール（Border radius 用語と重複）
+
+**Color**:
+アプリ横断の色ルール。**Brand color**、**Neutral color**、**Semantic color** などのカテゴリ、**Color token**、**Element Plus color mapping** を含む。**Spacing**・**Border radius** とは別カテゴリ。
+_Avoid_: パレット（具体的な色一覧だけを指す印象）, テーマ（タイポ・余白まで含む総称）
+
+**Color token**:
+Color の正本となる CSS カスタムプロパティ（`--color-*` 接頭辞）。`frontend/src/assets/style.css` の `:root` に定義する。**App color token** が唯一の色の出所であり、Element Plus の `--el-color-*` 等は **Element Plus color mapping** でここから委譲する（Spacing の **Spacing token** が正本で pattern が委譲するのと同型）。新規・改修では hex 直書きやレガシー名（`--accent` 等）を増やさない（**Color adoption**）。
+_Avoid_: --el-color-primary（EP 変数を正本にしない）, accent（レガシー俗称）
+
+**App color token**:
+**Color token** のうち、アプリ UI の意味論（Brand / Neutral / Semantic 等）に沿って名前付けされたもの。画面・共有スタイルはこれを参照し、同じ意味の色を二重に hex 定義しない。
+_Avoid_: デザイントークン（Sizing・Spacing と混同しやすいため）, ブランドカラー（英語以外の俗称だけ）
+
+**Element Plus color mapping**:
+**App color token** から Element Plus の `--el-*` 色変数へ値を渡す層。`html.dark` ブロック内で定義する。`el-button` 等の EP テーマ整合が目的。コンポーネントの独自スタイルは原則 **App color token** を参照し、`--el-*` 直参照は EP 上書きブロックと既存 EP 利用箇所に限定する。
+_Avoid_: EP 正本（出所を Element Plus に置く案）, 二重カタログ（App と EP を別々に hex 管理する案）
+
+**Color v1 scope**:
+Color の最初の届け範囲。**ダークテーマのみ**の **App color token** 定義、**Element Plus color mapping**、**Color adoption**、**Color Storybook catalog**、ADR、`.cursor/rules/` に限定する。含めないもの: ライトテーマ用トークン、`prefers-color-scheme` 切替、テーマ切替 UI、全 View の hex 一括置換、Element Plus 内部色の全面再設計、Neutral border の多段トークン化、ESLint 強制。
+
+**Color v1 deliverables**:
+Issue／PR で最初に届ける具体物。(1) `frontend/src/assets/style.css` の全カテゴリ **App color token** と **Element Plus color mapping**、レガシー **Color alias**、(2) `frontend/src/design/colorTokens.ts`（Spacing の `spacingTokens.ts` 同型）、(3) **Server status color**・**Presence color** の既知 2 コンポーネントをトークン参照へ、(4) 共有スタイル（`.page-title`、`.section-card` 等）の Neutral 置換、(5) **Color Storybook catalog**、ADR。各 View の scoped hex は **Color adoption** に従い触ったところだけ。
+_Avoid_: Color v1 scope（届け物リストを指すときは deliverables とセットで書く）, 全画面置換（adoption と矛盾するため）
+
+**Color adoption**:
+**App color token** への移行方針。新規画面・改修で触ったファイルでは **Color token** を使い、hex 直書きやレガシー名を増やさない。未着手の既存 View・scoped style は一括置換しない。**Color v1 deliverables** の共有スタイルと既知 Domain コンポーネントは v1 で寄せる。遵守は `.cursor/rules/` で案内し、移行期は ESLint では強制しない。見た目の正本は **Color Storybook catalog**。
+_Avoid_: 全面置換, hex 禁止の CI 強制（即時一括・CI 強制を含意するため）
+
+**Color alias**:
+移行期に残す、旧 CSS 変数名から新 **App color token** へのエイリアス（例: `--accent` → `--color-brand`、`--bg-primary` → `--color-bg-base`）。v1 では **Color adoption** の破壊を避けるため `:root` に置く。削除時期は別判断（v1 では削除しない）。
+_Avoid_: 永久互換の約束（削除時期を v1 で固定しないため）, 二重 hex（エイリアスは委譲のみ。別値を持たない）
+
+**Color Storybook catalog**:
+Color の Storybook 一覧。**Brand color**、**Neutral color token** 各段、**Semantic color catalog**、**Server status color**、**Presence color** のスウォッチとトークン名対応表、**Element Plus color mapping** の要点を載せ、見た目と使い方の正本とする（**Spacing Storybook catalog** と同型）。
+_Avoid_: 全画面 Storybook, デザイントークン一覧（Sizing・Spacing の総称）
+
+**Brand color**:
+アプリのメインアクセント色（リンク、フォーカスリング、**Primary button** の塗り、サイドバーアクティブ項目など）。**Color** カテゴリのひとつ。**Primary button**（操作優先度の様式名）とは別概念。「Primary color」「アクセント色」としてパレット用語にしない。
+_Avoid_: Primary color（**Primary button** と混同するため）, accent（レガシー `--accent` の俗称）, メインカラー（様式と色の区別が曖昧なため）
+
+**Brand color token**:
+**Brand color** を表す **App color token**（例: 本体・hover のペア）。**Element Plus color mapping** では `--el-color-primary` 系へ委譲する。レガシーの `--accent` / `--accent-hover` は v1 で **Brand color token** へ寄せ、移行期はエイリアス可。
+_Avoid_: --color-primary（Primary button 用語と接頭辞が衝突するため）, --el-color-primary（正本ではなく mapping 先）
+
+**Semantic color**:
+UI の状態・結果を伝える **Color** カテゴリ。**Danger color**、**Success color**、**Warning color**、**Info color** の 4 種（**Semantic color catalog**）。`el-tag`・`ElMessage`・フォーム検証・**Danger button** の警告色など横断フィードバックに使う。**Semantic button**（Presence 色ボタン等のドメイン UI）とは別カテゴリ。
+_Avoid_: Semantic button（ボタン分類の用語と混同するため）, 状態色（Server status のドメイン色と混同しやすいため）
+
+**Semantic color catalog**:
+v1 の **Semantic color** 公式一覧: danger（危険・エラー・破壊）、success（成功・正常）、warning（注意・要確認）、info（中立通知・補足）。Element Plus の `danger` / `success` / `warning` / `info` と 1 対 1 で **Element Plus color mapping** する。`error` は danger と同値でよい（EP 互換）。
+_Avoid_: 3 色のみ（info を落とすと EP `type="info"` とずれる）, Server status 5 色（**Domain color** 側）
+
+**Domain color**:
+特定画面・ドメインだけが持つ意味付きの色。**Semantic color** とは別カタログ。全体のフィードバック色として流用しない。v1 では **Server status color** と **Presence color** を扱う。他ドメインは必要になったらカタログ追加。
+_Avoid_: Semantic color（横断フィードバックと混同するため）, テーマカラー（**Brand color** と混同しやすいため）
+
+**Server status color**:
+**Server status presentation** 向けの **Domain color**。status.vrchat.com に近い 5 段（operational / degraded / partial / major / maintenance）＋ unknown。**Semantic color** の success / warning / danger とは別トークン（メンテナンス青・partial 橙などを無理に Semantic に畳まない）。
+_Avoid_: Semantic color, プレゼンス色
+
+**Presence color**:
+**Presence change section** の **Semantic button**（Join Me / Active / Ask Me / Busy）向けの **Domain color**。VRChat クライアントに近い 4 色。**Semantic color catalog** や **Brand color** の流用はしない。
+_Avoid_: Semantic color, クイックステータス色（旧称）
+
+**Neutral color**:
+背景・テキスト・枠線など、意味を持たない骨格色の **Color** カテゴリ。**Neutral surface**、**Neutral text**、**Neutral border** に分ける。**Brand color** や **Semantic color** の代替ではない。
+_Avoid_: グレー（色相の指定を含意しないため）, テーマ色（**Brand color** と混同しやすいため）
+
+**Neutral surface**:
+画面の層（奥行き）を表す **Neutral color**。v1 は 3 段: **base**（ページ地）、**elevated**（カード・パネル）、**muted**（入力欄・ホバー・第 3 層）。**Neutral surface token** で表す。
+_Avoid_: bg-primary（レガシー名）, 背景色（段数が分からないため）
+
+**Neutral text**:
+本文・ラベル・補足の **Neutral color**。v1 は 3 段: **primary**（本文）、**secondary**（ラベル・補足）、**muted**（プレースホルダ・無効表示）。**Neutral text token** で表す。`placeholder` / `disabled` は **Element Plus color mapping** で **muted** へ委譲してよい。
+_Avoid_: text-secondary だけ（段数が足りないため）, プレースホルダ色（単独トークンにせず muted に含める）
+
+**Neutral border**:
+区切り線・カード枠の **Neutral color**。v1 は 1 段（既定の枠線色）。細い階層（light / lighter）は v1 では **Element Plus color mapping** 内の導出のみとし、Neutral カタログには載せない。
+_Avoid_: ボーダー色（段数が分からないため）, EP border-light 列の全面トークン化（v1 スコープ外）
+
+**Neutral color token**:
+**Neutral surface** / **Neutral text** / **Neutral border** を表す **App color token**（`--color-bg-*`、`--color-text-*`、`--color-border`）。レガシーの `--bg-primary` / `--text-secondary` / `--border` は移行期エイリアス可。
+_Avoid_: --el-bg-color（正本ではなく mapping 先）, 数値段階名のみ（base 等の役割名と対応が分からないため）
+
+**Semantic color token**:
+**Semantic color catalog** の各色 1 つずつの **App color token**（`--color-danger` 等）。hover や EP の `light-*` / `dark-*` 派生は **App color token** に含めない（**Element Plus color derivative** として mapping 内のみ）。
+_Avoid_: --color-semantic-danger（category 接頭辞の重複）, light-3（EP 派生段階を App 正本にしない）
+
+**Element Plus color derivative**:
+**Element Plus color mapping** 内だけで定義する、EP コンポーネント向けの濃淡（`--el-color-primary-light-3`、`--el-color-danger-light-5` 等）。**App color token** の委譲先であり、画面・共有スタイルから直接参照しない。v1 では tokenize 時に **既存 hex を維持**し、見た目を変えない。
+_Avoid_: Color token（App 正本と混同するため）, 派生色カタログ（v1 で App 側に持たない）
+
+**Color v1 visual policy**:
+Color v1 では **hex 値・見た目を変えない**。現行 `style.css`・**Server status color**・**Presence color** の色をそのまま **App color token** に移し、トークン名と参照の整理のみ行う。コントラスト改善・色相の揃え込み・Brand のリデザインは v1 スコープ外（別 PR／Issue）。
+_Avoid_: リデザイン（v1 で見た目変更を含意するため）, トークン化 PR での微調整（回帰レビューと混ぜないため）
 
 ## Agent contribution
 
