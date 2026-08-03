@@ -535,8 +535,8 @@ yt-dlp user config のパスに何かあるが読めない状態（権限・ロ�
 _Avoid_: Effective＝無効, サイレントフォールバック, 自動修復
 
 **Cookie linkage draft**:
-動画タブ上で覚える、方式・ブラウザ・cookies ファイルパスなどの入力下書き、および Cookie linkage risk acknowledgment。無効中でも前回の選択を残してよい。有効時の変更は即時に yt-dlp user config へ書き込み、Cookie linkage effective state と揃える。Cookie ファイルの作成・エクスポート、ブラウザ起動中のロック自動検知、yt-dlp／動画再生の成否確認は含まない。
-_Avoid_: 保存済み設定（未書き込みの下書きだけを指す印象）, 適用待ち（明示適用ボタン前提の印象）, Cookie エクスポート, ロック監視
+動画タブ上で覚える、方式・ブラウザ・cookies ファイルパスなどの入力下書き、および Cookie linkage risk acknowledgment。無効中でも前回の選択を残してよい。有効時の変更は原則 **即時**に yt-dlp user config へ書き込み、Cookie linkage effective state と揃える。例外: **Cookie linkage effective state** が有効のとき **Browser cookie source** と **Cookies file source** のラジオを切り替え、切替先がまだ書き込めない（典型: Cookies file source へ切替だがパス未指定／不存在）場合は、黙って **Disable**（Managed 行削除）して Effective を無効にし、Draft は切替先の方式のまま、トグルは OFF のままとする（追加の案内文は出さない）。切替先が書き込み可能なら即 upsert（Cookies file → Browser、Browser → Cookies file で有効パスあり、など）。Disable が失敗したときはセクション内エラー、ラジオは操作前の Effective へ戻し、トグルは ON のまま。トグル OFF の間の参照は Draft のパス更新のみ（自動再有効化しない）。同一方式内（ブラウザ変更・パス欄編集）はこの例外に含めず、従来どおり即書き込み（失敗時はエラー＋Effective へ戻す）。Cookie ファイルの作成・エクスポート、ブラウザ起動中のロック自動検知、yt-dlp／動画再生の成否確認は含まない（[Issue #219](https://github.com/JO3QMA/vrctweaker/issues/219)）。
+_Avoid_: 保存済み設定（未書き込みの下書きだけを指す印象）, 適用待ち（明示適用ボタン前提の印象）, Cookie エクスポート, ロック監視, 方式切替の常時 Disable（書き込み可能な切替先まで巻き込む印象）
 
 **Cookie linkage unsupported form**:
 Cookie linkage effective state が有効だが、v1 UI（chrome / edge / firefox 既定、または単純な cookies ファイルパス）では再現・編集できない Managed cookie options の形。表示上は未対応として示し、保存または無効化で v1 の単純形／削除へ寄せる。
