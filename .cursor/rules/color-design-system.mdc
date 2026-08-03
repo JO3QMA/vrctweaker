@@ -1,0 +1,55 @@
+---
+description: Color カラーデザインシステム（ADR 0019）。新規・改修で触った画面は App color token を使う
+globs: "frontend/**/*.{vue,ts,css}"
+alwaysApply: false
+---
+
+# Color design system
+
+正本: [ADR 0019](../docs/adr/0019-color-design-system.md)、用語: [`CONTEXT.md`](../CONTEXT.md) Design system 節。
+
+## トークン
+
+`frontend/src/assets/style.css` の `:root` で定義（**App color token** が正本）。
+
+| カテゴリ | 変数例 |
+|----------|--------|
+| Brand | `--color-brand`, `--color-brand-hover` |
+| Neutral 表面 | `--color-bg-base`, `--color-bg-elevated`, `--color-bg-muted` |
+| Neutral 文字 | `--color-text-primary`, `--color-text-secondary`, `--color-text-muted` |
+| Neutral 枠 | `--color-border` |
+| Semantic | `--color-danger`, `--color-success`, `--color-warning`, `--color-info` |
+| Server status | `--color-status-operational` … `--color-status-unknown` |
+| Presence | `--color-presence-join-me` + `-border` 等 |
+
+「Primary color」は使わない（**Primary button** と混同）。**Semantic color** と **Semantic button**（Presence 等）も別カテゴリ。
+
+## 使い方
+
+```css
+color: var(--color-text-secondary);
+background: var(--color-bg-elevated);
+border-color: var(--color-border);
+```
+
+- hex 直書きや新規レガシー名（`--accent` 等）は増やさない
+- `--el-color-*` 直参照は EP テーマ上書きと既存 EP 利用に限定。独自スタイルは `--color-*` を優先
+- EP の `light-*` / `dark-*` は mapping 内のみ（画面から参照しない）
+
+## 移行（Color adoption）
+
+- 新規・改修で触ったファイルはトークン化する
+- 未触りの View scoped hex は一括置換しない
+- レガシー alias（`--bg-primary` → `--color-bg-base` 等）は移行期のみ。新規コードでは `--color-*` を使う
+- v1 では見た目（hex 値）を変えない
+- ESLint 禁止は v1 では入れない
+
+## Storybook
+
+`frontend/src/design/Color.stories.ts` がスウォッチとマッピング表の正本。変更時は `colorTokens.ts` とストーリーも更新する。
+
+## 関連
+
+- 余白: `.cursor/rules/spacing-design-system.mdc`
+- ボタン: `.cursor/rules/button-design-system.mdc`
+- Element Plus 一般: `.cursor/rules/element-plus-ui.mdc`
