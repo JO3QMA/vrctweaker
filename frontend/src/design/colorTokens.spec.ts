@@ -32,6 +32,7 @@ describe("colorTokens", () => {
     const names = NEUTRAL_COLOR_TOKENS.map((t) => t.varName);
     expect(names).toContain("--color-bg-base");
     expect(names).toContain("--color-text-muted");
+    expect(names).toContain("--color-text-inverse");
     expect(names).toContain("--color-border");
   });
 
@@ -67,5 +68,19 @@ describe("colorTokens", () => {
       expect(legacy.startsWith("--")).toBe(true);
       expect(target.startsWith("--color-")).toBe(true);
     }
+  });
+
+  it("derives COLOR_LEGACY_ALIASES from token legacyAlias fields", () => {
+    const expected = [
+      ...BRAND_COLOR_TOKENS,
+      ...NEUTRAL_COLOR_TOKENS,
+      ...SEMANTIC_COLOR_TOKENS,
+    ]
+      .filter((token) => token.legacyAlias != null)
+      .map((token) => ({
+        legacy: token.legacyAlias,
+        target: token.varName,
+      }));
+    expect(COLOR_LEGACY_ALIASES).toEqual(expected);
   });
 });

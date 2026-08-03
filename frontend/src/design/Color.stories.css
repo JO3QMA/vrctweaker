@@ -76,6 +76,6 @@
   padding: var(--space-8) var(--space-12);
   border-radius: var(--radius);
   border: 1px solid transparent;
-  color: #fff;
+  color: var(--color-text-inverse);
   font-size: 0.85rem;
 }

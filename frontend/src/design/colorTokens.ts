@@ -6,10 +6,29 @@ export type SimpleColorToken = {
   legacyAlias?: string;
 };
 
+export type ColorLegacyAlias = {
+  legacy: string;
+  target: ColorVarName;
+};
+
+function legacyAliasesFrom(
+  tokens: ReadonlyArray<SimpleColorToken>,
+): ColorLegacyAlias[] {
+  return tokens.flatMap((token) =>
+    token.legacyAlias
+      ? [{ legacy: token.legacyAlias, target: token.varName }]
+      : [],
+  );
+}
+
 /** Brand color tokens (ADR 0019). */
 export const BRAND_COLOR_TOKENS = [
-  { name: "brand", varName: "--color-brand" },
-  { name: "brand-hover", varName: "--color-brand-hover" },
+  { name: "brand", varName: "--color-brand", legacyAlias: "--accent" },
+  {
+    name: "brand-hover",
+    varName: "--color-brand-hover",
+    legacyAlias: "--accent-hover",
+  },
 ] as const satisfies ReadonlyArray<SimpleColorToken>;
 
 /** Neutral color tokens (ADR 0019). */
@@ -36,6 +55,7 @@ export const NEUTRAL_COLOR_TOKENS = [
     legacyAlias: "--text-secondary",
   },
   { name: "text-muted", varName: "--color-text-muted" },
+  { name: "text-inverse", varName: "--color-text-inverse" },
   { name: "border", varName: "--color-border", legacyAlias: "--border" },
 ] as const satisfies ReadonlyArray<SimpleColorToken>;
 
@@ -97,19 +117,9 @@ export const PRESENCE_COLOR_TOKENS = [
   },
 ] as const satisfies ReadonlyArray<PresenceColorToken>;
 
-/** Legacy aliases that delegate to App color tokens (migration). */
-export const COLOR_LEGACY_ALIASES = [
-  { legacy: "--accent", target: "--color-brand" },
-  { legacy: "--accent-hover", target: "--color-brand-hover" },
-  { legacy: "--bg-primary", target: "--color-bg-base" },
-  { legacy: "--bg-secondary", target: "--color-bg-elevated" },
-  { legacy: "--bg-tertiary", target: "--color-bg-muted" },
-  { legacy: "--text-primary", target: "--color-text-primary" },
-  { legacy: "--text-secondary", target: "--color-text-secondary" },
-  { legacy: "--border", target: "--color-border" },
-  { legacy: "--danger", target: "--color-danger" },
-  { legacy: "--success", target: "--color-success" },
-] as const satisfies ReadonlyArray<{
-  legacy: string;
-  target: ColorVarName;
-}>;
+/** Legacy aliases derived from token `legacyAlias` fields (single source of truth). */
+export const COLOR_LEGACY_ALIASES = legacyAliasesFrom([
+  ...BRAND_COLOR_TOKENS,
+  ...NEUTRAL_COLOR_TOKENS,
+  ...SEMANTIC_COLOR_TOKENS,
+]);

@@ -399,14 +399,14 @@ onUnmounted(() => {
 
 .presence-color-btn {
   border: 1px solid transparent;
-  color: #fff !important;
+  color: var(--color-text-inverse) !important;
   flex: 0 0 auto;
 }
 
 .presence-color-btn:hover,
 .presence-color-btn:focus {
   filter: brightness(1.08);
-  color: #fff !important;
+  color: var(--color-text-inverse) !important;
 }
 
 .presence-color-btn--selected {
