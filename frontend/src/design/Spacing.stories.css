@@ -10,7 +10,7 @@
 }
 
 .spacing-story h3 {
-  margin: var(--space-section) 0 var(--space-form-field);
+  margin: var(--space-24) 0 var(--space-12);
   font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-secondary);
@@ -24,7 +24,7 @@
 
 .spacing-story-table th,
 .spacing-story-table td {
-  padding: var(--space-form-field) var(--space-block);
+  padding: var(--space-12) var(--space-16);
   border-bottom: 1px solid var(--border);
   text-align: left;
 }
@@ -37,13 +37,13 @@
 .spacing-story-scale-row {
   display: flex;
   align-items: center;
-  gap: var(--space-block);
-  margin-bottom: var(--space-form-field);
+  gap: var(--space-16);
+  margin-bottom: var(--space-12);
 }
 
 .spacing-story-scale-bar {
   flex-shrink: 0;
-  height: var(--space-action-group);
+  height: var(--space-8);
   background: var(--accent);
   border-radius: 2px;
 }
