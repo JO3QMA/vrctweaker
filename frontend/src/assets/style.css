@@ -40,7 +40,7 @@
   --color-presence-busy: #d94a4a;
   --color-presence-busy-border: #b83c3c;
 
-  /* Legacy aliases (Color adoption; delegate only) */
+  /* Legacy aliases (Color adoption; deprecated — for backward compatibility only) */
   --bg-primary: var(--color-bg-base);
   --bg-secondary: var(--color-bg-elevated);
   --bg-tertiary: var(--color-bg-muted);
