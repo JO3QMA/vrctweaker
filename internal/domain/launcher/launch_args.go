@@ -304,7 +304,6 @@ func stripQuotedValueAfterPrefix(s, prefix string) string {
 		b.WriteString(prefix)
 		restStart := idx + len(prefix)
 		if restStart >= len(s) {
-			i = restStart
 			break
 		}
 		quote := s[restStart]

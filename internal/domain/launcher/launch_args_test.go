@@ -308,6 +308,19 @@ func TestParseLaunchArgsForGUI_IK20QuotedValues(t *testing.T) {
 	}
 }
 
+func TestParseLaunchArgsForGUI_IK20QuotedAmongFlags(t *testing.T) {
+	in := `--disable-shoulder-tracking --calibration-range="0.6" --enable-ik-debug-logging`
+	got := ParseLaunchArgsForGUI(in)
+	if !got.DisableShoulderTracking || got.CalibrationRange != 0.6 || !got.EnableIKDebugLogging || got.Custom != "" {
+		t.Errorf("ParseLaunchArgsForGUI(quoted among flags) = %+v", got)
+	}
+	tokens := parseLaunchArgsTokens(normalizeIKQuotedArgs(in))
+	wantTokens := []string{"--disable-shoulder-tracking", "--calibration-range=0.6", "--enable-ik-debug-logging"}
+	if !reflect.DeepEqual(tokens, wantTokens) {
+		t.Errorf("tokens after normalize = %#v, want %#v", tokens, wantTokens)
+	}
+}
+
 func TestParseLaunchArgsForGUI_IK20InvalidDropped(t *testing.T) {
 	in := "--custom-arm-ratio=abc --calibration-range=-1 --disable-shoulder-tracking"
 	got := ParseLaunchArgsForGUI(in)
