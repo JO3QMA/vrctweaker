@@ -1,0 +1,73 @@
+---
+description: Typography タイポグラフィデザインシステム（ADR 0020）。新規・改修で触った画面は Typography token / Text style を使う
+globs: "frontend/**/*.{vue,ts,css}"
+alwaysApply: false
+---
+
+# Typography design system
+
+正本: [ADR 0020](../docs/adr/0020-typography-design-system.md)、用語: [`CONTEXT.md`](../CONTEXT.md) Design system 節。
+
+## トークン
+
+`frontend/src/assets/style.css` の `:root` で定義。
+
+**Font size**（px）: `--font-size-10` … `--font-size-24`（10, 12, 14, 16, 18, 20, 24 のみ）
+
+**Line height**（無単位）:
+
+| 変数 | 値 | 用途 |
+|------|-----|------|
+| `--line-height-tight` | 1.25 | 見出し |
+| `--line-height-normal` | 1.5 | Body 既定 |
+| `--line-height-relaxed` | 1.75 | 長文 |
+
+**Font weight**: `--font-weight-400` … `--font-weight-700`（400, 500, 600, 700 のみ）
+
+**Font family**: `--font-family-ui`（UI サンセリフスタック）
+
+## Text style catalog
+
+共有クラス（色は含まない。`--color-text-*` は Color 側）:
+
+| クラス | 用途 |
+|--------|------|
+| `.text-h1` | Heading 1（`.page-title` は同型 alias + margin） |
+| `.text-h2` … `.text-h4` | 画面内見出し |
+| `.text-body` | 本文（`body` と同型） |
+| `.text-body-sm` | 補足・ラベル |
+| `.text-caption` | メタ情報・最小段 |
+
+## 使い方
+
+```css
+font-size: var(--font-size-14);
+line-height: var(--line-height-normal);
+font-weight: var(--font-weight-600);
+font-family: var(--font-family-ui);
+```
+
+または `<p class="text-body-sm">` のように Text style クラスを使う。
+
+- `rem` / スケール外の任意 `px` / 非標準 `font-weight` は増やさない
+- `--el-font-size-*` 直参照は EP mapping ブロックと既存 EP 利用に限定
+- EP の `13px`（`--el-font-size-small`）は derivative。画面から参照しない
+- TitleBar クローム・**Code font** は v1 スコープ外
+
+## 移行（Typography adoption）
+
+- 新規・改修で触ったファイルはトークン化する
+- 未触りの View scoped `rem` / 任意 px は一括置換しない
+- 置換時は **Typography migration rounding**（四捨五入で最寄り段階）
+- v1 deliverables では見た目を変えない（H1 は `calc(var(--font-size-14) * 1.4)`）
+- ESLint 禁止は v1 では入れない
+
+## Storybook
+
+`frontend/src/design/Typography.stories.ts` がスケール・Text style・EP mapping の正本。変更時は `typographyTokens.ts` とストーリーも更新する。
+
+## 関連
+
+- 色: `.cursor/rules/color-design-system.mdc`
+- 余白: `.cursor/rules/spacing-design-system.mdc`
+- ボタン: `.cursor/rules/button-design-system.mdc`

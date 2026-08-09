@@ -72,6 +72,28 @@
   --space-block: var(--space-16);
   --space-section: var(--space-24);
   --space-page: var(--space-32);
+
+  /* Typography scale (ADR 0020) */
+  --font-size-10: 10px;
+  --font-size-12: 12px;
+  --font-size-14: 14px;
+  --font-size-16: 16px;
+  --font-size-18: 18px;
+  --font-size-20: 20px;
+  --font-size-24: 24px;
+  /* Outside scale: preserves legacy page title (1.4rem @ 14px root = 19.6px). */
+  --font-size-h1: calc(var(--font-size-14) * 1.4);
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.5;
+  --line-height-relaxed: 1.75;
+
+  --font-weight-400: 400;
+  --font-weight-500: 500;
+  --font-weight-600: 600;
+  --font-weight-700: 700;
+
+  --font-family-ui: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
 /* ─── Element Plus dark theme CSS variable overrides ───────────── */
@@ -172,6 +194,15 @@ html.dark {
   --el-scrollbar-bg-color: var(--color-border);
   --el-scrollbar-hover-opacity: 0.8;
   --el-scrollbar-hover-bg-color: var(--color-brand);
+
+  /* Typography (ADR 0020) */
+  --el-font-size-extra-large: var(--font-size-20);
+  --el-font-size-large: var(--font-size-18);
+  --el-font-size-medium: var(--font-size-16);
+  --el-font-size-base: var(--font-size-14);
+  /* ADR 0020: Element Plus small is intentionally outside the app scale */
+  --el-font-size-small: 13px;
+  --el-font-size-extra-small: var(--font-size-12);
 }
 
 /* ─── Base resets ──────────────────────────────────────────────── */
@@ -187,14 +218,12 @@ html {
 
 body {
   margin: 0;
-  font-family:
-    "Segoe UI",
-    -apple-system,
-    BlinkMacSystemFont,
-    sans-serif;
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-14);
+  font-weight: var(--font-weight-400);
   background: var(--color-bg-base);
   color: var(--color-text-primary);
-  line-height: 1.5;
+  line-height: var(--line-height-normal);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -234,11 +263,65 @@ a:hover {
   line-height: 42px;
 }
 
-/* Page title shared style */
+/* Text style catalog (ADR 0020) */
+.text-h1,
+.text-h2,
+.text-h3,
+.text-h4,
+.text-body,
+.text-body-sm,
+.text-caption {
+  /* Explicit UI font regardless of parent context (e.g. EP components). */
+  font-family: var(--font-family-ui);
+}
+
+.text-h1 {
+  font-size: var(--font-size-h1);
+  line-height: var(--line-height-tight);
+  font-weight: var(--font-weight-600);
+}
+
+.text-h2 {
+  font-size: var(--font-size-18);
+  line-height: var(--line-height-tight);
+  font-weight: var(--font-weight-600);
+}
+
+.text-h3 {
+  font-size: var(--font-size-16);
+  line-height: var(--line-height-tight);
+  font-weight: var(--font-weight-600);
+}
+
+.text-h4 {
+  font-size: var(--font-size-14);
+  line-height: var(--line-height-normal);
+  font-weight: var(--font-weight-600);
+}
+
+.text-body {
+  font-size: var(--font-size-14);
+  line-height: var(--line-height-normal);
+  font-weight: var(--font-weight-400);
+}
+
+.text-body-sm {
+  font-size: var(--font-size-12);
+  line-height: var(--line-height-normal);
+  font-weight: var(--font-weight-400);
+}
+
+.text-caption {
+  font-size: var(--font-size-10);
+  line-height: var(--line-height-normal);
+  font-weight: var(--font-weight-400);
+}
+
+/* Page title shared style (Heading 1 alias) */
 .page-title {
   margin: 0 0 var(--space-block);
-  font-size: 1.4rem;
-  font-weight: 600;
+  font-size: var(--font-size-h1);
+  font-weight: var(--font-weight-600);
   color: var(--color-text-primary);
 }
 
@@ -262,7 +345,7 @@ a:hover {
   border: none;
   background: none;
   font: inherit;
-  font-weight: 600;
+  font-weight: var(--font-weight-600);
   color: var(--color-text-secondary);
   cursor: pointer;
   text-align: left;
@@ -274,7 +357,7 @@ a:hover {
 
 .section-card__toggle-icon {
   flex-shrink: 0;
-  font-size: 1rem;
+  font-size: var(--font-size-14);
 }
 
 .section-card.section-card--collapsed > .el-card__body {

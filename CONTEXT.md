@@ -708,7 +708,7 @@ _Avoid_: 常時実行, バックグラウンドサービス（v1 で含意しな
 
 ## Design system
 
-ボタン様式・余白・色などアプリ横断 UI 部品の用語。**VtButton** と 4 **Button variant**（[ADR 0017](docs/adr/0017-button-design-system-vtbutton.md)）は grill-with-docs で合意済み。**Spacing**（余白ルール）（[ADR 0018](docs/adr/0018-spacing-design-system.md)）は grill-with-docs で合意済み。**Color**（カラーパレット）（[ADR 0019](docs/adr/0019-color-design-system.md)）は grill-with-docs で合意済み。実装契約は各 ADR を正本とする。色コード・hex 値・個別 props など実装詳細はここに書かない。
+ボタン様式・余白・色・タイポグラフィなどアプリ横断 UI 部品の用語。**VtButton** と 4 **Button variant**（[ADR 0017](docs/adr/0017-button-design-system-vtbutton.md)）は grill-with-docs で合意済み。**Spacing**（余白ルール）（[ADR 0018](docs/adr/0018-spacing-design-system.md)）は grill-with-docs で合意済み。**Color**（カラーパレット）（[ADR 0019](docs/adr/0019-color-design-system.md)）は grill-with-docs で合意済み。**Typography**（タイポグラフィ）（[ADR 0020](docs/adr/0020-typography-design-system.md)）は grill-with-docs で合意済み。実装契約は各 ADR を正本とする。色コード・hex 値・個別 props など実装詳細はここに書かない。
 
 ### Language
 
@@ -902,6 +902,106 @@ _Avoid_: Color token（App 正本と混同するため）, 派生色カタログ
 **Color v1 visual policy**:
 Color v1 では **hex 値・見た目を変えない**。現行 `style.css`・**Server status color**・**Presence color** の色をそのまま **App color token** に移し、トークン名と参照の整理のみ行う。コントラスト改善・色相の揃え込み・Brand のリデザインは v1 スコープ外（別 PR／Issue）。
 _Avoid_: リデザイン（v1 で見た目変更を含意するため）, トークン化 PR での微調整（回帰レビューと混ぜないため）
+
+**Typography**:
+アプリ横断の文字組ルール。UI 用 **Font family**、**Typography scale**（サイズ）、**Line height**、**Font weight**、用途別 **Text style**（見出し・本文・キャプション等）を含む。**Spacing** の Sizing・**Border radius** とは別カテゴリ。**Color** の **Neutral text**（色）とは別で、サイズ・行高・太さを扱う。
+_Avoid_: フォント（ウェイト・行高を含意しない俗称）, テーマ（色・余白まで含む総称）
+
+**Typography v1 scope**:
+Typography の最初の届け範囲。**ダークテーマのみ**の **Typography token**・**Text style catalog**、**Typography adoption**、**Typography Storybook catalog**、ADR、`.cursor/rules/` に限定する。含める: アプリ作者が書くテキスト（`style.css` 共有クラス、新規・改修 View）、**Line height** の正本化（**Spacing** では除外済み）。含めない: Element Plus コンポーネント内部タイポの全面上書き、**Sizing**（アイコン・アバター寸法）、TitleBar 等ウィンドウクローム固有サイズ、**Code font**（モノスペース）カタログ、ライトテーマ・テーマ切替 UI、全 View 一括トークン化、ESLint 強制。
+_Avoid_: Typography（v1 範囲を指すときは scope とセットで書く）, 将来拡張（スコープ外リストの総称として曖昧なため）
+
+**Typography v1 deliverables**:
+Issue／PR で最初に届ける具体物。(1) `frontend/src/assets/style.css` の **Typography token** 全種、**Text style catalog** 共有クラス、`body` / `.page-title` のトークン化、**Element Plus typography mapping**、(2) `frontend/src/design/typographyTokens.ts`（Spacing の `spacingTokens.ts` 同型）+ 単体テスト、(3) **Typography Storybook catalog**、(4) `.cursor/rules/typography-design-system.mdc`、(5) `docs/adr/0020-typography-design-system.md` + `CONTEXT.md`。各 View の scoped `rem` / 任意 px は **Typography adoption** に従い触ったところだけ。
+_Avoid_: Typography v1 scope（届け物リストを指すときは deliverables とセットで書く）, 全画面置換（adoption と矛盾するため）
+
+**Typography v1 visual policy**:
+Typography v1 では **見た目を変えない**（**Color v1 visual policy** と同型）。現行の computed サイズ・行高・ウェイトをそのまま **Typography token** / **Text style** に移し、トークン名と参照の整理のみ行う。タイポグラフィのリデザイン・スケールの整理による寄せは v1 スコープ外（別 PR／Issue）。
+_Avoid_: リデザイン（v1 で見た目変更を含意するため）, Spacing 型の四捨五入寄せを v1 deliverables に含める（回帰レビューと混ぜないため）
+
+**Typography token**:
+Typography の正本となる CSS カスタムプロパティ。`frontend/src/assets/style.css` の `:root` に定義する。サイズは **px リテラル**の **Font size token**（`--font-size-*`）、行高は **Line height token**、太さは **Font weight token**、用途別まとまりは **Text style**（セマンティック・エイリアスまたは共有クラス）。`rem` / `em` でスケールを表現しない。`html { font-size: 14px }` は Typography v1 では変更しない（**Spacing** ADR と同様）。`body` の既定サイズは **Font size token** の 14px 段へ委譲する。
+_Avoid_: rem トークン（14px ルートと噛み合わないため）, font-md（数値と名前がずれるため）
+
+**Font size token**:
+**Typography scale** の各段階を表す **Typography token**。値は **px リテラル**（例: `--font-size-14: 14px`）。トークン名の数値は実 px と一致させる（`--font-size-14` は 14px）。新規・改修ではスケール外の任意 `px` / `rem` 直書きを増やさない（**Typography adoption**）。
+_Avoid_: --text-14（サイズと色の接頭辞が衝突しうるため）, 1rem（単位混在）
+
+**Typography scale**:
+Typography で使ってよいフォントサイズの段階列。許容値は **10, 12, 14, 16, 18, 20, 24**（px）のみ。新規・改修ではこの列以外の任意サイズを増やさない（**Typography adoption**）。`body` 既定は **14** 段。
+_Avoid_: 8 の倍数ルール（10 を含むため）, 連続スケール（任意の 1px 刻みすべてを許す印象）, Spacing scale との同一列（用途が別のため）
+
+**Typography migration rounding**:
+既存の `rem` や任意 px を **Font size token** へ置き換えるとき（**Typography adoption**）、スケールに無い値は **四捨五入で最寄りの段階**へ寄せる（例: 12.6px → 12 または 13 → **12**、15.4px → **16**、19.6px → **20**）。**Typography v1 deliverables** では寄せない。スケール外でも現行 computed と完全一致が必要な共有スタイルは **Text style** で `calc(var(--font-size-14) * 倍率)` 等を使い見た目を維持する。
+_Avoid_: 目視のみ（置換ごとに判断がぶれるため）, v1 deliverables での四捨五入（**Typography v1 visual policy** と矛盾）
+
+**Font family token**:
+UI 本文スタックを表す **Typography token**（`--font-family-ui`）。モノスペース（**Code font**）は v1 では含めない。Web フォントの新規読み込みは v1 スコープ外。`button` / `input` / `textarea` は `inherit` で **Font family token** に追従する。
+_Avoid_: --font-sans（Tailwind 俗称）, 日本語フォント（v1 でスタック変更を含意するため）
+
+**UI font**:
+**Font family token** が指す、本文・見出し・ラベル等に使うサンセリフスタック。v1 では現行 `body` と同型（Segoe UI → system UI → sans-serif）。**Typography v1 visual policy** に従いスタックも見た目も変えない。
+_Avoid_: 本文フォント（**Code font** を含意しうるため）, Element Plus フォント（EP 内部は v1 で全面上書きしない）
+
+**Line height token**:
+行高を表す **Typography token**。値は **無単位の比率**（`px` ではない）。フォントサイズに追従する。**Line height scale** の各段階または **Line height pattern** 名で参照する。
+_Avoid_: px 行高（テキストの拡大縮小に弱いため）, line-height-150（数値名と実値の対応が曖昧なため）
+
+**Line height scale**:
+Typography で使ってよい行高の段階列（無単位）。v1 は **1.25, 1.5, 1.75** の 3 段のみ。`body` 既定は **1.5**（`--line-height-normal`）。メニュー行高など固定 `px` の Sizing は含めない。
+_Avoid_: 1.4（スケール外の中間値）, 連続スケール（任意の小数すべてを許す印象）
+
+**Line height pattern**:
+繰り返し現れる行高に付ける意味別の名前。**Line height token** のセマンティック・エイリアスとして定義し、実体は **Line height scale** へ委譲する。v1: `--line-height-tight` → 1.25、`--line-height-normal` → 1.5、`--line-height-relaxed` → 1.75。
+_Avoid_: ユーティリティクラス（`.leading-normal` 等のクラス体系を含意するため）
+
+**Font weight token**:
+フォントウェイトを表す **Typography token**。トークン名の数値は CSS の `font-weight` 値と一致させる（例: `--font-weight-600: 600`）。**Font weight scale** 以外の任意ウェイトを新規・改修で増やさない（**Typography adoption**）。
+_Avoid_: semibold（数値と名前がずれるため）, bold トークン（`700` と 1 対 1 でない印象）
+
+**Font weight scale**:
+Typography で使ってよいフォントウェイトの段階列。v1 は **400, 500, 600, 700** の 4 段のみ。`body` 既定は **400**。非標準値（`450` / `550` 等）は **Typography adoption** で最寄り段階へ四捨五入（`450` → `500`、`550` → `600`）。**Typography v1 deliverables** では寄せない。
+_Avoid_: 300（現行 UI に無いため）, 800 以上（現行 UI に無いため）
+
+**Text style**:
+用途別の標準文字組（フォントサイズ・行高・ウェイトの組み合わせ）。**Text style catalog** で定義する。**Neutral text**（色）は **Color** の責務のため Text style には含めない。実装は `style.css` の共有クラス（`.text-h1` 等）。色が必要なときは呼び出し側または親で **Neutral text token** を指定する。
+_Avoid_: タイポグラフィ（トークン全体の総称）, テキスト色（**Color** と混同しやすいため）
+
+**Text style catalog**:
+v1 の **Text style** 公式一覧（いずれも共有クラス + Storybook 参照）。
+
+| Style | font-size | line-height | font-weight | クラス |
+|-------|-----------|-------------|-------------|--------|
+| Heading 1 | `calc(var(--font-size-14) * 1.4)` | tight | 600 | `.text-h1`（既存 `.page-title` は同型 alias） |
+| Heading 2 | `--font-size-18` | tight | 600 | `.text-h2` |
+| Heading 3 | `--font-size-16` | tight | 600 | `.text-h3` |
+| Heading 4 | `--font-size-14` | normal | 600 | `.text-h4` |
+| Body | `--font-size-14` | normal | 400 | `.text-body`（`body` 既定と同型） |
+| Body small | `--font-size-12` | normal | 400 | `.text-body-sm` |
+| Caption | `--font-size-10` | normal | 400 | `.text-caption` |
+
+**Typography v1 visual policy** に従い Heading 1 は `calc` で現行 19.6px を維持する。将来リデザインで `--font-size-20` へ寄せてよい。
+_Avoid_: h1 要素（HTML セマンティクスと 1 対 1 でない。見出しレベルは文脈で選ぶ）, 全スタイルの色込み定義
+
+**Page title style**:
+画面最上部のページ名向け **Text style**。**Heading 1** と同じ font-size / font-weight（`--font-size-h1` / 600）だが、line-height は **v1 visual policy** のため body の `--line-height-normal` を継承する（`.text-h1` の tight とは意図的に異なる）。v1 では既存クラス名 `.page-title` を残す。
+_Avoid_: Heading 1（HTML の `<h1>` 限定を含意するため）, ウィンドウタイトル（TitleBar は **Typography v1 scope** 外）, `.text-h1` と完全同一（line-height が異なる）
+
+**Element Plus typography mapping**:
+**Font size token** から Element Plus の `--el-font-size-*` へ値を渡す層。`html.dark` 内で定義する。`el-form` / `el-table` 等の EP テーマ整合が目的。コンポーネントの独自スタイルは原則 **Typography token** または **Text style** を参照し、`--el-font-size-*` 直参照は EP 上書きブロックと既存 EP 利用箇所に限定する（**Element Plus color mapping** と同型）。
+_Avoid_: EP 正本（出所を Element Plus に置く案）, 二重カタログ（App と EP を別々に管理する案）
+
+**Element Plus typography derivative**:
+**Element Plus typography mapping** 内だけで定義する、EP コンポーネント向けのスケール外サイズ（例: `--el-font-size-small: 13px`）。**Font size token** の委譲先ではなく、**Typography scale** に無い値を v1 では mapping 内に残して見た目を維持する。画面・共有スタイルから直接参照しない。
+_Avoid_: Typography token（App 正本と混同するため）, 13px の App token 化（v1 でスケールを壊すため）
+
+**Typography adoption**:
+**Typography token** / **Text style** への移行方針。新規画面・改修で触ったファイルでは **Typography token** または **Text style catalog** を使い、`rem`・スケール外の任意 `px`・非標準 `font-weight` を増やさない。未着手の既存 View は一括置換しない（触ったところから順次）。**Typography v1 deliverables** の共有スタイルと **Element Plus typography mapping** は v1 で寄せる。置換時は **Typography migration rounding** を適用する（**Typography v1 deliverables** 自体では寄せない）。遵守は `.cursor/rules/` で案内し、移行期は ESLint では強制しない。見た目の正本は **Typography Storybook catalog**。
+_Avoid_: 全面置換, rem 禁止の CI 強制（即時一括・CI 強制を含意するため）
+
+**Typography Storybook catalog**:
+Typography の Storybook 一覧。**Typography scale**・**Line height scale**・**Font weight scale**・**Text style catalog** の対応表と使用例、**Element Plus typography mapping** の要点を載せ、見た目と使い方の正本とする（**Spacing Storybook catalog** / **Color Storybook catalog** と同型）。
+_Avoid_: 全画面 Storybook, デザイントークン一覧（Color・Spacing の総称）
 
 ## Agent contribution
 

@@ -51,5 +51,6 @@ border-color: var(--color-border);
 ## 関連
 
 - 余白: `.cursor/rules/spacing-design-system.mdc`
+- タイポグラフィ: `.cursor/rules/typography-design-system.mdc`
 - ボタン: `.cursor/rules/button-design-system.mdc`
 - Element Plus 一般: `.cursor/rules/element-plus-ui.mdc`
