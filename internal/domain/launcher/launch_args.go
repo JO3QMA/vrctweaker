@@ -1,6 +1,7 @@
 package launcher
 
 import (
+	"math"
 	"strconv"
 	"strings"
 )
@@ -105,7 +106,7 @@ func ParseLaunchArgsForGUI(args string) *LaunchArgsParsed {
 	if args == "" {
 		return p
 	}
-	tokens := parseLaunchArgsTokens(normalizeEqualsQuotedArgs(args))
+	tokens := parseLaunchArgsTokens(normalizeIKQuotedArgs(args))
 	var customParts []string
 	i := 0
 	for i < len(tokens) {
@@ -206,20 +207,16 @@ func ParseLaunchArgsForGUI(args string) *LaunchArgsParsed {
 		case tok == enforceWorldServerChecks:
 			p.EnforceWorldServerChecks = true
 		case strings.HasPrefix(tok, customArmRatioPrefix):
-			if v := stripLaunchArgQuotes(strings.TrimPrefix(tok, customArmRatioPrefix)); v != "" {
-				if n, err := strconv.ParseFloat(v, 64); err == nil && n > 0 {
-					p.CustomArmRatio = n
-				}
+			if n, ok := parsePositiveFiniteFloat(strings.TrimPrefix(tok, customArmRatioPrefix)); ok {
+				p.CustomArmRatio = n
 			}
 		case tok == disableShoulderTracking:
 			p.DisableShoulderTracking = true
 		case tok == enableIKDebugLogging:
 			p.EnableIKDebugLogging = true
 		case strings.HasPrefix(tok, calibrationRangePrefix):
-			if v := stripLaunchArgQuotes(strings.TrimPrefix(tok, calibrationRangePrefix)); v != "" {
-				if n, err := strconv.ParseFloat(v, 64); err == nil && n > 0 {
-					p.CalibrationRange = n
-				}
+			if n, ok := parsePositiveFiniteFloat(strings.TrimPrefix(tok, calibrationRangePrefix)); ok {
+				p.CalibrationRange = n
 			}
 		case tok == freezeTrackingOnDisconnect:
 			p.FreezeTrackingOnDisconnect = true
@@ -280,31 +277,48 @@ func parseLaunchArgsTokens(s string) []string {
 	return out
 }
 
-// normalizeEqualsQuotedArgs rewrites --key="value" / --key='value' to --key=value
-// so the existing quote tokenizer (which starts a new token at ") still yields one arg.
-func normalizeEqualsQuotedArgs(s string) string {
-	if s == "" || !strings.Contains(s, "=") {
+// normalizeIKQuotedArgs rewrites only known IK value options from --key="v" / --key='v'
+// to --key=v so the quote tokenizer still yields one token. Other Custom args keep quotes.
+func normalizeIKQuotedArgs(s string) string {
+	if s == "" {
 		return s
 	}
+	for _, prefix := range []string{customArmRatioPrefix, calibrationRangePrefix} {
+		s = stripQuotedValueAfterPrefix(s, prefix)
+	}
+	return s
+}
+
+func stripQuotedValueAfterPrefix(s, prefix string) string {
 	var b strings.Builder
 	b.Grow(len(s))
 	i := 0
 	for i < len(s) {
-		if i+1 < len(s) && s[i] == '=' && (s[i+1] == '"' || s[i+1] == '\'') {
-			quote := s[i+1]
-			j := i + 2
-			for j < len(s) && s[j] != quote {
-				j++
-			}
-			if j < len(s) {
-				b.WriteByte('=')
-				b.WriteString(s[i+2 : j])
-				i = j + 1
-				continue
-			}
+		idx := strings.Index(s[i:], prefix)
+		if idx < 0 {
+			b.WriteString(s[i:])
+			break
 		}
-		b.WriteByte(s[i])
-		i++
+		idx += i
+		b.WriteString(s[i:idx])
+		b.WriteString(prefix)
+		restStart := idx + len(prefix)
+		if restStart >= len(s) {
+			i = restStart
+			break
+		}
+		quote := s[restStart]
+		if quote != '"' && quote != '\'' {
+			i = restStart
+			continue
+		}
+		endRel := strings.IndexByte(s[restStart+1:], quote)
+		if endRel < 0 {
+			i = restStart
+			continue
+		}
+		b.WriteString(s[restStart+1 : restStart+1+endRel])
+		i = restStart + 1 + endRel + 1
 	}
 	return b.String()
 }
@@ -316,6 +330,14 @@ func stripLaunchArgQuotes(v string) string {
 		}
 	}
 	return v
+}
+
+func parsePositiveFiniteFloat(v string) (float64, bool) {
+	n, err := strconv.ParseFloat(stripLaunchArgQuotes(v), 64)
+	if err != nil || !(n > 0) || math.IsInf(n, 0) {
+		return 0, false
+	}
+	return n, true
 }
 
 // MergeLaunchArgsForGUI builds a single arguments string from parsed GUI state.

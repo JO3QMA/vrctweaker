@@ -880,14 +880,20 @@ function onAffinityEnabledChange() {
 
 function onCustomArmRatioEnabledChange() {
   if (!valueOptionsEnabled.customArmRatio) launchArgs.value.customArmRatio = 0;
-  else if (!(launchArgs.value.customArmRatio > 0))
+  else if (
+    !Number.isFinite(launchArgs.value.customArmRatio) ||
+    !(launchArgs.value.customArmRatio > 0)
+  )
     launchArgs.value.customArmRatio = IK_CUSTOM_ARM_RATIO_DEFAULT;
 }
 
 function onCalibrationRangeEnabledChange() {
   if (!valueOptionsEnabled.calibrationRange)
     launchArgs.value.calibrationRange = 0;
-  else if (!(launchArgs.value.calibrationRange > 0))
+  else if (
+    !Number.isFinite(launchArgs.value.calibrationRange) ||
+    !(launchArgs.value.calibrationRange > 0)
+  )
     launchArgs.value.calibrationRange = IK_CALIBRATION_RANGE_DEFAULT;
 }
 
@@ -984,12 +990,13 @@ function sanitizeLaunchArgs(a: LaunchArgsParsedDTO): LaunchArgsParsedDTO {
   let customArmRatio = Number(a.customArmRatio);
   let calibrationRange = Number(a.calibrationRange);
   if (valueOptionsEnabled.customArmRatio) {
-    if (!(customArmRatio > 0)) customArmRatio = IK_CUSTOM_ARM_RATIO_DEFAULT;
+    if (!Number.isFinite(customArmRatio) || !(customArmRatio > 0))
+      customArmRatio = IK_CUSTOM_ARM_RATIO_DEFAULT;
   } else {
     customArmRatio = 0;
   }
   if (valueOptionsEnabled.calibrationRange) {
-    if (!(calibrationRange > 0))
+    if (!Number.isFinite(calibrationRange) || !(calibrationRange > 0))
       calibrationRange = IK_CALIBRATION_RANGE_DEFAULT;
   } else {
     calibrationRange = 0;

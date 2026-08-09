@@ -2,6 +2,7 @@ package launcher
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -335,5 +336,27 @@ func TestMergeLaunchArgsForGUI_IK20OmitsZeroValues(t *testing.T) {
 	got := MergeLaunchArgsForGUI(p)
 	if got != "" {
 		t.Errorf("MergeLaunchArgsForGUI(zero IK values) = %q, want empty", got)
+	}
+}
+
+func TestParseLaunchArgsForGUI_IK20RejectsInf(t *testing.T) {
+	got := ParseLaunchArgsForGUI("--custom-arm-ratio=+Inf --calibration-range=+Inf --disable-shoulder-tracking")
+	if got.CustomArmRatio != 0 || got.CalibrationRange != 0 || !got.DisableShoulderTracking || got.Custom != "" {
+		t.Errorf("ParseLaunchArgsForGUI(+Inf IK) = %+v, want ratio/range omitted", got)
+	}
+}
+
+func TestParseLaunchArgsForGUI_preservesQuotedCustomArgs(t *testing.T) {
+	in := `--foo="a b" --custom-arm-ratio="0.4537"`
+	norm := normalizeIKQuotedArgs(in)
+	if !strings.Contains(norm, `--foo="a b"`) {
+		t.Errorf("normalizeIKQuotedArgs = %q, want --foo=\"a b\" unchanged", norm)
+	}
+	if !strings.Contains(norm, `--custom-arm-ratio=0.4537`) {
+		t.Errorf("normalizeIKQuotedArgs = %q, want IK quotes stripped", norm)
+	}
+	got := ParseLaunchArgsForGUI(in)
+	if got.CustomArmRatio != 0.4537 {
+		t.Errorf("CustomArmRatio = %v, want 0.4537", got.CustomArmRatio)
 	}
 }
