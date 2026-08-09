@@ -2,6 +2,8 @@ import type { Meta, StoryObj } from "@storybook/vue3-vite";
 import {
   ELEMENT_PLUS_TYPOGRAPHY_DERIVATIVES,
   ELEMENT_PLUS_TYPOGRAPHY_MAPPING,
+  FONT_FAMILY_UI_VAR,
+  FONT_SIZE_DERIVATIVES,
   FONT_SIZE_SCALE_PX,
   FONT_WEIGHT_SCALE,
   LINE_HEIGHT_PATTERNS,
@@ -39,6 +41,35 @@ export const FontSizeScale: Story = {
   }),
 };
 
+export const FontSizeDerivatives: Story = {
+  name: "Font size derivatives",
+  render: () => ({
+    setup: () => ({ derivatives: FONT_SIZE_DERIVATIVES }),
+    template: `
+      <div class="typography-story">
+        <h2>Font size derivatives</h2>
+        <p>Sizes outside the numeric scale that preserve legacy computed values.</p>
+        <table class="typography-story-table">
+          <thead>
+            <tr>
+              <th>Token</th>
+              <th>Value</th>
+              <th>Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in derivatives" :key="row.varName">
+              <td><code>{{ row.varName }}</code></td>
+              <td><code>{{ row.cssValue }}</code></td>
+              <td>{{ row.note }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `,
+  }),
+};
+
 export const LineHeightScale: Story = {
   name: "Line height scale",
   render: () => ({
@@ -61,6 +92,22 @@ export const LineHeightScale: Story = {
             </tr>
           </tbody>
         </table>
+      </div>
+    `,
+  }),
+};
+
+export const FontFamilyUi: Story = {
+  name: "UI font family",
+  render: () => ({
+    setup: () => ({ familyVar: FONT_FAMILY_UI_VAR }),
+    template: `
+      <div class="typography-story">
+        <h2>UI font family</h2>
+        <p><code>{{ familyVar }}</code> — sans-serif stack for body, headings, and labels.</p>
+        <p :style="{ fontFamily: 'var(' + familyVar + ')' }">
+          The quick brown fox jumps over the lazy dog.
+        </p>
       </div>
     `,
   }),

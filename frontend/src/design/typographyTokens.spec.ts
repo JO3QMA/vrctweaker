@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   ELEMENT_PLUS_TYPOGRAPHY_DERIVATIVES,
   ELEMENT_PLUS_TYPOGRAPHY_MAPPING,
+  FONT_FAMILY_UI_VAR,
+  FONT_SIZE_DERIVATIVES,
   FONT_SIZE_SCALE_PX,
   FONT_WEIGHT_SCALE,
   LINE_HEIGHT_PATTERNS,
@@ -28,6 +30,17 @@ describe("typographyTokens", () => {
     expect(fontWeightScaleVar(600)).toBe("--font-weight-600");
   });
 
+  it("defines font-size derivatives outside the scale", () => {
+    expect(FONT_SIZE_DERIVATIVES[0]?.varName).toBe("--font-size-h1");
+    expect(FONT_SIZE_DERIVATIVES[0]?.cssValue).toBe(
+      "calc(var(--font-size-14) * 1.4)",
+    );
+  });
+
+  it("exposes UI font family token for Storybook catalog", () => {
+    expect(FONT_FAMILY_UI_VAR).toBe("--font-family-ui");
+  });
+
   it("maps each text style to catalog tokens", () => {
     expect(TEXT_STYLES.map((s) => s.className)).toEqual([
       "text-h1",
@@ -38,7 +51,8 @@ describe("typographyTokens", () => {
       "text-body-sm",
       "text-caption",
     ]);
-    expect(TEXT_STYLES[0]?.fontSize).toBe("calc(var(--font-size-14) * 1.4)");
+    expect(TEXT_STYLES[0]?.fontSize).toBe("var(--font-size-h1)");
+    expect(TEXT_STYLES[0]?.fontWeightVar).toBe(fontWeightScaleVar(600));
   });
 
   it("maps Element Plus font sizes to app tokens", () => {

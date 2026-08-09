@@ -28,6 +28,12 @@ Accepted（grill-with-docs で合意）
 | 20 | `--font-size-20` |
 | 24 | `--font-size-24` |
 
+**Font size derivative**（スケール外・レガシー維持）:
+
+| 用途 | CSS 変数 | 値 |
+|------|----------|-----|
+| Heading 1 / page title | `--font-size-h1` | `calc(var(--font-size-14) * 1.4)`（19.6px @ 14px root） |
+
 - 上記以外の任意サイズは新規・改修で増やさない
 - 値は **px リテラル**。`rem` / `em` は使わない
 - `html { font-size: 14px }` は Typography のために変更しない
@@ -68,7 +74,7 @@ Accepted（grill-with-docs で合意）
 
 | Style | font-size | line-height | font-weight | クラス |
 |-------|-----------|-------------|-------------|--------|
-| Heading 1 | `calc(var(--font-size-14) * 1.4)` | tight | 600 | `.text-h1`（`.page-title` は同型 alias + margin + 色） |
+| Heading 1 | `--font-size-h1` | tight | 600 | `.text-h1`（`.page-title` は同型 alias + margin + 色。line-height は継承） |
 | Heading 2 | `--font-size-18` | tight | 600 | `.text-h2` |
 | Heading 3 | `--font-size-16` | tight | 600 | `.text-h3` |
 | Heading 4 | `--font-size-14` | normal | 600 | `.text-h4` |
@@ -92,7 +98,7 @@ Accepted（grill-with-docs で合意）
 
 ### 7. Typography v1 visual policy
 
-tokenize 時は **既存の見た目を変えない**。Heading 1 は `calc(var(--font-size-14) * 1.4)` で 19.6px を維持。タイポグラフィのリデザインは v1 スコープ外。
+tokenize 時は **既存の見た目を変えない**。Heading 1 は `--font-size-h1`（19.6px）を維持。`.page-title` は line-height を継承（従来どおり 1.5）。タイポグラフィのリデザインは v1 スコープ外。
 
 ### 8. 実装正本
 

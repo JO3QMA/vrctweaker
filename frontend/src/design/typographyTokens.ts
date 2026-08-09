@@ -39,6 +39,26 @@ export function fontWeightScaleVar(
 
 export const FONT_FAMILY_UI_VAR = "--font-family-ui" as const;
 
+export type FontSizeDerivative = {
+  name: string;
+  varName: `--font-size-${string}`;
+  cssValue: string;
+  note: string;
+};
+
+/**
+ * Font sizes outside Typography scale (ADR 0020).
+ * Preserves legacy computed sizes without adding scale steps.
+ */
+export const FONT_SIZE_DERIVATIVES = [
+  {
+    name: "h1",
+    varName: "--font-size-h1",
+    cssValue: "calc(var(--font-size-14) * 1.4)",
+    note: "Legacy page title (19.6px at 14px root); outside scale by design",
+  },
+] as const satisfies readonly FontSizeDerivative[];
+
 export type TextStyleName =
   "h1" | "h2" | "h3" | "h4" | "body" | "body-sm" | "caption";
 
@@ -55,7 +75,7 @@ export const TEXT_STYLES = [
   {
     name: "h1",
     className: "text-h1",
-    fontSize: "calc(var(--font-size-14) * 1.4)",
+    fontSize: "var(--font-size-h1)",
     lineHeightVar: "--line-height-tight",
     fontWeightVar: fontWeightScaleVar(600),
   },

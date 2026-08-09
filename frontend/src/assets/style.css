@@ -81,6 +81,8 @@
   --font-size-18: 18px;
   --font-size-20: 20px;
   --font-size-24: 24px;
+  /* Outside scale: preserves legacy page title (1.4rem @ 14px root = 19.6px). */
+  --font-size-h1: calc(var(--font-size-14) * 1.4);
 
   --line-height-tight: 1.25;
   --line-height-normal: 1.5;
@@ -272,7 +274,7 @@ a:hover {
 }
 
 .text-h1 {
-  font-size: calc(var(--font-size-14) * 1.4);
+  font-size: var(--font-size-h1);
   line-height: var(--line-height-tight);
   font-weight: var(--font-weight-600);
 }
@@ -316,8 +318,7 @@ a:hover {
 /* Page title shared style (Heading 1 alias) */
 .page-title {
   margin: 0 0 var(--space-block);
-  font-size: calc(var(--font-size-14) * 1.4);
-  line-height: var(--line-height-tight);
+  font-size: var(--font-size-h1);
   font-weight: var(--font-weight-600);
   color: var(--color-text-primary);
 }
