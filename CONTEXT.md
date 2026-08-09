@@ -217,8 +217,24 @@ Launcher エディタで常時表示する起動引数のまとまり。デス�
 _Avoid_: 基本設定, 日常設定（Launch profile 属性と混同しやすいため）
 
 **Advanced launch options**:
-Launcher エディタの折りたたみ内にまとめる起動引数。解像度、モニター、FPS、優先度、VRChat profile slot、デバッグ・MIDI など。Primary に含まれないものはすべてここに属する。
+Launcher エディタの折りたたみ内にまとめる起動引数。解像度、モニター、FPS、優先度、VRChat profile slot、デバッグ・MIDI、**IK 2.0 launch options** など。Primary に含まれないものはすべてここに属する。
 _Avoid_: 詳細設定, すべてのオプション（UI ラベルは可。ドメインでは Advanced と書く）
+
+**IK 2.0 launch options**:
+Launch profile の起動引数のうち、VRChat 公式が IK 2.0 向けに列挙する起動オプション（[Issue #17](https://github.com/JO3QMA/vrctweaker/issues/17)、[公式ドキュメント](https://docs.vrchat.com/docs/ik-20-features-and-options)）。grill-with-docs / grill-review-ready で合意済み。対象は `--custom-arm-ratio`・`--disable-shoulder-tracking`・`--enable-ik-debug-logging`・`--calibration-range`・`--freeze-tracking-on-disconnect` の 5 本。クライアント内の IK Legacy／2.0 切替・Avatar Measurement・Lock Types・Locomotion Animation は起動引数ではないため含めない。既存の `--ignore-trackers`（Ignore trackers）は別オプションのまま据え置く。既知の IK 引数が Custom 欄にあれば、他の既知引数と同様に Parse で GUI フィールドへ吸い上げ、Custom からは外す（二重出力しない）。Parse で既知プレフィックスだが値が不正なトークンは、既存の他引数と同様フィールドにも Custom にも残さず捨てる。
+_Avoid_: IK 設定（クライアント内トグルを含意するため）, Full-body 設定, ignore-trackers（別の既存 Advanced 項目）, Custom に残したまま GUI にも出す
+
+**IK launch options section**:
+Launcher の **Advanced launch options** 内に置く第 3 ブロック（「表示・性能」「デバッグ・上級」に続く）。見出しは日英とも **「IK 2.0」**（`IK 2.0`）。**IK 2.0 launch options** の 5 本だけをまとめる。並びは公式ドキュメントの「New Launch Options」順（`--custom-arm-ratio` → `--disable-shoulder-tracking` → `--enable-ik-debug-logging` → `--calibration-range` → `--freeze-tracking-on-disconnect`）。Ignore trackers は「デバッグ・上級」に残し、このブロックへ移さない。
+_Avoid_: トラッキング設定（Ignore trackers やクライアント内 IK を含意するため）, デバッグ・上級への混在, IK / トラッキング, IK 起動オプション（見出しとしては冗長・Ignore trackers を連想させやすい）, 値付き優先や常用推測の並び
+
+**IK value launch option**:
+**IK 2.0 launch options** のうち値が付くもの（`--custom-arm-ratio`・`--calibration-range`）。Launcher では既存の FPS／MIDI と同型で、有効チェックがオフのときは引数自体を出さない。オンにしたときの初期値は公式ドキュメントの既定（arm-ratio `0.4537`／calibration-range `0.6`）をシードする。フラグのみの 3 本（`--disable-shoulder-tracking`・`--enable-ik-debug-logging`・`--freeze-tracking-on-disconnect`）はチェックボックスのみ。有効時の値は**正の実数**（`> 0`）のみ許可し、公式に無い上下限は設けない。有効なのに値が空・0・負・非数のときは、保存を止めず公式既定へ戻す（FPS と同型）。Merge（保存・起動用文字列）の正規形はクォート無しの `=値`（例: `--custom-arm-ratio=0.4537`）。Parse 時は公式ドキュメント形のクォート付きも受理し、GUI フィールドへ取り込む。未設定の内部表現は FPS／解像度と同型（専用 sentinel や文字列保持にはしない）。
+_Avoid_: 常時数値欄, 省略不可の固定値, 空欄のまま引数出力, 推測の固定レンジ（例: 0.01–1.0）, 常にクォート付きで書き出す, 読み込み形のまま非正規化で保持, 不正値で保存拒否, 不正値で有効チェック自動 OFF
+
+**IK 2.0 launch options v1 scope**:
+Issue #17 で最初に届ける範囲。上記 5 本を **IK launch options section** の GUI で編集・保存できるようにすることに限定する。クライアント内 IK 設定の再現、Ignore trackers の改変・移動、Primary への昇格は含めない。Desktop（`--no-vr`）プロファイルでもセクションは常に表示・編集可（他 Advanced と同型。VRChat 側の無視はユーザー責任）。
+_Avoid_: IK 2.0 launch options（v1 範囲を指すときは scope とセットで書く）, 将来拡張（スコープ外リストの総称として曖昧なため）, no-vr 時の非表示・無効化
 
 **Unsaved launch profile edits**:
 Launcher エディタで、最後の保存または読み込み以降に加えた Launch profile の変更（名前、既定フラグ、Primary / Advanced の各引数）。保存前はサイドバーの未保存表示とエディタ上部バナーで示す。

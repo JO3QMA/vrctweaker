@@ -12,7 +12,13 @@ export interface ValueOptionsEnabled {
   ignoreTrackers: boolean;
   osc: boolean;
   affinity: boolean;
+  customArmRatio: boolean;
+  calibrationRange: boolean;
 }
+
+/** Official VRChat defaults for IK value launch options. */
+export const IK_CUSTOM_ARM_RATIO_DEFAULT = 0.4537;
+export const IK_CALIBRATION_RANGE_DEFAULT = 0.6;
 
 export interface LaunchProfileEditSnapshot {
   profileId: string;
@@ -36,6 +42,8 @@ export function defaultValueOptionsEnabled(): ValueOptionsEnabled {
     ignoreTrackers: false,
     osc: false,
     affinity: false,
+    customArmRatio: false,
+    calibrationRange: false,
   };
 }
 
@@ -59,6 +67,8 @@ export function syncValueOptionsEnabled(
     ignoreTrackers: a.ignoreTrackers !== "",
     osc: a.osc !== "",
     affinity: a.affinity !== "",
+    customArmRatio: a.customArmRatio > 0,
+    calibrationRange: a.calibrationRange > 0,
   };
 }
 
@@ -101,6 +111,11 @@ export function hasAdvancedLaunchOptionsEnabled(
   if (args.disableAMDStutterWorkaround) return true;
   if (enabled.osc && args.osc !== "") return true;
   if (enabled.affinity && args.affinity !== "") return true;
+  if (enabled.customArmRatio && args.customArmRatio > 0) return true;
+  if (args.disableShoulderTracking) return true;
+  if (args.enableIkDebugLogging) return true;
+  if (enabled.calibrationRange && args.calibrationRange > 0) return true;
+  if (args.freezeTrackingOnDisconnect) return true;
   return false;
 }
 

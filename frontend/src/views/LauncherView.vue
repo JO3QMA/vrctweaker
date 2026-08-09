@@ -523,6 +523,89 @@
                         />
                       </div>
                     </div>
+
+                    <h3
+                      class="advanced-section-title"
+                      data-testid="advanced-ik-section"
+                    >
+                      {{ t("launcher.advancedIk20") }}
+                    </h3>
+                    <div class="launch-args-advanced">
+                      <div class="arg-row">
+                        <el-checkbox
+                          v-model="valueOptionsEnabled.customArmRatio"
+                          data-testid="custom-arm-ratio-enabled-checkbox"
+                          @change="onCustomArmRatioEnabledChange"
+                        >
+                          {{ t("launcher.customArmRatio") }}
+                        </el-checkbox>
+                      </div>
+                      <div
+                        v-if="valueOptionsEnabled.customArmRatio"
+                        class="sub-options"
+                      >
+                        <el-input-number
+                          v-model="launchArgs.customArmRatio"
+                          :min="0.0001"
+                          :step="0.0001"
+                          :precision="4"
+                          data-testid="custom-arm-ratio-input"
+                          size="small"
+                          controls-position="right"
+                        />
+                      </div>
+
+                      <div class="arg-row">
+                        <el-checkbox
+                          v-model="launchArgs.disableShoulderTracking"
+                          data-testid="disable-shoulder-tracking-checkbox"
+                        >
+                          {{ t("launcher.disableShoulderTracking") }}
+                        </el-checkbox>
+                      </div>
+
+                      <div class="arg-row">
+                        <el-checkbox
+                          v-model="launchArgs.enableIkDebugLogging"
+                          data-testid="enable-ik-debug-logging-checkbox"
+                        >
+                          {{ t("launcher.enableIkDebugLogging") }}
+                        </el-checkbox>
+                      </div>
+
+                      <div class="arg-row">
+                        <el-checkbox
+                          v-model="valueOptionsEnabled.calibrationRange"
+                          data-testid="calibration-range-enabled-checkbox"
+                          @change="onCalibrationRangeEnabledChange"
+                        >
+                          {{ t("launcher.calibrationRange") }}
+                        </el-checkbox>
+                      </div>
+                      <div
+                        v-if="valueOptionsEnabled.calibrationRange"
+                        class="sub-options"
+                      >
+                        <el-input-number
+                          v-model="launchArgs.calibrationRange"
+                          :min="0.0001"
+                          :step="0.1"
+                          :precision="2"
+                          data-testid="calibration-range-input"
+                          size="small"
+                          controls-position="right"
+                        />
+                      </div>
+
+                      <div class="arg-row">
+                        <el-checkbox
+                          v-model="launchArgs.freezeTrackingOnDisconnect"
+                          data-testid="freeze-tracking-on-disconnect-checkbox"
+                        >
+                          {{ t("launcher.freezeTrackingOnDisconnect") }}
+                        </el-checkbox>
+                      </div>
+                    </div>
                   </div>
                 </el-collapse-item>
               </el-collapse>
@@ -554,6 +637,8 @@ import {
   readSidebarOpenPreference,
   syncValueOptionsEnabled,
   writeSidebarOpenPreference,
+  IK_CUSTOM_ARM_RATIO_DEFAULT,
+  IK_CALIBRATION_RANGE_DEFAULT,
   type LaunchProfileEditSnapshot,
   type ValueOptionsEnabled,
 } from "./launcher/launcherProfileEdits";
@@ -602,6 +687,11 @@ const defaultLaunchArgs = (): LaunchArgsParsedDTO => ({
   osc: "",
   affinity: "",
   enforceWorldServerChecks: false,
+  customArmRatio: 0,
+  disableShoulderTracking: false,
+  enableIkDebugLogging: false,
+  calibrationRange: 0,
+  freezeTrackingOnDisconnect: false,
   custom: "",
 });
 
@@ -788,6 +878,25 @@ function onAffinityEnabledChange() {
   if (!valueOptionsEnabled.affinity) launchArgs.value.affinity = "";
 }
 
+function onCustomArmRatioEnabledChange() {
+  if (!valueOptionsEnabled.customArmRatio) launchArgs.value.customArmRatio = 0;
+  else if (
+    !Number.isFinite(launchArgs.value.customArmRatio) ||
+    !(launchArgs.value.customArmRatio > 0)
+  )
+    launchArgs.value.customArmRatio = IK_CUSTOM_ARM_RATIO_DEFAULT;
+}
+
+function onCalibrationRangeEnabledChange() {
+  if (!valueOptionsEnabled.calibrationRange)
+    launchArgs.value.calibrationRange = 0;
+  else if (
+    !Number.isFinite(launchArgs.value.calibrationRange) ||
+    !(launchArgs.value.calibrationRange > 0)
+  )
+    launchArgs.value.calibrationRange = IK_CALIBRATION_RANGE_DEFAULT;
+}
+
 async function syncLaunchArgsFromProfile(p: LaunchProfileDTO) {
   launchArgs.value = await App.parseLaunchArgsForGUI(p.arguments);
   Object.assign(valueOptionsEnabled, syncValueOptionsEnabled(launchArgs.value));
@@ -878,6 +987,20 @@ function sanitizeLaunchArgs(a: LaunchArgsParsedDTO): LaunchArgsParsedDTO {
   const pp = Number(a.processPriority);
   const mtp = Number(a.mainThreadPriority);
   const profile = Number(a.profile);
+  let customArmRatio = Number(a.customArmRatio);
+  let calibrationRange = Number(a.calibrationRange);
+  if (valueOptionsEnabled.customArmRatio) {
+    if (!Number.isFinite(customArmRatio) || !(customArmRatio > 0))
+      customArmRatio = IK_CUSTOM_ARM_RATIO_DEFAULT;
+  } else {
+    customArmRatio = 0;
+  }
+  if (valueOptionsEnabled.calibrationRange) {
+    if (!Number.isFinite(calibrationRange) || !(calibrationRange > 0))
+      calibrationRange = IK_CALIBRATION_RANGE_DEFAULT;
+  } else {
+    calibrationRange = 0;
+  }
   const base = {
     ...a,
     screenWidth: Math.max(0, Number(a.screenWidth) || 0),
@@ -889,6 +1012,11 @@ function sanitizeLaunchArgs(a: LaunchArgsParsedDTO): LaunchArgsParsedDTO {
       Number.isInteger(mtp) && mtp >= -2 && mtp <= 2 ? mtp : PRIORITY_OMIT,
     monitor: Math.max(0, Math.floor(Number(a.monitor) || 0)),
     profile: Number.isInteger(profile) && profile >= 0 ? profile : -1,
+    customArmRatio,
+    calibrationRange,
+    disableShoulderTracking: !!a.disableShoulderTracking,
+    enableIkDebugLogging: !!a.enableIkDebugLogging,
+    freezeTrackingOnDisconnect: !!a.freezeTrackingOnDisconnect,
   };
   if (!valueOptionsEnabled.resolution) {
     base.screenWidth = 0;
