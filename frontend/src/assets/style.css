@@ -200,6 +200,7 @@ html.dark {
   --el-font-size-large: var(--font-size-18);
   --el-font-size-medium: var(--font-size-16);
   --el-font-size-base: var(--font-size-14);
+  /* ADR 0020: Element Plus small is intentionally outside the app scale */
   --el-font-size-small: 13px;
   --el-font-size-extra-small: var(--font-size-12);
 }
@@ -270,6 +271,7 @@ a:hover {
 .text-body,
 .text-body-sm,
 .text-caption {
+  /* Explicit UI font regardless of parent context (e.g. EP components). */
   font-family: var(--font-family-ui);
 }
 

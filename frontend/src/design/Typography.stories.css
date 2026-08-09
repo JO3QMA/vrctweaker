@@ -68,6 +68,7 @@
 }
 
 .typography-story-scale-label {
+  /* Storybook-only: 140px ~= legacy 10rem at 14px root for aligned scale rows */
   flex: 0 0 calc(var(--space-64) * 2 + var(--space-12));
   font-family: ui-monospace, monospace;
   font-size: var(--font-size-12);
