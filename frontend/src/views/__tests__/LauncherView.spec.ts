@@ -111,6 +111,11 @@ describe("LauncherView", () => {
           osc: "",
           affinity: "",
           enforceWorldServerChecks: false,
+          customArmRatio: 0,
+          disableShoulderTracking: false,
+          enableIkDebugLogging: false,
+          calibrationRange: 0,
+          freezeTrackingOnDisconnect: false,
         };
         return {
           ...base,
@@ -899,6 +904,11 @@ describe("LauncherView", () => {
       osc: "9000",
       affinity: "0,1",
       enforceWorldServerChecks: false,
+      customArmRatio: 0,
+      disableShoulderTracking: false,
+      enableIkDebugLogging: false,
+      calibrationRange: 0,
+      freezeTrackingOnDisconnect: false,
       custom: "",
     } as LaunchArgsParsedDTO);
 
@@ -1373,6 +1383,11 @@ describe("LauncherView", () => {
           osc: "",
           affinity: "",
           enforceWorldServerChecks: false,
+          customArmRatio: 0,
+          disableShoulderTracking: false,
+          enableIkDebugLogging: false,
+          calibrationRange: 0,
+          freezeTrackingOnDisconnect: false,
           custom: "",
         };
         if (args.includes("-windowed")) {
@@ -1415,6 +1430,11 @@ describe("LauncherView", () => {
       osc: "",
       affinity: "",
       enforceWorldServerChecks: false,
+      customArmRatio: 0,
+      disableShoulderTracking: false,
+      enableIkDebugLogging: false,
+      calibrationRange: 0,
+      freezeTrackingOnDisconnect: false,
       custom: "",
     });
     await flushPromises();

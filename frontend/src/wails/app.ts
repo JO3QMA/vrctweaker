@@ -179,6 +179,11 @@ const EMPTY_LAUNCH_ARGS: LaunchArgsParsedDTO = {
   osc: "",
   affinity: "",
   enforceWorldServerChecks: false,
+  customArmRatio: 0,
+  disableShoulderTracking: false,
+  enableIkDebugLogging: false,
+  calibrationRange: 0,
+  freezeTrackingOnDisconnect: false,
   custom: "",
 };
 

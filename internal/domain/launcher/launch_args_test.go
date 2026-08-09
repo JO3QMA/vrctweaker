@@ -275,3 +275,65 @@ func TestParseLaunchArgsForGUI_preservesCustomOrdering(t *testing.T) {
 		t.Errorf("parse-merge-parse roundtrip: got %+v, reparsed %+v", got, reparsed)
 	}
 }
+
+func TestParseMergeLaunchArgsForGUI_IK20Options(t *testing.T) {
+	p := &LaunchArgsParsed{
+		Profile:                    -1,
+		ProcessPriority:            PriorityOmit,
+		MainThreadPriority:         PriorityOmit,
+		CustomArmRatio:             0.4537,
+		DisableShoulderTracking:    true,
+		EnableIKDebugLogging:       true,
+		CalibrationRange:           0.6,
+		FreezeTrackingOnDisconnect: true,
+	}
+	got := MergeLaunchArgsForGUI(p)
+	want := "--custom-arm-ratio=0.4537 --disable-shoulder-tracking --enable-ik-debug-logging --calibration-range=0.6 --freeze-tracking-on-disconnect"
+	if got != want {
+		t.Errorf("MergeLaunchArgsForGUI(IK) = %q, want %q", got, want)
+	}
+	reparsed := ParseLaunchArgsForGUI(got)
+	if reparsed.CustomArmRatio != 0.4537 || !reparsed.DisableShoulderTracking || !reparsed.EnableIKDebugLogging ||
+		reparsed.CalibrationRange != 0.6 || !reparsed.FreezeTrackingOnDisconnect || reparsed.Custom != "" {
+		t.Errorf("Parse after Merge IK = %+v", reparsed)
+	}
+}
+
+func TestParseLaunchArgsForGUI_IK20QuotedValues(t *testing.T) {
+	in := `--custom-arm-ratio="0.4537" --calibration-range="0.6"`
+	got := ParseLaunchArgsForGUI(in)
+	if got.CustomArmRatio != 0.4537 || got.CalibrationRange != 0.6 || got.Custom != "" {
+		t.Errorf("ParseLaunchArgsForGUI(quoted IK) = %+v", got)
+	}
+}
+
+func TestParseLaunchArgsForGUI_IK20InvalidDropped(t *testing.T) {
+	in := "--custom-arm-ratio=abc --calibration-range=-1 --disable-shoulder-tracking"
+	got := ParseLaunchArgsForGUI(in)
+	if got.CustomArmRatio != 0 || got.CalibrationRange != 0 || !got.DisableShoulderTracking || got.Custom != "" {
+		t.Errorf("ParseLaunchArgsForGUI(invalid IK) = %+v, want ratio/range omitted, flag kept, Custom empty", got)
+	}
+}
+
+func TestParseLaunchArgsForGUI_IK20FlagsOnly(t *testing.T) {
+	in := "--disable-shoulder-tracking --enable-ik-debug-logging --freeze-tracking-on-disconnect"
+	got := ParseLaunchArgsForGUI(in)
+	if got.CustomArmRatio != 0 || got.CalibrationRange != 0 ||
+		!got.DisableShoulderTracking || !got.EnableIKDebugLogging || !got.FreezeTrackingOnDisconnect {
+		t.Errorf("ParseLaunchArgsForGUI(IK flags) = %+v", got)
+	}
+}
+
+func TestMergeLaunchArgsForGUI_IK20OmitsZeroValues(t *testing.T) {
+	p := &LaunchArgsParsed{
+		Profile:            -1,
+		ProcessPriority:    PriorityOmit,
+		MainThreadPriority: PriorityOmit,
+		CustomArmRatio:     0,
+		CalibrationRange:   0,
+	}
+	got := MergeLaunchArgsForGUI(p)
+	if got != "" {
+		t.Errorf("MergeLaunchArgsForGUI(zero IK values) = %q, want empty", got)
+	}
+}

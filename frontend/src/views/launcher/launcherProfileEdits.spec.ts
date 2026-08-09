@@ -34,6 +34,11 @@ const emptyArgs = (): LaunchArgsParsedDTO => ({
   osc: "",
   affinity: "",
   enforceWorldServerChecks: false,
+  customArmRatio: 0,
+  disableShoulderTracking: false,
+  enableIkDebugLogging: false,
+  calibrationRange: 0,
+  freezeTrackingOnDisconnect: false,
   custom: "",
 });
 
@@ -59,6 +64,25 @@ describe("launcherProfileEdits", () => {
 
   it("does not treat primary-only custom args as advanced", () => {
     const args = { ...emptyArgs(), custom: "-batchmode" };
+    const enabled = defaultValueOptionsEnabled();
+    expect(hasAdvancedLaunchOptionsEnabled(args, enabled)).toBe(false);
+  });
+
+  it("detects advanced options when IK flags are set", () => {
+    const args = { ...emptyArgs(), disableShoulderTracking: true };
+    const enabled = syncValueOptionsEnabled(args);
+    expect(hasAdvancedLaunchOptionsEnabled(args, enabled)).toBe(true);
+  });
+
+  it("detects advanced options when custom arm ratio is enabled", () => {
+    const args = { ...emptyArgs(), customArmRatio: 0.4537 };
+    const enabled = syncValueOptionsEnabled(args);
+    expect(enabled.customArmRatio).toBe(true);
+    expect(hasAdvancedLaunchOptionsEnabled(args, enabled)).toBe(true);
+  });
+
+  it("does not treat zero IK values as advanced when enable is off", () => {
+    const args = emptyArgs();
     const enabled = defaultValueOptionsEnabled();
     expect(hasAdvancedLaunchOptionsEnabled(args, enabled)).toBe(false);
   });

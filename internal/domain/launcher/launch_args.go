@@ -50,7 +50,13 @@ type LaunchArgsParsed struct {
 	OSC                         string `json:"osc"`                         // --osc=inPort:outIP:outPort
 	Affinity                    string `json:"affinity"`                    // --affinity=<hex>
 	EnforceWorldServerChecks    bool   `json:"enforceWorldServerChecks"`    // --enforce-world-server-checks
-	Custom                      string `json:"custom"`                      // remaining args as-is
+	// IK 2.0 (https://docs.vrchat.com/docs/ik-20-features-and-options)
+	CustomArmRatio             float64 `json:"customArmRatio"`             // --custom-arm-ratio=N, 0=omit
+	DisableShoulderTracking    bool    `json:"disableShoulderTracking"`    // --disable-shoulder-tracking
+	EnableIKDebugLogging       bool    `json:"enableIkDebugLogging"`       // --enable-ik-debug-logging
+	CalibrationRange           float64 `json:"calibrationRange"`           // --calibration-range=N, 0=omit
+	FreezeTrackingOnDisconnect bool    `json:"freezeTrackingOnDisconnect"` // --freeze-tracking-on-disconnect
+	Custom                     string  `json:"custom"`                     // remaining args as-is
 }
 
 var (
@@ -81,6 +87,11 @@ var (
 	oscPrefix                   = "--osc="
 	affinityPrefix              = "--affinity="
 	enforceWorldServerChecks    = "--enforce-world-server-checks"
+	customArmRatioPrefix        = "--custom-arm-ratio="
+	disableShoulderTracking     = "--disable-shoulder-tracking"
+	enableIKDebugLogging        = "--enable-ik-debug-logging"
+	calibrationRangePrefix      = "--calibration-range="
+	freezeTrackingOnDisconnect  = "--freeze-tracking-on-disconnect"
 )
 
 // ParseLaunchArgsForGUI parses a launch arguments string into GUI fields.
@@ -94,7 +105,7 @@ func ParseLaunchArgsForGUI(args string) *LaunchArgsParsed {
 	if args == "" {
 		return p
 	}
-	tokens := parseLaunchArgsTokens(args)
+	tokens := parseLaunchArgsTokens(normalizeEqualsQuotedArgs(args))
 	var customParts []string
 	i := 0
 	for i < len(tokens) {
@@ -194,6 +205,24 @@ func ParseLaunchArgsForGUI(args string) *LaunchArgsParsed {
 			}
 		case tok == enforceWorldServerChecks:
 			p.EnforceWorldServerChecks = true
+		case strings.HasPrefix(tok, customArmRatioPrefix):
+			if v := stripLaunchArgQuotes(strings.TrimPrefix(tok, customArmRatioPrefix)); v != "" {
+				if n, err := strconv.ParseFloat(v, 64); err == nil && n > 0 {
+					p.CustomArmRatio = n
+				}
+			}
+		case tok == disableShoulderTracking:
+			p.DisableShoulderTracking = true
+		case tok == enableIKDebugLogging:
+			p.EnableIKDebugLogging = true
+		case strings.HasPrefix(tok, calibrationRangePrefix):
+			if v := stripLaunchArgQuotes(strings.TrimPrefix(tok, calibrationRangePrefix)); v != "" {
+				if n, err := strconv.ParseFloat(v, 64); err == nil && n > 0 {
+					p.CalibrationRange = n
+				}
+			}
+		case tok == freezeTrackingOnDisconnect:
+			p.FreezeTrackingOnDisconnect = true
 		default:
 			customParts = append(customParts, tok)
 		}
@@ -249,6 +278,44 @@ func parseLaunchArgsTokens(s string) []string {
 		out = append(out, string(cur))
 	}
 	return out
+}
+
+// normalizeEqualsQuotedArgs rewrites --key="value" / --key='value' to --key=value
+// so the existing quote tokenizer (which starts a new token at ") still yields one arg.
+func normalizeEqualsQuotedArgs(s string) string {
+	if s == "" || !strings.Contains(s, "=") {
+		return s
+	}
+	var b strings.Builder
+	b.Grow(len(s))
+	i := 0
+	for i < len(s) {
+		if i+1 < len(s) && s[i] == '=' && (s[i+1] == '"' || s[i+1] == '\'') {
+			quote := s[i+1]
+			j := i + 2
+			for j < len(s) && s[j] != quote {
+				j++
+			}
+			if j < len(s) {
+				b.WriteByte('=')
+				b.WriteString(s[i+2 : j])
+				i = j + 1
+				continue
+			}
+		}
+		b.WriteByte(s[i])
+		i++
+	}
+	return b.String()
+}
+
+func stripLaunchArgQuotes(v string) string {
+	if len(v) >= 2 {
+		if (v[0] == '"' && v[len(v)-1] == '"') || (v[0] == '\'' && v[len(v)-1] == '\'') {
+			return v[1 : len(v)-1]
+		}
+	}
+	return v
 }
 
 // MergeLaunchArgsForGUI builds a single arguments string from parsed GUI state.
@@ -330,6 +397,21 @@ func MergeLaunchArgsForGUI(p *LaunchArgsParsed) string {
 	}
 	if p.EnforceWorldServerChecks {
 		parts = append(parts, enforceWorldServerChecks)
+	}
+	if p.CustomArmRatio > 0 {
+		parts = append(parts, customArmRatioPrefix+strconv.FormatFloat(p.CustomArmRatio, 'f', -1, 64))
+	}
+	if p.DisableShoulderTracking {
+		parts = append(parts, disableShoulderTracking)
+	}
+	if p.EnableIKDebugLogging {
+		parts = append(parts, enableIKDebugLogging)
+	}
+	if p.CalibrationRange > 0 {
+		parts = append(parts, calibrationRangePrefix+strconv.FormatFloat(p.CalibrationRange, 'f', -1, 64))
+	}
+	if p.FreezeTrackingOnDisconnect {
+		parts = append(parts, freezeTrackingOnDisconnect)
 	}
 	if p.Custom != "" {
 		parts = append(parts, strings.TrimSpace(p.Custom))
