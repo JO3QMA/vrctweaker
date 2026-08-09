@@ -59,13 +59,18 @@ export const FONT_SIZE_DERIVATIVES = [
   },
 ] as const satisfies readonly FontSizeDerivative[];
 
+export type FontSizeDerivativeVar = "--font-size-h1";
+
+export type FontSizeTokenRef =
+  `var(--font-size-${FontSizeScalePx})` | `var(${FontSizeDerivativeVar})`;
+
 export type TextStyleName =
   "h1" | "h2" | "h3" | "h4" | "body" | "body-sm" | "caption";
 
 export type TextStyle = {
   name: TextStyleName;
   className: `text-${TextStyleName}`;
-  fontSize: string;
+  fontSize: FontSizeTokenRef;
   lineHeightVar: LineHeightPattern["varName"];
   fontWeightVar: ReturnType<typeof fontWeightScaleVar>;
 };

@@ -50,11 +50,12 @@ export const FontSizeDerivatives: Story = {
         <h2>Font size derivatives</h2>
         <p>Sizes outside the numeric scale that preserve legacy computed values.</p>
         <table class="typography-story-table">
+          <caption>Font size derivatives</caption>
           <thead>
             <tr>
-              <th>Token</th>
-              <th>Value</th>
-              <th>Note</th>
+              <th scope="col">Token</th>
+              <th scope="col">Value</th>
+              <th scope="col">Note</th>
             </tr>
           </thead>
           <tbody>
@@ -79,10 +80,11 @@ export const LineHeightScale: Story = {
         <h2>Line height scale</h2>
         <p>Unitless ratios. Body default is <code>--line-height-normal</code> (1.5).</p>
         <table class="typography-story-table">
+          <caption>Line height scale</caption>
           <thead>
             <tr>
-              <th>Token</th>
-              <th>Value</th>
+              <th scope="col">Token</th>
+              <th scope="col">Value</th>
             </tr>
           </thead>
           <tbody>
@@ -139,12 +141,13 @@ export const TextStyleCatalog: Story = {
         <h2>Text style catalog</h2>
         <p>Shared classes in <code>style.css</code>. Colors are not included (use Color tokens).</p>
         <table class="typography-story-table">
+          <caption>Text style catalog</caption>
           <thead>
             <tr>
-              <th>Class</th>
-              <th>font-size</th>
-              <th>line-height</th>
-              <th>font-weight</th>
+              <th scope="col">Class</th>
+              <th scope="col">font-size</th>
+              <th scope="col">line-height</th>
+              <th scope="col">font-weight</th>
             </tr>
           </thead>
           <tbody>
@@ -158,7 +161,7 @@ export const TextStyleCatalog: Story = {
         </table>
         <div class="typography-story-sample">
           <div class="typography-story-sample-row">
-            <span class="typography-story-sample-label">.page-title (Heading 1 alias)</span>
+            <span class="typography-story-sample-label">.page-title (H1 size alias; line-height inherits body)</span>
             <h1 class="page-title">Page title sample</h1>
           </div>
           <div v-for="row in styles" :key="'sample-' + row.className" class="typography-story-sample-row">
@@ -181,12 +184,16 @@ export const ElementPlusMapping: Story = {
     template: `
       <div class="typography-story">
         <h2>Element Plus typography mapping</h2>
-        <p>Defined in <code>html.dark</code>. App font-size tokens are the source of truth.</p>
+        <p>
+          Defined in <code>html.dark</code> (enabled globally in Storybook preview);
+          the samples below resolve the mapped Element Plus variables.
+        </p>
         <table class="typography-story-table">
+          <caption>Element Plus typography mapping</caption>
           <thead>
             <tr>
-              <th>EP variable</th>
-              <th>Delegates to</th>
+              <th scope="col">EP variable</th>
+              <th scope="col">Delegates to</th>
             </tr>
           </thead>
           <tbody>
@@ -200,6 +207,24 @@ export const ElementPlusMapping: Story = {
             </tr>
           </tbody>
         </table>
+        <div class="typography-story-ep-samples">
+          <p
+            v-for="row in mapping"
+            :key="'sample-' + row.elVar"
+            class="typography-story-ep-sample"
+            :style="{ fontSize: 'var(' + row.elVar + ')' }"
+          >
+            {{ row.elVar }} sample
+          </p>
+          <p
+            v-for="row in derivatives"
+            :key="'sample-' + row.elVar"
+            class="typography-story-ep-sample"
+            :style="{ fontSize: 'var(' + row.elVar + ')' }"
+          >
+            {{ row.elVar }} sample
+          </p>
+        </div>
       </div>
     `,
   }),

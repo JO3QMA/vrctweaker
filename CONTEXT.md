@@ -984,8 +984,8 @@ v1 の **Text style** 公式一覧（いずれも共有クラス + Storybook 参
 _Avoid_: h1 要素（HTML セマンティクスと 1 対 1 でない。見出しレベルは文脈で選ぶ）, 全スタイルの色込み定義
 
 **Page title style**:
-画面最上部のページ名向け **Text style**。**Heading 1** と同型。v1 では既存クラス名 `.page-title` を残し **Heading 1** の alias として扱う（リネームは v1 スコープ外）。
-_Avoid_: Heading 1（HTML の `<h1>` 限定を含意するため）, ウィンドウタイトル（TitleBar は **Typography v1 scope** 外）
+画面最上部のページ名向け **Text style**。**Heading 1** と同じ font-size / font-weight（`--font-size-h1` / 600）だが、line-height は **v1 visual policy** のため body の `--line-height-normal` を継承する（`.text-h1` の tight とは意図的に異なる）。v1 では既存クラス名 `.page-title` を残す。
+_Avoid_: Heading 1（HTML の `<h1>` 限定を含意するため）, ウィンドウタイトル（TitleBar は **Typography v1 scope** 外）, `.text-h1` と完全同一（line-height が異なる）
 
 **Element Plus typography mapping**:
 **Font size token** から Element Plus の `--el-font-size-*` へ値を渡す層。`html.dark` 内で定義する。`el-form` / `el-table` 等の EP テーマ整合が目的。コンポーネントの独自スタイルは原則 **Typography token** または **Text style** を参照し、`--el-font-size-*` 直参照は EP 上書きブロックと既存 EP 利用箇所に限定する（**Element Plus color mapping** と同型）。

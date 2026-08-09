@@ -69,8 +69,20 @@
 
 .typography-story-scale-label {
   /* Storybook-only: 140px ~= legacy 10rem at 14px root for aligned scale rows */
-  flex: 0 0 calc(var(--space-64) * 2 + var(--space-12));
+  flex: 0 1 calc(var(--space-64) * 2 + var(--space-12));
+  min-width: 0;
   font-family: ui-monospace, monospace;
   font-size: var(--font-size-12);
   color: var(--color-text-secondary);
+}
+
+.typography-story-ep-samples {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-action-group);
+}
+
+.typography-story-ep-sample {
+  margin: 0;
+  color: var(--color-text-primary);
 }
