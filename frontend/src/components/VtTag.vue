@@ -1,6 +1,10 @@
 <script setup lang="ts">
 import { computed, useAttrs } from "vue";
-import { type VtTagProps, vtTagElementType } from "./vtTagVariants";
+import {
+  type VtTagProps,
+  omitVtTagAttr,
+  vtTagElementType,
+} from "./vtTagVariants";
 
 const props = defineProps<VtTagProps>();
 const attrs = useAttrs();
@@ -12,23 +16,24 @@ defineOptions({
 const tagType = computed(() => vtTagElementType(props.variant));
 
 const tagBind = computed(() => {
+  const rawAttrs = attrs as Record<string, unknown>;
   if (props.variant === "neutral") {
-    const { type: _type, ...forwardedAttrs } = attrs;
+    const withoutType = omitVtTagAttr(rawAttrs, "type");
     return {
-      ...forwardedAttrs,
+      ...omitVtTagAttr(withoutType, "size"),
       class: ["vt-tag--neutral", attrs.class],
       effect: "plain" as const,
     };
   }
   return {
-    ...attrs,
+    ...omitVtTagAttr(rawAttrs, "size"),
     type: tagType.value,
   };
 });
 </script>
 
 <template>
-  <el-tag v-bind="tagBind">
+  <el-tag v-bind="tagBind" :size="size">
     <slot />
   </el-tag>
 </template>

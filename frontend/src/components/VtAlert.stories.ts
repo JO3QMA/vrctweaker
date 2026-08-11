@@ -27,11 +27,11 @@ type Story = StoryObj<typeof meta>;
 
 function variantStory(alertTitle: string, args: VtAlertProps): Story {
   return {
-    args,
+    args: { ...args, title: alertTitle },
     render: (storyArgs) => ({
       components: { VtAlert },
-      setup: () => ({ args: storyArgs, alertTitle }),
-      template: `<VtAlert v-bind="args" :title="alertTitle" />`,
+      setup: () => ({ args: storyArgs }),
+      template: `<VtAlert v-bind="args" />`,
     }),
   };
 }
@@ -50,15 +50,16 @@ export const Info = variantStory("Official build required for cookies", {
 });
 
 export const WithDescription: Story = {
-  render: () => ({
+  args: {
+    variant: "warning",
+    title: "Account risk",
+    description:
+      "Using cookies with a main account may risk a ban. Prefer a throwaway account.",
+  },
+  render: (storyArgs) => ({
     components: { VtAlert },
-    template: `
-      <VtAlert
-        variant="warning"
-        title="Account risk"
-        description="Using cookies with a main account may risk a ban. Prefer a throwaway account."
-      />
-    `,
+    setup: () => ({ args: storyArgs }),
+    template: `<VtAlert v-bind="args" />`,
   }),
 };
 
@@ -69,7 +70,7 @@ export const BlockErrorExample: Story = {
     components: { VtAlert },
     template: `
       <div class="vt-alert-story-stack">
-        <VtAlert variant="danger" title="Could not load gallery" data-testid="gallery-load-error" />
+        <VtAlert variant="danger" title="Could not load gallery" />
       </div>
     `,
   }),

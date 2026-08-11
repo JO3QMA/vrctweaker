@@ -40,11 +40,11 @@ describe("VtTag", () => {
 
   it("forwards size and data-testid", () => {
     const wrapper = mount(VtTag, {
-      props: { variant: "success" },
-      attrs: { size: "small", "data-testid": "status-tag" },
+      props: { variant: "success", size: "small" },
+      attrs: { "data-testid": "status-tag" },
       slots: { default: "OK" },
     });
     expect(wrapper.attributes("data-testid")).toBe("status-tag");
-    expect(wrapper.find(".el-tag").exists()).toBe(true);
+    expect(wrapper.find(".el-tag--small").exists()).toBe(true);
   });
 });

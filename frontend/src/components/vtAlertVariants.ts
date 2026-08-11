@@ -9,6 +9,8 @@ export type VtAlertVariant = (typeof VT_ALERT_VARIANTS)[number];
 
 export type VtAlertProps = {
   variant: VtAlertVariant;
+  title?: string;
+  description?: string;
 };
 
 /** Maps semantic danger to Element Plus alert type `error`. */

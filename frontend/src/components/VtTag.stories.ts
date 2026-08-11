@@ -38,7 +38,7 @@ function variantStory(label: string, args: VtTagProps): Story {
 
 export const Success = variantStory("Success", { variant: "success" });
 export const Warning = variantStory("Warning", { variant: "warning" });
-export const Danger = variantStory("Failed", { variant: "danger" });
+export const Danger = variantStory("Danger", { variant: "danger" });
 export const Info = variantStory("Info", { variant: "info" });
 export const Neutral = variantStory("3 licenses", { variant: "neutral" });
 export const Primary = variantStory("Default", { variant: "primary" });
