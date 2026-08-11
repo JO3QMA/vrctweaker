@@ -668,6 +668,8 @@ describe("ActivityView", () => {
         displayName: "Stale",
         instanceId: "inst",
         joinedAt: "2024-01-03T12:00:00.000Z",
+        isFirstEncounter: false,
+        isListableFriend: false,
       },
     ]);
     await flushPromises();
