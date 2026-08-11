@@ -15,7 +15,7 @@ defineOptions({
 
 const tagType = computed(() => vtTagElementType(props.variant));
 
-const tagBind = computed(() => {
+function tagBind() {
   // `type` is owned by vtTagElementType; strip caller attrs to avoid el-tag conflicts.
   const forwarded = omitVtTagAttr(attrs as Record<string, unknown>, "type");
   if (tagType.value === undefined) {
@@ -32,11 +32,11 @@ const tagBind = computed(() => {
     ...forwarded,
     type: tagType.value,
   };
-});
+}
 </script>
 
 <template>
-  <el-tag v-bind="tagBind" :size="size">
+  <el-tag v-bind="tagBind()" :size="props.size">
     <slot />
   </el-tag>
 </template>
