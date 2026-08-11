@@ -1,0 +1,72 @@
+---
+description: Form control ラッパーとレイアウト規約（ADR 0021）。新規・改修で触った画面は VtInput / VtSelect / VtCheckbox / VtSwitch を使う
+globs: "frontend/**/*.{vue,ts}"
+alwaysApply: false
+---
+
+# Form & input control design system
+
+正本: [ADR 0021](../docs/adr/0021-form-control-design-system.md)、用語: [`CONTEXT.md`](../CONTEXT.md) Design system 節。
+
+## 使うもの
+
+| 用途 | コンポーネント |
+|------|----------------|
+| テキスト入力 | **`VtInput`** |
+| 単一選択 | **`VtSelect`** + `el-option` |
+| 編集フォーム内の真偽（一括保存） | **`VtCheckbox`** |
+| 即時反映設定・一覧の有効フラグ | **`VtSwitch`** |
+
+`disabled` / `size` / `data-testid` / `placeholder` 等はそのまま渡す（透過）。
+
+## Checkbox vs switch
+
+| 文脈 | 使うもの |
+|------|----------|
+| `el-form` 内・他項目と同じ保存タイミング | **VtCheckbox** |
+| 即時 API 保存の単発設定（多くは Setting row） | **VtSwitch** |
+| 一覧カードの有効/無効即切替 | **VtSwitch**（`size="small"` 可） |
+| UI 表示モード切替（Friends Online/Offline 等） | **UI mode toggle**（既存 toggle-group。VtSwitch にしない） |
+
+**VtSwitch** の `active-text` / `inline-prompt` は使わない。ラベルは外側で付ける。
+
+## レイアウト
+
+| パターン | いつ |
+|----------|------|
+| **Form layout** | 複数項目の編集 → `el-form` + `label-position="top"` + `size="default"`。項目間 `--space-form-field` |
+| **Setting row** | カード内 1 行設定 → `.setting-row`（ラベル左・コントロール右） |
+| **Path input row** | パス入力 → `.path-input-group` + **VtInput** + 参照 **VtButton** `variant="secondary"` |
+
+編集フォーム内の入力は **`el-form-item` 内で幅 100%**（フル幅）を既定とする。
+
+## サイズ
+
+- 省略時 **default**（`el-form size="default"` で継承）
+- `small` は **List enable toggle** の VtSwitch と密集レイアウトの明示指定のみ
+- `large` は使わない
+
+## エラー
+
+| 層 | 示し方 |
+|----|--------|
+| フィールド検証 | `el-form-item` 直下、i18n 固定文 |
+| 一括保存失敗 | `ElMessage.error` |
+| 即時トグル失敗 | ブロック内 `el-alert`（Cookie linkage 型） |
+
+## 移行
+
+- 新規・改修で触ったファイルは Vt* へ。未触りの `el-input` 等直書きは一括置換しない
+- ESLint 禁止は v1 では入れない
+- パス入力: `.cursor/rules/path-input-pattern.mdc`
+
+## Storybook
+
+- `VtInput.stories.ts` / `VtSelect.stories.ts` / `VtCheckbox.stories.ts` / `VtSwitch.stories.ts`
+- `FormLayoutPatterns.stories.ts` — レイアウト例の正本
+
+## 関連
+
+- ボタン: `.cursor/rules/button-design-system.mdc`
+- Element Plus: `.cursor/rules/element-plus-ui.mdc`
+- Storybook: `.cursor/rules/storybook-wails-ui.mdc`

@@ -28,16 +28,22 @@ alwaysApply: false
 ```vue
 <!-- フォルダ選択 -->
 <div class="path-input-group">
-  <input v-model="config.cacheDirectory" type="text" ...>
-  <button type="button" class="btn-browse" @click="browseCacheDirectory">参照</button>
+  <VtInput v-model="config.cacheDirectory" ... />
+  <VtButton variant="secondary" data-testid="cache-browse" @click="browseCacheDirectory">
+    参照
+  </VtButton>
 </div>
 
 <!-- ファイル選択 -->
 <div class="path-input-group">
-  <input v-model="pathSettings.outputLogPath" type="text" ...>
-  <button type="button" class="btn-browse" @click="browseOutputLogPath">参照</button>
+  <VtInput v-model="pathSettings.outputLogPath" ... />
+  <VtButton variant="secondary" data-testid="output-log-browse" @click="browseOutputLogPath">
+    参照
+  </VtButton>
 </div>
 ```
+
+正本: [ADR 0021](../docs/adr/0021-form-control-design-system.md)、`.cursor/rules/form-design-system.mdc`（**Path input row**）。
 
 ```ts
 // フォルダ選択

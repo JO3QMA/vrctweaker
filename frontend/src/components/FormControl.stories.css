@@ -1,0 +1,56 @@
+.vt-form-story-prefix {
+  color: var(--color-text-secondary);
+}
+
+.vt-form-layout-story {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section);
+  max-width: 28rem;
+}
+
+.vt-form-layout-story .el-form-item {
+  margin-bottom: var(--space-form-field);
+}
+
+.vt-form-layout-story .el-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.vt-form-layout-story .el-form-item__content > * {
+  width: 100%;
+}
+
+.vt-setting-row-story {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-block);
+}
+
+.vt-setting-row-story__label {
+  flex: 1;
+  min-width: 0;
+}
+
+.vt-setting-row-story__hint {
+  display: block;
+  margin-top: var(--space-4);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-12);
+}
+
+.vt-setting-row-story__control {
+  flex-shrink: 0;
+}
+
+.vt-path-input-group-story {
+  display: flex;
+  gap: var(--space-action-group);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.vt-path-input-group-story > :first-child {
+  flex: 1;
+  min-width: 0;
+}
