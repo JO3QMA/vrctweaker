@@ -5,7 +5,5 @@ defineOptions({
 </script>
 
 <template>
-  <el-switch v-bind="$attrs">
-    <slot />
-  </el-switch>
+  <el-switch v-bind="$attrs" />
 </template>
