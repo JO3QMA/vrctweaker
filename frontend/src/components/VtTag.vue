@@ -16,13 +16,16 @@ defineOptions({
 const tagType = computed(() => vtTagElementType(props.variant));
 
 const tagBind = computed(() => {
+  // `type` is owned by vtTagElementType; strip caller attrs to avoid el-tag conflicts.
   const forwarded = omitVtTagAttr(attrs as Record<string, unknown>, "type");
   if (tagType.value === undefined) {
     return {
       ...forwarded,
       type: "info" as const,
       effect: "plain" as const,
-      class: ["vt-tag--neutral", attrs.class],
+      class: attrs.class
+        ? ["vt-tag--neutral", attrs.class]
+        : ["vt-tag--neutral"],
     };
   }
   return {
