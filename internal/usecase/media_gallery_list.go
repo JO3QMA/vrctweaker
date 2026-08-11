@@ -52,11 +52,15 @@ func (uc *MediaUseCase) filterScreenshotsWithExistingFiles(list []*media.Screens
 }
 
 func (uc *MediaUseCase) fileExistsCheck(path string) bool {
-	if exists, ok := uc.fileExists.get(path); ok {
+	exists, ok, generation := uc.fileExists.get(path)
+	if ok {
 		return exists
 	}
-	exists := screenshotFileExists(path)
-	uc.fileExists.put(path, exists)
+	exists = screenshotFileExists(path)
+	// Guard the put with the generation observed at get time: if a sync/ingest
+	// invalidated the cache in between, the result is re-derived next listing
+	// instead of re-registering a stale value.
+	uc.fileExists.putIfUnchanged(path, exists, generation)
 	return exists
 }
 

@@ -42,6 +42,10 @@ Accepted（[#99](https://github.com/JO3QMA/vrctweaker/issues/99) で実装）
   キャッシュを無効化する。新規・復帰ファイルは次回一覧から即反映される。
 - **TTL**: ディスク上の外部削除はウォッチャーが検知しないため、TTL 経過後に再 stat して
   一覧へ反映する（最大 30 秒の stale を許容）。
+- **並行性**: 無効化は世代番号を進め、`get` で観測した世代と一致しない `put` は破棄する。
+  一覧の stat と ingest の無効化が並行しても、古い「missing」結果が無効化後に再登録されない。
+- **上限**: キャッシュは `galleryFileStatCacheMaxItems`（8192）で境界。一覧に現れなくなった
+  パスが残り続けるのを防ぐため、超過時に期限切れエントリを掃除し、残る超過分は任意に追い出す。
 - 実装: `internal/usecase/gallery_file_exists_cache.go`、`internal/usecase/media_gallery_list.go`
 
 ## Implementation
