@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
+import { ElOption } from "element-plus";
 import { ref } from "vue";
 import VtSelect from "./VtSelect.vue";
 
@@ -18,7 +19,7 @@ type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
   render: () => ({
-    components: { VtSelect },
+    components: { VtSelect, ElOption },
     setup() {
       const value = ref("ja");
       return { value };
@@ -34,7 +35,7 @@ export const Default: Story = {
 
 export const Disabled: Story = {
   render: () => ({
-    components: { VtSelect },
+    components: { VtSelect, ElOption },
     setup() {
       const value = ref("ja");
       return { value };

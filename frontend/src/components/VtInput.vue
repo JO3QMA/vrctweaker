@@ -7,7 +7,7 @@ defineOptions({
 <template>
   <el-input v-bind="$attrs">
     <template v-for="(_, slotName) in $slots" #[slotName]="slotProps">
-      <slot :name="slotName" v-bind="slotProps || {}" />
+      <slot :name="slotName" v-bind="slotProps ?? {}" />
     </template>
   </el-input>
 </template>

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
+import { ElForm, ElFormItem, ElOption } from "element-plus";
 import { ref } from "vue";
 import VtInput from "./VtInput.vue";
 import VtSelect from "./VtSelect.vue";
@@ -23,7 +24,7 @@ type Story = StoryObj<typeof meta>;
 export const FormLayoutTopLabels: Story = {
   name: "Form layout (top labels)",
   render: () => ({
-    components: { VtInput, VtSelect, VtCheckbox },
+    components: { VtInput, VtSelect, VtCheckbox, ElForm, ElFormItem, ElOption },
     setup() {
       const name = ref("Desktop");
       const lang = ref("ja");
