@@ -16,17 +16,17 @@ defineOptions({
 const tagType = computed(() => vtTagElementType(props.variant));
 
 const tagBind = computed(() => {
-  const rawAttrs = attrs as Record<string, unknown>;
-  if (props.variant === "neutral") {
-    const withoutType = omitVtTagAttr(rawAttrs, "type");
+  const forwarded = omitVtTagAttr(attrs as Record<string, unknown>, "type");
+  if (tagType.value === undefined) {
     return {
-      ...omitVtTagAttr(withoutType, "size"),
-      class: ["vt-tag--neutral", attrs.class],
+      ...forwarded,
+      type: "info" as const,
       effect: "plain" as const,
+      class: ["vt-tag--neutral", attrs.class],
     };
   }
   return {
-    ...omitVtTagAttr(rawAttrs, "size"),
+    ...forwarded,
     type: tagType.value,
   };
 });

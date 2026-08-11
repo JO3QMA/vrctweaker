@@ -16,7 +16,7 @@ export type VtTagProps = {
   size?: VtTagSize;
 };
 
-/** Maps VtTag variant to Element Plus el-tag `type` (neutral omits type). */
+/** Maps VtTag variant to Element Plus el-tag `type` (neutral → undefined; EP binding uses info+plain). */
 export function vtTagElementType(
   variant: VtTagVariant,
 ): "success" | "warning" | "danger" | "info" | "primary" | undefined {

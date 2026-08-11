@@ -19,6 +19,10 @@ const meta = {
       control: "select",
       options: [...VT_TAG_VARIANTS],
     },
+    size: {
+      control: "select",
+      options: ["large", "default", "small"],
+    },
   },
 } satisfies Meta<typeof VtTag>;
 
@@ -30,8 +34,8 @@ function variantStory(label: string, args: VtTagProps): Story {
     args,
     render: (storyArgs) => ({
       components: { VtTag },
-      setup: () => ({ args: storyArgs }),
-      template: `<VtTag v-bind="args">${label}</VtTag>`,
+      setup: () => ({ args: storyArgs, label }),
+      template: `<VtTag v-bind="args">{{ label }}</VtTag>`,
     }),
   };
 }

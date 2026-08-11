@@ -17,6 +17,7 @@ describe("VtTag", () => {
       slots: { default: "3" },
     });
     expect(wrapper.find(".vt-tag--neutral").exists()).toBe(true);
+    expect(wrapper.find(".el-tag--primary").exists()).toBe(false);
     expect(wrapper.find(".el-tag--success").exists()).toBe(false);
   });
 

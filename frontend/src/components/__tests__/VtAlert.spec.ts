@@ -45,4 +45,11 @@ describe("VtAlert", () => {
     });
     expect(wrapper.find("strong").text()).toBe("Extra");
   });
+
+  it("does not render empty description when slot is absent", () => {
+    const wrapper = mount(VtAlert, {
+      props: { variant: "danger", title: "Failed" },
+    });
+    expect(wrapper.find(".el-alert__description").exists()).toBe(false);
+  });
 });
