@@ -34,8 +34,8 @@ function variantStory(label: string, args: VtTagProps): Story {
     args,
     render: (storyArgs) => ({
       components: { VtTag },
-      setup: () => ({ args: storyArgs, label }),
-      template: `<VtTag v-bind="args">{{ label }}</VtTag>`,
+      setup: () => ({ storyArgs, label }),
+      template: `<VtTag v-bind="storyArgs">{{ label }}</VtTag>`,
     }),
   };
 }
@@ -44,7 +44,7 @@ export const Success = variantStory("Success", { variant: "success" });
 export const Warning = variantStory("Warning", { variant: "warning" });
 export const Danger = variantStory("Danger", { variant: "danger" });
 export const Info = variantStory("Info", { variant: "info" });
-export const Neutral = variantStory("3 licenses", { variant: "neutral" });
+export const Neutral = variantStory("Neutral", { variant: "neutral" });
 export const Primary = variantStory("Default", { variant: "primary" });
 
 export const SemanticRow: Story = {

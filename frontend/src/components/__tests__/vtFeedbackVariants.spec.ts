@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { vtAlertElementType } from "../vtAlertVariants";
-import { omitVtTagAttr, vtTagElementType } from "../vtTagVariants";
+import { vtTagElementType } from "../vtTagVariants";
 
 describe("vtAlertElementType", () => {
   it("maps danger to error", () => {
@@ -11,13 +11,5 @@ describe("vtAlertElementType", () => {
 describe("vtTagElementType", () => {
   it("maps neutral to undefined", () => {
     expect(vtTagElementType("neutral")).toBeUndefined();
-  });
-});
-
-describe("omitVtTagAttr", () => {
-  it("removes a single attribute", () => {
-    expect(omitVtTagAttr({ type: "danger", class: "x" }, "type")).toEqual({
-      class: "x",
-    });
   });
 });

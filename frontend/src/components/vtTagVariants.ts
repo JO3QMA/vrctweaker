@@ -23,13 +23,3 @@ export function vtTagElementType(
   if (variant === "neutral") return undefined;
   return variant;
 }
-
-/** Omit a single attribute before forwarding to Element Plus. */
-export function omitVtTagAttr(
-  attrs: Record<string, unknown>,
-  key: string,
-): Record<string, unknown> {
-  const copy = { ...attrs };
-  delete copy[key];
-  return copy;
-}

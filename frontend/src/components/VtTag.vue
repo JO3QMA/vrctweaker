@@ -1,10 +1,6 @@
 <script setup lang="ts">
 import { computed, useAttrs } from "vue";
-import {
-  type VtTagProps,
-  omitVtTagAttr,
-  vtTagElementType,
-} from "./vtTagVariants";
+import { type VtTagProps, vtTagElementType } from "./vtTagVariants";
 
 const props = defineProps<VtTagProps>();
 const attrs = useAttrs();
@@ -14,29 +10,23 @@ defineOptions({
 });
 
 const tagType = computed(() => vtTagElementType(props.variant));
-
-function tagBind() {
-  // `type` is owned by vtTagElementType; strip caller attrs to avoid el-tag conflicts.
-  const forwarded = omitVtTagAttr(attrs as Record<string, unknown>, "type");
-  if (tagType.value === undefined) {
-    return {
-      ...forwarded,
-      type: "info" as const,
-      effect: "plain" as const,
-      class: attrs.class
-        ? ["vt-tag--neutral", attrs.class]
-        : ["vt-tag--neutral"],
-    };
-  }
-  return {
-    ...forwarded,
-    type: tagType.value,
-  };
-}
+const isNeutral = computed(() => tagType.value === undefined);
 </script>
 
 <template>
-  <el-tag v-bind="tagBind()" :size="props.size">
+  <el-tag
+    v-bind="attrs"
+    :type="isNeutral ? 'info' : tagType"
+    :effect="isNeutral ? 'plain' : undefined"
+    :class="
+      isNeutral
+        ? attrs.class
+          ? ['vt-tag--neutral', attrs.class]
+          : 'vt-tag--neutral'
+        : undefined
+    "
+    :size="props.size"
+  >
     <slot />
   </el-tag>
 </template>
