@@ -744,9 +744,11 @@ function onRefreshClick(): void {
   void load();
 }
 
-async function load(): Promise<void> {
+async function load(background = false): Promise<void> {
   loadError.value = null;
-  loading.value = true;
+  if (!background) {
+    loading.value = true;
+  }
   try {
     const filter = buildGallerySearchFilter(
       filterWorldSearch.value,
@@ -767,7 +769,9 @@ async function load(): Promise<void> {
     loadError.value = err instanceof Error ? err.message : String(err);
     list.value = [];
   } finally {
-    loading.value = false;
+    if (!background) {
+      loading.value = false;
+    }
   }
 }
 
@@ -777,7 +781,9 @@ function scheduleLoadFromPictureWatcher(): void {
   }
   screenshotsChangedDebounceTimer = setTimeout(() => {
     screenshotsChangedDebounceTimer = null;
-    void load();
+    // バックグラウンド更新: loading を立てずにグリッドを差し替えることで
+    // スクロール位置を保持する（#27）。
+    void load(true);
   }, GALLERY_SCREENSHOTS_CHANGED_DEBOUNCE_MS);
 }
 

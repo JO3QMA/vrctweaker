@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createRouter, createWebHashHistory } from "vue-router";
 import ActivityView from "../ActivityView.vue";
+import type { UserEncounterDTO } from "../../wails/app";
 
 const {
   mockEncounters,
@@ -570,6 +571,30 @@ describe("ActivityView", () => {
     mockEncounters.mockResolvedValue([]);
     const { wrapper } = await mountActivity();
     expect(wrapper.find(".empty").text()).toContain("遭遇");
+  });
+
+  it("keeps the encounter table mounted during background refresh", async () => {
+    vi.useFakeTimers();
+    mockEncounters.mockResolvedValue([
+      {
+        id: "1",
+        vrcUserId: "u1",
+        displayName: "Alpha",
+        instanceId: "inst",
+        joinedAt: "2024-01-01T12:00:00.000Z",
+      },
+    ]);
+    const { wrapper } = await mountActivity();
+    expect(wrapper.find(".el-table").exists()).toBe(true);
+
+    // バックグラウンド更新が保留中でも loading でテーブルを差し替えず維持する（#27）
+    mockEncounters.mockReturnValue(new Promise<UserEncounterDTO[]>(() => {}));
+    runtimeHooks.encountersChangedHandler?.();
+    await vi.advanceTimersByTimeAsync(400);
+
+    expect(wrapper.find(".encounter-log-scroll .loading").exists()).toBe(false);
+    expect(wrapper.find(".el-table").exists()).toBe(true);
+    vi.useRealTimers();
   });
 
   it("collapses encounter section when header toggle is clicked", async () => {

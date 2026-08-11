@@ -238,6 +238,28 @@ describe("GalleryView", () => {
     expect(mockScreenshots).not.toHaveBeenCalled();
   });
 
+  it("keeps the gallery grid mounted during background refresh", async () => {
+    vi.useFakeTimers();
+    const debounceMs = 400;
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    expect(wrapper.find("[data-testid='gallery-grid-scroll']").exists()).toBe(
+      true,
+    );
+
+    // バックグラウンド更新が保留中でも loading でグリッドを差し替えず維持する（#27）
+    mockScreenshots.mockReturnValue(new Promise<ScreenshotDTO[]>(() => {}));
+    wailsEventListeners["gallery:screenshots-changed"]?.();
+    await vi.advanceTimersByTimeAsync(debounceMs);
+    await flushPromises();
+
+    expect(wrapper.find(".loading").exists()).toBe(false);
+    expect(wrapper.find("[data-testid='gallery-grid-scroll']").exists()).toBe(
+      true,
+    );
+    vi.useRealTimers();
+  });
+
   it("fetches thumbnail data URLs via App.screenshotThumbnailDataURL", async () => {
     const wrapper = mount(GalleryView, { attachTo: host });
     await flushPromises();

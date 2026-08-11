@@ -240,21 +240,29 @@ function scheduleActivityRefresh(): void {
   }
   encountersChangedDebounceTimer = setTimeout(() => {
     encountersChangedDebounceTimer = null;
-    void refreshActivity();
+    // バックグラウンド更新: loading を立てずにデータだけ差し替えることで、
+    // 遭遇ログのスクロール位置を保持する（#27）。
+    void refreshActivity(true);
   }, ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS);
 }
 
-async function loadEncounters(): Promise<void> {
-  encountersLoading.value = true;
+async function loadEncounters(background = false): Promise<void> {
+  if (!background) {
+    encountersLoading.value = true;
+  }
   try {
     encounters.value = await App.encounters();
   } finally {
-    encountersLoading.value = false;
+    if (!background) {
+      encountersLoading.value = false;
+    }
   }
 }
 
-async function loadStats(): Promise<void> {
-  statsLoading.value = true;
+async function loadStats(background = false): Promise<void> {
+  if (!background) {
+    statsLoading.value = true;
+  }
   try {
     const days = playtimeChartDays.value;
     const to = new Date();
@@ -265,12 +273,14 @@ async function loadStats(): Promise<void> {
     statsRangeTo.value = toStr;
     stats.value = await App.getActivityStats(fromStr, toStr);
   } finally {
-    statsLoading.value = false;
+    if (!background) {
+      statsLoading.value = false;
+    }
   }
 }
 
-async function refreshActivity(): Promise<void> {
-  await Promise.all([loadEncounters(), loadStats()]);
+async function refreshActivity(background = false): Promise<void> {
+  await Promise.all([loadEncounters(background), loadStats(background)]);
 }
 
 onMounted(() => {
