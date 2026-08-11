@@ -13,6 +13,10 @@ function show(variant: ToastVariant, message: string): MessageHandler {
       return ElMessage.error(message);
     case "info":
       return ElMessage.info(message);
+    default: {
+      const _exhaustive: never = variant;
+      throw new Error(`Unknown toast variant: ${String(_exhaustive)}`);
+    }
   }
 }
 
