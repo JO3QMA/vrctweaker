@@ -708,7 +708,7 @@ _Avoid_: 常時実行, バックグラウンドサービス（v1 で含意しな
 
 ## Design system
 
-ボタン様式・余白・色・タイポグラフィ・フォーム入力部品などアプリ横断 UI 部品の用語。**VtButton** と 4 **Button variant**（[ADR 0017](docs/adr/0017-button-design-system-vtbutton.md)）は grill-with-docs で合意済み。**Spacing**（余白ルール）（[ADR 0018](docs/adr/0018-spacing-design-system.md)）は grill-with-docs で合意済み。**Color**（カラーパレット）（[ADR 0019](docs/adr/0019-color-design-system.md)）は grill-with-docs で合意済み。**Typography**（タイポグラフィ）（[ADR 0020](docs/adr/0020-typography-design-system.md)）は grill-with-docs で合意済み。**Form control** ラッパー（VtInput / VtSelect / VtCheckbox / VtSwitch）は grill-with-docs で合意済み（[ADR 0021](docs/adr/0021-form-control-design-system.md)）。実装契約は各 ADR を正本とする。色コード・hex 値・個別 props など実装詳細はここに書かない。
+ボタン様式・余白・色・タイポグラフィ・フォーム入力部品などアプリ横断 UI 部品の用語。**VtButton** と 4 **Button variant**（[ADR 0017](docs/adr/0017-button-design-system-vtbutton.md)）は grill-with-docs で合意済み。**Spacing**（余白ルール）（[ADR 0018](docs/adr/0018-spacing-design-system.md)）は grill-with-docs で合意済み。**Color**（カラーパレット）（[ADR 0019](docs/adr/0019-color-design-system.md)）は grill-with-docs で合意済み。**Typography**（タイポグラフィ）（[ADR 0020](docs/adr/0020-typography-design-system.md)）は grill-with-docs で合意済み。**Form control** ラッパー（VtInput / VtSelect / VtCheckbox / VtSwitch）は grill-with-docs で合意済み（[ADR 0021](docs/adr/0021-form-control-design-system.md)）。**Feedback & Badges**（Alert / Toast / Badge / Loading の横断チャネル）は grill-with-docs で合意済み（[ADR 0022](docs/adr/0022-feedback-badges-design-system.md)）。実装契約は各 ADR を正本とする。色コード・hex 値・個別 props など実装詳細はここに書かない。
 
 ### Language
 
@@ -1052,11 +1052,11 @@ _Avoid_: Readonly 様式, Loading 入力（ボタン loading と混同しやす�
 _Avoid_: ElMessage（一括保存失敗と混同しやすいため）, バリデーション（サーバー応答のマッピングまで含意しうるため）
 
 **Form save failure feedback**:
-編集フォームの一括保存 API が失敗したときの示し方。既存どおり **`ElMessage.error`**（i18n + `formatBackendError` 等）。フィールド別に原因が分からない失敗を `el-form-item` へ割り当てない。
+編集フォームの一括保存 API が失敗したときの示し方。既存どおり **showToast.error**（i18n + `formatBackendError` 等）。フィールド別に原因が分からない失敗を `el-form-item` へ割り当てない。
 _Avoid_: フィールドエラー, セクション alert（即時反映失敗と混同しやすいため）
 
 **Immediate toggle failure feedback**:
-**Immediate setting toggle** または **List enable toggle** の API 失敗の示し方。**そのブロック内**の `el-alert` またはブロック直下のエラー行（Cookie linkage 型）。**i18n 分類済みの短い文**のみ。`ElMessage.error` だけに頼らない（一覧トグルと Setting row を同型にする）。失敗後はトグルを操作前の Effective 状態へ戻す（Cookie linkage draft 型）。
+**Immediate setting toggle** または **List enable toggle** の API 失敗の示し方。**そのブロック内**の **VtAlert** またはブロック直下のエラー行（Cookie linkage 型）。**i18n 分類済みの短い文**のみ。**showToast** だけに頼らない（一覧トグルと Setting row を同型にする）。失敗後はトグルを操作前の Effective 状態へ戻す（Cookie linkage draft 型）。
 _Avoid_: Form save failure feedback, 生のバックエンドエラー, Server status fetch failure（読み取り失敗と混同しやすいため）
 
 **Form fetch failure**:
@@ -1102,6 +1102,94 @@ _Avoid_: フォーム行（**Form layout** 全体と混同しやすいため）,
 **Form layout adoption**:
 Form layout / Setting row への揃え方針。新規・改修で複数項目編集は **Form layout**、カード内単発の横並び設定は **Setting row**。既存のばらつき（`setting-row` 内 `el-input-number` 等）は一括置換しない（触ったところから）。Spacing は **Spacing token** / **Spacing pattern** を使う。
 _Avoid_: 全面レイアウト統一, el-form 強制の CI（即時一括を含意するため）
+
+**Feedback & Badges**:
+アプリ横断のフィードバック表示ルール。**Feedback channel**（Alert / Toast / Badge / Loading）の使い分けと配置の正本。**Form control** ADR のエラー 3 層（フィールド検証・一括保存・即時トグル・取得失敗）はフィールド文脈の契約として残し、**どのチャネルを使うか**はここで結線する（上書き・再定義はしない）。色は **Semantic color catalog**（[ADR 0019](docs/adr/0019-color-design-system.md)）を参照する。
+_Avoid_: エラー表示（Form 専用の 3 層まで含む総称）, 通知（OS 通知や `ElNotification` を含意しうるため）
+
+**Feedback channel**:
+ユーザーへ状態・結果・注意を伝える表示経路の総称。v1 で扱う 4 種: **Section alert**（インライン `el-alert`）、**Toast**（`ElMessage`）、**Status badge**（`el-tag` 等のラベル）、**Loading feedback**（**Button loading state** 以外の待機表示を含む）。チャネル選択の正本は **Feedback & Badges** ADR（予定）。
+_Avoid_: フィードバック（Form バリデーションだけを指す印象）, ElNotification（v1 では未採用の別 API）
+
+**Section alert**:
+**Feedback channel** のひとつ。画面上の特定**セクション・カード・ブロック内**に置くインラインアラート（v1 実装は **VtAlert**、内部 `el-alert`）。**条件が解消するまで**（または画面を離れるまで）残す状態・注意・ブロック内操作失敗を示す。`show-icon`・`:closable="false"` を既定とする（v1）。**Fetch failure**（Presence / Launch block / Gallery loadError / Video playback history 等）、**Immediate toggle failure feedback**、常時リスク警告（Cookie BAN 文、Launcher 未保存バナー）に使う。バックグラウンド refresh 失敗も、対象ブロックの状態としてここに示す（Toast にしない）。
+_Avoid_: Toast, トースト, ElMessage（一時通知と混同しやすいため）, モーダル（`ElMessageBox` と混同しやすいため）
+
+**VtAlert**:
+**Section alert** の標準ラッパー。内部は `el-alert`。`variant`: `success` | `warning` | `danger` | `info`（**必須**。暗黙既定なし）。**Semantic color catalog** と 1 対 1。既定で `show-icon`・`:closable="false"`。`title`・`description`・`data-testid` 等は透過。**VtAlert adoption**（触ったところから `el-alert` 直書きを置換）。
+_Avoid_: el-alert（移行完了後の直呼び）, Toast
+
+**VtAlert adoption**:
+VtAlert への移行方針。新規・改修で **Section alert** には **VtAlert** を使う。未着手の `el-alert` 直書きは一括置換しない。ESLint 強制は v1 では入れない。見た目の正本は **VtAlert Storybook catalog**。
+_Avoid_: 全面置換, el-alert 禁止の CI 強制
+
+**VtAlert Storybook catalog**:
+VtAlert の Storybook 一覧。4 `variant` それぞれ（通常・長文 `description` あり）と、常時 warning / ブロック内 error の使用例を載せる（**VtTag Storybook catalog** と同型）。
+_Avoid_: 全画面 Storybook, Section alert（配置ルールまで含む総称）
+
+**Toast**:
+**Feedback channel** のひとつ。**showToast** 経由の画面端一時通知（内部は `ElMessage`）。**ユーザーが明示操作した直後**の結果フィードバック（保存・起動・反映・削除の成否、件数付き成功メッセージ等）。数秒で自動消滅し、消えても画面の主要 UI は読める。**Fetch failure** やブロック読み取り失敗には使わない（**Section alert** またはカード内文言）。`success` / `error` / `warning` / `info` は **Semantic color catalog** と 1 対 1。
+_Avoid_: Section alert, 通知バナー（常時表示を含意するため）, ElNotification（v1 未採用 API）, ElMessage 直叩き（新規・改修の正本は **showToast**）
+
+**showToast**:
+**Toast** の薄いユーティリティ（`frontend/src/utils/showToast.ts` 等）。`showToast.success(message)` / `.error` / `.warning` / `.info` で `ElMessage` に委譲。引数は **i18n 済み string のみ**（生 `Error`・バックエンド生文字列は渡さない）。例外は呼び出し側で `formatError` / `formatBackendError` してから渡す。表示時間・`grouping` 等の既定はここに集約。**showToast adoption**（触ったところから `ElMessage.*` 直叩きを置換）。DOM ラッパー（VtToast）は v1 では作らない。
+_Avoid_: VtToast, errorFromUnknown（例外吸収の魔法 API。v1 では呼び出し側で format して明示）, ElMessage（実装 API 名だけの直呼び正本）
+
+**showToast adoption**:
+showToast への移行方針。新規・改修で **Toast** には **showToast** を使う。未着手の `ElMessage.*` 直叩きは一括置換しない。ESLint 強制は v1 では入れない。
+_Avoid_: 全面置換, ElMessage 禁止の CI 強制
+
+**Feedback channel selection**:
+Alert と Toast の切り分け正本。**主軸は持続性**（解消まで残す → Section alert、操作直後 → Toast）。**補足は文脈の近さ**（特定ブロックの状態 → Section alert、画面横断の操作結果 → Toast）。**Form save failure feedback** は Toast（**showToast.error**）。**Form fetch failure** は Section alert 型（Toast 禁止）。**Immediate toggle failure feedback** は Section alert 型。
+_Avoid_: 重要度だけで機械分岐（success は常に Toast 等。常時 warning は Section alert のため）
+
+**Status badge**:
+**Feedback channel** のひとつ。短いラベルで状態・結果・属性を示すチップ UI（主に `el-tag`）。v1 では **Semantic status badge**・**Neutral badge**・**Domain badge** の 3 分類。**VtTag** が Semantic / Neutral の標準ラッパー。**Domain badge** は専用コンポーネントのまま **VtTag adoption** 対象外。
+_Avoid_: User tag chip（**Domain badge** の VrcUserTagChip と混同しやすいため）, バッジ（通知バッジの OS/UI 俗称）
+
+**Semantic status badge**:
+操作結果・有効状態・ログイン済みなど、**良し悪し・注意度**を **Semantic color catalog**（success / warning / danger / info）で示す **Status badge**。Automation 実行ログの成否、Settings のログイン済み表示など。**VtTag** の `variant`（または EP `type`）で 4 色と 1 対 1。**Domain badge** や **Neutral badge** に Semantic 色を流用しない。
+_Avoid_: primary ラベル（Brand 寄り属性と混同しやすいため）, プレゼンス色（**Domain badge**）
+
+**Neutral badge**:
+意味論色を持たない **Status badge**。件数・カテゴリ・技術メタのラベル（Licenses 件数、Automation の kind 表示など）。**VtTag** の `variant="neutral"`（`type` 省略・EP 既定の中立灰）。**Launch profile default label** は例外（下記）。
+_Avoid_: Semantic status badge, info（補足通知色と混同しやすいため）
+
+**Launch profile default label**:
+Launcher サイドバー一覧で **Default launch profile** を示す **Status badge**。**Semantic status badge** ではない。**Neutral badge** でもなく、**Brand color** 寄りの `primary`（**VtTag** `variant="primary"` または EP `type="primary"`）を**この 1 用途だけ**許可する。成功・ログイン済み等の Semantic 表示と混同しない。
+_Avoid_: 既定タグ（Neutral への統一を含意するため）, success バッジ（状態の良し悪しと混同しやすいため）
+
+**Domain badge**:
+特定ドメインだけが持つ意味付きチップ。**Semantic color catalog** を横断フィードバックとして流用しない（**VtButton** の **Semantic button** と同型の例外）。v1: **VrcStatusTag**（プレゼンス文字列）、**VrcUserTagChip**（User tag）。専用 Storybook・色ルールは各ドメイン／**Domain color** ADR 側。**VtTag** には寄せない。
+_Avoid_: Semantic status badge, Status badge（3 分類全体と混同しやすいため）
+
+**VtTag**:
+**Semantic status badge**・**Neutral badge**・**Launch profile default label** の標準ラッパー。内部は `el-tag`。`variant`: `success` | `warning` | `danger` | `info` | `neutral` | `primary`（**必須**。暗黙既定なし）。`primary` は **Launch profile default label** のみ（**Brand color mapping**）。`size`・`data-testid` 等は透過。**VtTag adoption**（触ったところから `el-tag` 直書きを置換）。**Domain badge** は対象外。
+_Avoid_: el-tag（移行完了後の直呼び）, VrcStatusTag（**Domain badge**）
+
+**VtTag adoption**:
+VtTag への移行方針。新規・改修で Semantic / Neutral の **Status badge** には **VtTag** を使う。**Domain badge** は専用 UI のまま。未着手の `el-tag` 直書きは一括置換しない。ESLint 強制は v1 では入れない。見た目の正本は **VtTag Storybook catalog**。
+_Avoid_: 全面置換, Domain badge の VtTag 化
+
+**Loading feedback**:
+**Feedback channel** のひとつ。非同期処理の待機を示す表示。v1 は **Action loading** と **Section loading** の 2 層のみ。**Button loading state**（[ADR 0017](docs/adr/0017-button-design-system-vtbutton.md)）を操作待ちの正本とする。`v-loading` オーバーレイ・スケルトン・画面全体ロック・進捗％は v1 スコープ外。
+_Avoid_: Button loading state（第 2 の様式名。操作ボタン待ちは ADR 0017 を正本とする）, スピナー（実装部品の総称）
+
+**Action loading**:
+ユーザーが押した**操作ボタン**に付ける待機表示。**Button loading state** と同義。VtButton / `el-button` の `:loading`。Action group 内の他ボタンまで一括無効化は原則しない。取得中は関連入力を `disabled` してよい（Gallery の `loading || scanning` と同型）。
+_Avoid_: Section loading, 画面ロック
+
+**Section loading**:
+ブロック・カード・一覧の**初回または再取得中**に、その領域内でコンテンツの代わりに示す待機表示。中立テキスト 1 行（`common.loading` またはブロック専用 i18n、**Neutral text**）。Presence change・Activity・Video 履歴が代表例。loading 中は **Toast** を出さない。**Section alert**（loadError）と排他（loading → error → content）。一覧が空でも loading 中は empty メッセージを出さない。
+_Avoid_: v-loading, スケルトン, Toast, Action loading（押下ボタンだけの待ち）
+
+**Feedback & Badges v1 scope**:
+Feedback & Badges 策定の最初の届け範囲。**VtAlert**・**VtTag**・**showToast**、各 Storybook catalog（Alert / Tag）、単体テスト、`.cursor/rules/feedback-design-system.mdc`、ADR 0022、`CONTEXT.md`、**Feedback channel selection** 参照表（Form ADR 3 層との結線）に限定する。含めないもの: `ElNotification`・OS 通知、`v-loading`・スケルトン・進捗％、VtToast、全 View 一括置換、ESLint 強制、Dashboard refresh 警告や Automation トグル失敗の v1 強制移行、**Domain badge** の変更。
+_Avoid_: Feedback & Badges（v1 範囲を指すときは scope とセットで書く）, 将来拡張（スコープ外リストの総称として曖昧なため）
+
+**Feedback & Badges v1 deliverables**:
+Issue／PR で最初に届ける具体物。(1) **VtAlert** + テスト + **VtAlert Storybook catalog**、(2) **VtTag**（semantic 4 + neutral + primary）+ テスト + **VtTag Storybook catalog**、(3) **showToast** + テスト、(4) `.cursor/rules/feedback-design-system.mdc`、(5) `docs/adr/0022-feedback-badges-design-system.md`、(6) `CONTEXT.md` 同期。移行は **VtAlert adoption** / **VtTag adoption** / **showToast adoption** のみ（触ったところから）。
+_Avoid_: Feedback & Badges v1 scope（届け物リストを指すときは deliverables とセットで書く）, 全画面置換（adoption と矛盾するため）
 
 ## Agent contribution
 

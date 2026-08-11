@@ -51,8 +51,9 @@ alwaysApply: false
 | 層 | 示し方 |
 |----|--------|
 | フィールド検証 | `el-form-item` 直下、i18n 固定文 |
-| 一括保存失敗 | `ElMessage.error` |
-| 即時トグル失敗 | ブロック内 `el-alert`（Cookie linkage 型） |
+| 一括保存失敗 | **showToast.error**（[Feedback ADR](../docs/adr/0022-feedback-badges-design-system.md)） |
+| 即時トグル失敗 | **VtAlert**（ブロック内。Cookie linkage 型） |
+| フォーム取得失敗 | **VtAlert** 型またはカード内文言（Toast 禁止） |
 
 ## 移行
 
@@ -67,6 +68,7 @@ alwaysApply: false
 
 ## 関連
 
+- フィードバック: `.cursor/rules/feedback-design-system.mdc`
 - ボタン: `.cursor/rules/button-design-system.mdc`
 - Element Plus: `.cursor/rules/element-plus-ui.mdc`
 - Storybook: `.cursor/rules/storybook-wails-ui.mdc`

@@ -1,0 +1,6 @@
+.vt-tag-story-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-action-group, 8px);
+  align-items: center;
+}

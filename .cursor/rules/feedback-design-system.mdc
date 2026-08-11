@@ -1,0 +1,72 @@
+---
+description: Feedback & badges デザインシステム（ADR 0022）。Section alert / Toast / Status badge / Loading のチャネル選択
+globs: "frontend/**/*.{vue,ts}"
+alwaysApply: false
+---
+
+# Feedback & badges design system
+
+正本: [ADR 0022](../docs/adr/0022-feedback-badges-design-system.md)、用語: [`CONTEXT.md`](../CONTEXT.md) Design system 節。
+
+## 使うもの
+
+| チャネル | いつ | 実装 |
+|----------|------|------|
+| **Section alert** | 解消まで残す・ブロック内状態・fetch 失敗・常時警告 | **`VtAlert`** |
+| **Toast** | ユーザー操作直後の成否 | **`showToast`**（`frontend/src/utils/showToast.ts`） |
+| **Status badge** | Semantic / Neutral / default ラベル | **`VtTag`** |
+| **Action loading** | 押したボタンの待ち | **VtButton** `:loading`（[ADR 0017](../docs/adr/0017-button-design-system-vtbutton.md)） |
+| **Section loading** | ブロック取得中 | 中立テキスト 1 行（`common.loading` 等） |
+
+## VtAlert
+
+- **`variant` は必須**: `success` | `warning` | `danger` | `info`
+- 既定: `show-icon`、`:closable="false"`
+- `title` / `description` / `data-testid` は透過
+- fetch failure・即時トグル失敗・常時 warning に使う。**Toast にしない**
+
+## showToast
+
+- `showToast.success` / `.warning` / `.error` / `.info`
+- 引数は **i18n 済み string のみ**（生バックエンドエラーは `formatError` してから渡す）
+- `ElMessage.*` 直叩きは adoption で **showToast** へ
+
+## VtTag
+
+- **`variant` は必須**: `success` | `warning` | `danger` | `info` | `neutral` | `primary`
+- `primary` は **Launch profile default label** のみ
+- **Domain badge**（VrcStatusTag / VrcUserTagChip）は VtTag にしない
+- サイズ: 一覧・ログは `size="small"` 明示可。`large` は増やさない
+
+## Form ADR との結線
+
+| Form 用語 | チャネル |
+|-----------|----------|
+| Form field validation error | `el-form-item` |
+| Form save failure feedback | **showToast.error** |
+| Immediate toggle failure feedback | **VtAlert** |
+| Form fetch failure | **VtAlert** 型（Toast 禁止） |
+
+## Loading
+
+- 操作待ち: **Button loading state** のみ（画面全体ロックしない）
+- ブロック取得: Section loading テキスト。loading 中 Toast なし。loadError と排他
+
+## v1 で使わない
+
+- `ElNotification`、OS 通知、`v-loading`、スケルトン、VtToast
+
+## 移行
+
+- 新規・改修で触ったファイルは VtAlert / VtTag / showToast へ。一括置換・ESLint 禁止は v1 では入れない
+
+## Storybook
+
+- `VtAlert.stories.ts` / `VtTag.stories.ts` が見た目の正本
+
+## 関連
+
+- 色: `.cursor/rules/color-design-system.mdc`
+- フォームエラー: `.cursor/rules/form-design-system.mdc`
+- Element Plus: `.cursor/rules/element-plus-ui.mdc`
+- Storybook: `.cursor/rules/storybook-wails-ui.mdc`
