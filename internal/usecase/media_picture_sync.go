@@ -21,6 +21,9 @@ func (uc *MediaUseCase) SyncPictureFolder(ctx context.Context, basePath string, 
 	if err != nil {
 		return ingested, err
 	}
+	// The folder may have gained or lost files; drop cached existence results so
+	// the next Gallery listing reflects the synced state.
+	uc.fileExists.invalidateAll()
 	return ingested + updated, nil
 }
 

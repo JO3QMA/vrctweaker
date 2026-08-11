@@ -46,12 +46,18 @@ type MediaUseCase struct {
 	repo          screenshotRepo
 	worldRepo     worldInfoRepo
 	userCacheRepo userCacheRepo
+	fileExists    *galleryFileExistsCache
 }
 
 // NewMediaUseCase creates a new MediaUseCase.
 // worldRepo and userCacheRepo may be nil; when set, extracted metadata is upserted into world_info and users_cache.
 func NewMediaUseCase(repo screenshotRepo, worldRepo worldInfoRepo, userCacheRepo userCacheRepo) *MediaUseCase {
-	return &MediaUseCase{repo: repo, worldRepo: worldRepo, userCacheRepo: userCacheRepo}
+	return &MediaUseCase{
+		repo:          repo,
+		worldRepo:     worldRepo,
+		userCacheRepo: userCacheRepo,
+		fileExists:    newGalleryFileExistsCache(),
+	}
 }
 
 func (uc *MediaUseCase) upsertWorldInfo(ctx context.Context, worldID, worldName string, at time.Time) {
@@ -109,6 +115,10 @@ func (uc *MediaUseCase) IngestScreenshotFile(ctx context.Context, path string) (
 		return nil, false, nil
 	}
 
+	// The file is confirmed on disk; drop any cached missing/exists result so
+	// the next Gallery listing re-checks it (covers restored and new files).
+	uc.fileExists.invalidatePath(path)
+
 	existing, _ := uc.repo.GetByFilePath(ctx, path)
 	if existing != nil {
 		return existing, false, nil
@@ -149,7 +159,11 @@ func (uc *MediaUseCase) IngestScreenshotFile(ctx context.Context, path string) (
 // onProgress is optional; when non-nil it receives listing/importing snapshots.
 func (uc *MediaUseCase) ScanDirectory(ctx context.Context, basePath string, onProgress func(ScanProgress)) (int, error) {
 	count, _, err := uc.ingestImagePathsInDir(ctx, basePath, onProgress)
-	return count, err
+	if err != nil {
+		return count, err
+	}
+	uc.fileExists.invalidateAll()
+	return count, nil
 }
 
 // IngestUnderPictureRootSince walks basePath for image files whose ModTime is strictly after since
@@ -196,6 +210,7 @@ func (uc *MediaUseCase) IngestUnderPictureRootSince(ctx context.Context, basePat
 	if err != nil {
 		return createdCount, err
 	}
+	uc.fileExists.invalidateAll()
 	return createdCount, nil
 }
 

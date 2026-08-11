@@ -21,7 +21,7 @@ func (uc *MediaUseCase) ListScreenshotsInGalleryScope(ctx context.Context, pictu
 	if err != nil {
 		return nil, err
 	}
-	return filterScreenshotsWithExistingFiles(list), nil
+	return uc.filterScreenshotsWithExistingFiles(list), nil
 }
 
 func cloneScreenshotFilter(f *media.ScreenshotFilter) *media.ScreenshotFilter {
@@ -32,7 +32,10 @@ func cloneScreenshotFilter(f *media.ScreenshotFilter) *media.ScreenshotFilter {
 	return &cp
 }
 
-func filterScreenshotsWithExistingFiles(list []*media.Screenshot) []*media.Screenshot {
+// filterScreenshotsWithExistingFiles excludes rows whose file is missing on disk.
+// Existence checks are memoized for a short TTL (see galleryFileExistsCache) so
+// repeated listings with many screenshots avoid a stat per row on every call.
+func (uc *MediaUseCase) filterScreenshotsWithExistingFiles(list []*media.Screenshot) []*media.Screenshot {
 	if len(list) == 0 {
 		return list
 	}
@@ -41,14 +44,27 @@ func filterScreenshotsWithExistingFiles(list []*media.Screenshot) []*media.Scree
 		if s == nil {
 			continue
 		}
-		if screenshotFileExists(s.FilePath) {
+		if uc.fileExistsCheck(s.FilePath) {
 			out = append(out, s)
 		}
 	}
 	return out
 }
 
-func screenshotFileExists(path string) bool {
+func (uc *MediaUseCase) fileExistsCheck(path string) bool {
+	if exists, ok := uc.fileExists.get(path); ok {
+		return exists
+	}
+	exists := screenshotFileExists(path)
+	uc.fileExists.put(path, exists)
+	return exists
+}
+
+// screenshotFileExists reports whether path is a regular file on disk.
+// Overridable in tests to observe how often listing stats paths.
+var screenshotFileExists = statScreenshotFile
+
+func statScreenshotFile(path string) bool {
 	info, err := os.Stat(path)
 	if err != nil {
 		return false
