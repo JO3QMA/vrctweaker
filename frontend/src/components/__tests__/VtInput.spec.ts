@@ -23,6 +23,15 @@ describe("VtInput", () => {
     expect(input.attributes("disabled")).toBeDefined();
   });
 
+  it("forwards modelValue to the inner input", () => {
+    const wrapper = mount(VtInput, {
+      attrs: { modelValue: "hello" },
+    });
+    expect((wrapper.find("input").element as HTMLInputElement).value).toBe(
+      "hello",
+    );
+  });
+
   it("forwards prefix slot", () => {
     const wrapper = mount(VtInput, {
       slots: {

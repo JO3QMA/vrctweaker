@@ -82,9 +82,9 @@ export const PathInputRow: Story = {
     },
     template: `
       <div class="vt-form-layout-story">
-        <label>Output log path</label>
+        <label for="output-log-path">Output log path</label>
         <div class="vt-path-input-group-story">
-          <VtInput v-model="path" />
+          <VtInput id="output-log-path" v-model="path" />
           <VtButton variant="secondary">Browse</VtButton>
         </div>
       </div>

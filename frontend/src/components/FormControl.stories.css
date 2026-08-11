@@ -17,8 +17,7 @@
   margin-bottom: 0;
 }
 
-.vt-form-layout-story .el-form-item__content > .el-input,
-.vt-form-layout-story .el-form-item__content > .el-select {
+.vt-form-layout-story .el-form-item__content > * {
   width: 100%;
 }
 
@@ -35,7 +34,7 @@
 
 .vt-setting-row-story__hint {
   display: block;
-  margin-top: var(--space-inline-tight);
+  margin-top: var(--space-4);
   color: var(--color-text-secondary);
   font-size: var(--font-size-12);
 }
@@ -51,7 +50,7 @@
   flex-wrap: wrap;
 }
 
-.vt-path-input-group-story .el-input {
+.vt-path-input-group-story > :first-child {
   flex: 1;
   min-width: 0;
 }
