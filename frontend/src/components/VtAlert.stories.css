@@ -1,0 +1,6 @@
+.vt-alert-story-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-block, 16px);
+  max-width: 40rem;
+}
