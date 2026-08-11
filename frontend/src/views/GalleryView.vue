@@ -744,21 +744,29 @@ function onRefreshClick(): void {
   void load();
 }
 
+let loadGeneration = 0;
+let loadForegroundGeneration = 0;
+
 async function load(background = false): Promise<void> {
   loadError.value = null;
+  const gen = ++loadGeneration;
   if (!background) {
     loading.value = true;
+    loadForegroundGeneration = gen;
   }
   try {
     const filter = buildGallerySearchFilter(
       filterWorldSearch.value,
       filterDateRange.value,
     );
+    let next: ScreenshotDTO[];
     if (filter) {
-      list.value = await App.searchScreenshots(filter);
+      next = await App.searchScreenshots(filter);
     } else {
-      list.value = await App.screenshots("");
+      next = await App.screenshots("");
     }
+    if (gen !== loadGeneration) return;
+    list.value = next;
     if (
       selected.value &&
       !list.value.find((s) => s.id === selected.value?.id)
@@ -766,10 +774,14 @@ async function load(background = false): Promise<void> {
       selected.value = null;
     }
   } catch (err) {
+    if (gen !== loadGeneration) return;
     loadError.value = err instanceof Error ? err.message : String(err);
-    list.value = [];
-  } finally {
+    // バックグラウンド更新の失敗では表示中のグリッドを維持する（#27）
     if (!background) {
+      list.value = [];
+    }
+  } finally {
+    if (!background && gen === loadForegroundGeneration) {
       loading.value = false;
     }
   }
