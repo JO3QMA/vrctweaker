@@ -51,11 +51,18 @@ func TestGalleryFileExistsCache_evictsWhenOverBound(t *testing.T) {
 	c.now = func() time.Time { return base }
 	c.maxItems = 2
 
-	c.putIfUnchanged("a", true, 0)
-	c.putIfUnchanged("b", true, 0)
-	c.putIfUnchanged("c", true, 0) // all fresh; evicts arbitrarily down to maxItems
-	if len(c.items) != 2 {
+	// The full sweep only runs at double the bound (4 here); the sweep then
+	// evicts arbitrarily down to the steady-state maxItems.
+	for _, p := range []string{"a", "b", "c", "d"} {
+		c.putIfUnchanged(p, true, 0)
+	}
+	if len(c.items) != c.maxItems {
 		t.Fatalf("items = %d, want %d", len(c.items), c.maxItems)
+	}
+	// Below the double bound, no pruning happens.
+	c.putIfUnchanged("e", true, 0)
+	if len(c.items) != c.maxItems+1 {
+		t.Fatalf("items = %d, want %d (no sweep under double bound)", len(c.items), c.maxItems+1)
 	}
 }
 
@@ -68,11 +75,45 @@ func TestGalleryFileExistsCache_prunesExpiredWhenOverBound(t *testing.T) {
 	c.putIfUnchanged("a", true, 0)
 	c.putIfUnchanged("b", true, 0)
 	c.now = func() time.Time { return base.Add(time.Hour) }
-	c.putIfUnchanged("c", true, 0) // a,b are expired -> pruned before adding c
-	if len(c.items) != 1 {
-		t.Fatalf("items = %d, want 1 (expired pruned)", len(c.items))
+	c.putIfUnchanged("c", true, 0)
+	c.putIfUnchanged("d", true, 0) // reaching 2*maxItems sweeps expired a,b
+	if len(c.items) != c.maxItems {
+		t.Fatalf("items = %d, want %d", len(c.items), c.maxItems)
 	}
-	if _, hit, _ := c.get("c"); !hit {
-		t.Fatal("expected c cached")
+	for _, p := range []string{"a", "b"} {
+		if _, hit, _ := c.get(p); hit {
+			t.Fatalf("expected %s pruned, still cached", p)
+		}
+	}
+	for _, p := range []string{"c", "d"} {
+		if e, hit, _ := c.get(p); !hit || !e {
+			t.Fatalf("expected %s cached, got exists=%v hit=%v", p, e, hit)
+		}
+	}
+}
+
+func TestGalleryFileExistsCache_checkCachesOnlyDefinitiveResults(t *testing.T) {
+	c := newGalleryFileExistsCache()
+	c.now = func() time.Time { return time.Unix(1_000_000, 0) }
+
+	// A transient failure (permission, I/O) is not cached: the next check
+	// re-stats and recovers.
+	c.stat = func(string) (bool, bool) { return false, false }
+	if c.check("p.png") {
+		t.Fatal("expected false from transient error")
+	}
+	c.stat = func(string) (bool, bool) { return true, true }
+	if !c.check("p.png") {
+		t.Fatal("expected true after transient error cleared")
+	}
+
+	// A definitively-missing file IS cached: still missing after a restore.
+	c.stat = func(string) (bool, bool) { return false, true }
+	if c.check("gone.png") {
+		t.Fatal("expected false from not-exist")
+	}
+	c.stat = func(string) (bool, bool) { return true, true }
+	if c.check("gone.png") {
+		t.Fatal("expected cached missing within TTL")
 	}
 }

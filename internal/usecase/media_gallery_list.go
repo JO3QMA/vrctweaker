@@ -10,6 +10,11 @@ import (
 // ListScreenshotsInGalleryScope returns screenshots for Gallery listing: limited to
 // pictureFolderRoot and excluding rows whose files are missing on disk.
 // When pictureFolderRoot is empty, returns an empty list.
+//
+// Missing-file exclusion is memoized with a short TTL (galleryFileStatCacheTTL),
+// so external deletions/restorations are reflected only after an invalidation
+// event (sync or ingest) or once the TTL expires; within the TTL a listing may
+// briefly include a just-deleted file or exclude a just-restored one.
 func (uc *MediaUseCase) ListScreenshotsInGalleryScope(ctx context.Context, pictureFolderRoot string, filter *media.ScreenshotFilter) ([]*media.Screenshot, error) {
 	prefix := media.PictureFolderPathPrefix(pictureFolderRoot)
 	if prefix == "" {
@@ -52,26 +57,17 @@ func (uc *MediaUseCase) filterScreenshotsWithExistingFiles(list []*media.Screens
 }
 
 func (uc *MediaUseCase) fileExistsCheck(path string) bool {
-	exists, ok, generation := uc.fileExists.get(path)
-	if ok {
-		return exists
-	}
-	exists = screenshotFileExists(path)
-	// Guard the put with the generation observed at get time: if a sync/ingest
-	// invalidated the cache in between, the result is re-derived next listing
-	// instead of re-registering a stale value.
-	uc.fileExists.putIfUnchanged(path, exists, generation)
-	return exists
+	return uc.fileExists.check(path)
 }
 
-// screenshotFileExists reports whether path is a regular file on disk.
-// Overridable in tests to observe how often listing stats paths.
-var screenshotFileExists = statScreenshotFile
-
-func statScreenshotFile(path string) bool {
+// statScreenshotFile reports whether path is a regular file on disk, and whether
+// the result is safe to cache. Only a definitively-missing file (IsNotExist) is
+// cached as missing; other stat failures (permission, transient I/O) are retried
+// on the next listing so a real file is not hidden for the whole TTL.
+func statScreenshotFile(path string) (exists bool, cacheable bool) {
 	info, err := os.Stat(path)
 	if err != nil {
-		return false
+		return false, os.IsNotExist(err)
 	}
-	return info.Mode().IsRegular()
+	return info.Mode().IsRegular(), true
 }

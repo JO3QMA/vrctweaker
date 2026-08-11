@@ -12,9 +12,10 @@ import (
 // avoiding an os.Stat per row on every listing (ADR 0001).
 const galleryFileStatCacheTTL = 30 * time.Second
 
-// galleryFileStatCacheMaxItems caps the number of cached paths. Paths that stop
-// appearing in listings (e.g. their DB row was removed) are pruned once the
-// cache exceeds this bound so long-running use does not grow without limit.
+// galleryFileStatCacheMaxItems is the steady-state target for cached paths.
+// Paths that stop appearing in listings (e.g. their DB row was removed) would
+// otherwise accumulate; to keep puts cheap the cache only sweeps when it reaches
+// double this size, so it never holds more than 2*maxItems entries.
 const galleryFileStatCacheMaxItems = 8192
 
 type galleryFileStatEntry struct {
@@ -31,6 +32,7 @@ type galleryFileExistsCache struct {
 	now        func() time.Time
 	generation uint64
 	maxItems   int
+	stat       func(path string) (exists, cacheable bool)
 	items      map[string]galleryFileStatEntry
 }
 
@@ -39,8 +41,25 @@ func newGalleryFileExistsCache() *galleryFileExistsCache {
 		ttl:      galleryFileStatCacheTTL,
 		now:      time.Now,
 		maxItems: galleryFileStatCacheMaxItems,
+		stat:     statScreenshotFile,
 		items:    make(map[string]galleryFileStatEntry),
 	}
+}
+
+// check returns whether path is a regular file on disk, consulting the cache and
+// populating it on a miss. Results derived from errors other than a
+// definitively-missing file are not cached, so transient stat failures are
+// retried on the next listing instead of hiding a real file for the TTL.
+func (c *galleryFileExistsCache) check(path string) bool {
+	exists, ok, generation := c.get(path)
+	if ok {
+		return exists
+	}
+	exists, cacheable := c.stat(path)
+	if cacheable {
+		c.putIfUnchanged(path, exists, generation)
+	}
+	return exists
 }
 
 // get returns the cached existence for path when it is still fresh, along with
@@ -101,11 +120,13 @@ func (c *galleryFileExistsCache) normalize(path string) string {
 	return filepath.Clean(path)
 }
 
-// pruneLocked keeps the cache bounded: expired entries are removed when the map
-// exceeds maxItems, and any remaining overflow is evicted arbitrarily (the
-// value is simply re-derived from disk on the next listing). Caller holds mu.
+// pruneLocked keeps the cache bounded. A full TTL sweep scans every entry, so it
+// only runs once the cache reaches double maxItems; the cost is amortized over
+// the entries added since the last sweep. Any remaining overflow is evicted
+// arbitrarily (the value is simply re-derived from disk on the next listing).
+// Caller holds mu.
 func (c *galleryFileExistsCache) pruneLocked() {
-	if len(c.items) <= c.maxItems {
+	if len(c.items) < 2*c.maxItems {
 		return
 	}
 	now := c.now()
@@ -114,10 +135,10 @@ func (c *galleryFileExistsCache) pruneLocked() {
 			delete(c.items, k)
 		}
 	}
-	for k := range c.items {
-		if len(c.items) <= c.maxItems {
+	for len(c.items) > c.maxItems {
+		for k := range c.items {
+			delete(c.items, k)
 			break
 		}
-		delete(c.items, k)
 	}
 }

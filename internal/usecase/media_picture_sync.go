@@ -76,7 +76,7 @@ func (uc *MediaUseCase) ingestImagePathsInDir(ctx context.Context, basePath stri
 		if ctx.Err() != nil {
 			return count, created, ctx.Err()
 		}
-		_, wasCreated, ingestErr := uc.IngestScreenshotFile(ctx, path)
+		_, wasCreated, ingestErr := uc.ingestScreenshotFile(ctx, path, false)
 		if ingestErr != nil {
 			// Same as ScanDirectory: skip file on ingest error.
 		} else if wasCreated {

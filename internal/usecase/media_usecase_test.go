@@ -761,10 +761,8 @@ func TestMediaUseCase_ListScreenshotsInGalleryScope_cachesStatWithinTTL(t *testi
 	uc := NewMediaUseCase(repo, nil, nil)
 	ctx := context.Background()
 
-	old := screenshotFileExists
 	calls := 0
-	screenshotFileExists = func(string) bool { calls++; return true }
-	t.Cleanup(func() { screenshotFileExists = old })
+	uc.fileExists.stat = func(string) (bool, bool) { calls++; return true, true }
 
 	if _, err := uc.ListScreenshotsInGalleryScope(ctx, base, nil); err != nil {
 		t.Fatal(err)
@@ -921,6 +919,40 @@ func TestMediaUseCase_ListScreenshotsInGalleryScope_ingestInvalidatesCache(t *te
 	}
 }
 
+func TestMediaUseCase_ingestScreenshotFile_bulkModeKeepsCache(t *testing.T) {
+	base := t.TempDir()
+	path := filepath.Join(base, "shot.png")
+	if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "s1", FilePath: path})
+	uc := NewMediaUseCase(repo, nil, nil)
+	ctx := context.Background()
+
+	calls := 0
+	uc.fileExists.stat = func(string) (bool, bool) { calls++; return true, true }
+
+	if _, err := uc.ListScreenshotsInGalleryScope(ctx, base, nil); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Fatalf("warmup list: stat calls = %d, want 1", calls)
+	}
+
+	// Bulk flows pass invalidateCache=false: no per-path generation bump, so the
+	// cache populated by a concurrent listing is not discarded mid-sync.
+	if _, _, err := uc.ingestScreenshotFile(ctx, path, false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := uc.ListScreenshotsInGalleryScope(ctx, base, nil); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Fatalf("list after bulk-style ingest: stat calls = %d, want 1 (cache kept)", calls)
+	}
+}
+
 func TestMediaUseCase_ListScreenshotsInGalleryScope_ingestUnderRootInvalidatesCache(t *testing.T) {
 	base := t.TempDir()
 	path := filepath.Join(base, "later.png")
@@ -967,12 +999,10 @@ func BenchmarkListScreenshotsInGalleryScope(b *testing.B) {
 	ctx := context.Background()
 
 	// Simulate a per-row stat cost so the cache benefit is measurable.
-	old := screenshotFileExists
-	screenshotFileExists = func(path string) bool {
+	uc.fileExists.stat = func(path string) (bool, bool) {
 		time.Sleep(2 * time.Microsecond)
 		return statScreenshotFile(path)
 	}
-	b.Cleanup(func() { screenshotFileExists = old })
 
 	b.Run("cached", func(b *testing.B) {
 		if _, err := uc.ListScreenshotsInGalleryScope(ctx, base, nil); err != nil {
