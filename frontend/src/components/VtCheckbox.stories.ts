@@ -10,6 +10,7 @@ const meta = {
   title: "Components/VtCheckbox",
   component: VtCheckbox,
   tags: ["autodocs"],
+  parameters: catalogParameters,
 } satisfies Meta<typeof VtCheckbox>;
 
 export default meta;
@@ -27,7 +28,6 @@ export const Default: Story = {
 };
 
 export const Disabled: Story = {
-  parameters: catalogParameters,
   render: () => ({
     components: { VtCheckbox },
     setup() {

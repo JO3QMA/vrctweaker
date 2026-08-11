@@ -10,6 +10,7 @@ const meta = {
   title: "Components/VtInput",
   component: VtInput,
   tags: ["autodocs"],
+  parameters: catalogParameters,
 } satisfies Meta<typeof VtInput>;
 
 export default meta;
@@ -23,7 +24,6 @@ export const Default: Story = {
 };
 
 export const Disabled: Story = {
-  parameters: catalogParameters,
   render: () => ({
     components: { VtInput },
     template: `<VtInput placeholder="Profile name" disabled />`,
@@ -31,7 +31,6 @@ export const Disabled: Story = {
 };
 
 export const WithPrefix: Story = {
-  parameters: catalogParameters,
   render: () => ({
     components: { VtInput },
     template: `

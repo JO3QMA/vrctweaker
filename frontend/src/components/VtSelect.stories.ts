@@ -10,6 +10,7 @@ const meta = {
   title: "Components/VtSelect",
   component: VtSelect,
   tags: ["autodocs"],
+  parameters: catalogParameters,
 } satisfies Meta<typeof VtSelect>;
 
 export default meta;
@@ -32,7 +33,6 @@ export const Default: Story = {
 };
 
 export const Disabled: Story = {
-  parameters: catalogParameters,
   render: () => ({
     components: { VtSelect },
     setup() {

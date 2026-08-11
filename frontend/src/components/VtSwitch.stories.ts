@@ -10,6 +10,7 @@ const meta = {
   title: "Components/VtSwitch",
   component: VtSwitch,
   tags: ["autodocs"],
+  parameters: catalogParameters,
 } satisfies Meta<typeof VtSwitch>;
 
 export default meta;
@@ -22,43 +23,40 @@ export const On: Story = {
       const enabled = ref(true);
       return { enabled };
     },
-    template: `<VtSwitch v-model="enabled" />`,
+    template: `<VtSwitch v-model="enabled" aria-label="Enable feature" />`,
   }),
 };
 
 export const Off: Story = {
-  parameters: catalogParameters,
   render: () => ({
     components: { VtSwitch },
     setup() {
       const enabled = ref(false);
       return { enabled };
     },
-    template: `<VtSwitch v-model="enabled" />`,
+    template: `<VtSwitch v-model="enabled" aria-label="Enable feature" />`,
   }),
 };
 
 export const Disabled: Story = {
-  parameters: catalogParameters,
   render: () => ({
     components: { VtSwitch },
     setup() {
       const enabled = ref(true);
       return { enabled };
     },
-    template: `<VtSwitch v-model="enabled" disabled />`,
+    template: `<VtSwitch v-model="enabled" disabled aria-label="Enable feature" />`,
   }),
 };
 
 export const Small: Story = {
   name: "Small (list enable toggle)",
-  parameters: catalogParameters,
   render: () => ({
     components: { VtSwitch },
     setup() {
       const enabled = ref(true);
       return { enabled };
     },
-    template: `<VtSwitch v-model="enabled" size="small" />`,
+    template: `<VtSwitch v-model="enabled" size="small" aria-label="Enable list item" />`,
   }),
 };
