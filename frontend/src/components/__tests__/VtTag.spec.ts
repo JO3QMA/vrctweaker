@@ -20,6 +20,16 @@ describe("VtTag", () => {
     expect(wrapper.find(".el-tag--success").exists()).toBe(false);
   });
 
+  it("strips conflicting type attr when variant is neutral", () => {
+    const wrapper = mount(VtTag, {
+      props: { variant: "neutral" },
+      attrs: { type: "danger" },
+      slots: { default: "3" },
+    });
+    expect(wrapper.find(".el-tag--danger").exists()).toBe(false);
+    expect(wrapper.find(".vt-tag--neutral").exists()).toBe(true);
+  });
+
   it("maps primary variant to el-tag--primary", () => {
     const wrapper = mount(VtTag, {
       props: { variant: "primary" },

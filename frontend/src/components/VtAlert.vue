@@ -12,5 +12,7 @@ const alertType = computed(() => vtAlertElementType(props.variant));
 </script>
 
 <template>
-  <el-alert v-bind="$attrs" :type="alertType" :closable="false" show-icon />
+  <el-alert v-bind="$attrs" :type="alertType" :closable="false" show-icon>
+    <slot />
+  </el-alert>
 </template>

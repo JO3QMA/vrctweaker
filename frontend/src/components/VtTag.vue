@@ -13,8 +13,9 @@ const tagType = computed(() => vtTagElementType(props.variant));
 
 const tagBind = computed(() => {
   if (props.variant === "neutral") {
+    const { type: _type, ...forwardedAttrs } = attrs;
     return {
-      ...attrs,
+      ...forwardedAttrs,
       class: ["vt-tag--neutral", attrs.class],
       effect: "plain" as const,
     };

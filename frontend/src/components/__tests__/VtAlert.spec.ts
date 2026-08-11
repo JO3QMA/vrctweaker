@@ -37,4 +37,12 @@ describe("VtAlert", () => {
     expect(wrapper.text()).toContain("Details");
     expect(wrapper.attributes("data-testid")).toBe("block-alert");
   });
+
+  it("forwards default slot content", () => {
+    const wrapper = mount(VtAlert, {
+      props: { variant: "info", title: "Hint" },
+      slots: { default: "<strong>Extra</strong>" },
+    });
+    expect(wrapper.find("strong").text()).toBe("Extra");
+  });
 });
