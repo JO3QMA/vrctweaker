@@ -76,7 +76,7 @@ export const PathInputRow: Story = {
   render: () => ({
     components: { VtInput, VtButton },
     setup() {
-      const path = ref("C:\\\\VRChat\\\\output_log.txt");
+      const path = ref("C:\\VRChat\\output_log.txt");
       return { path };
     },
     template: `
