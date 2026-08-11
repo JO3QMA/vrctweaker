@@ -238,6 +238,86 @@ describe("GalleryView", () => {
     expect(mockScreenshots).not.toHaveBeenCalled();
   });
 
+  it("keeps the gallery grid mounted during background refresh", async () => {
+    vi.useFakeTimers();
+    const debounceMs = 400;
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    expect(wrapper.find("[data-testid='gallery-grid-scroll']").exists()).toBe(
+      true,
+    );
+
+    // バックグラウンド更新が保留中でも loading でグリッドを差し替えず維持する（#27）
+    mockScreenshots.mockReturnValue(new Promise<ScreenshotDTO[]>(() => {}));
+    wailsEventListeners["gallery:screenshots-changed"]?.();
+    await vi.advanceTimersByTimeAsync(debounceMs);
+    await flushPromises();
+
+    expect(wrapper.find(".loading").exists()).toBe(false);
+    expect(wrapper.find("[data-testid='gallery-grid-scroll']").exists()).toBe(
+      true,
+    );
+    vi.useRealTimers();
+  });
+
+  it("discards a stale background gallery load after a foreground load", async () => {
+    vi.useFakeTimers();
+    const debounceMs = 400;
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+
+    // バックグラウンド更新を保留にし、その後にフィルタ入力（新世代）を完了させる
+    let resolveBg!: (v: ScreenshotDTO[]) => void;
+    mockScreenshots.mockReturnValue(
+      new Promise<ScreenshotDTO[]>((res) => {
+        resolveBg = res;
+      }),
+    );
+    wailsEventListeners["gallery:screenshots-changed"]?.();
+    await vi.advanceTimersByTimeAsync(debounceMs);
+
+    const newerShot: ScreenshotDTO = {
+      ...sampleShot,
+      id: "s2",
+      filePath: "C:/VRChat/2024/new.png",
+    };
+    mockSearchScreenshots.mockResolvedValue([newerShot]);
+    const filterInput = wrapper.find("[data-testid='gallery-world-filter']");
+    await filterInput.setValue("wrld_new");
+    await filterInput.trigger("keyup.enter");
+    await flushPromises();
+
+    // 古いバックグラウンド応答が後から届いても上書きしない
+    resolveBg([sampleShot]);
+    await flushPromises();
+
+    expect(wrapper.find('img[alt="new.png"]').exists()).toBe(true);
+    expect(wrapper.find('img[alt="shot.png"]').exists()).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it("keeps the existing grid when a background refresh fails", async () => {
+    vi.useFakeTimers();
+    const debounceMs = 400;
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+    expect(wrapper.find("[data-testid='gallery-grid-scroll']").exists()).toBe(
+      true,
+    );
+
+    mockScreenshots.mockRejectedValue(new Error("boom"));
+    wailsEventListeners["gallery:screenshots-changed"]?.();
+    await vi.advanceTimersByTimeAsync(debounceMs);
+    await flushPromises();
+
+    // バックグラウンド更新の失敗ではグリッドを維持し、エラーのみ表示する（#27）
+    expect(wrapper.find("[data-testid='gallery-grid-scroll']").exists()).toBe(
+      true,
+    );
+    expect(wrapper.find(".el-alert").exists()).toBe(true);
+    vi.useRealTimers();
+  });
+
   it("fetches thumbnail data URLs via App.screenshotThumbnailDataURL", async () => {
     const wrapper = mount(GalleryView, { attachTo: host });
     await flushPromises();

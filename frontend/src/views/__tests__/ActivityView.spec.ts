@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createRouter, createWebHashHistory } from "vue-router";
 import ActivityView from "../ActivityView.vue";
+import type { UserEncounterDTO } from "../../wails/app";
 
 const {
   mockEncounters,
@@ -570,6 +571,112 @@ describe("ActivityView", () => {
     mockEncounters.mockResolvedValue([]);
     const { wrapper } = await mountActivity();
     expect(wrapper.find(".empty").text()).toContain("遭遇");
+  });
+
+  it("keeps the encounter table mounted during background refresh", async () => {
+    vi.useFakeTimers();
+    mockEncounters.mockResolvedValue([
+      {
+        id: "1",
+        vrcUserId: "u1",
+        displayName: "Alpha",
+        instanceId: "inst",
+        joinedAt: "2024-01-01T12:00:00.000Z",
+      },
+    ]);
+    const { wrapper } = await mountActivity();
+    expect(wrapper.find(".el-table").exists()).toBe(true);
+
+    // バックグラウンド更新が保留中でも loading でテーブルを差し替えず維持する（#27）
+    mockEncounters.mockReturnValue(new Promise<UserEncounterDTO[]>(() => {}));
+    runtimeHooks.encountersChangedHandler?.();
+    await vi.advanceTimersByTimeAsync(400);
+
+    expect(wrapper.find(".encounter-log-scroll .loading").exists()).toBe(false);
+    expect(wrapper.find(".el-table").exists()).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it("shows loading when the refresh button is explicitly clicked", async () => {
+    vi.useFakeTimers();
+    mockEncounters.mockResolvedValue([
+      {
+        id: "1",
+        vrcUserId: "u1",
+        displayName: "Alpha",
+        instanceId: "inst",
+        joinedAt: "2024-01-01T12:00:00.000Z",
+      },
+    ]);
+    const { wrapper } = await mountActivity();
+
+    // 明示的な「更新」ボタンは loading 付き更新のまま（イベントオブジェクトが
+    // background に入らないよう false を明示的に渡す）
+    mockEncounters.mockReturnValue(new Promise<UserEncounterDTO[]>(() => {}));
+    const buttons = wrapper.findAll(".filters .el-button");
+    await buttons[0]!.trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.find(".encounter-log-scroll .loading").exists()).toBe(true);
+    expect(wrapper.find(".el-table").exists()).toBe(false);
+    vi.useRealTimers();
+  });
+
+  it("discards a stale background encounters response after a foreground load", async () => {
+    vi.useFakeTimers();
+    mockEncounters.mockResolvedValue([
+      {
+        id: "1",
+        vrcUserId: "u1",
+        displayName: "Alpha",
+        instanceId: "inst",
+        joinedAt: "2024-01-01T12:00:00.000Z",
+      },
+    ]);
+    const { wrapper } = await mountActivity();
+
+    // バックグラウンド更新を保留にし、その後に明示更新（新世代）を完了させる
+    let resolveBg!: (v: UserEncounterDTO[]) => void;
+    mockEncounters.mockReturnValue(
+      new Promise<UserEncounterDTO[]>((res) => {
+        resolveBg = res;
+      }),
+    );
+    runtimeHooks.encountersChangedHandler?.();
+    await vi.advanceTimersByTimeAsync(400);
+
+    const newer = [
+      {
+        id: "2",
+        vrcUserId: "u2",
+        displayName: "Beta",
+        instanceId: "inst",
+        joinedAt: "2024-01-02T12:00:00.000Z",
+      },
+    ];
+    mockEncounters.mockResolvedValue(newer);
+    const buttons = wrapper.findAll(".filters .el-button");
+    await buttons[0]!.trigger("click");
+    await flushPromises();
+    expect(wrapper.text()).toContain("Beta");
+
+    // 古いバックグラウンド応答が後から届いても上書きしない
+    resolveBg([
+      {
+        id: "3",
+        vrcUserId: "u3",
+        displayName: "Stale",
+        instanceId: "inst",
+        joinedAt: "2024-01-03T12:00:00.000Z",
+        isFirstEncounter: false,
+        isListableFriend: false,
+      },
+    ]);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("Beta");
+    expect(wrapper.text()).not.toContain("Stale");
+    vi.useRealTimers();
   });
 
   it("collapses encounter section when header toggle is clicked", async () => {

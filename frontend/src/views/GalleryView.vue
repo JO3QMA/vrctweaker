@@ -744,19 +744,29 @@ function onRefreshClick(): void {
   void load();
 }
 
-async function load(): Promise<void> {
+let loadGeneration = 0;
+let loadForegroundGeneration = 0;
+
+async function load(background = false): Promise<void> {
   loadError.value = null;
-  loading.value = true;
+  const gen = ++loadGeneration;
+  if (!background) {
+    loading.value = true;
+    loadForegroundGeneration = gen;
+  }
   try {
     const filter = buildGallerySearchFilter(
       filterWorldSearch.value,
       filterDateRange.value,
     );
+    let next: ScreenshotDTO[];
     if (filter) {
-      list.value = await App.searchScreenshots(filter);
+      next = await App.searchScreenshots(filter);
     } else {
-      list.value = await App.screenshots("");
+      next = await App.screenshots("");
     }
+    if (gen !== loadGeneration) return;
+    list.value = next;
     if (
       selected.value &&
       !list.value.find((s) => s.id === selected.value?.id)
@@ -764,10 +774,16 @@ async function load(): Promise<void> {
       selected.value = null;
     }
   } catch (err) {
+    if (gen !== loadGeneration) return;
     loadError.value = err instanceof Error ? err.message : String(err);
-    list.value = [];
+    // バックグラウンド更新の失敗では表示中のグリッドを維持する（#27）
+    if (!background) {
+      list.value = [];
+    }
   } finally {
-    loading.value = false;
+    if (!background && gen === loadForegroundGeneration) {
+      loading.value = false;
+    }
   }
 }
 
@@ -777,7 +793,9 @@ function scheduleLoadFromPictureWatcher(): void {
   }
   screenshotsChangedDebounceTimer = setTimeout(() => {
     screenshotsChangedDebounceTimer = null;
-    void load();
+    // バックグラウンド更新: loading を立てずにグリッドを差し替えることで
+    // スクロール位置を保持する（#27）。
+    void load(true);
   }, GALLERY_SCREENSHOTS_CHANGED_DEBOUNCE_MS);
 }
 

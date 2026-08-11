@@ -23,7 +23,7 @@
             <el-icon><Search /></el-icon>
           </template>
         </el-input>
-        <el-button @click="refreshActivity">{{
+        <el-button @click="refreshActivity(false)">{{
           t("common.refresh")
         }}</el-button>
       </div>
@@ -240,21 +240,40 @@ function scheduleActivityRefresh(): void {
   }
   encountersChangedDebounceTimer = setTimeout(() => {
     encountersChangedDebounceTimer = null;
-    void refreshActivity();
+    // バックグラウンド更新: loading を立てずにデータだけ差し替えることで、
+    // 遭遇ログのスクロール位置を保持する（#27）。
+    void refreshActivity(true);
   }, ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS);
 }
 
-async function loadEncounters(): Promise<void> {
-  encountersLoading.value = true;
+let encountersLoadGeneration = 0;
+let encountersForegroundGeneration = 0;
+let statsLoadGeneration = 0;
+let statsForegroundGeneration = 0;
+
+async function loadEncounters(background = false): Promise<void> {
+  const gen = ++encountersLoadGeneration;
+  if (!background) {
+    encountersLoading.value = true;
+    encountersForegroundGeneration = gen;
+  }
   try {
-    encounters.value = await App.encounters();
+    const next = await App.encounters();
+    if (gen !== encountersLoadGeneration) return;
+    encounters.value = next;
   } finally {
-    encountersLoading.value = false;
+    if (!background && gen === encountersForegroundGeneration) {
+      encountersLoading.value = false;
+    }
   }
 }
 
-async function loadStats(): Promise<void> {
-  statsLoading.value = true;
+async function loadStats(background = false): Promise<void> {
+  const gen = ++statsLoadGeneration;
+  if (!background) {
+    statsLoading.value = true;
+    statsForegroundGeneration = gen;
+  }
   try {
     const days = playtimeChartDays.value;
     const to = new Date();
@@ -263,14 +282,18 @@ async function loadStats(): Promise<void> {
     const toStr = localDateISO(to);
     statsRangeFrom.value = fromStr;
     statsRangeTo.value = toStr;
-    stats.value = await App.getActivityStats(fromStr, toStr);
+    const next = await App.getActivityStats(fromStr, toStr);
+    if (gen !== statsLoadGeneration) return;
+    stats.value = next;
   } finally {
-    statsLoading.value = false;
+    if (!background && gen === statsForegroundGeneration) {
+      statsLoading.value = false;
+    }
   }
 }
 
-async function refreshActivity(): Promise<void> {
-  await Promise.all([loadEncounters(), loadStats()]);
+async function refreshActivity(background = false): Promise<void> {
+  await Promise.all([loadEncounters(background), loadStats(background)]);
 }
 
 onMounted(() => {
