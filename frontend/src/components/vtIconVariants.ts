@@ -4,6 +4,6 @@ export type { VtIconSize };
 
 export type VtIconProps = {
   size: VtIconSize;
-  /** When true (default), sets aria-hidden for decorative icons. */
+  /** When true, sets aria-hidden for decorative icons (default in VtIcon.vue). */
   decorative?: boolean;
 };

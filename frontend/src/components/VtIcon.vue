@@ -12,18 +12,24 @@ defineOptions({
   inheritAttrs: false,
 });
 
+const passthroughAttrs = computed(() => {
+  const { "aria-hidden": _ariaHidden, ...rest } = attrs;
+  return rest;
+});
+
 const sizeClass = computed(() => `vt-icon--size-${props.size}`);
 
 const ariaHidden = computed(() => {
   if (props.decorative) return "true";
   const fromAttrs = attrs["aria-hidden"];
-  return fromAttrs !== undefined ? String(fromAttrs) : undefined;
+  if (fromAttrs !== undefined) return String(fromAttrs);
+  return "false";
 });
 </script>
 
 <template>
   <el-icon
-    v-bind="$attrs"
+    v-bind="passthroughAttrs"
     class="vt-icon"
     :class="sizeClass"
     :aria-hidden="ariaHidden"
