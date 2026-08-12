@@ -47,17 +47,12 @@ export const ICON_SIZE_PATTERNS = [
   },
 ] as const satisfies readonly IconSizePattern[];
 
-/** VtIcon `size` prop values (1:1 with Icon size pattern names). */
-export const VT_ICON_SIZES = ICON_SIZE_PATTERNS.map(
-  (pattern) => pattern.name,
-) as unknown as readonly [
-  IconSizePatternName,
-  IconSizePatternName,
-  IconSizePatternName,
-  IconSizePatternName,
-];
-
 export type VtIconSize = IconSizePatternName;
+
+/** VtIcon `size` prop values (1:1 with Icon size pattern names). */
+export const VT_ICON_SIZES: readonly VtIconSize[] = ICON_SIZE_PATTERNS.map(
+  (pattern) => pattern.name,
+);
 
 /** Legacy icon size outside scale (v1 visual policy). */
 export const ICON_SIZE_LEGACY = {

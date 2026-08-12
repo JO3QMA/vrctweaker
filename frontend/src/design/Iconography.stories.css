@@ -24,9 +24,13 @@
 
 .iconography-story-table th,
 .iconography-story-table td {
-  border: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
   padding: var(--space-8) var(--space-12);
   text-align: left;
+}
+
+.iconography-story-table th {
+  border-bottom: 2px solid var(--color-border);
 }
 
 .iconography-story-size-row {
@@ -83,5 +87,17 @@
 }
 
 .iconography-story-color-swatch span {
+  color: inherit;
+}
+
+.iconography-story-color--secondary {
   color: var(--color-text-secondary);
+}
+
+.iconography-story-color--primary {
+  color: var(--color-text-primary);
+}
+
+.iconography-story-color--muted {
+  color: var(--color-text-muted);
 }

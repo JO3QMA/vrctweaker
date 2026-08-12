@@ -27,13 +27,21 @@ export const Scale: Story = {
   name: "Icon size scale",
   render: () => ({
     components: { VtIcon, Search },
-    setup: () => ({ scale: ICON_SIZE_SCALE_PX }),
+    setup: () => {
+      const sizeByPx = Object.fromEntries(
+        ICON_SIZE_PATTERNS.map((pattern) => [pattern.px, pattern.name]),
+      ) as Record<
+        (typeof ICON_SIZE_SCALE_PX)[number],
+        (typeof ICON_SIZE_PATTERNS)[number]["name"]
+      >;
+      return { scale: ICON_SIZE_SCALE_PX, sizeByPx };
+    },
     template: `
       <div class="iconography-story">
         <h2>Icon size scale</h2>
         <p>Square slot via <code>font-size</code> on <code>VtIcon</code> / <code>el-icon</code>.</p>
         <div v-for="px in scale" :key="px" class="iconography-story-size-row">
-          <VtIcon :size="px === 12 ? 'compact' : px === 16 ? 'default' : px === 20 ? 'emphasis' : 'large'">
+          <VtIcon :size="sizeByPx[px]">
             <Search />
           </VtIcon>
           <span>--icon-size-{{ px }} · {{ px }}px</span>
@@ -111,15 +119,15 @@ export const ColorRule: Story = {
       <div class="iconography-story">
         <h2>Icon color rule</h2>
         <p>Icons use <code>currentColor</code>. Parent sets Neutral text tokens.</p>
-        <div class="iconography-story-color-swatch" style="color: var(--color-text-secondary)">
+        <div class="iconography-story-color-swatch iconography-story-color--secondary">
           <VtIcon size="default"><CaretRight /></VtIcon>
           <span>secondary (decorative)</span>
         </div>
-        <div class="iconography-story-color-swatch" style="color: var(--color-text-primary)">
+        <div class="iconography-story-color-swatch iconography-story-color--primary">
           <VtIcon size="default"><CaretRight /></VtIcon>
           <span>primary (hover / active parent)</span>
         </div>
-        <div class="iconography-story-color-swatch" style="color: var(--color-text-muted)">
+        <div class="iconography-story-color-swatch iconography-story-color--muted">
           <VtIcon size="default"><CaretRight /></VtIcon>
           <span>muted (disabled context)</span>
         </div>
