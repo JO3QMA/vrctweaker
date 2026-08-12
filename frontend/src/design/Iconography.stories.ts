@@ -135,10 +135,19 @@ export const NavigationGlyph: Story = {
   name: "Navigation glyph",
   render: () => ({
     components: { VtIcon },
-    setup: () => ({
-      mainItems: NAV_MAIN_MENU_ITEMS,
-      settingsItem: NAV_SETTINGS_MENU_ITEM,
-    }),
+    setup: () => {
+      const mainItems = NAV_MAIN_MENU_ITEMS.map((item) => ({
+        ...item,
+        detail: item.windowsOnly
+          ? `${item.path} · ${item.labelKey} (Windows only)`
+          : `${item.path} · ${item.labelKey}`,
+      }));
+      const settingsItem = {
+        ...NAV_SETTINGS_MENU_ITEM,
+        detail: `${NAV_SETTINGS_MENU_ITEM.path} · ${NAV_SETTINGS_MENU_ITEM.labelKey} (footer)`,
+      };
+      return { mainItems, settingsItem };
+    },
     template: `
       <div class="iconography-story">
         <h2>Navigation glyph</h2>
@@ -151,13 +160,13 @@ export const NavigationGlyph: Story = {
           <VtIcon size="default">
             <component :is="item.icon" />
           </VtIcon>
-          <span><code>{{ item.path }}</code> · <code>{{ item.labelKey }}</code><span v-if="item.windowsOnly"> (Windows only)</span></span>
+          <span><code>{{ item.detail }}</code></span>
         </div>
         <div class="iconography-story-nav-row iconography-story-color--secondary">
           <VtIcon size="default">
             <component :is="settingsItem.icon" />
           </VtIcon>
-          <span><code>{{ settingsItem.path }}</code> · <code>{{ settingsItem.labelKey }}</code> (footer)</span>
+          <span><code>{{ settingsItem.detail }}</code></span>
         </div>
       </div>
     `,
