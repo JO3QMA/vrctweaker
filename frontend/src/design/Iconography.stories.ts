@@ -5,7 +5,6 @@ import SampleIcon from "../icons/SampleIcon.vue";
 import {
   ICON_SIZE_LEGACY,
   ICON_SIZE_PATTERNS,
-  ICON_SIZE_SCALE_PX,
   VT_ICON_SIZES,
 } from "./iconTokens";
 import "./Iconography.stories.css";
@@ -27,24 +26,16 @@ export const Scale: Story = {
   name: "Icon size scale",
   render: () => ({
     components: { VtIcon, Search },
-    setup: () => {
-      const sizeByPx = Object.fromEntries(
-        ICON_SIZE_PATTERNS.map((pattern) => [pattern.px, pattern.name]),
-      ) as Record<
-        (typeof ICON_SIZE_SCALE_PX)[number],
-        (typeof ICON_SIZE_PATTERNS)[number]["name"]
-      >;
-      return { scale: ICON_SIZE_SCALE_PX, sizeByPx };
-    },
+    setup: () => ({ patterns: ICON_SIZE_PATTERNS }),
     template: `
       <div class="iconography-story">
         <h2>Icon size scale</h2>
         <p>Square slot via <code>font-size</code> on <code>VtIcon</code> / <code>el-icon</code>.</p>
-        <div v-for="px in scale" :key="px" class="iconography-story-size-row">
-          <VtIcon :size="sizeByPx[px]">
+        <div v-for="pattern in patterns" :key="pattern.px" class="iconography-story-size-row">
+          <VtIcon :size="pattern.name">
             <Search />
           </VtIcon>
-          <span>--icon-size-{{ px }} · {{ px }}px</span>
+          <span>{{ pattern.scaleVar }} · {{ pattern.px }}px</span>
         </div>
       </div>
     `,

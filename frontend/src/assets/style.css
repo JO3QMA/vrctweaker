@@ -407,7 +407,11 @@ a:hover {
   font-size: var(--icon-size-large);
 }
 
-[class^="nav-glyph-size-"] {
+.nav-glyph-size-compact,
+.nav-glyph-size-default,
+.nav-glyph-size-legacy,
+.nav-glyph-size-emphasis,
+.nav-glyph-size-large {
   display: inline-flex;
   flex-shrink: 0;
   line-height: 1;
