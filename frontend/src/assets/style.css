@@ -94,6 +94,21 @@
   --font-weight-700: 700;
 
   --font-family-ui: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* Icon size scale (ADR 0023) */
+  --icon-size-12: 12px;
+  --icon-size-16: 16px;
+  --icon-size-20: 20px;
+  --icon-size-24: 24px;
+
+  /* Icon size pattern catalog */
+  --icon-size-compact: var(--icon-size-12);
+  --icon-size-default: var(--icon-size-16);
+  --icon-size-emphasis: var(--icon-size-20);
+  --icon-size-large: var(--icon-size-24);
+
+  /* Outside scale: preserves legacy section toggle (14px). Adoption → --icon-size-default. */
+  --icon-size-legacy-toggle: var(--font-size-14);
 }
 
 /* ─── Element Plus dark theme CSS variable overrides ───────────── */
@@ -357,9 +372,62 @@ a:hover {
 
 .section-card__toggle-icon {
   flex-shrink: 0;
-  font-size: var(--font-size-14);
+  font-size: var(--icon-size-legacy-toggle);
 }
 
 .section-card.section-card--collapsed > .el-card__body {
   display: none;
+}
+
+/* ─── Iconography (ADR 0023) ─────────────────────────────────────── */
+
+.vt-icon--size-compact {
+  font-size: var(--icon-size-compact);
+}
+
+.vt-icon--size-default {
+  font-size: var(--icon-size-default);
+}
+
+.vt-icon--size-emphasis {
+  font-size: var(--icon-size-emphasis);
+}
+
+.vt-icon--size-large {
+  font-size: var(--icon-size-large);
+}
+
+.nav-glyph-size-compact {
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: var(--icon-size-compact);
+  line-height: 1;
+}
+
+.nav-glyph-size-default {
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: var(--icon-size-default);
+  line-height: 1;
+}
+
+.nav-glyph-size-legacy {
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: var(--icon-size-legacy-toggle);
+  line-height: 1;
+}
+
+.nav-glyph-size-emphasis {
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: var(--icon-size-emphasis);
+  line-height: 1;
+}
+
+.nav-glyph-size-large {
+  display: inline-flex;
+  flex-shrink: 0;
+  font-size: var(--icon-size-large);
+  line-height: 1;
 }

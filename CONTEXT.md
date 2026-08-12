@@ -708,7 +708,7 @@ _Avoid_: 常時実行, バックグラウンドサービス（v1 で含意しな
 
 ## Design system
 
-ボタン様式・余白・色・タイポグラフィ・フォーム入力部品などアプリ横断 UI 部品の用語。**VtButton** と 4 **Button variant**（[ADR 0017](docs/adr/0017-button-design-system-vtbutton.md)）は grill-with-docs で合意済み。**Spacing**（余白ルール）（[ADR 0018](docs/adr/0018-spacing-design-system.md)）は grill-with-docs で合意済み。**Color**（カラーパレット）（[ADR 0019](docs/adr/0019-color-design-system.md)）は grill-with-docs で合意済み。**Typography**（タイポグラフィ）（[ADR 0020](docs/adr/0020-typography-design-system.md)）は grill-with-docs で合意済み。**Form control** ラッパー（VtInput / VtSelect / VtCheckbox / VtSwitch）は grill-with-docs で合意済み（[ADR 0021](docs/adr/0021-form-control-design-system.md)）。**Feedback & Badges**（Alert / Toast / Badge / Loading の横断チャネル）は grill-with-docs で合意済み（[ADR 0022](docs/adr/0022-feedback-badges-design-system.md)）。実装契約は各 ADR を正本とする。色コード・hex 値・個別 props など実装詳細はここに書かない。
+ボタン様式・余白・色・タイポグラフィ・アイコン・フォーム入力部品などアプリ横断 UI 部品の用語。**VtButton** と 4 **Button variant**（[ADR 0017](docs/adr/0017-button-design-system-vtbutton.md)）は grill-with-docs で合意済み。**Spacing**（余白ルール）（[ADR 0018](docs/adr/0018-spacing-design-system.md)）は grill-with-docs で合意済み。**Color**（カラーパレット）（[ADR 0019](docs/adr/0019-color-design-system.md)）は grill-with-docs で合意済み。**Typography**（タイポグラフィ）（[ADR 0020](docs/adr/0020-typography-design-system.md)）は grill-with-docs で合意済み。**Form control** ラッパー（VtInput / VtSelect / VtCheckbox / VtSwitch）は grill-with-docs で合意済み（[ADR 0021](docs/adr/0021-form-control-design-system.md)）。**Feedback & Badges**（Alert / Toast / Badge / Loading の横断チャネル）は grill-with-docs で合意済み（[ADR 0022](docs/adr/0022-feedback-badges-design-system.md)）。**Iconography**（アイコン・グリフのサイズ・色・部品化）（[ADR 0023](docs/adr/0023-iconography-design-system.md)）は grill-with-docs で合意済み。実装契約は各 ADR を正本とする。色コード・hex 値・個別 props など実装詳細はここに書かない。
 
 ### Language
 
@@ -1190,6 +1190,90 @@ _Avoid_: Feedback & Badges（v1 範囲を指すときは scope とセットで�
 **Feedback & Badges v1 deliverables**:
 Issue／PR で最初に届ける具体物。(1) **VtAlert** + テスト + **VtAlert Storybook catalog**、(2) **VtTag**（semantic 4 + neutral + primary）+ テスト + **VtTag Storybook catalog**、(3) **showToast** + テスト、(4) `.cursor/rules/feedback-design-system.mdc`、(5) `docs/adr/0022-feedback-badges-design-system.md`、(6) `CONTEXT.md` 同期。移行は **VtAlert adoption** / **VtTag adoption** / **showToast adoption** のみ（触ったところから）。
 _Avoid_: Feedback & Badges v1 scope（届け物リストを指すときは deliverables とセットで書く）, 全画面置換（adoption と矛盾するため）
+
+**Iconography**:
+アプリ横断のアイコン・グリフのルール。**Icon size scale**・**Icon color rule**・部品化手順を含む。**Spacing** の Sizing（余白以外の寸法）・**Typography** のフォントサイズとは別カテゴリ。絵文字・SVG・Element Plus アイコンを横断して同じサイズ段階と色の意味論で揃える（実装移行は **Iconography adoption** で段階的）。
+_Avoid_: アイコン（実装部品名だけ）, 絵文字（**Navigation glyph** を含意しない俗称）, Sizing（アバター・サムネまで含む総称）
+
+**UI icon**:
+装飾または操作補助の SVG グリフ。v1 正本は `@element-plus/icons-vue`（`el-icon` または将来の **VtIcon** で包む）。入力 prefix（Search）、ボタン内、折りたたみ矢印（Caret）、コピー（CopyDocument）など。**Domain icon**・**Navigation glyph** とは用途で分けるが、**Icon size scale** と **Icon color rule** は共有する。
+_Avoid_: el-icon（実装タグ名だけ）, アイコンフォント（EP は Vue コンポーネント）
+
+**Navigation glyph**:
+サイドバー等のナビ項目左に置く目的地を示すグリフ。現行は Unicode 絵文字（🏠 等）だが、**Iconography** では **UI icon** と同じサイズ段階・スロット幅で扱う（将来 SVG／EP アイコンへ置換してよい）。テキストラベル（`nav.*`）とは別要素。
+_Avoid_: サイドバーアイコン（実装クラス名だけ）, ファビコン, アプリアイコン（OS／インストーラ資産）
+
+**Domain icon**:
+特定画面・ドメインだけが持つ意味付きグリフ。**Domain badge**（`el-tag` チップ）・**Semantic button**（Presence 色ボタン）・Server status の色ドットとは別。サイズと配置は **Iconography**、色の意味は各ドメイン（例: **Encounter friend mark** は **Neutral text** 系）。**Semantic color catalog** や **Presence color** を横断フィードバックとして流用しない。
+_Avoid_: Domain badge, User tag chip, フレンドマーク（**Encounter friend mark** の俗称だけ）
+
+**Custom icon**:
+Element Plus 一覧に無く、リポジトリ内 SVG として追加するグリフ。v1 の **Iconography v1 deliverables** では新規資産は作らないが、追加手順（SVG コンポーネント化）は ADR で定義する。
+_Avoid_: 外部画像（PNG 等のラスタ）, インライン data URL プレースホルダ（Gallery サムネ用など **Iconography** 外）
+
+**Iconography v1 scope**:
+Iconography 策定の最初の届け範囲。**UI icon**・**Navigation glyph**・**Domain icon** のサイズ規律と **Icon color rule**、**Custom icon** の手順文書化、ADR、`.cursor/rules/`、**Iconography Storybook catalog**、`CONTEXT.md` に限定する。含めないもの: サイドバー絵文字の即時 SVG 化、全画面一括置換、ESLint 強制、アバター・サムネ・Server status 色ドット・Presence 色ボタン、**Custom icon** の新規 SVG 追加 PR。
+_Avoid_: Iconography（v1 範囲を指すときは scope とセットで書く）, 将来拡張（スコープ外リストの総称として曖昧なため）
+
+**Icon size scale**:
+Iconography で使ってよいアイコン・グリフの辺長（正方形スロット）の段階列。許容値は **12, 16, 20, 24**（px）のみ。**UI icon**・**Navigation glyph**・**Domain icon** は同じ列を共有する。新規・改修ではこの列以外の任意 px を増やさない（**Iconography adoption**）。**Typography scale** や **Spacing scale** とは別カテゴリ（数値が近くても流用しない）。
+_Avoid_: 16/20/24 のみ（compact 12 を落とす印象）, font-size 直書き（トークン化前の俗称）
+
+**Icon size token**:
+**Icon size scale** の各段階を表す CSS カスタムプロパティ。値は **px リテラル**（例: `--icon-size-16: 16px`）。トークン名の数値は実 px と一致させる（`--icon-size-12` … `--icon-size-24`）。`rem` / `em` は使わない。実装は `el-icon` の `font-size`、絵文字の `font-size`、**Domain icon** の固定スロット幅・高さに同じ値を当てる。
+_Avoid_: --font-size-16（Typography トークンの流用）, icon-md（数値と名前がずれるため）
+
+**Icon size pattern**:
+繰り返し現れるアイコン寸法に付ける意味別の名前。**Icon size token** のセマンティック・エイリアスとして定義し、実体は必ず `--icon-size-*` へ委譲する。v1: `--icon-size-compact` → 12px、`--icon-size-default` → 16px、`--icon-size-emphasis` → 20px、`--icon-size-large` → 24px。
+_Avoid_: small/medium/large（px 数と対応が曖昧なため）, Form control size（入力部品の EP size と混同しやすいため）
+
+**Iconography migration rounding**:
+既存の任意 px / `rem` アイコン寸法を **Icon size token** へ置き換えるとき、スケールに無い値は **四捨五入で最寄りの段階**へ寄せる（例: 14px → 16、12.6px → 12、18px → 20）。**Iconography v1 deliverables** では寄せない（**Iconography v1 visual policy**）。アバター・サムネ・意図的な非正方形は対象外。
+_Avoid_: 目視のみ（置換ごとに判断がぶれるため）, Typography migration rounding と同一視（フォントサイズは別スケール）
+
+**Iconography v1 visual policy**:
+Iconography v1 では **見た目を変えない**（**Color v1 visual policy** / **Typography v1 visual policy** と同型）。tokenize PR では現行 computed 寸法をそのまま **Icon size token** に移し、**Iconography migration rounding**（14→16 等）は adoption 時のみ。サイドバー絵文字の SVG 化も v1 deliverables 外。
+_Avoid_: リデザイン（v1 で見た目変更を含意するため）, deliverables での一括 16px 化（回帰レビューと混ぜないため）
+
+**Icon color rule**:
+Iconography における色の付け方の正本。SVG／Element Plus アイコンは原則 **`currentColor`**（親の `color` を継承）。親は **Neutral text token**（`--color-text-primary` / `--color-text-secondary` / `--color-text-muted`）で役割を決める。単体の装飾 **UI icon** は **secondary**、無効文脈は **muted**、テキストリンクと一体の操作アイコンのみ **Brand color token** を親に使ってよい。**Semantic color**・**Domain color**（**Presence color** 等）を汎用 **UI icon** に直付けしない（**VtAlert** 等 EP 部品内のアイコンは部品側の Semantic mapping に任せる）。**Domain icon** の色は各ドメイン正本（例: **Encounter friend mark** → **Neutral text secondary**）。
+_Avoid_: アイコン専用パレット（**App color token** と二重管理）, hex 直書き, danger 赤の単独 UI icon（**Semantic button** / **VtButton** と混同しやすいため）
+
+**Navigation glyph color**:
+**Navigation glyph** が Unicode 絵文字の間は **Icon color rule** の CSS `color` は効かない（絵文字固有の色）。v1 では **Icon size scale** のみ揃える。SVG／EP アイコンへ置換後は、メニュー項目の `color` 継承（`currentColor`）に従い **Neutral text**／active 時 **primary** を親が担当する。**Brand color** をナビ専用に追加しない（サイドバー active は既存の左ボーダー等で足りる）。
+_Avoid_: 絵文字の色統一（不可能なため）, ナビ active の Brand 固定（**Icon color rule** 案 C）
+
+**Icon color adoption**:
+**Icon color rule** への移行方針。新規・改修で触ったファイルではレガシー `--text-*` や hex をアイコンに増やさず、親の **Neutral text token** または `currentColor` に寄せる。未着手の既存 View は一括置換しない。
+_Avoid_: 全面置換, アイコンに Brand 直指定の新規増殖
+
+**VtIcon**:
+**UI icon**・**Custom icon** の標準ラッパー。内部は `el-icon`。**Icon size pattern** に対応する `size` prop（`compact` | `default` | `emphasis` | `large`）を**必須**とし、暗黙既定は持たない。色は **Icon color rule** に従い `currentColor`（親の **Neutral text token**）。`data-testid` 等は透過。**Navigation glyph** の Unicode 絵文字は v1 では `VtIcon` で包まず、同じ **Icon size token**／pattern クラスを `span` 等に当てる（SVG 化後は `VtIcon` に寄せる）。
+_Avoid_: el-icon（移行完了後の直呼び）, Icon component（汎用フレームワークの俗称）
+
+**VtIcon adoption**:
+VtIcon への移行方針。新規・改修で **UI icon** には **VtIcon** を使う。未着手の `<el-icon>` 直書きは一括置換しない（触ったところから順次）。ESLint 強制は v1 では入れない。見た目の正本は **Iconography Storybook catalog**。
+_Avoid_: 全面置換, el-icon 禁止の CI 強制（即時一括・CI 強制を含意するため）
+
+**Custom icon component**:
+**Custom icon** の Vue SFC（`frontend/src/icons/*.vue`）。単一ルート `<svg>`、`viewBox` 必須、`width`/`height` 属性なし、塗り／線は `currentColor`（`fill` または `stroke`）。利用は `<VtIcon size="…"><FooIcon /></VtIcon>`。EP 一覧に無いグリフの追加手順の正本。
+_Avoid_: 生 SVG ファイル直置き（`.svg` を import するだけ）, PNG アイコン, インライン `<svg>` の View 直書き（再利用グリフの場合）
+
+**Iconography Storybook catalog**:
+Iconography の Storybook 一覧。**Icon size scale**・**Icon size pattern** 対応表、**Icon color rule** 要点、**VtIcon** の 4 `size`、EP 代表アイコン（Search / Caret）と **Custom icon component** 1 例、**Navigation glyph**（絵文字サイズ揃え）の使用例を載せる（**Spacing Storybook catalog** / **Color Storybook catalog** と同型）。
+_Avoid_: 全画面 Storybook, EP Icons 全件一覧
+
+**Iconography adoption**:
+Iconography トークン・**VtIcon**・**Icon color rule** への移行方針。新規・改修で触ったファイルでは **Icon size token**／**VtIcon**／`currentColor` を使う。未着手の既存 `<el-icon>`・任意 px・絵文字サイズ直書きは一括置換しない。**Iconography v1 deliverables** の共有スタイルと Storybook は v1 で寄せる。サイドバー SVG 化は後続。**Iconography migration rounding** は adoption 時のみ。
+_Avoid_: 全面置換, 絵文字即時 SVG 化の v1 強制
+
+**Iconography v1 deliverables**:
+Issue／PR で最初に届ける具体物。(1) `frontend/src/assets/style.css` の **Icon size token**・**Icon size pattern**、(2) `frontend/src/design/iconTokens.ts` + 単体テスト、(3) **VtIcon** + variants + 単体テスト、(4) **Iconography Storybook catalog**（EP 代表 + **Custom icon component** サンプル 1 例 + **Navigation glyph** サイズ例）、(5) 共有スタイル（`.section-card__toggle-icon` 等）のトークン参照化（**Iconography v1 visual policy**）、(6) `.cursor/rules/iconography-design-system.mdc`、(7) `docs/adr/0023-iconography-design-system.md`（**Icon accessibility rule** を含む）、(8) `CONTEXT.md` 同期。各 View の `<el-icon>` 直書きは **Iconography adoption** のみ。
+_Avoid_: Iconography v1 scope（届け物リストを指すときは deliverables とセットで書く）, 全画面置換（adoption と矛盾するため）
+
+**Icon accessibility rule**:
+**VtIcon**・**Domain icon** の支援技術向けルール。**装飾 icon**（ボタン・リンク横の補助、折りたたみ Caret、入力 prefix の Search 等）は `aria-hidden="true"`。操作意味は隣のテキスト・ボタンラベル・`aria-labelledby` が担う。**意味 icon**（ラベル無しで情報を伝える **Domain icon** 等）は `role="img"` + `aria-label`（i18n 固定文）。**アイコンのみボタン**（テキストラベル無し）は v1 では新規に増やさない。既存は `aria-label` 必須。v1 では文書化と **VtIcon**／Storybook の既定に留め、既存 View の一括修正は **Iconography adoption** に委ねる。
+_Avoid_: 全 icon に aria-label（装飾まで読み上げる）, 装飾 icon の role="img", v1 での a11y 一括置換
 
 ## Agent contribution
 
