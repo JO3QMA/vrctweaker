@@ -13,8 +13,9 @@ defineOptions({
 });
 
 const passthroughAttrs = computed(() => {
-  const { "aria-hidden": _ariaHidden, ...rest } = attrs;
-  return rest;
+  const result = { ...attrs };
+  delete result["aria-hidden"];
+  return result;
 });
 
 const sizeClass = computed(() => `vt-icon--size-${props.size}`);
