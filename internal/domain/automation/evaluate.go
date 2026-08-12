@@ -171,15 +171,6 @@ func SortItemsByID(items []*AutomationItem) []*AutomationItem {
 	return out
 }
 
-// LegacyEvalRule evaluates old AutomationRule shape (tests / migration).
-func LegacyEvalRule(rule *AutomationRule, ctx *EvalContext) (bool, error) {
-	if rule == nil || !rule.IsEnabled {
-		return false, nil
-	}
-	item := RuleToItem(rule)
-	return EvalItem(item, ctx)
-}
-
 // RuleToItem converts a legacy rule row.
 func RuleToItem(rule *AutomationRule) *AutomationItem {
 	if rule == nil {
