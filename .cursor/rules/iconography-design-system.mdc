@@ -13,7 +13,7 @@ alwaysApply: false
 | 含む | 含まない |
 |------|----------|
 | **UI icon**（`@element-plus/icons-vue` + **VtIcon**） | アバター・サムネ |
-| **Navigation glyph**（絵文字。v1 はサイズのみ） | Server status ドット |
+| **Navigation glyph**（サイドバー。`navMenuItems.ts` + **VtIcon**） | Server status ドット |
 | **Domain icon**（friend mark 等） | Presence 色ボタン |
 | **Custom icon**（`frontend/src/icons/*.vue`） | EP 全件グローバル登録 |
 
@@ -30,13 +30,12 @@ alwaysApply: false
 
 Legacy（v1 見た目不変）: `--icon-size-legacy-toggle` → `--font-size-14`（adoption 先: `--icon-size-default`）
 
-**Navigation glyph** 絵文字: `.nav-glyph-size-compact` / `.nav-glyph-size-default` / `.nav-glyph-size-legacy`（14px 現行サイドバー）等（`VtIcon` で包まない）
+**Navigation glyph**（サイドバー）: `frontend/src/navigation/navMenuItems.ts` の Element Plus アイコン + `<VtIcon size="default">`。色は親メニュー項目の `currentColor`。
 
 ## Icon color rule
 
 - SVG / EP: **`currentColor`**。親は **Neutral text token**
 - 装飾単体: `--color-text-secondary`
-- 絵文字: サイズのみ（色は固有）
 - **Semantic / Domain color** を汎用 UI icon に直付けしない
 
 ## VtIcon
@@ -58,7 +57,7 @@ Legacy（v1 見た目不変）: `--icon-size-legacy-toggle` → `--font-size-14`
 ## 移行（Iconography adoption）
 
 - 新規・改修は **VtIcon** + icon トークン
-- 未触りの `<el-icon>` / 絵文字直書きは一括置換しない
+- 未触りの `<el-icon>` 直書きは一括置換しない
 - スケール外寸法は **四捨五入で最寄り**（14→16）。v1 deliverables では寄せない
 - ESLint 禁止は v1 では入れない
 

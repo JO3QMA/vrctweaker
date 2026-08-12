@@ -56,7 +56,7 @@ test.describe("Navigation", () => {
     });
   }
 
-  test("footer settings (⚙️ 設定) navigates to settings", async ({ page }) => {
+  test("footer settings navigates to settings", async ({ page }) => {
     await page.goto("/");
     await page
       .locator(".sidebar-footer")
