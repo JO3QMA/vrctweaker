@@ -27,6 +27,6 @@ const { t } = useI18n();
 .quick-actions {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-block);
 }
 </style>

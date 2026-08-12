@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createRouter, createWebHashHistory } from "vue-router";
-import { ElMessageBox, ElSlider, ElMessage } from "element-plus";
+import { ElMessageBox, ElSlider } from "element-plus";
 import ConfigView from "../ConfigView.vue";
 import { App } from "../../wails/app";
+import { showToast } from "../../utils/showToast";
 import type { VRChatConfigDTO } from "../../wails/app";
 
 const router = createRouter({
@@ -650,8 +651,10 @@ describe("ConfigView asset cache clear", () => {
     vi.spyOn(App, "clearVRChatAssetCache").mockResolvedValue(12);
     vi.spyOn(ElMessageBox, "confirm").mockResolvedValue(undefined as never);
     const successSpy = vi
-      .spyOn(ElMessage, "success")
-      .mockImplementation(() => ({ close: () => {} }));
+      .spyOn(showToast, "success")
+      .mockImplementation(() => ({
+        close: () => {},
+      }));
     const wrapper = await mountEditor();
 
     await wrapper

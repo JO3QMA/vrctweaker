@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createRouter, createWebHashHistory } from "vue-router";
-import { ElMessage } from "element-plus";
 import FriendsView from "../FriendsView.vue";
 import { App, type UserCacheDTO } from "../../wails/app";
+import { showToast } from "../../utils/showToast";
 
 async function mountFriendsView(query: Record<string, string> = {}) {
   const router = createRouter({
@@ -325,10 +325,9 @@ describe("FriendsView", () => {
   });
 
   it("warns and removes vrcUserId query when id is not in friends list", async () => {
-    const noopHandler = { close: () => {} };
-    const warnSpy = vi
-      .spyOn(ElMessage, "warning")
-      .mockImplementation(() => noopHandler);
+    const warnSpy = vi.spyOn(showToast, "warning").mockImplementation(() => ({
+      close: () => {},
+    }));
     mockFriends.mockResolvedValue([
       minimalUser({
         vrcUserId: "1",

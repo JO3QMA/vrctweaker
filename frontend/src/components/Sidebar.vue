@@ -6,14 +6,14 @@
         :key="item.path"
         :index="item.path"
       >
-        <span class="sidebar-icon">{{ item.icon }}</span>
+        <span class="sidebar-icon nav-glyph-size-default">{{ item.icon }}</span>
         <template #title>{{ item.label }}</template>
       </el-menu-item>
     </el-menu>
     <div class="sidebar-footer">
       <el-menu :default-active="route.path" router class="sidebar-nav">
         <el-menu-item index="/settings">
-          <span class="sidebar-icon">⚙️</span>
+          <span class="sidebar-icon nav-glyph-size-default">⚙️</span>
           <template #title>{{ t("nav.settings") }}</template>
         </el-menu-item>
       </el-menu>
@@ -66,8 +66,8 @@ const menuItems = computed(() => {
 <style scoped>
 .sidebar {
   width: var(--sidebar-width);
-  background: var(--bg-secondary);
-  border-right: 1px solid var(--border);
+  background: var(--color-bg-elevated);
+  border-right: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
@@ -79,28 +79,27 @@ const menuItems = computed(() => {
 }
 
 .sidebar-nav :deep(.el-menu-item) {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   height: 42px;
   line-height: 42px;
 }
 
 .sidebar-nav :deep(.el-menu-item:hover),
 .sidebar-nav :deep(.el-menu-item.is-active) {
-  background: var(--bg-tertiary) !important;
-  color: var(--text-primary) !important;
+  background: var(--color-bg-muted) !important;
+  color: var(--color-text-primary) !important;
 }
 
 .sidebar-nav :deep(.el-menu-item.is-active) {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--color-brand);
 }
 
 .sidebar-footer {
   margin-top: auto;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--color-border);
 }
 
 .sidebar-icon {
-  margin-right: 0.5rem;
-  font-size: 1rem;
+  margin-right: var(--space-action-group);
 }
 </style>

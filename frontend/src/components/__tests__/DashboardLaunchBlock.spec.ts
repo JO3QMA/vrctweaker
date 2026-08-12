@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createRouter, createMemoryHistory } from "vue-router";
-import { ElMessage, ElSelect } from "element-plus";
+import { ElSelect } from "element-plus";
 import DashboardLaunchBlock from "../DashboardLaunchBlock.vue";
 import type { LaunchProfileDTO } from "../../wails/app";
+import { showToast } from "../../utils/showToast";
 
 const {
   mockGetDashboardLaunchBlock,
@@ -172,11 +173,11 @@ describe("DashboardLaunchBlock", () => {
       },
     });
     mockGetDashboardLaunchBlock.mockRejectedValueOnce(new Error("db down"));
-    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
+    const errorSpy = vi.spyOn(showToast, "error").mockImplementation(() => ({
       close: () => {},
     }));
     const warningSpy = vi
-      .spyOn(ElMessage, "warning")
+      .spyOn(showToast, "warning")
       .mockImplementation(() => ({
         close: () => {},
       }));
@@ -226,7 +227,7 @@ describe("DashboardLaunchBlock", () => {
 
   it("shows inline error on load failure without toast", async () => {
     mockGetDashboardLaunchBlock.mockRejectedValueOnce(new Error("db down"));
-    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
+    const errorSpy = vi.spyOn(showToast, "error").mockImplementation(() => ({
       close: () => {},
     }));
     const consoleSpy = vi
@@ -325,7 +326,7 @@ describe("DashboardLaunchBlock", () => {
       rejoin: null,
     });
     mockLaunchVRChat.mockRejectedValueOnce(new Error("launch failed"));
-    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
+    const errorSpy = vi.spyOn(showToast, "error").mockImplementation(() => ({
       close: () => {},
     }));
     const wrapper = mountBlock();
@@ -346,7 +347,7 @@ describe("DashboardLaunchBlock", () => {
       rejoin: { playSessionId: "ps-1", worldDisplayName: "" },
     });
     mockInstanceRejoin.mockRejectedValueOnce(new Error("rejoin failed"));
-    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
+    const errorSpy = vi.spyOn(showToast, "error").mockImplementation(() => ({
       close: () => {},
     }));
     const wrapper = mountBlock();

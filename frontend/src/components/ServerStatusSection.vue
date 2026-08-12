@@ -5,20 +5,23 @@
     data-testid="server-status-section"
   >
     <template #header>
-      <span class="server-status-title">{{
+      <span class="server-status-title text-body-sm">{{
         t("dashboard.serverStatus.title")
       }}</span>
     </template>
 
     <div
       v-if="loading"
-      class="server-status-message"
+      class="server-status-message text-body-sm"
       data-testid="server-status-loading"
     >
       {{ t("dashboard.serverStatus.loading") }}
     </div>
 
-    <div v-else-if="fetchState === 'unavailable'" class="server-status-message">
+    <div
+      v-else-if="fetchState === 'unavailable'"
+      class="server-status-message text-body-sm"
+    >
       {{ t("dashboard.serverStatus.fetchUnavailable") }}
     </div>
 
@@ -34,7 +37,7 @@
 
       <p
         v-if="fetchState === 'partial'"
-        class="server-status-message"
+        class="server-status-message text-body-sm"
         data-testid="server-status-detail-unavailable"
       >
         {{ t("dashboard.serverStatus.detailUnavailable") }}
@@ -48,7 +51,7 @@
         <li
           v-for="(row, idx) in componentRows"
           :key="`component-${idx}`"
-          class="server-status-detail-row"
+          class="server-status-detail-row text-body-sm"
           :class="row.colorClass"
         >
           <span class="server-status-dot" aria-hidden="true" />
@@ -58,14 +61,14 @@
         <li
           v-for="(headline, idx) in headlineRows"
           :key="`headline-${idx}`"
-          class="server-status-detail-row server-status-detail-headline"
+          class="server-status-detail-row server-status-detail-headline text-body-sm"
         >
           {{ headline }}
         </li>
       </ul>
 
       <a
-        class="server-status-link"
+        class="server-status-link text-caption"
         :href="statusPageUrl"
         target="_blank"
         rel="noopener noreferrer"
@@ -180,44 +183,41 @@ onUnmounted(() => {
 
 <style scoped>
 .server-status-panel {
-  background: var(--bg-secondary) !important;
-  border-color: var(--border) !important;
+  background: var(--color-bg-elevated) !important;
+  border-color: var(--color-border) !important;
 }
 
 .server-status-title {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .server-status-summary {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
+  gap: var(--space-action-group);
+  font-weight: var(--font-weight-600);
+  margin-bottom: var(--space-action-group);
 }
 
 .server-status-message {
-  margin: 0 0 0.5rem;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+  margin: 0 0 var(--space-action-group);
+  color: var(--color-text-secondary);
 }
 
 .server-status-detail {
   list-style: none;
-  margin: 0 0 0.75rem;
+  margin: 0 0 var(--space-form-field);
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: var(--space-inline-tight);
 }
 
 .server-status-detail-row {
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
+  gap: var(--space-action-group);
   flex-wrap: wrap;
-  font-size: 0.9rem;
 }
 
 .server-status-detail-name {
@@ -226,25 +226,24 @@ onUnmounted(() => {
 }
 
 .server-status-detail-status {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   white-space: nowrap;
 }
 
 .server-status-detail-headline {
-  padding-left: 1.1rem;
-  color: var(--text-secondary);
+  padding-left: var(--space-block);
+  color: var(--color-text-secondary);
 }
 
 .server-status-dot {
-  width: 0.55rem;
-  height: 0.55rem;
+  width: var(--space-action-group);
+  height: var(--space-action-group);
   border-radius: 50%;
   flex-shrink: 0;
   background: currentColor;
 }
 
 .server-status-link {
-  font-size: 0.85rem;
   color: var(--color-brand);
 }
 

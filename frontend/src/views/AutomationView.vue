@@ -1,41 +1,44 @@
 <template>
   <div class="automation-view">
     <h1 class="page-title">{{ t("automation.title") }}</h1>
-    <el-alert
+    <VtAlert
       v-if="!runtime.available"
-      type="warning"
+      class="runtime-alert"
+      variant="warning"
       :title="t('automation.unavailableTitle')"
       :description="
         t(`automation.reason.${runtime.reasonKey || 'subsystemUnavailable'}`)
       "
-      show-icon
-      :closable="false"
-      style="margin-bottom: 1rem"
     />
-    <el-text
-      type="info"
-      size="small"
-      style="display: block; margin-bottom: 1rem"
-    >
+    <p class="text-body-sm automation-intro">
       {{ t("automation.intro") }}
-    </el-text>
-    <div
+    </p>
+    <VtAlert
       v-if="isDirty"
       class="unsaved-banner"
       data-testid="unsaved-banner"
+      variant="warning"
       :title="t('automation.unsavedBanner')"
-    >
-      {{ t("automation.unsavedBanner") }}
-    </div>
+    />
 
     <div class="automation-layout">
       <div class="items-list">
-        <el-button class="btn-add" data-testid="add-rule" @click="addRule">
+        <VtButton
+          variant="secondary"
+          class="btn-add"
+          data-testid="add-rule"
+          @click="addRule"
+        >
           {{ t("automation.addRule") }}
-        </el-button>
-        <el-button class="btn-add" data-testid="add-script" @click="addScript">
+        </VtButton>
+        <VtButton
+          variant="secondary"
+          class="btn-add"
+          data-testid="add-script"
+          @click="addScript"
+        >
           {{ t("automation.addScript") }}
-        </el-button>
+        </VtButton>
         <div
           v-for="item in items"
           :key="item.id"
@@ -49,7 +52,7 @@
           <div class="rule-header">
             <span class="rule-name">{{ item.name }}</span>
             <div class="toggle-wrap" @click.stop>
-              <el-switch
+              <VtSwitch
                 :model-value="item.isEnabled"
                 size="small"
                 @change="(v: boolean) => toggleItem(item, v)"
@@ -57,11 +60,11 @@
             </div>
           </div>
           <div class="rule-summary">
-            <el-tag size="small" type="info">{{
+            <VtTag size="small" variant="info">{{
               item.kind === "script"
                 ? t("automation.kindScript")
                 : t("automation.kindRule")
-            }}</el-tag>
+            }}</VtTag>
             <span>{{ itemSummary(item) }}</span>
           </div>
         </div>
@@ -89,7 +92,7 @@
 
         <el-form label-position="top" @submit.prevent="save">
           <el-form-item :label="t('automation.itemName')">
-            <el-input
+            <VtInput
               v-model="editor.name"
               :placeholder="t('automation.ruleNamePh')"
               required
@@ -99,27 +102,27 @@
           <template v-if="editor.kind === 'rule'">
             <el-divider>{{ t("automation.sectionWhen") }}</el-divider>
             <el-form-item :label="t('automation.trigger')">
-              <el-select v-model="editor.triggerType" style="width: 100%">
+              <VtSelect v-model="editor.triggerType" class="field-full-width">
                 <el-option
                   v-for="opt in triggerOptions"
                   :key="opt.value"
                   :value="opt.value"
                   :label="opt.label"
                 />
-              </el-select>
+              </VtSelect>
             </el-form-item>
             <el-form-item
               v-if="editor.triggerType === 'schedule.tick'"
               :label="t('automation.schedule')"
             >
               <el-checkbox-group v-model="editor.scheduleWeekdays">
-                <el-checkbox
+                <VtCheckbox
                   v-for="d in weekdayOptions"
                   :key="d.value"
                   :value="d.value"
                 >
                   {{ d.label }}
-                </el-checkbox>
+                </VtCheckbox>
               </el-checkbox-group>
               <div class="time-row">
                 <el-input-number
@@ -138,19 +141,19 @@
 
             <el-divider>{{ t("automation.sectionIf") }}</el-divider>
             <el-form-item>
-              <el-checkbox v-model="editor.vrchatRunning">
+              <VtCheckbox v-model="editor.vrchatRunning">
                 {{ t("automation.conditionVrchatRunning") }}
-              </el-checkbox>
+              </VtCheckbox>
             </el-form-item>
             <el-form-item
               v-if="editor.triggerType === 'friend_joined'"
               :label="t('automation.conditionFriendIs')"
             >
-              <el-select
+              <VtSelect
                 v-model="editor.friendUserId"
                 clearable
                 filterable
-                style="width: 100%"
+                class="field-full-width"
               >
                 <el-option
                   v-for="f in friends"
@@ -158,7 +161,7 @@
                   :value="f.vrcUserId"
                   :label="f.displayName"
                 />
-              </el-select>
+              </VtSelect>
             </el-form-item>
 
             <el-divider>{{ t("automation.sectionThen") }}</el-divider>
@@ -168,7 +171,7 @@
               class="action-row"
             >
               <el-form-item :label="t('automation.action')">
-                <el-select v-model="action.type" style="width: 100%">
+                <VtSelect v-model="action.type" class="field-full-width">
                   <el-option
                     v-for="opt in actionOptions"
                     :key="opt.value"
@@ -176,20 +179,20 @@
                     :label="opt.label"
                     :disabled="opt.disabled"
                   />
-                </el-select>
+                </VtSelect>
               </el-form-item>
               <el-form-item
                 v-if="action.type === 'change_status'"
                 :label="t('automation.status')"
               >
-                <el-select v-model="action.status" style="width: 100%">
+                <VtSelect v-model="action.status" class="field-full-width">
                   <el-option
                     v-for="opt in statusOptions"
                     :key="opt.value"
                     :value="opt.value"
                     :label="opt.label"
                   />
-                </el-select>
+                </VtSelect>
               </el-form-item>
               <template v-if="action.type === 'set_power_plan'">
                 <el-form-item :label="t('automation.powerPlanMode')">
@@ -206,9 +209,9 @@
                   v-if="action.powerPlanMode === 'preset'"
                   :label="t('automation.powerPlanPreset')"
                 >
-                  <el-select
+                  <VtSelect
                     v-model="action.powerPlanPreset"
-                    style="width: 100%"
+                    class="field-full-width"
                   >
                     <el-option
                       v-for="p in powerPlanPresets"
@@ -216,17 +219,20 @@
                       :value="p.value"
                       :label="p.label"
                     />
-                  </el-select>
+                  </VtSelect>
                 </el-form-item>
                 <el-form-item v-else :label="t('automation.powerPlanDetected')">
-                  <el-select v-model="action.powerPlanGuid" style="width: 100%">
+                  <VtSelect
+                    v-model="action.powerPlanGuid"
+                    class="field-full-width"
+                  >
                     <el-option
                       v-for="p in powerPlans"
                       :key="p.guid"
                       :value="p.guid"
                       :label="p.name"
                     />
-                  </el-select>
+                  </VtSelect>
                 </el-form-item>
               </template>
               <template v-if="action.type === 'set_vrchat_window_size'">
@@ -247,33 +253,33 @@
                   />
                 </el-form-item>
               </template>
-              <el-checkbox v-model="action.continueOnError">
+              <VtCheckbox v-model="action.continueOnError">
                 {{ t("automation.continueOnError") }}
-              </el-checkbox>
-              <el-button
+              </VtCheckbox>
+              <VtButton
                 v-if="editor.actions.length > 1"
-                type="danger"
-                text
+                variant="tertiary"
                 @click="removeAction(idx)"
               >
                 {{ t("automation.removeAction") }}
-              </el-button>
+              </VtButton>
             </div>
-            <el-button
+            <VtButton
               v-if="editor.actions.length < 10"
+              variant="secondary"
               class="btn-add-action"
               @click="addAction"
             >
               {{ t("automation.addAction") }}
-            </el-button>
-            <el-text type="info" size="small" class="partial-hint">
+            </VtButton>
+            <p class="text-body-sm partial-hint">
               {{ t("automation.partialApplyHint") }}
-            </el-text>
+            </p>
           </template>
 
           <template v-else>
             <el-divider>{{ t("automation.scriptSource") }}</el-divider>
-            <el-input
+            <VtInput
               v-model="editor.scriptSource"
               type="textarea"
               :rows="14"
@@ -283,25 +289,25 @@
           </template>
 
           <div class="editor-actions">
-            <el-button
-              type="primary"
+            <VtButton
+              variant="primary"
               data-testid="save-item"
               :loading="saving"
               @click="save"
             >
               {{ t("automation.save") }}
-            </el-button>
-            <el-button
+            </VtButton>
+            <VtButton
               v-if="editor.id && !editor.isNew"
-              type="danger"
+              variant="danger"
               plain
               @click="confirmDelete"
             >
               {{ t("automation.delete") }}
-            </el-button>
-            <el-button @click="cancelEdit">{{
+            </VtButton>
+            <VtButton variant="secondary" @click="cancelEdit">{{
               t("automation.cancel")
-            }}</el-button>
+            }}</VtButton>
           </div>
         </el-form>
       </el-card>
@@ -309,9 +315,9 @@
       <el-card class="run-log-panel" shadow="never">
         <template #header>
           <span>{{ t("automation.runLogTitle") }}</span>
-          <el-button text size="small" @click="loadRunLog">
+          <VtButton variant="tertiary" size="small" @click="loadRunLog">
             {{ t("common.refresh") }}
-          </el-button>
+          </VtButton>
         </template>
         <el-table :data="runLog" size="small" stripe empty-text="—">
           <el-table-column
@@ -327,13 +333,13 @@
           />
           <el-table-column :label="t('automation.runLogResult')" width="100">
             <template #default="{ row }">
-              <el-tag :type="row.success ? 'success' : 'danger'" size="small">
+              <VtTag :variant="row.success ? 'success' : 'danger'" size="small">
                 {{
                   row.success
                     ? t("automation.runLogSuccess")
                     : t("automation.runLogFailure")
                 }}
-              </el-tag>
+              </VtTag>
             </template>
           </el-table-column>
           <el-table-column :label="t('automation.runLogActions')" width="80">
@@ -355,7 +361,14 @@
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessageBox } from "element-plus";
+import VtAlert from "../components/VtAlert.vue";
+import VtButton from "../components/VtButton.vue";
+import VtCheckbox from "../components/VtCheckbox.vue";
+import VtInput from "../components/VtInput.vue";
+import VtSelect from "../components/VtSelect.vue";
+import VtSwitch from "../components/VtSwitch.vue";
+import VtTag from "../components/VtTag.vue";
 import {
   App,
   type AutomationItemDTO,
@@ -376,6 +389,7 @@ import {
   VT_BUTTON_DANGER_CONFIRM_CLASS,
   VT_BUTTON_SECONDARY_CANCEL_CLASS,
 } from "../components/vtButtonClasses";
+import { showToast } from "../utils/showToast";
 
 const { t } = useI18n();
 
@@ -537,7 +551,7 @@ async function selectItem(item: AutomationItemDTO) {
   } catch {
     editor.value = null;
     savedSnapshot.value = "";
-    ElMessage.error(t("automation.itemParseError"));
+    showToast.error(t("automation.itemParseError"));
   }
 }
 
@@ -623,7 +637,7 @@ async function save(): Promise<boolean> {
           editor.value.isNew = false;
         } catch {
           editor.value.isNew = false;
-          ElMessage.error(t("automation.itemParseError"));
+          showToast.error(t("automation.itemParseError"));
         }
       } else {
         editor.value.isNew = false;
@@ -635,7 +649,7 @@ async function save(): Promise<boolean> {
     captureSnapshot();
     return true;
   } catch {
-    ElMessage.error(t("automation.saveError"));
+    showToast.error(t("automation.saveError"));
     return false;
   } finally {
     saving.value = false;
@@ -650,7 +664,7 @@ async function toggleItem(item: AutomationItemDTO, enabled: boolean) {
     await loadItems();
   } catch {
     item.isEnabled = previous;
-    ElMessage.error(t("automation.toggleError"));
+    showToast.error(t("automation.toggleError"));
   }
 }
 
@@ -679,10 +693,20 @@ async function confirmDelete() {
 </script>
 
 <style scoped>
+.automation-intro {
+  display: block;
+  margin: 0 0 var(--space-block);
+  color: var(--color-text-secondary);
+}
+
+.runtime-alert {
+  margin-bottom: var(--space-block);
+}
+
 .automation-layout {
   display: grid;
   grid-template-columns: 280px 1fr 320px;
-  gap: 1rem;
+  gap: var(--space-block);
   align-items: start;
 }
 
@@ -698,21 +722,21 @@ async function confirmDelete() {
 
 .btn-add {
   width: 100%;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-action-group);
   border-style: dashed !important;
-  color: var(--text-secondary) !important;
+  color: var(--color-text-secondary) !important;
 }
 
 .rule-card {
-  padding: 0.75rem;
-  margin-bottom: 0.5rem;
-  background: var(--bg-secondary);
+  padding: var(--space-form-field);
+  margin-bottom: var(--space-action-group);
+  background: var(--color-bg-elevated);
   border-radius: var(--radius);
   cursor: pointer;
 }
 
 .rule-card.active {
-  background: var(--bg-tertiary);
+  background: var(--color-bg-muted);
 }
 
 .rule-card.disabled {
@@ -723,12 +747,12 @@ async function confirmDelete() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.35rem;
+  gap: var(--space-action-group);
+  margin-bottom: var(--space-inline-tight);
 }
 
 .rule-name {
-  font-weight: 500;
+  font-weight: var(--font-weight-500);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -738,81 +762,81 @@ async function confirmDelete() {
 .rule-summary {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
+  gap: var(--space-inline-tight);
+  font-size: var(--font-size-12);
+  color: var(--color-text-secondary);
 }
 
 .rule-editor,
 .run-log-panel {
-  background: var(--bg-secondary) !important;
-  border-color: var(--border) !important;
+  background: var(--color-bg-elevated) !important;
+  border-color: var(--color-border) !important;
 }
 
 .rule-editor :deep(.el-card__header) {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-weight: 600;
+  gap: var(--space-action-group);
+  font-weight: var(--font-weight-600);
+}
+
+.field-full-width {
+  width: 100%;
 }
 
 .editor-actions {
-  margin-top: 1rem;
+  margin-top: var(--space-block);
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-action-group);
   flex-wrap: wrap;
 }
 
 .weekday-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+  gap: var(--space-action-group);
+  margin-bottom: var(--space-action-group);
 }
 
 .time-row {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-action-group);
 }
 
 .action-row {
-  padding: 0.75rem;
-  margin-bottom: 0.75rem;
-  border: 1px solid var(--border);
+  padding: var(--space-form-field);
+  margin-bottom: var(--space-form-field);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
 }
 
 .btn-add-action {
   width: 100%;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-action-group);
   border-style: dashed !important;
 }
 
 .partial-hint {
   display: block;
-  margin-bottom: 1rem;
+  margin: 0 0 var(--space-block);
+  color: var(--color-text-secondary);
 }
 
 .script-editor :deep(textarea) {
   font-family: ui-monospace, monospace;
-  font-size: 0.85rem;
+  font-size: var(--font-size-12);
 }
 
 .unsaved-banner {
-  margin-bottom: 0.75rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--radius);
-  background: color-mix(in srgb, var(--el-color-warning) 18%, transparent);
-  color: var(--el-color-warning);
-  font-size: 0.85rem;
+  margin-bottom: var(--space-form-field);
 }
 
 .unsaved-dot {
-  width: 8px;
-  height: 8px;
+  width: var(--space-action-group);
+  height: var(--space-action-group);
   border-radius: 50%;
-  background: var(--el-color-warning);
+  background: var(--color-warning);
   flex-shrink: 0;
 }
 

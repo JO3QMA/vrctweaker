@@ -18,9 +18,9 @@
       <div v-else class="friend-thumb friend-thumb-placeholder" />
       <span class="friend-name">{{ f.displayName }}</span>
       <VrcStatusTag :status="f.status" />
-      <el-button
+      <VtButton
         link
-        :type="f.isFavorite ? 'primary' : 'info'"
+        :variant="f.isFavorite ? 'primary' : 'tertiary'"
         :title="
           f.isFavorite
             ? t('friendsList.favoriteRemove')
@@ -30,7 +30,7 @@
         @click.stop="emit('toggleFavorite', f)"
       >
         ★
-      </el-button>
+      </VtButton>
     </div>
     <p v-if="friends.length === 0 && !loading" class="empty-message">
       {{ emptyMessage }}
@@ -41,6 +41,7 @@
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
 import VrcStatusTag from "../../components/VrcStatusTag.vue";
+import VtButton from "../../components/VtButton.vue";
 import type { UserCacheDTO } from "../../wails/app";
 import { friendThumbUrl } from "@/utils/vrcUserCacheDisplay";
 
@@ -73,10 +74,10 @@ const emit = defineEmits<{
 .friend-card {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  margin-bottom: 0.5rem;
-  background: var(--bg-secondary);
+  gap: var(--space-action-group);
+  padding: var(--space-form-field);
+  margin-bottom: var(--space-action-group);
+  background: var(--color-bg-elevated);
   border-radius: var(--radius);
   cursor: pointer;
   transition: background 0.15s;
@@ -84,7 +85,7 @@ const emit = defineEmits<{
 
 .friend-card:hover,
 .friend-card.active {
-  background: var(--bg-tertiary);
+  background: var(--color-bg-muted);
 }
 
 .friend-thumb {
@@ -96,13 +97,13 @@ const emit = defineEmits<{
 }
 
 .friend-thumb-placeholder {
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
 }
 
 .friend-name {
   flex: 1;
-  font-weight: 500;
+  font-weight: var(--font-weight-500);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -111,13 +112,13 @@ const emit = defineEmits<{
 
 .btn-favorite {
   flex-shrink: 0;
-  font-size: 1rem !important;
-  padding: 0 4px !important;
+  font-size: var(--font-size-16) !important;
+  padding: 0 var(--space-inline-tight) !important;
 }
 
 .empty-message {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin: 1rem 0;
+  font-size: var(--font-size-14);
+  color: var(--color-text-secondary);
+  margin: var(--space-block) 0;
 }
 </style>

@@ -13,19 +13,19 @@
     >
       <!-- フィルタ -->
       <div class="filters">
-        <el-input
+        <VtInput
           v-model="displayNameFilter"
           :placeholder="t('activity.searchDisplayName')"
           clearable
           style="max-width: 220px"
         >
           <template #prefix>
-            <el-icon><Search /></el-icon>
+            <VtIcon size="default"><Search /></VtIcon>
           </template>
-        </el-input>
-        <el-button @click="refreshActivity(false)">{{
+        </VtInput>
+        <VtButton variant="tertiary" @click="refreshActivity(false)">{{
           t("common.refresh")
-        }}</el-button>
+        }}</VtButton>
       </div>
 
       <div class="encounter-log-scroll">
@@ -66,8 +66,10 @@
             <template #default="{ row }">
               <div class="encounter-name-cell">
                 <span class="encounter-friend-mark-slot">
-                  <el-icon
+                  <VtIcon
                     v-if="row.isListableFriend"
+                    size="compact"
+                    :decorative="false"
                     class="encounter-friend-mark"
                     data-testid="encounter-friend-mark"
                     role="img"
@@ -75,17 +77,17 @@
                     :aria-label="t('activity.friendMark')"
                   >
                     <UserFilled />
-                  </el-icon>
+                  </VtIcon>
                 </span>
-                <el-button
+                <VtButton
                   v-if="row.vrcUserId"
+                  variant="primary"
                   link
-                  type="primary"
                   class="timeline-link"
                   @click="openUserFromEncounter(row)"
                 >
                   {{ row.displayName }}
-                </el-button>
+                </VtButton>
                 <span v-else class="timeline-name-muted">{{
                   row.displayName
                 }}</span>
@@ -94,16 +96,16 @@
           </el-table-column>
           <el-table-column :label="t('activity.colWorldName')" min-width="120">
             <template #default="{ row }">
-              <el-button
+              <VtButton
                 v-if="row.worldId"
+                variant="primary"
                 link
-                type="primary"
                 class="timeline-link"
                 :title="row.worldId"
                 @click="openWorldHistory(row.worldId)"
               >
                 {{ row.worldDisplayName || row.worldId }}
-              </el-button>
+              </VtButton>
               <span v-else>{{ t("common.dash") }}</span>
             </template>
           </el-table-column>
@@ -132,6 +134,9 @@ import { ref, computed, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import CollapsibleSectionCard from "../components/CollapsibleSectionCard.vue";
+import VtButton from "../components/VtButton.vue";
+import VtIcon from "../components/VtIcon.vue";
+import VtInput from "../components/VtInput.vue";
 import {
   App,
   type ActivityStatsDTO,
@@ -325,7 +330,7 @@ onUnmounted(() => {
 .activity-view {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--space-section);
   min-width: 0;
   width: 100%;
   min-height: 0;
@@ -338,17 +343,17 @@ onUnmounted(() => {
 }
 
 .section-card {
-  background: var(--bg-secondary) !important;
-  border-color: var(--border) !important;
+  background: var(--color-bg-elevated) !important;
+  border-color: var(--color-border) !important;
   width: 100%;
   min-width: 0;
   padding: 0;
 }
 
 .section-card :deep(.el-card__header) {
-  font-weight: 600;
-  border-bottom-color: var(--border);
-  color: var(--text-secondary);
+  font-weight: var(--font-weight-600);
+  border-bottom-color: var(--color-border);
+  color: var(--color-text-secondary);
 }
 
 /* プレイ時間カード全体の縦幅を固定（ヘッダー + グラフ 280px 相当の body） */
@@ -392,7 +397,7 @@ onUnmounted(() => {
 
 .section-card--playtime :deep(.el-card__body) .loading,
 .section-card--playtime :deep(.el-card__body) .empty-stats {
-  padding: 1rem;
+  padding: var(--space-block);
 }
 
 .section-card--encounters.section-card--collapsed {
@@ -434,22 +439,22 @@ onUnmounted(() => {
 
 .filters {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-action-group);
   align-items: center;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-action-group);
   flex-wrap: wrap;
   flex-shrink: 0;
 }
 
 .retention-hint {
-  margin: 0 0 1rem;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
+  margin: 0 0 var(--space-block);
+  font-size: var(--font-size-12);
+  color: var(--color-text-secondary);
   flex-shrink: 0;
 }
 
 .page-retention-hint {
-  margin-top: -0.75rem;
+  margin-top: calc(-1 * var(--space-form-field));
 }
 
 /* セクションカードの残り高さに合わせてスクロール（親チェーンに flex + min-height:0 あり） */
@@ -465,14 +470,14 @@ onUnmounted(() => {
 .loading,
 .empty,
 .empty-stats {
-  padding: 2rem;
+  padding: var(--space-page);
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .timeline-time {
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  font-size: var(--font-size-12);
+  color: var(--color-text-secondary);
 }
 
 .timeline-link {
@@ -484,28 +489,27 @@ onUnmounted(() => {
 }
 
 .timeline-name-muted {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .encounter-name-cell {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--space-inline-tight);
   max-width: 100%;
   min-width: 0;
 }
 
 .encounter-friend-mark-slot {
-  flex: 0 0 12px;
-  width: 12px;
-  height: 12px;
+  flex: 0 0 var(--icon-size-compact);
+  width: var(--icon-size-compact);
+  height: var(--icon-size-compact);
   display: inline-flex;
   align-items: center;
   justify-content: center;
 }
 
 .encounter-friend-mark {
-  font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 </style>

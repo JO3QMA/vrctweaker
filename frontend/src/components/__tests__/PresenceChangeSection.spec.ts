@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
-import { ElMessage } from "element-plus";
 import PresenceChangeSection from "../PresenceChangeSection.vue";
 import { unlockState } from "./sessionUnlockTestState";
+import { showToast } from "../../utils/showToast";
 
 const {
   mockGetPresenceChangeSection,
@@ -214,7 +214,7 @@ describe("PresenceChangeSection", () => {
 
   it("applies presence change and shows success message", async () => {
     const successSpy = vi
-      .spyOn(ElMessage, "success")
+      .spyOn(showToast, "success")
       .mockImplementation(() => ({ close: () => {} }));
     const wrapper = mountSection();
     await flushPromises();
@@ -232,7 +232,7 @@ describe("PresenceChangeSection", () => {
   it("shows error when apply fails", async () => {
     mockApplyPresenceChange.mockRejectedValueOnce(new Error("apply failed"));
     const errorSpy = vi
-      .spyOn(ElMessage, "error")
+      .spyOn(showToast, "error")
       .mockImplementation(() => ({ close: () => {} }));
     const wrapper = mountSection();
     await flushPromises();
@@ -249,7 +249,7 @@ describe("PresenceChangeSection", () => {
   it("shows warning when refresh fails after initial load", async () => {
     vi.useFakeTimers();
     const warnSpy = vi
-      .spyOn(ElMessage, "warning")
+      .spyOn(showToast, "warning")
       .mockImplementation(() => ({ close: () => {} }));
     mountSection();
     await flushPromises();

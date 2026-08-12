@@ -1,11 +1,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessageBox } from "element-plus";
 import { createRouter, createWebHashHistory } from "vue-router";
 import SettingsView from "../SettingsView.vue";
 import { App } from "../../wails/app";
 import * as I18nModule from "../../i18n";
 import { resetSessionUnlockForStorybook } from "../../composables/useSessionUnlock";
+import { showToast } from "../../utils/showToast";
+
+vi.mock("../../utils/showToast", () => ({
+  showToast: {
+    success: vi.fn(),
+    warning: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+  },
+}));
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -36,11 +46,19 @@ function pathRowInput(wrapper: ReturnType<typeof mount>, rowIndex: number) {
   return wrapper.findAll(".path-row .el-input input")[rowIndex]!;
 }
 
+const pathFieldKeys = [
+  "vrchatPathWindows",
+  "steamPathLinux",
+  "outputLogPath",
+] as const;
+
 function validateExistsBtn(
   wrapper: ReturnType<typeof mount>,
   rowIndex: number,
 ) {
-  return wrapper.findAll(".path-row .el-button--primary")[rowIndex]!;
+  return wrapper.find(
+    `[data-testid="path-validate-${pathFieldKeys[rowIndex]}"]`,
+  );
 }
 
 function setupAppMocks() {
@@ -282,11 +300,6 @@ describe("SettingsView", () => {
 
   it("runs vacuum DB after confirmation", async () => {
     vi.spyOn(ElMessageBox, "confirm").mockResolvedValue(undefined as never);
-    const successSpy = vi
-      .spyOn(ElMessage, "success")
-      .mockImplementation(() => ({
-        close: () => {},
-      }));
     const wrapper = mountSettings();
     await flushPromises();
 
@@ -297,14 +310,11 @@ describe("SettingsView", () => {
     await flushPromises();
 
     expect(App.vacuumDb).toHaveBeenCalled();
-    expect(successSpy).toHaveBeenCalled();
+    expect(showToast.success).toHaveBeenCalled();
   });
 
   it("clears encounters after confirmation", async () => {
     vi.spyOn(ElMessageBox, "confirm").mockResolvedValue(undefined as never);
-    vi.spyOn(ElMessage, "success").mockImplementation(() => ({
-      close: () => {},
-    }));
     const wrapper = mountSettings();
     await flushPromises();
 
@@ -319,9 +329,6 @@ describe("SettingsView", () => {
 
   it("clears screenshots after confirmation", async () => {
     vi.spyOn(ElMessageBox, "confirm").mockResolvedValue(undefined as never);
-    vi.spyOn(ElMessage, "success").mockImplementation(() => ({
-      close: () => {},
-    }));
     const wrapper = mountSettings();
     await flushPromises();
 
@@ -336,9 +343,6 @@ describe("SettingsView", () => {
 
   it("clears friends cache after confirmation", async () => {
     vi.spyOn(ElMessageBox, "confirm").mockResolvedValue(undefined as never);
-    vi.spyOn(ElMessage, "success").mockImplementation(() => ({
-      close: () => {},
-    }));
     const wrapper = mountSettings();
     await flushPromises();
 
@@ -620,9 +624,6 @@ describe("SettingsView onLanguageChange", () => {
 
   it("does not call i18n setLanguage when App.setLanguage fails", async () => {
     vi.mocked(App.setLanguage).mockRejectedValueOnce(new Error("save failed"));
-    const elErrorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
-      close: () => {},
-    }));
 
     const wrapper = mountSettings();
     await flushPromises();
@@ -634,7 +635,7 @@ describe("SettingsView onLanguageChange", () => {
     await flushPromises();
 
     expect(I18nModule.setLanguage).not.toHaveBeenCalled();
-    expect(elErrorSpy).toHaveBeenCalledWith("save failed");
+    expect(showToast.error).toHaveBeenCalledWith("save failed");
   });
 
   it("ignores invalid locale values", async () => {

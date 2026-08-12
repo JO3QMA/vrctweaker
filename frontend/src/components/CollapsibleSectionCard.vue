@@ -12,10 +12,14 @@
         :aria-controls="panelId"
         @click="toggle"
       >
-        <el-icon class="section-card__toggle-icon" aria-hidden="true">
+        <VtIcon
+          size="default"
+          class="section-card__toggle-icon"
+          aria-hidden="true"
+        >
           <CaretBottom v-if="expanded" />
           <CaretRight v-else />
-        </el-icon>
+        </VtIcon>
         <span class="section-card__toggle-label">
           <slot name="title">{{ title }}</slot>
         </span>
@@ -33,6 +37,7 @@ let nextCollapsibleSectionId = 0;
 
 <script setup lang="ts">
 import { CaretBottom, CaretRight } from "@element-plus/icons-vue";
+import VtIcon from "./VtIcon.vue";
 
 defineOptions({ name: "CollapsibleSectionCard" });
 

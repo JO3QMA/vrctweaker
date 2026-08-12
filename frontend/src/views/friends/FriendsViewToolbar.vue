@@ -18,8 +18,8 @@
           >Offline</span
         >
       </div>
-      <el-button
-        type="primary"
+      <VtButton
+        variant="primary"
         :disabled="!isLoggedIn || refreshLoading"
         :loading="refreshLoading"
         :title="
@@ -30,9 +30,9 @@
         @click="emit('refresh')"
       >
         {{ refreshLoading ? t("common.updating") : t("common.refresh") }}
-      </el-button>
+      </VtButton>
     </div>
-    <el-input
+    <VtInput
       v-model.trim="displayNameQuery"
       type="search"
       :placeholder="t('friends.searchPlaceholder')"
@@ -42,15 +42,18 @@
       autocomplete="off"
     >
       <template #prefix>
-        <el-icon><Search /></el-icon>
+        <VtIcon size="default"><Search /></VtIcon>
       </template>
-    </el-input>
+    </VtInput>
   </div>
 </template>
 
 <script setup lang="ts">
 import { Search } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
+import VtButton from "../../components/VtButton.vue";
+import VtIcon from "../../components/VtIcon.vue";
+import VtInput from "../../components/VtInput.vue";
 
 const { t } = useI18n();
 
@@ -73,16 +76,16 @@ const displayNameQuery = defineModel<string>("displayNameQuery", {
 
 <style scoped>
 .friends-toolbar {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-block);
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: var(--space-form-field);
 }
 
 .friends-header {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-block);
 }
 
 .friends-search-input {
@@ -92,19 +95,19 @@ const displayNameQuery = defineModel<string>("displayNameQuery", {
 .filter-mode {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
+  gap: var(--space-form-field);
   flex-wrap: wrap;
 }
 
 .mode-label {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
+  font-size: var(--font-size-14);
+  color: var(--color-text-secondary);
   min-width: 3.25rem;
   transition: color 0.15s ease;
 }
 
 .mode-label.active {
-  color: var(--text-primary);
-  font-weight: 600;
+  color: var(--color-text-primary);
+  font-weight: var(--font-weight-600);
 }
 </style>

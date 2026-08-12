@@ -372,7 +372,7 @@ a:hover {
 
 .section-card__toggle-icon {
   flex-shrink: 0;
-  font-size: var(--icon-size-legacy-toggle);
+  font-size: var(--icon-size-default);
 }
 
 .section-card.section-card--collapsed > .el-card__body {

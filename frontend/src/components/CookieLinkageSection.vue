@@ -10,35 +10,27 @@
         {{ t("video.cookieLinkage.section") }}
       </h2>
       <div class="cookie-alerts">
-        <el-alert
+        <VtAlert
           v-if="cookieActionError"
+          variant="danger"
           :title="cookieActionError"
-          type="error"
-          :closable="false"
-          show-icon
           class="cookie-action-error"
         />
-        <el-alert
-          type="warning"
-          :closable="false"
-          show-icon
+        <VtAlert
+          variant="warning"
           class="cookie-always-warn"
           :title="t('video.cookieLinkage.alwaysWarn')"
         />
-        <el-alert
+        <VtAlert
           v-if="!toolsEffectiveOfficial"
-          type="info"
-          :closable="false"
-          show-icon
+          variant="info"
           class="cookie-official-hint"
           data-testid="video-cookie-official-hint"
           :title="t('video.cookieLinkage.officialHint')"
         />
-        <el-alert
+        <VtAlert
           v-if="cookieSourceKind === 'unsupported'"
-          type="warning"
-          :closable="false"
-          show-icon
+          variant="warning"
           :title="t('video.cookieLinkage.unsupportedForm')"
         />
       </div>
@@ -49,7 +41,7 @@
             t("video.cookieLinkage.lockHint")
           }}</el-text>
         </div>
-        <el-switch
+        <VtSwitch
           v-model="cookieEnabled"
           class="cookie-switch"
           data-testid="video-cookie-enable"
@@ -77,7 +69,7 @@
           v-if="cookieDraftSource === 'browser'"
           :label="t('video.cookieLinkage.browserLabel')"
         >
-          <el-select
+          <VtSelect
             v-model="cookieDraftBrowser"
             data-testid="video-cookie-browser"
             :disabled="cookieBusy"
@@ -86,34 +78,33 @@
             <el-option value="chrome" label="Chrome" />
             <el-option value="edge" label="Edge" />
             <el-option value="firefox" label="Firefox" />
-          </el-select>
+          </VtSelect>
         </el-form-item>
         <el-form-item v-else :label="t('video.cookieLinkage.cookiesFileLabel')">
           <div class="path-input-group">
-            <el-input
+            <VtInput
               v-model="cookieDraftCookiesPath"
               data-testid="video-cookie-file-path"
               :placeholder="t('video.cookieLinkage.cookiesFilePh')"
               :disabled="cookieBusy"
               @change="onCookiePathChange"
             />
-            <el-button
+            <VtButton
+              variant="secondary"
               data-testid="video-cookie-file-browse"
               :disabled="cookieBusy"
               @click="browseCookieFile"
             >
               {{ t("video.cookieLinkage.browse") }}
-            </el-button>
+            </VtButton>
           </div>
         </el-form-item>
       </el-form>
     </template>
-    <el-alert
+    <VtAlert
       v-else-if="cookieActionError"
+      variant="danger"
       :title="cookieActionError"
-      type="error"
-      :closable="false"
-      show-icon
       class="cookie-action-error cookie-unsupported-error"
     />
   </section>
@@ -123,6 +114,15 @@
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
+import VtAlert from "./VtAlert.vue";
+import VtButton from "./VtButton.vue";
+import VtInput from "./VtInput.vue";
+import VtSelect from "./VtSelect.vue";
+import VtSwitch from "./VtSwitch.vue";
+import {
+  VT_BUTTON_DANGER_CONFIRM_CLASS,
+  VT_BUTTON_SECONDARY_CANCEL_CLASS,
+} from "./vtButtonClasses";
 import { App, type CookieLinkageStatusDTO } from "../wails/app";
 import { cookieLinkageErrorI18nKey } from "../views/cookieLinkageErrors";
 
@@ -217,6 +217,8 @@ async function ensureCookieRiskAck(gen: number): Promise<boolean> {
       confirmButtonText: t("video.cookieLinkage.riskAckConfirm"),
       cancelButtonText: t("common.cancel"),
       type: "warning",
+      confirmButtonClass: VT_BUTTON_DANGER_CONFIRM_CLASS,
+      cancelButtonClass: VT_BUTTON_SECONDARY_CANCEL_CLASS,
     },
   );
   if (isCookieViewStale(gen)) return false;
@@ -390,23 +392,23 @@ onMounted(async () => {
 
 <style scoped>
 .cookie-section {
-  margin-top: 1.5rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid var(--border);
+  margin-top: var(--space-section);
+  padding-top: var(--space-form-field);
+  border-top: 1px solid var(--color-border);
   width: 100%;
 }
 .video-block-title {
-  margin: 0 0 0.75rem;
-  font-size: 1rem;
-  font-weight: 600;
+  margin: 0 0 var(--space-form-field);
+  font-size: var(--font-size-14);
+  font-weight: var(--font-weight-600);
 }
 .cookie-alerts {
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-form-field);
 }
-.cookie-alerts .el-alert {
-  margin-bottom: 0.75rem;
+.cookie-alerts :deep(.el-alert) {
+  margin-bottom: var(--space-form-field);
 }
-.cookie-alerts .el-alert:last-child {
+.cookie-alerts :deep(.el-alert:last-child) {
   margin-bottom: 0;
 }
 .cookie-unsupported-error {
@@ -415,8 +417,8 @@ onMounted(async () => {
 .cookie-switch-row {
   display: flex;
   align-items: flex-start;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
+  gap: var(--space-block);
+  margin-bottom: var(--space-action-group);
 }
 .cookie-toggle-label {
   flex: 1;
@@ -424,18 +426,18 @@ onMounted(async () => {
 }
 .block-hint {
   display: block;
-  margin-top: 0.35rem;
+  margin-top: var(--space-inline-tight);
 }
 .cookie-switch {
   flex-shrink: 0;
-  margin-top: 0.15rem;
+  margin-top: var(--space-inline-tight);
 }
 .cookie-form {
-  margin-top: 0.75rem;
+  margin-top: var(--space-form-field);
 }
 .path-input-group {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-action-group);
   align-items: center;
   flex-wrap: wrap;
   width: 100%;
@@ -445,6 +447,6 @@ onMounted(async () => {
   min-width: 0;
 }
 .hint {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 </style>

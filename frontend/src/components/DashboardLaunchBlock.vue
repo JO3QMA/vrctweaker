@@ -6,7 +6,7 @@
   >
     <div
       v-if="loading"
-      class="launch-block-message"
+      class="launch-block-message text-body-sm"
       data-testid="launch-block-loading"
     >
       {{ t("dashboard.launchBlock.loading") }}
@@ -14,7 +14,7 @@
 
     <div
       v-else-if="loadError"
-      class="launch-block-message"
+      class="launch-block-message text-body-sm"
       data-testid="launch-block-load-error"
     >
       {{ t("dashboard.launchBlock.loadError") }}
@@ -23,7 +23,7 @@
     <template v-else>
       <p
         v-if="isEmpty"
-        class="launch-block-empty"
+        class="launch-block-empty text-body-sm"
         data-testid="launch-block-empty-state"
       >
         {{ t("dashboard.launchBlock.emptyState") }}
@@ -37,7 +37,7 @@
       </p>
 
       <div class="launch-block-controls">
-        <el-select
+        <VtSelect
           v-model="selectedProfileId"
           class="launch-block-profile"
           data-testid="launch-block-profile-select"
@@ -50,13 +50,13 @@
             :label="p.name"
             :value="p.id"
           />
-        </el-select>
+        </VtSelect>
         <div
           class="launch-block-actions"
           :class="{ 'launch-block-actions--solo': !rejoin }"
         >
-          <el-button
-            type="primary"
+          <VtButton
+            variant="primary"
             class="launch-block-quick-btn"
             data-testid="launch-block-quick-btn"
             :disabled="isEmpty || !selectedProfileId || launching"
@@ -64,10 +64,10 @@
             @click="launchQuick"
           >
             {{ t("dashboard.launchBlock.quickLaunch") }}
-          </el-button>
-          <el-button
+          </VtButton>
+          <VtButton
             v-if="rejoin"
-            type="primary"
+            variant="secondary"
             class="launch-block-rejoin-btn"
             data-testid="launch-block-rejoin-btn"
             :disabled="
@@ -80,7 +80,7 @@
             @click="launchRejoin"
           >
             {{ rejoinButtonLabel }}
-          </el-button>
+          </VtButton>
         </div>
       </div>
     </template>
@@ -90,7 +90,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { ElMessage } from "element-plus";
+import VtButton from "./VtButton.vue";
+import VtSelect from "./VtSelect.vue";
 import {
   App,
   type DashboardLaunchBlockDTO,
@@ -99,6 +100,7 @@ import {
 } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
 import { formatError } from "../utils/formatError";
+import { showToast } from "../utils/showToast";
 import { truncateRejoinWorldName } from "../utils/truncateText";
 
 const ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS = 400;
@@ -167,7 +169,7 @@ async function load(): Promise<void> {
       selectedProfileId.value = "";
       rejoin.value = null;
     } else {
-      ElMessage.warning(t("dashboard.launchBlock.refreshError"));
+      showToast.warning(t("dashboard.launchBlock.refreshError"));
     }
   } finally {
     inFlight = false;
@@ -197,7 +199,7 @@ async function launchQuick(): Promise<void> {
   try {
     await App.launchVRChat(selectedProfileId.value);
   } catch (e) {
-    ElMessage.error(formatError(e, t("dashboard.launchBlock.launchError")));
+    showToast.error(formatError(e, t("dashboard.launchBlock.launchError")));
   } finally {
     launching.value = false;
   }
@@ -210,7 +212,7 @@ async function launchRejoin(): Promise<void> {
   try {
     await App.instanceRejoin(selectedProfileId.value, playSessionId);
   } catch (e) {
-    ElMessage.error(formatError(e, t("dashboard.launchBlock.rejoinError")));
+    showToast.error(formatError(e, t("dashboard.launchBlock.rejoinError")));
     void load();
   } finally {
     launching.value = false;
@@ -240,26 +242,24 @@ onUnmounted(() => {
 
 <style scoped>
 .dashboard-launch-block {
-  background: var(--bg-secondary) !important;
-  border-color: var(--border) !important;
+  background: var(--color-bg-elevated) !important;
+  border-color: var(--color-border) !important;
 }
 
 .launch-block-message,
 .launch-block-empty {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin: 0 0 0.75rem;
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-form-field);
 }
 
 .launch-block-launcher-link {
-  margin-left: 0.35rem;
+  margin-left: var(--space-inline-tight);
 }
 
 .launch-block-controls {
-  --launch-block-gap: 0.5rem;
   display: flex;
   flex-direction: column;
-  gap: var(--launch-block-gap);
+  gap: var(--space-action-group);
 }
 
 .launch-block-profile {
@@ -268,7 +268,7 @@ onUnmounted(() => {
 
 .launch-block-actions {
   display: flex;
-  gap: var(--launch-block-gap);
+  gap: var(--space-action-group);
   width: 100%;
 }
 

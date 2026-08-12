@@ -1,14 +1,10 @@
 <template>
   <div class="config-view">
     <h1 class="page-title">{{ t("config.title") }}</h1>
-    <el-text
-      type="info"
-      size="small"
-      style="display: block; margin-bottom: 1.5rem"
-    >
+    <p class="text-body-sm config-intro">
       {{ t("config.intro") }}
       <code>%LocalAppData%Low\VRChat\VRChat\config.json</code>
-    </el-text>
+    </p>
 
     <el-card
       v-if="!configExists && !editing"
@@ -16,54 +12,46 @@
       class="config-card"
     >
       <div class="config-not-found">
-        <el-text type="info">
+        <p class="text-body-sm config-not-found-text">
           {{ t("config.notFound") }}
-        </el-text>
-        <el-button
-          type="primary"
+        </p>
+        <VtButton
+          variant="primary"
+          class="config-create-btn"
           data-testid="create-config-btn"
-          style="margin-top: 1rem"
           @click="createConfig"
         >
           {{ t("config.create") }}
-        </el-button>
+        </VtButton>
       </div>
     </el-card>
 
     <div v-if="editing" class="config-editor">
-      <el-alert
+      <VtAlert
         v-if="saveError"
+        variant="danger"
         :title="saveError"
-        type="error"
-        :closable="false"
-        show-icon
-        style="margin-bottom: 1rem"
+        class="config-alert"
       />
-      <el-alert
+      <VtAlert
         v-if="saveSuccess"
+        variant="success"
         :title="t('config.saved')"
-        type="success"
-        :closable="false"
-        show-icon
-        style="margin-bottom: 1rem"
+        class="config-alert"
       />
 
       <!-- Camera Resolution -->
       <el-card shadow="never" class="config-card">
         <template #header>{{ t("config.cameraHeader") }}</template>
-        <el-text
-          type="info"
-          size="small"
-          style="display: block; margin-bottom: 0.75rem"
-        >
+        <p class="text-body-sm config-help">
           {{ t("config.cameraHelp") }}
-        </el-text>
+        </p>
         <div class="resolution-section">
           <el-radio-group
             v-model="cameraPreset"
             :aria-label="t('config.cameraPresetAria')"
             size="small"
-            style="flex-wrap: wrap; gap: 4px"
+            class="resolution-presets"
             @change="applyCameraPreset"
           >
             <el-radio-button value="HD" data-testid="camera-preset-hd"
@@ -96,7 +84,7 @@
               data-testid="camera-width-input"
               size="small"
               :placeholder="t('launcher.widthPh')"
-              style="width: 130px"
+              class="resolution-number-input"
             />
             <span class="resolution-sep">×</span>
             <el-input-number
@@ -107,7 +95,7 @@
               data-testid="camera-height-input"
               size="small"
               :placeholder="t('launcher.heightPh')"
-              style="width: 130px"
+              class="resolution-number-input"
             />
           </div>
         </div>
@@ -116,19 +104,15 @@
       <!-- Screenshot Resolution -->
       <el-card shadow="never" class="config-card">
         <template #header>{{ t("config.screenshotHeader") }}</template>
-        <el-text
-          type="info"
-          size="small"
-          style="display: block; margin-bottom: 0.75rem"
-        >
+        <p class="text-body-sm config-help">
           {{ t("config.screenshotHelp") }}
-        </el-text>
+        </p>
         <div class="resolution-section">
           <el-radio-group
             v-model="screenshotPreset"
             :aria-label="t('config.screenshotPresetAria')"
             size="small"
-            style="flex-wrap: wrap; gap: 4px"
+            class="resolution-presets"
             @change="applyScreenshotPreset"
           >
             <el-radio-button value="HD" data-testid="screenshot-preset-hd"
@@ -158,7 +142,7 @@
               data-testid="screenshot-width-input"
               size="small"
               :placeholder="t('launcher.widthPh')"
-              style="width: 130px"
+              class="resolution-number-input"
             />
             <span class="resolution-sep">×</span>
             <el-input-number
@@ -169,7 +153,7 @@
               data-testid="screenshot-height-input"
               size="small"
               :placeholder="t('launcher.heightPh')"
-              style="width: 130px"
+              class="resolution-number-input"
             />
           </div>
         </div>
@@ -180,28 +164,29 @@
         <template #header>{{ t("config.photoHeader") }}</template>
         <el-form label-position="top" size="default">
           <el-form-item :label="t('config.outputFolder')">
-            <div class="path-row">
-              <el-input
+            <div class="path-input-group">
+              <VtInput
                 id="picture-output-folder"
                 v-model="config.pictureOutputFolder"
                 :placeholder="t('config.outputFolderPh')"
                 data-testid="picture-output-folder-input"
               />
-              <el-button
+              <VtButton
+                variant="secondary"
                 data-testid="picture-output-folder-browse"
                 @click="browsePictureOutputFolder"
               >
                 {{ t("common.browse") }}
-              </el-button>
+              </VtButton>
             </div>
           </el-form-item>
           <el-form-item>
-            <el-checkbox
+            <VtCheckbox
               v-model="pictureOutputSplitByDate"
               data-testid="picture-split-by-date-checkbox"
             >
               {{ t("config.splitByDate") }}
-            </el-checkbox>
+            </VtCheckbox>
           </el-form-item>
         </el-form>
       </el-card>
@@ -209,19 +194,15 @@
       <!-- Steadycam FOV -->
       <el-card shadow="never" class="config-card">
         <template #header>{{ t("config.steadycamHeader") }}</template>
-        <el-text
-          type="info"
-          size="small"
-          style="display: block; margin-bottom: 0.75rem"
-        >
+        <p class="text-body-sm config-help">
           {{ t("config.steadycamHelp") }}
-        </el-text>
+        </p>
         <div class="fov-row">
           <el-slider
             :model-value="steadycamFovSliderValue"
             :min="STEADYCAM_FOV_MIN"
             :max="STEADYCAM_FOV_MAX"
-            style="flex: 1; max-width: 240px"
+            class="fov-slider"
             data-testid="steadycam-fov-slider"
             @input="onSteadycamFovSliderInput"
           />
@@ -233,7 +214,7 @@
             :placeholder="String(STEADYCAM_FOV_PLACEHOLDER)"
             data-testid="steadycam-fov-input"
             size="small"
-            style="width: 100px"
+            class="fov-number-input"
             @change="onSteadycamFovChange"
             @blur="clampSteadycamFov"
           />
@@ -243,28 +224,25 @@
       <!-- Cache -->
       <el-card shadow="never" class="config-card">
         <template #header>{{ t("config.cacheHeader") }}</template>
-        <el-text
-          type="info"
-          size="small"
-          style="display: block; margin-bottom: 0.75rem"
-        >
+        <p class="text-body-sm config-help">
           {{ t("config.cacheHelp") }}
-        </el-text>
+        </p>
         <el-form label-position="top" size="default">
           <el-form-item :label="t('config.cacheDir')">
-            <div class="path-row">
-              <el-input
+            <div class="path-input-group">
+              <VtInput
                 id="cache-directory"
                 v-model="config.cacheDirectory"
                 :placeholder="t('config.cacheDirPh')"
                 data-testid="cache-directory-input"
               />
-              <el-button
+              <VtButton
+                variant="secondary"
                 data-testid="cache-directory-browse"
                 @click="browseCacheDirectory"
               >
                 {{ t("common.browse") }}
-              </el-button>
+              </VtButton>
             </div>
           </el-form-item>
           <el-form-item :label="t('config.cacheSizeGb')">
@@ -290,17 +268,15 @@
             />
           </el-form-item>
         </el-form>
-        <el-alert
+        <VtAlert
           v-if="assetCacheClearError"
+          variant="danger"
           :title="assetCacheClearError"
-          type="error"
-          :closable="false"
-          show-icon
-          style="margin: 0.75rem 0"
+          class="config-cache-alert"
           data-testid="asset-cache-clear-error"
         />
-        <el-button
-          type="danger"
+        <VtButton
+          variant="danger"
           plain
           :loading="assetCacheClearLoading"
           data-testid="asset-cache-clear-btn"
@@ -311,37 +287,37 @@
               ? t("config.assetCacheClearRunning")
               : t("config.assetCacheClear")
           }}
-        </el-button>
+        </VtButton>
       </el-card>
 
       <!-- Rich Presence -->
       <el-card shadow="never" class="config-card">
         <template #header>{{ t("config.otherHeader") }}</template>
-        <el-checkbox
+        <VtCheckbox
           v-model="disableRichPresence"
           data-testid="disable-rich-presence-checkbox"
         >
           {{ t("config.richPresenceOff") }}
-        </el-checkbox>
+        </VtCheckbox>
       </el-card>
 
       <!-- Actions -->
       <div class="config-actions">
-        <el-button
-          type="primary"
+        <VtButton
+          variant="primary"
           data-testid="save-config-btn"
           @click="saveConfig"
         >
           {{ t("config.save") }}
-        </el-button>
-        <el-button
-          type="danger"
+        </VtButton>
+        <VtButton
+          variant="danger"
           plain
           data-testid="delete-config-btn"
           @click="deleteConfig"
         >
           {{ t("config.deleteConfig") }}
-        </el-button>
+        </VtButton>
       </div>
     </div>
   </div>
@@ -350,14 +326,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useI18n } from "vue-i18n";
-import { ElMessageBox, ElMessage } from "element-plus";
-import { App } from "../wails/app";
-import type { VRChatConfigDTO } from "../wails/app";
-import { AssetCacheErr } from "../utils/assetCacheErrors";
+import { ElMessageBox } from "element-plus";
+import VtAlert from "../components/VtAlert.vue";
+import VtButton from "../components/VtButton.vue";
+import VtCheckbox from "../components/VtCheckbox.vue";
+import VtInput from "../components/VtInput.vue";
 import {
   VT_BUTTON_DANGER_CONFIRM_CLASS,
   VT_BUTTON_SECONDARY_CANCEL_CLASS,
 } from "../components/vtButtonClasses";
+import { showToast } from "../utils/showToast";
+import { App } from "../wails/app";
+import type { VRChatConfigDTO } from "../wails/app";
+import { AssetCacheErr } from "../utils/assetCacheErrors";
 
 const { t } = useI18n();
 
@@ -686,7 +667,7 @@ async function doClearAssetCache() {
   try {
     const n = await App.clearVRChatAssetCache();
     if (gen !== clearGeneration) return;
-    ElMessage.success(t("config.assetCacheClearDone", { n: String(n ?? 0) }));
+    showToast.success(t("config.assetCacheClearDone", { n: String(n ?? 0) }));
   } catch (e) {
     if (gen !== clearGeneration) return;
     assetCacheClearError.value = classifyAssetCacheClearError(e);
@@ -703,60 +684,107 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+.config-intro {
+  display: block;
+  margin: 0 0 var(--space-section);
+  color: var(--color-text-secondary);
+}
+
 .config-card {
-  margin-bottom: 1.25rem;
-  background: var(--bg-secondary) !important;
-  border-color: var(--border) !important;
+  margin-bottom: var(--space-section);
+  background: var(--color-bg-elevated) !important;
+  border-color: var(--color-border) !important;
 }
 
 .config-card :deep(.el-card__header) {
-  font-weight: 600;
-  border-bottom-color: var(--border);
+  font-weight: var(--font-weight-600);
+  border-bottom-color: var(--color-border);
 }
 
 .config-not-found {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1.5rem;
+  padding: var(--space-section);
+}
+
+.config-not-found-text {
+  margin: 0;
+  color: var(--color-text-secondary);
+}
+
+.config-create-btn {
+  margin-top: var(--space-block);
+}
+
+.config-alert {
+  margin-bottom: var(--space-block);
+}
+
+.config-help {
+  margin: 0 0 var(--space-form-field);
+  color: var(--color-text-secondary);
 }
 
 .resolution-section {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-form-field);
+}
+
+.resolution-presets {
+  flex-wrap: wrap;
+  gap: var(--space-inline-tight);
 }
 
 .resolution-fields {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-action-group);
+}
+
+.resolution-number-input {
+  width: 130px;
 }
 
 .resolution-sep {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
-.path-row {
+.path-input-group {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-action-group);
   width: 100%;
   max-width: 480px;
 }
 
-.path-row :deep(.el-input) {
+.path-input-group :deep(.el-input) {
   flex: 1;
+  min-width: 0;
 }
 
 .fov-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: var(--space-block);
+}
+
+.fov-slider {
+  flex: 1;
+  max-width: 240px;
+}
+
+.fov-number-input {
+  width: 100px;
+}
+
+.config-cache-alert {
+  margin: var(--space-form-field) 0;
 }
 
 .config-actions {
   display: flex;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
+  gap: var(--space-form-field);
+  margin-top: var(--space-action-group);
 }
 </style>
