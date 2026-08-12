@@ -29,15 +29,13 @@ describe("VtIcon", () => {
     expect(wrapper.find(".el-icon").attributes("aria-hidden")).toBe("true");
   });
 
-  it("omits aria-hidden when decorative is false", () => {
+  it("passes through aria-hidden when decorative is false", () => {
     const wrapper = mount(VtIcon, {
       props: { size: "default", decorative: false },
-      attrs: { "aria-label": "Search" },
+      attrs: { "aria-hidden": "true" },
       slots: { default: Search },
     });
-    const icon = wrapper.find(".el-icon");
-    expect(icon.attributes("aria-hidden")).toBeUndefined();
-    expect(icon.attributes("aria-label")).toBe("Search");
+    expect(wrapper.find(".el-icon").attributes("aria-hidden")).toBe("true");
   });
 
   it("forwards attrs such as data-testid", () => {

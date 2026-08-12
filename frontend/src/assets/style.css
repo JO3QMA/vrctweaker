@@ -381,6 +381,16 @@ a:hover {
 
 /* ─── Iconography (ADR 0023) ─────────────────────────────────────── */
 
+.vt-icon,
+.vt-icon--size-compact,
+.vt-icon--size-default,
+.vt-icon--size-emphasis,
+.vt-icon--size-large {
+  display: inline-flex;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
 .vt-icon--size-compact {
   font-size: var(--icon-size-compact);
 }
@@ -397,37 +407,28 @@ a:hover {
   font-size: var(--icon-size-large);
 }
 
-.nav-glyph-size-compact {
+[class^="nav-glyph-size-"] {
   display: inline-flex;
   flex-shrink: 0;
-  font-size: var(--icon-size-compact);
   line-height: 1;
+}
+
+.nav-glyph-size-compact {
+  font-size: var(--icon-size-compact);
 }
 
 .nav-glyph-size-default {
-  display: inline-flex;
-  flex-shrink: 0;
   font-size: var(--icon-size-default);
-  line-height: 1;
 }
 
 .nav-glyph-size-legacy {
-  display: inline-flex;
-  flex-shrink: 0;
   font-size: var(--icon-size-legacy-toggle);
-  line-height: 1;
 }
 
 .nav-glyph-size-emphasis {
-  display: inline-flex;
-  flex-shrink: 0;
   font-size: var(--icon-size-emphasis);
-  line-height: 1;
 }
 
 .nav-glyph-size-large {
-  display: inline-flex;
-  flex-shrink: 0;
   font-size: var(--icon-size-large);
-  line-height: 1;
 }

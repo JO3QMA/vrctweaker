@@ -4,9 +4,9 @@ export const ICON_SIZE_SCALE_PX = [12, 16, 20, 24] as const;
 export type IconSizeScalePx = (typeof ICON_SIZE_SCALE_PX)[number];
 
 /** CSS custom property for a numeric icon size step, e.g. `--icon-size-16`. */
-export function iconSizeScaleVar(
-  px: IconSizeScalePx,
-): `--icon-size-${IconSizeScalePx}` {
+export function iconSizeScaleVar<const P extends IconSizeScalePx>(
+  px: P,
+): `--icon-size-${P}` {
   return `--icon-size-${px}`;
 }
 

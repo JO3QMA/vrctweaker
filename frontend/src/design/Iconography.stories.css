@@ -40,14 +40,6 @@
   margin-bottom: var(--space-12);
 }
 
-.iconography-story-size-box {
-  align-items: center;
-  color: var(--color-text-secondary);
-  display: inline-flex;
-  flex-shrink: 0;
-  justify-content: center;
-}
-
 .iconography-story-examples {
   display: flex;
   flex-direction: column;

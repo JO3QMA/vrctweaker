@@ -31,6 +31,20 @@ describe("iconTokens", () => {
     ]);
   });
 
+  it("keeps each pattern name, varName, and px aligned", () => {
+    const pxByName = {
+      compact: 12,
+      default: 16,
+      emphasis: 20,
+      large: 24,
+    } as const;
+    for (const pattern of ICON_SIZE_PATTERNS) {
+      expect(pattern.px).toBe(pxByName[pattern.name]);
+      expect(pattern.varName).toBe(`--icon-size-${pattern.name}`);
+      expect(pattern.scaleVar).toBe(`--icon-size-${pattern.px}`);
+    }
+  });
+
   it("documents legacy toggle size for v1 visual policy", () => {
     expect(ICON_SIZE_LEGACY.toggle.px).toBe(14);
     expect(ICON_SIZE_LEGACY.toggle.adoptionTarget).toBe("--icon-size-default");
