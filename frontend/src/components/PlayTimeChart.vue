@@ -284,7 +284,8 @@ onBeforeUnmount(() => {
   background: var(--color-bg-muted);
   color: var(--color-text-primary);
   font-size: var(--font-size-12);
-  line-height: var(--line-height-normal);
+  /* Preserve 1.4: Typography scale has 1.25/1.5/1.75 only; tip offset assumes ~1.4 */
+  line-height: 1.4;
   white-space: nowrap;
   z-index: 1;
 }

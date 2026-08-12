@@ -6,7 +6,7 @@
   >
     <div
       v-if="loading"
-      class="launch-block-message"
+      class="launch-block-message text-body-sm"
       data-testid="launch-block-loading"
     >
       {{ t("dashboard.launchBlock.loading") }}
@@ -14,7 +14,7 @@
 
     <div
       v-else-if="loadError"
-      class="launch-block-message"
+      class="launch-block-message text-body-sm"
       data-testid="launch-block-load-error"
     >
       {{ t("dashboard.launchBlock.loadError") }}
