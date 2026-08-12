@@ -21,6 +21,9 @@ func (uc *MediaUseCase) SyncPictureFolder(ctx context.Context, basePath string, 
 	if err != nil {
 		return ingested, err
 	}
+	// The folder may have gained or lost files; drop cached existence results so
+	// the next Gallery listing reflects the synced state.
+	uc.fileExists.invalidateAll()
 	return ingested + updated, nil
 }
 
@@ -73,7 +76,7 @@ func (uc *MediaUseCase) ingestImagePathsInDir(ctx context.Context, basePath stri
 		if ctx.Err() != nil {
 			return count, created, ctx.Err()
 		}
-		_, wasCreated, ingestErr := uc.IngestScreenshotFile(ctx, path)
+		_, wasCreated, ingestErr := uc.ingestScreenshotFile(ctx, path, false)
 		if ingestErr != nil {
 			// Same as ScanDirectory: skip file on ingest error.
 		} else if wasCreated {

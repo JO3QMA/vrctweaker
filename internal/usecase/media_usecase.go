@@ -46,12 +46,18 @@ type MediaUseCase struct {
 	repo          screenshotRepo
 	worldRepo     worldInfoRepo
 	userCacheRepo userCacheRepo
+	fileExists    *galleryFileExistsCache
 }
 
 // NewMediaUseCase creates a new MediaUseCase.
 // worldRepo and userCacheRepo may be nil; when set, extracted metadata is upserted into world_info and users_cache.
 func NewMediaUseCase(repo screenshotRepo, worldRepo worldInfoRepo, userCacheRepo userCacheRepo) *MediaUseCase {
-	return &MediaUseCase{repo: repo, worldRepo: worldRepo, userCacheRepo: userCacheRepo}
+	return &MediaUseCase{
+		repo:          repo,
+		worldRepo:     worldRepo,
+		userCacheRepo: userCacheRepo,
+		fileExists:    newGalleryFileExistsCache(),
+	}
 }
 
 func (uc *MediaUseCase) upsertWorldInfo(ctx context.Context, worldID, worldName string, at time.Time) {
@@ -94,6 +100,16 @@ func (uc *MediaUseCase) GetScreenshot(ctx context.Context, id string) (*media.Sc
 // Returns the screenshot row, whether it was newly created, and an error only for
 // persistence/stat failures. Thumbnail generation errors are ignored so the row stays saved.
 func (uc *MediaUseCase) IngestScreenshotFile(ctx context.Context, path string) (*media.Screenshot, bool, error) {
+	return uc.ingestScreenshotFile(ctx, path, true)
+}
+
+// ingestScreenshotFile is the shared implementation. invalidateCache is true for
+// single-file ingestion (picture-folder watcher), so a restored/new file is
+// reflected by the next listing immediately. Bulk flows (ScanDirectory,
+// IngestUnderPictureRootSince, SyncPictureFolder) pass false and invalidate the
+// whole cache once at the end: a per-file generation bump during a long sync
+// would otherwise discard every concurrent listing's cache fill.
+func (uc *MediaUseCase) ingestScreenshotFile(ctx context.Context, path string, invalidateCache bool) (*media.Screenshot, bool, error) {
 	path = filepath.Clean(path)
 	info, err := os.Stat(path)
 	if err != nil {
@@ -107,6 +123,12 @@ func (uc *MediaUseCase) IngestScreenshotFile(ctx context.Context, path string) (
 	case ".png", ".jpg", ".jpeg":
 	default:
 		return nil, false, nil
+	}
+
+	if invalidateCache {
+		// The file is confirmed on disk; drop any cached missing/exists result so
+		// the next Gallery listing re-checks it (covers restored and new files).
+		uc.fileExists.invalidatePath(path)
 	}
 
 	existing, _ := uc.repo.GetByFilePath(ctx, path)
@@ -149,7 +171,11 @@ func (uc *MediaUseCase) IngestScreenshotFile(ctx context.Context, path string) (
 // onProgress is optional; when non-nil it receives listing/importing snapshots.
 func (uc *MediaUseCase) ScanDirectory(ctx context.Context, basePath string, onProgress func(ScanProgress)) (int, error) {
 	count, _, err := uc.ingestImagePathsInDir(ctx, basePath, onProgress)
-	return count, err
+	if err != nil {
+		return count, err
+	}
+	uc.fileExists.invalidateAll()
+	return count, nil
 }
 
 // IngestUnderPictureRootSince walks basePath for image files whose ModTime is strictly after since
@@ -184,7 +210,7 @@ func (uc *MediaUseCase) IngestUnderPictureRootSince(ctx context.Context, basePat
 		if !fi.ModTime().After(since) {
 			return nil
 		}
-		_, created, ingestErr := uc.IngestScreenshotFile(ctx, path)
+		_, created, ingestErr := uc.ingestScreenshotFile(ctx, path, false)
 		if ingestErr != nil {
 			return nil
 		}
@@ -196,6 +222,7 @@ func (uc *MediaUseCase) IngestUnderPictureRootSince(ctx context.Context, basePat
 	if err != nil {
 		return createdCount, err
 	}
+	uc.fileExists.invalidateAll()
 	return createdCount, nil
 }
 

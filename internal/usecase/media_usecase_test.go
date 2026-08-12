@@ -747,13 +747,291 @@ func TestMediaUseCase_ListScreenshotsInGalleryScope_preservesWorldFilter(t *test
 	}
 }
 
+func TestMediaUseCase_ListScreenshotsInGalleryScope_cachesStatWithinTTL(t *testing.T) {
+	base := t.TempDir()
+	const n = 40
+	repo := newMockScreenshotRepo()
+	for i := 0; i < n; i++ {
+		path := filepath.Join(base, fmt.Sprintf("shot-%02d.png", i))
+		if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		_ = repo.Save(context.Background(), &media.Screenshot{ID: fmt.Sprintf("s%02d", i), FilePath: path})
+	}
+	uc := NewMediaUseCase(repo, nil, nil)
+	ctx := context.Background()
+
+	calls := 0
+	uc.fileExists.stat = func(string) (bool, bool) { calls++; return true, true }
+
+	if _, err := uc.ListScreenshotsInGalleryScope(ctx, base, nil); err != nil {
+		t.Fatal(err)
+	}
+	if calls != n {
+		t.Fatalf("first list: stat calls = %d, want %d (one per row)", calls, n)
+	}
+	if _, err := uc.ListScreenshotsInGalleryScope(ctx, base, nil); err != nil {
+		t.Fatal(err)
+	}
+	if calls != n {
+		t.Fatalf("second list within TTL: stat calls = %d, want %d (cache hit)", calls, n)
+	}
+}
+
+func TestMediaUseCase_ListScreenshotsInGalleryScope_reStatsAfterTTLExpiry(t *testing.T) {
+	base := t.TempDir()
+	here := filepath.Join(base, "here.png")
+	gone := filepath.Join(base, "gone.png")
+	if err := os.WriteFile(here, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "here", FilePath: here})
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "gone", FilePath: gone})
+	uc := NewMediaUseCase(repo, nil, nil)
+	uc.fileExists.ttl = time.Hour
+	now := time.Unix(1_000_000, 0)
+	uc.fileExists.now = func() time.Time { return now }
+	ctx := context.Background()
+
+	assertIDs := func(want ...string) {
+		t.Helper()
+		list, err := uc.ListScreenshotsInGalleryScope(ctx, base, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []string
+		for _, s := range list {
+			got = append(got, s.ID)
+		}
+		slices.Sort(got)
+		slices.Sort(want)
+		if !slices.Equal(got, want) {
+			t.Fatalf("list = %v, want %v", got, want)
+		}
+	}
+
+	assertIDs("here") // warms cache: here=exists, gone=missing
+	if err := os.Remove(here); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(gone, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	assertIDs("here") // stale within TTL: cache still reports here exists, gone missing
+
+	now = now.Add(time.Hour) // expire the cache
+	assertIDs("gone")        // re-stat reflects the swap
+}
+
+func TestMediaUseCase_ListScreenshotsInGalleryScope_syncInvalidatesCache(t *testing.T) {
+	base := t.TempDir()
+	a := filepath.Join(base, "a.png")
+	b := filepath.Join(base, "b.png")
+	for _, p := range []string{a, b} {
+		if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "a", FilePath: a})
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "b", FilePath: b})
+	uc := NewMediaUseCase(repo, nil, nil)
+	ctx := context.Background()
+
+	list, err := uc.ListScreenshotsInGalleryScope(ctx, base, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 2 {
+		t.Fatalf("warmup list = %d, want 2", len(list))
+	}
+
+	if err = os.Remove(a); err != nil {
+		t.Fatal(err)
+	}
+	list, err = uc.ListScreenshotsInGalleryScope(ctx, base, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 2 {
+		t.Fatalf("list within TTL = %d, want 2 (cached)", len(list))
+	}
+
+	if _, err = uc.SyncPictureFolder(ctx, base, nil); err != nil {
+		t.Fatal(err)
+	}
+	list, err = uc.ListScreenshotsInGalleryScope(ctx, base, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].ID != "b" {
+		t.Fatalf("list after sync = %v, want only b", list)
+	}
+}
+
+func TestMediaUseCase_ListScreenshotsInGalleryScope_ingestInvalidatesCache(t *testing.T) {
+	base := t.TempDir()
+	path := filepath.Join(base, "restored.png")
+
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "restored", FilePath: path})
+	uc := NewMediaUseCase(repo, nil, nil)
+	ctx := context.Background()
+
+	list, err := uc.ListScreenshotsInGalleryScope(ctx, base, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 0 {
+		t.Fatalf("warmup list = %d, want 0 (missing)", len(list))
+	}
+
+	// Restore the file; within TTL the cached "missing" hides it.
+	if err = os.WriteFile(path, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	list, err = uc.ListScreenshotsInGalleryScope(ctx, base, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 0 {
+		t.Fatalf("list within TTL = %d, want 0 (cached missing)", len(list))
+	}
+
+	// Ingest (picture folder watcher hook) drops the cached entry for the path.
+	s, created, err := uc.IngestScreenshotFile(ctx, path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created || s == nil || s.ID != "restored" {
+		t.Fatalf("ingest = %+v created=%v, want existing row restored", s, created)
+	}
+
+	list, err = uc.ListScreenshotsInGalleryScope(ctx, base, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].ID != "restored" {
+		t.Fatalf("list after ingest = %v, want restored", list)
+	}
+}
+
+func TestMediaUseCase_ingestScreenshotFile_bulkModeKeepsCache(t *testing.T) {
+	base := t.TempDir()
+	path := filepath.Join(base, "shot.png")
+	if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "s1", FilePath: path})
+	uc := NewMediaUseCase(repo, nil, nil)
+	ctx := context.Background()
+
+	calls := 0
+	uc.fileExists.stat = func(string) (bool, bool) { calls++; return true, true }
+
+	if _, err := uc.ListScreenshotsInGalleryScope(ctx, base, nil); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Fatalf("warmup list: stat calls = %d, want 1", calls)
+	}
+
+	// Bulk flows pass invalidateCache=false: no per-path generation bump, so the
+	// cache populated by a concurrent listing is not discarded mid-sync.
+	if _, _, err := uc.ingestScreenshotFile(ctx, path, false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := uc.ListScreenshotsInGalleryScope(ctx, base, nil); err != nil {
+		t.Fatal(err)
+	}
+	if calls != 1 {
+		t.Fatalf("list after bulk-style ingest: stat calls = %d, want 1 (cache kept)", calls)
+	}
+}
+
+func TestMediaUseCase_ListScreenshotsInGalleryScope_ingestUnderRootInvalidatesCache(t *testing.T) {
+	base := t.TempDir()
+	path := filepath.Join(base, "later.png")
+
+	repo := newMockScreenshotRepo()
+	_ = repo.Save(context.Background(), &media.Screenshot{ID: "later", FilePath: path})
+	uc := NewMediaUseCase(repo, nil, nil)
+	ctx := context.Background()
+
+	if _, err := uc.ListScreenshotsInGalleryScope(ctx, base, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	// File appears on disk after the cached "missing" result; the automatic
+	// ingest pass invalidates the cache on success.
+	if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := uc.IngestUnderPictureRootSince(ctx, base, time.Now().Add(-time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+
+	list, err := uc.ListScreenshotsInGalleryScope(ctx, base, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 || list[0].ID != "later" {
+		t.Fatalf("list after ingest-under-root = %v, want later", list)
+	}
+}
+
+func BenchmarkListScreenshotsInGalleryScope(b *testing.B) {
+	const n = 300
+	base := b.TempDir()
+	repo := newMockScreenshotRepo()
+	for i := 0; i < n; i++ {
+		path := filepath.Join(base, fmt.Sprintf("shot-%03d.png", i))
+		if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+			b.Fatal(err)
+		}
+		_ = repo.Save(context.Background(), &media.Screenshot{ID: fmt.Sprintf("s%03d", i), FilePath: path})
+	}
+	uc := NewMediaUseCase(repo, nil, nil)
+	ctx := context.Background()
+
+	// Simulate a per-row stat cost so the cache benefit is measurable.
+	uc.fileExists.stat = func(path string) (bool, bool) {
+		time.Sleep(2 * time.Microsecond)
+		return statScreenshotFile(path)
+	}
+
+	b.Run("cached", func(b *testing.B) {
+		if _, err := uc.ListScreenshotsInGalleryScope(ctx, base, nil); err != nil {
+			b.Fatal(err)
+		}
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			if _, err := uc.ListScreenshotsInGalleryScope(ctx, base, nil); err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+	b.Run("uncached", func(b *testing.B) {
+		uc.fileExists.ttl = 0 // every lookup is stale -> re-stat on each listing
+		b.ResetTimer()
+		for i := 0; i < b.N; i++ {
+			if _, err := uc.ListScreenshotsInGalleryScope(ctx, base, nil); err != nil {
+				b.Fatal(err)
+			}
+		}
+	})
+}
+
 func TestMediaUseCase_ListGetDeleteScreenshot(t *testing.T) {
 	repo := newMockScreenshotRepo()
 	s := &media.Screenshot{ID: "s-del", FilePath: "/tmp/x.png"}
 	_ = repo.Save(context.Background(), s)
 	uc := NewMediaUseCase(repo, nil, nil)
 	ctx := context.Background()
-
 	list, err := uc.ListScreenshots(ctx, nil)
 	if err != nil || len(list) != 1 {
 		t.Fatalf("ListScreenshots = %d err=%v", len(list), err)
