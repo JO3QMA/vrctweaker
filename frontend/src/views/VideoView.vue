@@ -13,11 +13,9 @@
       <p class="history-retention-hint">
         {{ t("video.historyRetentionHint", { days: logRetentionDays }) }}
       </p>
-      <el-alert
+      <VtAlert
         v-if="historyFetchError"
-        type="error"
-        :closable="false"
-        show-icon
+        variant="danger"
         class="block-hint"
         data-testid="video-history-fetch-error"
         :title="t('video.historyFetchError')"
@@ -52,15 +50,15 @@
           <template #default="{ row }">
             <div class="url-cell">
               <span class="url-text">{{ row.url }}</span>
-              <el-button
+              <VtButton
+                variant="primary"
                 link
-                type="primary"
                 size="small"
                 data-testid="video-history-copy-url"
                 @click="copyAttemptUrl(row.url)"
               >
                 {{ t("video.historyCopyUrl") }}
-              </el-button>
+              </VtButton>
             </div>
           </template>
         </el-table-column>
@@ -118,35 +116,27 @@
         <template v-else>
           <!-- 1. 注意・エラー（置換ブロック直下・1箇所） -->
           <div class="video-alerts" data-testid="ytdlp-alert-area">
-            <el-alert
+            <VtAlert
               v-if="actionError"
-              type="error"
-              :closable="false"
-              show-icon
+              variant="danger"
               class="block-hint"
               data-testid="ytdlp-error-banner"
               :title="actionError"
             />
-            <el-alert
+            <VtAlert
               v-else-if="!status.supported"
-              type="warning"
-              :closable="false"
-              show-icon
+              variant="warning"
               :title="userFacingReason(status.unsupportedReason ?? '')"
             />
             <template v-else>
-              <el-alert
-                type="warning"
-                :closable="false"
-                show-icon
+              <VtAlert
+                variant="warning"
                 class="block-hint"
                 :title="t('video.alwaysWarn')"
               />
-              <el-alert
+              <VtAlert
                 v-if="bannerError"
-                type="error"
-                :closable="false"
-                show-icon
+                variant="danger"
                 class="block-hint"
                 data-testid="ytdlp-error-banner"
                 :title="bannerError"
@@ -158,7 +148,7 @@
             <!-- 2. 操作エリア -->
             <section class="video-ops" data-testid="ytdlp-ops">
               <div class="video-switch-row">
-                <el-switch
+                <VtSwitch
                   v-model="maintainOn"
                   data-testid="ytdlp-maintain-switch"
                   :disabled="busy"
@@ -173,39 +163,46 @@
               </div>
 
               <div class="video-actions" data-testid="ytdlp-action-grid">
-                <el-button
+                <VtButton
+                  variant="secondary"
                   data-testid="ytdlp-check-latest"
                   :loading="checkLoading"
                   :disabled="busy"
                   @click="checkLatest"
                 >
                   {{ t("video.checkLatest") }}
-                </el-button>
-                <el-button
-                  type="primary"
+                </VtButton>
+                <VtButton
+                  variant="primary"
                   data-testid="ytdlp-update-cache"
                   :loading="updateLoading"
                   :disabled="busy"
                   @click="updateCache"
                 >
                   {{ t("video.updateCache") }}
-                </el-button>
-                <el-button
+                </VtButton>
+                <VtButton
+                  variant="secondary"
                   data-testid="ytdlp-open-cache-folder"
                   :disabled="busy"
                   @click="openCacheFolder"
                 >
-                  <el-icon class="btn-icon"><FolderOpened /></el-icon>
+                  <VtIcon size="default" class="btn-icon"
+                    ><FolderOpened
+                  /></VtIcon>
                   {{ t("video.openCacheFolder") }}
-                </el-button>
-                <el-button
+                </VtButton>
+                <VtButton
+                  variant="secondary"
                   data-testid="ytdlp-open-tools-folder"
                   :disabled="busy"
                   @click="openToolsFolder"
                 >
-                  <el-icon class="btn-icon"><FolderOpened /></el-icon>
+                  <VtIcon size="default" class="btn-icon"
+                    ><FolderOpened
+                  /></VtIcon>
                   {{ t("video.openToolsFolder") }}
-                </el-button>
+                </VtButton>
               </div>
 
               <p
@@ -227,10 +224,10 @@
                 :aria-controls="detailsPanelId"
                 @click="detailsExpanded = !detailsExpanded"
               >
-                <el-icon class="details-toggle-icon" aria-hidden="true">
+                <VtIcon size="default" class="details-toggle-icon" decorative>
                   <CaretBottom v-if="detailsExpanded" />
                   <CaretRight v-else />
-                </el-icon>
+                </VtIcon>
                 <span>{{ t("video.detailsToggle") }}</span>
               </button>
               <div
@@ -270,6 +267,14 @@ import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
 import { CaretBottom, CaretRight, FolderOpened } from "@element-plus/icons-vue";
 import CookieLinkageSection from "../components/CookieLinkageSection.vue";
+import VtAlert from "../components/VtAlert.vue";
+import VtButton from "../components/VtButton.vue";
+import VtIcon from "../components/VtIcon.vue";
+import VtSwitch from "../components/VtSwitch.vue";
+import {
+  VT_BUTTON_DANGER_CONFIRM_CLASS,
+  VT_BUTTON_SECONDARY_CANCEL_CLASS,
+} from "../components/vtButtonClasses";
 import {
   App,
   type VideoPlaybackDTO,
@@ -487,6 +492,8 @@ async function onMaintainChange(on: boolean) {
           confirmButtonText: t("video.riskAckConfirm"),
           cancelButtonText: t("common.cancel"),
           type: "warning",
+          confirmButtonClass: VT_BUTTON_DANGER_CONFIRM_CLASS,
+          cancelButtonClass: VT_BUTTON_SECONDARY_CANCEL_CLASS,
         },
       );
       if (isViewStale(gen)) return;
@@ -661,13 +668,13 @@ onUnmounted(() => {
   box-sizing: border-box;
 }
 .video-card {
-  margin-top: 1rem;
+  margin-top: var(--space-block);
   width: 100%;
 }
 .history-retention-hint {
-  margin: 0 0 0.75rem;
-  color: var(--text-secondary);
-  font-size: 0.875rem;
+  margin: 0 0 var(--space-form-field);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-14);
 }
 .history-table {
   width: 100%;
@@ -675,7 +682,7 @@ onUnmounted(() => {
 .url-cell {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-action-group);
   min-width: 0;
 }
 .url-text {
@@ -685,33 +692,33 @@ onUnmounted(() => {
   min-width: 0;
 }
 .video-block-title {
-  margin: 0 0 0.75rem;
-  font-size: 1rem;
-  font-weight: 600;
+  margin: 0 0 var(--space-form-field);
+  font-size: var(--font-size-16);
+  font-weight: var(--font-weight-600);
 }
 .video-alerts {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-block);
 }
 .block-hint {
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-form-field);
 }
 .video-ops {
-  margin-bottom: 1.25rem;
+  margin-bottom: var(--space-section);
 }
 .video-switch-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.75rem 1rem;
-  margin-bottom: 1rem;
+  gap: var(--space-form-field) var(--space-block);
+  margin-bottom: var(--space-block);
 }
 .switch-status {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 .video-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.75rem;
+  gap: var(--space-form-field);
   width: 100%;
   max-width: 40rem;
 }
@@ -721,53 +728,53 @@ onUnmounted(() => {
   justify-content: center;
 }
 .btn-icon {
-  margin-right: 0.25rem;
+  margin-right: var(--space-inline-tight);
   vertical-align: middle;
 }
 .video-status {
-  margin-top: 0.25rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
+  margin-top: var(--space-inline-tight);
+  padding-top: var(--space-block);
+  border-top: 1px solid var(--color-border);
 }
 .details-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: var(--space-inline-tight);
   padding: 0;
   border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font: inherit;
   cursor: pointer;
 }
 .details-toggle:hover {
-  color: var(--text-primary);
+  color: var(--color-text-primary);
 }
 .details-toggle-icon {
-  font-size: 0.9rem;
+  font-size: var(--font-size-14);
 }
 .details-panel {
-  margin-top: 0.75rem;
+  margin-top: var(--space-form-field);
 }
 .video-dl {
   display: grid;
   grid-template-columns: minmax(10rem, 14rem) 1fr;
-  gap: 0.4rem 1rem;
+  gap: var(--space-inline-tight) var(--space-block);
   margin: 0;
 }
 .video-dl dt {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 .video-dl dd {
   margin: 0;
 }
 .muted {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 .flash {
-  margin-top: 0.75rem;
+  margin-top: var(--space-form-field);
 }
 .flash-ok {
-  color: var(--el-color-success);
+  color: var(--color-success);
 }
 </style>

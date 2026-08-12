@@ -5,14 +5,14 @@
     data-testid="presence-change-section"
   >
     <template #header>
-      <span class="presence-change-title">{{
+      <span class="presence-change-title text-body-sm">{{
         t("dashboard.presenceChange.title")
       }}</span>
     </template>
 
     <div
       v-if="loading"
-      class="presence-change-message"
+      class="presence-change-message text-body-sm"
       data-testid="presence-change-loading"
     >
       {{ t("dashboard.presenceChange.loading") }}
@@ -20,7 +20,7 @@
 
     <div
       v-else-if="loadError"
-      class="presence-change-message"
+      class="presence-change-message text-body-sm"
       data-testid="presence-change-load-error"
     >
       <p class="presence-change-error-text">
@@ -39,7 +39,7 @@
     <template v-else>
       <p
         v-if="!loggedIn"
-        class="presence-change-login-hint"
+        class="presence-change-login-hint text-body-sm"
         data-testid="presence-change-login-required"
       >
         {{ t("dashboard.presenceChange.loginRequired") }}
@@ -103,10 +103,10 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { ElMessage } from "element-plus";
 import { App, type PresenceChangeSectionDTO } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
 import { formatError } from "../utils/formatError";
+import { showToast } from "../utils/showToast";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
 import VtButton from "./VtButton.vue";
 
@@ -256,7 +256,7 @@ async function load(options?: LoadOptions): Promise<void> {
       loggedIn.value = false;
       history.value = [];
     } else {
-      ElMessage.warning(t("dashboard.presenceChange.refreshError"));
+      showToast.warning(t("dashboard.presenceChange.refreshError"));
     }
   } finally {
     inFlight = false;
@@ -324,10 +324,10 @@ async function applyPresenceChange(): Promise<void> {
       draftDescription.value,
     );
     syncSnapshotFromApply(result.status, result.statusDescription);
-    ElMessage.success(t("dashboard.presenceChange.applySuccess"));
+    showToast.success(t("dashboard.presenceChange.applySuccess"));
     void load({ skipSnapshotUpdate: true });
   } catch (e) {
-    ElMessage.error(formatError(e, t("dashboard.presenceChange.applyError")));
+    showToast.error(formatError(e, t("dashboard.presenceChange.applyError")));
   } finally {
     applying.value = false;
   }
@@ -362,35 +362,33 @@ onUnmounted(() => {
 
 <style scoped>
 .presence-change-section {
-  background: var(--bg-secondary) !important;
-  border-color: var(--border) !important;
+  background: var(--color-bg-elevated) !important;
+  border-color: var(--color-border) !important;
 }
 
 .presence-change-title {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .presence-change-message,
 .presence-change-login-hint {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
-  margin: 0 0 0.75rem;
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-form-field);
 }
 
 .presence-change-error-text {
-  margin: 0 0 0.5rem;
+  margin: 0 0 var(--space-action-group);
 }
 
 .presence-change-settings-link {
-  margin-left: 0.35rem;
+  margin-left: var(--space-inline-tight);
 }
 
 .presence-color-buttons {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.35rem;
-  margin-bottom: 0.5rem;
+  gap: var(--space-inline-tight);
+  margin-bottom: var(--space-action-group);
 }
 
 .presence-color-buttons :deep(.el-button + .el-button) {
@@ -437,7 +435,7 @@ onUnmounted(() => {
 .presence-description-row {
   display: flex;
   flex-wrap: nowrap;
-  gap: 0.5rem;
+  gap: var(--space-action-group);
   align-items: center;
 }
 

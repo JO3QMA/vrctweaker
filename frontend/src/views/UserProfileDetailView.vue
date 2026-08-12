@@ -2,12 +2,10 @@
   <div class="user-profile-detail-view">
     <h1 class="page-title">{{ t("userProfile.title") }}</h1>
     <div v-if="loading" class="msg">{{ t("userProfile.loading") }}</div>
-    <el-alert
+    <VtAlert
       v-else-if="loadError && !selected"
+      variant="warning"
       :title="loadError"
-      type="warning"
-      :closable="false"
-      show-icon
     />
     <div v-else-if="selected" class="detail-wrap">
       <VrcUserCacheDetail
@@ -23,6 +21,7 @@ import { ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import VrcUserCacheDetail from "../components/VrcUserCacheDetail.vue";
+import VtAlert from "../components/VtAlert.vue";
 import { App } from "../wails/app";
 import type { UserCacheDTO } from "../wails/app";
 
@@ -116,8 +115,8 @@ void load();
 }
 
 .msg {
-  padding: 1rem;
-  color: var(--text-secondary);
+  padding: var(--space-block);
+  color: var(--color-text-secondary);
 }
 
 .detail-wrap {

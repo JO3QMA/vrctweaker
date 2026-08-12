@@ -1,8 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
-import { ElMessage, ElMessageBox } from "element-plus";
+import { ElMessageBox } from "element-plus";
 import AutomationView from "../AutomationView.vue";
 import type { AutomationItemDTO } from "../../wails/app";
+import { showToast } from "../../utils/showToast";
+
+vi.mock("../../utils/showToast", () => ({
+  showToast: {
+    success: vi.fn(),
+    warning: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+  },
+}));
 
 const {
   mockListAutomationItems,
@@ -83,16 +93,13 @@ describe("AutomationView unsaved guard", () => {
     const confirmSpy = vi
       .spyOn(ElMessageBox, "confirm")
       .mockResolvedValue("confirm" as never);
-    const errorSpy = vi
-      .spyOn(ElMessage, "error")
-      .mockImplementation(() => ({ close: () => {} }) as never);
 
     await wrapper.find(".rule-card").trigger("click");
     await flushPromises();
 
     expect(confirmSpy).toHaveBeenCalled();
     expect(mockSaveAutomationItem).toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalled();
+    expect(showToast.error).toHaveBeenCalled();
     // Still editing the draft (did not switch to seeded card editor).
     expect(wrapper.find(".rule-editor").exists()).toBe(true);
     expect(
@@ -100,7 +107,6 @@ describe("AutomationView unsaved guard", () => {
     ).toBe("Draft rule");
 
     confirmSpy.mockRestore();
-    errorSpy.mockRestore();
   });
 
   it("does not treat list refresh failure as save failure", async () => {
@@ -113,18 +119,13 @@ describe("AutomationView unsaved guard", () => {
     await flushPromises();
 
     mockListAutomationItems.mockRejectedValueOnce(new Error("list failed"));
-    const errorSpy = vi
-      .spyOn(ElMessage, "error")
-      .mockImplementation(() => ({ close: () => {} }) as never);
 
     await wrapper.find('[data-testid="save-item"]').trigger("click");
     await flushPromises();
 
     expect(mockSaveAutomationItem).toHaveBeenCalled();
-    expect(errorSpy).not.toHaveBeenCalled();
+    expect(showToast.error).not.toHaveBeenCalled();
     expect(wrapper.find('[data-testid="unsaved-banner"]').exists()).toBe(false);
-
-    errorSpy.mockRestore();
   });
 
   it("clears the editor when selecting an item with invalid JSON", async () => {
@@ -146,17 +147,11 @@ describe("AutomationView unsaved guard", () => {
     await flushPromises();
     expect(wrapper.find(".rule-editor").exists()).toBe(true);
 
-    const errorSpy = vi
-      .spyOn(ElMessage, "error")
-      .mockImplementation(() => ({ close: () => {} }) as never);
-
     await wrapper.findAll(".rule-card")[1]?.trigger("click");
     await flushPromises();
 
-    expect(errorSpy).toHaveBeenCalled();
+    expect(showToast.error).toHaveBeenCalled();
     expect(wrapper.find(".rule-editor").exists()).toBe(false);
-
-    errorSpy.mockRestore();
   });
 
   it("does not keep a generated id on the editor when save fails", async () => {
@@ -169,9 +164,6 @@ describe("AutomationView unsaved guard", () => {
     await flushPromises();
 
     mockSaveAutomationItem.mockRejectedValueOnce(new Error("save failed"));
-    const errorSpy = vi
-      .spyOn(ElMessage, "error")
-      .mockImplementation(() => ({ close: () => {} }) as never);
 
     await wrapper.find('[data-testid="save-item"]').trigger("click");
     await flushPromises();
@@ -180,7 +172,7 @@ describe("AutomationView unsaved guard", () => {
       mockSaveAutomationItem.mock.calls[0]?.[0] as AutomationItemDTO
     ).id;
     expect(firstId).toBeTruthy();
-    expect(errorSpy).toHaveBeenCalled();
+    expect(showToast.error).toHaveBeenCalled();
     expect(wrapper.find('[data-testid="unsaved-banner"]').exists()).toBe(true);
 
     mockSaveAutomationItem.mockResolvedValueOnce(undefined);
@@ -200,7 +192,5 @@ describe("AutomationView unsaved guard", () => {
     // Retry must mint a new id (editor did not keep the failed attempt's UUID).
     expect(secondId).toBeTruthy();
     expect(secondId).not.toBe(firstId);
-
-    errorSpy.mockRestore();
   });
 });

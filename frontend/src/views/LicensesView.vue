@@ -1,12 +1,12 @@
 <template>
   <div class="licenses-view">
     <h1 class="page-title">{{ t("licenses.title") }}</h1>
-    <el-text type="info" size="default" class="intro">
+    <p class="text-body-sm intro">
       {{ t("licenses.intro") }}
-    </el-text>
+    </p>
 
     <section class="licenses-section">
-      <h2 class="section-title">{{ t("licenses.frontend") }}</h2>
+      <h2 class="text-h2 section-title">{{ t("licenses.frontend") }}</h2>
       <el-table
         :data="npmLicensesArray"
         class="licenses-table"
@@ -30,7 +30,7 @@
         />
         <el-table-column :label="t('licenses.colLicense')" width="120">
           <template #default="{ row }">
-            <el-tag size="small">{{ row.licenses }}</el-tag>
+            <VtTag size="small" variant="neutral">{{ row.licenses }}</VtTag>
           </template>
         </el-table-column>
         <el-table-column :label="t('licenses.colRepo')" min-width="200">
@@ -44,14 +44,16 @@
             >
               {{ truncateUrl(row.repository) }}
             </a>
-            <el-text v-else type="info">-</el-text>
+            <span v-else class="text-caption repo-missing">{{
+              t("common.dash")
+            }}</span>
           </template>
         </el-table-column>
       </el-table>
     </section>
 
     <section class="licenses-section">
-      <h2 class="section-title">{{ t("licenses.backend") }}</h2>
+      <h2 class="text-h2 section-title">{{ t("licenses.backend") }}</h2>
       <el-table :data="goLicenses" style="width: 100%" size="small" stripe>
         <el-table-column
           prop="path"
@@ -64,7 +66,7 @@
         </el-table-column>
         <el-table-column :label="t('licenses.colLicense')" width="120">
           <template #default="{ row }">
-            <el-tag size="small">{{ row.license }}</el-tag>
+            <VtTag size="small" variant="neutral">{{ row.license }}</VtTag>
           </template>
         </el-table-column>
         <el-table-column :label="t('licenses.colRepo')" min-width="200">
@@ -78,7 +80,9 @@
             >
               {{ truncateUrl(row.repository) }}
             </a>
-            <el-text v-else type="info">-</el-text>
+            <span v-else class="text-caption repo-missing">{{
+              t("common.dash")
+            }}</span>
           </template>
         </el-table-column>
       </el-table>
@@ -89,6 +93,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
+import VtTag from "../components/VtTag.vue";
 
 const { t } = useI18n();
 import npmLicensesData from "../data/licenses.json";
@@ -136,33 +141,36 @@ function truncateUrl(url: string): string {
 
 .intro {
   display: block;
-  margin-bottom: 2rem;
-  line-height: 1.6;
+  margin: 0 0 var(--space-page);
+  line-height: var(--line-height-relaxed);
+  color: var(--color-text-secondary);
 }
 
 .licenses-section {
-  margin-bottom: 2.5rem;
+  margin-bottom: var(--space-48);
 }
 
 .section-title {
-  font-size: 1.1rem;
-  margin: 0 0 1rem;
-  color: var(--text-primary);
-  font-weight: 600;
+  margin: 0 0 var(--space-block);
+  color: var(--color-text-primary);
 }
 
 .package-name {
   font-family: ui-monospace, monospace;
-  font-size: 0.85rem;
+  font-size: var(--font-size-14);
 }
 
 .repo-link {
-  color: var(--accent);
+  color: var(--color-brand);
   text-decoration: none;
 }
 
 .repo-link:hover {
-  color: var(--accent-hover);
+  color: var(--color-brand-hover);
   text-decoration: underline;
+}
+
+.repo-missing {
+  color: var(--color-text-secondary);
 }
 </style>

@@ -10,12 +10,10 @@
           :refresh-loading="refreshLoading"
           @refresh="doRefresh"
         />
-        <el-alert
+        <VtAlert
           v-if="!isLoggedIn"
+          variant="info"
           :title="t('friends.loginRequired')"
-          type="info"
-          :closable="false"
-          show-icon
           class="login-hint"
         />
         <div class="friends-list-wrap">
@@ -41,12 +39,13 @@
 import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { ElMessage } from "element-plus";
+import VtAlert from "../components/VtAlert.vue";
 import FriendsDetailPane from "./friends/FriendsDetailPane.vue";
 import FriendsListPanel from "./friends/FriendsListPanel.vue";
 import FriendsViewToolbar from "./friends/FriendsViewToolbar.vue";
 import { friendIsOffline } from "@/utils/vrcUserCacheDisplay";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
+import { showToast } from "../utils/showToast";
 import { App } from "../wails/app";
 import type { UserCacheDTO } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
@@ -151,7 +150,7 @@ async function applyVrcUserIdFromQuery(): Promise<void> {
     f = friends.value.find((x) => x.vrcUserId === id);
   }
   if (!f) {
-    ElMessage.warning(t("friends.userNotFound"));
+    showToast.warning(t("friends.userNotFound"));
     await stripVrcUserIdFromQuery();
     return;
   }
@@ -251,7 +250,7 @@ async function onDetailFavoriteChange(f: UserCacheDTO, isFavorite: boolean) {
 }
 
 .login-hint {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-block);
 }
 
 .friends-section {
@@ -260,7 +259,7 @@ async function onDetailFavoriteChange(f: UserCacheDTO, isFavorite: boolean) {
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  gap: 1.5rem;
+  gap: var(--space-section);
 }
 
 .friends-pane--left {

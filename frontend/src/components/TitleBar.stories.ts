@@ -18,7 +18,7 @@ export const Default: Story = {
   render: () => ({
     components: { TitleBar },
     template: `
-      <div style="max-width: 720px; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden">
+      <div style="max-width: 720px; border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden">
         <TitleBar />
       </div>
     `,

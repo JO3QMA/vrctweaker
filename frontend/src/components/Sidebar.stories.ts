@@ -34,7 +34,7 @@ export const Default: Story = {
   render: () => ({
     components: { Sidebar },
     template: `
-      <div style="height: 28rem; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden">
+      <div style="height: 28rem; border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden">
         <Sidebar />
       </div>
     `,
@@ -46,7 +46,7 @@ export const ActiveActivity: Story = {
   render: () => ({
     components: { Sidebar },
     template: `
-      <div style="height: 28rem; border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden">
+      <div style="height: 28rem; border: 1px solid var(--color-border); border-radius: var(--radius); overflow: hidden">
         <Sidebar />
       </div>
     `,

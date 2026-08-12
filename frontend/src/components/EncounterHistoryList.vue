@@ -2,13 +2,7 @@
   <div class="encounter-history-list">
     <template v-if="canLoad">
       <div v-if="loading" class="message">{{ t("common.loading") }}</div>
-      <el-alert
-        v-else-if="error"
-        :title="error"
-        type="error"
-        :closable="false"
-        show-icon
-      />
+      <VtAlert v-else-if="error" variant="danger" :title="error" />
       <div v-else-if="rows.length === 0" class="message">
         {{ t("encounterHistory.empty") }}
       </div>
@@ -59,6 +53,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import VtAlert from "./VtAlert.vue";
 import { App, type UserEncounterDTO } from "../wails/app";
 import { formatEncounteredAt } from "../utils/formatEncounteredAt";
 import { appLocaleToBcp47 } from "../i18n";
@@ -130,19 +125,19 @@ watch(
 .encounter-history-list {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-action-group);
   min-height: 0;
 }
 
 .message {
-  padding: 1rem;
+  padding: var(--space-block);
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .mono {
   font-family: monospace;
-  font-size: 0.78rem;
+  font-size: var(--font-size-12);
   word-break: break-all;
 }
 </style>

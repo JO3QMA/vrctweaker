@@ -49,12 +49,12 @@
             <div v-else class="profile-avatar profile-avatar--placeholder" />
           </div>
           <div v-if="variant !== 'self'" class="profile-toolbar-actions">
-            <el-checkbox
+            <VtCheckbox
               :model-value="selected.isFavorite"
               @update:model-value="onFavoriteUpdate"
             >
               {{ t("userDetail.favorite") }}
-            </el-checkbox>
+            </VtCheckbox>
           </div>
         </div>
       </div>
@@ -62,17 +62,17 @@
       <div class="profile-body">
         <div ref="nameAnchor" class="profile-name-row">
           <h2 class="profile-display-name">{{ selected.displayName }}</h2>
-          <el-button
+          <VtButton
+            variant="primary"
             link
-            type="primary"
             :title="t('userDetail.copyDisplayName')"
             :aria-label="t('userDetail.copyDisplayName')"
             data-testid="friend-copy-display-name"
             class="profile-copy-name"
             @click="copyDisplayName(selected.displayName)"
           >
-            <el-icon><CopyDocument /></el-icon>
-          </el-button>
+            <VtIcon size="default"><CopyDocument /></VtIcon>
+          </VtButton>
         </div>
         <p v-if="selected.username" class="profile-handle">
           @{{ selected.username }}
@@ -104,14 +104,14 @@
         >
           <el-tab-pane :label="t('userDetail.tabDetail')" name="detail">
             <div v-if="variant === 'self'" class="self-profile-actions">
-              <el-button
-                type="primary"
+              <VtButton
+                variant="primary"
                 data-testid="self-profile-refresh"
                 :loading="refreshLoading"
                 @click="emit('refresh')"
               >
                 {{ t("selfProfile.refresh") }}
-              </el-button>
+              </VtButton>
             </div>
             <el-descriptions :column="1" border size="small">
               <el-descriptions-item
@@ -276,6 +276,9 @@ import { useI18n } from "vue-i18n";
 import EncounterHistoryList from "./EncounterHistoryList.vue";
 import VrcStatusTag from "./VrcStatusTag.vue";
 import VrcUserTagChip from "./VrcUserTagChip.vue";
+import VtButton from "./VtButton.vue";
+import VtCheckbox from "./VtCheckbox.vue";
+import VtIcon from "./VtIcon.vue";
 import type { UserCacheDTO } from "../wails/app";
 import {
   copyDisplayName,
@@ -418,8 +421,8 @@ onUnmounted(() => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--bg-secondary) !important;
-  border-color: var(--border) !important;
+  background: var(--color-bg-elevated) !important;
+  border-color: var(--color-border) !important;
 }
 
 .friend-detail-card :deep(.el-card__body) {
@@ -435,17 +438,17 @@ onUnmounted(() => {
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: 0.55rem;
+  gap: var(--space-action-group);
   box-sizing: border-box;
   max-height: 0;
   min-height: 0;
-  padding: 0 0.75rem;
+  padding: 0 var(--space-form-field);
   overflow: hidden;
-  border-bottom: 0 solid var(--border);
-  background: color-mix(in srgb, var(--bg-secondary) 92%, #000);
+  border-bottom: 0 solid var(--color-border);
+  background: color-mix(in srgb, var(--color-bg-elevated) 92%, #000);
   backdrop-filter: blur(6px);
   opacity: 0;
-  transform: translateY(-0.35rem);
+  transform: translateY(calc(-1 * var(--space-inline-tight)));
   pointer-events: none;
   transition:
     max-height 0.2s ease,
@@ -457,7 +460,7 @@ onUnmounted(() => {
 
 .detail-sticky-header.visible {
   max-height: 3.5rem;
-  padding: 0.55rem 0.75rem;
+  padding: var(--space-action-group) var(--space-form-field);
   border-bottom-width: 1px;
   opacity: 1;
   transform: translateY(0);
@@ -474,14 +477,14 @@ onUnmounted(() => {
 
 .detail-sticky-avatar--placeholder {
   background: var(--el-fill-color-light);
-  border: 1px solid var(--border);
+  border: 1px solid var(--color-border);
 }
 
 .detail-sticky-main {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: var(--space-inline-tight);
 }
 
 .detail-sticky-name {
@@ -490,9 +493,9 @@ onUnmounted(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: var(--el-text-color-primary);
+  font-size: var(--font-size-14);
+  font-weight: var(--font-weight-700);
+  color: var(--color-text-primary);
 }
 
 .profile-hero {
@@ -531,8 +534,8 @@ onUnmounted(() => {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0 1rem;
+  gap: var(--space-form-field);
+  padding: 0 var(--space-block);
   margin-top: -44px;
   position: relative;
   z-index: 1;
@@ -548,9 +551,9 @@ onUnmounted(() => {
   height: 88px;
   border-radius: 12px;
   object-fit: cover;
-  border: 3px solid var(--bg-secondary);
+  border: 3px solid var(--color-bg-elevated);
   box-sizing: border-box;
-  background: var(--bg-secondary);
+  background: var(--color-bg-elevated);
 }
 
 .profile-avatar--placeholder {
@@ -559,26 +562,26 @@ onUnmounted(() => {
 }
 
 .profile-toolbar-actions {
-  padding-bottom: 0.35rem;
+  padding-bottom: var(--space-inline-tight);
 }
 
 .profile-body {
-  padding: 0.65rem 1rem 1rem;
+  padding: var(--space-form-field) var(--space-block) var(--space-block);
 }
 
 .profile-name-row {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--space-inline-tight);
   flex-wrap: wrap;
 }
 
 .profile-display-name {
   margin: 0;
-  font-size: 1.25rem;
-  font-weight: 700;
-  line-height: 1.25;
-  color: var(--el-text-color-primary);
+  font-size: var(--font-size-20);
+  font-weight: var(--font-weight-700);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-primary);
 }
 
 .profile-copy-name {
@@ -586,35 +589,35 @@ onUnmounted(() => {
 }
 
 .profile-handle {
-  margin: 0.15rem 0 0;
-  font-size: 0.9rem;
-  color: var(--el-text-color-secondary);
+  margin: var(--space-inline-tight) 0 0;
+  font-size: var(--font-size-14);
+  color: var(--color-text-secondary);
 }
 
 .profile-status-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 0.35rem 0.5rem;
-  margin-top: 0.5rem;
+  gap: var(--space-inline-tight) var(--space-action-group);
+  margin-top: var(--space-action-group);
 }
 
 .profile-status-desc {
-  font-size: 0.85rem;
-  color: var(--el-text-color-regular);
+  font-size: var(--font-size-14);
+  color: var(--color-text-secondary);
 }
 
 .profile-bio {
-  margin: 0.75rem 0 0;
-  font-size: 0.9rem;
-  line-height: 1.45;
-  color: var(--el-text-color-primary);
+  margin: var(--space-form-field) 0 0;
+  font-size: var(--font-size-14);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
 }
 
 .profile-bio-links {
-  margin: 0.5rem 0 0;
-  padding-left: 1.1rem;
-  font-size: 0.9rem;
+  margin: var(--space-action-group) 0 0;
+  padding-left: var(--space-block);
+  font-size: var(--font-size-14);
 }
 
 .profile-bio-links a {
@@ -623,7 +626,7 @@ onUnmounted(() => {
 }
 
 .profile-details-wrap {
-  padding: 0 1rem 1rem;
+  padding: 0 var(--space-block) var(--space-block);
   min-height: 0;
 }
 
@@ -636,11 +639,11 @@ onUnmounted(() => {
 }
 
 .self-profile-actions {
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-form-field);
 }
 
 .profile-detail-tabs :deep(.el-tabs__header) {
-  margin-bottom: 0.65rem;
+  margin-bottom: var(--space-form-field);
 }
 
 .profile-detail-tabs :deep(.el-tabs__content),
@@ -650,7 +653,7 @@ onUnmounted(() => {
 
 .mono {
   font-family: ui-monospace, monospace;
-  font-size: 0.85rem;
+  font-size: var(--font-size-14);
 }
 
 .wrap {

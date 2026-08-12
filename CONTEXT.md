@@ -708,9 +708,13 @@ _Avoid_: 常時実行, バックグラウンドサービス（v1 で含意しな
 
 ## Design system
 
-ボタン様式・余白・色・タイポグラフィ・アイコン・フォーム入力部品などアプリ横断 UI 部品の用語。**VtButton** と 4 **Button variant**（[ADR 0017](docs/adr/0017-button-design-system-vtbutton.md)）は grill-with-docs で合意済み。**Spacing**（余白ルール）（[ADR 0018](docs/adr/0018-spacing-design-system.md)）は grill-with-docs で合意済み。**Color**（カラーパレット）（[ADR 0019](docs/adr/0019-color-design-system.md)）は grill-with-docs で合意済み。**Typography**（タイポグラフィ）（[ADR 0020](docs/adr/0020-typography-design-system.md)）は grill-with-docs で合意済み。**Form control** ラッパー（VtInput / VtSelect / VtCheckbox / VtSwitch）は grill-with-docs で合意済み（[ADR 0021](docs/adr/0021-form-control-design-system.md)）。**Feedback & Badges**（Alert / Toast / Badge / Loading の横断チャネル）は grill-with-docs で合意済み（[ADR 0022](docs/adr/0022-feedback-badges-design-system.md)）。**Iconography**（アイコン・グリフのサイズ・色・部品化）（[ADR 0023](docs/adr/0023-iconography-design-system.md)）は grill-with-docs で合意済み。実装契約は各 ADR を正本とする。色コード・hex 値・個別 props など実装詳細はここに書かない。
+ボタン様式・余白・色・タイポグラフィ・アイコン・フォーム入力部品などアプリ横断 UI 部品の用語。**VtButton** と 4 **Button variant**（[ADR 0017](docs/adr/0017-button-design-system-vtbutton.md)）は grill-with-docs で合意済み。**Spacing**（余白ルール）（[ADR 0018](docs/adr/0018-spacing-design-system.md)）は grill-with-docs で合意済み。**Color**（カラーパレット）（[ADR 0019](docs/adr/0019-color-design-system.md)）は grill-with-docs で合意済み。**Typography**（タイポグラフィ）（[ADR 0020](docs/adr/0020-typography-design-system.md)）は grill-with-docs で合意済み。**Form control** ラッパー（VtInput / VtSelect / VtCheckbox / VtSwitch）は grill-with-docs で合意済み（[ADR 0021](docs/adr/0021-form-control-design-system.md)）。**Feedback & Badges**（Alert / Toast / Badge / Loading の横断チャネル）は grill-with-docs で合意済み（[ADR 0022](docs/adr/0022-feedback-badges-design-system.md)）。**Iconography**（アイコン・グリフのサイズ・色・部品化）（[ADR 0023](docs/adr/0023-iconography-design-system.md)）は grill-with-docs で合意済み。既存画面への一括適用は **Bulk design-system adoption campaign**（[ADR 0024](docs/adr/0024-bulk-design-system-adoption-campaign.md)）で行う。実装契約は各 ADR を正本とする。色コード・hex 値・個別 props など実装詳細はここに書かない。
 
 ### Language
+
+**Bulk design-system adoption campaign**:
+既存の全 View と関連共有 UI に、Design system 全層（Button / Form / Feedback / Color / Spacing / Typography / Iconography）を意図的に一括適用する期間限定の作業。ADR 0017–0023 の「触ったところから順次・一括置換しない」adoption の **例外**。通常の機能 PR では引き続き触ったファイルだけ寄せる。ESLint 強制・Sidebar 絵文字の SVG 化・Domain badge / Semantic button の無理な Vt* 化・レイアウトリデザインは含めない。完了条件と対象外は [ADR 0024](docs/adr/0024-bulk-design-system-adoption-campaign.md)。
+_Avoid_: 全面置換（通常 adoption の常時方針と混同するため）, Design system v1 deliverables（トークン／ラッパー初回届けと混同するため）
 
 **VtButton**:
 VRCTweaker の標準操作ボタンコンポーネント。画面に置く **Primary / Secondary / Tertiary / Danger** は VtButton の `variant` で指定する（**必須**。省略時の暗黙既定は持たない）。`el-button` の直接利用は新規・改修時に VtButton へ寄せる。**Semantic button** は VtButton の variant に含めない（専用 UI を別に持つ）。

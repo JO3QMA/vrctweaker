@@ -1,27 +1,21 @@
 <template>
   <div class="self-profile-view">
     <h1 class="page-title">{{ t("selfProfile.title") }}</h1>
-    <el-alert
+    <VtAlert
       v-if="!isLoggedIn"
+      variant="info"
       :title="t('selfProfile.loginRequired')"
-      type="info"
-      :closable="false"
-      show-icon
       class="login-hint"
     >
-      <template #default>
-        <router-link class="settings-link" :to="{ name: 'settings' }">
-          {{ t("selfProfile.openSettings") }}
-        </router-link>
-      </template>
-    </el-alert>
+      <router-link class="settings-link" :to="{ name: 'settings' }">
+        {{ t("selfProfile.openSettings") }}
+      </router-link>
+    </VtAlert>
     <div v-else-if="loading" class="msg">{{ t("selfProfile.loading") }}</div>
-    <el-alert
+    <VtAlert
       v-else-if="loadError && !selected"
+      variant="warning"
       :title="loadError"
-      type="warning"
-      :closable="false"
-      show-icon
     />
     <div v-else-if="selected" class="detail-wrap">
       <VrcUserCacheDetail
@@ -38,6 +32,7 @@
 import { onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import VrcUserCacheDetail from "../components/VrcUserCacheDetail.vue";
+import VtAlert from "../components/VtAlert.vue";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
 import { App } from "../wails/app";
 import type { UserCacheDTO } from "../wails/app";
@@ -102,11 +97,11 @@ onMounted(async () => {
 }
 
 .login-hint {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-block);
 }
 
 .settings-link {
-  color: var(--el-color-primary);
+  color: var(--color-brand);
   text-decoration: none;
 }
 
@@ -115,8 +110,8 @@ onMounted(async () => {
 }
 
 .msg {
-  padding: 1rem;
-  color: var(--text-secondary);
+  padding: var(--space-block);
+  color: var(--color-text-secondary);
 }
 
 .detail-wrap {

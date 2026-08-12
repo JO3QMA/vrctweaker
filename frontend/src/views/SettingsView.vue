@@ -9,7 +9,7 @@
       <el-text type="info" size="small" class="hint block-hint">{{
         t("settings.languageHint")
       }}</el-text>
-      <el-select
+      <VtSelect
         class="language-select"
         :model-value="locale"
         data-testid="settings-ui-language"
@@ -20,7 +20,7 @@
         <el-option value="ko" :label="t('settingsLanguages.ko')" />
         <el-option value="zh-TW" :label="t('settingsLanguages.zhTW')" />
         <el-option value="zh-CN" :label="t('settingsLanguages.zhCN')" />
-      </el-select>
+      </VtSelect>
     </el-card>
 
     <!-- VRChat ログイン -->
@@ -71,44 +71,36 @@
             </router-link>
           </div>
         </div>
-        <el-alert
-          v-if="profileError"
-          :title="profileError"
-          type="error"
-          :closable="false"
-          show-icon
-        />
-        <el-tag type="success" size="large">{{
+        <VtAlert v-if="profileError" variant="danger" :title="profileError" />
+        <VtTag variant="success" size="large">{{
           t("settings.loggedInTag")
-        }}</el-tag>
+        }}</VtTag>
         <div class="login-actions">
-          <el-button
-            type="primary"
+          <VtButton
+            variant="tertiary"
             :loading="profileLoading"
             @click="loadSelfProfileSummary(true)"
           >
             {{ t("settings.refreshProfile") }}
-          </el-button>
-          <el-button type="primary" @click="refreshFriends">
+          </VtButton>
+          <VtButton variant="secondary" @click="refreshFriends">
             {{ t("settings.refreshFriends") }}
-          </el-button>
-          <el-button type="danger" plain @click="logout">
+          </VtButton>
+          <VtButton variant="danger" plain @click="logout">
             {{ t("settings.logout") }}
-          </el-button>
+          </VtButton>
         </div>
       </div>
       <div v-else class="login-form">
-        <el-alert
+        <VtAlert
           v-if="unlockState === 'needs-relogin' && unlockErrorMessage"
+          variant="warning"
           :title="unlockErrorMessage"
-          type="warning"
-          :closable="false"
-          show-icon
           class="login-error"
         />
         <el-form label-position="top" size="default">
           <el-form-item :label="t('settings.username')">
-            <el-input
+            <VtInput
               id="login-username"
               v-model="loginForm.username"
               :placeholder="t('settings.usernamePh')"
@@ -116,7 +108,7 @@
             />
           </el-form-item>
           <el-form-item :label="t('settings.password')">
-            <el-input
+            <VtInput
               id="login-password"
               v-model="loginForm.password"
               type="password"
@@ -126,23 +118,21 @@
             />
           </el-form-item>
           <el-form-item :label="t('settings.twoFactor')">
-            <el-input
+            <VtInput
               id="login-2fa"
               v-model="loginForm.twoFactorCode"
               :placeholder="t('settings.twoFactorPh')"
               autocomplete="one-time-code"
             />
           </el-form-item>
-          <el-alert
+          <VtAlert
             v-if="loginError"
+            variant="danger"
             :title="loginError"
-            type="error"
-            :closable="false"
-            show-icon
             class="login-error"
           />
-          <el-button
-            type="primary"
+          <VtButton
+            variant="primary"
             :loading="loginLoading"
             :disabled="
               loginLoading || !loginForm.username || !loginForm.password
@@ -150,7 +140,7 @@
             @click="login"
           >
             {{ loginLoading ? t("settings.loggingIn") : t("settings.login") }}
-          </el-button>
+          </VtButton>
         </el-form>
       </div>
     </el-card>
@@ -164,27 +154,29 @@
         <div v-for="field in pathFields" :key="field.key" class="path-row">
           <label class="path-label">{{ field.label }}</label>
           <div class="path-input-group">
-            <el-input
+            <VtInput
               v-model="pathSettings[field.key]"
               :placeholder="field.placeholder"
               @change="savePathSettings"
             />
-            <el-button
+            <VtButton
               v-for="btn in field.buttons"
               :key="btn.label"
+              variant="secondary"
               :data-testid="btn.testid"
               :title="btn.title"
               @click="btn.handler"
             >
               {{ btn.label }}
-            </el-button>
-            <el-button
-              type="primary"
+            </VtButton>
+            <VtButton
+              variant="secondary"
+              :data-testid="`path-validate-${field.key}`"
               :disabled="!pathSettings[field.key]"
               @click="validatePathField(field.key)"
             >
               {{ t("settings.validateExists") }}
-            </el-button>
+            </VtButton>
           </div>
           <el-text
             v-if="validateResult[field.key] !== null"
@@ -216,7 +208,7 @@
             t("settings.suppressSleepHint")
           }}</el-text>
         </div>
-        <el-switch
+        <VtSwitch
           v-model="suppressSleepWhileVRChat"
           class="power-switch"
           @change="saveSuppressSleepWhileVRChat"
@@ -251,9 +243,9 @@
       <el-text type="info" size="small" class="hint">{{
         t("settings.ossHint")
       }}</el-text>
-      <div style="margin-top: 0.75rem">
+      <div class="oss-link-row">
         <router-link class="btn-licenses" to="/licenses">
-          <el-button type="primary">{{ t("settings.ossButton") }}</el-button>
+          <VtButton variant="primary">{{ t("settings.ossButton") }}</VtButton>
         </router-link>
       </div>
     </el-card>
@@ -263,52 +255,49 @@
       <template #header>
         <span>{{ t("settings.dbSection") }}</span>
       </template>
-      <el-text
-        type="info"
-        size="small"
-        class="hint"
-        style="display: block; margin-bottom: 1rem"
-      >
+      <el-text type="info" size="small" class="hint db-hint">
         {{ t("settings.dbHint") }}
       </el-text>
-      <el-alert
+      <VtAlert
         v-if="maintenanceError"
+        variant="danger"
         :title="maintenanceError"
-        type="error"
-        :closable="false"
-        show-icon
-        style="margin-bottom: 0.75rem"
+        class="maintenance-error-alert"
       />
       <div class="maintenance-actions">
-        <el-button :loading="maintenanceLoading" @click="doVacuumDb">
+        <VtButton
+          variant="secondary"
+          :loading="maintenanceLoading"
+          @click="doVacuumDb"
+        >
           {{
             maintenanceLoading ? t("settings.running") : t("settings.vacuum")
           }}
-        </el-button>
-        <el-button
-          type="danger"
+        </VtButton>
+        <VtButton
+          variant="danger"
           plain
           :loading="maintenanceLoading"
           @click="doClearEncounters"
         >
           {{ t("settings.clearEncounters") }}
-        </el-button>
-        <el-button
-          type="danger"
+        </VtButton>
+        <VtButton
+          variant="danger"
           plain
           :loading="maintenanceLoading"
           @click="doClearScreenshots"
         >
           {{ t("settings.clearScreenshots") }}
-        </el-button>
-        <el-button
-          type="danger"
+        </VtButton>
+        <VtButton
+          variant="danger"
           plain
           :loading="maintenanceLoading"
           @click="doClearFriendsCache"
         >
           {{ t("settings.clearFriends") }}
-        </el-button>
+        </VtButton>
       </div>
     </el-card>
   </div>
@@ -317,12 +306,23 @@
 <script setup lang="ts">
 import { ref, reactive, computed, onMounted } from "vue";
 import { useI18n } from "vue-i18n";
-import { ElMessageBox, ElMessage } from "element-plus";
+import { ElMessageBox } from "element-plus";
+import VtAlert from "../components/VtAlert.vue";
+import VtButton from "../components/VtButton.vue";
+import VtInput from "../components/VtInput.vue";
+import VtSelect from "../components/VtSelect.vue";
+import VtSwitch from "../components/VtSwitch.vue";
+import VtTag from "../components/VtTag.vue";
+import {
+  VT_BUTTON_DANGER_CONFIRM_CLASS,
+  VT_BUTTON_SECONDARY_CANCEL_CLASS,
+} from "../components/vtButtonClasses";
 import { App } from "../wails/app";
 import type { PathSettingsDTO, UserCacheDTO } from "../wails/app";
 import { friendThumbUrl } from "../utils/vrcUserCacheDisplay";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
 import { isAppLocale, setLanguage } from "../i18n";
+import { showToast } from "../utils/showToast";
 
 const {
   state: unlockState,
@@ -432,7 +432,7 @@ async function onLanguageChange(v: string) {
   try {
     await App.setLanguage(v);
   } catch (e) {
-    ElMessage.error(formatBackendError(e, t("settings.errLanguageSave")));
+    showToast.error(formatBackendError(e, t("settings.errLanguageSave")));
     return;
   }
   setLanguage(v);
@@ -534,7 +534,7 @@ async function savePathSettings() {
   try {
     await App.setPathSettings(pathSettings);
   } catch (e) {
-    ElMessage.error(formatBackendError(e, t("settings.errOperation")));
+    showToast.error(formatBackendError(e, t("settings.errOperation")));
     return;
   }
 }
@@ -612,6 +612,8 @@ async function runWithConfirm(
       confirmButtonText: t("common.execute"),
       cancelButtonText: t("common.cancel"),
       type: "warning",
+      confirmButtonClass: VT_BUTTON_DANGER_CONFIRM_CLASS,
+      cancelButtonClass: VT_BUTTON_SECONDARY_CANCEL_CLASS,
     });
   } catch {
     return;
@@ -624,7 +626,7 @@ async function runWithConfirm(
       ? successMessage(typeof result === "number" ? result : undefined)
       : t("settings.complete");
     if (msg) {
-      ElMessage.success(msg);
+      showToast.success(msg);
     }
   } catch (e) {
     maintenanceError.value =
@@ -675,34 +677,34 @@ function doClearFriendsCache() {
 
 <style scoped>
 .settings-card {
-  margin-bottom: 1.5rem;
-  background: var(--bg-secondary) !important;
-  border-color: var(--border) !important;
+  margin-bottom: var(--space-section);
+  background: var(--color-bg-elevated) !important;
+  border-color: var(--color-border) !important;
 }
 
 .settings-card :deep(.el-card__header) {
-  font-weight: 600;
-  border-bottom-color: var(--border);
+  font-weight: var(--font-weight-600);
+  border-bottom-color: var(--color-border);
 }
 
 .login-status {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-form-field);
 }
 
 .profile-loading {
-  font-size: 0.9rem;
-  color: var(--text-secondary);
+  font-size: var(--font-size-12);
+  color: var(--color-text-secondary);
 }
 
 .current-user-card {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-block);
   align-items: flex-start;
-  padding: 0.75rem;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
+  padding: var(--space-form-field);
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
   max-width: 480px;
 }
@@ -711,38 +713,38 @@ function doClearFriendsCache() {
   flex-shrink: 0;
   border-radius: var(--radius);
   object-fit: cover;
-  background: var(--bg-primary);
+  background: var(--color-bg-base);
 }
 
 .current-user-details {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: var(--space-inline-tight);
 }
 
 .current-user-display-name {
   margin: 0;
-  font-size: 1.05rem;
-  font-weight: 600;
+  font-size: var(--font-size-14);
+  font-weight: var(--font-weight-600);
 }
 
 .current-user-line {
   margin: 0;
-  font-size: 0.88rem;
+  font-size: var(--font-size-12);
   word-break: break-all;
 }
 
 .current-user-line.muted {
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .self-profile-link {
   display: inline-block;
-  margin-top: 0.65rem;
+  margin-top: var(--space-action-group);
   color: var(--el-color-primary);
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: var(--font-size-12);
 }
 
 .self-profile-link:hover {
@@ -751,7 +753,7 @@ function doClearFriendsCache() {
 
 .login-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-action-group);
   flex-wrap: wrap;
 }
 
@@ -760,34 +762,47 @@ function doClearFriendsCache() {
 }
 
 .login-error {
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-form-field);
 }
 
 .hint {
   display: block;
-  margin-top: 0.75rem;
+  margin-top: var(--space-form-field);
+}
+
+.db-hint {
+  display: block;
+  margin-bottom: var(--space-block);
+}
+
+.maintenance-error-alert {
+  margin-bottom: var(--space-form-field);
+}
+
+.oss-link-row {
+  margin-top: var(--space-form-field);
 }
 
 .path-settings {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-block);
 }
 
 .path-row {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: var(--space-inline-tight);
 }
 
 .path-label {
-  font-size: 0.95rem;
-  color: var(--text-primary);
+  font-size: var(--font-size-14);
+  color: var(--color-text-primary);
 }
 
 .path-input-group {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-action-group);
   align-items: center;
   flex-wrap: wrap;
 }
@@ -800,8 +815,8 @@ function doClearFriendsCache() {
 .setting-row {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 0.5rem;
+  gap: var(--space-block);
+  margin-bottom: var(--space-action-group);
 }
 
 .power-setting-row {
@@ -815,23 +830,23 @@ function doClearFriendsCache() {
 
 .block-hint {
   display: block;
-  margin-top: 0.35rem;
+  margin-top: var(--space-inline-tight);
 }
 
 .power-switch {
   flex-shrink: 0;
-  margin-top: 0.15rem;
+  margin-top: var(--space-inline-tight);
 }
 
 .maintenance-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-action-group);
 }
 
 .language-select {
   display: block;
-  margin-top: 0.65rem;
+  margin-top: var(--space-action-group);
   max-width: 22rem;
   width: 100%;
 }

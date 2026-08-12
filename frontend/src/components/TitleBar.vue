@@ -35,8 +35,8 @@ function close() {
   justify-content: space-between;
   height: 36px;
   padding: 0 0.5rem;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border);
+  background: var(--color-bg-elevated);
+  border-bottom: 1px solid var(--color-border);
   user-select: none;
   flex-shrink: 0;
 }
@@ -44,7 +44,7 @@ function close() {
 .title-bar-text {
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .title-bar-actions {
@@ -57,7 +57,7 @@ function close() {
   height: 36px;
   border: none;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   font-size: 16px;
   line-height: 1;
   cursor: pointer;
@@ -67,12 +67,12 @@ function close() {
 }
 
 .title-bar-btn:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
+  background: var(--color-bg-muted);
+  color: var(--color-text-primary);
 }
 
 .title-bar-btn.close:hover {
-  background: var(--danger);
-  color: white;
+  background: var(--color-danger);
+  color: var(--color-text-inverse);
 }
 </style>

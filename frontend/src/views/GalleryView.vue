@@ -3,7 +3,7 @@
     <h1 class="page-title">{{ t("routes.gallery") }}</h1>
 
     <div class="filters">
-      <el-input
+      <VtInput
         v-model="filterWorldSearch"
         data-testid="gallery-world-filter"
         type="search"
@@ -13,9 +13,9 @@
         @keyup.enter="onFilterEnter"
       >
         <template #prefix>
-          <el-icon><Search /></el-icon>
+          <VtIcon size="default"><Search /></VtIcon>
         </template>
-      </el-input>
+      </VtInput>
       <el-date-picker
         v-model="filterDateRange"
         data-testid="gallery-date-range"
@@ -28,33 +28,26 @@
         class="gallery-date-range"
         @change="onFilterEnter"
       />
-      <el-button :disabled="loading || scanning" @click="onRefreshClick">
+      <VtButton
+        variant="tertiary"
+        :disabled="loading || scanning"
+        @click="onRefreshClick"
+      >
         {{ t("common.refresh") }}
-      </el-button>
-      <el-button
+      </VtButton>
+      <VtButton
+        variant="secondary"
         data-testid="gallery-scan-folder"
         :disabled="loading || scanning"
         :loading="scanning"
         @click="scanFolder"
       >
         {{ scanning ? t("gallery.scanning") : t("gallery.scanFolder") }}
-      </el-button>
+      </VtButton>
     </div>
 
-    <el-alert
-      v-if="loadError"
-      :title="loadError"
-      type="error"
-      :closable="false"
-      show-icon
-    />
-    <el-alert
-      v-if="scanError"
-      :title="scanError"
-      type="warning"
-      :closable="false"
-      show-icon
-    />
+    <VtAlert v-if="loadError" variant="danger" :title="loadError" />
+    <VtAlert v-if="scanError" variant="warning" :title="scanError" />
 
     <div class="gallery-body">
       <!-- グリッド一覧 -->
@@ -177,51 +170,48 @@
             {{ selected.authorDisplayName || t("common.dash") }}
           </el-descriptions-item>
           <el-descriptions-item :label="t('gallery.filePath')">
-            <el-button
+            <VtButton
+              variant="primary"
               link
-              type="primary"
               data-testid="gallery-detail-open-file"
               :title="t('gallery.openWithDefaultApp')"
               class="file-path-btn"
               @click="openSelectedFileExternally"
             >
               {{ selected.filePath }}
-            </el-button>
+            </VtButton>
           </el-descriptions-item>
         </el-descriptions>
-        <el-alert
+        <VtAlert
           v-if="detailActionError"
+          variant="danger"
+          class="detail-action-alert"
           :title="detailActionError"
-          type="error"
-          :closable="false"
-          show-icon
-          style="margin: 0.75rem 0"
         />
-        <el-button
-          style="width: 100%; margin: 0.75rem 0 0.5rem"
+        <VtButton
+          variant="secondary"
+          class="detail-panel-action-btn"
           data-testid="gallery-detail-open-folder"
           :title="openFolderButtonTitle"
           @click="revealSelectedInFolder"
         >
           {{ t("gallery.openFolder") }}
-        </el-button>
-        <el-alert
+        </VtButton>
+        <VtAlert
           v-if="joinError"
+          variant="danger"
+          class="join-error-alert"
           :title="joinError"
-          type="error"
-          :closable="false"
-          show-icon
-          style="margin-bottom: 0.5rem"
         />
-        <el-button
-          type="primary"
-          style="width: 100%"
+        <VtButton
+          variant="primary"
+          class="detail-panel-action-btn detail-panel-action-btn--last"
           :disabled="!selected.worldId || selected.worldId.trim() === ''"
           :title="joinButtonTitle"
           @click="onJoin"
         >
           {{ t("gallery.joinWorld") }}
-        </el-button>
+        </VtButton>
       </el-card>
     </div>
   </div>
@@ -230,6 +220,10 @@
 <script setup lang="ts">
 import { Search } from "@element-plus/icons-vue";
 import { useVirtualizer, type VirtualItem } from "@tanstack/vue-virtual";
+import VtAlert from "../components/VtAlert.vue";
+import VtButton from "../components/VtButton.vue";
+import VtIcon from "../components/VtIcon.vue";
+import VtInput from "../components/VtInput.vue";
 import {
   ref,
   onMounted,
@@ -948,14 +942,14 @@ onMounted(() => {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-block);
   overflow: hidden;
 }
 
 .filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
+  gap: var(--space-action-group);
   align-items: center;
   flex-shrink: 0;
 }
@@ -976,7 +970,7 @@ onMounted(() => {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--space-block);
   align-items: stretch;
   min-height: 0;
   min-width: 0;
@@ -1004,23 +998,23 @@ onMounted(() => {
 
 .loading,
 .empty {
-  padding: 2rem;
+  padding: var(--space-page);
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
 }
 
 .gallery-scan-progress {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  padding: 2rem;
+  gap: var(--space-form-field);
+  padding: var(--space-page);
 }
 
 .gallery-scan-status {
   margin: 0;
-  font-size: 0.95rem;
-  color: var(--text-secondary);
+  font-size: var(--font-size-14);
+  color: var(--color-text-secondary);
   max-width: 28rem;
   word-break: break-all;
 }
@@ -1053,14 +1047,14 @@ onMounted(() => {
 
 .grid-item:hover,
 .grid-item.selected {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 1px var(--color-brand);
 }
 
 .thumbnail-wrap {
   width: 100%;
   height: 100%;
-  background: var(--bg-tertiary);
+  background: var(--color-bg-muted);
 }
 
 .thumbnail {
@@ -1072,25 +1066,42 @@ onMounted(() => {
 
 .detail-panel {
   flex-shrink: 0;
-  background: var(--bg-secondary) !important;
-  border-color: var(--border) !important;
+  background: var(--color-bg-elevated) !important;
+  border-color: var(--color-border) !important;
 }
 
 .detail-panel :deep(.el-card__header) {
-  font-weight: 600;
-  border-bottom-color: var(--border);
+  font-weight: var(--font-weight-600);
+  border-bottom-color: var(--color-border);
 }
 
 .detail-preview {
-  margin: 0 0 1rem;
+  margin: 0 0 var(--space-block);
   border-radius: var(--radius);
   overflow: hidden;
-  background: var(--bg-tertiary);
-  border: 1px solid var(--border);
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  min-height: 4rem;
+  min-height: var(--space-64);
+}
+
+.detail-action-alert {
+  margin: var(--space-form-field) 0;
+}
+
+.detail-panel-action-btn {
+  width: 100%;
+  margin: var(--space-form-field) 0 var(--space-action-group);
+}
+
+.detail-panel-action-btn--last {
+  margin-bottom: 0;
+}
+
+.join-error-alert {
+  margin-bottom: var(--space-action-group);
 }
 
 .detail-preview-img {
@@ -1113,41 +1124,41 @@ onMounted(() => {
   height: 100%;
   display: flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0 0.35rem;
+  gap: var(--space-inline-tight);
+  padding: 0 var(--space-inline-tight);
   margin: 0;
-  background: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
-  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--color-bg-elevated) 88%, transparent);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  color: var(--text-primary);
-  font-size: 0.9rem;
+  color: var(--color-text-primary);
+  font-size: var(--font-size-14);
   cursor: pointer;
   text-align: left;
   box-sizing: border-box;
 }
 
 .gallery-group-header:hover {
-  background: var(--bg-tertiary);
+  background: var(--color-bg-muted);
 }
 
 .gallery-group-h-year {
-  font-weight: 600;
+  font-weight: var(--font-weight-600);
 }
 
 .gallery-group-h-month {
-  padding-left: 1.1rem;
-  font-weight: 550;
+  padding-left: var(--space-block);
+  font-weight: var(--font-weight-500);
 }
 
 .gallery-group-h-day {
-  padding-left: 2rem;
-  font-weight: 450;
+  padding-left: var(--space-page);
+  font-weight: var(--font-weight-400);
 }
 
 .gallery-group-chevron {
   flex-shrink: 0;
-  width: 0.85rem;
-  font-size: 0.6rem;
+  width: var(--icon-size-compact);
+  font-size: var(--font-size-10);
   opacity: 0.85;
   line-height: 1;
 }

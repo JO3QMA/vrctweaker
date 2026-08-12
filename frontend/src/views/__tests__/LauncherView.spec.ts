@@ -3,6 +3,7 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { ElMessageBox } from "element-plus";
 import LauncherView from "../LauncherView.vue";
 import type { LaunchProfileDTO, LaunchArgsParsedDTO } from "../../wails/app";
+import { showToast } from "../../utils/showToast";
 
 const {
   mockLaunchProfiles,
@@ -682,9 +683,8 @@ describe("LauncherView", () => {
     );
   });
 
-  it("shows ElMessage.error when save fails", async () => {
-    const { ElMessage } = await import("element-plus");
-    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
+  it("shows showToast.error when save fails", async () => {
+    const errorSpy = vi.spyOn(showToast, "error").mockImplementation(() => ({
       close: () => {},
     }));
     mockSaveLaunchProfile.mockRejectedValue(new Error("db locked"));
@@ -713,8 +713,7 @@ describe("LauncherView", () => {
   });
 
   it("shows error when save succeeds but profile is missing from list", async () => {
-    const { ElMessage } = await import("element-plus");
-    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
+    const errorSpy = vi.spyOn(showToast, "error").mockImplementation(() => ({
       close: () => {},
     }));
     mockSaveLaunchProfile.mockResolvedValue(undefined);
@@ -760,8 +759,7 @@ describe("LauncherView", () => {
   });
 
   it("refreshes profile list after create failure even with empty selection", async () => {
-    const { ElMessage } = await import("element-plus");
-    const errorSpy = vi.spyOn(ElMessage, "error").mockImplementation(() => ({
+    const errorSpy = vi.spyOn(showToast, "error").mockImplementation(() => ({
       close: () => {},
     }));
     mockLaunchProfiles.mockResolvedValueOnce([]).mockResolvedValueOnce([]);

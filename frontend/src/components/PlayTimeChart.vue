@@ -121,9 +121,9 @@ function draw(): void {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   const { cssW, cssH, plotW, plotH, maxY } = L;
-  const textMuted = readCssVar("--text-secondary", "#a0a0a0");
-  const border = readCssVar("--border", "#333333");
-  const accent = readCssVar("--accent", "#5b9bd5");
+  const textMuted = readCssVar("--color-text-secondary", "#a0a0a0");
+  const border = readCssVar("--color-border", "#333333");
+  const accent = readCssVar("--color-brand", "#5b9bd5");
 
   ctx.clearRect(0, 0, cssW, cssH);
   if (props.series.length === 0) return;
@@ -280,11 +280,11 @@ onBeforeUnmount(() => {
   pointer-events: none;
   padding: 6px 8px;
   border-radius: 4px;
-  border: 1px solid var(--border, #333);
-  background: var(--bg-tertiary, #1a1a1a);
-  color: var(--text-primary, #e0e0e0);
-  font-size: 12px;
-  line-height: 1.4;
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-muted);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-12);
+  line-height: var(--line-height-normal);
   white-space: nowrap;
   z-index: 1;
 }

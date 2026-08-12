@@ -1,14 +1,12 @@
 <template>
   <div class="encounter-history-view">
     <h1 class="page-title">{{ pageTitle }}</h1>
-    <p v-if="idLine" class="id-line">{{ idLine }}</p>
+    <p v-if="idLine" class="text-caption id-line">{{ idLine }}</p>
 
-    <el-alert
+    <VtAlert
       v-if="invalidQuery"
+      variant="warning"
       :title="t('encounterHistory.invalidQuery')"
-      type="warning"
-      :closable="false"
-      show-icon
     />
     <EncounterHistoryList
       v-else
@@ -25,6 +23,7 @@ import { computed } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import EncounterHistoryList from "../components/EncounterHistoryList.vue";
+import VtAlert from "../components/VtAlert.vue";
 
 const route = useRoute();
 const { t } = useI18n();
@@ -73,14 +72,13 @@ const idLine = computed(() => {
 .encounter-history-view {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-form-field);
   min-height: 0;
 }
 
 .id-line {
   margin: 0;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary);
   word-break: break-all;
 }
 </style>
