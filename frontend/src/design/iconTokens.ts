@@ -19,25 +19,22 @@ export type IconSizePattern = {
   scaleVar: ReturnType<typeof iconSizeScaleVar>;
 };
 
-const ICON_SIZE_PATTERN_SCALE = {
-  compact: 12,
-  default: 16,
-  emphasis: 20,
-  large: 24,
-} as const satisfies Record<IconSizePatternName, IconSizeScalePx>;
+const ICON_SIZE_PATTERN_ENTRIES = [
+  ["compact", 12],
+  ["default", 16],
+  ["emphasis", 20],
+  ["large", 24],
+] as const satisfies readonly [IconSizePatternName, IconSizeScalePx][];
 
 /** Icon size pattern catalog (v1). Each pattern delegates to a scale token. */
-export const ICON_SIZE_PATTERNS = (
-  Object.entries(ICON_SIZE_PATTERN_SCALE) as [
-    IconSizePatternName,
-    IconSizeScalePx,
-  ][]
-).map(([name, px]) => ({
-  name,
-  varName: `--icon-size-${name}`,
-  px,
-  scaleVar: iconSizeScaleVar(px),
-})) satisfies readonly IconSizePattern[];
+export const ICON_SIZE_PATTERNS = ICON_SIZE_PATTERN_ENTRIES.map(
+  ([name, px]) => ({
+    name,
+    varName: `--icon-size-${name}`,
+    px,
+    scaleVar: iconSizeScaleVar(px),
+  }),
+) satisfies readonly IconSizePattern[];
 
 export type VtIconSize = IconSizePatternName;
 

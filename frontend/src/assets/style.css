@@ -385,7 +385,12 @@ a:hover {
 .vt-icon--size-compact,
 .vt-icon--size-default,
 .vt-icon--size-emphasis,
-.vt-icon--size-large {
+.vt-icon--size-large,
+.nav-glyph-size-compact,
+.nav-glyph-size-default,
+.nav-glyph-size-legacy,
+.nav-glyph-size-emphasis,
+.nav-glyph-size-large {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -408,19 +413,6 @@ a:hover {
 
 .vt-icon--size-large {
   font-size: var(--icon-size-large);
-}
-
-.nav-glyph-size-compact,
-.nav-glyph-size-default,
-.nav-glyph-size-legacy,
-.nav-glyph-size-emphasis,
-.nav-glyph-size-large {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  line-height: 1;
-  vertical-align: middle;
 }
 
 .nav-glyph-size-compact {

@@ -14,6 +14,7 @@ defineOptions({
 
 const passthroughAttrs = computed(() => {
   const result = { ...attrs };
+  // aria-hidden is controlled by `ariaHidden` computed below; remove to avoid conflict
   delete result["aria-hidden"];
   return result;
 });
