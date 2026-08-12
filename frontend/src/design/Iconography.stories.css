@@ -83,6 +83,7 @@
 }
 
 .iconography-story-color--secondary {
+  /* App Neutral text tokens (Color ADR 0019); contrast verified on dark canvas. */
   color: var(--color-text-secondary);
 }
 

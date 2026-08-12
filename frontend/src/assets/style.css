@@ -108,7 +108,7 @@
   --icon-size-large: var(--icon-size-24);
 
   /* Outside scale: preserves legacy section toggle (14px). Adoption → --icon-size-default. */
-  --icon-size-legacy-toggle: var(--font-size-14);
+  --icon-size-legacy-toggle: 14px;
 }
 
 /* ─── Element Plus dark theme CSS variable overrides ───────────── */
@@ -387,8 +387,11 @@ a:hover {
 .vt-icon--size-emphasis,
 .vt-icon--size-large {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   line-height: 1;
+  vertical-align: middle;
 }
 
 .vt-icon--size-compact {
@@ -413,8 +416,11 @@ a:hover {
 .nav-glyph-size-emphasis,
 .nav-glyph-size-large {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   line-height: 1;
+  vertical-align: middle;
 }
 
 .nav-glyph-size-compact {

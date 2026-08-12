@@ -47,6 +47,14 @@ describe("iconTokens", () => {
 
   it("documents legacy toggle size for v1 visual policy", () => {
     expect(ICON_SIZE_LEGACY.toggle.px).toBe(14);
+    expect(ICON_SIZE_LEGACY.toggle.delegatesTo).toBe("14px");
     expect(ICON_SIZE_LEGACY.toggle.adoptionTarget).toBe("--icon-size-default");
+  });
+
+  it("keeps pattern scale values on ICON_SIZE_SCALE_PX", () => {
+    const patternPx = ICON_SIZE_PATTERNS.map((pattern) => pattern.px);
+    expect([...new Set(patternPx)].sort((a, b) => a - b)).toEqual([
+      ...ICON_SIZE_SCALE_PX,
+    ]);
   });
 });

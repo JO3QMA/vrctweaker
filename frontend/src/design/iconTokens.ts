@@ -19,33 +19,25 @@ export type IconSizePattern = {
   scaleVar: ReturnType<typeof iconSizeScaleVar>;
 };
 
+const ICON_SIZE_PATTERN_SCALE = {
+  compact: 12,
+  default: 16,
+  emphasis: 20,
+  large: 24,
+} as const satisfies Record<IconSizePatternName, IconSizeScalePx>;
+
 /** Icon size pattern catalog (v1). Each pattern delegates to a scale token. */
-export const ICON_SIZE_PATTERNS = [
-  {
-    name: "compact",
-    varName: "--icon-size-compact",
-    px: 12,
-    scaleVar: iconSizeScaleVar(12),
-  },
-  {
-    name: "default",
-    varName: "--icon-size-default",
-    px: 16,
-    scaleVar: iconSizeScaleVar(16),
-  },
-  {
-    name: "emphasis",
-    varName: "--icon-size-emphasis",
-    px: 20,
-    scaleVar: iconSizeScaleVar(20),
-  },
-  {
-    name: "large",
-    varName: "--icon-size-large",
-    px: 24,
-    scaleVar: iconSizeScaleVar(24),
-  },
-] as const satisfies readonly IconSizePattern[];
+export const ICON_SIZE_PATTERNS = (
+  Object.entries(ICON_SIZE_PATTERN_SCALE) as [
+    IconSizePatternName,
+    IconSizeScalePx,
+  ][]
+).map(([name, px]) => ({
+  name,
+  varName: `--icon-size-${name}`,
+  px,
+  scaleVar: iconSizeScaleVar(px),
+})) satisfies readonly IconSizePattern[];
 
 export type VtIconSize = IconSizePatternName;
 
@@ -58,7 +50,7 @@ export const VT_ICON_SIZES: readonly VtIconSize[] = ICON_SIZE_PATTERNS.map(
 export const ICON_SIZE_LEGACY = {
   toggle: {
     varName: "--icon-size-legacy-toggle",
-    delegatesTo: "--font-size-14",
+    delegatesTo: "14px",
     px: 14,
     adoptionTarget: "--icon-size-default",
   },
