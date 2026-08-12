@@ -57,4 +57,15 @@ describe("Sidebar", () => {
     await flushPromises();
     expect(wrapper.text()).toContain("動画");
   });
+
+  it("renders VtIcon navigation glyphs without emoji", async () => {
+    const wrapper = mount(Sidebar, {
+      global: {
+        plugins: [router],
+      },
+    });
+    await flushPromises();
+    expect(wrapper.findAll(".vt-icon").length).toBeGreaterThanOrEqual(8);
+    expect(wrapper.html()).not.toMatch(/[\u{1F300}-\u{1FAFF}]/u);
+  });
 });

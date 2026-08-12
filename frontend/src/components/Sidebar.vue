@@ -6,15 +6,19 @@
         :key="item.path"
         :index="item.path"
       >
-        <span class="sidebar-icon nav-glyph-size-default">{{ item.icon }}</span>
+        <VtIcon size="default" class="sidebar-icon">
+          <component :is="item.icon" />
+        </VtIcon>
         <template #title>{{ item.label }}</template>
       </el-menu-item>
     </el-menu>
     <div class="sidebar-footer">
       <el-menu :default-active="route.path" router class="sidebar-nav">
-        <el-menu-item index="/settings">
-          <span class="sidebar-icon nav-glyph-size-default">⚙️</span>
-          <template #title>{{ t("nav.settings") }}</template>
+        <el-menu-item :index="settingsItem.path">
+          <VtIcon size="default" class="sidebar-icon">
+            <component :is="settingsItem.icon" />
+          </VtIcon>
+          <template #title>{{ settingsItem.label }}</template>
         </el-menu-item>
       </el-menu>
     </div>
@@ -25,6 +29,11 @@
 import { computed, onMounted, ref } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
+import {
+  NAV_MAIN_MENU_ITEMS,
+  NAV_SETTINGS_MENU_ITEM,
+} from "../navigation/navMenuItems";
+import VtIcon from "./VtIcon.vue";
 import { App } from "../wails/app";
 
 const route = useRoute();
@@ -39,28 +48,19 @@ onMounted(async () => {
   }
 });
 
-const menuItems = computed(() => {
-  const items = [
-    { path: "/", icon: "🏠", label: t("nav.dashboard") },
-    { path: "/launcher", icon: "🚀", label: t("nav.launcher") },
-    { path: "/gallery", icon: "🖼️", label: t("nav.gallery") },
-    { path: "/activity", icon: "📊", label: t("nav.activity") },
-    { path: "/me", icon: "👤", label: t("nav.me") },
-    { path: "/friends", icon: "👥", label: t("nav.friends") },
-    { path: "/automation", icon: "🤖", label: t("nav.automation") },
-    { path: "/config", icon: "📝", label: t("nav.configOther") },
-  ];
-  if (isWindows.value) {
-    const configIdx = items.findIndex((item) => item.path === "/config");
-    const insertAt = configIdx === -1 ? items.length : configIdx;
-    return [
-      ...items.slice(0, insertAt),
-      { path: "/video", icon: "🎬", label: t("nav.video") },
-      ...items.slice(insertAt),
-    ];
-  }
-  return items;
-});
+const menuItems = computed(() =>
+  NAV_MAIN_MENU_ITEMS.filter(
+    (item) => !item.windowsOnly || isWindows.value,
+  ).map((item) => ({
+    ...item,
+    label: t(item.labelKey),
+  })),
+);
+
+const settingsItem = computed(() => ({
+  ...NAV_SETTINGS_MENU_ITEM,
+  label: t(NAV_SETTINGS_MENU_ITEM.labelKey),
+}));
 </script>
 
 <style scoped>

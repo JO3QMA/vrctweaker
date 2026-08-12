@@ -3,6 +3,10 @@ import { CaretRight, Search } from "@element-plus/icons-vue";
 import VtIcon from "../components/VtIcon.vue";
 import SampleIcon from "../icons/SampleIcon.vue";
 import {
+  NAV_MAIN_MENU_ITEMS,
+  NAV_SETTINGS_MENU_ITEM,
+} from "../navigation/navMenuItems";
+import {
   ICON_SIZE_LEGACY,
   ICON_SIZE_PATTERNS,
   VT_ICON_SIZES,
@@ -128,23 +132,41 @@ export const ColorRule: Story = {
 };
 
 export const NavigationGlyph: Story = {
-  name: "Navigation glyph (emoji)",
+  name: "Navigation glyph",
   render: () => ({
+    components: { VtIcon },
+    setup: () => {
+      const mainItems = NAV_MAIN_MENU_ITEMS.map((item) => ({
+        ...item,
+        detail: item.windowsOnly
+          ? `${item.path} · ${item.labelKey} (Windows only)`
+          : `${item.path} · ${item.labelKey}`,
+      }));
+      const settingsItem = {
+        ...NAV_SETTINGS_MENU_ITEM,
+        detail: `${NAV_SETTINGS_MENU_ITEM.path} · ${NAV_SETTINGS_MENU_ITEM.labelKey} (footer)`,
+      };
+      return { mainItems, settingsItem };
+    },
     template: `
       <div class="iconography-story">
         <h2>Navigation glyph</h2>
-        <p>Emoji keep intrinsic colors. Align size with <code>.nav-glyph-size-default</code> until SVG migration.</p>
-        <div class="iconography-story-nav-row">
-          <span class="nav-glyph-size-legacy" aria-hidden="true">🏠</span>
-          <span>Dashboard (legacy 14px — current sidebar)</span>
+        <p>Catalog from <code>navMenuItems.ts</code>. Sidebar uses <code>VtIcon size="default"</code> and menu <code>currentColor</code>.</p>
+        <div
+          v-for="item in mainItems"
+          :key="item.path"
+          class="iconography-story-nav-row iconography-story-color--secondary"
+        >
+          <VtIcon size="default">
+            <component :is="item.icon" />
+          </VtIcon>
+          <span><code>{{ item.detail }}</code></span>
         </div>
-        <div class="iconography-story-nav-row">
-          <span class="nav-glyph-size-default" aria-hidden="true">🏠</span>
-          <span>Dashboard (default 16px — adoption target)</span>
-        </div>
-        <div class="iconography-story-nav-row">
-          <span class="nav-glyph-size-compact" aria-hidden="true">📊</span>
-          <span>Activity (compact)</span>
+        <div class="iconography-story-nav-row iconography-story-color--secondary">
+          <VtIcon size="default">
+            <component :is="settingsItem.icon" />
+          </VtIcon>
+          <span><code>{{ settingsItem.detail }}</code></span>
         </div>
       </div>
     `,
