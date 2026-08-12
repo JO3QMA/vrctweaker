@@ -1,0 +1,72 @@
+---
+description: Iconography デザインシステム（ADR 0023）。UI icon / Navigation glyph / Domain icon のサイズ・色・VtIcon
+globs: "frontend/**/*.{vue,ts,css}"
+alwaysApply: false
+---
+
+# Iconography design system
+
+正本: [ADR 0023](../docs/adr/0023-iconography-design-system.md)、用語: [`CONTEXT.md`](../CONTEXT.md) Design system 節。
+
+## スコープ
+
+| 含む | 含まない |
+|------|----------|
+| **UI icon**（`@element-plus/icons-vue` + **VtIcon**） | アバター・サムネ |
+| **Navigation glyph**（絵文字。v1 はサイズのみ） | Server status ドット |
+| **Domain icon**（friend mark 等） | Presence 色ボタン |
+| **Custom icon**（`frontend/src/icons/*.vue`） | EP 全件グローバル登録 |
+
+## Icon size scale
+
+`frontend/src/assets/style.css` の `:root`:
+
+| px | 変数 | VtIcon `size` |
+|----|------|----------------|
+| 12 | `--icon-size-12` / `--icon-size-compact` | `compact` |
+| 16 | `--icon-size-16` / `--icon-size-default` | `default` |
+| 20 | `--icon-size-20` / `--icon-size-emphasis` | `emphasis` |
+| 24 | `--icon-size-24` / `--icon-size-large` | `large` |
+
+Legacy（v1 見た目不変）: `--icon-size-legacy-toggle` → `--font-size-14`（adoption 先: `--icon-size-default`）
+
+**Navigation glyph** 絵文字: `.nav-glyph-size-compact` / `.nav-glyph-size-default` / `.nav-glyph-size-legacy`（14px 現行サイドバー）等（`VtIcon` で包まない）
+
+## Icon color rule
+
+- SVG / EP: **`currentColor`**。親は **Neutral text token**
+- 装飾単体: `--color-text-secondary`
+- 絵文字: サイズのみ（色は固有）
+- **Semantic / Domain color** を汎用 UI icon に直付けしない
+
+## VtIcon
+
+```vue
+<VtIcon size="default"><Search /></VtIcon>
+<VtIcon size="compact"><SampleIcon /></VtIcon>
+```
+
+- `size` **必須**（暗黙既定なし）
+- `decorative` 既定 `true` → `aria-hidden="true"`
+- 意味あり **Domain icon** は `role="img"` + `aria-label`（VtIcon 外でも可）
+
+## Custom icon
+
+1. `frontend/src/icons/FooIcon.vue` — 単一 `<svg>`、`viewBox` 必須、`currentColor`
+2. `<VtIcon size="…"><FooIcon /></VtIcon>`
+
+## 移行（Iconography adoption）
+
+- 新規・改修は **VtIcon** + icon トークン
+- 未触りの `<el-icon>` / 絵文字直書きは一括置換しない
+- スケール外寸法は **四捨五入で最寄り**（14→16）。v1 deliverables では寄せない
+- ESLint 禁止は v1 では入れない
+
+## Storybook
+
+`frontend/src/design/Iconography.stories.ts` が正本。変更時はストーリーも更新する。
+
+## 関連
+
+- 色: `.cursor/rules/color-design-system.mdc`
+- Element Plus: `.cursor/skills/element-plus-frontend/SKILL.md`（ファイル単位 import）

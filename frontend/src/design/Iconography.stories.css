@@ -1,0 +1,96 @@
+.iconography-story {
+  color: var(--color-text-primary);
+  font-family: var(--font-family-ui);
+  font-size: var(--font-size-14);
+  line-height: var(--line-height-normal);
+  max-width: 40rem;
+}
+
+.iconography-story h2 {
+  font-size: var(--font-size-18);
+  font-weight: var(--font-weight-600);
+  margin: 0 0 var(--space-block);
+}
+
+.iconography-story p {
+  color: var(--color-text-secondary);
+  margin: 0 0 var(--space-block);
+}
+
+.iconography-story-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.iconography-story-table th,
+.iconography-story-table td {
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-8) var(--space-12);
+  text-align: left;
+}
+
+.iconography-story-table th {
+  border-bottom: 2px solid var(--color-border);
+}
+
+.iconography-story-size-row {
+  align-items: center;
+  display: flex;
+  gap: var(--space-block);
+  margin-bottom: var(--space-12);
+}
+
+.iconography-story-examples {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-section);
+}
+
+.iconography-story-example-block {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: var(--space-block);
+}
+
+.iconography-story-example-block h3 {
+  font-size: var(--font-size-16);
+  font-weight: var(--font-weight-600);
+  margin: 0 0 var(--space-12);
+}
+
+.iconography-story-inline {
+  align-items: center;
+  color: var(--color-text-secondary);
+  display: inline-flex;
+  gap: var(--space-action-group);
+}
+
+.iconography-story-nav-row {
+  align-items: center;
+  color: var(--color-text-secondary);
+  display: flex;
+  gap: var(--space-action-group);
+}
+
+.iconography-story-color-swatch {
+  align-items: center;
+  display: flex;
+  gap: var(--space-block);
+}
+
+.iconography-story-color-swatch span {
+  color: inherit;
+}
+
+.iconography-story-color--secondary {
+  /* App Neutral text tokens (Color ADR 0019); contrast verified on dark canvas. */
+  color: var(--color-text-secondary);
+}
+
+.iconography-story-color--primary {
+  color: var(--color-text-primary);
+}
+
+.iconography-story-color--muted {
+  color: var(--color-text-muted);
+}
