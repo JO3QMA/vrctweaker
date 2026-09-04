@@ -233,6 +233,19 @@
       <el-text type="info" size="small" class="hint">{{
         t("settings.retentionHint")
       }}</el-text>
+      <div class="setting-row power-setting-row">
+        <div class="power-toggle-label">
+          <span>{{ t("settings.galleryAutoEnrich") }}</span>
+          <el-text type="info" size="small" class="hint block-hint">{{
+            t("settings.galleryAutoEnrichHint")
+          }}</el-text>
+        </div>
+        <VtSwitch
+          v-model="galleryAutoEnrichMetadata"
+          data-testid="settings-gallery-auto-enrich"
+          @change="saveGalleryAutoEnrich"
+        />
+      </div>
     </el-card>
 
     <!-- OSS ライセンス -->
@@ -364,6 +377,7 @@ const loginError = ref("");
 const loginLoading = ref(false);
 
 const logRetentionDays = ref(30);
+const galleryAutoEnrichMetadata = ref(true);
 const suppressSleepWhileVRChat = ref(false);
 const maintenanceError = ref("");
 const maintenanceLoading = ref(false);
@@ -449,6 +463,7 @@ onMounted(async () => {
     await loadSelfProfileSummary();
   }
   logRetentionDays.value = await App.getLogRetentionDays();
+  galleryAutoEnrichMetadata.value = await App.getGalleryAutoEnrichMetadata();
   suppressSleepWhileVRChat.value = await App.getSuppressSleepWhileVRChat();
   const ps = await App.getPathSettings();
   pathSettings.vrchatPathWindows = ps.vrchatPathWindows;
@@ -524,6 +539,10 @@ async function refreshFriends() {
 
 async function saveRetention() {
   await App.setLogRetentionDays(logRetentionDays.value);
+}
+
+async function saveGalleryAutoEnrich() {
+  await App.setGalleryAutoEnrichMetadata(galleryAutoEnrichMetadata.value);
 }
 
 async function saveSuppressSleepWhileVRChat() {

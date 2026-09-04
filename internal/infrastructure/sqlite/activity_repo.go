@@ -39,6 +39,29 @@ func (r *PlaySessionRepository) List(ctx context.Context, from, to time.Time) ([
 	return list, rows.Err()
 }
 
+// ListOverlappingAt returns play sessions that contain the given instant.
+func (r *PlaySessionRepository) ListOverlappingAt(ctx context.Context, at time.Time) ([]*activity.PlaySession, error) {
+	atStr := at.Format(time.RFC3339)
+	rows, err := r.db.QueryContext(ctx, `SELECT id, start_time, end_time, duration_sec, IFNULL(instance_id, ''), IFNULL(log_source_path, '')
+		FROM play_sessions
+		WHERE start_time <= ? AND (end_time IS NULL OR end_time = '' OR end_time >= ?)
+		ORDER BY start_time DESC`, atStr, atStr)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	var list []*activity.PlaySession
+	for rows.Next() {
+		s, err := scanPlaySession(rows)
+		if err != nil {
+			return nil, err
+		}
+		list = append(list, s)
+	}
+	return list, rows.Err()
+}
+
 // FindLatestWithoutEndTime returns the most recent play session with no end time.
 func (r *PlaySessionRepository) FindLatestWithoutEndTime(ctx context.Context) (*activity.PlaySession, error) {
 	row := r.db.QueryRowContext(ctx, `SELECT id, start_time, end_time, duration_sec, IFNULL(instance_id, ''), IFNULL(log_source_path, '') FROM play_sessions WHERE end_time IS NULL OR end_time = '' ORDER BY start_time DESC LIMIT 1`)

@@ -42,6 +42,10 @@ func (stubPlaySessionRepo) List(context.Context, time.Time, time.Time) ([]*activ
 	return nil, nil
 }
 
+func (stubPlaySessionRepo) ListOverlappingAt(context.Context, time.Time) ([]*activity.PlaySession, error) {
+	return nil, nil
+}
+
 func (stubPlaySessionRepo) GetByID(context.Context, string) (*activity.PlaySession, error) {
 	return nil, nil
 }

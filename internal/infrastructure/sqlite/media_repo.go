@@ -11,10 +11,12 @@ const screenshotSelectBase = `SELECT s.id, s.file_path, COALESCE(s.world_id, '')
 	COALESCE(w.display_name, '') AS world_name_resolved,
 	COALESCE(s.author_vrc_user_id, ''),
 	COALESCE(u.display_name, '') AS author_display_name,
-	s.taken_at, s.file_size_bytes
+	s.taken_at, s.file_size_bytes,
+	COALESCE(e.status, ''), COALESCE(e.skip_reason, ''), COALESCE(e.instance_id, '')
 	FROM screenshots s
 	LEFT JOIN world_info w ON w.world_id = s.world_id
-	LEFT JOIN users_cache u ON u.vrc_user_id = s.author_vrc_user_id`
+	LEFT JOIN users_cache u ON u.vrc_user_id = s.author_vrc_user_id
+	LEFT JOIN screenshot_enrichment e ON e.screenshot_id = s.id`
 
 // ScreenshotRepository persists screenshots in SQLite.
 type ScreenshotRepository struct {
@@ -152,18 +154,23 @@ func scanScreenshot(rows *sql.Rows) (*media.Screenshot, error) {
 	var id, filePath, worldID, worldNameResolved, authorID, authorName string
 	var takenAt sql.NullString
 	var fileSize sql.NullInt64
-	if err := rows.Scan(&id, &filePath, &worldID, &worldNameResolved, &authorID, &authorName, &takenAt, &fileSize); err != nil {
+	var enrichStatus, enrichSkip, enrichInstance string
+	if err := rows.Scan(&id, &filePath, &worldID, &worldNameResolved, &authorID, &authorName, &takenAt, &fileSize,
+		&enrichStatus, &enrichSkip, &enrichInstance); err != nil {
 		return nil, err
 	}
 	return &media.Screenshot{
-		ID:                id,
-		FilePath:          filePath,
-		WorldID:           worldID,
-		WorldName:         worldNameResolved,
-		AuthorVRCUserID:   authorID,
-		AuthorDisplayName: authorName,
-		TakenAt:           parseTime(takenAt),
-		FileSizeBytes:     parseInt64Ptr(fileSize),
+		ID:                   id,
+		FilePath:             filePath,
+		WorldID:              worldID,
+		WorldName:            worldNameResolved,
+		AuthorVRCUserID:      authorID,
+		AuthorDisplayName:    authorName,
+		TakenAt:              parseTime(takenAt),
+		FileSizeBytes:        parseInt64Ptr(fileSize),
+		EnrichmentStatus:     enrichStatus,
+		EnrichmentSkipReason: enrichSkip,
+		EnrichmentInstanceID: enrichInstance,
 	}, nil
 }
 
@@ -171,7 +178,9 @@ func scanScreenshotRow(row *sql.Row) (*media.Screenshot, error) {
 	var id, filePath, worldID, worldNameResolved, authorID, authorName string
 	var takenAt sql.NullString
 	var fileSize sql.NullInt64
-	err := row.Scan(&id, &filePath, &worldID, &worldNameResolved, &authorID, &authorName, &takenAt, &fileSize)
+	var enrichStatus, enrichSkip, enrichInstance string
+	err := row.Scan(&id, &filePath, &worldID, &worldNameResolved, &authorID, &authorName, &takenAt, &fileSize,
+		&enrichStatus, &enrichSkip, &enrichInstance)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -179,13 +188,16 @@ func scanScreenshotRow(row *sql.Row) (*media.Screenshot, error) {
 		return nil, err
 	}
 	return &media.Screenshot{
-		ID:                id,
-		FilePath:          filePath,
-		WorldID:           worldID,
-		WorldName:         worldNameResolved,
-		AuthorVRCUserID:   authorID,
-		AuthorDisplayName: authorName,
-		TakenAt:           parseTime(takenAt),
-		FileSizeBytes:     parseInt64Ptr(fileSize),
+		ID:                   id,
+		FilePath:             filePath,
+		WorldID:              worldID,
+		WorldName:            worldNameResolved,
+		AuthorVRCUserID:      authorID,
+		AuthorDisplayName:    authorName,
+		TakenAt:              parseTime(takenAt),
+		FileSizeBytes:        parseInt64Ptr(fileSize),
+		EnrichmentStatus:     enrichStatus,
+		EnrichmentSkipReason: enrichSkip,
+		EnrichmentInstanceID: enrichInstance,
 	}, nil
 }

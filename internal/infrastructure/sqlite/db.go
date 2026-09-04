@@ -66,6 +66,9 @@ func applySchema(db *sql.DB) error {
 	if _, err := db.Exec(`INSERT OR IGNORE INTO app_settings (key, value, updated_at) VALUES ('log_retention_days', ?, datetime('now'))`, fmt.Sprintf("%d", defaultLogRetentionDays)); err != nil {
 		return err
 	}
+	if _, err := db.Exec(`INSERT OR IGNORE INTO app_settings (key, value, updated_at) VALUES ('gallery_auto_enrich_metadata', '1', datetime('now'))`); err != nil {
+		return err
+	}
 
 	// Seed Desktop + VR launch profiles when none exist (no backfill for existing DBs).
 	var count int
@@ -82,6 +85,10 @@ func applySchema(db *sql.DB) error {
 	}
 
 	if err := ensureActivityLogSourceColumns(db); err != nil {
+		return err
+	}
+
+	if err := ensureScreenshotEnrichmentTable(db); err != nil {
 		return err
 	}
 
@@ -108,6 +115,20 @@ func ensureActivityLogSourceColumns(db *sql.DB) error {
 		}
 	}
 	return nil
+}
+
+func ensureScreenshotEnrichmentTable(db *sql.DB) error {
+	_, err := db.Exec(`CREATE TABLE IF NOT EXISTS screenshot_enrichment (
+		screenshot_id TEXT PRIMARY KEY,
+		status TEXT NOT NULL,
+		instance_id TEXT,
+		world_id TEXT,
+		participants_json TEXT,
+		skip_reason TEXT,
+		enriched_at TEXT,
+		FOREIGN KEY (screenshot_id) REFERENCES screenshots(id) ON DELETE CASCADE
+	)`)
+	return err
 }
 
 func addColumnIfMissing(db *sql.DB, table, column, decl string) error {

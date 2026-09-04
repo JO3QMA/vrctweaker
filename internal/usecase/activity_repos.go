@@ -11,6 +11,7 @@ import (
 
 type playSessionRepo interface {
 	List(ctx context.Context, from, to time.Time) ([]*activity.PlaySession, error)
+	ListOverlappingAt(ctx context.Context, at time.Time) ([]*activity.PlaySession, error)
 	GetByID(ctx context.Context, id string) (*activity.PlaySession, error)
 	Save(ctx context.Context, s *activity.PlaySession) error
 	FindLatestWithoutEndTime(ctx context.Context) (*activity.PlaySession, error)

@@ -587,6 +587,22 @@ export const App = {
   ),
   scanScreenshotDir: bindGo((a, path: string) => a.ScanScreenshotDir(path), 0),
   isGalleryScanning: bindGo((a) => a.IsGalleryScanning(), false),
+  enrichScreenshotMetadata: bindGo(
+    (a, screenshotId: string) => a.EnrichScreenshotMetadata(screenshotId),
+    null,
+  ),
+  enrichEligibleScreenshotMetadata: bindGo(
+    (a) => a.EnrichEligibleScreenshotMetadata(),
+    { processed: 0, results: [] },
+  ),
+  getGalleryAutoEnrichMetadata: bindGo(
+    (a) => a.GetGalleryAutoEnrichMetadata(),
+    true,
+  ),
+  setGalleryAutoEnrichMetadata: bindGo(
+    (a, enabled: boolean) => a.SetGalleryAutoEnrichMetadata(enabled),
+    undefined,
+  ),
   reindexScreenshotDir: bindGo(
     (a, path: string) => a.ReindexScreenshotDir(path),
     0,

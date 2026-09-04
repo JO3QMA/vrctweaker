@@ -11,6 +11,7 @@ import (
 
 	"vrchat-tweaker/internal/domain/activity"
 	"vrchat-tweaker/internal/domain/identity"
+	"vrchat-tweaker/internal/domain/media"
 )
 
 type fakePlaySessionRepo struct {
@@ -20,6 +21,21 @@ type fakePlaySessionRepo struct {
 func (f *fakePlaySessionRepo) List(_ context.Context, _, _ time.Time) ([]*activity.PlaySession, error) {
 	out := make([]*activity.PlaySession, len(f.sessions))
 	copy(out, f.sessions)
+	return out, nil
+}
+
+func (f *fakePlaySessionRepo) ListOverlappingAt(_ context.Context, at time.Time) ([]*activity.PlaySession, error) {
+	var out []*activity.PlaySession
+	for _, s := range f.sessions {
+		if media.SessionOverlapsAt(media.SessionAtTime{
+			InstanceID: s.InstanceID,
+			WorldID:    activity.WorldIDFromInstanceKey(s.InstanceID),
+			StartTime:  s.StartTime,
+			EndTime:    s.EndTime,
+		}, at) {
+			out = append(out, s)
+		}
+	}
 	return out, nil
 }
 
