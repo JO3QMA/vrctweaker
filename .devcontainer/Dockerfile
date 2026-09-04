@@ -32,6 +32,6 @@ RUN go install github.com/wailsapp/wails/v2/cmd/wails@latest
 # golangci-lint v2 (must match .golangci.yml version: "2" and CI action)
 RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 
-# Git pre-commit hooks
-RUN go install github.com/evilmartians/lefthook/v2@latest
+# Git pre-commit hooks (pin with Makefile LEFTHOOK_VERSION)
+RUN go install github.com/evilmartians/lefthook/v2/cmd/lefthook@v2.1.12
 

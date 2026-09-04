@@ -1,6 +1,8 @@
 # vrchat-tweaker Makefile
 # フルビルド、front/backendビルド、lint、fmt、test、e2e を実行
 
+LEFTHOOK_VERSION ?= v2.1.12
+
 .PHONY: all build build-native build-windows build-front build-back dev-wails lint fmt test test-e2e setup-e2e setup-hooks link-var clean help
 
 # デフォルトターゲット
@@ -93,7 +95,7 @@ test-e2e-install:
 
 ## Git hooks（Lefthook）のインストール — clone 後に一度実行
 setup-hooks:
-	@command -v lefthook >/dev/null 2>&1 || go install github.com/evilmartians/lefthook/v2@latest
+	@command -v lefthook >/dev/null 2>&1 || go install github.com/evilmartians/lefthook/v2/cmd/lefthook@$(LEFTHOOK_VERSION)
 	lefthook install
 
 ## WSL: Windows 側の DB・VRChat ログを var/ に symlink（var/local.env が必要）
