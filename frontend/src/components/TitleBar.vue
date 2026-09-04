@@ -11,6 +11,7 @@
 
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
+import { App } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
 
 const { t } = useI18n();
@@ -24,7 +25,7 @@ function maximize() {
 }
 
 function close() {
-  getRuntime()?.Quit?.();
+  void App.requestClose();
 }
 </script>
 

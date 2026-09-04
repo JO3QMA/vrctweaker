@@ -201,6 +201,50 @@ func TestSettingsUseCase_GetSuppressSleepWhileVRChat_defaultFalse(t *testing.T) 
 	}
 }
 
+func TestSettingsUseCase_CloseToTray_roundtrip(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	if err := uc.SetCloseToTray(ctx, false); err != nil {
+		t.Fatalf("SetCloseToTray: %v", err)
+	}
+	off, err := uc.GetCloseToTray(ctx)
+	if err != nil {
+		t.Fatalf("GetCloseToTray: %v", err)
+	}
+	if off {
+		t.Fatal("want false")
+	}
+	if repo.m[keyCloseToTray] != "false" {
+		t.Fatalf("stored value: got %q", repo.m[keyCloseToTray])
+	}
+	if err := uc.SetCloseToTray(ctx, true); err != nil {
+		t.Fatalf("SetCloseToTray true: %v", err)
+	}
+	on, err := uc.GetCloseToTray(ctx)
+	if err != nil {
+		t.Fatalf("GetCloseToTray: %v", err)
+	}
+	if !on {
+		t.Fatal("want true")
+	}
+}
+
+func TestSettingsUseCase_GetCloseToTray_defaultTrue(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	v, err := uc.GetCloseToTray(ctx)
+	if err != nil {
+		t.Fatalf("GetCloseToTray: %v", err)
+	}
+	if !v {
+		t.Fatal("want default true")
+	}
+}
+
 func TestSettingsUseCase_Language_roundtripAndValidation(t *testing.T) {
 	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
 	uc := NewSettingsUseCase(repo)

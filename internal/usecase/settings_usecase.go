@@ -154,6 +154,7 @@ const (
 	keyOutputLogPath                 = "output_log_path"
 	keyGalleryLastExitAt             = "gallery_last_exit_at"
 	keySuppressSleepWhileVRChat      = "suppress_sleep_while_vrchat"
+	keyCloseToTray                   = "close_to_tray"
 	keyLanguage                      = "language"
 	keyLastLaunchProfileID           = "last_launch_profile_id"
 	keyYTDLPToolsReplaceMaintain     = "ytdlp_tools_replace_maintain"
@@ -230,6 +231,24 @@ func (uc *SettingsUseCase) GetSuppressSleepWhileVRChat(ctx context.Context) (boo
 // SetSuppressSleepWhileVRChat persists the sleep-suppression toggle.
 func (uc *SettingsUseCase) SetSuppressSleepWhileVRChat(ctx context.Context, on bool) error {
 	return uc.repo.Set(ctx, keySuppressSleepWhileVRChat, strconv.FormatBool(on))
+}
+
+// GetCloseToTray returns whether closing the window hides to the system tray instead of quitting.
+// Default is true when unset or invalid.
+func (uc *SettingsUseCase) GetCloseToTray(ctx context.Context) (bool, error) {
+	v, err := uc.repo.Get(ctx, keyCloseToTray)
+	if err != nil {
+		return true, err
+	}
+	if strings.TrimSpace(v) == "" {
+		return true, nil
+	}
+	return parseBoolSetting(v), nil
+}
+
+// SetCloseToTray persists the close-to-tray toggle.
+func (uc *SettingsUseCase) SetCloseToTray(ctx context.Context, on bool) error {
+	return uc.repo.Set(ctx, keyCloseToTray, strconv.FormatBool(on))
 }
 
 // GetYTDLPToolsReplaceMaintain returns whether Tools replace maintain is desired (default false).

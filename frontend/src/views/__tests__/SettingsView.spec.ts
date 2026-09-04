@@ -66,12 +66,14 @@ function setupAppMocks() {
   vi.spyOn(App, "isLoggedIn").mockResolvedValue(false);
   vi.spyOn(App, "getLogRetentionDays").mockResolvedValue(45);
   vi.spyOn(App, "getSuppressSleepWhileVRChat").mockResolvedValue(true);
+  vi.spyOn(App, "getCloseToTray").mockResolvedValue(true);
   vi.spyOn(App, "getPathSettings").mockResolvedValue({
     ...defaultPathSettings,
   });
   vi.spyOn(App, "setPathSettings").mockResolvedValue(undefined);
   vi.spyOn(App, "setLogRetentionDays").mockResolvedValue(undefined);
   vi.spyOn(App, "setSuppressSleepWhileVRChat").mockResolvedValue(undefined);
+  vi.spyOn(App, "setCloseToTray").mockResolvedValue(undefined);
   vi.spyOn(App, "openFileDialog").mockResolvedValue(null);
   vi.spyOn(App, "openDirectoryDialog").mockResolvedValue(null);
   vi.spyOn(App, "validatePath").mockResolvedValue(true);
@@ -133,6 +135,7 @@ describe("SettingsView", () => {
 
     expect(App.getLogRetentionDays).toHaveBeenCalled();
     expect(App.getSuppressSleepWhileVRChat).toHaveBeenCalled();
+    expect(App.getCloseToTray).toHaveBeenCalled();
     expect(
       (
         wrapper.find(".setting-row .el-input-number input")
@@ -140,7 +143,13 @@ describe("SettingsView", () => {
       ).value,
     ).toBe("45");
     expect(
-      wrapper.findComponent({ name: "ElSwitch" }).props("modelValue"),
+      wrapper
+        .find(".power-switch")
+        .findComponent({ name: "ElSwitch" })
+        .props("modelValue"),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="settings-close-to-tray"]').exists(),
     ).toBe(true);
   });
 
@@ -296,6 +305,19 @@ describe("SettingsView", () => {
     await flushPromises();
 
     expect(App.setSuppressSleepWhileVRChat).toHaveBeenCalledWith(false);
+  });
+
+  it("saves close to tray toggle on change", async () => {
+    const wrapper = mountSettings();
+    await flushPromises();
+    vi.mocked(App.setCloseToTray).mockClear();
+
+    await wrapper
+      .find('[data-testid="settings-close-to-tray"]')
+      .trigger("click");
+    await flushPromises();
+
+    expect(App.setCloseToTray).toHaveBeenCalledWith(false);
   });
 
   it("runs vacuum DB after confirmation", async () => {

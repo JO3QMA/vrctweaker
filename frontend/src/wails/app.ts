@@ -507,6 +507,9 @@ export const App = {
     (a, on: boolean) => a.SetSuppressSleepWhileVRChat(on),
     undefined,
   ),
+  getCloseToTray: bindGo((a) => a.GetCloseToTray(), true),
+  setCloseToTray: bindGo((a, on: boolean) => a.SetCloseToTray(on), undefined),
+  requestClose: bindGo((a) => a.RequestClose(), undefined),
   runtimeIsWindows: bindGo((a) => a.RuntimeIsWindows(), false),
   getYTDLPMaintainStatus: bindGo(
     (a) => a.GetYTDLPMaintainStatus(),
