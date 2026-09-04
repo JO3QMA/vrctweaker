@@ -196,6 +196,27 @@
       }}</el-text>
     </el-card>
 
+    <!-- アプリ -->
+    <el-card class="settings-card" shadow="never">
+      <template #header>
+        <span>{{ t("settings.appSection") }}</span>
+      </template>
+      <div class="setting-row power-setting-row">
+        <div class="power-toggle-label">
+          <span>{{ t("settings.closeToTray") }}</span>
+          <el-text type="info" size="small" class="hint block-hint">{{
+            t("settings.closeToTrayHint")
+          }}</el-text>
+        </div>
+        <VtSwitch
+          v-model="closeToTray"
+          class="tray-switch"
+          data-testid="settings-close-to-tray"
+          @change="saveCloseToTray"
+        />
+      </div>
+    </el-card>
+
     <!-- 電源（Windows） -->
     <el-card class="settings-card" shadow="never">
       <template #header>
@@ -365,6 +386,7 @@ const loginLoading = ref(false);
 
 const logRetentionDays = ref(30);
 const suppressSleepWhileVRChat = ref(false);
+const closeToTray = ref(true);
 const maintenanceError = ref("");
 const maintenanceLoading = ref(false);
 const pathSettings = reactive<PathSettingsDTO>({
@@ -450,6 +472,7 @@ onMounted(async () => {
   }
   logRetentionDays.value = await App.getLogRetentionDays();
   suppressSleepWhileVRChat.value = await App.getSuppressSleepWhileVRChat();
+  closeToTray.value = await App.getCloseToTray();
   const ps = await App.getPathSettings();
   pathSettings.vrchatPathWindows = ps.vrchatPathWindows;
   pathSettings.steamPathLinux = ps.steamPathLinux;
@@ -528,6 +551,14 @@ async function saveRetention() {
 
 async function saveSuppressSleepWhileVRChat() {
   await App.setSuppressSleepWhileVRChat(suppressSleepWhileVRChat.value);
+}
+
+async function saveCloseToTray() {
+  try {
+    await App.setCloseToTray(closeToTray.value);
+  } catch (e) {
+    showToast.error(formatBackendError(e, t("settings.errSaveCloseToTray")));
+  }
 }
 
 async function savePathSettings() {

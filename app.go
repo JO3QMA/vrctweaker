@@ -26,6 +26,7 @@ import (
 	"vrchat-tweaker/internal/infrastructure/sleepsuppress"
 	"vrchat-tweaker/internal/infrastructure/sqlite"
 	"vrchat-tweaker/internal/infrastructure/statuspage"
+	"vrchat-tweaker/internal/infrastructure/tray"
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
 	"vrchat-tweaker/internal/infrastructure/vrchatpipeline"
 	"vrchat-tweaker/internal/infrastructure/ytdlpmaintain"
@@ -82,6 +83,8 @@ type App struct {
 
 	activityIngestMu       sync.Mutex
 	activityIngestAdapters map[string]*logwatcher.ActivityIngestAdapter
+
+	tray tray.Manager
 }
 
 // NewApp creates a new App application struct.
@@ -175,10 +178,12 @@ func (a *App) startup(ctx context.Context) {
 	go a.startupGalleryIncremental()
 	a.startSleepSuppressLoop()
 	a.startYTDLPMaintainLoop()
+	a.syncTrayFromSettings(ctx)
 }
 
 // onShutdown persists state before the process exits (Wails lifecycle).
 func (a *App) onShutdown(ctx context.Context) {
+	a.stopTray()
 	a.stopVRChatActivityMonitor()
 	if a.automation != nil {
 		a.automation.Stop()
