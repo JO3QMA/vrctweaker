@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"hash/crc32"
 	"os"
 	"path/filepath"
 	"strings"
@@ -166,7 +167,9 @@ func appendPNGDataChunk(data []byte, typ string, payload []byte) []byte {
 	data = append(data, lenBuf[:]...)
 	data = append(data, []byte(typ)...)
 	data = append(data, payload...)
-	data = append(data, 0, 0, 0, 0)
+	crc := crc32.ChecksumIEEE(append([]byte(typ), payload...))
+	binary.BigEndian.PutUint32(lenBuf[:], crc)
+	data = append(data, lenBuf[:]...)
 	return data
 }
 

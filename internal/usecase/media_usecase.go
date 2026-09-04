@@ -168,7 +168,7 @@ func (uc *MediaUseCase) ingestScreenshotFile(ctx context.Context, path string, i
 	uc.upsertWorldInfo(ctx, meta.WorldID, meta.WorldDisplayName, at)
 	uc.upsertAuthorFromScreenshot(ctx, meta.AuthorVRCUserID, meta.AuthorDisplayName, at)
 	_ = uc.EnsureScreenshotThumbnail(ctx, s.ID)
-	uc.QueueEnrichmentAfterIngest(ctx, s.ID)
+	uc.TryEnrichAfterIngest(ctx, s.ID)
 	return s, true, nil
 }
 

@@ -77,6 +77,11 @@
 
     <VtAlert v-if="loadError" variant="danger" :title="loadError" />
     <VtAlert v-if="scanError" variant="warning" :title="scanError" />
+    <VtAlert
+      v-if="enrichBatchError"
+      variant="warning"
+      :title="enrichBatchError"
+    />
 
     <div class="gallery-body">
       <!-- グリッド一覧 -->
@@ -345,6 +350,7 @@ const scanning = ref(false);
 const scanProgress = ref<ScanProgressPayload | null>(null);
 const loadError = ref<string | null>(null);
 const scanError = ref<string | null>(null);
+const enrichBatchError = ref<string | null>(null);
 const filterWorldSearch = ref("");
 const filterDateRange = ref<GalleryDateRangeFilter | null>(null);
 const filterEnrichment = ref("all");
@@ -1013,6 +1019,7 @@ async function onEnrichBatch(): Promise<void> {
     return;
   }
   enriching.value = true;
+  enrichBatchError.value = null;
   try {
     const res = await App.enrichEligibleScreenshotMetadata();
     if ((res?.processed ?? 0) > 0) {
@@ -1025,7 +1032,7 @@ async function onEnrichBatch(): Promise<void> {
     await load();
     await refreshSelectedFromList();
   } catch (err) {
-    scanError.value = err instanceof Error ? err.message : String(err);
+    enrichBatchError.value = err instanceof Error ? err.message : String(err);
   } finally {
     enriching.value = false;
   }

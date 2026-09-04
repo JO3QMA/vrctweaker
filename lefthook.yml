@@ -1,7 +1,7 @@
 # Git hooks via Lefthook — install: make setup-hooks
 # https://github.com/evilmartians/lefthook
 
-min_version: 1.6.0
+min_version: 2.0.0
 
 pre-commit:
   parallel: true

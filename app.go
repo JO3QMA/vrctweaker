@@ -308,6 +308,7 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 		finalize := live == nil || !live[fp]
 		a.ingestOneActivityLogBootstrap(ctx, absWatch, fp, parser, logger, emitEncounters, emitVideoPlayback, cp, finalize, nil)
 	}
+	a.retryScreenshotEnrichment()
 }
 
 func bootstrapLiveLogFiles(paths []string) map[string]bool {
@@ -417,7 +418,6 @@ func (a *App) ingestOneActivityLogBootstrap(
 		endOff = st.Size()
 	}
 	_ = a.activity.SetActivityLogFileCheckpoint(ctx, absWatch, absLogPath(pathCopy), endOff, checkpointVRTime(lastVRLineTime))
-	a.retryScreenshotEnrichment()
 }
 
 func (a *App) startOutputLogWatcher(ctx context.Context) {
@@ -800,9 +800,17 @@ func (a *App) GetScreenshot(id string) (*ScreenshotDTO, error) {
 	return toScreenshotDTO(s), nil
 }
 
+func (a *App) appContext() context.Context {
+	if a.ctx != nil {
+		return a.ctx
+	}
+	return context.Background()
+}
+
 // EnrichScreenshotMetadata correlates activity and embeds instance/participant metadata into the file.
 func (a *App) EnrichScreenshotMetadata(screenshotID string) (*EnrichScreenshotResultDTO, error) {
-	res, err := a.media.EnrichScreenshot(a.ctx, screenshotID, true)
+	ctx := a.appContext()
+	res, err := a.media.EnrichScreenshot(ctx, screenshotID, true)
 	if err != nil {
 		return nil, err
 	}
@@ -815,17 +823,18 @@ func (a *App) EnrichScreenshotMetadata(screenshotID string) (*EnrichScreenshotRe
 		SkipReason:   res.SkipReason,
 		InstanceID:   res.InstanceID,
 	}
-	runtime.EventsEmit(a.ctx, galleryScreenshotsChangedEvent, struct{}{})
+	runtime.EventsEmit(ctx, galleryScreenshotsChangedEvent, struct{}{})
 	return dto, nil
 }
 
 // EnrichEligibleScreenshotMetadata enriches all eligible screenshots in gallery scope.
 func (a *App) EnrichEligibleScreenshotMetadata() (*EnrichBatchResultDTO, error) {
-	res, err := a.media.EnrichEligibleScreenshots(a.ctx, nil, true)
+	ctx := a.appContext()
+	res, err := a.media.EnrichEligibleScreenshots(ctx, nil, true)
 	if err != nil {
 		return nil, err
 	}
-	dto := &EnrichBatchResultDTO{Processed: res.Processed}
+	dto := &EnrichBatchResultDTO{Processed: res.Processed, Results: []EnrichScreenshotResultDTO{}}
 	for _, r := range res.Results {
 		dto.Results = append(dto.Results, EnrichScreenshotResultDTO{
 			ScreenshotID: r.ScreenshotID,
@@ -834,7 +843,7 @@ func (a *App) EnrichEligibleScreenshotMetadata() (*EnrichBatchResultDTO, error) 
 			InstanceID:   r.InstanceID,
 		})
 	}
-	runtime.EventsEmit(a.ctx, galleryScreenshotsChangedEvent, struct{}{})
+	runtime.EventsEmit(ctx, galleryScreenshotsChangedEvent, struct{}{})
 	return dto, nil
 }
 
@@ -852,10 +861,7 @@ func (a *App) retryScreenshotEnrichment() {
 	if a.media == nil {
 		return
 	}
-	ctx := a.ctx
-	if ctx == nil {
-		ctx = context.Background()
-	}
+	ctx := a.appContext()
 	if _, err := a.media.RetryPendingEnrichments(ctx); err != nil {
 		runtime.LogWarning(ctx, "screenshot enrichment retry: "+err.Error())
 	}

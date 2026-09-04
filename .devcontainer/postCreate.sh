@@ -10,6 +10,7 @@ export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 export GOMODCACHE="${GOMODCACHE:-$REPO_ROOT/.gomodcache}"
 export GOPATH="${GOPATH:-$REPO_ROOT/.go}"
 mkdir -p "$GOMODCACHE" "$GOPATH"
+export PATH="$GOPATH/bin:$PATH"
 
 cd "$REPO_ROOT"
 

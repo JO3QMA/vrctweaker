@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
+	"strings"
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
@@ -53,12 +55,14 @@ func (uc *MediaUseCase) galleryAutoEnrichEnabled(ctx context.Context) bool {
 	return v == "1" || v == "true"
 }
 
-// QueueEnrichmentAfterIngest attempts enrichment for a newly ingested screenshot when auto mode is on.
-func (uc *MediaUseCase) QueueEnrichmentAfterIngest(ctx context.Context, screenshotID string) {
+// TryEnrichAfterIngest attempts enrichment for a newly ingested screenshot when auto mode is on.
+func (uc *MediaUseCase) TryEnrichAfterIngest(ctx context.Context, screenshotID string) {
 	if uc.enrichment == nil || !uc.galleryAutoEnrichEnabled(ctx) {
 		return
 	}
-	_, _ = uc.EnrichScreenshot(ctx, screenshotID, true)
+	if _, err := uc.EnrichScreenshot(ctx, screenshotID, true); err != nil {
+		log.Printf("[enrich] ingest enrich failed for %s: %v", screenshotID, err)
+	}
 }
 
 // RetryPendingEnrichments re-attempts pending and no_match enrichments.
@@ -68,11 +72,17 @@ func (uc *MediaUseCase) RetryPendingEnrichments(ctx context.Context) (int, error
 	}
 	count := 0
 	for _, status := range []string{media.EnrichmentStatusPending, media.EnrichmentStatusNoMatch} {
+		if err := ctx.Err(); err != nil {
+			return count, err
+		}
 		rows, err := uc.enrichment.ListByStatus(ctx, status)
 		if err != nil {
 			return count, err
 		}
 		for _, row := range rows {
+			if err := ctx.Err(); err != nil {
+				return count, err
+			}
 			res, err := uc.EnrichScreenshot(ctx, row.ScreenshotID, false)
 			if err != nil {
 				return count, err
@@ -101,7 +111,7 @@ func (uc *MediaUseCase) EnrichScreenshot(ctx context.Context, screenshotID strin
 	if s == nil {
 		return nil, errScreenshotNotFound
 	}
-	return uc.enrichScreenshotRow(ctx, s, writeFile)
+	return uc.enrichScreenshotRow(ctx, s, writeFile, nil)
 }
 
 // EnrichEligibleScreenshots enriches eligible screenshots (all when ids empty).
@@ -129,14 +139,14 @@ func (uc *MediaUseCase) EnrichEligibleScreenshots(ctx context.Context, ids []str
 	}
 	out := &EnrichBatchResult{}
 	for _, s := range targets {
-		eligible, err := uc.isScreenshotEligible(ctx, s)
+		eligible, fileMeta, err := uc.isScreenshotEligibleWithMeta(ctx, s)
 		if err != nil {
 			return out, err
 		}
 		if !eligible {
 			continue
 		}
-		res, err := uc.enrichScreenshotRow(ctx, s, writeFile)
+		res, err := uc.enrichScreenshotRow(ctx, s, writeFile, &fileMeta)
 		if err != nil {
 			return out, err
 		}
@@ -148,27 +158,50 @@ func (uc *MediaUseCase) EnrichEligibleScreenshots(ctx context.Context, ids []str
 	return out, nil
 }
 
-func (uc *MediaUseCase) enrichScreenshotRow(ctx context.Context, s *media.Screenshot, writeFile bool) (*EnrichScreenshotResult, error) {
-	existing, _ := uc.enrichment.GetByScreenshotID(ctx, s.ID)
-	fileFields, err := media.ReadEnrichmentFieldsFromFile(s.FilePath)
+type screenshotFileMeta struct {
+	fields      media.EnrichmentFields
+	hasMetaDate bool
+}
+
+func readScreenshotFileMeta(path string) (screenshotFileMeta, error) {
+	fields, err := media.ReadEnrichmentFieldsFromFile(path)
+	if err != nil {
+		return screenshotFileMeta{}, err
+	}
+	hasMetaDate, err := media.HasMetadataTakenAt(path)
+	if err != nil {
+		return screenshotFileMeta{}, err
+	}
+	return screenshotFileMeta{fields: fields, hasMetaDate: hasMetaDate}, nil
+}
+
+func (uc *MediaUseCase) enrichScreenshotRow(ctx context.Context, s *media.Screenshot, writeFile bool, fileMeta *screenshotFileMeta) (*EnrichScreenshotResult, error) {
+	existing, err := uc.enrichment.GetByScreenshotID(ctx, s.ID)
 	if err != nil {
 		return nil, err
 	}
-	hasMetaDate, err := media.HasMetadataTakenAt(s.FilePath)
-	if err != nil {
-		return nil, err
+	var meta screenshotFileMeta
+	if fileMeta != nil {
+		meta = *fileMeta
+	} else {
+		meta, err = readScreenshotFileMeta(s.FilePath)
+		if err != nil {
+			return nil, err
+		}
 	}
-	if !media.IsEligibleForEnrichment(s.WorldID, hasMetaDate, fileFields, existing) {
+	if !media.IsEligibleForEnrichment(s.WorldID, meta.hasMetaDate, meta.fields, existing) {
 		return nil, nil
 	}
 	if s.TakenAt == nil {
 		row := uc.pendingEnrichment(s.ID, "missing_taken_at")
-		_ = uc.enrichment.Save(ctx, row)
+		if err := uc.enrichment.Save(ctx, row); err != nil {
+			return nil, err
+		}
 		return enrichResultFromRow(row), nil
 	}
 
-	meta, _ := extractScreenshotMetadata(s.FilePath)
-	outcome := uc.correlateForScreenshot(ctx, s, meta.WorldID, fileFields.InstanceID, *s.TakenAt)
+	extracted, _ := extractScreenshotMetadata(s.FilePath)
+	outcome := uc.correlateForScreenshot(ctx, s, extracted.WorldID, meta.fields.InstanceID, *s.TakenAt)
 	row := &media.ScreenshotEnrichment{
 		ScreenshotID: s.ID,
 		Status:       outcome.Status,
@@ -244,20 +277,16 @@ func (uc *MediaUseCase) correlateForScreenshot(ctx context.Context, s *media.Scr
 	return media.CorrelateActivity(takenAt, filterWorld, xmpWorldID, existingInstanceID, sessionDTOs, encDTOs)
 }
 
-func (uc *MediaUseCase) isScreenshotEligible(ctx context.Context, s *media.Screenshot) (bool, error) {
+func (uc *MediaUseCase) isScreenshotEligibleWithMeta(ctx context.Context, s *media.Screenshot) (bool, screenshotFileMeta, error) {
 	existing, err := uc.enrichment.GetByScreenshotID(ctx, s.ID)
 	if err != nil {
-		return false, err
+		return false, screenshotFileMeta{}, err
 	}
-	fileFields, err := media.ReadEnrichmentFieldsFromFile(s.FilePath)
+	meta, err := readScreenshotFileMeta(s.FilePath)
 	if err != nil {
-		return false, err
+		return false, screenshotFileMeta{}, err
 	}
-	hasMetaDate, err := media.HasMetadataTakenAt(s.FilePath)
-	if err != nil {
-		return false, err
-	}
-	return media.IsEligibleForEnrichment(s.WorldID, hasMetaDate, fileFields, existing), nil
+	return media.IsEligibleForEnrichment(s.WorldID, meta.hasMetaDate, meta.fields, existing), meta, nil
 }
 
 func (uc *MediaUseCase) pendingEnrichment(screenshotID, reason string) *media.ScreenshotEnrichment {
@@ -281,13 +310,7 @@ func enrichResultFromRow(row *media.ScreenshotEnrichment) *EnrichScreenshotResul
 }
 
 func trimID(id string) string {
-	for len(id) > 0 && (id[0] == ' ' || id[0] == '\t') {
-		id = id[1:]
-	}
-	for len(id) > 0 && (id[len(id)-1] == ' ' || id[len(id)-1] == '\t') {
-		id = id[:len(id)-1]
-	}
-	return id
+	return strings.TrimSpace(id)
 }
 
 // GetScreenshotEnrichment returns persisted enrichment for UI.

@@ -16,3 +16,7 @@ fi
 mkdir -p "$ROOT/frontend/dist"
 echo '<!DOCTYPE html><html></html>' >"$ROOT/frontend/dist/index.html"
 (cd "$ROOT" && wails generate module)
+if [[ ! -f "$ROOT/frontend/wailsjs/go/main/App.d.ts" ]]; then
+  echo "wails generate module did not produce App.d.ts" >&2
+  exit 1
+fi

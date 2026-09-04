@@ -1,6 +1,9 @@
 package media
 
-import "time"
+import (
+	"sort"
+	"time"
+)
 
 // CorrelationOutcome is the result of matching a screenshot time to activity.
 type CorrelationOutcome struct {
@@ -121,6 +124,9 @@ func SnapshotParticipants(encounters []EncounterAtTime, instanceID string, t tim
 	for _, p := range latest {
 		out = append(out, p)
 	}
+	sort.Slice(out, func(i, j int) bool {
+		return out[i].VRCUserID < out[j].VRCUserID
+	})
 	return out
 }
 
