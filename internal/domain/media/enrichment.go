@@ -33,9 +33,3 @@ type ScreenshotEnrichment struct {
 	SkipReason       string
 	EnrichedAt       *time.Time
 }
-
-// SessionOverlap holds a play session that overlaps a point in time.
-type SessionOverlap struct {
-	InstanceID string
-	WorldID    string
-}

@@ -139,6 +139,9 @@ func (uc *MediaUseCase) EnrichEligibleScreenshots(ctx context.Context, ids []str
 	}
 	out := &EnrichBatchResult{}
 	for _, s := range targets {
+		if err := ctx.Err(); err != nil {
+			return out, err
+		}
 		eligible, fileMeta, err := uc.isScreenshotEligibleWithMeta(ctx, s)
 		if err != nil {
 			return out, err
@@ -200,7 +203,10 @@ func (uc *MediaUseCase) enrichScreenshotRow(ctx context.Context, s *media.Screen
 		return enrichResultFromRow(row), nil
 	}
 
-	extracted, _ := extractScreenshotMetadata(s.FilePath)
+	extracted, extractErr := extractScreenshotMetadata(s.FilePath)
+	if extractErr != nil {
+		log.Printf("[enrich] metadata extract failed for %s: %v", s.FilePath, extractErr)
+	}
 	outcome := uc.correlateForScreenshot(ctx, s, extracted.WorldID, meta.fields.InstanceID, *s.TakenAt)
 	row := &media.ScreenshotEnrichment{
 		ScreenshotID: s.ID,
@@ -222,17 +228,15 @@ func (uc *MediaUseCase) enrichScreenshotRow(ctx context.Context, s *media.Screen
 			Participants: outcome.Participants,
 		}
 		if err := media.EmbedEnrichmentMetadata(s.FilePath, fields); err != nil {
-			return nil, err
+			row.Status = media.EnrichmentStatusConflict
+			row.SkipReason = "metadata_write_failed"
+		} else {
+			now := time.Now()
+			row.EnrichedAt = &now
 		}
-		now := time.Now()
-		row.EnrichedAt = &now
 	} else if outcome.Status == media.EnrichmentStatusSuccess {
 		now := time.Now()
 		row.EnrichedAt = &now
-	} else if outcome.Status == media.EnrichmentStatusNoMatch || outcome.Status == media.EnrichmentStatusAmbiguous || outcome.Status == media.EnrichmentStatusConflict {
-		// keep enriched_at nil
-	} else if outcome.Status == "" {
-		row.Status = media.EnrichmentStatusPending
 	}
 	if err := uc.enrichment.Save(ctx, row); err != nil {
 		return nil, err
@@ -243,7 +247,7 @@ func (uc *MediaUseCase) enrichScreenshotRow(ctx context.Context, s *media.Screen
 func (uc *MediaUseCase) correlateForScreenshot(ctx context.Context, s *media.Screenshot, xmpWorldID, existingInstanceID string, takenAt time.Time) media.CorrelationOutcome {
 	sessions, err := uc.playSessions.ListOverlappingAt(ctx, takenAt)
 	if err != nil {
-		return media.CorrelationOutcome{Status: media.EnrichmentStatusNoMatch, SkipReason: "activity_query_failed"}
+		return media.CorrelationOutcome{Status: media.EnrichmentStatusPending, SkipReason: "activity_query_failed"}
 	}
 	sessionDTOs := make([]media.SessionAtTime, 0, len(sessions))
 	for _, ps := range sessions {
@@ -258,7 +262,7 @@ func (uc *MediaUseCase) correlateForScreenshot(ctx context.Context, s *media.Scr
 	to := takenAt.Add(24 * time.Hour)
 	encounters, err := uc.encounters.List(ctx, &activity.EncounterFilter{From: &from, To: &to})
 	if err != nil {
-		return media.CorrelationOutcome{Status: media.EnrichmentStatusNoMatch, SkipReason: "encounter_query_failed"}
+		return media.CorrelationOutcome{Status: media.EnrichmentStatusPending, SkipReason: "encounter_query_failed"}
 	}
 	encDTOs := make([]media.EncounterAtTime, 0, len(encounters))
 	for _, e := range encounters {

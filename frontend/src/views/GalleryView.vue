@@ -148,12 +148,13 @@
                         @error="onThumbnailError"
                       />
                       <VtTag
-                        v-if="enrichmentBadge(item)"
+                        v-for="tag in enrichmentBadgeTags(item)"
+                        :key="tag.label"
                         class="enrichment-badge"
-                        :variant="enrichmentBadge(item)!.variant"
+                        :variant="tag.variant"
                         size="small"
                       >
-                        {{ enrichmentBadge(item)!.label }}
+                        {{ tag.label }}
                       </VtTag>
                     </div>
                   </div>
@@ -986,6 +987,13 @@ function enrichmentBadge(
   }
 }
 
+function enrichmentBadgeTags(
+  item: ScreenshotDTO,
+): { label: string; variant: "success" | "warning" | "info" }[] {
+  const badge = enrichmentBadge(item);
+  return badge ? [badge] : [];
+}
+
 async function refreshSelectedFromList(): Promise<void> {
   if (!selected.value) return;
   const hit = list.value.find((s) => s.id === selected.value?.id);
@@ -1016,6 +1024,7 @@ async function onEnrichBatch(): Promise<void> {
       type: "warning",
     });
   } catch {
+    enrichBatchError.value = null;
     return;
   }
   enriching.value = true;

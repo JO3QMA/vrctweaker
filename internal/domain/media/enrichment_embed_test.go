@@ -58,6 +58,38 @@ func TestEmbedEnrichmentMetadata_PNG_roundTrip(t *testing.T) {
 	}
 }
 
+func TestEmbedEnrichmentMetadata_PNG_insertsITXtBeforeIEND(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "bare.png")
+	// Minimal PNG: signature + IHDR + IEND (no existing XMP iTXt).
+	data := []byte("\x89PNG\r\n\x1a\n")
+	data = appendPNGChunk(data, "IHDR", make([]byte, 13))
+	data = appendPNGChunk(data, "IEND", nil)
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := EmbedEnrichmentMetadata(path, EnrichmentFields{InstanceID: "wrld_bare:1"}); err != nil {
+		t.Fatal(err)
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(raw) < 12 {
+		t.Fatalf("PNG too short: %d", len(raw))
+	}
+	if string(raw[len(raw)-8:len(raw)-4]) != "IEND" {
+		t.Fatalf("PNG missing IEND chunk type at tail")
+	}
+	got, err := ReadEnrichmentFieldsFromFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.InstanceID != "wrld_bare:1" {
+		t.Fatalf("instance = %q", got.InstanceID)
+	}
+}
+
 func TestParseEnrichmentXMP(t *testing.T) {
 	xmp := `<rdf:Description vrctweaker:InstanceID="inst:1"><vrctweaker:Participants>[{"vrcUserId":"usr_1","displayName":"A"}]</vrctweaker:Participants>`
 	got := ParseEnrichmentXMP(xmp)

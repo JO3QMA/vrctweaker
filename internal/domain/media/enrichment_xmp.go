@@ -2,6 +2,7 @@ package media
 
 import (
 	"encoding/json"
+	"fmt"
 	"regexp"
 	"strings"
 )
@@ -35,21 +36,21 @@ func ParseEnrichmentXMP(xmp string) EnrichmentFields {
 }
 
 // MergeEnrichmentIntoXMP adds or updates vrctweaker fields without touching vrc:WorldID.
-func MergeEnrichmentIntoXMP(xmp string, fields EnrichmentFields) string {
+func MergeEnrichmentIntoXMP(xmp string, fields EnrichmentFields) (string, error) {
 	if fields.InstanceID == "" && len(fields.Participants) == 0 {
-		return xmp
+		return xmp, nil
 	}
 	if xmp == "" {
-		return minimalXMPPacket(fields)
+		return minimalXMPPacket(fields), nil
 	}
 	existing := ParseEnrichmentXMP(xmp)
 	if existing.InstanceID != "" && fields.InstanceID != "" && existing.InstanceID != fields.InstanceID {
-		return xmp
+		return xmp, fmt.Errorf("existing instance_id %q conflicts with new %q", existing.InstanceID, fields.InstanceID)
 	}
 	if strings.Contains(xmp, "<rdf:Description") {
-		return injectIntoDescription(xmp, fields, existing)
+		return injectIntoDescription(xmp, fields, existing), nil
 	}
-	return minimalXMPPacket(fields)
+	return minimalXMPPacket(fields), nil
 }
 
 func minimalXMPPacket(fields EnrichmentFields) string {

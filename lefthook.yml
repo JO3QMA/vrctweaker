@@ -7,11 +7,11 @@ pre-commit:
   parallel: true
   commands:
     go-lint:
-      glob: "*.go"
+      glob: "**/*.go"
       exclude: "(^|/)(vendor|\\.gomodcache)/"
       run: make lint-back
     go-test-compile:
-      glob: "*.go"
+      glob: "**/*.go"
       exclude: "(^|/)(vendor|\\.gomodcache)/"
       run: go test -run=^$ ./...
     vue-typecheck:

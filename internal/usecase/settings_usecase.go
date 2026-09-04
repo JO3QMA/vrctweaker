@@ -60,7 +60,7 @@ func (uc *SettingsUseCase) SetLogRetentionDays(ctx context.Context, days int) er
 func (uc *SettingsUseCase) GetGalleryAutoEnrichMetadata(ctx context.Context) (bool, error) {
 	v, err := uc.repo.Get(ctx, keyGalleryAutoEnrichMetadata)
 	if err != nil {
-		return true, err
+		return true, nil
 	}
 	if v == "" {
 		return true, nil

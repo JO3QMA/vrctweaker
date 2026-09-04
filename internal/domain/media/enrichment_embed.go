@@ -38,7 +38,10 @@ func embedEnrichmentJPEG(data []byte, fields EnrichmentFields) ([]byte, error) {
 		return nil, fmt.Errorf("invalid JPEG")
 	}
 	xmp := extractXMPFromJPEG(data)
-	merged := MergeEnrichmentIntoXMP(xmp, fields)
+	merged, err := MergeEnrichmentIntoXMP(xmp, fields)
+	if err != nil {
+		return nil, err
+	}
 	if merged == xmp && xmp != "" {
 		return data, nil
 	}
@@ -52,7 +55,10 @@ func embedEnrichmentPNG(data []byte, fields EnrichmentFields) ([]byte, error) {
 		return nil, fmt.Errorf("invalid PNG")
 	}
 	xmp := extractXMPFromPNG(data)
-	merged := MergeEnrichmentIntoXMP(xmp, fields)
+	merged, err := MergeEnrichmentIntoXMP(xmp, fields)
+	if err != nil {
+		return nil, err
+	}
 	if merged == xmp && xmp != "" {
 		return data, nil
 	}
@@ -144,7 +150,9 @@ func replaceOrInsertPNGXMP(data []byte, xmp string) []byte {
 		pos = chunkEnd
 	}
 	if !replaced {
-		return appendPNGDataChunk(data[:len(data)-12], "iTXt", buildPNGITXtPayload(pngXMPKeyword, xmp))
+		iendChunk := data[len(data)-12:]
+		withITXt := appendPNGDataChunk(data[:len(data)-12], "iTXt", buildPNGITXtPayload(pngXMPKeyword, xmp))
+		return append(withITXt, iendChunk...)
 	}
 	return out
 }

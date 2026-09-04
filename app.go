@@ -807,9 +807,14 @@ func (a *App) appContext() context.Context {
 	return context.Background()
 }
 
+func (a *App) enrichmentContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(a.appContext(), 30*time.Second)
+}
+
 // EnrichScreenshotMetadata correlates activity and embeds instance/participant metadata into the file.
 func (a *App) EnrichScreenshotMetadata(screenshotID string) (*EnrichScreenshotResultDTO, error) {
-	ctx := a.appContext()
+	ctx, cancel := a.enrichmentContext()
+	defer cancel()
 	res, err := a.media.EnrichScreenshot(ctx, screenshotID, true)
 	if err != nil {
 		return nil, err
@@ -829,7 +834,8 @@ func (a *App) EnrichScreenshotMetadata(screenshotID string) (*EnrichScreenshotRe
 
 // EnrichEligibleScreenshotMetadata enriches all eligible screenshots in gallery scope.
 func (a *App) EnrichEligibleScreenshotMetadata() (*EnrichBatchResultDTO, error) {
-	ctx := a.appContext()
+	ctx, cancel := a.enrichmentContext()
+	defer cancel()
 	res, err := a.media.EnrichEligibleScreenshots(ctx, nil, true)
 	if err != nil {
 		return nil, err
