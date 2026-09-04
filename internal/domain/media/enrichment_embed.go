@@ -111,7 +111,6 @@ func replaceOrInsertJPEGAPP1(data, payload []byte) []byte {
 }
 
 func replaceOrInsertPNGXMP(data []byte, xmp string) []byte {
-	const pngSignature = "\x89PNG\r\n\x1a\n"
 	pos := 8
 	var out []byte
 	out = append(out, data[:8]...)
