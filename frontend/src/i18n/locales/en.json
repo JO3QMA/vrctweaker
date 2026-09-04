@@ -208,6 +208,8 @@
     "enrichBatch": "Enrich all eligible",
     "enrichBatchConfirm": "Write instance and participant metadata into eligible screenshots. Continue?",
     "enrichSuccess": "Metadata enriched",
+    "enrichNoMatch": "No matching activity found for this screenshot",
+    "enrichNeedsReview": "Ambiguous or conflicting matches — review manually",
     "enrichBatchDone": "Enriched metadata for {n} screenshot(s)",
     "enrichNothing": "No eligible screenshots",
     "filterEnrichment": "Metadata",

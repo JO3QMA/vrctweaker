@@ -208,6 +208,8 @@
     "enrichBatch": "미보완 일괄 보완",
     "enrichBatchConfirm": "대상 스크린샷에 인스턴스 및 참가자 정보를 기록합니다. 계속할까요?",
     "enrichSuccess": "메타데이터를 보완했습니다",
+    "enrichNoMatch": "일치하는 활동 기록을 찾지 못했습니다",
+    "enrichNeedsReview": "매칭이 모호하거나 충돌합니다. 수동으로 확인하세요",
     "enrichBatchDone": "{n}건의 메타데이터를 보완했습니다",
     "enrichNothing": "보완 대상이 없습니다",
     "filterEnrichment": "메타데이터",

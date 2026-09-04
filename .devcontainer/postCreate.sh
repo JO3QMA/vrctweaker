@@ -23,5 +23,5 @@ if [[ -f "frontend/package.json" ]]; then
 fi
 
 if [[ -f "$REPO_ROOT/lefthook.yml" ]] && command -v lefthook >/dev/null 2>&1; then
-  lefthook install -f "$REPO_ROOT/lefthook.yml"
+  lefthook install "$REPO_ROOT/lefthook.yml"
 fi

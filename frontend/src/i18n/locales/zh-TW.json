@@ -208,6 +208,8 @@
     "enrichBatch": "批次補全未處理項目",
     "enrichBatchConfirm": "將向符合條件的截圖寫入實例與參與者資訊。是否繼續？",
     "enrichSuccess": "已補全元資料",
+    "enrichNoMatch": "找不到可匹配的活動記錄",
+    "enrichNeedsReview": "比對結果模糊或衝突，請手動確認",
     "enrichBatchDone": "已補全 {n} 張截圖的元資料",
     "enrichNothing": "沒有可補全的截圖",
     "filterEnrichment": "元資料",

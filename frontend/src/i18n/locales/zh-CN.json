@@ -208,6 +208,8 @@
     "enrichBatch": "批量补全未处理项",
     "enrichBatchConfirm": "将向符合条件的截图写入实例与参与者信息。是否继续？",
     "enrichSuccess": "已补全元数据",
+    "enrichNoMatch": "未找到可匹配的活动记录",
+    "enrichNeedsReview": "匹配结果模糊或冲突，请手动确认",
     "enrichBatchDone": "已补全 {n} 张截图的元数据",
     "enrichNothing": "没有可补全的截图",
     "filterEnrichment": "元数据",

@@ -96,7 +96,7 @@ test-e2e-install:
 ## Git hooks（Lefthook）のインストール — clone 後に一度実行
 setup-hooks:
 	@command -v lefthook >/dev/null 2>&1 || go install github.com/evilmartians/lefthook/v2/cmd/lefthook@$(LEFTHOOK_VERSION)
-	lefthook install
+	@PATH="$$(go env GOPATH)/bin:$$PATH" lefthook install
 
 ## WSL: Windows 側の DB・VRChat ログを var/ に symlink（var/local.env が必要）
 link-var:

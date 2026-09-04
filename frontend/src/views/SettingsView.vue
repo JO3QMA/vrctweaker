@@ -542,7 +542,13 @@ async function saveRetention() {
 }
 
 async function saveGalleryAutoEnrich() {
-  await App.setGalleryAutoEnrichMetadata(galleryAutoEnrichMetadata.value);
+  const attempted = galleryAutoEnrichMetadata.value;
+  try {
+    await App.setGalleryAutoEnrichMetadata(attempted);
+  } catch (e) {
+    galleryAutoEnrichMetadata.value = !attempted;
+    showToast.error(formatBackendError(e, t("settings.errOperation")));
+  }
 }
 
 async function saveSuppressSleepWhileVRChat() {

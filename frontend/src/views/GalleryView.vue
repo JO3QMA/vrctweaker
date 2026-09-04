@@ -57,7 +57,6 @@
         v-model="filterEnrichment"
         data-testid="gallery-enrichment-filter"
         class="gallery-enrichment-filter"
-        @change="onFilterEnter"
       >
         <el-option :label="t('gallery.filterEnrichmentAll')" value="all" />
         <el-option
@@ -1006,8 +1005,17 @@ async function onEnrichSelected(): Promise<void> {
   detailActionError.value = null;
   try {
     const res = await App.enrichScreenshotMetadata(selected.value.id);
-    if (res?.status === "success") {
-      showToast.success(t("gallery.enrichSuccess"));
+    switch (res?.status) {
+      case "success":
+        showToast.success(t("gallery.enrichSuccess"));
+        break;
+      case "no_match":
+        showToast.info(t("gallery.enrichNoMatch"));
+        break;
+      case "conflict":
+      case "ambiguous":
+        showToast.warning(t("gallery.enrichNeedsReview"));
+        break;
     }
     await load();
     await refreshSelectedFromList();
@@ -1023,8 +1031,12 @@ async function onEnrichBatch(): Promise<void> {
     await ElMessageBox.confirm(t("gallery.enrichBatchConfirm"), {
       type: "warning",
     });
-  } catch {
-    enrichBatchError.value = null;
+  } catch (err) {
+    if (err === "cancel" || err === "close") {
+      enrichBatchError.value = null;
+      return;
+    }
+    enrichBatchError.value = err instanceof Error ? err.message : String(err);
     return;
   }
   enriching.value = true;

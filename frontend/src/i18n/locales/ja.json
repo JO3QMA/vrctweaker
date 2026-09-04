@@ -208,6 +208,8 @@
     "enrichBatch": "未補完を一括補完",
     "enrichBatchConfirm": "対象のスクリーンショットにインスタンスと参加者情報を書き込みます。続行しますか？",
     "enrichSuccess": "メタデータを補完しました",
+    "enrichNoMatch": "照合できるアクティビティがありませんでした",
+    "enrichNeedsReview": "照合が曖昧または競合しています。手動で確認してください",
     "enrichBatchDone": "{n} 件のメタデータを補完しました",
     "enrichNothing": "補完対象がありませんでした",
     "filterEnrichment": "メタデータ",
