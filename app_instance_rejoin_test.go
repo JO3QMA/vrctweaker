@@ -17,6 +17,9 @@ type errRejoinPlayRepo struct{}
 func (errRejoinPlayRepo) List(context.Context, time.Time, time.Time) ([]*activity.PlaySession, error) {
 	return nil, errors.New("db down")
 }
+func (errRejoinPlayRepo) ListOverlappingAt(context.Context, time.Time) ([]*activity.PlaySession, error) {
+	return nil, errors.New("db down")
+}
 func (errRejoinPlayRepo) GetByID(context.Context, string) (*activity.PlaySession, error) {
 	return nil, errors.New("db down")
 }
@@ -187,6 +190,9 @@ type memRejoinPlayRepo struct {
 }
 
 func (r *memRejoinPlayRepo) List(context.Context, time.Time, time.Time) ([]*activity.PlaySession, error) {
+	return nil, nil
+}
+func (r *memRejoinPlayRepo) ListOverlappingAt(context.Context, time.Time) ([]*activity.PlaySession, error) {
 	return nil, nil
 }
 func (r *memRejoinPlayRepo) GetByID(_ context.Context, id string) (*activity.PlaySession, error) {
