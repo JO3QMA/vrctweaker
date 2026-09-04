@@ -219,8 +219,8 @@ func TestSettingsUseCase_CloseToTray_roundtrip(t *testing.T) {
 	if repo.m[keyCloseToTray] != "false" {
 		t.Fatalf("stored value: got %q", repo.m[keyCloseToTray])
 	}
-	if err := uc.SetCloseToTray(ctx, true); err != nil {
-		t.Fatalf("SetCloseToTray true: %v", err)
+	if err2 := uc.SetCloseToTray(ctx, true); err2 != nil {
+		t.Fatalf("SetCloseToTray true: %v", err2)
 	}
 	on, err := uc.GetCloseToTray(ctx)
 	if err != nil {
