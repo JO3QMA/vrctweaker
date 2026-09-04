@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "VRChat Tweaker"
+    "name": "VRChat Tweaker",
+    "errClose": "無法關閉視窗"
   },
   "routes": {
     "dashboard": "儀表板",
@@ -386,6 +387,9 @@
     "existsNo": "不存在",
     "pathHint": "用於啟動 VRChat 與監看日誌。請指定 launch.exe。留空則使用預設路徑。output_log 請指定日誌資料夾（留空使用預設）。將並行監看資料夾內正在增長的 output_log*.txt。",
     "powerSection": "電源",
+    "appSection": "應用程式",
+    "closeToTray": "關閉時縮到系統匣",
+    "closeToTrayHint": "按關閉按鈕時不結束程式，改為常駐系統匣。自動化與日誌監看會繼續（僅 Windows）。關閉此選項則關閉時結束程式。",
     "suppressSleep": "VRChat 執行時防止睡眠",
     "suppressSleepHint": "VRChat.exe 執行時減少閒置睡眠與關閉螢幕（僅 Windows，Tweaker 執行中）。預設關閉。",
     "dataSection": "日誌與資料",
@@ -422,6 +426,7 @@
     "errLogout": "登出失敗",
     "errFriends": "無法更新好友列表",
     "errLanguageSave": "無法儲存顯示語言",
+    "errSaveCloseToTray": "無法儲存系統匣設定",
     "confirmTitle": "確認",
     "complete": "完成",
     "errOperation": "操作失敗",

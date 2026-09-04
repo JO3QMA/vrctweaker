@@ -284,6 +284,9 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         SetPathSettings: () => Promise.resolve(),
         GetSuppressSleepWhileVRChat: () => Promise.resolve(false),
         SetSuppressSleepWhileVRChat: () => Promise.resolve(),
+        GetCloseToTray: () => Promise.resolve(true),
+        SetCloseToTray: () => Promise.resolve(),
+        RequestClose: () => Promise.resolve(),
         RuntimeIsWindows: () => Promise.resolve(true),
         GetYTDLPMaintainStatus: function() {
           return Promise.resolve(ytdlpMaintainStatus);

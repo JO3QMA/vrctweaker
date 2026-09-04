@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "VRChat Tweaker"
+    "name": "VRChat Tweaker",
+    "errClose": "창을 닫지 못했습니다"
   },
   "routes": {
     "dashboard": "대시보드",
@@ -386,6 +387,9 @@
     "existsNo": "없습니다",
     "pathHint": "VRChat 실행 및 로그 감시에 사용합니다. launch.exe를 지정하세요. 비우면 기본 경로를 사용합니다. output_log는 로그 폴더를 지정하세요(비우면 기본 폴더). 폴더 안에서 증가 중인 output_log*.txt를 병렬로 감시합니다.",
     "powerSection": "전원",
+    "appSection": "앱",
+    "closeToTray": "닫을 때 시스템 트레이로 숨기기",
+    "closeToTrayHint": "닫기 버튼으로 종료하지 않고 시스템 트레이에 상주합니다. 자동화와 로그 감시는 계속됩니다(Windows만). 끄면 닫을 때 종료합니다.",
     "suppressSleep": "VRChat 실행 중 절전 방지",
     "suppressSleepHint": "VRChat.exe 실행 중 유휴 절전·디스플레이 끄기를 줄입니다 (Windows, Tweaker 실행 중만). 기본값 끔.",
     "dataSection": "로그·데이터",
@@ -422,6 +426,7 @@
     "errLogout": "로그아웃 실패",
     "errFriends": "친구 목록 새로 고침 실패",
     "errLanguageSave": "표시 언어를 저장하지 못했습니다",
+    "errSaveCloseToTray": "시스템 트레이 설정을 저장하지 못했습니다",
     "confirmTitle": "확인",
     "complete": "완료했습니다",
     "errOperation": "작업 실패",

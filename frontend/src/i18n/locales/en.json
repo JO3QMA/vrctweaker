@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "VRChat Tweaker"
+    "name": "VRChat Tweaker",
+    "errClose": "Could not close the window"
   },
   "routes": {
     "dashboard": "Dashboard",
@@ -386,6 +387,9 @@
     "existsNo": "Not found",
     "pathHint": "Used to launch VRChat and watch logs. Set launch.exe (direct VRChat.exe forces offline). Leave empty for defaults. For output_log, set the …\\VRChat\\VRChat log folder (empty uses the default). Growing output_log*.txt files in that folder are watched in parallel.",
     "powerSection": "Power",
+    "appSection": "Application",
+    "closeToTray": "Close to system tray",
+    "closeToTrayHint": "The close button hides the window to the system tray instead of quitting. Automation and log watchers keep running (Windows only). Turn off to quit when closing.",
     "suppressSleep": "Suppress sleep while VRChat is running",
     "suppressSleepHint": "While VRChat.exe is running, reduces idle sleep and display power-off (Windows only, while Tweaker is running). Default off.",
     "dataSection": "Log & data",
@@ -422,6 +426,7 @@
     "errLogout": "Logout failed",
     "errFriends": "Failed to refresh friends list",
     "errLanguageSave": "Could not save display language",
+    "errSaveCloseToTray": "Could not save close-to-tray setting",
     "confirmTitle": "Confirm",
     "complete": "Done",
     "errOperation": "Operation failed",
