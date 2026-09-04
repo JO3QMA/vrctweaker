@@ -17,3 +17,7 @@ if [[ -f "frontend/package.json" ]]; then
   cd frontend && pnpm install && pnpm exec playwright install --with-deps chromium && cd ..
 fi
 
+if [[ -f "lefthook.yml" ]] && command -v lefthook >/dev/null 2>&1; then
+  lefthook install
+fi
+

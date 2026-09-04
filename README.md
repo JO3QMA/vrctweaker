@@ -38,10 +38,14 @@ WSL 上でホストの VRChat フォルダ（`/mnt/c/...`）をマウントす�
 | [Wails CLI v2](https://wails.io/docs/gettingstarted/installation) | デスクトップアプリのビルド・開発 |
 | Node.js 20+ / pnpm | フロントエンド |
 | golangci-lint | Go の Lint |
+| [Lefthook](https://github.com/evilmartians/lefthook) | Git pre-commit hooks（任意・推奨） |
 
 ```bash
 # 依存関係
 make install-front
+
+# pre-commit（golangci-lint / go test compile / vue-tsc）— clone 後に一度
+make setup-hooks
 
 # 開発サーバー（ヘッドレス環境では xvfb 付き）
 make dev-wails
@@ -94,6 +98,7 @@ make test-e2e
 
 - 関連 Issue があれば `Closes #123` などでリンク
 - コード変更後は `make fmt` → `make test` → `make lint`（フロント `src` 変更時は `make test-e2e` も）
+- `make setup-hooks` 済みなら commit 時に Go lint / テスト compile / フロント型チェックが自動実行される
 - UI 変更時は Storybook 側の更新も検討（`.cursor/rules/storybook-wails-ui.mdc`）
 
 エージェント駆動で開発する場合は [`.cursor/AGENTS.md`](./.cursor/AGENTS.md) と [`docs/agents/`](./docs/agents/) も参照してください。

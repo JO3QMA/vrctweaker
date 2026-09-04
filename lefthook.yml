@@ -1,0 +1,20 @@
+# Git hooks via Lefthook — install: make setup-hooks
+# https://github.com/evilmartians/lefthook
+
+min_version: 1.6.0
+
+pre-commit:
+  parallel: true
+  commands:
+    go-lint:
+      glob: "*.go"
+      exclude: "(^|/)(vendor|\\.gomodcache)/"
+      run: make lint-back
+    go-test-compile:
+      glob: "*.go"
+      exclude: "(^|/)(vendor|\\.gomodcache)/"
+      run: go test -run=^$ ./...
+    vue-typecheck:
+      glob: "frontend/**/*.{ts,vue}"
+      exclude: "frontend/node_modules/"
+      run: bash scripts/ensure-wails-bindings.sh && cd frontend && pnpm exec vue-tsc --noEmit
