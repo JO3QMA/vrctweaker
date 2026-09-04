@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "VRChat Tweaker"
+    "name": "VRChat Tweaker",
+    "errClose": "창을 닫지 못했습니다"
   },
   "routes": {
     "dashboard": "대시보드",
@@ -425,6 +426,7 @@
     "errLogout": "로그아웃 실패",
     "errFriends": "친구 목록 새로 고침 실패",
     "errLanguageSave": "표시 언어를 저장하지 못했습니다",
+    "errSaveCloseToTray": "시스템 트레이 설정을 저장하지 못했습니다",
     "confirmTitle": "확인",
     "complete": "완료했습니다",
     "errOperation": "작업 실패",

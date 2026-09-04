@@ -13,6 +13,8 @@
 import { useI18n } from "vue-i18n";
 import { App } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
+import { formatBackendError } from "../utils/formatError";
+import { showToast } from "../utils/showToast";
 
 const { t } = useI18n();
 
@@ -24,8 +26,12 @@ function maximize() {
   getRuntime()?.WindowToggleMaximise?.();
 }
 
-function close() {
-  void App.requestClose();
+async function close() {
+  try {
+    await App.requestClose();
+  } catch (e) {
+    showToast.error(formatBackendError(e, t("app.errClose")));
+  }
 }
 </script>
 

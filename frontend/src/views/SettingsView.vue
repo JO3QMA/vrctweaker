@@ -554,7 +554,11 @@ async function saveSuppressSleepWhileVRChat() {
 }
 
 async function saveCloseToTray() {
-  await App.setCloseToTray(closeToTray.value);
+  try {
+    await App.setCloseToTray(closeToTray.value);
+  } catch (e) {
+    showToast.error(formatBackendError(e, t("settings.errSaveCloseToTray")));
+  }
 }
 
 async function savePathSettings() {

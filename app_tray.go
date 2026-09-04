@@ -5,7 +5,6 @@ import (
 	_ "embed"
 	"os"
 	"path/filepath"
-	"sync"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"vrchat-tweaker/internal/infrastructure/tray"
@@ -27,6 +26,9 @@ func (a *App) trayIconPath() (string, error) {
 		return "", err
 	}
 	path := filepath.Join(dataDir, "tray.ico")
+	if err := os.MkdirAll(dataDir, 0700); err != nil {
+		return "", err
+	}
 	if err := os.WriteFile(path, trayIconICO, 0600); err != nil {
 		return "", err
 	}
@@ -34,7 +36,8 @@ func (a *App) trayIconPath() (string, error) {
 }
 
 func (a *App) closeToTrayEffective(ctx context.Context) bool {
-	if a.settings == nil || a.tray == nil || !a.tray.Supported() {
+	a.initTrayManager()
+	if a.settings == nil || !a.tray.Supported() {
 		return false
 	}
 	on, err := a.settings.GetCloseToTray(ctx)
@@ -62,7 +65,6 @@ func (a *App) syncTrayFromSettings(ctx context.Context) {
 }
 
 func (a *App) startTray(ctx context.Context) error {
-	a.initTrayManager()
 	if !a.tray.Supported() || a.tray.Running() {
 		return nil
 	}
@@ -97,15 +99,15 @@ func (a *App) quitApplication() {
 	if a.ctx == nil {
 		return
 	}
-	_ = a.tray.Stop()
+	a.stopTray()
 	runtime.Quit(a.ctx)
 }
 
-func (a *App) hideMainWindow() {
-	if a.ctx == nil {
+func (a *App) hideMainWindow(ctx context.Context) {
+	if ctx == nil {
 		return
 	}
-	runtime.WindowHide(a.ctx)
+	runtime.WindowHide(ctx)
 }
 
 // handleBeforeClose hides the window when close-to-tray is enabled; returns true to prevent quit.
@@ -113,7 +115,7 @@ func (a *App) handleBeforeClose(ctx context.Context) bool {
 	if !a.closeToTrayEffective(ctx) {
 		return false
 	}
-	a.hideMainWindow()
+	a.hideMainWindow(ctx)
 	return true
 }
 
@@ -142,15 +144,11 @@ func (a *App) SetCloseToTray(on bool) error {
 	return nil
 }
 
-var trayStopOnce sync.Once
-
 func (a *App) stopTray() {
 	if a.tray == nil {
 		return
 	}
-	trayStopOnce.Do(func() {
-		if err := a.tray.Stop(); err != nil && a.ctx != nil {
-			runtime.LogWarning(a.ctx, "tray stop: "+err.Error())
-		}
-	})
+	if err := a.tray.Stop(); err != nil && a.ctx != nil {
+		runtime.LogWarning(a.ctx, "tray stop: "+err.Error())
+	}
 }

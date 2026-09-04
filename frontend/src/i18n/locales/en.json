@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "VRChat Tweaker"
+    "name": "VRChat Tweaker",
+    "errClose": "Could not close the window"
   },
   "routes": {
     "dashboard": "Dashboard",
@@ -425,6 +426,7 @@
     "errLogout": "Logout failed",
     "errFriends": "Failed to refresh friends list",
     "errLanguageSave": "Could not save display language",
+    "errSaveCloseToTray": "Could not save close-to-tray setting",
     "confirmTitle": "Confirm",
     "complete": "Done",
     "errOperation": "Operation failed",

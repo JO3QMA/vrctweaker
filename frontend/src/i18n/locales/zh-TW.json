@@ -1,6 +1,7 @@
 {
   "app": {
-    "name": "VRChat Tweaker"
+    "name": "VRChat Tweaker",
+    "errClose": "無法關閉視窗"
   },
   "routes": {
     "dashboard": "儀表板",
@@ -425,6 +426,7 @@
     "errLogout": "登出失敗",
     "errFriends": "無法更新好友列表",
     "errLanguageSave": "無法儲存顯示語言",
+    "errSaveCloseToTray": "無法儲存系統匣設定",
     "confirmTitle": "確認",
     "complete": "完成",
     "errOperation": "操作失敗",
