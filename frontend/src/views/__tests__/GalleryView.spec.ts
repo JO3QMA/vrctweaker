@@ -653,6 +653,27 @@ describe("GalleryView", () => {
     expect(wrapper.text()).toMatch(/12(\.0)? KB/);
   });
 
+  it("shows enrichment participants by display name in detail", async () => {
+    mockScreenshots.mockResolvedValue([
+      {
+        ...sampleShot,
+        enrichmentParticipants: [
+          { displayName: "Alice" },
+          { displayName: "Bob", vrcUserId: "usr_hidden" },
+        ],
+      },
+    ]);
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+
+    await wrapper.find(".grid-item").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(wrapper.text()).toContain("Test World");
+    expect(wrapper.text()).toContain("Alice, Bob");
+    expect(wrapper.text()).not.toContain("usr_hidden");
+  });
+
   it("shows detail preview image data URL when an item is selected", async () => {
     const wrapper = mount(GalleryView, { attachTo: host });
     await flushPromises();

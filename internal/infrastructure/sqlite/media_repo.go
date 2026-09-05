@@ -8,15 +8,17 @@ import (
 )
 
 const screenshotSelectBase = `SELECT s.id, s.file_path, COALESCE(s.world_id, ''),
-	COALESCE(w.display_name, '') AS world_name_resolved,
+	COALESCE(NULLIF(w.display_name, ''), NULLIF(ew.display_name, ''), '') AS world_name_resolved,
 	COALESCE(s.author_vrc_user_id, ''),
 	COALESCE(u.display_name, '') AS author_display_name,
 	s.taken_at, s.file_size_bytes,
-	COALESCE(e.status, ''), COALESCE(e.skip_reason, ''), COALESCE(e.instance_id, '')
+	COALESCE(e.status, ''), COALESCE(e.skip_reason, ''), COALESCE(e.instance_id, ''),
+	COALESCE(e.participants_json, '')
 	FROM screenshots s
 	LEFT JOIN world_info w ON w.world_id = s.world_id
 	LEFT JOIN users_cache u ON u.vrc_user_id = s.author_vrc_user_id
-	LEFT JOIN screenshot_enrichment e ON e.screenshot_id = s.id`
+	LEFT JOIN screenshot_enrichment e ON e.screenshot_id = s.id
+	LEFT JOIN world_info ew ON ew.world_id = e.world_id`
 
 // ScreenshotRepository persists screenshots in SQLite.
 type ScreenshotRepository struct {
@@ -154,23 +156,28 @@ func scanScreenshot(rows *sql.Rows) (*media.Screenshot, error) {
 	var id, filePath, worldID, worldNameResolved, authorID, authorName string
 	var takenAt sql.NullString
 	var fileSize sql.NullInt64
-	var enrichStatus, enrichSkip, enrichInstance string
+	var enrichStatus, enrichSkip, enrichInstance, participantsJSON string
 	if err := rows.Scan(&id, &filePath, &worldID, &worldNameResolved, &authorID, &authorName, &takenAt, &fileSize,
-		&enrichStatus, &enrichSkip, &enrichInstance); err != nil {
+		&enrichStatus, &enrichSkip, &enrichInstance, &participantsJSON); err != nil {
+		return nil, err
+	}
+	participants, err := ParticipantsFromJSON(participantsJSON)
+	if err != nil {
 		return nil, err
 	}
 	return &media.Screenshot{
-		ID:                   id,
-		FilePath:             filePath,
-		WorldID:              worldID,
-		WorldName:            worldNameResolved,
-		AuthorVRCUserID:      authorID,
-		AuthorDisplayName:    authorName,
-		TakenAt:              parseTime(takenAt),
-		FileSizeBytes:        parseInt64Ptr(fileSize),
-		EnrichmentStatus:     enrichStatus,
-		EnrichmentSkipReason: enrichSkip,
-		EnrichmentInstanceID: enrichInstance,
+		ID:                     id,
+		FilePath:               filePath,
+		WorldID:                worldID,
+		WorldName:              worldNameResolved,
+		AuthorVRCUserID:        authorID,
+		AuthorDisplayName:      authorName,
+		TakenAt:                parseTime(takenAt),
+		FileSizeBytes:          parseInt64Ptr(fileSize),
+		EnrichmentStatus:       enrichStatus,
+		EnrichmentSkipReason:   enrichSkip,
+		EnrichmentInstanceID:   enrichInstance,
+		EnrichmentParticipants: participants,
 	}, nil
 }
 
@@ -178,26 +185,31 @@ func scanScreenshotRow(row *sql.Row) (*media.Screenshot, error) {
 	var id, filePath, worldID, worldNameResolved, authorID, authorName string
 	var takenAt sql.NullString
 	var fileSize sql.NullInt64
-	var enrichStatus, enrichSkip, enrichInstance string
+	var enrichStatus, enrichSkip, enrichInstance, participantsJSON string
 	err := row.Scan(&id, &filePath, &worldID, &worldNameResolved, &authorID, &authorName, &takenAt, &fileSize,
-		&enrichStatus, &enrichSkip, &enrichInstance)
+		&enrichStatus, &enrichSkip, &enrichInstance, &participantsJSON)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
+	participants, err := ParticipantsFromJSON(participantsJSON)
+	if err != nil {
+		return nil, err
+	}
 	return &media.Screenshot{
-		ID:                   id,
-		FilePath:             filePath,
-		WorldID:              worldID,
-		WorldName:            worldNameResolved,
-		AuthorVRCUserID:      authorID,
-		AuthorDisplayName:    authorName,
-		TakenAt:              parseTime(takenAt),
-		FileSizeBytes:        parseInt64Ptr(fileSize),
-		EnrichmentStatus:     enrichStatus,
-		EnrichmentSkipReason: enrichSkip,
-		EnrichmentInstanceID: enrichInstance,
+		ID:                     id,
+		FilePath:               filePath,
+		WorldID:                worldID,
+		WorldName:              worldNameResolved,
+		AuthorVRCUserID:        authorID,
+		AuthorDisplayName:      authorName,
+		TakenAt:                parseTime(takenAt),
+		FileSizeBytes:          parseInt64Ptr(fileSize),
+		EnrichmentStatus:       enrichStatus,
+		EnrichmentSkipReason:   enrichSkip,
+		EnrichmentInstanceID:   enrichInstance,
+		EnrichmentParticipants: participants,
 	}, nil
 }
