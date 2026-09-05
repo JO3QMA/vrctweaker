@@ -43,14 +43,20 @@
           :border="false"
           stripe
         >
-          <el-table-column :label="t('activity.colJoin')" width="150">
+          <el-table-column
+            :label="t('activity.colJoin')"
+            :width="ENCOUNTER_LOG_TIME_COL_WIDTH"
+          >
             <template #default="{ row }">
               <span class="timeline-time">{{
                 formatEncounterLocal(row.joinedAt)
               }}</span>
             </template>
           </el-table-column>
-          <el-table-column :label="t('activity.colLeave')" width="150">
+          <el-table-column
+            :label="t('activity.colLeave')"
+            :width="ENCOUNTER_LOG_TIME_COL_WIDTH"
+          >
             <template #default="{ row }">
               <span class="timeline-time">{{
                 row.leftAt
@@ -153,17 +159,19 @@ import {
   eachLocalDateISO,
   localDateISO,
 } from "../utils/localDate";
-import { formatEncounteredAt } from "../utils/formatEncounteredAt";
-import { appLocaleToBcp47 } from "../i18n";
+import {
+  ENCOUNTER_LOG_TIME_COL_WIDTH,
+  formatEncounterLogTimestamp,
+} from "../utils/formatEncounteredAt";
 
 const PLAYTIME_CHART_MAX_DAYS = 14;
 const ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS = 400;
 
 const router = useRouter();
-const { t, locale } = useI18n();
+const { t } = useI18n();
 
 function formatEncounterLocal(iso: string): string {
-  return formatEncounteredAt(iso, appLocaleToBcp47(String(locale.value)));
+  return formatEncounterLogTimestamp(iso) ?? t("common.dash");
 }
 
 const encountersExpanded = ref(true);
@@ -478,6 +486,7 @@ onUnmounted(() => {
 .timeline-time {
   font-size: var(--font-size-12);
   color: var(--color-text-secondary);
+  white-space: nowrap;
 }
 
 .timeline-link {

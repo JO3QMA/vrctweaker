@@ -7,18 +7,28 @@
         {{ t("encounterHistory.empty") }}
       </div>
       <el-table v-else :data="rows" style="width: 100%" size="small" stripe>
-        <el-table-column :label="t('encounterHistory.colJoin')" width="155">
+        <el-table-column
+          :label="t('encounterHistory.colJoin')"
+          :width="ENCOUNTER_LOG_TIME_COL_WIDTH"
+        >
           <template #default="{ row }">
-            {{ formatEncounterLocal(row.joinedAt) }}
+            <span class="encounter-log-time">{{
+              formatEncounterLocal(row.joinedAt)
+            }}</span>
           </template>
         </el-table-column>
-        <el-table-column :label="t('encounterHistory.colLeave')" width="155">
+        <el-table-column
+          :label="t('encounterHistory.colLeave')"
+          :width="ENCOUNTER_LOG_TIME_COL_WIDTH"
+        >
           <template #default="{ row }">
-            {{
-              row.leftAt
-                ? formatEncounterLocal(row.leftAt)
-                : t("common.stillPresent")
-            }}
+            <span class="encounter-log-time">
+              {{
+                row.leftAt
+                  ? formatEncounterLocal(row.leftAt)
+                  : t("common.stillPresent")
+              }}
+            </span>
           </template>
         </el-table-column>
         <el-table-column
@@ -55,13 +65,15 @@ import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import VtAlert from "./VtAlert.vue";
 import { App, type UserEncounterDTO } from "../wails/app";
-import { formatEncounteredAt } from "../utils/formatEncounteredAt";
-import { appLocaleToBcp47 } from "../i18n";
+import {
+  ENCOUNTER_LOG_TIME_COL_WIDTH,
+  formatEncounterLogTimestamp,
+} from "../utils/formatEncounteredAt";
 
-const { t, locale } = useI18n();
+const { t } = useI18n();
 
 function formatEncounterLocal(iso: string): string {
-  return formatEncounteredAt(iso, appLocaleToBcp47(String(locale.value)));
+  return formatEncounterLogTimestamp(iso) ?? t("common.dash");
 }
 
 const props = withDefaults(
@@ -133,6 +145,10 @@ watch(
   padding: var(--space-block);
   text-align: center;
   color: var(--color-text-secondary);
+}
+
+.encounter-log-time {
+  white-space: nowrap;
 }
 
 .mono {
