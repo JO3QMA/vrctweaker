@@ -3,7 +3,7 @@
  * `el-table-column` の `width` は数値 px のみ有効（`22ch` は `22` px と解釈される）。
  * `yyyy/MM/DD HH:mm:ss`（19 文字）+ セル余白向け。
  */
-export const ENCOUNTER_LOG_TIME_COL_WIDTH = 130;
+export const ENCOUNTER_LOG_TIME_COL_WIDTH = 120;
 
 /** ISO 時刻文字列をロケール付き表示用文字列にする（ギャラリー・動画等）。 */
 export function formatEncounteredAt(

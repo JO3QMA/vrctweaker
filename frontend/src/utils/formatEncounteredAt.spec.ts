@@ -43,7 +43,7 @@ describe("formatEncounteredAt", () => {
 
 describe("formatEncounterLogTimestamp", () => {
   it("exports encounter log column width", () => {
-    expect(ENCOUNTER_LOG_TIME_COL_WIDTH).toBe(130);
+    expect(ENCOUNTER_LOG_TIME_COL_WIDTH).toBe(120);
   });
 
   it("formats valid ISO in local time as yyyy/MM/DD HH:mm:ss", () => {
