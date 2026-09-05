@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
+	"vrchat-tweaker/internal/domain/media"
 )
 
 const testRejoinInst = "wrld_test1111-1111-4111-8111-111111111101:42~public"
@@ -18,6 +19,23 @@ type fakeRejoinPlayRepo struct {
 
 func (f *fakeRejoinPlayRepo) List(context.Context, time.Time, time.Time) ([]*activity.PlaySession, error) {
 	return f.sessions, f.err
+}
+func (f *fakeRejoinPlayRepo) ListOverlappingAt(_ context.Context, at time.Time) ([]*activity.PlaySession, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	var out []*activity.PlaySession
+	for _, s := range f.sessions {
+		if media.SessionOverlapsAt(media.SessionAtTime{
+			InstanceID: s.InstanceID,
+			WorldID:    activity.WorldIDFromInstanceKey(s.InstanceID),
+			StartTime:  s.StartTime,
+			EndTime:    s.EndTime,
+		}, at) {
+			out = append(out, s)
+		}
+	}
+	return out, nil
 }
 func (f *fakeRejoinPlayRepo) GetByID(_ context.Context, id string) (*activity.PlaySession, error) {
 	if f.err != nil {

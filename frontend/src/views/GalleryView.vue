@@ -38,16 +38,49 @@
       <VtButton
         variant="secondary"
         data-testid="gallery-scan-folder"
-        :disabled="loading || scanning"
+        :disabled="loading || scanning || enriching"
         :loading="scanning"
         @click="scanFolder"
       >
         {{ scanning ? t("gallery.scanning") : t("gallery.scanFolder") }}
       </VtButton>
+      <VtButton
+        variant="secondary"
+        data-testid="gallery-enrich-batch"
+        :disabled="loading || scanning || enriching"
+        :loading="enriching"
+        @click="onEnrichBatch"
+      >
+        {{ t("gallery.enrichBatch") }}
+      </VtButton>
+      <VtSelect
+        v-model="filterEnrichment"
+        data-testid="gallery-enrichment-filter"
+        class="gallery-enrichment-filter"
+      >
+        <el-option :label="t('gallery.filterEnrichmentAll')" value="all" />
+        <el-option
+          :label="t('gallery.filterEnrichmentNeedsReview')"
+          value="needs_review"
+        />
+        <el-option
+          :label="t('gallery.filterEnrichmentNoMatch')"
+          value="no_match"
+        />
+        <el-option
+          :label="t('gallery.filterEnrichmentEnriched')"
+          value="success"
+        />
+      </VtSelect>
     </div>
 
     <VtAlert v-if="loadError" variant="danger" :title="loadError" />
     <VtAlert v-if="scanError" variant="warning" :title="scanError" />
+    <VtAlert
+      v-if="enrichBatchError"
+      variant="warning"
+      :title="enrichBatchError"
+    />
 
     <div class="gallery-body">
       <!-- グリッド一覧 -->
@@ -113,6 +146,15 @@
                         class="thumbnail"
                         @error="onThumbnailError"
                       />
+                      <VtTag
+                        v-for="tag in enrichmentBadgeTags(item)"
+                        :key="tag.label"
+                        class="enrichment-badge"
+                        :variant="tag.variant"
+                        size="small"
+                      >
+                        {{ tag.label }}
+                      </VtTag>
                     </div>
                   </div>
                 </div>
@@ -169,6 +211,12 @@
           <el-descriptions-item :label="t('gallery.authorDisplayName')">
             {{ selected.authorDisplayName || t("common.dash") }}
           </el-descriptions-item>
+          <el-descriptions-item
+            v-if="selected.enrichmentInstanceId"
+            :label="t('gallery.instanceId')"
+          >
+            {{ selected.enrichmentInstanceId }}
+          </el-descriptions-item>
           <el-descriptions-item :label="t('gallery.filePath')">
             <VtButton
               variant="primary"
@@ -188,6 +236,16 @@
           class="detail-action-alert"
           :title="detailActionError"
         />
+        <VtButton
+          variant="secondary"
+          class="detail-panel-action-btn"
+          data-testid="gallery-detail-enrich"
+          :disabled="!canEnrichSelected || enriching"
+          :loading="enriching"
+          @click="onEnrichSelected"
+        >
+          {{ t("gallery.enrichMetadata") }}
+        </VtButton>
         <VtButton
           variant="secondary"
           class="detail-panel-action-btn"
@@ -224,6 +282,10 @@ import VtAlert from "../components/VtAlert.vue";
 import VtButton from "../components/VtButton.vue";
 import VtIcon from "../components/VtIcon.vue";
 import VtInput from "../components/VtInput.vue";
+import VtSelect from "../components/VtSelect.vue";
+import VtTag from "../components/VtTag.vue";
+import { ElMessageBox } from "element-plus";
+import { showToast } from "../utils/showToast";
 import {
   ref,
   onMounted,
@@ -288,8 +350,11 @@ const scanning = ref(false);
 const scanProgress = ref<ScanProgressPayload | null>(null);
 const loadError = ref<string | null>(null);
 const scanError = ref<string | null>(null);
+const enrichBatchError = ref<string | null>(null);
 const filterWorldSearch = ref("");
 const filterDateRange = ref<GalleryDateRangeFilter | null>(null);
+const filterEnrichment = ref("all");
+const enriching = ref(false);
 const thumbnailUrls = ref<Record<string, string>>({});
 const collapsed = ref(new Set<string>());
 const gridScrollRef = ref<HTMLElement | null>(null);
@@ -402,9 +467,22 @@ const galleryDateLabels = computed(() =>
   ),
 );
 
+const filteredList = computed(() => {
+  const mode = filterEnrichment.value;
+  if (mode === "all") return list.value;
+  return list.value.filter((item) => {
+    const status = item.enrichmentStatus ?? "";
+    if (mode === "success") return status === "success";
+    if (mode === "no_match") return status === "no_match";
+    if (mode === "needs_review")
+      return status === "conflict" || status === "ambiguous";
+    return true;
+  });
+});
+
 const flatGalleryRows = computed(() =>
   buildGalleryVirtualRows(
-    list.value,
+    filteredList.value,
     columnCount.value,
     collapsed.value,
     galleryDateLabels.value,
@@ -885,6 +963,102 @@ function select(item: ScreenshotDTO): void {
 
 const joinError = ref<string | null>(null);
 
+const canEnrichSelected = computed(
+  () =>
+    !!selected.value &&
+    selected.value.enrichmentStatus !== "success" &&
+    !enriching.value,
+);
+
+function enrichmentBadge(
+  item: ScreenshotDTO,
+): { label: string; variant: "success" | "warning" | "info" } | null {
+  switch (item.enrichmentStatus) {
+    case "success":
+      return { label: t("gallery.badgeEnriched"), variant: "success" };
+    case "no_match":
+      return { label: t("gallery.badgeNoMatch"), variant: "info" };
+    case "conflict":
+    case "ambiguous":
+      return { label: t("gallery.badgeNeedsReview"), variant: "warning" };
+    default:
+      return null;
+  }
+}
+
+function enrichmentBadgeTags(
+  item: ScreenshotDTO,
+): { label: string; variant: "success" | "warning" | "info" }[] {
+  const badge = enrichmentBadge(item);
+  return badge ? [badge] : [];
+}
+
+async function refreshSelectedFromList(): Promise<void> {
+  if (!selected.value) return;
+  const hit = list.value.find((s) => s.id === selected.value?.id);
+  if (hit) selected.value = hit;
+}
+
+async function onEnrichSelected(): Promise<void> {
+  if (!selected.value || !canEnrichSelected.value) return;
+  enriching.value = true;
+  detailActionError.value = null;
+  try {
+    const res = await App.enrichScreenshotMetadata(selected.value.id);
+    switch (res?.status) {
+      case "success":
+        showToast.success(t("gallery.enrichSuccess"));
+        break;
+      case "no_match":
+        showToast.info(t("gallery.enrichNoMatch"));
+        break;
+      case "conflict":
+      case "ambiguous":
+        showToast.warning(t("gallery.enrichNeedsReview"));
+        break;
+    }
+    await load();
+    await refreshSelectedFromList();
+  } catch (err) {
+    detailActionError.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    enriching.value = false;
+  }
+}
+
+async function onEnrichBatch(): Promise<void> {
+  try {
+    await ElMessageBox.confirm(t("gallery.enrichBatchConfirm"), {
+      type: "warning",
+    });
+  } catch (err) {
+    if (err === "cancel" || err === "close") {
+      enrichBatchError.value = null;
+      return;
+    }
+    enrichBatchError.value = err instanceof Error ? err.message : String(err);
+    return;
+  }
+  enriching.value = true;
+  enrichBatchError.value = null;
+  try {
+    const res = await App.enrichEligibleScreenshotMetadata();
+    if ((res?.processed ?? 0) > 0) {
+      showToast.success(
+        t("gallery.enrichBatchDone", { n: String(res?.processed ?? 0) }),
+      );
+    } else {
+      showToast.info(t("gallery.enrichNothing"));
+    }
+    await load();
+    await refreshSelectedFromList();
+  } catch (err) {
+    enrichBatchError.value = err instanceof Error ? err.message : String(err);
+  } finally {
+    enriching.value = false;
+  }
+}
+
 async function onJoin(): Promise<void> {
   if (!selected.value?.worldId || selected.value.worldId.trim() === "") return;
   joinError.value = null;
@@ -1052,9 +1226,18 @@ onMounted(() => {
 }
 
 .thumbnail-wrap {
+  position: relative;
   width: 100%;
   height: 100%;
   background: var(--color-bg-muted);
+}
+.enrichment-badge {
+  position: absolute;
+  left: var(--space-inline-tight);
+  bottom: var(--space-inline-tight);
+}
+.gallery-enrichment-filter {
+  min-width: 10rem;
 }
 
 .thumbnail {

@@ -254,6 +254,19 @@
       <el-text type="info" size="small" class="hint">{{
         t("settings.retentionHint")
       }}</el-text>
+      <div class="setting-row power-setting-row">
+        <div class="power-toggle-label">
+          <span>{{ t("settings.galleryAutoEnrich") }}</span>
+          <el-text type="info" size="small" class="hint block-hint">{{
+            t("settings.galleryAutoEnrichHint")
+          }}</el-text>
+        </div>
+        <VtSwitch
+          v-model="galleryAutoEnrichMetadata"
+          data-testid="settings-gallery-auto-enrich"
+          @change="saveGalleryAutoEnrich"
+        />
+      </div>
     </el-card>
 
     <!-- OSS ライセンス -->
@@ -385,6 +398,7 @@ const loginError = ref("");
 const loginLoading = ref(false);
 
 const logRetentionDays = ref(30);
+const galleryAutoEnrichMetadata = ref(true);
 const suppressSleepWhileVRChat = ref(false);
 const closeToTray = ref(true);
 const maintenanceError = ref("");
@@ -471,6 +485,7 @@ onMounted(async () => {
     await loadSelfProfileSummary();
   }
   logRetentionDays.value = await App.getLogRetentionDays();
+  galleryAutoEnrichMetadata.value = await App.getGalleryAutoEnrichMetadata();
   suppressSleepWhileVRChat.value = await App.getSuppressSleepWhileVRChat();
   closeToTray.value = await App.getCloseToTray();
   const ps = await App.getPathSettings();
@@ -547,6 +562,16 @@ async function refreshFriends() {
 
 async function saveRetention() {
   await App.setLogRetentionDays(logRetentionDays.value);
+}
+
+async function saveGalleryAutoEnrich() {
+  const attempted = galleryAutoEnrichMetadata.value;
+  try {
+    await App.setGalleryAutoEnrichMetadata(attempted);
+  } catch (e) {
+    galleryAutoEnrichMetadata.value = !attempted;
+    showToast.error(formatBackendError(e, t("settings.errOperation")));
+  }
 }
 
 async function saveSuppressSleepWhileVRChat() {

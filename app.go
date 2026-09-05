@@ -140,6 +140,13 @@ func (a *App) startup(ctx context.Context) {
 	}
 	a.launcher = usecase.NewLauncherUseCase(launcherRepo)
 	a.media = usecase.NewMediaUseCase(mediaRepo, worldRepo, userCacheRepo)
+	enrichmentRepo := sqlite.NewScreenshotEnrichmentRepository(db)
+	a.media.SetEnrichmentDeps(usecase.MediaEnrichmentDeps{
+		PlaySessions: playRepo,
+		Encounters:   encounterRepo,
+		Enrichment:   enrichmentRepo,
+		Settings:     settingsRepo,
+	})
 	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo).
 		WithVideoPlaybackRepo(videoPlaybackRepo)
 	a.identity = usecase.NewIdentityUseCase(userCacheRepo, apiClient, credStore, settingsRepo, notify)
@@ -306,6 +313,7 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 		finalize := live == nil || !live[fp]
 		a.ingestOneActivityLogBootstrap(ctx, absWatch, fp, parser, logger, emitEncounters, emitVideoPlayback, cp, finalize, nil)
 	}
+	a.retryScreenshotEnrichment()
 }
 
 func bootstrapLiveLogFiles(paths []string) map[string]bool {
@@ -797,6 +805,79 @@ func (a *App) GetScreenshot(id string) (*ScreenshotDTO, error) {
 	return toScreenshotDTO(s), nil
 }
 
+func (a *App) appContext() context.Context {
+	if a.ctx != nil {
+		return a.ctx
+	}
+	return context.Background()
+}
+
+func (a *App) enrichmentContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(a.appContext(), 30*time.Second)
+}
+
+// EnrichScreenshotMetadata correlates activity and embeds instance/participant metadata into the file.
+func (a *App) EnrichScreenshotMetadata(screenshotID string) (*EnrichScreenshotResultDTO, error) {
+	ctx, cancel := a.enrichmentContext()
+	defer cancel()
+	res, err := a.media.EnrichScreenshot(ctx, screenshotID, true)
+	if err != nil {
+		return nil, err
+	}
+	if res == nil {
+		return &EnrichScreenshotResultDTO{ScreenshotID: screenshotID, Status: "skipped"}, nil
+	}
+	dto := &EnrichScreenshotResultDTO{
+		ScreenshotID: res.ScreenshotID,
+		Status:       res.Status,
+		SkipReason:   res.SkipReason,
+		InstanceID:   res.InstanceID,
+	}
+	runtime.EventsEmit(ctx, galleryScreenshotsChangedEvent, struct{}{})
+	return dto, nil
+}
+
+// EnrichEligibleScreenshotMetadata enriches all eligible screenshots in gallery scope.
+func (a *App) EnrichEligibleScreenshotMetadata() (*EnrichBatchResultDTO, error) {
+	ctx, cancel := a.enrichmentContext()
+	defer cancel()
+	res, err := a.media.EnrichEligibleScreenshots(ctx, nil, true)
+	if err != nil {
+		return nil, err
+	}
+	dto := &EnrichBatchResultDTO{Processed: res.Processed, Results: []EnrichScreenshotResultDTO{}}
+	for _, r := range res.Results {
+		dto.Results = append(dto.Results, EnrichScreenshotResultDTO{
+			ScreenshotID: r.ScreenshotID,
+			Status:       r.Status,
+			SkipReason:   r.SkipReason,
+			InstanceID:   r.InstanceID,
+		})
+	}
+	runtime.EventsEmit(ctx, galleryScreenshotsChangedEvent, struct{}{})
+	return dto, nil
+}
+
+// GetGalleryAutoEnrichMetadata returns whether screenshot ingest auto-enrichment is enabled.
+func (a *App) GetGalleryAutoEnrichMetadata() (bool, error) {
+	return a.settings.GetGalleryAutoEnrichMetadata(a.ctx)
+}
+
+// SetGalleryAutoEnrichMetadata saves the screenshot ingest auto-enrichment toggle.
+func (a *App) SetGalleryAutoEnrichMetadata(enabled bool) error {
+	return a.settings.SetGalleryAutoEnrichMetadata(a.ctx, enabled)
+}
+
+func (a *App) retryScreenshotEnrichment() {
+	if a.media == nil {
+		return
+	}
+	ctx := a.appContext()
+	if _, err := a.media.RetryPendingEnrichments(ctx); err != nil {
+		runtime.LogWarning(ctx, "screenshot enrichment retry: "+err.Error())
+	}
+}
+
 // ScreenshotThumbnailDataURL returns a JPEG data URL for the screenshot thumbnail (for WebView; avoids file://).
 // Uses the DB cache when valid; otherwise builds and stores a thumbnail from the source file (lazy fill for legacy rows).
 func (a *App) ScreenshotThumbnailDataURL(id string) (string, error) {
@@ -925,6 +1006,9 @@ func (a *App) ScanScreenshotDir(path string) (int, error) {
 	}()
 
 	count, err = a.media.SyncPictureFolder(scanCtx, path, em.emit)
+	if err == nil {
+		a.retryScreenshotEnrichment()
+	}
 	return count, err
 }
 

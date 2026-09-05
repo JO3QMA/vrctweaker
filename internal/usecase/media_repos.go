@@ -18,3 +18,9 @@ type screenshotRepo interface {
 	UpsertThumbnail(ctx context.Context, screenshotID string, thumb *media.ScreenshotThumbnail) error
 	DeleteThumbnail(ctx context.Context, screenshotID string) error
 }
+
+type screenshotEnrichmentRepo interface {
+	GetByScreenshotID(ctx context.Context, screenshotID string) (*media.ScreenshotEnrichment, error)
+	Save(ctx context.Context, e *media.ScreenshotEnrichment) error
+	ListByStatus(ctx context.Context, status string) ([]*media.ScreenshotEnrichment, error)
+}

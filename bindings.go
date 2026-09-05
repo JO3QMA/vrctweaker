@@ -100,14 +100,31 @@ type ServerStatusHeadlineDTO struct {
 
 // ScreenshotDTO is the frontend-facing screenshot.
 type ScreenshotDTO struct {
-	ID                string  `json:"id"`
-	FilePath          string  `json:"filePath"`
-	WorldID           string  `json:"worldId"`
-	WorldName         string  `json:"worldName"`
-	AuthorVRCUserID   string  `json:"authorVrcUserId,omitempty"`
-	AuthorDisplayName string  `json:"authorDisplayName,omitempty"`
-	TakenAt           *string `json:"takenAt,omitempty"`
-	FileSizeBytes     *int64  `json:"fileSizeBytes,omitempty"`
+	ID                   string  `json:"id"`
+	FilePath             string  `json:"filePath"`
+	WorldID              string  `json:"worldId"`
+	WorldName            string  `json:"worldName"`
+	AuthorVRCUserID      string  `json:"authorVrcUserId,omitempty"`
+	AuthorDisplayName    string  `json:"authorDisplayName,omitempty"`
+	TakenAt              *string `json:"takenAt,omitempty"`
+	FileSizeBytes        *int64  `json:"fileSizeBytes,omitempty"`
+	EnrichmentStatus     string  `json:"enrichmentStatus,omitempty"`
+	EnrichmentSkipReason string  `json:"enrichmentSkipReason,omitempty"`
+	EnrichmentInstanceID string  `json:"enrichmentInstanceId,omitempty"`
+}
+
+// EnrichBatchResultDTO is the outcome of batch metadata enrichment.
+type EnrichBatchResultDTO struct {
+	Processed int                         `json:"processed"`
+	Results   []EnrichScreenshotResultDTO `json:"results"`
+}
+
+// EnrichScreenshotResultDTO is one screenshot enrichment outcome.
+type EnrichScreenshotResultDTO struct {
+	ScreenshotID string `json:"screenshotId"`
+	Status       string `json:"status"`
+	SkipReason   string `json:"skipReason,omitempty"`
+	InstanceID   string `json:"instanceId,omitempty"`
 }
 
 // ScreenshotSearchDTO is the filter for SearchScreenshots.
@@ -131,12 +148,15 @@ func toScreenshotDTO(s *media.Screenshot) *ScreenshotDTO {
 		return nil
 	}
 	dto := &ScreenshotDTO{
-		ID:                s.ID,
-		FilePath:          s.FilePath,
-		WorldID:           s.WorldID,
-		WorldName:         s.WorldName,
-		AuthorVRCUserID:   s.AuthorVRCUserID,
-		AuthorDisplayName: s.AuthorDisplayName,
+		ID:                   s.ID,
+		FilePath:             s.FilePath,
+		WorldID:              s.WorldID,
+		WorldName:            s.WorldName,
+		AuthorVRCUserID:      s.AuthorVRCUserID,
+		AuthorDisplayName:    s.AuthorDisplayName,
+		EnrichmentStatus:     s.EnrichmentStatus,
+		EnrichmentSkipReason: s.EnrichmentSkipReason,
+		EnrichmentInstanceID: s.EnrichmentInstanceID,
 	}
 	if s.TakenAt != nil {
 		dto.TakenAt = formatRFC3339Ptr(s.TakenAt)

@@ -56,6 +56,27 @@ func (uc *SettingsUseCase) SetLogRetentionDays(ctx context.Context, days int) er
 	return uc.repo.Set(ctx, "log_retention_days", strconv.Itoa(days))
 }
 
+// GetGalleryAutoEnrichMetadata returns whether ingest should auto-enrich screenshots (default true).
+func (uc *SettingsUseCase) GetGalleryAutoEnrichMetadata(ctx context.Context) (bool, error) {
+	v, err := uc.repo.Get(ctx, keyGalleryAutoEnrichMetadata)
+	if err != nil {
+		return true, nil
+	}
+	if v == "" {
+		return true, nil
+	}
+	return v == "1" || v == "true", nil
+}
+
+// SetGalleryAutoEnrichMetadata saves the auto-enrich toggle.
+func (uc *SettingsUseCase) SetGalleryAutoEnrichMetadata(ctx context.Context, enabled bool) error {
+	val := "0"
+	if enabled {
+		val = "1"
+	}
+	return uc.repo.Set(ctx, keyGalleryAutoEnrichMetadata, val)
+}
+
 // GetOutputLogPath returns the configured VRChat log folder (empty if not set).
 func (uc *SettingsUseCase) GetOutputLogPath(ctx context.Context) (string, error) {
 	return uc.repo.Get(ctx, keyOutputLogPath)

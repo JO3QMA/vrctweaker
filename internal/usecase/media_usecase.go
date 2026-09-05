@@ -43,10 +43,14 @@ var extractScreenshotMetadata = media.Extract
 
 // MediaUseCase handles screenshot scanning and management.
 type MediaUseCase struct {
-	repo          screenshotRepo
-	worldRepo     worldInfoRepo
-	userCacheRepo userCacheRepo
-	fileExists    *galleryFileExistsCache
+	repo           screenshotRepo
+	worldRepo      worldInfoRepo
+	userCacheRepo  userCacheRepo
+	fileExists     *galleryFileExistsCache
+	playSessions   playSessionRepo
+	encounters     userEncounterRepo
+	enrichment     screenshotEnrichmentRepo
+	enrichSettings appSettingsRepo
 }
 
 // NewMediaUseCase creates a new MediaUseCase.
@@ -164,6 +168,7 @@ func (uc *MediaUseCase) ingestScreenshotFile(ctx context.Context, path string, i
 	uc.upsertWorldInfo(ctx, meta.WorldID, meta.WorldDisplayName, at)
 	uc.upsertAuthorFromScreenshot(ctx, meta.AuthorVRCUserID, meta.AuthorDisplayName, at)
 	_ = uc.EnsureScreenshotThumbnail(ctx, s.ID)
+	uc.TryEnrichAfterIngest(ctx, s.ID)
 	return s, true, nil
 }
 
