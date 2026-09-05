@@ -99,6 +99,8 @@ func (a *App) quitApplication() {
 	if a.ctx == nil {
 		return
 	}
+	// runtime.Quit also invokes OnBeforeClose; bypass close-to-tray hide for explicit quit.
+	a.quitPending.Store(true)
 	a.stopTray()
 	runtime.Quit(a.ctx)
 }
@@ -112,6 +114,9 @@ func (a *App) hideMainWindow(ctx context.Context) {
 
 // handleBeforeClose hides the window when close-to-tray is enabled; returns true to prevent quit.
 func (a *App) handleBeforeClose(ctx context.Context) bool {
+	if a.quitPending.Load() {
+		return false
+	}
 	if !a.closeToTrayEffective(ctx) {
 		return false
 	}

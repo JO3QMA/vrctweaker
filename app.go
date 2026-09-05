@@ -10,6 +10,7 @@ import (
 	goruntime "runtime" // stdlib; wails v2/pkg/runtime is imported as runtime below
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/gen2brain/beeep"
@@ -84,7 +85,8 @@ type App struct {
 	activityIngestMu       sync.Mutex
 	activityIngestAdapters map[string]*logwatcher.ActivityIngestAdapter
 
-	tray tray.Manager
+	tray        tray.Manager
+	quitPending atomic.Bool
 }
 
 // NewApp creates a new App application struct.
