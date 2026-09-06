@@ -167,7 +167,32 @@
             {{ selected.worldName || t("common.dash") }}
           </el-descriptions-item>
           <el-descriptions-item :label="t('gallery.participants')">
-            {{ formatParticipantNames(selected.enrichmentParticipants) }}
+            <ul
+              v-if="selectedParticipants.length > 0"
+              class="gallery-participants-list"
+              data-testid="gallery-detail-participants"
+            >
+              <li
+                v-for="(participant, index) in selectedParticipants"
+                :key="participantKey(participant, index)"
+                class="gallery-participants-item"
+              >
+                <VtButton
+                  v-if="participant.vrcUserId"
+                  variant="primary"
+                  link
+                  class="gallery-participant-link"
+                  :data-testid="`gallery-participant-link-${index}`"
+                  @click="openParticipantProfile(participant)"
+                >
+                  {{ participantLabel(participant) }}
+                </VtButton>
+                <span v-else class="gallery-participant-name">{{
+                  participantLabel(participant)
+                }}</span>
+              </li>
+            </ul>
+            <span v-else>{{ t("common.dash") }}</span>
           </el-descriptions-item>
           <el-descriptions-item :label="t('gallery.authorDisplayName')">
             {{ selected.authorDisplayName || t("common.dash") }}
@@ -242,6 +267,7 @@ import {
   watchEffect,
   nextTick,
 } from "vue";
+import { useRouter } from "vue-router";
 import { useI18n } from "vue-i18n";
 import {
   App,
@@ -262,9 +288,11 @@ import {
   type GalleryDateRangeFilter,
 } from "./gallerySearchFilter";
 import { formatEncounteredAt } from "../utils/formatEncounteredAt";
+import { navigateToUserProfile } from "../utils/userProfileNavigation";
 import { appLocaleToBcp47 } from "../i18n";
 
 const { t, locale } = useI18n();
+const router = useRouter();
 
 const FILTER_DEBOUNCE_MS = 400;
 const GALLERY_SCREENSHOTS_CHANGED_DEBOUNCE_MS = 400;
@@ -892,14 +920,38 @@ function select(item: ScreenshotDTO): void {
   detailActionError.value = null;
 }
 
-function formatParticipantNames(
-  participants?: Array<{ displayName?: string }> | null,
+type GalleryParticipant = NonNullable<
+  ScreenshotDTO["enrichmentParticipants"]
+>[number];
+
+const selectedParticipants = computed((): GalleryParticipant[] => {
+  const list = selected.value?.enrichmentParticipants;
+  return list?.length ? list : [];
+});
+
+function participantLabel(participant: GalleryParticipant): string {
+  const name = participant.displayName?.trim();
+  return name || t("common.dash");
+}
+
+function participantKey(
+  participant: GalleryParticipant,
+  index: number,
 ): string {
-  if (!participants?.length) return t("common.dash");
-  const names = participants
-    .map((p) => p.displayName?.trim())
-    .filter((name): name is string => !!name);
-  return names.length > 0 ? names.join(", ") : t("common.dash");
+  const id = participant.vrcUserId?.trim();
+  return id || `participant-${index}`;
+}
+
+async function openParticipantProfile(
+  participant: GalleryParticipant,
+): Promise<void> {
+  const vrcUserId = participant.vrcUserId?.trim();
+  if (!vrcUserId) return;
+  await navigateToUserProfile(
+    router,
+    vrcUserId,
+    participant.displayName?.trim() ?? "",
+  );
 }
 
 const joinError = ref<string | null>(null);
@@ -1109,6 +1161,21 @@ onMounted(() => {
 
 .detail-action-alert {
   margin: var(--space-form-field) 0;
+}
+
+.gallery-participants-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gallery-participants-item + .gallery-participants-item {
+  margin-top: var(--space-inline-tight);
+}
+
+.gallery-participant-link {
+  padding: 0;
+  height: auto;
 }
 
 .detail-panel-action-btn {
