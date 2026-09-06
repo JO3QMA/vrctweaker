@@ -98,33 +98,26 @@ type ServerStatusHeadlineDTO struct {
 	Name string `json:"name"`
 }
 
+// EnrichmentParticipantDTO is one participant at screenshot time (display name for UI).
+type EnrichmentParticipantDTO struct {
+	VRCUserID   string `json:"vrcUserId,omitempty"`
+	DisplayName string `json:"displayName"`
+}
+
 // ScreenshotDTO is the frontend-facing screenshot.
 type ScreenshotDTO struct {
-	ID                   string  `json:"id"`
-	FilePath             string  `json:"filePath"`
-	WorldID              string  `json:"worldId"`
-	WorldName            string  `json:"worldName"`
-	AuthorVRCUserID      string  `json:"authorVrcUserId,omitempty"`
-	AuthorDisplayName    string  `json:"authorDisplayName,omitempty"`
-	TakenAt              *string `json:"takenAt,omitempty"`
-	FileSizeBytes        *int64  `json:"fileSizeBytes,omitempty"`
-	EnrichmentStatus     string  `json:"enrichmentStatus,omitempty"`
-	EnrichmentSkipReason string  `json:"enrichmentSkipReason,omitempty"`
-	EnrichmentInstanceID string  `json:"enrichmentInstanceId,omitempty"`
-}
-
-// EnrichBatchResultDTO is the outcome of batch metadata enrichment.
-type EnrichBatchResultDTO struct {
-	Processed int                         `json:"processed"`
-	Results   []EnrichScreenshotResultDTO `json:"results"`
-}
-
-// EnrichScreenshotResultDTO is one screenshot enrichment outcome.
-type EnrichScreenshotResultDTO struct {
-	ScreenshotID string `json:"screenshotId"`
-	Status       string `json:"status"`
-	SkipReason   string `json:"skipReason,omitempty"`
-	InstanceID   string `json:"instanceId,omitempty"`
+	ID                     string                     `json:"id"`
+	FilePath               string                     `json:"filePath"`
+	WorldID                string                     `json:"worldId"`
+	WorldName              string                     `json:"worldName"`
+	AuthorVRCUserID        string                     `json:"authorVrcUserId,omitempty"`
+	AuthorDisplayName      string                     `json:"authorDisplayName,omitempty"`
+	TakenAt                *string                    `json:"takenAt,omitempty"`
+	FileSizeBytes          *int64                     `json:"fileSizeBytes,omitempty"`
+	EnrichmentStatus       string                     `json:"enrichmentStatus,omitempty"`
+	EnrichmentSkipReason   string                     `json:"enrichmentSkipReason,omitempty"`
+	EnrichmentInstanceID   string                     `json:"enrichmentInstanceId,omitempty"`
+	EnrichmentParticipants []EnrichmentParticipantDTO `json:"enrichmentParticipants,omitempty"`
 }
 
 // ScreenshotSearchDTO is the filter for SearchScreenshots.
@@ -157,6 +150,15 @@ func toScreenshotDTO(s *media.Screenshot) *ScreenshotDTO {
 		EnrichmentStatus:     s.EnrichmentStatus,
 		EnrichmentSkipReason: s.EnrichmentSkipReason,
 		EnrichmentInstanceID: s.EnrichmentInstanceID,
+	}
+	if len(s.EnrichmentParticipants) > 0 {
+		dto.EnrichmentParticipants = make([]EnrichmentParticipantDTO, len(s.EnrichmentParticipants))
+		for i, p := range s.EnrichmentParticipants {
+			dto.EnrichmentParticipants[i] = EnrichmentParticipantDTO{
+				VRCUserID:   p.VRCUserID,
+				DisplayName: p.DisplayName,
+			}
+		}
 	}
 	if s.TakenAt != nil {
 		dto.TakenAt = formatRFC3339Ptr(s.TakenAt)

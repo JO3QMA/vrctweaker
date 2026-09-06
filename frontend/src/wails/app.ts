@@ -33,18 +33,6 @@ export type ServerStatusHeadlineDTO = WailsDTO<main.ServerStatusHeadlineDTO>;
 export type LaunchArgsParsedDTO = WailsDTO<launcher.LaunchArgsParsed>;
 export type ScreenshotDTO = WailsDTO<main.ScreenshotDTO>;
 export type ScreenshotSearchDTO = WailsDTO<main.ScreenshotSearchDTO>;
-/** Gallery metadata enrichment result (bindings.EnrichScreenshotResultDTO). */
-export type EnrichScreenshotResultDTO = {
-  screenshotId: string;
-  status: string;
-  skipReason?: string;
-  instanceId?: string;
-};
-/** Gallery batch enrichment result (bindings.EnrichBatchResultDTO). */
-export type EnrichBatchResultDTO = {
-  processed: number;
-  results: EnrichScreenshotResultDTO[];
-};
 export type UserEncounterDTO = WailsDTO<main.UserEncounterDTO>;
 /** Video playback history row (bindings.VideoPlaybackDTO); local until wails generate. */
 export type VideoPlaybackDTO = {
@@ -425,16 +413,6 @@ async function nullableStringDialog(
   return result && result !== "" ? result : null;
 }
 
-function emptyEnrichBatchResult(): EnrichBatchResultDTO {
-  return { processed: 0, results: [] };
-}
-
-function emptyEnrichScreenshotResult(
-  screenshotId = "",
-): EnrichScreenshotResultDTO {
-  return { screenshotId, status: "skipped" };
-}
-
 function emptyUserProfileNavigation(
   vrcUserID: string,
 ): UserProfileNavigationDTO {
@@ -612,20 +590,6 @@ export const App = {
   ),
   scanScreenshotDir: bindGo((a, path: string) => a.ScanScreenshotDir(path), 0),
   isGalleryScanning: bindGo((a) => a.IsGalleryScanning(), false),
-  enrichScreenshotMetadata: (screenshotId: string) =>
-    callApp<EnrichScreenshotResultDTO>(
-      (a) =>
-        a.EnrichScreenshotMetadata(
-          screenshotId,
-        ) as Promise<EnrichScreenshotResultDTO>,
-      emptyEnrichScreenshotResult(screenshotId),
-    ),
-  enrichEligibleScreenshotMetadata: () =>
-    callApp<EnrichBatchResultDTO>(
-      (a) =>
-        a.EnrichEligibleScreenshotMetadata() as Promise<EnrichBatchResultDTO>,
-      emptyEnrichBatchResult(),
-    ),
   getGalleryAutoEnrichMetadata: bindGo(
     (a) => a.GetGalleryAutoEnrichMetadata(),
     true,

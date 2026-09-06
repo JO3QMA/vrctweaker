@@ -814,52 +814,6 @@ func (a *App) appContext() context.Context {
 	return context.Background()
 }
 
-func (a *App) enrichmentContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(a.appContext(), 30*time.Second)
-}
-
-// EnrichScreenshotMetadata correlates activity and embeds instance/participant metadata into the file.
-func (a *App) EnrichScreenshotMetadata(screenshotID string) (*EnrichScreenshotResultDTO, error) {
-	ctx, cancel := a.enrichmentContext()
-	defer cancel()
-	res, err := a.media.EnrichScreenshot(ctx, screenshotID, true)
-	if err != nil {
-		return nil, err
-	}
-	if res == nil {
-		return &EnrichScreenshotResultDTO{ScreenshotID: screenshotID, Status: "skipped"}, nil
-	}
-	dto := &EnrichScreenshotResultDTO{
-		ScreenshotID: res.ScreenshotID,
-		Status:       res.Status,
-		SkipReason:   res.SkipReason,
-		InstanceID:   res.InstanceID,
-	}
-	runtime.EventsEmit(ctx, galleryScreenshotsChangedEvent, struct{}{})
-	return dto, nil
-}
-
-// EnrichEligibleScreenshotMetadata enriches all eligible screenshots in gallery scope.
-func (a *App) EnrichEligibleScreenshotMetadata() (*EnrichBatchResultDTO, error) {
-	ctx, cancel := a.enrichmentContext()
-	defer cancel()
-	res, err := a.media.EnrichEligibleScreenshots(ctx, nil, true)
-	if err != nil {
-		return nil, err
-	}
-	dto := &EnrichBatchResultDTO{Processed: res.Processed, Results: []EnrichScreenshotResultDTO{}}
-	for _, r := range res.Results {
-		dto.Results = append(dto.Results, EnrichScreenshotResultDTO{
-			ScreenshotID: r.ScreenshotID,
-			Status:       r.Status,
-			SkipReason:   r.SkipReason,
-			InstanceID:   r.InstanceID,
-		})
-	}
-	runtime.EventsEmit(ctx, galleryScreenshotsChangedEvent, struct{}{})
-	return dto, nil
-}
-
 // GetGalleryAutoEnrichMetadata returns whether screenshot ingest auto-enrichment is enabled.
 func (a *App) GetGalleryAutoEnrichMetadata() (bool, error) {
 	return a.settings.GetGalleryAutoEnrichMetadata(a.ctx)

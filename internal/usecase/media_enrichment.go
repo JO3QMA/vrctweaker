@@ -22,12 +22,6 @@ type EnrichScreenshotResult struct {
 	InstanceID   string
 }
 
-// EnrichBatchResult aggregates batch enrichment outcomes.
-type EnrichBatchResult struct {
-	Processed int
-	Results   []EnrichScreenshotResult
-}
-
 // MediaEnrichmentDeps wires activity and enrichment persistence into MediaUseCase.
 type MediaEnrichmentDeps struct {
 	PlaySessions playSessionRepo
@@ -112,53 +106,6 @@ func (uc *MediaUseCase) EnrichScreenshot(ctx context.Context, screenshotID strin
 		return nil, errScreenshotNotFound
 	}
 	return uc.enrichScreenshotRow(ctx, s, writeFile, nil)
-}
-
-// EnrichEligibleScreenshots enriches eligible screenshots (all when ids empty).
-func (uc *MediaUseCase) EnrichEligibleScreenshots(ctx context.Context, ids []string, writeFile bool) (*EnrichBatchResult, error) {
-	if uc.enrichment == nil {
-		return nil, fmt.Errorf("enrichment not configured")
-	}
-	var targets []*media.Screenshot
-	if len(ids) > 0 {
-		for _, id := range ids {
-			s, err := uc.repo.GetByID(ctx, trimID(id))
-			if err != nil {
-				return nil, err
-			}
-			if s != nil {
-				targets = append(targets, s)
-			}
-		}
-	} else {
-		list, err := uc.repo.List(ctx, nil)
-		if err != nil {
-			return nil, err
-		}
-		targets = list
-	}
-	out := &EnrichBatchResult{}
-	for _, s := range targets {
-		if err := ctx.Err(); err != nil {
-			return out, err
-		}
-		eligible, fileMeta, err := uc.isScreenshotEligibleWithMeta(ctx, s)
-		if err != nil {
-			return out, err
-		}
-		if !eligible {
-			continue
-		}
-		res, err := uc.enrichScreenshotRow(ctx, s, writeFile, &fileMeta)
-		if err != nil {
-			return out, err
-		}
-		if res != nil {
-			out.Processed++
-			out.Results = append(out.Results, *res)
-		}
-	}
-	return out, nil
 }
 
 type screenshotFileMeta struct {
@@ -279,18 +226,6 @@ func (uc *MediaUseCase) correlateForScreenshot(ctx context.Context, s *media.Scr
 		filterWorld = xmpWorldID
 	}
 	return media.CorrelateActivity(takenAt, filterWorld, xmpWorldID, existingInstanceID, sessionDTOs, encDTOs)
-}
-
-func (uc *MediaUseCase) isScreenshotEligibleWithMeta(ctx context.Context, s *media.Screenshot) (bool, screenshotFileMeta, error) {
-	existing, err := uc.enrichment.GetByScreenshotID(ctx, s.ID)
-	if err != nil {
-		return false, screenshotFileMeta{}, err
-	}
-	meta, err := readScreenshotFileMeta(s.FilePath)
-	if err != nil {
-		return false, screenshotFileMeta{}, err
-	}
-	return media.IsEligibleForEnrichment(s.WorldID, meta.hasMetaDate, meta.fields, existing), meta, nil
 }
 
 func (uc *MediaUseCase) pendingEnrichment(screenshotID, reason string) *media.ScreenshotEnrichment {

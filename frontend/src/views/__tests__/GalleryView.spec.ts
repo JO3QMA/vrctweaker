@@ -42,6 +42,7 @@ const {
   mockScreenshotThumbnailDataURL,
   mockOpenScreenshotExternally,
   mockRevealScreenshotInFileManager,
+  mockNavigateToUserProfile,
 } = vi.hoisted(() => ({
   mockScreenshots: vi.fn(),
   mockSearchScreenshots: vi.fn(),
@@ -53,6 +54,15 @@ const {
   mockScreenshotThumbnailDataURL: vi.fn(),
   mockOpenScreenshotExternally: vi.fn(),
   mockRevealScreenshotInFileManager: vi.fn(),
+  mockNavigateToUserProfile: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock("vue-router", () => ({
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
+vi.mock("../../utils/userProfileNavigation", () => ({
+  navigateToUserProfile: mockNavigateToUserProfile,
 }));
 
 vi.mock("../../wails/app", async (importOriginal) => {
@@ -651,6 +661,39 @@ describe("GalleryView", () => {
     expect(wrapper.text()).toContain("shot.png");
     expect(wrapper.text()).toContain("ファイルサイズ");
     expect(wrapper.text()).toMatch(/12(\.0)? KB/);
+  });
+
+  it("shows enrichment participants as a linked list in detail", async () => {
+    mockScreenshots.mockResolvedValue([
+      {
+        ...sampleShot,
+        enrichmentParticipants: [
+          { displayName: "Alice" },
+          { displayName: "Bob", vrcUserId: "usr_test_bob" },
+        ],
+      },
+    ]);
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+
+    await wrapper.find(".grid-item").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    expect(
+      wrapper.find('[data-testid="gallery-detail-participants"]').exists(),
+    ).toBe(true);
+    expect(wrapper.text()).toContain("Alice");
+    expect(wrapper.text()).toContain("Bob");
+    expect(wrapper.text()).not.toContain("usr_test_bob");
+
+    const link = wrapper.find('[data-testid="gallery-participant-link-1"]');
+    expect(link.exists()).toBe(true);
+    await link.trigger("click");
+    expect(mockNavigateToUserProfile).toHaveBeenCalledWith(
+      expect.anything(),
+      "usr_test_bob",
+      "Bob",
+    );
   });
 
   it("shows detail preview image data URL when an item is selected", async () => {
