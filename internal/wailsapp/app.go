@@ -98,7 +98,7 @@ func NewApp() *App {
 // Startup is called when the app starts.
 const selfCacheChangedEvent = "identity:self-cache-changed"
 
-func (a *App) startup(ctx context.Context) {
+func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 
 	dataDir, err := paths.AppDataDir()
