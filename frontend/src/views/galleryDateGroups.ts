@@ -200,7 +200,11 @@ export function galleryRowHeight(
   if (row.type === "yearHeader") {
     return GALLERY_YEAR_HEADER_ROW_HEIGHT_PX;
   }
-  return GALLERY_DAY_HEADER_ROW_HEIGHT_PX;
+  if (row.type === "dayHeader") {
+    return GALLERY_DAY_HEADER_ROW_HEIGHT_PX;
+  }
+  const _exhaustive: never = row;
+  return _exhaustive;
 }
 
 export interface GalleryHeaderIndexEntry {
@@ -247,7 +251,8 @@ export interface GalleryStickySection {
   yearRowKey?: string;
 }
 
-const STICKY_HEADER_SCAN_CAP = 64;
+/** Max header-index entries to walk backward when resolving a day section's year divider. */
+const STICKY_YEAR_SEARCH_RADIUS = 64;
 
 function toStickySection(
   entry: GalleryHeaderIndexEntry,
@@ -299,7 +304,9 @@ export function stickySectionForIndex(
     return toStickySection(nearest);
   }
 
-  const scanStart = Math.max(0, end - STICKY_HEADER_SCAN_CAP + 1);
+  const scanStart = Math.max(0, end - STICKY_YEAR_SEARCH_RADIUS + 1);
+  // O(radius) backward scan: year dividers are sparse (≤1 per calendar year), so
+  // radius 64 comfortably covers any realistic day→year lookup without a second index.
   let yearEntry: GalleryHeaderIndexEntry | undefined;
   for (let i = end; i >= scanStart; i--) {
     const entry = headerIndices[i]!;

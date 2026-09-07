@@ -89,13 +89,15 @@
           class="grid-scroll"
           @scroll.passive="onGridScroll"
         >
+          <!-- Visual sticky duplicate; in-list role="heading" rows are canonical. -->
           <div class="gallery-sticky-anchor">
             <div
               v-show="stickyOverlay.show"
               class="gallery-sticky-header gallery-sticky-header--overlay"
               :class="stickyOverlay.headerClass"
               data-testid="gallery-sticky-header"
-              aria-hidden="true"
+              role="region"
+              :aria-label="stickyOverlay.ariaLabel"
             >
               <span
                 v-if="stickyOverlay.showYearContext"
@@ -491,6 +493,7 @@ type StickyOverlayState = {
   headerClass: string;
   yearLabel: string;
   showYearContext: boolean;
+  ariaLabel: string;
 };
 
 const emptyStickyOverlay: StickyOverlayState = {
@@ -499,7 +502,18 @@ const emptyStickyOverlay: StickyOverlayState = {
   headerClass: "",
   yearLabel: "",
   showYearContext: false,
+  ariaLabel: "",
 };
+
+function stickyOverlayAriaLabel(
+  section: GalleryStickySection,
+  showYearContext: boolean,
+): string {
+  if (showYearContext && section.yearLabel) {
+    return `${section.yearLabel} ${section.label}`;
+  }
+  return section.label;
+}
 
 function firstVisibleVirtualItem(
   vItems: VirtualItem[],
@@ -566,13 +580,8 @@ const stickyOverlay = computed((): StickyOverlayState => {
   const headerClass = stickyHeaderClass(section);
   const hideWhenHeaderVisible = (rowKey: string): boolean => {
     if (clientHeight <= 0) {
-      return vItems.some((v) => {
-        const row = rows[v.index];
-        return (
-          (row?.type === "yearHeader" || row?.type === "dayHeader") &&
-          row.rowKey === rowKey
-        );
-      });
+      // Viewport unknown (init / display:none) — prefer showing sticky.
+      return false;
     }
     return isMatchingHeaderVisibleInViewport(
       vItems,
@@ -590,6 +599,7 @@ const stickyOverlay = computed((): StickyOverlayState => {
       headerClass,
       yearLabel: section.yearLabel ?? "",
       showYearContext: false,
+      ariaLabel: stickyOverlayAriaLabel(section, false),
     };
   }
 
@@ -609,20 +619,9 @@ const stickyOverlay = computed((): StickyOverlayState => {
     headerClass,
     yearLabel: section.yearLabel ?? "",
     showYearContext,
+    ariaLabel: stickyOverlayAriaLabel(section, showYearContext),
   };
 });
-
-const virtualRowViews = computed(() =>
-  virtualRows.value.map((vr) => {
-    const header = galleryHeaderAt(vr.index);
-    return {
-      vr,
-      header,
-      isGrid: header === undefined && isGridRow(vr.index),
-      gridItems: gridRowItems(vr.index),
-    };
-  }),
-);
 
 const totalVirtualHeight = computed(() => {
   void scrollSync.value;
@@ -694,6 +693,41 @@ function galleryHeaderClass(
     ? "gallery-section-header--year"
     : "gallery-section-header--day";
 }
+
+type GalleryVirtualRowView = {
+  vr: VirtualItem;
+  header: ReturnType<typeof galleryHeaderAt>;
+  isGrid: boolean;
+  gridItems: ScreenshotDTO[];
+};
+
+const virtualRowViewScratch: GalleryVirtualRowView[] = [];
+const emptyGridItems: ScreenshotDTO[] = [];
+
+function syncVirtualRowViews(vItems: VirtualItem[]): GalleryVirtualRowView[] {
+  for (let i = 0; i < vItems.length; i++) {
+    const vr = vItems[i]!;
+    const header = galleryHeaderAt(vr.index);
+    const isGrid = header === undefined && isGridRow(vr.index);
+    const gridItems = isGrid ? gridRowItems(vr.index) : emptyGridItems;
+    const existing = virtualRowViewScratch[i];
+    if (existing) {
+      existing.vr = vr;
+      existing.header = header;
+      existing.isGrid = isGrid;
+      existing.gridItems = gridItems;
+    } else {
+      virtualRowViewScratch[i] = { vr, header, isGrid, gridItems };
+    }
+  }
+  virtualRowViewScratch.length = vItems.length;
+  return virtualRowViewScratch;
+}
+
+const virtualRowViews = computed(() => {
+  void scrollSync.value;
+  return syncVirtualRowViews(virtualRows.value);
+});
 
 watchEffect((onCleanup) => {
   const el = gridScrollRef.value;
@@ -1403,7 +1437,7 @@ onMounted(() => {
   height: 100%;
   display: flex;
   align-items: flex-end;
-  padding: 0;
+  padding: 0 var(--space-inline-tight);
   margin: 0;
   box-sizing: border-box;
 }

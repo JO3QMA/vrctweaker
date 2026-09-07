@@ -768,6 +768,18 @@ describe("GalleryView", () => {
     expect(
       wrapper.findAll("[data-testid='gallery-group-header']").length,
     ).toBeGreaterThan(0);
+    const grid = wrapper.find("[data-testid='gallery-grid-scroll']");
+    Object.defineProperty(grid.element, "clientHeight", {
+      value: 600,
+      configurable: true,
+    });
+    Object.defineProperty(grid.element, "scrollTop", {
+      value: 0,
+      writable: true,
+      configurable: true,
+    });
+    await grid.trigger("scroll");
+    await wrapper.vm.$nextTick();
     // Sticky overlay stays mounted (v-show) but hidden while the in-list header is visible.
     expect(
       wrapper.find("[data-testid='gallery-sticky-header']").isVisible(),
