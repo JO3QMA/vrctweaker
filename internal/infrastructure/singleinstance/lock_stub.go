@@ -5,9 +5,12 @@ package singleinstance
 import (
 	"fmt"
 	"io"
+	"log"
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -15,15 +18,21 @@ import (
 	"vrchat-tweaker/internal/platform/paths"
 )
 
-const activateMessage = "activate"
+const (
+	activateMessage = "activate"
+	// sunPathMax is the maximum Unix domain socket path length (excluding NUL).
+	sunPathMax = 104
+)
 
 type stubGuard struct {
-	name     string
-	lockPath string
-	sockPath string
-	lockFile *os.File
-	listener net.Listener
-	wg       sync.WaitGroup
+	name        string
+	lockPath    string
+	sockPath    string
+	sockNetwork string
+	sockAddr    string
+	lockFile    *os.File
+	listener    net.Listener
+	wg          sync.WaitGroup
 }
 
 func newPlatformGuard(name string) platformGuard {
@@ -41,6 +50,23 @@ func (s *stubGuard) paths() error {
 	s.lockPath = filepath.Join(dir, s.name+".lock")
 	s.sockPath = filepath.Join(dir, s.name+".sock")
 	return nil
+}
+
+func (s *stubGuard) resolveSocket() (network, addr string, err error) {
+	if err := s.paths(); err != nil {
+		return "", "", err
+	}
+	if len(s.sockPath) < sunPathMax {
+		return "unix", s.sockPath, nil
+	}
+	if runtime.GOOS == "linux" {
+		return "unix", "@" + s.name + "_activate", nil
+	}
+	tmpAddr := filepath.Join(os.TempDir(), s.name+".sock")
+	if len(tmpAddr) >= sunPathMax {
+		return "", "", fmt.Errorf("singleinstance: activation socket path too long (%d bytes): %q", len(s.sockPath), s.sockPath)
+	}
+	return "unix", tmpAddr, nil
 }
 
 func (s *stubGuard) acquire() (bool, error) {
@@ -66,10 +92,15 @@ func (s *stubGuard) acquire() (bool, error) {
 }
 
 func (s *stubGuard) notifyExisting() error {
-	if err := s.paths(); err != nil {
+	network, addr, err := s.resolveSocket()
+	if err != nil {
 		return err
 	}
-	conn, err := net.Dial("unix", s.sockPath)
+	if s.sockNetwork == "" {
+		s.sockNetwork = network
+		s.sockAddr = addr
+	}
+	conn, err := net.Dial(network, addr)
 	if err != nil {
 		return fmt.Errorf("singleinstance: existing instance could not be activated: %w", err)
 	}
@@ -80,17 +111,22 @@ func (s *stubGuard) notifyExisting() error {
 	return nil
 }
 
-func (s *stubGuard) start(stop <-chan struct{}, onActivate func()) {
-	if onActivate == nil {
-		return
-	}
-	if err := s.paths(); err != nil {
-		return
-	}
-	_ = os.Remove(s.sockPath)
-	ln, err := net.Listen("unix", s.sockPath)
+func (s *stubGuard) start(stop <-chan struct{}, dispatch func()) error {
+	network, addr, err := s.resolveSocket()
 	if err != nil {
-		return
+		return err
+	}
+	s.sockNetwork = network
+	s.sockAddr = addr
+
+	if !strings.HasPrefix(addr, "@") {
+		if rmErr := os.Remove(addr); rmErr != nil && !os.IsNotExist(rmErr) {
+			log.Printf("singleinstance: failed to remove stale socket %q: %v", addr, rmErr)
+		}
+	}
+	ln, err := net.Listen(network, addr)
+	if err != nil {
+		return fmt.Errorf("singleinstance: failed to bind activation socket at %q: %w", addr, err)
 	}
 	s.listener = ln
 	s.wg.Add(1)
@@ -120,10 +156,11 @@ func (s *stubGuard) start(stop <-chan struct{}, onActivate func()) {
 			_, _ = io.ReadFull(conn, buf)
 			_ = conn.Close()
 			if string(buf) == activateMessage {
-				onActivate()
+				dispatch()
 			}
 		}
 	}()
+	return nil
 }
 
 func (s *stubGuard) release() {
@@ -132,7 +169,11 @@ func (s *stubGuard) release() {
 		s.listener = nil
 	}
 	s.wg.Wait()
-	_ = os.Remove(s.sockPath)
+	if s.sockAddr != "" && !strings.HasPrefix(s.sockAddr, "@") {
+		if err := os.Remove(s.sockAddr); err != nil && !os.IsNotExist(err) {
+			log.Printf("singleinstance: failed to remove activation socket %q: %v", s.sockAddr, err)
+		}
+	}
 	if s.lockFile != nil {
 		_ = syscall.Flock(int(s.lockFile.Fd()), syscall.LOCK_UN)
 		_ = s.lockFile.Close()

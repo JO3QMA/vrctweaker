@@ -59,13 +59,15 @@ func (w *winGuard) acquire() (bool, error) {
 }
 
 func (w *winGuard) notifyExisting() error {
-	if err := w.signalEvent(); err == nil {
+	signalErr := w.signalEvent()
+	if signalErr == nil {
 		return nil
 	}
-	if err := w.activateWindowByTitle("VRChat Tweaker"); err == nil {
+	fallbackErr := w.activateWindowByTitle(DefaultWindowTitle)
+	if fallbackErr == nil {
 		return nil
 	}
-	return fmt.Errorf("singleinstance: existing instance could not be activated")
+	return fmt.Errorf("singleinstance: existing instance could not be activated (signal: %w; fallback: %w)", signalErr, fallbackErr)
 }
 
 func (w *winGuard) signalEvent() error {
@@ -84,9 +86,9 @@ func (w *winGuard) signalEvent() error {
 	return nil
 }
 
-func (w *winGuard) start(stop <-chan struct{}, onActivate func()) {
-	if w.event == 0 || onActivate == nil {
-		return
+func (w *winGuard) start(stop <-chan struct{}, dispatch func()) error {
+	if w.event == 0 {
+		return nil
 	}
 	w.listener.Add(1)
 	go func() {
@@ -103,12 +105,13 @@ func (w *winGuard) start(stop <-chan struct{}, onActivate func()) {
 			}
 			switch status {
 			case windows.WAIT_OBJECT_0:
-				onActivate()
+				dispatch()
 			case uint32(windows.WAIT_FAILED):
 				return
 			}
 		}
 	}()
+	return nil
 }
 
 func (w *winGuard) release() {

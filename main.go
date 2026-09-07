@@ -74,13 +74,16 @@ func main() {
 		}
 		os.Exit(0)
 	}
+	if err := instanceGuard.Start(); err != nil {
+		log.Fatal("single instance listener: ", err)
+	}
 	defer instanceGuard.Release()
 
 	app := wailsapp.NewApp()
 	lc := wailsapp.NewLifecycle(app)
 
 	err = wails.Run(&options.App{
-		Title:  "VRChat Tweaker",
+		Title:  singleinstance.DefaultWindowTitle,
 		Width:  1024,
 		Height: 768,
 		AssetServer: &assetserver.Options{
@@ -91,7 +94,6 @@ func main() {
 		OnStartup: func(ctx context.Context) {
 			lc.Startup(ctx)
 			instanceGuard.SetOnActivate(app.ActivateMainWindow)
-			instanceGuard.Start()
 		},
 		OnShutdown: func(ctx context.Context) {
 			lc.Shutdown(ctx)
