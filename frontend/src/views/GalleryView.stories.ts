@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Filter bar: world search (wrld_ prefix → ID, else world name) and date range picker.",
+          "Flat thumbnail grid with sticky day section headers. Year dividers appear when the calendar year changes; day labels omit the year (e.g. 9月4日). Filter bar: world search and date range picker.",
       },
     },
   },

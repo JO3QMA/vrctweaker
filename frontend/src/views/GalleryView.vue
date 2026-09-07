@@ -89,6 +89,14 @@
           class="grid-scroll"
           @scroll.passive="onGridScroll"
         >
+          <div
+            v-if="showStickyHeader"
+            class="gallery-sticky-header"
+            data-testid="gallery-sticky-header"
+            aria-hidden="true"
+          >
+            {{ stickySectionLabel }}
+          </div>
           <div class="grid-virtual-spacer" :style="spacerStyle">
             <div
               v-for="vr in virtualRows"
@@ -117,25 +125,16 @@
                   </div>
                 </div>
               </template>
-              <button
+              <div
                 v-else-if="galleryHeaderAt(vr.index)"
-                type="button"
-                class="gallery-group-header"
-                :class="galleryHeaderIndentClass(galleryHeaderAt(vr.index)!)"
+                class="gallery-section-header"
+                :class="galleryHeaderClass(galleryHeaderAt(vr.index)!)"
                 data-testid="gallery-group-header"
-                :data-collapse-key="galleryHeaderAt(vr.index)!.collapseKey"
-                :aria-expanded="galleryHeaderAt(vr.index)!.expanded"
-                @click="
-                  toggleGalleryCollapse(galleryHeaderAt(vr.index)!.collapseKey)
-                "
               >
-                <span class="gallery-group-chevron" aria-hidden="true">{{
-                  galleryHeaderAt(vr.index)!.expanded ? "▼" : "▶"
-                }}</span>
-                <span class="gallery-group-label">{{
+                <span class="gallery-section-label">{{
                   galleryHeaderAt(vr.index)!.label
                 }}</span>
-              </button>
+              </div>
             </div>
           </div>
         </div>
@@ -328,7 +327,6 @@ const scanError = ref<string | null>(null);
 const filterWorldSearch = ref("");
 const filterDateRange = ref<GalleryDateRangeFilter | null>(null);
 const thumbnailUrls = ref<Record<string, string>>({});
-const collapsed = ref(new Set<string>());
 const gridScrollRef = ref<HTMLElement | null>(null);
 const gridInnerWidth = ref(0);
 const scrollSync = ref(0);
@@ -443,10 +441,61 @@ const flatGalleryRows = computed(() =>
   buildGalleryVirtualRows(
     list.value,
     columnCount.value,
-    collapsed.value,
     galleryDateLabels.value,
   ),
 );
+
+const stickySectionLabel = computed(() => {
+  void scrollSync.value;
+  const rows = flatGalleryRows.value;
+  if (rows.length === 0) {
+    return null;
+  }
+  const vItems = rowVirtualizer.value.getVirtualItems();
+  if (vItems.length === 0) {
+    return null;
+  }
+  const firstIdx = vItems[0]?.index ?? 0;
+  let dayLabel: string | null = null;
+  let yearLabel: string | null = null;
+  for (let i = firstIdx; i >= 0; i--) {
+    const row = rows[i];
+    if (!row) {
+      continue;
+    }
+    if (row.type === "dayHeader" && dayLabel === null) {
+      dayLabel = row.label;
+    }
+    if (row.type === "yearHeader") {
+      yearLabel = row.label;
+      break;
+    }
+  }
+  if (dayLabel) {
+    return dayLabel;
+  }
+  return yearLabel;
+});
+
+const showStickyHeader = computed(() => {
+  void scrollSync.value;
+  const label = stickySectionLabel.value;
+  if (!label) {
+    return false;
+  }
+  const rows = flatGalleryRows.value;
+  const vItems = rowVirtualizer.value.getVirtualItems();
+  for (const v of vItems) {
+    const row = rows[v.index];
+    if (
+      (row?.type === "yearHeader" || row?.type === "dayHeader") &&
+      row.label === label
+    ) {
+      return false;
+    }
+  }
+  return true;
+});
 
 const rowVirtualizer = useVirtualizer(
   computed(() => ({
@@ -521,45 +570,20 @@ function gridRowItems(index: number): ScreenshotDTO[] {
 function galleryHeaderAt(
   index: number,
 ):
-  | Extract<
-      GalleryVirtualRow,
-      { type: "yearHeader" | "monthHeader" | "dayHeader" }
-    >
-  | undefined {
+  Extract<GalleryVirtualRow, { type: "yearHeader" | "dayHeader" }> | undefined {
   const row = galleryRowAt(index);
-  if (
-    row?.type === "yearHeader" ||
-    row?.type === "monthHeader" ||
-    row?.type === "dayHeader"
-  ) {
+  if (row?.type === "yearHeader" || row?.type === "dayHeader") {
     return row;
   }
   return undefined;
 }
 
-function galleryHeaderIndentClass(
+function galleryHeaderClass(
   row: NonNullable<ReturnType<typeof galleryHeaderAt>>,
 ): string {
-  if (row.type === "yearHeader") return "gallery-group-h-year";
-  if (row.type === "monthHeader") return "gallery-group-h-month";
-  return "gallery-group-h-day";
-}
-
-function toggleGalleryCollapse(key: string): void {
-  const next = new Set(collapsed.value);
-  if (next.has(key)) {
-    next.delete(key);
-  } else {
-    next.add(key);
-  }
-  collapsed.value = next;
-  void nextTick(() => {
-    scrollSync.value++;
-    rowVirtualizer.value.measure();
-    thumbnailFetchGeneration++;
-    pruneThumbnailsToRetained();
-    void syncThumbnailsForVisible();
-  });
+  return row.type === "yearHeader"
+    ? "gallery-section-header--year"
+    : "gallery-section-header--day";
 }
 
 watchEffect((onCleanup) => {
@@ -1206,52 +1230,47 @@ onMounted(() => {
   line-height: 1.4 !important;
 }
 
-.gallery-group-header {
+.gallery-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: var(--space-inline-tight) 0;
+  margin-bottom: var(--space-inline-tight);
+  background: color-mix(in srgb, var(--color-bg-base) 90%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-14);
+  font-weight: var(--font-weight-500);
+  line-height: var(--line-height-tight);
+}
+
+.gallery-section-header {
   width: 100%;
   height: 100%;
   display: flex;
-  align-items: center;
-  gap: var(--space-inline-tight);
-  padding: 0 var(--space-inline-tight);
+  align-items: flex-end;
+  padding: 0;
   margin: 0;
-  background: color-mix(in srgb, var(--color-bg-elevated) 88%, transparent);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-14);
-  cursor: pointer;
-  text-align: left;
   box-sizing: border-box;
 }
 
-.gallery-group-header:hover {
-  background: var(--color-bg-muted);
-}
-
-.gallery-group-h-year {
+.gallery-section-header--year {
+  padding-top: var(--space-form-field);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-14);
   font-weight: var(--font-weight-600);
+  line-height: var(--line-height-tight);
 }
 
-.gallery-group-h-month {
-  padding-left: var(--space-block);
+.gallery-section-header--day {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-12);
   font-weight: var(--font-weight-500);
+  line-height: var(--line-height-tight);
 }
 
-.gallery-group-h-day {
-  padding-left: var(--space-page);
-  font-weight: var(--font-weight-400);
-}
-
-.gallery-group-chevron {
-  flex-shrink: 0;
-  width: var(--icon-size-compact);
-  font-size: var(--font-size-10);
-  opacity: 0.85;
-  line-height: 1;
-}
-
-.gallery-group-label {
-  flex: 1;
+.gallery-section-label {
   min-width: 0;
 }
 </style>

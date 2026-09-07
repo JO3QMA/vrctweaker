@@ -743,7 +743,7 @@ describe("GalleryView", () => {
     );
   });
 
-  it("renders date group headers for multiple screenshots", async () => {
+  it("renders flat date group headers for multiple screenshots", async () => {
     const june15: ScreenshotDTO = {
       ...sampleShot,
       id: "s-a",
@@ -763,72 +763,15 @@ describe("GalleryView", () => {
 
     const txt = wrapper.text();
     expect(txt).toContain("2024年");
-    expect(txt).toMatch(/2024年0?6月/);
-    expect(txt).toMatch(/2024年0?6月0?15日/);
-    expect(txt).toMatch(/2024年0?6月0?1日/);
+    expect(txt).toContain("6月15日");
+    expect(txt).toContain("6月1日");
     expect(
       wrapper.findAll("[data-testid='gallery-group-header']").length,
     ).toBeGreaterThan(0);
-  });
-
-  it("collapsing year hides thumbnails under that year", async () => {
-    const june15: ScreenshotDTO = {
-      ...sampleShot,
-      id: "s-a",
-      filePath: "C:/a.png",
-      takenAt: "2024-06-15T10:00:00Z",
-    };
-    const june1: ScreenshotDTO = {
-      ...sampleShot,
-      id: "s-b",
-      filePath: "C:/b.png",
-      takenAt: "2024-06-01T10:00:00Z",
-    };
-    mockScreenshots.mockResolvedValue([june15, june1]);
-    const wrapper = mount(GalleryView, { attachTo: host });
-    await flushPromises();
-    await flushPromises();
-
-    expect(wrapper.findAll(".grid-item").length).toBe(2);
-
-    const yearBtn = wrapper.find('[data-collapse-key="y:2024"]');
-    expect(yearBtn.exists()).toBe(true);
-    expect(yearBtn.attributes("aria-expanded")).toBe("true");
-
-    await yearBtn.trigger("click");
-    await wrapper.vm.$nextTick();
-
-    expect(wrapper.findAll(".grid-item").length).toBe(0);
-    expect(
-      wrapper.find('[data-collapse-key="y:2024"]').attributes("aria-expanded"),
-    ).toBe("false");
-  });
-
-  it("calls pruneThumbnailUrlMap when collapsing a year group", async () => {
-    const june15: ScreenshotDTO = {
-      ...sampleShot,
-      id: "s-a",
-      filePath: "C:/a.png",
-      takenAt: "2024-06-15T10:00:00Z",
-    };
-    const june1: ScreenshotDTO = {
-      ...sampleShot,
-      id: "s-b",
-      filePath: "C:/b.png",
-      takenAt: "2024-06-01T10:00:00Z",
-    };
-    mockScreenshots.mockResolvedValue([june15, june1]);
-    const pruneSpy = vi.spyOn(galleryThumbnailCache, "pruneThumbnailUrlMap");
-    const wrapper = mount(GalleryView, { attachTo: host });
-    await flushPromises();
-    await flushPromises();
-    pruneSpy.mockClear();
-
-    await wrapper.find('[data-collapse-key="y:2024"]').trigger("click");
-    await wrapper.vm.$nextTick();
-
-    expect(pruneSpy).toHaveBeenCalled();
-    pruneSpy.mockRestore();
+    // Sticky header is hidden while the matching in-list header is still visible.
+    expect(wrapper.find("[data-testid='gallery-sticky-header']").exists()).toBe(
+      false,
+    );
   });
 
   it("debounced scroll schedules thumbnail cache prune", async () => {
