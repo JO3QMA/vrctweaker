@@ -99,6 +99,11 @@ func (a *App) showMainWindow() {
 	runtime.WindowUnminimise(a.ctx)
 }
 
+// ActivateMainWindow shows the main window when a second launch requests activation.
+func (a *App) ActivateMainWindow() {
+	a.showMainWindow()
+}
+
 func (a *App) quitApplication() {
 	if a.ctx == nil {
 		return
