@@ -371,7 +371,7 @@ Activity 上の副次セクション。Play time の日別合計を棒グラフ�
 _Avoid_: プレイ時間画面, アクティビティ統計（遭遇ログ全体を指す語と混同しやすいため）
 
 **Video playback attempt**:
-output_log の `[Video Playback]` 由来で、ある URL の resolve を 1 回試みた記録（[Issue #176](https://github.com/JO3QMA/vrctweaker/issues/176)）。`Attempting to resolve URL` / `Resolving URL` で始まり、同じ URL に対する成功（`resolved to`）または失敗（`ERROR`）で結果が付く。結果の正は **Video playback outcome**。結果が未観測の間は Open。試行時点に Open play session があればそのワールドを文脈として付与し、無ければワールドは空（試行自体は残す）。直近の終了済み Play session には遡らない。属する Log source を持つ（UI には出さない）。User encounter や Play session と同じく Output log ingest の対象であり、Activity 画面には出さない。
+output_log の `[Video Playback]` 由来で、ある URL の resolve を 1 回試みた記録（[Issue #176](https://github.com/JO3QMA/vrctweaker/issues/176)）。`Attempting to resolve URL` / `Resolving URL` で始まり、同じ URL に対する成功（`resolved to`）または失敗（`ERROR`）で結果が付く。結果の正は **Video playback outcome**。結果が未観測の間は Open。試行時点に Open play session があればそのワールドを文脈として付与し、無ければワールドは空（試行自体は残す）。直近の終了済み Play session には遡らない。属する Log source を持つ（UI には出さない）。User encounter や Play session と同じく Output log ingest の対象であり、Activity 画面には出さない。ingest 時、試行 URL が YouTube 系（`youtube.com` サブドメイン・`youtu.be`）のときはトラッキング用クエリ（`si`・`feature`・`pp`・`utm_*` 等）を除去して正規化する。再生に関わるクエリ（`v`・`t`・`list` 等）は残す。既に永続化済みの行は書き換えない（Activity retention で自然消滅まで生 URL のまま）。
 _Avoid_: 再生履歴（一覧全体を指す語）, VideoPlaybackEvent（実装型名）, 再生セッション（Play session と混同しやすいため）, 動画ログ
 
 **Open video playback attempt**:

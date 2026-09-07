@@ -341,8 +341,8 @@ func TestLogParser_ParseLine_DestinationRoomAvatarVideo(t *testing.T) {
 		if !ok {
 			t.Fatalf("type %T", events[0])
 		}
-		if v.URL != "https://youtu.be/-I1aPyp-_uE?si=x" {
-			t.Errorf("URL = %q", v.URL)
+		if v.URL != "https://youtu.be/-I1aPyp-_uE" {
+			t.Errorf("URL = %q, want tracking params stripped", v.URL)
 		}
 	})
 
