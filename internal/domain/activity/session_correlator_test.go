@@ -342,6 +342,33 @@ func TestSessionCorrelator_VideoPlayback_ResetClearsPending(t *testing.T) {
 	}
 }
 
+func TestSessionCorrelator_VideoPlayback_parserStripsTrackingForCorrelation(t *testing.T) {
+	p := NewLogParser()
+	c := &SessionCorrelator{}
+	base := time.Date(2026, 3, 18, 0, 6, 0, 0, time.UTC)
+
+	attempt, err := p.ParseLine("2026.03.18 00:01:12 Debug      -  [Video Playback] Attempting to resolve URL 'https://youtu.be/abc?si=xyz'", base)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ev := range attempt {
+		c.Apply(ev)
+	}
+
+	resolved, err := p.ParseLine("2026.03.18 00:01:14 Debug      -  [Video Playback] URL 'https://youtu.be/abc' resolved to 'https://cdn.example/x.mp4'", base.Add(time.Second))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmds := c.Apply(resolved[0])
+	if len(cmds) != 1 {
+		t.Fatalf("want correlated success, got %+v", cmds)
+	}
+	ok, isOK := cmds[0].(CompleteVideoPlaybackSuccessCmd)
+	if !isOK || ok.URL != "https://youtu.be/abc" || ok.ResolvedURL != "https://cdn.example/x.mp4" {
+		t.Fatalf("success cmd = %+v", cmds[0])
+	}
+}
+
 // Regression for GitHub bug report (2026-06-24): log-replayed home→cozy transition must not
 // write Cozy with. onto the home world_id.
 func TestSessionCorrelator_logReplay_homeToCozyTransition_roomNamesNotCrossAssigned(t *testing.T) {

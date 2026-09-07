@@ -284,7 +284,7 @@ func (p *LogParser) ParseLine(line string, baseTime time.Time) ([]ParsedEvent, e
 	if m := p.videoRE.FindStringSubmatch(line); len(m) >= 2 {
 		u := strings.TrimSpace(m[1])
 		if u != "" {
-			return []ParsedEvent{&VideoPlaybackEvent{URL: u, OccurredAt: baseTime}}, nil
+			return []ParsedEvent{&VideoPlaybackEvent{URL: StripYouTubeTrackingParams(u), OccurredAt: baseTime}}, nil
 		}
 	}
 
@@ -292,7 +292,11 @@ func (p *LogParser) ParseLine(line string, baseTime time.Time) ([]ParsedEvent, e
 		u := strings.TrimSpace(m[1])
 		resolved := strings.TrimSpace(m[2])
 		if u != "" {
-			return []ParsedEvent{&VideoPlaybackResolvedEvent{URL: u, ResolvedURL: resolved, OccurredAt: baseTime}}, nil
+			return []ParsedEvent{&VideoPlaybackResolvedEvent{
+				URL:         StripYouTubeTrackingParams(u),
+				ResolvedURL: resolved,
+				OccurredAt:  baseTime,
+			}}, nil
 		}
 	}
 
