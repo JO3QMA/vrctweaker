@@ -34,6 +34,7 @@
         v-else
         :data="historyRows"
         stripe
+        size="small"
         class="history-table"
         data-testid="video-history-table"
       >
