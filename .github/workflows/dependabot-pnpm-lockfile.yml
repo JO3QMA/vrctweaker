@@ -1,0 +1,62 @@
+# Dependabot updates frontend/package.json but often drops the lockfile
+# overrides snapshot, which breaks CI's `pnpm install --frozen-lockfile`.
+# Regenerate frontend/pnpm-lock.yaml on Dependabot PRs and push when needed.
+#
+# Optional repo secret DEPENDABOT_LOCKFILE_PAT (fine-grained PAT with contents:write)
+# re-triggers pull_request workflows after the fix commit. GITHUB_TOKEN alone can
+# push to Dependabot branches but does not re-run CI on that push.
+
+name: Dependabot pnpm lockfile
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - frontend/package.json
+      - frontend/pnpm-lock.yaml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: dependabot-pnpm-lockfile-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  sync-lockfile:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.DEPENDABOT_LOCKFILE_PAT || secrets.GITHUB_TOKEN }}
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Regenerate lockfile (pnpm overrides snapshot)
+        run: cd frontend && pnpm install --no-frozen-lockfile
+
+      - name: Commit lockfile if changed
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if git diff --quiet -- frontend/pnpm-lock.yaml; then
+            echo "frontend/pnpm-lock.yaml already in sync"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add frontend/pnpm-lock.yaml
+          git commit \
+            -m "fix(deps): sync pnpm lockfile overrides with package.json" \
+            -m "Dependabot may drop the lockfile overrides block while package.json still declares pnpm.overrides, which breaks frozen-lockfile CI."
+          git push origin "HEAD:${HEAD_REF}"
