@@ -3,6 +3,9 @@ import type { ScreenshotDTO } from "../wails/app";
 export const GALLERY_YEAR_HEADER_ROW_HEIGHT_PX = 32;
 export const GALLERY_DAY_HEADER_ROW_HEIGHT_PX = 28;
 
+/** Leap year used only as a calendar scaffold for month/day Intl formatting (year is omitted in labels). */
+export const EXEMPLAR_LEAP_YEAR = 2024;
+
 export type GalleryVirtualRow =
   | {
       type: "yearHeader";
@@ -59,7 +62,7 @@ export function galleryLabelsFromLocale(
   });
   return {
     formatYear: (y) => yearFmt.format(new Date(y, 5, 15)),
-    formatDay: (m, d) => dayFmt.format(new Date(2024, m - 1, d)),
+    formatDay: (m, d) => dayFmt.format(new Date(EXEMPLAR_LEAP_YEAR, m - 1, d)),
     unknownDate,
   };
 }
@@ -198,4 +201,98 @@ export function galleryRowHeight(
     return GALLERY_YEAR_HEADER_ROW_HEIGHT_PX;
   }
   return GALLERY_DAY_HEADER_ROW_HEIGHT_PX;
+}
+
+export interface GalleryHeaderIndexEntry {
+  index: number;
+  rowKey: string;
+  label: string;
+  type: "yearHeader" | "dayHeader";
+  dayKey?: string;
+}
+
+/** Sorted header row indices for O(log n) sticky section lookup. */
+export function buildGalleryHeaderIndices(
+  rows: GalleryVirtualRow[],
+): GalleryHeaderIndexEntry[] {
+  const indices: GalleryHeaderIndexEntry[] = [];
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (row?.type === "yearHeader") {
+      indices.push({
+        index: i,
+        rowKey: row.rowKey,
+        label: row.label,
+        type: "yearHeader",
+      });
+    } else if (row?.type === "dayHeader") {
+      indices.push({
+        index: i,
+        rowKey: row.rowKey,
+        label: row.label,
+        type: "dayHeader",
+        dayKey: row.dayKey,
+      });
+    }
+  }
+  return indices;
+}
+
+export interface GalleryStickySection {
+  label: string;
+  rowKey: string;
+  dayKey?: string;
+}
+
+const STICKY_HEADER_SCAN_CAP = 64;
+
+/** Resolve the sticky section for the first visible virtual row index. */
+export function stickySectionForIndex(
+  firstIdx: number,
+  headerIndices: readonly GalleryHeaderIndexEntry[],
+): GalleryStickySection | null {
+  if (headerIndices.length === 0) {
+    return null;
+  }
+
+  let lo = 0;
+  let hi = headerIndices.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (headerIndices[mid]!.index <= firstIdx) {
+      lo = mid + 1;
+    } else {
+      hi = mid;
+    }
+  }
+  const end = lo - 1;
+  if (end < 0) {
+    return null;
+  }
+
+  const scanStart = Math.max(0, end - STICKY_HEADER_SCAN_CAP + 1);
+  let dayEntry: GalleryHeaderIndexEntry | undefined;
+  let yearEntry: GalleryHeaderIndexEntry | undefined;
+  for (let i = end; i >= scanStart; i--) {
+    const entry = headerIndices[i]!;
+    if (entry.type === "dayHeader" && dayEntry === undefined) {
+      dayEntry = entry;
+    }
+    if (entry.type === "yearHeader") {
+      yearEntry = entry;
+      if (dayEntry !== undefined) {
+        break;
+      }
+    }
+  }
+
+  const chosen = dayEntry ?? yearEntry ?? headerIndices[end];
+  if (!chosen) {
+    return null;
+  }
+  return {
+    label: chosen.label,
+    rowKey: chosen.rowKey,
+    dayKey: chosen.dayKey,
+  };
 }

@@ -768,10 +768,10 @@ describe("GalleryView", () => {
     expect(
       wrapper.findAll("[data-testid='gallery-group-header']").length,
     ).toBeGreaterThan(0);
-    // Sticky header is hidden while the matching in-list header is still visible.
-    expect(wrapper.find("[data-testid='gallery-sticky-header']").exists()).toBe(
-      false,
-    );
+    // Sticky overlay stays mounted (v-show) but hidden while the in-list header is visible.
+    expect(
+      wrapper.find("[data-testid='gallery-sticky-header']").isVisible(),
+    ).toBe(false);
   });
 
   it("debounced scroll schedules thumbnail cache prune", async () => {

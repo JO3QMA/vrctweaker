@@ -1,9 +1,12 @@
 import { describe, it, expect } from "vitest";
 import type { ScreenshotDTO } from "../../wails/app";
 import {
+  buildGalleryHeaderIndices,
   buildGalleryVirtualRows,
+  EXEMPLAR_LEAP_YEAR,
   galleryLabelsFromLocale,
   partitionScreenshotsByLocalDay,
+  stickySectionForIndex,
 } from "../galleryDateGroups";
 
 function shot(id: string, takenAt?: string): ScreenshotDTO {
@@ -25,6 +28,13 @@ describe("galleryLabelsFromLocale", () => {
     expect(labels.formatDay(3, 15)).toMatch(/15/);
     expect(labels.formatDay(3, 15)).not.toMatch(/2024/);
     expect(labels.unknownDate).toBe("Unknown date");
+  });
+
+  it("formats Feb 29 using the exemplar leap year scaffold", () => {
+    const labels = galleryLabelsFromLocale("en-US", "Unknown date");
+    expect(labels.formatDay(2, 29)).toMatch(/February/i);
+    expect(labels.formatDay(2, 29)).toMatch(/29/);
+    expect(EXEMPLAR_LEAP_YEAR % 4).toBe(0);
   });
 });
 
@@ -142,5 +152,46 @@ describe("buildGalleryVirtualRows", () => {
     if (last?.type === "grid") {
       expect(last.items.map((x) => x.id)).toEqual(["u"]);
     }
+  });
+});
+
+describe("buildGalleryHeaderIndices", () => {
+  it("lists header rows in ascending index order", () => {
+    const rows = buildGalleryVirtualRows(
+      [shot("a", "2025-03-01T10:00:00Z"), shot("b", "2024-03-01T10:00:00Z")],
+      2,
+    );
+    const indices = buildGalleryHeaderIndices(rows);
+    expect(indices.map((e) => e.type)).toEqual([
+      "yearHeader",
+      "dayHeader",
+      "yearHeader",
+      "dayHeader",
+    ]);
+    expect(indices[1]).toMatchObject({
+      type: "dayHeader",
+      dayKey: expect.stringMatching(/^\d+-\d+-\d+$/),
+      rowKey: expect.stringMatching(/^hdr-d-/),
+    });
+  });
+});
+
+describe("stickySectionForIndex", () => {
+  it("resolves day sections by rowKey even when labels collide across years", () => {
+    const rows = buildGalleryVirtualRows(
+      [shot("a", "2024-09-04T10:00:00Z"), shot("b", "2023-09-04T10:00:00Z")],
+      2,
+    );
+    const indices = buildGalleryHeaderIndices(rows);
+    const dayHeaders = indices.filter((e) => e.type === "dayHeader");
+    expect(dayHeaders[0]?.label).toBe(dayHeaders[1]?.label);
+    expect(dayHeaders[0]?.dayKey).not.toBe(dayHeaders[1]?.dayKey);
+
+    const newerDayIdx = rows.findIndex(
+      (r) => r.type === "dayHeader" && r.dayKey === dayHeaders[0]?.dayKey,
+    );
+    const section = stickySectionForIndex(newerDayIdx, indices);
+    expect(section?.rowKey).toBe(dayHeaders[0]?.rowKey);
+    expect(section?.dayKey).toBe(dayHeaders[0]?.dayKey);
   });
 });
