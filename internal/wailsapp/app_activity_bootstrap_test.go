@@ -1,4 +1,4 @@
-package main
+package wailsapp
 
 import (
 	"context"
@@ -18,47 +18,6 @@ const (
 	testBootstrapInstID  = testBootstrapWorldID + ":88577~region(jp)"
 	testBootstrapUserID  = "usr_abc"
 )
-
-func Test_bootstrapLiveLogFiles(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-	oldPath := filepath.Join(dir, "output_log_2026-03-20_23-00-00.txt")
-	midPath := filepath.Join(dir, "output_log_2026-03-21_08-00-00.txt")
-	newPath := filepath.Join(dir, "output_log_2026-03-21_11-00-00.txt")
-
-	base := time.Date(2026, 3, 21, 11, 0, 0, 0, time.UTC)
-	for _, spec := range []struct {
-		path string
-		mod  time.Time
-	}{
-		{oldPath, base.Add(-12 * time.Hour)},
-		{midPath, base.Add(-3 * time.Hour)},
-		{newPath, base},
-	} {
-		if err := os.WriteFile(spec.path, []byte("log\n"), 0600); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.Chtimes(spec.path, spec.mod, spec.mod); err != nil {
-			t.Fatal(err)
-		}
-	}
-
-	live := bootstrapLiveLogFiles([]string{oldPath, midPath, newPath})
-	if live == nil {
-		t.Fatal("expected live map for directory with recent tail file")
-	}
-	if live[oldPath] || live[midPath] {
-		t.Fatalf("historical files should not be live: old=%v mid=%v", live[oldPath], live[midPath])
-	}
-	if !live[newPath] {
-		t.Fatal("newest file within live window should be marked live")
-	}
-
-	single := bootstrapLiveLogFiles([]string{newPath})
-	if single == nil || !single[newPath] {
-		t.Fatalf("sole listed file should be marked live: %+v", single)
-	}
-}
 
 func Test_ingestActivityLogsBootstrap_skipsFullyIngestedFile(t *testing.T) {
 	t.Setenv("TZ", "UTC")

@@ -34,9 +34,11 @@ describe("openEncounterHistoryWindow", () => {
 
   it("uses router.push without window.open when Wails App bindings exist", () => {
     (
-      window as unknown as { go: { main: { App: Record<string, unknown> } } }
+      window as unknown as {
+        go: { wailsapp: { App: Record<string, unknown> } };
+      }
     ).go = {
-      main: { App: {} },
+      wailsapp: { App: {} },
     };
 
     const router = createRouter({

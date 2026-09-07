@@ -1,21 +1,22 @@
 // Wails app bindings - calls Go backend methods
-// When running in Wails, window.go.main.App is injected
+// When running in Wails, window.go.wailsapp.App is injected
 
 import {
   activity,
   automation,
   launcher,
-  main,
   usecase,
+  wailsapp,
 } from "../../wailsjs/go/models";
-import type * as WailsApp from "../../wailsjs/go/main/App";
+import type * as WailsApp from "../../wailsjs/go/wailsapp/App";
 
 /** Data fields only (wailsjs model classes may include convertValues). */
 type WailsDTO<T> = Omit<T, "convertValues">;
 
-export type LaunchProfileDTO = WailsDTO<main.LaunchProfileDTO>;
-export type DashboardRejoinDTO = WailsDTO<main.DashboardRejoinDTO>;
-export type DashboardLaunchBlockDTO = WailsDTO<main.DashboardLaunchBlockDTO>;
+export type LaunchProfileDTO = WailsDTO<wailsapp.LaunchProfileDTO>;
+export type DashboardRejoinDTO = WailsDTO<wailsapp.DashboardRejoinDTO>;
+export type DashboardLaunchBlockDTO =
+  WailsDTO<wailsapp.DashboardLaunchBlockDTO>;
 export type PresenceChangeSectionDTO = {
   loggedIn: boolean;
   status: string;
@@ -26,14 +27,16 @@ export type PresenceChangeApplyResultDTO = {
   status: string;
   statusDescription: string;
 };
-export type ServerStatusDTO = WailsDTO<main.ServerStatusDTO>;
-export type ServerStatusSummaryDTO = WailsDTO<main.ServerStatusSummaryDTO>;
-export type ServerStatusComponentDTO = WailsDTO<main.ServerStatusComponentDTO>;
-export type ServerStatusHeadlineDTO = WailsDTO<main.ServerStatusHeadlineDTO>;
+export type ServerStatusDTO = WailsDTO<wailsapp.ServerStatusDTO>;
+export type ServerStatusSummaryDTO = WailsDTO<wailsapp.ServerStatusSummaryDTO>;
+export type ServerStatusComponentDTO =
+  WailsDTO<wailsapp.ServerStatusComponentDTO>;
+export type ServerStatusHeadlineDTO =
+  WailsDTO<wailsapp.ServerStatusHeadlineDTO>;
 export type LaunchArgsParsedDTO = WailsDTO<launcher.LaunchArgsParsed>;
-export type ScreenshotDTO = WailsDTO<main.ScreenshotDTO>;
-export type ScreenshotSearchDTO = WailsDTO<main.ScreenshotSearchDTO>;
-export type UserEncounterDTO = WailsDTO<main.UserEncounterDTO>;
+export type ScreenshotDTO = WailsDTO<wailsapp.ScreenshotDTO>;
+export type ScreenshotSearchDTO = WailsDTO<wailsapp.ScreenshotSearchDTO>;
+export type UserEncounterDTO = WailsDTO<wailsapp.UserEncounterDTO>;
 /** Video playback history row (bindings.VideoPlaybackDTO); local until wails generate. */
 export type VideoPlaybackDTO = {
   id: string;
@@ -46,22 +49,24 @@ export type VideoPlaybackDTO = {
   worldDisplayName?: string;
   completedAt?: string;
 };
-export type UserCacheDTO = WailsDTO<main.UserCacheDTO>;
-export type UserProfileNavigationDTO = WailsDTO<main.UserProfileNavigationDTO>;
+export type UserCacheDTO = WailsDTO<wailsapp.UserCacheDTO>;
+export type UserProfileNavigationDTO =
+  WailsDTO<wailsapp.UserProfileNavigationDTO>;
 export type PathSettingsDTO = WailsDTO<usecase.PathSettings>;
 export type YTDLPMaintainStatusDTO = WailsDTO<usecase.YTDLPMaintainStatus>;
-export type LoginResultDTO = WailsDTO<main.LoginResultDTO>;
-export type VRChatCurrentUserDTO = WailsDTO<main.VRChatCurrentUserDTO>;
+export type LoginResultDTO = WailsDTO<wailsapp.LoginResultDTO>;
+export type VRChatCurrentUserDTO = WailsDTO<wailsapp.VRChatCurrentUserDTO>;
 export type DailyPlaySecondsDTO = WailsDTO<activity.DailyPlaySeconds>;
 export type TopWorldDTO = WailsDTO<activity.TopWorldSummary>;
 export type ActivityStatsDTO = WailsDTO<activity.ActivityStats>;
 export type AutomationRuleDTO = WailsDTO<automation.AutomationRule>;
-export type AutomationItemDTO = WailsDTO<main.AutomationItemDTO>;
-export type AutomationRunLogEntryDTO = WailsDTO<main.AutomationRunLogEntryDTO>;
+export type AutomationItemDTO = WailsDTO<wailsapp.AutomationItemDTO>;
+export type AutomationRunLogEntryDTO =
+  WailsDTO<wailsapp.AutomationRunLogEntryDTO>;
 export type AutomationRuntimeStatusDTO =
-  WailsDTO<main.AutomationRuntimeStatusDTO>;
-export type DetectedPowerPlanDTO = WailsDTO<main.DetectedPowerPlanDTO>;
-export type VRChatConfigDTO = WailsDTO<main.VRChatConfigDTO>;
+  WailsDTO<wailsapp.AutomationRuntimeStatusDTO>;
+export type DetectedPowerPlanDTO = WailsDTO<wailsapp.DetectedPowerPlanDTO>;
+export type VRChatConfigDTO = WailsDTO<wailsapp.VRChatConfigDTO>;
 
 /** Cookie linkage status (usecase.CookieLinkageStatus); defined locally until wails generate. */
 export type CookieLinkageStatusDTO = {
@@ -259,7 +264,7 @@ export type AppBindings = {
 declare global {
   interface Window {
     go?: {
-      main?: {
+      wailsapp?: {
         App?: AppBindings;
       };
     };
@@ -267,7 +272,7 @@ declare global {
 }
 
 function getApp(): AppBindings | undefined {
-  return typeof window !== "undefined" ? window.go?.main?.App : undefined;
+  return typeof window !== "undefined" ? window.go?.wailsapp?.App : undefined;
 }
 
 /** True when index was built to load Wails IPC/runtime (Vite dev injection or Wails-served HTML). */
@@ -353,7 +358,7 @@ export function isWailsRuntime(): boolean {
 }
 
 /**
- * Invokes a Wails `App` binding when `window.go.main.App` exists.
+ * Invokes a Wails `App` binding when `window.go.wailsapp.App` exists.
  *
  * `fallback` is returned **only** when that binding is missing (e.g. plain browser
  * or tests without Wails). It is **not** used when Go returns an error: in that

@@ -1,4 +1,4 @@
-package main
+package wailsapp
 
 import (
 	"context"
@@ -15,8 +15,8 @@ func (a *App) GetServerStatus() (ServerStatusDTO, error) {
 		ctx = context.Background()
 	}
 	snap := a.serverStatusClient().Fetch(ctx)
-	if snap.FetchState != statuspage.FetchStateOK {
-		runtime.LogWarning(ctx, "server status fetch: state="+snap.FetchState)
+	if snap.FetchState != statuspage.FetchStateOK && a.ctx != nil {
+		runtime.LogWarning(a.ctx, "server status fetch: state="+snap.FetchState)
 	}
 	return toServerStatusDTO(snap), nil
 }

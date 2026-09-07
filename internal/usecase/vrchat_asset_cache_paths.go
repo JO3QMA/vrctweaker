@@ -1,9 +1,9 @@
 package usecase
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
+
+	"vrchat-tweaker/internal/platform/paths"
 )
 
 // DefaultVRChatAssetCacheFolder returns the conventional VRChat asset cache directory
@@ -13,7 +13,7 @@ import (
 // This is intentionally Cache-WindowsPlayer under the VRChat data dir — not the data dir
 // itself — so clearing contents cannot wipe config.json or Tools.
 func DefaultVRChatAssetCacheFolder() (string, error) {
-	base, err := VRChatDataDir()
+	base, err := paths.VRChatDataDir()
 	if err != nil {
 		return "", err
 	}
@@ -22,12 +22,5 @@ func DefaultVRChatAssetCacheFolder() (string, error) {
 
 // VRChatDataDir returns the directory that holds config.json (LocalLow/VRChat/VRChat on Windows).
 func VRChatDataDir() (string, error) {
-	if dir := os.Getenv("LOCALAPPDATA"); dir != "" {
-		return filepath.Join(filepath.Dir(dir), "LocalLow", "VRChat", "VRChat"), nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", fmt.Errorf("user home: %w", err)
-	}
-	return filepath.Join(home, ".local", "share", "VRChat", "VRChat"), nil
+	return paths.VRChatDataDir()
 }

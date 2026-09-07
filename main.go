@@ -9,6 +9,8 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
+
+	"vrchat-tweaker/internal/wailsapp"
 )
 
 // cspMiddleware adds a Content-Security-Policy header to every HTTP response served by
@@ -48,8 +50,15 @@ func cspMiddleware(next http.Handler) http.Handler {
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed build/windows/icon.ico
+var trayIconICO []byte
+
 func main() {
-	app := NewApp()
+	if len(trayIconICO) > 0 {
+		wailsapp.SetTrayIconICO(trayIconICO)
+	}
+	app := wailsapp.NewApp()
+	lc := wailsapp.NewLifecycle(app)
 
 	err := wails.Run(&options.App{
 		Title:  "VRChat Tweaker",
@@ -60,9 +69,9 @@ func main() {
 			Middleware: cspMiddleware,
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
-		OnStartup:        app.startup,
-		OnShutdown:       app.onShutdown,
-		OnBeforeClose:    app.handleBeforeClose,
+		OnStartup:        lc.Startup,
+		OnShutdown:       lc.Shutdown,
+		OnBeforeClose:    lc.BeforeClose,
 		Bind: []interface{}{
 			app,
 		},

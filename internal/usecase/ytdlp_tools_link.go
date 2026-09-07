@@ -29,7 +29,7 @@ func officialYTDLPCachePathFromLocal(localAppData string) string {
 }
 
 // VRChatYTDLPToolsPath returns …/LocalLow/VRChat/VRChat/Tools/yt-dlp.exe on Windows
-// (same Local→LocalLow rule as getVRChatConfigPath).
+// (same Local→LocalLow rule as paths.VRChatConfigPath).
 func VRChatYTDLPToolsPath() (string, error) {
 	localAppData := os.Getenv("LOCALAPPDATA")
 	if localAppData == "" {
