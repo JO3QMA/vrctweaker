@@ -96,8 +96,7 @@
               class="gallery-sticky-header gallery-sticky-header--overlay"
               :class="stickyOverlay.headerClass"
               data-testid="gallery-sticky-header"
-              role="region"
-              :aria-label="stickyOverlay.ariaLabel"
+              aria-hidden="true"
             >
               <span
                 v-if="stickyOverlay.showYearContext"
@@ -493,7 +492,6 @@ type StickyOverlayState = {
   headerClass: string;
   yearLabel: string;
   showYearContext: boolean;
-  ariaLabel: string;
 };
 
 const emptyStickyOverlay: StickyOverlayState = {
@@ -502,18 +500,7 @@ const emptyStickyOverlay: StickyOverlayState = {
   headerClass: "",
   yearLabel: "",
   showYearContext: false,
-  ariaLabel: "",
 };
-
-function stickyOverlayAriaLabel(
-  section: GalleryStickySection,
-  showYearContext: boolean,
-): string {
-  if (showYearContext && section.yearLabel) {
-    return `${section.yearLabel} ${section.label}`;
-  }
-  return section.label;
-}
 
 function firstVisibleVirtualItem(
   vItems: VirtualItem[],
@@ -522,13 +509,8 @@ function firstVisibleVirtualItem(
   return vItems.find((v) => v.start + v.size > scrollTop);
 }
 
-function isVirtualItemInViewport(
-  v: VirtualItem,
-  scrollTop: number,
-  clientHeight: number,
-): boolean {
-  const viewportEnd = scrollTop + clientHeight;
-  return v.start + v.size > scrollTop && v.start < viewportEnd;
+function isHeaderPinnedAtScrollTop(v: VirtualItem, scrollTop: number): boolean {
+  return v.start <= scrollTop && v.start + v.size > scrollTop;
 }
 
 function stickyHeaderClass(section: GalleryStickySection): string {
@@ -537,21 +519,18 @@ function stickyHeaderClass(section: GalleryStickySection): string {
     : "gallery-sticky-header--day";
 }
 
-function isMatchingHeaderVisibleInViewport(
+function isMatchingHeaderPinnedAtTop(
   vItems: VirtualItem[],
   rows: GalleryVirtualRow[],
   scrollTop: number,
-  clientHeight: number,
   rowKey: string,
 ): boolean {
   for (const v of vItems) {
-    if (!isVirtualItemInViewport(v, scrollTop, clientHeight)) {
-      continue;
-    }
     const row = rows[v.index];
     if (
       (row?.type === "yearHeader" || row?.type === "dayHeader") &&
-      row.rowKey === rowKey
+      row.rowKey === rowKey &&
+      isHeaderPinnedAtScrollTop(v, scrollTop)
     ) {
       return true;
     }
@@ -583,13 +562,7 @@ const stickyOverlay = computed((): StickyOverlayState => {
       // Viewport unknown (init / display:none) — prefer showing sticky.
       return false;
     }
-    return isMatchingHeaderVisibleInViewport(
-      vItems,
-      rows,
-      scrollTop,
-      clientHeight,
-      rowKey,
-    );
+    return isMatchingHeaderPinnedAtTop(vItems, rows, scrollTop, rowKey);
   };
 
   if (hideWhenHeaderVisible(section.rowKey)) {
@@ -599,7 +572,6 @@ const stickyOverlay = computed((): StickyOverlayState => {
       headerClass,
       yearLabel: section.yearLabel ?? "",
       showYearContext: false,
-      ariaLabel: stickyOverlayAriaLabel(section, false),
     };
   }
 
@@ -619,7 +591,6 @@ const stickyOverlay = computed((): StickyOverlayState => {
     headerClass,
     yearLabel: section.yearLabel ?? "",
     showYearContext,
-    ariaLabel: stickyOverlayAriaLabel(section, showYearContext),
   };
 });
 
@@ -694,39 +665,17 @@ function galleryHeaderClass(
     : "gallery-section-header--day";
 }
 
-type GalleryVirtualRowView = {
-  vr: VirtualItem;
-  header: ReturnType<typeof galleryHeaderAt>;
-  isGrid: boolean;
-  gridItems: ScreenshotDTO[];
-};
-
-const virtualRowViewScratch: GalleryVirtualRowView[] = [];
-const emptyGridItems: ScreenshotDTO[] = [];
-
-function syncVirtualRowViews(vItems: VirtualItem[]): GalleryVirtualRowView[] {
-  for (let i = 0; i < vItems.length; i++) {
-    const vr = vItems[i]!;
-    const header = galleryHeaderAt(vr.index);
-    const isGrid = header === undefined && isGridRow(vr.index);
-    const gridItems = isGrid ? gridRowItems(vr.index) : emptyGridItems;
-    const existing = virtualRowViewScratch[i];
-    if (existing) {
-      existing.vr = vr;
-      existing.header = header;
-      existing.isGrid = isGrid;
-      existing.gridItems = gridItems;
-    } else {
-      virtualRowViewScratch[i] = { vr, header, isGrid, gridItems };
-    }
-  }
-  virtualRowViewScratch.length = vItems.length;
-  return virtualRowViewScratch;
-}
-
 const virtualRowViews = computed(() => {
   void scrollSync.value;
-  return syncVirtualRowViews(virtualRows.value);
+  return virtualRows.value.map((vr) => {
+    const header = galleryHeaderAt(vr.index);
+    return {
+      vr,
+      header,
+      isGrid: header === undefined && isGridRow(vr.index),
+      gridItems: gridRowItems(vr.index),
+    };
+  });
 });
 
 watchEffect((onCleanup) => {
@@ -1329,6 +1278,9 @@ onMounted(() => {
 
 .gallery-sticky-label {
   min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .grid-item {
