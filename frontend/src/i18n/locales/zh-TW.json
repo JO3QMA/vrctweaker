@@ -941,7 +941,7 @@
     "historyOutcomeOpen": "未解決",
     "historyOutcomeSuccess": "成功",
     "historyOutcomeFailure": "失敗",
-    "historyCopyUrl": "複製 URL",
+    "historyCopyUrl": "複製影片 URL",
     "historyCopyOk": "已複製 URL",
     "experimentalFeatures": "yt-dlp（實驗性功能）",
     "unsupported": "Not available in this environment.",

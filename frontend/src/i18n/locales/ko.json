@@ -941,7 +941,7 @@
     "historyOutcomeOpen": "미해결",
     "historyOutcomeSuccess": "성공",
     "historyOutcomeFailure": "실패",
-    "historyCopyUrl": "URL 복사",
+    "historyCopyUrl": "동영상 URL 복사",
     "historyCopyOk": "URL을 복사했습니다",
     "experimentalFeatures": "yt-dlp (실험적 기능)",
     "unsupported": "Not available in this environment.",

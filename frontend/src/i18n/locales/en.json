@@ -941,7 +941,7 @@
     "historyOutcomeOpen": "Unresolved",
     "historyOutcomeSuccess": "Success",
     "historyOutcomeFailure": "Failure",
-    "historyCopyUrl": "Copy URL",
+    "historyCopyUrl": "Copy video URL",
     "historyCopyOk": "URL copied",
     "experimentalFeatures": "yt-dlp (Experimental features)",
     "unsupported": "Not available in this environment.",

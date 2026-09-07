@@ -42,23 +42,24 @@
             {{ formatAttemptAt(row.attemptedAt) }}
           </template>
         </el-table-column>
-        <el-table-column
-          :label="t('video.historyColUrl')"
-          min-width="200"
-          show-overflow-tooltip
-        >
+        <el-table-column :label="t('video.historyColUrl')" min-width="200">
           <template #default="{ row }">
             <div class="url-cell">
-              <span class="url-text">{{ row.url }}</span>
-              <VtButton
-                variant="primary"
-                link
-                size="small"
-                data-testid="video-history-copy-url"
-                @click="copyAttemptUrl(row.url)"
-              >
-                {{ t("video.historyCopyUrl") }}
-              </VtButton>
+              <el-tooltip :content="row.url" placement="top">
+                <span class="url-text">{{ row.url }}</span>
+              </el-tooltip>
+              <el-tooltip :content="t('video.historyCopyUrl')" placement="top">
+                <VtButton
+                  variant="primary"
+                  link
+                  size="small"
+                  :aria-label="t('video.historyCopyUrl')"
+                  data-testid="video-history-copy-url"
+                  @click="copyAttemptUrl(row.url)"
+                >
+                  <VtIcon size="default"><Link /></VtIcon>
+                </VtButton>
+              </el-tooltip>
             </div>
           </template>
         </el-table-column>
@@ -265,7 +266,12 @@
 import { computed, onBeforeUnmount, onMounted, onUnmounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
-import { CaretBottom, CaretRight, FolderOpened } from "@element-plus/icons-vue";
+import {
+  CaretBottom,
+  CaretRight,
+  FolderOpened,
+  Link,
+} from "@element-plus/icons-vue";
 import CookieLinkageSection from "../components/CookieLinkageSection.vue";
 import VtAlert from "../components/VtAlert.vue";
 import VtButton from "../components/VtButton.vue";
@@ -686,6 +692,7 @@ onUnmounted(() => {
   min-width: 0;
 }
 .url-text {
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
