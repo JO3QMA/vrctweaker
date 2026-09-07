@@ -45,7 +45,11 @@
         <el-table-column :label="t('video.historyColUrl')" min-width="200">
           <template #default="{ row }">
             <div class="url-cell">
-              <el-tooltip :content="row.url" placement="top">
+              <el-tooltip
+                :content="row.url"
+                placement="top"
+                class="url-text-tooltip"
+              >
                 <span class="url-text">{{ row.url }}</span>
               </el-tooltip>
               <el-tooltip :content="t('video.historyCopyUrl')" placement="top">
@@ -691,12 +695,17 @@ onUnmounted(() => {
   gap: var(--space-action-group);
   min-width: 0;
 }
+.url-text-tooltip {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
 .url-text {
   flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0;
 }
 .video-block-title {
   margin: 0 0 var(--space-form-field);
