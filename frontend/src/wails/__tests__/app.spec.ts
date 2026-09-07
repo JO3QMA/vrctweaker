@@ -16,7 +16,7 @@ import {
 } from "../app";
 
 function setWindowGoApp(app: Partial<AppBindings>): void {
-  window.go = { main: { App: app as AppBindings } };
+  window.go = { wailsapp: { App: app as AppBindings } };
 }
 
 function mockWithProbe(): {
@@ -44,7 +44,7 @@ describe("isWailsRuntime", () => {
     window.go = prevGo;
   });
 
-  it("returns true when window.go.main.App exists", () => {
+  it("returns true when window.go.wailsapp.App exists", () => {
     expect(isWailsRuntime()).toBe(true);
   });
 

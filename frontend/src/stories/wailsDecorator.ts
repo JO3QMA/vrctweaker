@@ -9,7 +9,7 @@ type WailsDecoratorHooks = {
   beforeUnmount?: () => void;
 };
 
-/** Storybook: stub window.go.main.App for the story lifecycle. */
+/** Storybook: stub window.go.wailsapp.App for the story lifecycle. */
 export function withWailsApp(
   app: AppStub,
   hooks?: WailsDecoratorHooks,
@@ -23,9 +23,9 @@ export function withWailsApp(
         hooks?.created?.();
         prevGo = window.go;
         window.go = {
-          main: {
+          wailsapp: {
             App: app as NonNullable<
-              NonNullable<typeof window.go>["main"]
+              NonNullable<typeof window.go>["wailsapp"]
             >["App"],
           },
         };

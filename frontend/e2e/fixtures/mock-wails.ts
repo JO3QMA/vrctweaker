@@ -1,5 +1,5 @@
 /**
- * E2E テスト専用: window.go.main.App のモック
+ * E2E テスト専用: window.go.wailsapp.App のモック
  *
  * 【import 条件】
  * 本ファイルは frontend/e2e/app.spec.ts からのみ import し、Playwright の addInitScript で
@@ -189,8 +189,8 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
       };
 
       window.go = window.go || {};
-      window.go.main = window.go.main || {};
-      window.go.main.App = {
+      window.go.wailsapp = window.go.wailsapp || {};
+      window.go.wailsapp.App = {
         LaunchProfiles: () => Promise.resolve(launchProfiles),
         SaveLaunchProfile: (p) => {
           const next = Object.assign({}, p);

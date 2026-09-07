@@ -4,7 +4,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-if [[ -f "$ROOT/frontend/wailsjs/go/main/App.d.ts" ]]; then
+if [[ -f "$ROOT/frontend/wailsjs/go/wailsapp/App.d.ts" ]]; then
   exit 0
 fi
 
@@ -20,7 +20,7 @@ echo '<!DOCTYPE html><html></html>' >"$ROOT/frontend/dist/index.html"
 (cd "$ROOT" && wails generate module)
 rm -f "$ROOT/frontend/dist/index.html"
 rmdir "$ROOT/frontend/dist" 2>/dev/null || true
-if [[ ! -f "$ROOT/frontend/wailsjs/go/main/App.d.ts" ]]; then
+if [[ ! -f "$ROOT/frontend/wailsjs/go/wailsapp/App.d.ts" ]]; then
   echo "wails generate module did not produce App.d.ts" >&2
   exit 1
 fi
