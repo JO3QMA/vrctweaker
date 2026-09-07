@@ -926,7 +926,7 @@
     "historyOutcomeOpen": "未解決",
     "historyOutcomeSuccess": "成功",
     "historyOutcomeFailure": "失敗",
-    "historyCopyUrl": "URL をコピー",
+    "historyCopyUrl": "動画URLをコピー",
     "historyCopyOk": "URL をコピーしました",
     "experimentalFeatures": "yt-dlp (実験的機能)",
     "unsupported": "この環境では利用できません。",

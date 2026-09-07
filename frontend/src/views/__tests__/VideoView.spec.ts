@@ -357,6 +357,7 @@ describe("VideoView", () => {
     const wrapper = mountView();
     await flushPromises();
     const copyBtn = wrapper.find('[data-testid="video-history-copy-url"]');
+    expect(copyBtn.attributes("aria-label")).toBe("動画URLをコピー");
     await copyBtn.trigger("click");
     await flushPromises();
     expect(mockCopyDisplayName).toHaveBeenCalledWith(

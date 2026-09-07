@@ -42,23 +42,36 @@
             {{ formatAttemptAt(row.attemptedAt) }}
           </template>
         </el-table-column>
-        <el-table-column
-          :label="t('video.historyColUrl')"
-          min-width="200"
-          show-overflow-tooltip
-        >
+        <el-table-column :label="t('video.historyColUrl')" min-width="200">
           <template #default="{ row }">
             <div class="url-cell">
-              <span class="url-text">{{ row.url }}</span>
-              <VtButton
-                variant="primary"
-                link
-                size="small"
-                data-testid="video-history-copy-url"
-                @click="copyAttemptUrl(row.url)"
+              <div class="url-text-wrap">
+                <el-tooltip
+                  :content="row.url"
+                  placement="top"
+                  :disabled="!row.url"
+                >
+                  <span class="url-text">{{ row.url }}</span>
+                </el-tooltip>
+              </div>
+              <el-tooltip
+                :content="t('video.historyCopyUrl')"
+                placement="top"
+                :trigger="['hover', 'focus']"
+                :disabled="!row.url"
               >
-                {{ t("video.historyCopyUrl") }}
-              </VtButton>
+                <VtButton
+                  variant="primary"
+                  link
+                  size="small"
+                  :aria-label="t('video.historyCopyUrl')"
+                  :disabled="!row.url"
+                  data-testid="video-history-copy-url"
+                  @click="copyAttemptUrl(row.url)"
+                >
+                  <VtIcon size="default"><Link /></VtIcon>
+                </VtButton>
+              </el-tooltip>
             </div>
           </template>
         </el-table-column>
@@ -265,7 +278,12 @@
 import { computed, onBeforeUnmount, onMounted, onUnmounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
-import { CaretBottom, CaretRight, FolderOpened } from "@element-plus/icons-vue";
+import {
+  CaretBottom,
+  CaretRight,
+  FolderOpened,
+  Link,
+} from "@element-plus/icons-vue";
 import CookieLinkageSection from "../components/CookieLinkageSection.vue";
 import VtAlert from "../components/VtAlert.vue";
 import VtButton from "../components/VtButton.vue";
@@ -685,11 +703,17 @@ onUnmounted(() => {
   gap: var(--space-action-group);
   min-width: 0;
 }
+.url-text-wrap {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+}
 .url-text {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0;
 }
 .video-block-title {
   margin: 0 0 var(--space-form-field);
