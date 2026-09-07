@@ -98,7 +98,7 @@ func NewApp() *App {
 // Startup is called when the app starts.
 const selfCacheChangedEvent = "identity:self-cache-changed"
 
-func (a *App) Startup(ctx context.Context) {
+func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
 	dataDir, err := paths.AppDataDir()
@@ -191,8 +191,8 @@ func (a *App) Startup(ctx context.Context) {
 	a.syncTrayFromSettings(ctx)
 }
 
-// Shutdown persists state before the process exits (Wails lifecycle).
-func (a *App) Shutdown(ctx context.Context) {
+// shutdown persists state before the process exits (Wails lifecycle).
+func (a *App) shutdown(ctx context.Context) {
 	a.stopTray()
 	a.stopVRChatActivityMonitor()
 	if a.automation != nil {

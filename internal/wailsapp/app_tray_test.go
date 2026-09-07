@@ -51,7 +51,7 @@ func TestApp_closeToTrayEffective_defaultsWithoutTray(t *testing.T) {
 
 func TestApp_handleBeforeClose_withoutTray(t *testing.T) {
 	a := &App{}
-	if a.BeforeClose(t.Context()) {
+	if a.beforeClose(t.Context()) {
 		t.Fatal("want false without close-to-tray")
 	}
 }
@@ -64,7 +64,7 @@ func TestApp_handleBeforeClose_explicitQuitBypassesCloseToTray(t *testing.T) {
 	}
 
 	a.quitPending.Store(true)
-	if a.BeforeClose(t.Context()) {
+	if a.beforeClose(t.Context()) {
 		t.Fatal("want false when explicit quit is requested")
 	}
 }

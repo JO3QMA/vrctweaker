@@ -54,8 +54,11 @@ var assets embed.FS
 var trayIconICO []byte
 
 func main() {
-	wailsapp.SetTrayIconICO(trayIconICO)
+	if len(trayIconICO) > 0 {
+		wailsapp.SetTrayIconICO(trayIconICO)
+	}
 	app := wailsapp.NewApp()
+	lc := wailsapp.NewLifecycle(app)
 
 	err := wails.Run(&options.App{
 		Title:  "VRChat Tweaker",
@@ -66,9 +69,9 @@ func main() {
 			Middleware: cspMiddleware,
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
-		OnStartup:        app.Startup,
-		OnShutdown:       app.Shutdown,
-		OnBeforeClose:    app.BeforeClose,
+		OnStartup:        lc.Startup,
+		OnShutdown:       lc.Shutdown,
+		OnBeforeClose:    lc.BeforeClose,
 		Bind: []interface{}{
 			app,
 		},

@@ -116,8 +116,8 @@ func (a *App) hideMainWindow(ctx context.Context) {
 	runtime.WindowHide(ctx)
 }
 
-// handleBeforeClose hides the window when close-to-tray is enabled; returns true to prevent quit.
-func (a *App) BeforeClose(ctx context.Context) bool {
+// beforeClose hides the window when close-to-tray is enabled; returns true to prevent quit.
+func (a *App) beforeClose(ctx context.Context) bool {
 	if a.quitPending.Load() {
 		return false
 	}
@@ -133,7 +133,7 @@ func (a *App) RequestClose() {
 	if a.ctx == nil {
 		return
 	}
-	if a.BeforeClose(a.ctx) {
+	if a.beforeClose(a.ctx) {
 		return
 	}
 	a.quitApplication()
