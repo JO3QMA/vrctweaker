@@ -9,10 +9,10 @@ import (
 
 var errNilLineProcessorArg = errors.New("logwatcher: nil parser or handler")
 
-// ParseOutputLogLine parses a trimmed non-empty output_log line into events.
+// parseOutputLogLine parses a trimmed non-empty output_log line into events.
 // baseTime is taken from the line timestamp when present; otherwise now is used.
 // This is a pure function with no handler side effects.
-func ParseOutputLogLine(lineTrimmed string, parser *activity.LogParser, now time.Time) (events []activity.ParsedEvent, baseTime time.Time, err error) {
+func parseOutputLogLine(lineTrimmed string, parser *activity.LogParser, now time.Time) (events []activity.ParsedEvent, baseTime time.Time, err error) {
 	if parser == nil {
 		return nil, time.Time{}, errNilLineProcessorArg
 	}
@@ -38,7 +38,7 @@ func (p *LineProcessor) Process(lineTrimmed string) (baseTime time.Time, err err
 	if p == nil || p.Parser == nil || p.Handler == nil {
 		return time.Time{}, errNilLineProcessorArg
 	}
-	events, baseTime, err := ParseOutputLogLine(lineTrimmed, p.Parser, time.Now())
+	events, baseTime, err := parseOutputLogLine(lineTrimmed, p.Parser, time.Now())
 	if err != nil {
 		return baseTime, err
 	}

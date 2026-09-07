@@ -11,18 +11,18 @@ import (
 	"vrchat-tweaker/internal/domain/activity"
 )
 
-func TestParseOutputLogLine_nilParser(t *testing.T) {
+func Test_parseOutputLogLine_nilParser(t *testing.T) {
 	t.Parallel()
-	_, _, err := ParseOutputLogLine("line", nil, time.Now())
+	_, _, err := parseOutputLogLine("line", nil, time.Now())
 	if !errors.Is(err, errNilLineProcessorArg) {
 		t.Fatalf("err = %v, want %v", err, errNilLineProcessorArg)
 	}
 }
 
-func TestParseOutputLogLine_parsesEncounter(t *testing.T) {
+func Test_parseOutputLogLine_parsesEncounter(t *testing.T) {
 	t.Setenv("TZ", "UTC")
 	line := "2026.03.21 11:32:16 Debug      -  [Behaviour] OnPlayerJoined Alice (usr_abc)"
-	events, baseTime, err := ParseOutputLogLine(line, activity.NewLogParser(), time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
+	events, baseTime, err := parseOutputLogLine(line, activity.NewLogParser(), time.Date(2020, 1, 1, 0, 0, 0, 0, time.UTC))
 	if err != nil {
 		t.Fatal(err)
 	}

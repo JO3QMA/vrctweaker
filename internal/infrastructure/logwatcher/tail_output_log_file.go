@@ -44,6 +44,8 @@ func tailOutputLogFile(
 	br := bufio.NewReaderSize(f, readBufferSize)
 	offset := startOffset
 
+	// Intentionally not using scanOutputLogFromReader: tail must poll on EOF and on
+	// zero-byte reads (waitForTail) until ctx is cancelled, which batch scan does not do.
 	for {
 		select {
 		case <-ctx.Done():

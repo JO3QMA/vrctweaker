@@ -19,10 +19,13 @@ func (f FuncEventHandler) Handle(event activity.ParsedEvent) {
 	}
 }
 
-// FanoutHandler dispatches each event to every non-nil handler in order.
+// FanoutHandler is an exported slice of EventHandlers used to fan out parsed events
+// (e.g. activity ingest + automation triggers) without a bespoke composite type.
 type FanoutHandler []EventHandler
 
 // Handle implements EventHandler.
+// Each non-nil handler is invoked in order. Handlers must be safe for concurrent use
+// from other goroutines; FanoutHandler does not synchronize between them.
 func (h FanoutHandler) Handle(event activity.ParsedEvent) {
 	for _, handler := range h {
 		if handler != nil {

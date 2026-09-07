@@ -17,6 +17,9 @@ type ScannedLine struct {
 // When endOffset > 0, scanning stops once the byte position exceeds endOffset.
 // onLine is called for every line read (including blank lines).
 // Returns the final byte offset in the file.
+//
+// Cancellation is checked only before each ReadBytes call. A blocked read may delay
+// shutdown until the underlying reader returns (typically at EOF for log files).
 func scanOutputLogFromReader(
 	ctx context.Context,
 	br *bufio.Reader,
