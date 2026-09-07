@@ -1,4 +1,4 @@
-package main
+package wailsapp
 
 import (
 	"net/http"
@@ -46,7 +46,6 @@ func TestGetServerStatus_returnsDTOWithoutErrorOnFetchFailure(t *testing.T) {
 	defer srv.Close()
 
 	a := &App{
-		ctx:          t.Context(),
 		serverStatus: statuspage.NewTestClient(srv.URL + "/api/v2/"),
 	}
 	got, err := a.GetServerStatus()

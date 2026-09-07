@@ -1,4 +1,4 @@
-package main
+package wailsapp
 
 import (
 	"context"
@@ -32,6 +32,7 @@ import (
 	"vrchat-tweaker/internal/infrastructure/vrchatpipeline"
 	"vrchat-tweaker/internal/infrastructure/ytdlpmaintain"
 	"vrchat-tweaker/internal/locale"
+	"vrchat-tweaker/internal/platform/paths"
 	"vrchat-tweaker/internal/usecase"
 )
 
@@ -94,13 +95,13 @@ func NewApp() *App {
 	return &App{}
 }
 
-// startup is called when the app starts.
+// Startup is called when the app starts.
 const selfCacheChangedEvent = "identity:self-cache-changed"
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 
-	dataDir, err := getDataDir()
+	dataDir, err := paths.AppDataDir()
 	if err != nil {
 		runtime.LogError(ctx, "failed to get data dir: "+err.Error())
 		return
@@ -167,7 +168,7 @@ func (a *App) startup(ctx context.Context) {
 	a.cookieLinkage = usecase.NewCookieLinkageUseCase(a.settings)
 	a.serverStatus = statuspage.NewClient()
 
-	configPath := getVRChatConfigPath()
+	configPath := paths.VRChatConfigPathOrFallback()
 	configRepo := filesystem.NewVRChatConfigFileRepository(configPath)
 	a.vrchatConfigRepo = configRepo
 	a.assetCache = usecase.NewVRChatAssetCacheUseCase(
@@ -177,7 +178,7 @@ func (a *App) startup(ctx context.Context) {
 		sleepsuppress.NewVRChatProcessChecker(),
 		usecase.DefaultVRChatAssetCacheFolder,
 		func() (string, error) { return a.DefaultVRChatPictureFolder() },
-		usecase.VRChatDataDir,
+		paths.VRChatDataDir,
 	)
 
 	// Start output_log watcher if path is configured
@@ -190,8 +191,8 @@ func (a *App) startup(ctx context.Context) {
 	a.syncTrayFromSettings(ctx)
 }
 
-// onShutdown persists state before the process exits (Wails lifecycle).
-func (a *App) onShutdown(ctx context.Context) {
+// Shutdown persists state before the process exits (Wails lifecycle).
+func (a *App) Shutdown(ctx context.Context) {
 	a.stopTray()
 	a.stopVRChatActivityMonitor()
 	if a.automation != nil {
@@ -249,19 +250,6 @@ func (a *App) startupGalleryIncremental() {
 	}
 }
 
-func defaultVRChatOutputLogDir() string {
-	return filepath.Dir(getVRChatConfigPath())
-}
-
-func matchAbsPaths(a, b string) bool {
-	aa, e1 := filepath.Abs(filepath.Clean(a))
-	bb, e2 := filepath.Abs(filepath.Clean(b))
-	if e1 != nil || e2 != nil {
-		return filepath.Clean(a) == filepath.Clean(b)
-	}
-	return filepath.Clean(aa) == filepath.Clean(bb)
-}
-
 func (a *App) resolveEffectiveOutputLogWatchPath(ctx context.Context) (string, error) {
 	dir, cleared, err := a.settings.EnsureOutputLogWatchDir(ctx)
 	if err != nil {
@@ -280,7 +268,7 @@ func (a *App) resolveEffectiveOutputLogWatchPath(ctx context.Context) (string, e
 		}
 		return dir, nil
 	}
-	defaultDir := defaultVRChatOutputLogDir()
+	defaultDir := paths.DefaultVRChatOutputLogDir()
 	if defaultDir == "" {
 		return "", os.ErrNotExist
 	}
@@ -310,43 +298,12 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 	if listErr != nil {
 		return
 	}
-	live := bootstrapLiveLogFiles(files)
+	live := logwatcher.BootstrapLiveLogFiles(files, 5*time.Second)
 	for _, fp := range files {
 		finalize := live == nil || !live[fp]
 		a.ingestOneActivityLogBootstrap(ctx, absWatch, fp, parser, logger, emitEncounters, emitVideoPlayback, cp, finalize, nil)
 	}
 	a.retryScreenshotEnrichment()
-}
-
-func bootstrapLiveLogFiles(paths []string) map[string]bool {
-	const liveWindow = 5 * time.Second
-	type fileMod struct {
-		path string
-		mod  time.Time
-	}
-	var files []fileMod
-	var maxMod time.Time
-	for _, p := range paths {
-		info, err := os.Stat(p)
-		if err != nil {
-			continue
-		}
-		mod := info.ModTime()
-		files = append(files, fileMod{path: p, mod: mod})
-		if mod.After(maxMod) {
-			maxMod = mod
-		}
-	}
-	if maxMod.IsZero() {
-		return nil
-	}
-	live := make(map[string]bool)
-	for _, f := range files {
-		if maxMod.Sub(f.mod) <= liveWindow {
-			live[f.path] = true
-		}
-	}
-	return live
 }
 
 func (a *App) ingestOneActivityLogBootstrap(
@@ -359,12 +316,12 @@ func (a *App) ingestOneActivityLogBootstrap(
 	finalizeAtEnd bool,
 	ingestAdapter *logwatcher.ActivityIngestAdapter,
 ) {
-	absFile := absLogPath(filePath)
+	absFile := logwatcher.AbsLogPath(filePath)
 	if ingestAdapter == nil {
 		ingestAdapter = a.activityIngestAdapterForPath(ctx, logger, emitEncounters, emitVideoPlayback, filePath)
 	}
 	off := int64(0)
-	if cp != nil && matchAbsPaths(cp.WatchPath, absWatch) {
+	if cp != nil && logwatcher.MatchAbsPaths(cp.WatchPath, absWatch) {
 		if fc, ok := cp.FileCheckpoint(absFile); ok {
 			off = fc.ByteOffset
 			if st, statErr := os.Stat(filePath); statErr == nil && st != nil && st.Size() > 0 && off >= st.Size() {
@@ -407,7 +364,7 @@ func (a *App) ingestOneActivityLogBootstrap(
 		if checkpointLines != 1 && checkpointLines%32 != 0 {
 			return
 		}
-		_ = a.activity.SetActivityLogFileCheckpoint(ctx, absWatch, absLogPath(pathCopy), pos, checkpointVRTime(ts))
+		_ = a.activity.SetActivityLogFileCheckpoint(ctx, absWatch, logwatcher.AbsLogPath(pathCopy), pos, logwatcher.CheckpointVRTime(ts))
 	})
 	if procErr != nil {
 		if errors.Is(procErr, context.Canceled) {
@@ -424,7 +381,7 @@ func (a *App) ingestOneActivityLogBootstrap(
 	if statErr == nil && st != nil {
 		endOff = st.Size()
 	}
-	_ = a.activity.SetActivityLogFileCheckpoint(ctx, absWatch, absLogPath(pathCopy), endOff, checkpointVRTime(lastVRLineTime))
+	_ = a.activity.SetActivityLogFileCheckpoint(ctx, absWatch, logwatcher.AbsLogPath(pathCopy), endOff, logwatcher.CheckpointVRTime(lastVRLineTime))
 }
 
 func (a *App) startOutputLogWatcher(ctx context.Context) {
@@ -479,7 +436,7 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 			if a.activity == nil {
 				return
 			}
-			_ = a.activity.SetActivityLogFileCheckpoint(c, watchDeps.watchPath, absLogPath(path), offset, checkpointVRTime(lineTime))
+			_ = a.activity.SetActivityLogFileCheckpoint(c, watchDeps.watchPath, logwatcher.AbsLogPath(path), offset, logwatcher.CheckpointVRTime(lineTime))
 		},
 	}, logger)
 	if startErr := watcher.Start(ctx); startErr != nil {
@@ -560,14 +517,6 @@ func (logLogger) Printf(format string, args ...interface{}) {
 func appDiagLogger() logwatcher.Logger {
 	ll := logLogger{}
 	return logwatcher.Logger(ll.Printf)
-}
-
-func getDataDir() (string, error) {
-	configDir, err := os.UserConfigDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(configDir, "vrchat-tweaker"), nil
 }
 
 // --- Launcher bindings ---
@@ -1078,7 +1027,7 @@ func (a *App) OpenVRChatLogFolder() error {
 			dir = filepath.Dir(abs)
 		}
 	} else {
-		dir = defaultVRChatOutputLogDir()
+		dir = paths.DefaultVRChatOutputLogDir()
 	}
 	return desktop.OpenFolderInFileManager(dir)
 }
@@ -1658,20 +1607,4 @@ func openYTDLPFolderInFileManager(pathResolver func() (string, error)) error {
 		return mkErr
 	}
 	return desktop.OpenFolderInFileManager(dir)
-}
-
-// getVRChatConfigPath returns the path to VRChat's config.json.
-// On Windows: %LocalAppData%Low\VRChat\VRChat\config.json
-// On other OS: falls back to ~/.local/share/VRChat/VRChat/config.json
-func getVRChatConfigPath() string {
-	if dir := os.Getenv("LOCALAPPDATA"); dir != "" {
-		// Windows: %LOCALAPPDATA% is typically C:\Users\<user>\AppData\Local
-		// config.json lives in LocalLow, which is ../LocalLow relative to Local
-		return filepath.Join(filepath.Dir(dir), "LocalLow", "VRChat", "VRChat", "config.json")
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return filepath.Join(".", "config.json")
-	}
-	return filepath.Join(home, ".local", "share", "VRChat", "VRChat", "config.json")
 }

@@ -1,4 +1,4 @@
-package main
+package wailsapp
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 // activityIngestAdapterForPath returns a per–log-source ingest adapter reused across bootstrap and live tail.
 // SessionCorrelator state must survive from bootstrap replay into tailOutputLogFile.
 func (a *App) activityIngestAdapterForPath(ctx context.Context, logger logwatcher.Logger, emitEncounters, emitVideoPlayback func(), filePath string) *logwatcher.ActivityIngestAdapter {
-	abs := absLogPath(filePath)
+	abs := logwatcher.AbsLogPath(filePath)
 	a.activityIngestMu.Lock()
 	defer a.activityIngestMu.Unlock()
 	if a.activityIngestAdapters == nil {
@@ -28,7 +28,7 @@ func (a *App) evictActivityIngestAdapter(filePath string) {
 	if filePath == "" {
 		return
 	}
-	abs := absLogPath(filePath)
+	abs := logwatcher.AbsLogPath(filePath)
 	a.activityIngestMu.Lock()
 	defer a.activityIngestMu.Unlock()
 	delete(a.activityIngestAdapters, abs)

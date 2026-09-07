@@ -1,4 +1,4 @@
-package main
+package wailsapp
 
 import (
 	"context"
@@ -45,7 +45,7 @@ func (a *App) finalizeOpenActivityForLogSource(ctx context.Context, logPath stri
 	if lastTime.IsZero() {
 		return
 	}
-	_ = a.activity.FinalizeOpenActivityForLogSource(ctx, absLogPath(logPath), lastTime)
+	_ = a.activity.FinalizeOpenActivityForLogSource(ctx, logwatcher.AbsLogPath(logPath), lastTime)
 	if a.ctx != nil {
 		runtime.EventsEmit(a.ctx, activityEncountersChangedEvent, struct{}{})
 	}
@@ -115,7 +115,7 @@ func (a *App) finalizeAllLogSourcesOnVRChatExit(ctx context.Context, watchPath s
 		cp.NormalizeFiles()
 		for path, fc := range cp.Files {
 			fcCopy := fc
-			paths[absLogPath(path)] = pathClose{fc: &fcCopy}
+			paths[logwatcher.AbsLogPath(path)] = pathClose{fc: &fcCopy}
 		}
 	}
 
@@ -123,7 +123,7 @@ func (a *App) finalizeAllLogSourcesOnVRChatExit(ctx context.Context, watchPath s
 		if info, statErr := os.Stat(watchPath); statErr == nil && info.IsDir() {
 			if files, listErr := logwatcher.ListOutputLogFiles(watchPath); listErr == nil {
 				for _, path := range files {
-					abs := absLogPath(path)
+					abs := logwatcher.AbsLogPath(path)
 					if _, ok := paths[abs]; ok {
 						continue
 					}
@@ -134,7 +134,7 @@ func (a *App) finalizeAllLogSourcesOnVRChatExit(ctx context.Context, watchPath s
 	}
 
 	for path, pc := range paths {
-		closeAt := closeTimeForLogFile(path, lastLine, pc.fc)
+		closeAt := logwatcher.CloseTimeForLogFile(path, lastLine, pc.fc)
 		if closeAt.IsZero() {
 			continue
 		}
@@ -146,31 +146,4 @@ func (a *App) finalizeAllLogSourcesOnVRChatExit(ctx context.Context, watchPath s
 	if a.ctx != nil {
 		runtime.EventsEmit(a.ctx, activityEncountersChangedEvent, struct{}{})
 	}
-}
-
-func absLogPath(p string) string {
-	abs, err := filepath.Abs(filepath.Clean(p))
-	if err != nil {
-		return p
-	}
-	return abs
-}
-
-func checkpointVRTime(t time.Time) string {
-	if t.IsZero() {
-		return ""
-	}
-	return t.Format(time.RFC3339)
-}
-
-func closeTimeForLogFile(path string, fallback time.Time, fc *usecase.ActivityLogFileCheckpoint) time.Time {
-	if t, err := logwatcher.LastVRChatLineTimeInFile(path); err == nil && !t.IsZero() {
-		return t
-	}
-	if fc != nil && fc.VRChatLineTime != "" {
-		if t, err := time.Parse(time.RFC3339, fc.VRChatLineTime); err == nil && !t.IsZero() {
-			return t
-		}
-	}
-	return fallback
 }

@@ -1,18 +1,22 @@
-package main
+package wailsapp
 
 import (
 	"context"
-	_ "embed"
 	"os"
 	"path/filepath"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"vrchat-tweaker/internal/infrastructure/tray"
 	"vrchat-tweaker/internal/locale"
+	"vrchat-tweaker/internal/platform/paths"
 )
 
-//go:embed build/windows/icon.ico
 var trayIconICO []byte
+
+// SetTrayIconICO supplies the Windows tray icon bytes (embedded from main).
+func SetTrayIconICO(icon []byte) {
+	trayIconICO = icon
+}
 
 func (a *App) initTrayManager() {
 	if a.tray == nil {
@@ -21,7 +25,7 @@ func (a *App) initTrayManager() {
 }
 
 func (a *App) trayIconPath() (string, error) {
-	dataDir, err := getDataDir()
+	dataDir, err := paths.AppDataDir()
 	if err != nil {
 		return "", err
 	}
@@ -113,7 +117,7 @@ func (a *App) hideMainWindow(ctx context.Context) {
 }
 
 // handleBeforeClose hides the window when close-to-tray is enabled; returns true to prevent quit.
-func (a *App) handleBeforeClose(ctx context.Context) bool {
+func (a *App) BeforeClose(ctx context.Context) bool {
 	if a.quitPending.Load() {
 		return false
 	}
@@ -129,7 +133,7 @@ func (a *App) RequestClose() {
 	if a.ctx == nil {
 		return
 	}
-	if a.handleBeforeClose(a.ctx) {
+	if a.BeforeClose(a.ctx) {
 		return
 	}
 	a.quitApplication()

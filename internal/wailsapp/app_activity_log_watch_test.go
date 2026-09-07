@@ -1,4 +1,4 @@
-package main
+package wailsapp
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"vrchat-tweaker/internal/infrastructure/logwatcher"
 	"vrchat-tweaker/internal/usecase"
 )
 
@@ -157,7 +158,7 @@ func Test_closeTimeForLogFile_prefersFileTimestamp(t *testing.T) {
 	if err := os.WriteFile(logPath, []byte("2026.03.21 12:00:00 Debug      -  [EOSManager] tail\n"), 0600); err != nil {
 		t.Fatal(err)
 	}
-	got := closeTimeForLogFile(logPath, fallback, nil)
+	got := logwatcher.CloseTimeForLogFile(logPath, fallback, nil)
 	if !got.Equal(lineTime) {
 		t.Fatalf("closeTimeForLogFile = %v, want %v", got, lineTime)
 	}
