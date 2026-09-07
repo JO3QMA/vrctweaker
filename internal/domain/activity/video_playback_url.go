@@ -38,7 +38,6 @@ func StripYouTubeTrackingParams(raw string) string {
 }
 
 func isYouTubeVideoHost(host string) bool {
-	host = strings.ToLower(host)
 	if host == "youtu.be" {
 		return true
 	}
