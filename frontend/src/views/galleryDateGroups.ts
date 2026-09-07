@@ -241,10 +241,34 @@ export function buildGalleryHeaderIndices(
 export interface GalleryStickySection {
   label: string;
   rowKey: string;
+  headerKind: "yearHeader" | "dayHeader";
   dayKey?: string;
+  yearLabel?: string;
+  yearRowKey?: string;
 }
 
 const STICKY_HEADER_SCAN_CAP = 64;
+
+function toStickySection(
+  entry: GalleryHeaderIndexEntry,
+  yearEntry?: GalleryHeaderIndexEntry,
+): GalleryStickySection {
+  if (entry.type === "yearHeader") {
+    return {
+      label: entry.label,
+      rowKey: entry.rowKey,
+      headerKind: "yearHeader",
+    };
+  }
+  return {
+    label: entry.label,
+    rowKey: entry.rowKey,
+    headerKind: "dayHeader",
+    dayKey: entry.dayKey,
+    yearLabel: yearEntry?.label,
+    yearRowKey: yearEntry?.rowKey,
+  };
+}
 
 /** Resolve the sticky section for the first visible virtual row index. */
 export function stickySectionForIndex(
@@ -270,29 +294,20 @@ export function stickySectionForIndex(
     return null;
   }
 
+  const nearest = headerIndices[end]!;
+  if (nearest.type === "yearHeader") {
+    return toStickySection(nearest);
+  }
+
   const scanStart = Math.max(0, end - STICKY_HEADER_SCAN_CAP + 1);
-  let dayEntry: GalleryHeaderIndexEntry | undefined;
   let yearEntry: GalleryHeaderIndexEntry | undefined;
   for (let i = end; i >= scanStart; i--) {
     const entry = headerIndices[i]!;
-    if (entry.type === "dayHeader" && dayEntry === undefined) {
-      dayEntry = entry;
-    }
     if (entry.type === "yearHeader") {
       yearEntry = entry;
-      if (dayEntry !== undefined) {
-        break;
-      }
+      break;
     }
   }
 
-  const chosen = dayEntry ?? yearEntry ?? headerIndices[end];
-  if (!chosen) {
-    return null;
-  }
-  return {
-    label: chosen.label,
-    rowKey: chosen.rowKey,
-    dayKey: chosen.dayKey,
-  };
+  return toStickySection(nearest, yearEntry);
 }

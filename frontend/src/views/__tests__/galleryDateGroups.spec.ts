@@ -193,5 +193,45 @@ describe("stickySectionForIndex", () => {
     const section = stickySectionForIndex(newerDayIdx, indices);
     expect(section?.rowKey).toBe(dayHeaders[0]?.rowKey);
     expect(section?.dayKey).toBe(dayHeaders[0]?.dayKey);
+    expect(section?.headerKind).toBe("dayHeader");
+    expect(section?.yearLabel).toBe("2024年");
+  });
+
+  it("returns year header immediately when firstIdx is on a year divider", () => {
+    const rows = buildGalleryVirtualRows(
+      [shot("a", "2024-01-02T10:00:00Z"), shot("b", "2023-12-31T10:00:00Z")],
+      2,
+    );
+    const indices = buildGalleryHeaderIndices(rows);
+    const year2024Idx = rows.findIndex(
+      (r) => r.type === "yearHeader" && r.label === "2024年",
+    );
+    const section = stickySectionForIndex(year2024Idx, indices);
+    expect(section?.headerKind).toBe("yearHeader");
+    expect(section?.label).toBe("2024年");
+    expect(section?.dayKey).toBeUndefined();
+  });
+
+  it("returns unknown year header for unknown-dated grid rows", () => {
+    const rows = buildGalleryVirtualRows([shot("u", undefined)], 2);
+    const indices = buildGalleryHeaderIndices(rows);
+    const gridIdx = rows.findIndex((r) => r.type === "grid");
+    const section = stickySectionForIndex(gridIdx, indices);
+    expect(section?.headerKind).toBe("yearHeader");
+    expect(section?.label).toBe("日付不明");
+  });
+
+  it("includes yearLabel on day sections for sticky year context", () => {
+    const rows = buildGalleryVirtualRows(
+      [shot("a", "2024-09-04T10:00:00Z")],
+      2,
+    );
+    const indices = buildGalleryHeaderIndices(rows);
+    const gridIdx = rows.findIndex((r) => r.type === "grid");
+    const section = stickySectionForIndex(gridIdx, indices);
+    expect(section?.headerKind).toBe("dayHeader");
+    expect(section?.label).toBe("9月4日");
+    expect(section?.yearLabel).toBe("2024年");
+    expect(section?.yearRowKey).toBe("hdr-y-2024");
   });
 });
