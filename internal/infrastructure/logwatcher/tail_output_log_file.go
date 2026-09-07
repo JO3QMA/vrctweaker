@@ -40,9 +40,12 @@ func tailOutputLogFile(
 		return
 	}
 
+	processor := NewLineProcessor(parser, handler)
 	br := bufio.NewReaderSize(f, readBufferSize)
 	offset := startOffset
 
+	// Intentionally not using scanOutputLogFromReader: tail must poll on EOF and on
+	// zero-byte reads (waitForTail) until ctx is cancelled, which batch scan does not do.
 	for {
 		select {
 		case <-ctx.Done():
@@ -62,10 +65,8 @@ func tailOutputLogFile(
 				return
 			}
 			if consumed == 0 {
-				select {
-				case <-ctx.Done():
+				if waitForTail(ctx) {
 					return
-				case <-time.After(pollInterval):
 				}
 				continue
 			}
@@ -73,9 +74,9 @@ func tailOutputLogFile(
 
 		lineTrimmed := trimNL(line)
 		if lineTrimmed != "" {
-			baseTime, parseErr := dispatchOutputLogLine(lineTrimmed, parser, handler)
+			baseTime, parseErr := processor.Process(lineTrimmed)
 			if parseErr != nil {
-				logDispatchLineErr(logger, parseErr,
+				logLineProcessErr(logger, parseErr,
 					"[multi-logwatcher] parse %s: %v", "[multi-logwatcher] dispatch %s: %v",
 					path)
 			}
@@ -85,11 +86,18 @@ func tailOutputLogFile(
 		}
 
 		if err == io.EOF {
-			select {
-			case <-ctx.Done():
+			if waitForTail(ctx) {
 				return
-			case <-time.After(pollInterval):
 			}
 		}
+	}
+}
+
+func waitForTail(ctx context.Context) bool {
+	select {
+	case <-ctx.Done():
+		return true
+	case <-time.After(pollInterval):
+		return false
 	}
 }

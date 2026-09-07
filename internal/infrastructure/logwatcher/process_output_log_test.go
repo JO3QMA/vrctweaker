@@ -204,3 +204,29 @@ func TestProcessOutputLogFileFromOffset_progressCallback(t *testing.T) {
 		t.Fatalf("pos=%d err=%v", pos, err)
 	}
 }
+
+func TestProcessOutputLogFileFromOffset_progressCallbackIncludesEmptyLines(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "log.txt")
+	content := "x\n\ny\n"
+	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
+		t.Fatal(err)
+	}
+	var progress []string
+	pos, err := ProcessOutputLogFileFromOffset(
+		context.Background(), path, 0, activity.NewLogParser(), testEventHandler(func(activity.ParsedEvent) {}), nil,
+		func(_ int64, line string) { progress = append(progress, line) },
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pos != int64(len(content)) {
+		t.Fatalf("pos = %d, want %d", pos, len(content))
+	}
+	if len(progress) != 3 {
+		t.Fatalf("progress lines = %d, want 3: %v", len(progress), progress)
+	}
+	if progress[0] != "x" || progress[1] != "" || progress[2] != "y" {
+		t.Fatalf("progress = %v", progress)
+	}
+}

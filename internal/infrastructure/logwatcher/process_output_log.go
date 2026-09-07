@@ -10,14 +10,6 @@ import (
 )
 
 // SessionCorrelatorWarmer rebuilds SessionCorrelator state from log lines without persisting commands.
-type fnEventHandler func(event activity.ParsedEvent)
-
-func (f fnEventHandler) Handle(event activity.ParsedEvent) {
-	if f != nil {
-		f(event)
-	}
-}
-
 type SessionCorrelatorWarmer interface {
 	WarmFromParsedEvent(event activity.ParsedEvent)
 }
@@ -43,42 +35,22 @@ func WarmSessionCorrelatorFromLogFile(ctx context.Context, path string, endOffse
 	}
 	defer func() { _ = f.Close() }()
 
-	if _, err := f.Seek(0, io.SeekStart); err != nil {
+	if _, err = f.Seek(0, io.SeekStart); err != nil {
 		return err
 	}
 
-	br := bufio.NewReader(f)
-	pos := int64(0)
-	for pos < endOffset {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
+	processor := NewLineProcessor(parser, FuncEventHandler(warmer.WarmFromParsedEvent))
+	_, err = scanOutputLogFromReader(ctx, bufio.NewReader(f), 0, endOffset, func(line ScannedLine) error {
+		if line.Trimmed == "" {
+			return nil
 		}
-		lineBytes, err := br.ReadBytes('\n')
-		if len(lineBytes) == 0 && err == io.EOF {
-			break
+		if _, parseErr := processor.Process(line.Trimmed); parseErr != nil {
+			logLineProcessErr(logger, parseErr,
+				"[logwatcher] warm parse error: %v", "[logwatcher] warm dispatch error: %v")
 		}
-		pos += int64(len(lineBytes))
-		if pos > endOffset {
-			break
-		}
-		line := string(lineBytes)
-		if err != nil && err != io.EOF {
-			return err
-		}
-		lineTrimmed := trimNL(line)
-		if lineTrimmed != "" {
-			if _, parseErr := dispatchOutputLogLine(lineTrimmed, parser, fnEventHandler(warmer.WarmFromParsedEvent)); parseErr != nil {
-				logDispatchLineErr(logger, parseErr,
-					"[logwatcher] warm parse error: %v", "[logwatcher] warm dispatch error: %v")
-			}
-		}
-		if err == io.EOF {
-			break
-		}
-	}
-	return nil
+		return nil
+	})
+	return err
 }
 
 // ProgressCallback receives absolute byte offset in the file after each line (including newline) and the raw line text.
@@ -106,40 +78,22 @@ func ProcessOutputLogFileFromOffset(ctx context.Context, path string, startOffse
 	if startOffset > size {
 		startOffset = size
 	}
-	if _, err := f.Seek(startOffset, io.SeekStart); err != nil {
+	if _, err = f.Seek(startOffset, io.SeekStart); err != nil {
 		return startOffset, err
 	}
 
-	br := bufio.NewReader(f)
-	pos := startOffset
-	for {
-		select {
-		case <-ctx.Done():
-			return pos, ctx.Err()
-		default:
-		}
-		lineBytes, err := br.ReadBytes('\n')
-		if len(lineBytes) == 0 && err == io.EOF {
-			break
-		}
-		pos += int64(len(lineBytes))
-		line := string(lineBytes)
-		if err != nil && err != io.EOF {
-			return pos, err
-		}
-		lineTrimmed := trimNL(line)
-		if lineTrimmed != "" {
-			if _, parseErr := dispatchOutputLogLine(lineTrimmed, parser, handler); parseErr != nil {
-				logDispatchLineErr(logger, parseErr,
+	processor := NewLineProcessor(parser, handler)
+	pos, err := scanOutputLogFromReader(ctx, bufio.NewReader(f), startOffset, 0, func(line ScannedLine) error {
+		if line.Trimmed != "" {
+			if _, parseErr := processor.Process(line.Trimmed); parseErr != nil {
+				logLineProcessErr(logger, parseErr,
 					"[logwatcher] bootstrap parse error: %v", "[logwatcher] bootstrap dispatch error: %v")
 			}
 		}
 		if onProgress != nil {
-			onProgress(pos, trimNL(line))
+			onProgress(line.ByteOffset, trimNL(line.Raw))
 		}
-		if err == io.EOF {
-			break
-		}
-	}
-	return pos, nil
+		return nil
+	})
+	return pos, err
 }
