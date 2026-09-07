@@ -15,7 +15,7 @@ type ScannedLine struct {
 
 // scanOutputLogFromReader reads lines from br, which is already positioned at startOffset.
 // When endOffset > 0, scanning stops once the byte position exceeds endOffset.
-// onLine is called for each line with a non-empty Trimmed value.
+// onLine is called for every line read (including blank lines).
 // Returns the final byte offset in the file.
 func scanOutputLogFromReader(
 	ctx context.Context,
@@ -47,7 +47,7 @@ func scanOutputLogFromReader(
 		}
 
 		trimmed := trimNL(line)
-		if trimmed != "" && onLine != nil {
+		if onLine != nil {
 			if cbErr := onLine(ScannedLine{
 				Raw:        line,
 				Trimmed:    trimmed,

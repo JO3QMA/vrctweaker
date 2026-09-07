@@ -82,6 +82,26 @@ func TestScanOutputLogFromReader_respectsEndOffset(t *testing.T) {
 	}
 }
 
+func TestScanOutputLogFromReader_invokesCallbackForEmptyLines(t *testing.T) {
+	t.Parallel()
+	content := "a\n\nb\n"
+	br := bufio.NewReader(strings.NewReader(content))
+	var trimmed []string
+	_, err := scanOutputLogFromReader(context.Background(), br, 0, 0, func(line ScannedLine) error {
+		trimmed = append(trimmed, line.Trimmed)
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(trimmed) != 3 {
+		t.Fatalf("callbacks = %d, want 3: %v", len(trimmed), trimmed)
+	}
+	if trimmed[0] != "a" || trimmed[1] != "" || trimmed[2] != "b" {
+		t.Fatalf("trimmed = %v", trimmed)
+	}
+}
+
 func TestFanoutHandler_dispatchesToAll(t *testing.T) {
 	t.Parallel()
 	var count int

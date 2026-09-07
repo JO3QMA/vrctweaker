@@ -41,6 +41,9 @@ func WarmSessionCorrelatorFromLogFile(ctx context.Context, path string, endOffse
 
 	processor := NewLineProcessor(parser, FuncEventHandler(warmer.WarmFromParsedEvent))
 	_, err = scanOutputLogFromReader(ctx, bufio.NewReader(f), 0, endOffset, func(line ScannedLine) error {
+		if line.Trimmed == "" {
+			return nil
+		}
 		if _, parseErr := processor.Process(line.Trimmed); parseErr != nil {
 			logLineProcessErr(logger, parseErr,
 				"[logwatcher] warm parse error: %v", "[logwatcher] warm dispatch error: %v")
@@ -81,9 +84,11 @@ func ProcessOutputLogFileFromOffset(ctx context.Context, path string, startOffse
 
 	processor := NewLineProcessor(parser, handler)
 	pos, err := scanOutputLogFromReader(ctx, bufio.NewReader(f), startOffset, 0, func(line ScannedLine) error {
-		if _, parseErr := processor.Process(line.Trimmed); parseErr != nil {
-			logLineProcessErr(logger, parseErr,
-				"[logwatcher] bootstrap parse error: %v", "[logwatcher] bootstrap dispatch error: %v")
+		if line.Trimmed != "" {
+			if _, parseErr := processor.Process(line.Trimmed); parseErr != nil {
+				logLineProcessErr(logger, parseErr,
+					"[logwatcher] bootstrap parse error: %v", "[logwatcher] bootstrap dispatch error: %v")
+			}
 		}
 		if onProgress != nil {
 			onProgress(line.ByteOffset, trimNL(line.Raw))
