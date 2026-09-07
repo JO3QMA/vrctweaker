@@ -57,13 +57,15 @@
               <el-tooltip
                 :content="t('video.historyCopyUrl')"
                 placement="top"
-                trigger="hover focus"
+                :trigger="['hover', 'focus']"
+                :disabled="!row.url"
               >
                 <VtButton
                   variant="primary"
                   link
                   size="small"
                   :aria-label="t('video.historyCopyUrl')"
+                  :disabled="!row.url"
                   data-testid="video-history-copy-url"
                   @click="copyAttemptUrl(row.url)"
                 >
