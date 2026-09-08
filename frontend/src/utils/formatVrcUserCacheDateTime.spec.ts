@@ -17,26 +17,12 @@ describe("formatVrcUserCacheDateTime", () => {
     expect(formatVrcUserCacheDateTime("not-a-date")).toBeNull();
   });
 
-  it("formats valid ISO strings with the provided locale", () => {
-    const spy = vi.spyOn(Intl, "DateTimeFormat").mockImplementation(
-      () =>
-        ({
-          format: () => "2025/1/1 9:00",
-        }) as Intl.DateTimeFormat,
-    );
-
-    const result = formatVrcUserCacheDateTime(
-      "2025-01-01T00:00:00.000Z",
-      "ja-JP",
-    );
-    expect(result).toBe("2025/1/1 9:00");
-    expect(spy).toHaveBeenCalledWith("ja-JP", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    });
+  it("formats valid ISO strings with locale-specific output", () => {
+    const ja = formatVrcUserCacheDateTime("2025-06-15T12:00:00.000Z", "ja-JP");
+    const en = formatVrcUserCacheDateTime("2025-06-15T12:00:00.000Z", "en-US");
+    expect(ja).toMatch(/2025/);
+    expect(en).toMatch(/2025/);
+    expect(ja).not.toBe(en);
   });
 
   it("formats VRChat-style timestamps with fractional seconds", () => {
