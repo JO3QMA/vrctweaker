@@ -54,7 +54,7 @@
       <div class="grid-section">
         <div
           v-if="scanning"
-          class="loading gallery-scan-progress"
+          class="gallery-section-state gallery-scan-progress"
           data-testid="gallery-scan-progress"
         >
           <p class="gallery-scan-status">{{ scanStatusText }}</p>
@@ -78,9 +78,43 @@
             :duration="10"
           />
         </div>
-        <div v-else-if="loading" class="loading">{{ t("common.loading") }}</div>
-        <div v-else-if="list.length === 0" class="empty">
-          {{ t("gallery.empty") }}
+        <div
+          v-else-if="loading"
+          class="gallery-section-state gallery-loading"
+          data-testid="gallery-loading"
+        >
+          <VtIcon size="emphasis" class="gallery-loading-icon is-loading">
+            <Loading />
+          </VtIcon>
+          <p class="gallery-loading-text text-body-sm">
+            {{ t("gallery.loading") }}
+          </p>
+        </div>
+        <div
+          v-else-if="list.length === 0"
+          class="gallery-section-state gallery-empty"
+          data-testid="gallery-empty"
+        >
+          <h2 class="gallery-empty-title text-h3">{{ emptyTitle }}</h2>
+          <p class="gallery-empty-body text-body-sm">{{ emptyBody }}</p>
+          <VtButton
+            v-if="showEmptySyncAction"
+            variant="primary"
+            data-testid="gallery-empty-sync"
+            :disabled="loading || scanning"
+            :loading="scanning"
+            @click="scanFolder"
+          >
+            {{ scanning ? t("gallery.scanning") : t("gallery.scanFolder") }}
+          </VtButton>
+          <VtButton
+            v-else-if="hasActiveFilters"
+            variant="secondary"
+            data-testid="gallery-empty-clear-filters"
+            @click="clearFilters"
+          >
+            {{ t("gallery.clearFilters") }}
+          </VtButton>
         </div>
         <div
           v-else
@@ -267,7 +301,7 @@
 </template>
 
 <script setup lang="ts">
-import { Search } from "@element-plus/icons-vue";
+import { Loading, Search } from "@element-plus/icons-vue";
 import { useVirtualizer, type VirtualItem } from "@tanstack/vue-virtual";
 import VtAlert from "../components/VtAlert.vue";
 import VtButton from "../components/VtButton.vue";
@@ -358,6 +392,26 @@ let unsubscribeScanDone: (() => void) | undefined;
 let unsubscribeScreenshotsChanged: (() => void) | undefined;
 let screenshotsChangedDebounceTimer: ReturnType<typeof setTimeout> | null =
   null;
+
+const hasActiveFilters = computed(
+  () =>
+    buildGallerySearchFilter(filterWorldSearch.value, filterDateRange.value) !==
+    null,
+);
+
+const emptyTitle = computed(() =>
+  hasActiveFilters.value
+    ? t("gallery.emptyFilteredTitle")
+    : t("gallery.emptyTitle"),
+);
+
+const emptyBody = computed(() =>
+  hasActiveFilters.value
+    ? t("gallery.emptyFilteredBody")
+    : t("gallery.emptyBody"),
+);
+
+const showEmptySyncAction = computed(() => !hasActiveFilters.value);
 
 const scanProgressDeterminate = computed(() => {
   const p = scanProgress.value;
@@ -962,6 +1016,16 @@ function onFilterEnter(): void {
   void load();
 }
 
+function clearFilters(): void {
+  filterWorldSearch.value = "";
+  filterDateRange.value = null;
+  if (filterDebounceTimer !== null) {
+    clearTimeout(filterDebounceTimer);
+    filterDebounceTimer = null;
+  }
+  void load();
+}
+
 watch(filterWorldSearch, scheduleDebouncedLoad);
 watch(filterDateRange, scheduleDebouncedLoad);
 
@@ -1191,19 +1255,29 @@ onMounted(() => {
   }
 }
 
-.loading,
-.empty {
-  padding: var(--space-page);
-  text-align: center;
-  color: var(--color-text-secondary);
-}
-
-.gallery-scan-progress {
+.gallery-section-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: var(--space-form-field);
   padding: var(--space-page);
+  text-align: center;
+}
+
+.gallery-loading-icon {
+  color: var(--color-text-secondary);
+}
+
+.gallery-loading-text,
+.gallery-empty-body {
+  margin: 0;
+  max-width: 28rem;
+  color: var(--color-text-secondary);
+}
+
+.gallery-empty-title {
+  margin: 0;
+  color: var(--color-text-primary);
 }
 
 .gallery-scan-status {

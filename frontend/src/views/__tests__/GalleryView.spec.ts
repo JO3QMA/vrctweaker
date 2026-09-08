@@ -162,6 +162,71 @@ describe("GalleryView", () => {
     host.remove();
   });
 
+  it("shows loading panel with spinner while screenshots load", async () => {
+    let resolveLoad!: (v: ScreenshotDTO[]) => void;
+    mockScreenshots.mockReturnValue(
+      new Promise<ScreenshotDTO[]>((resolve) => {
+        resolveLoad = resolve;
+      }),
+    );
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="gallery-loading"]').exists()).toBe(true);
+    expect(wrapper.find(".is-loading").exists()).toBe(true);
+
+    resolveLoad([]);
+    await flushPromises();
+    expect(wrapper.find('[data-testid="gallery-loading"]').exists()).toBe(
+      false,
+    );
+  });
+
+  it("shows empty state with sync action when list is empty and no filters", async () => {
+    mockScreenshots.mockResolvedValue([]);
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="gallery-empty"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="gallery-empty-sync"]').exists()).toBe(
+      true,
+    );
+    expect(
+      wrapper.find('[data-testid="gallery-empty-clear-filters"]').exists(),
+    ).toBe(false);
+  });
+
+  it("shows filtered empty state with clear filters when search has no results", async () => {
+    mockScreenshots.mockResolvedValue([]);
+    mockSearchScreenshots.mockResolvedValue([]);
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+
+    const filterInput = wrapper.find("[data-testid='gallery-world-filter']");
+    await filterInput.setValue("wrld_none");
+    await filterInput.trigger("keyup.enter");
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="gallery-empty"]').exists()).toBe(true);
+    expect(
+      wrapper.find('[data-testid="gallery-empty-clear-filters"]').exists(),
+    ).toBe(true);
+    expect(wrapper.find('[data-testid="gallery-empty-sync"]').exists()).toBe(
+      false,
+    );
+  });
+
+  it("empty sync action triggers scanFolder", async () => {
+    mockScreenshots.mockResolvedValue([]);
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+
+    await wrapper.find('[data-testid="gallery-empty-sync"]').trigger("click");
+    await flushPromises();
+
+    expect(mockScanScreenshotDir).toHaveBeenCalledWith("C:/Pictures/VRChat");
+  });
+
   it("loads all screenshots on mount via App.screenshots", async () => {
     mount(GalleryView, { attachTo: host });
     await flushPromises();

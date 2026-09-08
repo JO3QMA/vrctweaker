@@ -1,5 +1,26 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
 import GalleryView from "./GalleryView.vue";
+import { withWailsApp } from "../stories/wailsDecorator";
+
+const galleryWailsBase = {
+  Screenshots: () => Promise.resolve([]),
+  SearchScreenshots: () => Promise.resolve([]),
+  IsGalleryScanning: () => Promise.resolve(false),
+  GetVRChatConfig: () =>
+    Promise.resolve({
+      cameraResWidth: 1920,
+      cameraResHeight: 1080,
+      screenshotResWidth: 1920,
+      screenshotResHeight: 1080,
+      pictureOutputFolder: "C:/Pictures/VRChat",
+      pictureOutputSplitByDate: true,
+      fpvSteadycamFov: 90,
+      cacheDirectory: "",
+      cacheSize: 0,
+      cacheExpiryDelay: 0,
+    }),
+  DefaultVRChatPictureFolder: () => Promise.resolve("C:/Pictures/VRChat"),
+};
 
 const meta = {
   title: "Views/GalleryView",
@@ -20,3 +41,16 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {};
+
+export const Empty: Story = {
+  decorators: [withWailsApp(galleryWailsBase)],
+};
+
+export const Loading: Story = {
+  decorators: [
+    withWailsApp({
+      ...galleryWailsBase,
+      Screenshots: () => new Promise(() => {}),
+    }),
+  ],
+};
