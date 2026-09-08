@@ -11,17 +11,19 @@ import (
 )
 
 type winGuard struct {
-	mutexName string
-	eventName string
-	mutex     windows.Handle
-	event     windows.Handle
-	listener  sync.WaitGroup
+	mutexName   string
+	eventName   string
+	windowTitle string
+	mutex       windows.Handle
+	event       windows.Handle
+	listener    sync.WaitGroup
 }
 
-func newPlatformGuard(name string) platformGuard {
+func newPlatformGuard(name, windowTitle string) platformGuard {
 	return &winGuard{
-		mutexName: `Local\` + name + `_SingleInstance`,
-		eventName: `Local\` + name + `_Activate`,
+		mutexName:   `Local\` + name + `_SingleInstance`,
+		eventName:   `Local\` + name + `_Activate`,
+		windowTitle: windowTitle,
 	}
 }
 
@@ -62,7 +64,7 @@ func (w *winGuard) notifyExisting() error {
 	if signalErr == nil {
 		return nil
 	}
-	fallbackErr := w.activateWindowByTitle(DefaultWindowTitle)
+	fallbackErr := w.activateWindowByTitle(w.windowTitle)
 	if fallbackErr == nil {
 		return nil
 	}
@@ -137,6 +139,9 @@ var (
 const swRestore = 9
 
 func (w *winGuard) activateWindowByTitle(title string) error {
+	if title == "" {
+		return fmt.Errorf("window title not configured")
+	}
 	titlePtr, err := windows.UTF16PtrFromString(title)
 	if err != nil {
 		return err

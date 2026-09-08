@@ -16,6 +16,8 @@ import (
 	"vrchat-tweaker/internal/wailsapp"
 )
 
+const appWindowTitle = "VRChat Tweaker"
+
 // cspMiddleware adds a Content-Security-Policy header to every HTTP response served by
 // the AssetServer. This reduces the impact of any XSS reaching the Wails IPC bridge.
 //
@@ -61,7 +63,7 @@ func main() {
 		wailsapp.SetTrayIconICO(trayIconICO)
 	}
 
-	instanceGuard := singleinstance.New()
+	instanceGuard := singleinstance.NewWithWindowTitle(appWindowTitle)
 	acquired, err := instanceGuard.Acquire()
 	if err != nil {
 		log.Fatal("single instance: ", err)
@@ -74,16 +76,13 @@ func main() {
 		}
 		os.Exit(0)
 	}
-	if err = instanceGuard.Start(); err != nil {
-		log.Fatal("single instance listener: ", err)
-	}
 	defer instanceGuard.Release()
 
 	app := wailsapp.NewApp()
 	lc := wailsapp.NewLifecycle(app)
 
 	err = wails.Run(&options.App{
-		Title:  singleinstance.DefaultWindowTitle,
+		Title:  appWindowTitle,
 		Width:  1024,
 		Height: 768,
 		AssetServer: &assetserver.Options{
@@ -93,11 +92,10 @@ func main() {
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
 		OnStartup: func(ctx context.Context) {
 			lc.Startup(ctx)
-			instanceGuard.SetOnActivate(app.ActivateMainWindow)
+			app.WireSingleInstanceActivate(instanceGuard)
 		},
 		OnShutdown: func(ctx context.Context) {
 			lc.Shutdown(ctx)
-			instanceGuard.Release()
 		},
 		OnBeforeClose: lc.BeforeClose,
 		Bind: []interface{}{

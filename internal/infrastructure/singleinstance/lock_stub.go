@@ -3,6 +3,8 @@
 package singleinstance
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -29,19 +31,27 @@ const (
 )
 
 type stubGuard struct {
-	name        string
-	lockPath    string
-	sockPath    string
-	sockNetwork string
-	sockAddr    string
-	sockBound   bool
-	lockFile    *os.File
-	listener    net.Listener
-	wg          sync.WaitGroup
+	name         string
+	dataDir      string
+	dataDirFP    string
+	lockPath     string
+	sockPath     string
+	sockNetwork  string
+	sockAddr     string
+	sockAbstract bool
+	sockBound    bool
+	lockFile     *os.File
+	listener     net.Listener
+	wg           sync.WaitGroup
 }
 
-func newPlatformGuard(name string) platformGuard {
+func newPlatformGuard(name, _ string) platformGuard {
 	return &stubGuard{name: name}
+}
+
+func dataDirFingerprint(dir string) string {
+	sum := sha256.Sum256([]byte(dir))
+	return hex.EncodeToString(sum[:8])
 }
 
 func (s *stubGuard) paths() error {
@@ -52,13 +62,15 @@ func (s *stubGuard) paths() error {
 	if err != nil {
 		return err
 	}
+	s.dataDir = dir
+	s.dataDirFP = dataDirFingerprint(dir)
 	s.lockPath = filepath.Join(dir, s.name+".lock")
 	s.sockPath = filepath.Join(dir, s.name+".sock")
 	return nil
 }
 
-func abstractActivateAddr(appName string) string {
-	return fmt.Sprintf("@%s_%d_activate", appName, os.Getuid())
+func abstractActivateAddr(appName, fingerprint string) string {
+	return fmt.Sprintf("@%s_%d_%s_activate", appName, os.Getuid(), fingerprint)
 }
 
 func (s *stubGuard) resolveSocket() (network, addr string, err error) {
@@ -69,13 +81,13 @@ func (s *stubGuard) resolveSocket() (network, addr string, err error) {
 		return "unix", s.sockPath, nil
 	}
 	if runtime.GOOS == "linux" {
-		return "unix", abstractActivateAddr(s.name), nil
+		return "unix", abstractActivateAddr(s.name, s.dataDirFP), nil
 	}
-	tmpAddr := filepath.Join(os.TempDir(), fmt.Sprintf("%s-%d.sock", s.name, os.Getuid()))
-	if len(tmpAddr) >= sunPathMax {
-		return "", "", fmt.Errorf("singleinstance: activation socket path too long (%d bytes): %q", len(tmpAddr), tmpAddr)
+	shortAddr := filepath.Join(s.dataDir, fmt.Sprintf("%s-%s.sock", s.name, s.dataDirFP))
+	if len(shortAddr) >= sunPathMax {
+		return "", "", fmt.Errorf("singleinstance: activation socket path too long (%d bytes): %q", len(shortAddr), shortAddr)
 	}
-	return "unix", tmpAddr, nil
+	return "unix", shortAddr, nil
 }
 
 func (s *stubGuard) acquire() (bool, error) {
@@ -134,14 +146,18 @@ func (s *stubGuard) notifyExisting() error {
 }
 
 func (s *stubGuard) start(stop <-chan struct{}, dispatch func()) error {
+	if s.listener != nil {
+		return nil
+	}
 	network, addr, err := s.resolveSocket()
 	if err != nil {
 		return err
 	}
 	s.sockNetwork = network
 	s.sockAddr = addr
+	s.sockAbstract = strings.HasPrefix(addr, "@")
 
-	if !strings.HasPrefix(addr, "@") {
+	if !s.sockAbstract {
 		if rmErr := os.Remove(addr); rmErr != nil && !os.IsNotExist(rmErr) {
 			log.Printf("singleinstance: failed to remove stale socket %q: %v", addr, rmErr)
 		}
@@ -175,7 +191,7 @@ func (s *stubGuard) start(stop <-chan struct{}, dispatch func()) error {
 				}
 				return
 			}
-			if !authorizedPeer(conn) {
+			if !authorizedPeer(conn, s.sockAbstract) {
 				log.Printf("singleinstance: rejected unauthorized activation request from %q", conn.RemoteAddr())
 				_ = conn.Close()
 				continue
@@ -201,7 +217,7 @@ func (s *stubGuard) release() {
 		s.listener = nil
 	}
 	s.wg.Wait()
-	if s.sockBound && s.sockAddr != "" && !strings.HasPrefix(s.sockAddr, "@") {
+	if s.sockBound && s.sockAddr != "" && !s.sockAbstract {
 		if err := os.Remove(s.sockAddr); err != nil && !os.IsNotExist(err) {
 			log.Printf("singleinstance: failed to remove activation socket %q: %v", s.sockAddr, err)
 		}

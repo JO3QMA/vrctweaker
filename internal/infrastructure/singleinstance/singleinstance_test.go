@@ -65,10 +65,6 @@ func TestNotifyExistingInvokesActivateCallback(t *testing.T) {
 	}
 	t.Cleanup(func() { holder.Release() })
 
-	if err := holder.Start(); err != nil {
-		t.Fatalf("Start: %v", err)
-	}
-
 	var activated atomic.Bool
 	holder.SetOnActivate(func() { activated.Store(true) })
 
@@ -98,10 +94,6 @@ func TestNotifyExistingQueuesUntilSetOnActivate(t *testing.T) {
 		t.Fatalf("holder Acquire: acquired=%v err=%v", acquired, err)
 	}
 	t.Cleanup(func() { holder.Release() })
-
-	if err := holder.Start(); err != nil {
-		t.Fatalf("Start: %v", err)
-	}
 
 	launcher := NewNamed(name)
 	if acquired, err := launcher.Acquire(); err != nil || acquired {
@@ -151,12 +143,6 @@ func TestReleaseIsIdempotent(t *testing.T) {
 	g.Release()
 }
 
-func TestDefaultWindowTitle(t *testing.T) {
-	if DefaultWindowTitle == "" {
-		t.Fatal("DefaultWindowTitle must not be empty")
-	}
-}
-
 func TestSetOnActivateNilDiscardsPending(t *testing.T) {
 	g := NewNamed("vrctweaker-test-" + uuid.NewString())
 	g.dispatchActivate()
@@ -183,10 +169,40 @@ func TestSetOnActivateCoalescesPendingActivations(t *testing.T) {
 	}
 }
 
-func TestAbstractActivateAddrIncludesUID(t *testing.T) {
-	addr := abstractActivateAddr("VRChatTweaker")
-	want := fmt.Sprintf("@VRChatTweaker_%d_activate", os.Getuid())
+func TestAbstractActivateAddrIncludesUIDAndFingerprint(t *testing.T) {
+	fp := dataDirFingerprint("/tmp/example-app-data")
+	addr := abstractActivateAddr("VRChatTweaker", fp)
+	want := fmt.Sprintf("@VRChatTweaker_%d_%s_activate", os.Getuid(), fp)
 	if addr != want {
 		t.Fatalf("got %q want %q", addr, want)
+	}
+}
+
+func TestAcquireBindsListener(t *testing.T) {
+	name := "vrctweaker-test-" + uuid.NewString()
+	holder := NewNamed(name)
+	acquired, err := holder.Acquire()
+	if err != nil || !acquired {
+		t.Fatalf("Acquire: acquired=%v err=%v", acquired, err)
+	}
+	t.Cleanup(func() { holder.Release() })
+
+	var activated atomic.Bool
+	holder.SetOnActivate(func() { activated.Store(true) })
+
+	launcher := NewNamed(name)
+	if acquired, err := launcher.Acquire(); err != nil || acquired {
+		t.Fatalf("launcher should see existing instance: acquired=%v err=%v", acquired, err)
+	}
+	if err := launcher.NotifyExisting(); err != nil {
+		t.Fatalf("NotifyExisting: %v", err)
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	for !activated.Load() && time.Now().Before(deadline) {
+		time.Sleep(10 * time.Millisecond)
+	}
+	if !activated.Load() {
+		t.Fatal("listener bound by Acquire should accept activation")
 	}
 }

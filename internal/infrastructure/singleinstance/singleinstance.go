@@ -7,30 +7,26 @@ import (
 	"sync"
 )
 
-const (
-	defaultName = "VRChatTweaker"
-
-	// DefaultWindowTitle is the Wails window title and Windows FindWindow fallback.
-	DefaultWindowTitle = "VRChat Tweaker"
-)
+const defaultName = "VRChatTweaker"
 
 var errGuardReleased = errors.New("singleinstance: guard released")
 
 // Guard coordinates single-instance locking and second-launch activation.
 type Guard struct {
-	name       string
-	onActivate func()
-	activateMu sync.Mutex
-	invokeMu   sync.Mutex
-	pending    bool
-	startMu    sync.Mutex
-	started    bool
-	startErr   error
-	stopCh     chan struct{}
-	releaseMu  sync.Mutex
-	released   bool
-	platformMu sync.Mutex
-	platform   platformGuard
+	name        string
+	windowTitle string
+	onActivate  func()
+	activateMu  sync.Mutex
+	invokeMu    sync.Mutex
+	pending     bool
+	startMu     sync.Mutex
+	started     bool
+	startErr    error
+	stopCh      chan struct{}
+	releaseMu   sync.Mutex
+	released    bool
+	platformMu  sync.Mutex
+	platform    platformGuard
 }
 
 // New returns a Guard using the default application identifier.
@@ -38,17 +34,29 @@ func New() *Guard {
 	return NewNamed(defaultName)
 }
 
+// NewWithWindowTitle returns a Guard and stores the window title for platform fallbacks.
+func NewWithWindowTitle(windowTitle string) *Guard {
+	return NewNamedWithWindowTitle(defaultName, windowTitle)
+}
+
 // NewNamed returns a Guard for tests or custom identifiers.
 func NewNamed(name string) *Guard {
+	return NewNamedWithWindowTitle(name, "")
+}
+
+// NewNamedWithWindowTitle returns a Guard for tests with an optional window title.
+func NewNamedWithWindowTitle(name, windowTitle string) *Guard {
 	return &Guard{
-		name:     name,
-		stopCh:   make(chan struct{}),
-		platform: newPlatformGuard(name),
+		name:        name,
+		windowTitle: windowTitle,
+		stopCh:      make(chan struct{}),
+		platform:    newPlatformGuard(name, windowTitle),
 	}
 }
 
 // Acquire tries to become the sole running instance.
 // When acquired is false, another instance already holds the lock.
+// On success the activation listener is bound immediately.
 func (g *Guard) Acquire() (acquired bool, err error) {
 	g.releaseMu.Lock()
 	defer g.releaseMu.Unlock()
@@ -60,7 +68,15 @@ func (g *Guard) Acquire() (acquired bool, err error) {
 	if g.platform == nil {
 		return false, errGuardReleased
 	}
-	return g.platform.acquire()
+	acquired, err = g.platform.acquire()
+	if err != nil || !acquired {
+		return acquired, err
+	}
+	if err := g.startListenerLocked(); err != nil {
+		g.platform.release()
+		return false, err
+	}
+	return true, nil
 }
 
 // NotifyExisting asks the running instance to activate its main window.
@@ -95,32 +111,34 @@ func (g *Guard) SetOnActivate(fn func()) {
 	g.runActivate(fn)
 }
 
-// Start binds the activation listener. Call immediately after a successful Acquire,
-// before the UI is ready, so second launches can connect while the first is starting.
+// Start binds the activation listener. Acquire already binds the listener on success;
+// Start remains for idempotent re-entry and tests.
 func (g *Guard) Start() error {
+	g.releaseMu.Lock()
+	defer g.releaseMu.Unlock()
+	if g.released {
+		return errGuardReleased
+	}
+	g.platformMu.Lock()
+	defer g.platformMu.Unlock()
+	if g.platform == nil {
+		return errGuardReleased
+	}
+	return g.startListenerLocked()
+}
+
+func (g *Guard) startListenerLocked() error {
 	g.startMu.Lock()
 	defer g.startMu.Unlock()
 	if g.started {
 		return g.startErr
 	}
 	g.started = true
-
-	g.releaseMu.Lock()
-	if g.released {
-		g.releaseMu.Unlock()
-		g.startErr = errGuardReleased
-		return g.startErr
-	}
-	g.platformMu.Lock()
 	if g.platform == nil {
-		g.platformMu.Unlock()
-		g.releaseMu.Unlock()
 		g.startErr = errGuardReleased
 		return g.startErr
 	}
 	g.startErr = g.platform.start(g.stopCh, g.dispatchActivate)
-	g.platformMu.Unlock()
-	g.releaseMu.Unlock()
 	return g.startErr
 }
 
