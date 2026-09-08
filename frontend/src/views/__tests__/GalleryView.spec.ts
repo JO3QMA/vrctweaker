@@ -170,7 +170,7 @@ describe("GalleryView", () => {
       }),
     );
     const wrapper = mount(GalleryView, { attachTo: host });
-    await wrapper.vm.$nextTick();
+    await flushPromises();
 
     expect(wrapper.find('[data-testid="gallery-loading"]').exists()).toBe(true);
     expect(wrapper.find(".is-loading").exists()).toBe(true);

@@ -395,10 +395,8 @@ let screenshotsChangedDebounceTimer: ReturnType<typeof setTimeout> | null =
 
 const hasActiveFilters = computed(
   () =>
-    buildGallerySearchFilter(
-      filterWorldSearch.value,
-      filterDateRange.value,
-    ) !== null,
+    buildGallerySearchFilter(filterWorldSearch.value, filterDateRange.value) !==
+    null,
 );
 
 const emptyTitle = computed(() =>
