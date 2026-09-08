@@ -1,46 +1,24 @@
 import type { ScreenshotDTO } from "../wails/app";
 
-export const GALLERY_HEADER_ROW_HEIGHT_PX = 42;
+export const GALLERY_YEAR_HEADER_ROW_HEIGHT_PX = 32;
+export const GALLERY_DAY_HEADER_ROW_HEIGHT_PX = 28;
+
+/** Leap year used only as a calendar scaffold for month/day Intl formatting (year is omitted in labels). */
+export const EXEMPLAR_LEAP_YEAR = 2024;
 
 export type GalleryVirtualRow =
   | {
       type: "yearHeader";
-      collapseKey: string;
       label: string;
       rowKey: string;
-      expanded: boolean;
-    }
-  | {
-      type: "monthHeader";
-      collapseKey: string;
-      label: string;
-      rowKey: string;
-      expanded: boolean;
     }
   | {
       type: "dayHeader";
-      collapseKey: string;
       label: string;
       rowKey: string;
-      expanded: boolean;
+      dayKey: string;
     }
   | { type: "grid"; items: ScreenshotDTO[]; rowKey: string };
-
-export function yearCollapseKey(year: number | "unknown"): string {
-  return year === "unknown" ? "y:unknown" : `y:${year}`;
-}
-
-export function monthCollapseKey(year: number, month: number): string {
-  return `m:${year}-${month}`;
-}
-
-export function dayCollapseKey(
-  year: number,
-  month: number,
-  day: number,
-): string {
-  return `d:${year}-${month}-${day}`;
-}
 
 function localDayParts(
   takenAt: string,
@@ -60,22 +38,16 @@ function dayKeyFromParts(y: number, m: number, d: number): string {
   return `${y}-${m}-${d}`;
 }
 
-function pad2(n: number): string {
-  return String(n).padStart(2, "0");
-}
-
 /** Labels for gallery date group headers; default matches legacy Japanese formatting. */
 export interface GalleryDateLabels {
   formatYear: (year: number) => string;
-  formatMonth: (year: number, month: number) => string;
-  formatDay: (year: number, month: number, day: number) => string;
+  formatDay: (month: number, day: number) => string;
   unknownDate: string;
 }
 
 export const galleryLabelsJapanese: GalleryDateLabels = {
   formatYear: (y) => `${y}年`,
-  formatMonth: (y, m) => `${y}年${pad2(m)}月`,
-  formatDay: (y, m, d) => `${y}年${pad2(m)}月${pad2(d)}日`,
+  formatDay: (m, d) => `${m}月${d}日`,
   unknownDate: "日付不明",
 };
 
@@ -84,19 +56,13 @@ export function galleryLabelsFromLocale(
   unknownDate: string,
 ): GalleryDateLabels {
   const yearFmt = new Intl.DateTimeFormat(calendarLocale, { year: "numeric" });
-  const monthFmt = new Intl.DateTimeFormat(calendarLocale, {
-    year: "numeric",
-    month: "long",
-  });
   const dayFmt = new Intl.DateTimeFormat(calendarLocale, {
-    year: "numeric",
     month: "long",
     day: "numeric",
   });
   return {
     formatYear: (y) => yearFmt.format(new Date(y, 5, 15)),
-    formatMonth: (y, m) => monthFmt.format(new Date(y, m - 1, 1)),
-    formatDay: (y, m, d) => dayFmt.format(new Date(y, m - 1, d)),
+    formatDay: (m, d) => dayFmt.format(new Date(EXEMPLAR_LEAP_YEAR, m - 1, d)),
     unknownDate,
   };
 }
@@ -145,54 +111,6 @@ export function partitionScreenshotsByLocalDay(list: ScreenshotDTO[]): {
   return { byDay, unknown };
 }
 
-type YearTree = Map<
-  number,
-  Map<number, Array<{ day: number; items: ScreenshotDTO[]; dayKey: string }>>
->;
-
-function buildYearTree(
-  sortedDayKeys: string[],
-  byDay: Map<string, ScreenshotDTO[]>,
-): YearTree {
-  const tree: YearTree = new Map();
-  for (const dayKey of sortedDayKeys) {
-    const items = byDay.get(dayKey);
-    if (!items?.length) {
-      continue;
-    }
-    const [ys, ms, ds] = dayKey.split("-");
-    const y = Number(ys);
-    const m = Number(ms);
-    const day = Number(ds);
-    let months = tree.get(y);
-    if (!months) {
-      months = new Map();
-      tree.set(y, months);
-    }
-    let days = months.get(m);
-    if (!days) {
-      days = [];
-      months.set(m, days);
-    }
-    days.push({ day, items, dayKey });
-  }
-  return tree;
-}
-
-function sortedYearsDesc(tree: YearTree): number[] {
-  return [...tree.keys()].sort((a, b) => b - a);
-}
-
-function sortedMonthsDesc(months: Map<number, unknown>): number[] {
-  return [...months.keys()].sort((a, b) => b - a);
-}
-
-function sortedDayEntries(
-  days: Array<{ day: number; items: ScreenshotDTO[]; dayKey: string }>,
-): Array<{ day: number; items: ScreenshotDTO[]; dayKey: string }> {
-  return [...days].sort((a, b) => b.day - a.day);
-}
-
 function pushGridRows(
   rows: GalleryVirtualRow[],
   items: ScreenshotDTO[],
@@ -216,12 +134,11 @@ function pushGridRows(
 
 /**
  * Build flat virtual rows for the gallery (newest-first days, same order as input within each day).
- * @param collapsed — keys from yearCollapseKey / monthCollapseKey / dayCollapseKey; when present, that node's children are omitted.
+ * Year dividers appear only when the calendar year changes; day headers omit the year.
  */
 export function buildGalleryVirtualRows(
   list: ScreenshotDTO[],
   cols: number,
-  collapsed: ReadonlySet<string>,
   labels: GalleryDateLabels = galleryLabelsJapanese,
 ): GalleryVirtualRow[] {
   if (list.length === 0 || cols < 1) {
@@ -230,78 +147,44 @@ export function buildGalleryVirtualRows(
 
   const { byDay, unknown } = partitionScreenshotsByLocalDay(list);
   const sortedDayKeys = [...byDay.keys()].sort(compareDayKeysDesc);
-  const tree = buildYearTree(sortedDayKeys, byDay);
   const rows: GalleryVirtualRow[] = [];
+  let lastYear: number | null = null;
 
-  for (const y of sortedYearsDesc(tree)) {
-    const yKey = yearCollapseKey(y);
-    const yCollapsed = collapsed.has(yKey);
-    rows.push({
-      type: "yearHeader",
-      collapseKey: yKey,
-      label: labels.formatYear(y),
-      rowKey: `hdr-y-${y}`,
-      expanded: !yCollapsed,
-    });
-    if (yCollapsed) {
+  for (const dayKey of sortedDayKeys) {
+    const items = byDay.get(dayKey);
+    if (!items?.length) {
       continue;
     }
+    const [ys, ms, ds] = dayKey.split("-");
+    const y = Number(ys);
+    const m = Number(ms);
+    const day = Number(ds);
 
-    const months = tree.get(y);
-    if (!months) {
-      continue;
-    }
-
-    for (const m of sortedMonthsDesc(months)) {
-      const mKey = monthCollapseKey(y, m);
-      const mCollapsed = collapsed.has(mKey);
+    if (lastYear !== y) {
       rows.push({
-        type: "monthHeader",
-        collapseKey: mKey,
-        label: labels.formatMonth(y, m),
-        rowKey: `hdr-m-${y}-${m}`,
-        expanded: !mCollapsed,
+        type: "yearHeader",
+        label: labels.formatYear(y),
+        rowKey: `hdr-y-${y}`,
       });
-      if (mCollapsed) {
-        continue;
-      }
-
-      const days = months.get(m);
-      if (!days?.length) {
-        continue;
-      }
-
-      for (const { day, items, dayKey } of sortedDayEntries(days)) {
-        const dKey = dayCollapseKey(y, m, day);
-        const dCollapsed = collapsed.has(dKey);
-        rows.push({
-          type: "dayHeader",
-          collapseKey: dKey,
-          label: labels.formatDay(y, m, day),
-          rowKey: `hdr-d-${dayKey}`,
-          expanded: !dCollapsed,
-        });
-        if (dCollapsed) {
-          continue;
-        }
-        pushGridRows(rows, items, cols, `grid-${dayKey}`);
-      }
+      lastYear = y;
     }
+
+    rows.push({
+      type: "dayHeader",
+      label: labels.formatDay(m, day),
+      rowKey: `hdr-d-${dayKey}`,
+      dayKey,
+    });
+    pushGridRows(rows, items, cols, `grid-${dayKey}`);
   }
 
   if (unknown.length > 0) {
-    const uk = yearCollapseKey("unknown");
-    const uCollapsed = collapsed.has(uk);
     rows.push({
       type: "yearHeader",
-      collapseKey: uk,
       label: labels.unknownDate,
       rowKey: "hdr-y-unknown",
-      expanded: !uCollapsed,
     });
-    if (!uCollapsed) {
-      pushGridRows(rows, unknown, cols, "grid-unknown");
-    }
+    pushGridRows(rows, unknown, cols, "grid-unknown");
   }
 
   return rows;
@@ -311,5 +194,115 @@ export function galleryRowHeight(
   row: GalleryVirtualRow,
   gridRowHeightPx: number,
 ): number {
-  return row.type === "grid" ? gridRowHeightPx : GALLERY_HEADER_ROW_HEIGHT_PX;
+  if (row.type === "grid") {
+    return gridRowHeightPx;
+  }
+  if (row.type === "yearHeader") {
+    return GALLERY_YEAR_HEADER_ROW_HEIGHT_PX;
+  }
+  if (row.type === "dayHeader") {
+    return GALLERY_DAY_HEADER_ROW_HEIGHT_PX;
+  }
+  const _exhaustive: never = row;
+  throw new Error(
+    `galleryRowHeight: unknown row type ${JSON.stringify(_exhaustive)}`,
+  );
+}
+
+export interface GalleryHeaderIndexEntry {
+  index: number;
+  rowKey: string;
+  label: string;
+  type: "yearHeader" | "dayHeader";
+  dayKey?: string;
+  yearLabel?: string;
+  yearRowKey?: string;
+}
+
+/** Sorted header row indices for O(log n) sticky section lookup. */
+export function buildGalleryHeaderIndices(
+  rows: GalleryVirtualRow[],
+): GalleryHeaderIndexEntry[] {
+  const indices: GalleryHeaderIndexEntry[] = [];
+  let currentYearLabel: string | undefined;
+  let currentYearRowKey: string | undefined;
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    if (row?.type === "yearHeader") {
+      currentYearLabel = row.label;
+      currentYearRowKey = row.rowKey;
+      indices.push({
+        index: i,
+        rowKey: row.rowKey,
+        label: row.label,
+        type: "yearHeader",
+      });
+    } else if (row?.type === "dayHeader") {
+      indices.push({
+        index: i,
+        rowKey: row.rowKey,
+        label: row.label,
+        type: "dayHeader",
+        dayKey: row.dayKey,
+        yearLabel: currentYearLabel,
+        yearRowKey: currentYearRowKey,
+      });
+    }
+  }
+  return indices;
+}
+
+export interface GalleryStickySection {
+  label: string;
+  rowKey: string;
+  headerKind: "yearHeader" | "dayHeader";
+  dayKey?: string;
+  yearLabel?: string;
+  yearRowKey?: string;
+}
+
+function toStickySection(entry: GalleryHeaderIndexEntry): GalleryStickySection {
+  if (entry.type === "yearHeader") {
+    return {
+      label: entry.label,
+      rowKey: entry.rowKey,
+      headerKind: "yearHeader",
+    };
+  }
+  return {
+    label: entry.label,
+    rowKey: entry.rowKey,
+    headerKind: "dayHeader",
+    dayKey: entry.dayKey,
+    yearLabel: entry.yearLabel,
+    yearRowKey: entry.yearRowKey,
+  };
+}
+
+/** Resolve the sticky section for the first visible virtual row index. */
+export function stickySectionForIndex(
+  firstIdx: number,
+  headerIndices: readonly GalleryHeaderIndexEntry[],
+): GalleryStickySection | null {
+  if (headerIndices.length === 0) {
+    return null;
+  }
+
+  let lo = 0;
+  let hi = headerIndices.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (headerIndices[mid]!.index <= firstIdx) {
+      lo = mid + 1;
+    } else {
+      hi = mid;
+    }
+  }
+  const end = lo - 1;
+  if (end < 0) {
+    return null;
+  }
+
+  const nearest = headerIndices[end]!;
+  return toStickySection(nearest);
 }

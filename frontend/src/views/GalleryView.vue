@@ -89,53 +89,68 @@
           class="grid-scroll"
           @scroll.passive="onGridScroll"
         >
-          <div class="grid-virtual-spacer" :style="spacerStyle">
+          <!-- Visual sticky duplicate; in-list role="heading" rows are canonical. -->
+          <div class="gallery-sticky-anchor">
             <div
-              v-for="vr in virtualRows"
-              :key="virtualRowDomKey(vr.index)"
-              class="grid-virtual-row"
-              :style="virtualRowStyle(vr)"
+              v-show="stickyOverlay.show"
+              class="gallery-sticky-header gallery-sticky-header--overlay"
+              :class="stickyOverlay.headerClass"
+              data-testid="gallery-sticky-header"
+              aria-hidden="true"
             >
-              <template v-if="isGridRow(vr.index)">
-                <div class="grid-row-inner" :style="gridRowInnerStyle">
-                  <div
-                    v-for="item in gridRowItems(vr.index)"
-                    :key="item.id"
-                    class="grid-item"
-                    :class="{ selected: selected?.id === item.id }"
-                    :style="gridItemStyle"
-                    @click="select(item)"
-                  >
-                    <div class="thumbnail-wrap">
-                      <img
-                        :src="thumbnailSrc(item)"
-                        :alt="fileNameFromPath(item.filePath)"
-                        class="thumbnail"
-                        @error="onThumbnailError"
-                      />
+              <span
+                v-if="stickyOverlay.showYearContext"
+                class="gallery-sticky-year"
+              >
+                {{ stickyOverlay.yearLabel }}
+              </span>
+              <span class="gallery-sticky-label">{{
+                stickyOverlay.label
+              }}</span>
+            </div>
+          </div>
+          <div class="grid-scroll-inner">
+            <div class="grid-virtual-spacer" :style="spacerStyle">
+              <div
+                v-for="rowView in virtualRowViews"
+                :key="virtualRowDomKey(rowView.vr.index)"
+                class="grid-virtual-row"
+                :style="virtualRowStyle(rowView.vr)"
+              >
+                <template v-if="rowView.isGrid">
+                  <div class="grid-row-inner" :style="gridRowInnerStyle">
+                    <div
+                      v-for="item in rowView.gridItems"
+                      :key="item.id"
+                      class="grid-item"
+                      :class="{ selected: selected?.id === item.id }"
+                      :style="gridItemStyle"
+                      @click="select(item)"
+                    >
+                      <div class="thumbnail-wrap">
+                        <img
+                          :src="thumbnailSrc(item)"
+                          :alt="fileNameFromPath(item.filePath)"
+                          class="thumbnail"
+                          @error="onThumbnailError"
+                        />
+                      </div>
                     </div>
                   </div>
+                </template>
+                <div
+                  v-else-if="rowView.header"
+                  class="gallery-section-header"
+                  :class="galleryHeaderClass(rowView.header)"
+                  data-testid="gallery-group-header"
+                  role="heading"
+                  :aria-level="rowView.header.type === 'yearHeader' ? 2 : 3"
+                >
+                  <span class="gallery-section-label">{{
+                    rowView.header.label
+                  }}</span>
                 </div>
-              </template>
-              <button
-                v-else-if="galleryHeaderAt(vr.index)"
-                type="button"
-                class="gallery-group-header"
-                :class="galleryHeaderIndentClass(galleryHeaderAt(vr.index)!)"
-                data-testid="gallery-group-header"
-                :data-collapse-key="galleryHeaderAt(vr.index)!.collapseKey"
-                :aria-expanded="galleryHeaderAt(vr.index)!.expanded"
-                @click="
-                  toggleGalleryCollapse(galleryHeaderAt(vr.index)!.collapseKey)
-                "
-              >
-                <span class="gallery-group-chevron" aria-hidden="true">{{
-                  galleryHeaderAt(vr.index)!.expanded ? "▼" : "▶"
-                }}</span>
-                <span class="gallery-group-label">{{
-                  galleryHeaderAt(vr.index)!.label
-                }}</span>
-              </button>
+              </div>
             </div>
           </div>
         </div>
@@ -277,9 +292,12 @@ import {
 } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
 import {
+  buildGalleryHeaderIndices,
   buildGalleryVirtualRows,
   galleryLabelsFromLocale,
   galleryRowHeight,
+  stickySectionForIndex,
+  type GalleryStickySection,
   type GalleryVirtualRow,
 } from "./galleryDateGroups";
 import { pruneThumbnailUrlMap } from "./galleryThumbnailCache";
@@ -328,7 +346,6 @@ const scanError = ref<string | null>(null);
 const filterWorldSearch = ref("");
 const filterDateRange = ref<GalleryDateRangeFilter | null>(null);
 const thumbnailUrls = ref<Record<string, string>>({});
-const collapsed = ref(new Set<string>());
 const gridScrollRef = ref<HTMLElement | null>(null);
 const gridInnerWidth = ref(0);
 const scrollSync = ref(0);
@@ -443,9 +460,12 @@ const flatGalleryRows = computed(() =>
   buildGalleryVirtualRows(
     list.value,
     columnCount.value,
-    collapsed.value,
     galleryDateLabels.value,
   ),
+);
+
+const galleryHeaderIndices = computed(() =>
+  buildGalleryHeaderIndices(flatGalleryRows.value),
 );
 
 const rowVirtualizer = useVirtualizer(
@@ -464,6 +484,122 @@ const rowVirtualizer = useVirtualizer(
 const virtualRows = computed(() => {
   void scrollSync.value;
   return rowVirtualizer.value.getVirtualItems();
+});
+
+type StickyOverlayState = {
+  show: boolean;
+  label: string;
+  headerClass: string;
+  yearLabel: string;
+  showYearContext: boolean;
+};
+
+const emptyStickyOverlay: StickyOverlayState = {
+  show: false,
+  label: "",
+  headerClass: "",
+  yearLabel: "",
+  showYearContext: false,
+};
+
+function anchorVirtualItemForSticky(
+  vItems: VirtualItem[],
+  scrollTop: number,
+): VirtualItem | undefined {
+  const firstVisible = vItems.find((v) => v.start + v.size > scrollTop);
+  if (firstVisible) {
+    return firstVisible;
+  }
+  // All rendered rows are above scrollTop (e.g. after a scroll jump).
+  return vItems[vItems.length - 1];
+}
+
+function isHeaderPinnedAtScrollTop(v: VirtualItem, scrollTop: number): boolean {
+  return v.start <= scrollTop && v.start + v.size > scrollTop;
+}
+
+function stickyHeaderClass(section: GalleryStickySection): string {
+  return section.headerKind === "yearHeader"
+    ? "gallery-sticky-header--year"
+    : "gallery-sticky-header--day";
+}
+
+function isMatchingHeaderPinnedAtTop(
+  vItems: VirtualItem[],
+  rows: GalleryVirtualRow[],
+  scrollTop: number,
+  rowKey: string,
+): boolean {
+  for (const v of vItems) {
+    const row = rows[v.index];
+    if (
+      (row?.type === "yearHeader" || row?.type === "dayHeader") &&
+      row.rowKey === rowKey &&
+      isHeaderPinnedAtScrollTop(v, scrollTop)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const stickyOverlay = computed((): StickyOverlayState => {
+  void scrollSync.value;
+  const vItems = virtualRows.value;
+  const rows = flatGalleryRows.value;
+  const scrollEl = gridScrollRef.value;
+  if (vItems.length === 0 || rows.length === 0 || !scrollEl) {
+    return emptyStickyOverlay;
+  }
+
+  const scrollTop = scrollEl.scrollTop;
+  const clientHeight = scrollEl.clientHeight;
+  const firstVisible = anchorVirtualItemForSticky(vItems, scrollTop);
+  if (!firstVisible) {
+    return emptyStickyOverlay;
+  }
+  const firstIdx = firstVisible.index;
+  const section = stickySectionForIndex(firstIdx, galleryHeaderIndices.value);
+  if (!section) {
+    return emptyStickyOverlay;
+  }
+
+  const headerClass = stickyHeaderClass(section);
+  const hideWhenHeaderVisible = (rowKey: string): boolean => {
+    if (clientHeight <= 0) {
+      // Viewport unknown (init / display:none) — prefer showing sticky.
+      return false;
+    }
+    return isMatchingHeaderPinnedAtTop(vItems, rows, scrollTop, rowKey);
+  };
+
+  if (hideWhenHeaderVisible(section.rowKey)) {
+    return {
+      show: false,
+      label: section.label,
+      headerClass,
+      yearLabel: section.yearLabel ?? "",
+      showYearContext: false,
+    };
+  }
+
+  let showYearContext = false;
+  if (
+    section.headerKind === "dayHeader" &&
+    section.yearLabel &&
+    section.yearRowKey &&
+    !hideWhenHeaderVisible(section.yearRowKey)
+  ) {
+    showYearContext = true;
+  }
+
+  return {
+    show: true,
+    label: section.label,
+    headerClass,
+    yearLabel: section.yearLabel ?? "",
+    showYearContext,
+  };
 });
 
 const totalVirtualHeight = computed(() => {
@@ -521,46 +657,34 @@ function gridRowItems(index: number): ScreenshotDTO[] {
 function galleryHeaderAt(
   index: number,
 ):
-  | Extract<
-      GalleryVirtualRow,
-      { type: "yearHeader" | "monthHeader" | "dayHeader" }
-    >
-  | undefined {
+  Extract<GalleryVirtualRow, { type: "yearHeader" | "dayHeader" }> | undefined {
   const row = galleryRowAt(index);
-  if (
-    row?.type === "yearHeader" ||
-    row?.type === "monthHeader" ||
-    row?.type === "dayHeader"
-  ) {
+  if (row?.type === "yearHeader" || row?.type === "dayHeader") {
     return row;
   }
   return undefined;
 }
 
-function galleryHeaderIndentClass(
+function galleryHeaderClass(
   row: NonNullable<ReturnType<typeof galleryHeaderAt>>,
 ): string {
-  if (row.type === "yearHeader") return "gallery-group-h-year";
-  if (row.type === "monthHeader") return "gallery-group-h-month";
-  return "gallery-group-h-day";
+  return row.type === "yearHeader"
+    ? "gallery-section-header--year"
+    : "gallery-section-header--day";
 }
 
-function toggleGalleryCollapse(key: string): void {
-  const next = new Set(collapsed.value);
-  if (next.has(key)) {
-    next.delete(key);
-  } else {
-    next.add(key);
-  }
-  collapsed.value = next;
-  void nextTick(() => {
-    scrollSync.value++;
-    rowVirtualizer.value.measure();
-    thumbnailFetchGeneration++;
-    pruneThumbnailsToRetained();
-    void syncThumbnailsForVisible();
+const virtualRowViews = computed(() => {
+  void scrollSync.value;
+  return virtualRows.value.map((vr) => {
+    const header = galleryHeaderAt(vr.index);
+    return {
+      vr,
+      header,
+      isGrid: header === undefined && isGridRow(vr.index),
+      gridItems: gridRowItems(vr.index),
+    };
   });
-}
+});
 
 watchEffect((onCleanup) => {
   const el = gridScrollRef.value;
@@ -664,7 +788,7 @@ function onGridScroll(): void {
 
 function visibleScreenshotIds(): string[] {
   if (list.value.length === 0) return [];
-  const vItems = rowVirtualizer.value.getVirtualItems();
+  const vItems = virtualRows.value;
   const idSet = new Set<string>();
   for (const v of vItems) {
     const row = flatGalleryRows.value[v.index];
@@ -1105,6 +1229,68 @@ onMounted(() => {
   overflow-x: hidden;
 }
 
+.grid-scroll-inner {
+  position: relative;
+  min-height: 100%;
+}
+
+.gallery-sticky-anchor {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  height: 0;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.gallery-sticky-header--overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+
+.gallery-sticky-header {
+  display: flex;
+  align-items: flex-end;
+  box-sizing: border-box;
+  padding: 0 var(--space-inline-tight);
+  background: color-mix(in srgb, var(--color-bg-base) 90%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--color-border);
+  line-height: var(--line-height-tight);
+}
+
+.gallery-sticky-header--year {
+  min-height: 32px;
+  padding-top: var(--space-form-field);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-14);
+  font-weight: var(--font-weight-600);
+}
+
+.gallery-sticky-header--day {
+  min-height: 28px;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-500);
+}
+
+.gallery-sticky-year {
+  margin-right: var(--space-inline-tight);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-14);
+  font-weight: var(--font-weight-600);
+}
+
+.gallery-sticky-label {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 .grid-item {
   border-radius: var(--radius);
   overflow: hidden;
@@ -1206,52 +1392,35 @@ onMounted(() => {
   line-height: 1.4 !important;
 }
 
-.gallery-group-header {
+.gallery-section-header {
   width: 100%;
   height: 100%;
   display: flex;
-  align-items: center;
-  gap: var(--space-inline-tight);
+  align-items: flex-end;
   padding: 0 var(--space-inline-tight);
   margin: 0;
-  background: color-mix(in srgb, var(--color-bg-elevated) 88%, transparent);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  color: var(--color-text-primary);
-  font-size: var(--font-size-14);
-  cursor: pointer;
-  text-align: left;
   box-sizing: border-box;
 }
 
-.gallery-group-header:hover {
-  background: var(--color-bg-muted);
-}
-
-.gallery-group-h-year {
+.gallery-section-header--year {
+  padding-top: var(--space-form-field);
+  color: var(--color-text-primary);
+  font-size: var(--font-size-14);
   font-weight: var(--font-weight-600);
+  line-height: var(--line-height-tight);
 }
 
-.gallery-group-h-month {
-  padding-left: var(--space-block);
+.gallery-section-header--day {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-12);
   font-weight: var(--font-weight-500);
+  line-height: var(--line-height-tight);
 }
 
-.gallery-group-h-day {
-  padding-left: var(--space-page);
-  font-weight: var(--font-weight-400);
-}
-
-.gallery-group-chevron {
-  flex-shrink: 0;
-  width: var(--icon-size-compact);
-  font-size: var(--font-size-10);
-  opacity: 0.85;
-  line-height: 1;
-}
-
-.gallery-group-label {
-  flex: 1;
+.gallery-section-label {
   min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 </style>
