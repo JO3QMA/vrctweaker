@@ -157,7 +157,7 @@
       </div>
 
       <!-- 詳細プレビュー -->
-      <el-card v-if="selected" class="detail-panel" shadow="never">
+      <el-card v-if="selected" class="section-card detail-panel" shadow="never">
         <template #header>{{ t("gallery.detail") }}</template>
         <div class="detail-preview">
           <img
@@ -1324,13 +1324,7 @@ onMounted(() => {
 
 .detail-panel {
   flex-shrink: 0;
-  background: var(--color-bg-elevated) !important;
-  border-color: var(--color-border) !important;
-}
-
-.detail-panel :deep(.el-card__header) {
-  font-weight: var(--font-weight-600);
-  border-bottom-color: var(--color-border);
+  margin-bottom: 0;
 }
 
 .detail-preview {

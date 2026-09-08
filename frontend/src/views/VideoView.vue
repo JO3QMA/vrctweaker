@@ -3,7 +3,7 @@
     <h1 class="page-title">{{ t("video.title") }}</h1>
 
     <el-card
-      class="video-card video-history-card"
+      class="section-card video-card video-history-card"
       shadow="never"
       data-testid="video-playback-history"
     >
@@ -110,7 +110,7 @@
     </el-card>
 
     <el-card
-      class="video-card"
+      class="section-card video-card"
       shadow="never"
       data-testid="ytdlp-experimental-features"
     >
@@ -688,6 +688,7 @@ onUnmounted(() => {
 }
 .video-card {
   margin-top: var(--space-block);
+  margin-bottom: 0;
   width: 100%;
 }
 .history-retention-hint {

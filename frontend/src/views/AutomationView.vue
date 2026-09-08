@@ -70,7 +70,7 @@
         </div>
       </div>
 
-      <el-card v-if="editor" class="rule-editor" shadow="never">
+      <el-card v-if="editor" class="section-card rule-editor" shadow="never">
         <template #header>
           <span v-if="editor.isNew">{{
             editor.kind === "script"
@@ -312,7 +312,7 @@
         </el-form>
       </el-card>
 
-      <el-card class="run-log-panel" shadow="never">
+      <el-card class="section-card run-log-panel" shadow="never">
         <template #header>
           <span>{{ t("automation.runLogTitle") }}</span>
           <VtButton variant="tertiary" size="small" @click="loadRunLog">
@@ -767,17 +767,10 @@ async function confirmDelete() {
   color: var(--color-text-secondary);
 }
 
-.rule-editor,
-.run-log-panel {
-  background: var(--color-bg-elevated) !important;
-  border-color: var(--color-border) !important;
-}
-
 .rule-editor :deep(.el-card__header) {
   display: flex;
   align-items: center;
   gap: var(--space-action-group);
-  font-weight: var(--font-weight-600);
 }
 
 .field-full-width {

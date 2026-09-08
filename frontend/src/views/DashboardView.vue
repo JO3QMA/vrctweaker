@@ -29,4 +29,8 @@ const { t } = useI18n();
   flex-direction: column;
   gap: var(--space-block);
 }
+
+.quick-actions :deep(.section-card) {
+  margin-bottom: 0;
+}
 </style>

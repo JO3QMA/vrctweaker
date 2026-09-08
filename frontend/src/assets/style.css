@@ -340,13 +340,24 @@ a:hover {
   color: var(--color-text-primary);
 }
 
-/* Shared section card */
+/* Shared section card surface (el-card + .section-card) */
 .section-card {
   background: var(--color-bg-elevated);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
   padding: 0;
   margin-bottom: var(--space-section);
+  box-shadow: none !important;
+}
+
+.section-card > .el-card__header {
+  padding: var(--space-block);
+  border-bottom: 1px solid var(--color-border);
+  font-weight: var(--font-weight-600);
+}
+
+.section-card > .el-card__body {
+  padding: var(--space-block);
 }
 
 /* 折りたたみ（CollapsibleSectionCard および手動でクラスを付けた .section-card 用） */

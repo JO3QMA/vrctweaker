@@ -1,7 +1,7 @@
 <template>
   <div v-if="selected" ref="detailRoot" class="friend-detail">
     <el-card
-      class="friend-detail-card"
+      class="section-card friend-detail-card"
       shadow="never"
       :body-style="{ padding: 0 }"
     >
@@ -421,8 +421,7 @@ onUnmounted(() => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: var(--color-bg-elevated) !important;
-  border-color: var(--color-border) !important;
+  margin-bottom: 0;
 }
 
 .friend-detail-card :deep(.el-card__body) {
