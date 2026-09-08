@@ -1,17 +1,22 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 
+	"vrchat-tweaker/internal/infrastructure/singleinstance"
 	"vrchat-tweaker/internal/wailsapp"
 )
+
+const appWindowTitle = "VRChat Tweaker"
 
 // cspMiddleware adds a Content-Security-Policy header to every HTTP response served by
 // the AssetServer. This reduces the impact of any XSS reaching the Wails IPC bridge.
@@ -57,11 +62,27 @@ func main() {
 	if len(trayIconICO) > 0 {
 		wailsapp.SetTrayIconICO(trayIconICO)
 	}
+
+	instanceGuard := singleinstance.NewWithWindowTitle(appWindowTitle)
+	acquired, err := instanceGuard.Acquire()
+	if err != nil {
+		log.Fatal("single instance: ", err)
+	}
+	if !acquired {
+		if notifyErr := instanceGuard.NotifyExisting(); notifyErr != nil {
+			log.Println("Another instance is already running:", notifyErr)
+		} else {
+			log.Println("Another instance is already running; activated existing window")
+		}
+		os.Exit(0)
+	}
+	defer instanceGuard.Release()
+
 	app := wailsapp.NewApp()
 	lc := wailsapp.NewLifecycle(app)
 
-	err := wails.Run(&options.App{
-		Title:  "VRChat Tweaker",
+	err = wails.Run(&options.App{
+		Title:  appWindowTitle,
 		Width:  1024,
 		Height: 768,
 		AssetServer: &assetserver.Options{
@@ -69,9 +90,14 @@ func main() {
 			Middleware: cspMiddleware,
 		},
 		BackgroundColour: &options.RGBA{R: 27, G: 38, B: 54, A: 1},
-		OnStartup:        lc.Startup,
-		OnShutdown:       lc.Shutdown,
-		OnBeforeClose:    lc.BeforeClose,
+		OnStartup: func(ctx context.Context) {
+			lc.Startup(ctx)
+			app.WireSingleInstanceActivate(instanceGuard)
+		},
+		OnShutdown: func(ctx context.Context) {
+			lc.Shutdown(ctx)
+		},
+		OnBeforeClose: lc.BeforeClose,
 		Bind: []interface{}{
 			app,
 		},

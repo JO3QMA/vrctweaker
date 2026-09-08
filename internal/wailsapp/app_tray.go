@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"vrchat-tweaker/internal/infrastructure/singleinstance"
 	"vrchat-tweaker/internal/infrastructure/tray"
 	"vrchat-tweaker/internal/locale"
 	"vrchat-tweaker/internal/platform/paths"
@@ -97,6 +98,11 @@ func (a *App) showMainWindow() {
 	}
 	runtime.WindowShow(a.ctx)
 	runtime.WindowUnminimise(a.ctx)
+}
+
+// WireSingleInstanceActivate connects second-launch activation to the main window.
+func (a *App) WireSingleInstanceActivate(g *singleinstance.Guard) {
+	g.SetOnActivate(func() { a.showMainWindow() })
 }
 
 func (a *App) quitApplication() {
