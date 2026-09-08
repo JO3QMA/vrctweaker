@@ -1,6 +1,6 @@
 <template>
   <el-card
-    class="presence-change-section"
+    class="section-card presence-change-section"
     shadow="never"
     data-testid="presence-change-section"
   >
@@ -361,11 +361,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.presence-change-section {
-  background: var(--color-bg-elevated) !important;
-  border-color: var(--color-border) !important;
-}
-
 .presence-change-title {
   color: var(--color-text-secondary);
 }

@@ -2,7 +2,7 @@
   <div class="settings-view">
     <h1 class="page-title">{{ t("settings.title") }}</h1>
 
-    <el-card class="settings-card" shadow="never">
+    <el-card class="section-card" shadow="never">
       <template #header>
         <span>{{ t("settings.language") }}</span>
       </template>
@@ -24,7 +24,7 @@
     </el-card>
 
     <!-- VRChat ログイン -->
-    <el-card class="settings-card" shadow="never">
+    <el-card class="section-card" shadow="never">
       <template #header>
         <span>{{ t("settings.loginSection") }}</span>
       </template>
@@ -146,7 +146,7 @@
     </el-card>
 
     <!-- パス設定 -->
-    <el-card class="settings-card" shadow="never">
+    <el-card class="section-card" shadow="never">
       <template #header>
         <span>{{ t("settings.pathSection") }}</span>
       </template>
@@ -197,7 +197,7 @@
     </el-card>
 
     <!-- アプリ -->
-    <el-card class="settings-card" shadow="never">
+    <el-card class="section-card" shadow="never">
       <template #header>
         <span>{{ t("settings.appSection") }}</span>
       </template>
@@ -218,7 +218,7 @@
     </el-card>
 
     <!-- 電源（Windows） -->
-    <el-card class="settings-card" shadow="never">
+    <el-card class="section-card" shadow="never">
       <template #header>
         <span>{{ t("settings.powerSection") }}</span>
       </template>
@@ -238,7 +238,7 @@
     </el-card>
 
     <!-- ログ・データ管理 -->
-    <el-card class="settings-card" shadow="never">
+    <el-card class="section-card" shadow="never">
       <template #header>
         <span>{{ t("settings.dataSection") }}</span>
       </template>
@@ -270,7 +270,7 @@
     </el-card>
 
     <!-- OSS ライセンス -->
-    <el-card class="settings-card" shadow="never">
+    <el-card class="section-card" shadow="never">
       <template #header>
         <span>{{ t("settings.ossSection") }}</span>
       </template>
@@ -285,7 +285,7 @@
     </el-card>
 
     <!-- DB メンテナンス -->
-    <el-card class="settings-card" shadow="never">
+    <el-card class="section-card" shadow="never">
       <template #header>
         <span>{{ t("settings.dbSection") }}</span>
       </template>
@@ -732,17 +732,6 @@ function doClearFriendsCache() {
 </script>
 
 <style scoped>
-.settings-card {
-  margin-bottom: var(--space-section);
-  background: var(--color-bg-elevated) !important;
-  border-color: var(--color-border) !important;
-}
-
-.settings-card :deep(.el-card__header) {
-  font-weight: var(--font-weight-600);
-  border-bottom-color: var(--color-border);
-}
-
 .login-status {
   display: flex;
   flex-direction: column;

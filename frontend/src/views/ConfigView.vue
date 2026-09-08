@@ -9,7 +9,7 @@
     <el-card
       v-if="!configExists && !editing"
       shadow="never"
-      class="config-card"
+      class="section-card"
     >
       <div class="config-not-found">
         <p class="text-body-sm config-not-found-text">
@@ -41,7 +41,7 @@
       />
 
       <!-- Camera Resolution -->
-      <el-card shadow="never" class="config-card">
+      <el-card shadow="never" class="section-card">
         <template #header>{{ t("config.cameraHeader") }}</template>
         <p class="text-body-sm config-help">
           {{ t("config.cameraHelp") }}
@@ -102,7 +102,7 @@
       </el-card>
 
       <!-- Screenshot Resolution -->
-      <el-card shadow="never" class="config-card">
+      <el-card shadow="never" class="section-card">
         <template #header>{{ t("config.screenshotHeader") }}</template>
         <p class="text-body-sm config-help">
           {{ t("config.screenshotHelp") }}
@@ -160,7 +160,7 @@
       </el-card>
 
       <!-- Picture Output -->
-      <el-card shadow="never" class="config-card">
+      <el-card shadow="never" class="section-card">
         <template #header>{{ t("config.photoHeader") }}</template>
         <el-form label-position="top" size="default">
           <el-form-item :label="t('config.outputFolder')">
@@ -192,7 +192,7 @@
       </el-card>
 
       <!-- Steadycam FOV -->
-      <el-card shadow="never" class="config-card">
+      <el-card shadow="never" class="section-card">
         <template #header>{{ t("config.steadycamHeader") }}</template>
         <p class="text-body-sm config-help">
           {{ t("config.steadycamHelp") }}
@@ -222,7 +222,7 @@
       </el-card>
 
       <!-- Cache -->
-      <el-card shadow="never" class="config-card">
+      <el-card shadow="never" class="section-card">
         <template #header>{{ t("config.cacheHeader") }}</template>
         <p class="text-body-sm config-help">
           {{ t("config.cacheHelp") }}
@@ -291,7 +291,7 @@
       </el-card>
 
       <!-- Rich Presence -->
-      <el-card shadow="never" class="config-card">
+      <el-card shadow="never" class="section-card">
         <template #header>{{ t("config.otherHeader") }}</template>
         <VtCheckbox
           v-model="disableRichPresence"
@@ -688,17 +688,6 @@ onBeforeUnmount(() => {
   display: block;
   margin: 0 0 var(--space-section);
   color: var(--color-text-secondary);
-}
-
-.config-card {
-  margin-bottom: var(--space-section);
-  background: var(--color-bg-elevated) !important;
-  border-color: var(--color-border) !important;
-}
-
-.config-card :deep(.el-card__header) {
-  font-weight: var(--font-weight-600);
-  border-bottom-color: var(--color-border);
 }
 
 .config-not-found {

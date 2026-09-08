@@ -1,6 +1,6 @@
 <template>
   <el-card
-    class="server-status-panel"
+    class="section-card server-status-panel"
     shadow="never"
     data-testid="server-status-section"
   >
@@ -182,11 +182,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.server-status-panel {
-  background: var(--color-bg-elevated) !important;
-  border-color: var(--color-border) !important;
-}
-
 .server-status-title {
   color: var(--color-text-secondary);
 }

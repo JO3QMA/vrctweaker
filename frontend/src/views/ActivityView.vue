@@ -351,16 +351,12 @@ onUnmounted(() => {
 }
 
 .section-card {
-  background: var(--color-bg-elevated) !important;
-  border-color: var(--color-border) !important;
   width: 100%;
   min-width: 0;
-  padding: 0;
+  margin-bottom: 0;
 }
 
 .section-card :deep(.el-card__header) {
-  font-weight: var(--font-weight-600);
-  border-bottom-color: var(--color-border);
   color: var(--color-text-secondary);
 }
 

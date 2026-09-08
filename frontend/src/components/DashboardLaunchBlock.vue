@@ -1,6 +1,6 @@
 <template>
   <el-card
-    class="dashboard-launch-block"
+    class="section-card dashboard-launch-block"
     shadow="never"
     data-testid="dashboard-launch-block"
   >
@@ -241,11 +241,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.dashboard-launch-block {
-  background: var(--color-bg-elevated) !important;
-  border-color: var(--color-border) !important;
-}
-
 .launch-block-message,
 .launch-block-empty {
   color: var(--color-text-secondary);
