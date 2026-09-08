@@ -523,6 +523,22 @@
     "profilePicThumb": "프로필 썸네일",
     "friendKey": "friendKey",
     "cacheUpdated": "캐시 갱신",
+    "bioLinkOpen": "{site} 링크 열기: {url}",
+    "bioLinkSites": {
+      "twitter": "X",
+      "booth": "Booth",
+      "misskey": "Misskey",
+      "github": "GitHub",
+      "youtube": "YouTube",
+      "discord": "Discord",
+      "twitch": "Twitch",
+      "vrchat": "VRChat",
+      "pixiv": "pixiv",
+      "instagram": "Instagram",
+      "tiktok": "TikTok",
+      "bluesky": "Bluesky",
+      "link": "링크"
+    },
     "userTags": {
       "deprecated": "폐기됨",
       "unknown": "알 수 없는 태그",

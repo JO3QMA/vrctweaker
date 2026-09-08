@@ -523,6 +523,22 @@
     "profilePicThumb": "Profile picture thumbnail",
     "friendKey": "friendKey",
     "cacheUpdated": "Cache updated",
+    "bioLinkOpen": "Open {site} link: {url}",
+    "bioLinkSites": {
+      "twitter": "X",
+      "booth": "Booth",
+      "misskey": "Misskey",
+      "github": "GitHub",
+      "youtube": "YouTube",
+      "discord": "Discord",
+      "twitch": "Twitch",
+      "vrchat": "VRChat",
+      "pixiv": "pixiv",
+      "instagram": "Instagram",
+      "tiktok": "TikTok",
+      "bluesky": "Bluesky",
+      "link": "Link"
+    },
     "userTags": {
       "deprecated": "Deprecated",
       "unknown": "Unknown tag",

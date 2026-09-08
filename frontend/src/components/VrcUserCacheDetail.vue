@@ -86,12 +86,9 @@
         <p v-if="selected.bio" class="profile-bio multiline">
           {{ selected.bio }}
         </p>
-        <ul
-          v-if="jsonStringArray(selected.bioLinksJson).length"
-          class="profile-bio-links"
-        >
-          <li v-for="(u, i) in jsonStringArray(selected.bioLinksJson)" :key="i">
-            <a :href="u" target="_blank" rel="noopener noreferrer">{{ u }}</a>
+        <ul v-if="bioLinks.length" class="profile-bio-links">
+          <li v-for="(u, i) in bioLinks" :key="i">
+            <VrcBioLinkChip :url="u" />
           </li>
         </ul>
       </div>
@@ -143,22 +140,22 @@
                 }}
               </el-descriptions-item>
               <el-descriptions-item
-                v-if="selected.lastLogin"
+                v-if="formattedLastLogin"
                 :label="t('userDetail.lastLogin')"
               >
-                {{ selected.lastLogin }}
+                {{ formattedLastLogin }}
               </el-descriptions-item>
               <el-descriptions-item
-                v-if="selected.lastActivity"
+                v-if="formattedLastActivity"
                 :label="t('userDetail.lastActivity')"
               >
-                {{ selected.lastActivity }}
+                {{ formattedLastActivity }}
               </el-descriptions-item>
               <el-descriptions-item
-                v-if="selected.lastMobile"
+                v-if="formattedLastMobile"
                 :label="t('userDetail.lastMobile')"
               >
-                {{ selected.lastMobile }}
+                {{ formattedLastMobile }}
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="jsonStringArray(selected.tagsJson).length"
@@ -247,7 +244,7 @@
                 <span class="mono wrap">{{ selected.friendKey }}</span>
               </el-descriptions-item>
               <el-descriptions-item :label="t('userDetail.cacheUpdated')">
-                {{ selected.lastUpdated }}
+                {{ formattedCacheUpdated }}
               </el-descriptions-item>
             </el-descriptions>
           </el-tab-pane>
@@ -274,12 +271,15 @@ import { CopyDocument } from "@element-plus/icons-vue";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import EncounterHistoryList from "./EncounterHistoryList.vue";
+import VrcBioLinkChip from "./VrcBioLinkChip.vue";
 import VrcStatusTag from "./VrcStatusTag.vue";
 import VrcUserTagChip from "./VrcUserTagChip.vue";
 import VtButton from "./VtButton.vue";
 import VtCheckbox from "./VtCheckbox.vue";
 import VtIcon from "./VtIcon.vue";
 import type { UserCacheDTO } from "../wails/app";
+import { appLocaleToBcp47 } from "../i18n";
+import { formatVrcUserCacheDateTime } from "../utils/formatVrcUserCacheDateTime";
 import {
   copyDisplayName,
   friendDetailStickyHeaderVisible,
@@ -289,7 +289,7 @@ import {
   jsonStringArray,
 } from "../utils/vrcUserCacheDisplay";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const props = withDefaults(
   defineProps<{
@@ -345,6 +345,32 @@ const avatarSrc = computed(() =>
 
 const locationLabel = computed(() =>
   props.selected ? friendLocationLabel(props.selected.location) : "",
+);
+
+const calendarLocale = computed(() => appLocaleToBcp47(String(locale.value)));
+
+const bioLinks = computed(() =>
+  props.selected ? jsonStringArray(props.selected.bioLinksJson) : [],
+);
+
+function formatCacheField(raw: string | undefined): string | null {
+  return formatVrcUserCacheDateTime(raw, calendarLocale.value);
+}
+
+const formattedLastLogin = computed(() =>
+  props.selected ? formatCacheField(props.selected.lastLogin) : null,
+);
+const formattedLastActivity = computed(() =>
+  props.selected ? formatCacheField(props.selected.lastActivity) : null,
+);
+const formattedLastMobile = computed(() =>
+  props.selected ? formatCacheField(props.selected.lastMobile) : null,
+);
+const formattedCacheUpdated = computed(() =>
+  props.selected
+    ? (formatCacheField(props.selected.lastUpdated) ??
+      props.selected.lastUpdated)
+    : "",
 );
 
 function onFavoriteUpdate(val: boolean | string | number | undefined) {
@@ -615,13 +641,16 @@ onUnmounted(() => {
 
 .profile-bio-links {
   margin: var(--space-action-group) 0 0;
-  padding-left: var(--space-block);
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-inline-tight);
   font-size: var(--font-size-14);
 }
 
-.profile-bio-links a {
-  color: var(--el-color-primary);
-  word-break: break-all;
+.profile-bio-links li {
+  max-width: 100%;
 }
 
 .profile-details-wrap {

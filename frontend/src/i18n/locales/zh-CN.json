@@ -523,6 +523,22 @@
     "profilePicThumb": "头像缩略图",
     "friendKey": "friendKey",
     "cacheUpdated": "缓存更新",
+    "bioLinkOpen": "打开 {site} 链接：{url}",
+    "bioLinkSites": {
+      "twitter": "X",
+      "booth": "Booth",
+      "misskey": "Misskey",
+      "github": "GitHub",
+      "youtube": "YouTube",
+      "discord": "Discord",
+      "twitch": "Twitch",
+      "vrchat": "VRChat",
+      "pixiv": "pixiv",
+      "instagram": "Instagram",
+      "tiktok": "TikTok",
+      "bluesky": "Bluesky",
+      "link": "链接"
+    },
     "userTags": {
       "deprecated": "已废弃",
       "unknown": "未知标签",
