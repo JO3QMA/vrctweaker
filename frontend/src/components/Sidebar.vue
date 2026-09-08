@@ -5,6 +5,7 @@
         v-for="item in menuItems"
         :key="item.path"
         :index="item.path"
+        class="vt-focus-ring--inset"
       >
         <VtIcon size="default" class="sidebar-icon">
           <component :is="item.icon" />
@@ -14,7 +15,7 @@
     </el-menu>
     <div class="sidebar-footer">
       <el-menu :default-active="route.path" router class="sidebar-nav">
-        <el-menu-item :index="settingsItem.path">
+        <el-menu-item :index="settingsItem.path" class="vt-focus-ring--inset">
           <VtIcon size="default" class="sidebar-icon">
             <component :is="settingsItem.icon" />
           </VtIcon>
@@ -82,6 +83,7 @@ const settingsItem = computed(() => ({
   color: var(--color-text-secondary);
   height: 42px;
   line-height: 42px;
+  border-left: 3px solid transparent;
 }
 
 .sidebar-nav :deep(.el-menu-item:hover) {
@@ -93,16 +95,7 @@ const settingsItem = computed(() => ({
   background: var(--color-bg-muted) !important;
   color: var(--color-brand) !important;
   font-weight: var(--font-weight-600);
-  border-left: 3px solid var(--color-brand);
-}
-
-.sidebar-nav :deep(.el-menu-item:focus) {
-  outline: none;
-}
-
-.sidebar-nav :deep(.el-menu-item:focus-visible) {
-  outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: calc(-1 * var(--focus-ring-offset));
+  border-left-color: var(--color-brand);
 }
 
 .sidebar-footer {

@@ -375,6 +375,10 @@ a:hover {
   color: var(--color-text-primary);
 }
 
+.section-card__toggle:focus:not(:focus-visible) {
+  outline: none;
+}
+
 .section-card__toggle:focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--focus-ring-offset);
@@ -421,12 +425,18 @@ a:hover {
   font-size: var(--icon-size-large);
 }
 
-/* Shared keyboard focus ring (shell chrome; apply via class or matching selectors) */
-.vt-focus-ring:focus {
+/* Shared keyboard focus ring (shell chrome) */
+.vt-focus-ring:focus:not(:focus-visible),
+.vt-focus-ring--inset:focus:not(:focus-visible) {
   outline: none;
 }
 
 .vt-focus-ring:focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--focus-ring-offset);
+}
+
+.vt-focus-ring--inset:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: calc(-1 * var(--focus-ring-offset));
 }

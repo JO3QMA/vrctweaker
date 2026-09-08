@@ -2,9 +2,15 @@
   <div class="title-bar" style="--wails-draggable: drag">
     <span class="title-bar-text">{{ t("app.name") }}</span>
     <div class="title-bar-actions" style="--wails-draggable: no-drag">
-      <button class="title-bar-btn" @click="minimize">−</button>
-      <button class="title-bar-btn" @click="maximize">□</button>
-      <button class="title-bar-btn close" @click="close">×</button>
+      <button class="title-bar-btn vt-focus-ring--inset" @click="minimize">
+        −
+      </button>
+      <button class="title-bar-btn vt-focus-ring--inset" @click="maximize">
+        □
+      </button>
+      <button class="title-bar-btn close vt-focus-ring--inset" @click="close">
+        ×
+      </button>
     </div>
   </div>
 </template>
@@ -81,14 +87,5 @@ async function close() {
 .title-bar-btn.close:hover {
   background: var(--color-danger);
   color: var(--color-text-inverse);
-}
-
-.title-bar-btn:focus {
-  outline: none;
-}
-
-.title-bar-btn:focus-visible {
-  outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: calc(-1 * var(--focus-ring-offset));
 }
 </style>
