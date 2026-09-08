@@ -5,7 +5,6 @@ package singleinstance
 import (
 	"fmt"
 	"sync"
-	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
@@ -60,15 +59,28 @@ func (w *winGuard) acquire() (bool, error) {
 }
 
 func (w *winGuard) notifyExisting() error {
+	if w.windowTitle == "" {
+		return w.signalEvent()
+	}
+
+	hwnd, findErr := findMainWindow(w.windowTitle)
+	var allowErr error
+	if findErr == nil {
+		allowErr = allowForegroundForWindow(hwnd)
+	}
+
 	signalErr := w.signalEvent()
-	if signalErr == nil {
-		return nil
+
+	var nativeErr error
+	if findErr != nil {
+		nativeErr = findErr
+	} else {
+		nativeErr = forceForeground(hwnd)
+		if nativeErr != nil && allowErr != nil {
+			nativeErr = fmt.Errorf("%w; %w", allowErr, nativeErr)
+		}
 	}
-	fallbackErr := w.activateWindowByTitle(w.windowTitle)
-	if fallbackErr == nil {
-		return nil
-	}
-	return fmt.Errorf("singleinstance: existing instance could not be activated (signal: %w; fallback: %w)", signalErr, fallbackErr)
+	return combineNotifyExistingResults(signalErr, nativeErr)
 }
 
 func (w *winGuard) signalEvent() error {
@@ -127,35 +139,4 @@ func (w *winGuard) release() {
 		_ = windows.CloseHandle(w.mutex)
 		w.mutex = 0
 	}
-}
-
-var (
-	modUser32               = windows.NewLazySystemDLL("user32.dll")
-	procFindWindowW         = modUser32.NewProc("FindWindowW")
-	procShowWindow          = modUser32.NewProc("ShowWindow")
-	procSetForegroundWindow = modUser32.NewProc("SetForegroundWindow")
-)
-
-const swRestore = 9
-
-func (w *winGuard) activateWindowByTitle(title string) error {
-	if title == "" {
-		return fmt.Errorf("window title not configured")
-	}
-	titlePtr, err := windows.UTF16PtrFromString(title)
-	if err != nil {
-		return err
-	}
-	hwnd, _, _ := procFindWindowW.Call(0, uintptr(unsafe.Pointer(titlePtr)))
-	if hwnd == 0 {
-		if errno := windows.GetLastError(); errno != windows.ERROR_SUCCESS {
-			return errno
-		}
-		return fmt.Errorf("window not found")
-	}
-	procShowWindow.Call(hwnd, swRestore)
-	if ret, _, _ := procSetForegroundWindow.Call(hwnd); ret == 0 {
-		return fmt.Errorf("SetForegroundWindow failed")
-	}
-	return nil
 }

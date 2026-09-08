@@ -98,10 +98,16 @@ func (a *App) showMainWindow() {
 	}
 	runtime.WindowShow(a.ctx)
 	runtime.WindowUnminimise(a.ctx)
+	if a.instanceGuard != nil {
+		if err := a.instanceGuard.ActivateWindow(); err != nil && a.ctx != nil {
+			runtime.LogWarning(a.ctx, "single instance foreground: "+err.Error())
+		}
+	}
 }
 
 // WireSingleInstanceActivate connects second-launch activation to the main window.
 func (a *App) WireSingleInstanceActivate(g *singleinstance.Guard) {
+	a.instanceGuard = g
 	g.SetOnActivate(func() { a.showMainWindow() })
 }
 
