@@ -1,6 +1,8 @@
 package singleinstance
 
 import (
+	"fmt"
+	"os"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -152,5 +154,26 @@ func TestReleaseIsIdempotent(t *testing.T) {
 func TestDefaultWindowTitle(t *testing.T) {
 	if DefaultWindowTitle == "" {
 		t.Fatal("DefaultWindowTitle must not be empty")
+	}
+}
+
+func TestSetOnActivateNilDiscardsPending(t *testing.T) {
+	g := NewNamed("vrctweaker-test-" + uuid.NewString())
+	g.dispatchActivate()
+	g.dispatchActivate()
+	g.SetOnActivate(nil)
+
+	var activated atomic.Bool
+	g.SetOnActivate(func() { activated.Store(true) })
+	if activated.Load() {
+		t.Fatal("pending activations should be discarded when callback cleared with nil")
+	}
+}
+
+func TestAbstractActivateAddrIncludesUID(t *testing.T) {
+	addr := abstractActivateAddr("VRChatTweaker")
+	want := fmt.Sprintf("@VRChatTweaker_%d_activate", os.Getuid())
+	if addr != want {
+		t.Fatalf("got %q want %q", addr, want)
 	}
 }

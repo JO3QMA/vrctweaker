@@ -1,7 +1,10 @@
 // Package singleinstance ensures only one VRChat Tweaker process runs at a time.
 package singleinstance
 
-import "sync"
+import (
+	"errors"
+	"sync"
+)
 
 const (
 	defaultName = "VRChatTweaker"
@@ -9,6 +12,8 @@ const (
 	// DefaultWindowTitle is the Wails window title and Windows FindWindow fallback.
 	DefaultWindowTitle = "VRChat Tweaker"
 )
+
+var errGuardReleased = errors.New("singleinstance: guard released")
 
 // Guard coordinates single-instance locking and second-launch activation.
 type Guard struct {
@@ -22,6 +27,7 @@ type Guard struct {
 	stopCh     chan struct{}
 	releaseMu  sync.Mutex
 	released   bool
+	platformMu sync.Mutex
 	platform   platformGuard
 }
 
@@ -33,36 +39,45 @@ func New() *Guard {
 // NewNamed returns a Guard for tests or custom identifiers.
 func NewNamed(name string) *Guard {
 	return &Guard{
-		name:   name,
-		stopCh: make(chan struct{}),
+		name:     name,
+		stopCh:   make(chan struct{}),
+		platform: newPlatformGuard(name),
 	}
 }
 
 // Acquire tries to become the sole running instance.
 // When acquired is false, another instance already holds the lock.
 func (g *Guard) Acquire() (acquired bool, err error) {
-	if g.platform == nil {
-		g.platform = newPlatformGuard(g.name)
+	g.platformMu.Lock()
+	defer g.platformMu.Unlock()
+	if g.released || g.platform == nil {
+		return false, errGuardReleased
 	}
 	return g.platform.acquire()
 }
 
 // NotifyExisting asks the running instance to activate its main window.
 func (g *Guard) NotifyExisting() error {
+	g.platformMu.Lock()
+	defer g.platformMu.Unlock()
 	if g.platform == nil {
-		g.platform = newPlatformGuard(g.name)
+		return errGuardReleased
 	}
 	return g.platform.notifyExisting()
 }
 
 // SetOnActivate registers a callback for second-launch activation requests.
 // Any activation requests received before registration are queued and drained once.
+// Passing nil clears the callback and discards any queued activations.
 func (g *Guard) SetOnActivate(fn func()) {
 	g.activateMu.Lock()
 	g.onActivate = fn
 	pending := g.pending
 	g.pending = 0
 	g.activateMu.Unlock()
+	if fn == nil {
+		return
+	}
 	for i := 0; i < pending; i++ {
 		fn()
 	}
@@ -77,8 +92,12 @@ func (g *Guard) Start() error {
 		return g.startErr
 	}
 	g.started = true
-	if g.platform == nil {
-		return nil
+
+	g.platformMu.Lock()
+	defer g.platformMu.Unlock()
+	if g.released || g.platform == nil {
+		g.startErr = errGuardReleased
+		return g.startErr
 	}
 	g.startErr = g.platform.start(g.stopCh, g.dispatchActivate)
 	return g.startErr
@@ -109,6 +128,9 @@ func (g *Guard) Release() {
 	default:
 		close(g.stopCh)
 	}
+
+	g.platformMu.Lock()
+	defer g.platformMu.Unlock()
 	if g.platform != nil {
 		g.platform.release()
 		g.platform = nil

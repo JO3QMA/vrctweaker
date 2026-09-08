@@ -52,6 +52,10 @@ func (s *stubGuard) paths() error {
 	return nil
 }
 
+func abstractActivateAddr(appName string) string {
+	return fmt.Sprintf("@%s_%d_activate", appName, os.Getuid())
+}
+
 func (s *stubGuard) resolveSocket() (network, addr string, err error) {
 	if err := s.paths(); err != nil {
 		return "", "", err
@@ -60,9 +64,9 @@ func (s *stubGuard) resolveSocket() (network, addr string, err error) {
 		return "unix", s.sockPath, nil
 	}
 	if runtime.GOOS == "linux" {
-		return "unix", "@" + s.name + "_activate", nil
+		return "unix", abstractActivateAddr(s.name), nil
 	}
-	tmpAddr := filepath.Join(os.TempDir(), s.name+".sock")
+	tmpAddr := filepath.Join(os.TempDir(), fmt.Sprintf("%s-%d.sock", s.name, os.Getuid()))
 	if len(tmpAddr) >= sunPathMax {
 		return "", "", fmt.Errorf("singleinstance: activation socket path too long (%d bytes): %q", len(s.sockPath), s.sockPath)
 	}
@@ -151,6 +155,10 @@ func (s *stubGuard) start(stop <-chan struct{}, dispatch func()) error {
 					continue
 				}
 				return
+			}
+			if !authorizedPeer(conn) {
+				_ = conn.Close()
+				continue
 			}
 			buf := make([]byte, len(activateMessage))
 			_, _ = io.ReadFull(conn, buf)
