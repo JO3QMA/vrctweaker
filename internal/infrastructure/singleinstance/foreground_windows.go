@@ -37,8 +37,14 @@ func ActivateWindowByTitle(title string) error {
 	if err != nil {
 		return err
 	}
-	allowForegroundForWindow(hwnd)
-	return forceForeground(hwnd)
+	allowErr := allowForegroundForWindow(hwnd)
+	if err := forceForeground(hwnd); err != nil {
+		if allowErr != nil {
+			return fmt.Errorf("%w; %w", allowErr, err)
+		}
+		return err
+	}
+	return allowErr
 }
 
 func findMainWindow(title string) (windows.HWND, error) {
@@ -56,13 +62,17 @@ func findMainWindow(title string) (windows.HWND, error) {
 	return windows.HWND(hwnd), nil
 }
 
-func allowForegroundForWindow(hwnd windows.HWND) {
+func allowForegroundForWindow(hwnd windows.HWND) error {
 	var pid uint32
 	_, _, _ = procGetWindowThreadProcessId.Call(uintptr(hwnd), uintptr(unsafe.Pointer(&pid)))
 	if pid == 0 {
-		return
+		return fmt.Errorf("could not determine window PID")
 	}
-	_, _, _ = procAllowSetForegroundWindow.Call(uintptr(pid))
+	ret, _, _ := procAllowSetForegroundWindow.Call(uintptr(pid))
+	if ret == 0 {
+		return fmt.Errorf("AllowSetForegroundWindow failed")
+	}
+	return nil
 }
 
 func showMainWindow(hwnd windows.HWND) {
@@ -72,9 +82,7 @@ func showMainWindow(hwnd windows.HWND) {
 	}
 	if !isWindowVisible(hwnd) {
 		_, _, _ = procShowWindow.Call(uintptr(hwnd), swShow)
-		return
 	}
-	_, _, _ = procShowWindow.Call(uintptr(hwnd), swRestore)
 }
 
 func isIconic(hwnd windows.HWND) bool {

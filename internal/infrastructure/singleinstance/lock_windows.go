@@ -59,13 +59,27 @@ func (w *winGuard) acquire() (bool, error) {
 }
 
 func (w *winGuard) notifyExisting() error {
-	if w.windowTitle != "" {
-		if hwnd, err := findMainWindow(w.windowTitle); err == nil {
-			allowForegroundForWindow(hwnd)
+	if w.windowTitle == "" {
+		return w.signalEvent()
+	}
+
+	hwnd, findErr := findMainWindow(w.windowTitle)
+	var allowErr error
+	if findErr == nil {
+		allowErr = allowForegroundForWindow(hwnd)
+	}
+
+	signalErr := w.signalEvent()
+
+	var nativeErr error
+	if findErr != nil {
+		nativeErr = findErr
+	} else {
+		nativeErr = forceForeground(hwnd)
+		if nativeErr != nil && allowErr != nil {
+			nativeErr = fmt.Errorf("%w; %w", allowErr, nativeErr)
 		}
 	}
-	signalErr := w.signalEvent()
-	nativeErr := ActivateWindowByTitle(w.windowTitle)
 	return combineNotifyExistingResults(signalErr, nativeErr)
 }
 
