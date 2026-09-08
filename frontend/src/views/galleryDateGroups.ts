@@ -204,7 +204,9 @@ export function galleryRowHeight(
     return GALLERY_DAY_HEADER_ROW_HEIGHT_PX;
   }
   const _exhaustive: never = row;
-  return _exhaustive;
+  throw new Error(
+    `galleryRowHeight: unknown row type ${JSON.stringify(_exhaustive)}`,
+  );
 }
 
 export interface GalleryHeaderIndexEntry {
@@ -213,6 +215,8 @@ export interface GalleryHeaderIndexEntry {
   label: string;
   type: "yearHeader" | "dayHeader";
   dayKey?: string;
+  yearLabel?: string;
+  yearRowKey?: string;
 }
 
 /** Sorted header row indices for O(log n) sticky section lookup. */
@@ -220,9 +224,13 @@ export function buildGalleryHeaderIndices(
   rows: GalleryVirtualRow[],
 ): GalleryHeaderIndexEntry[] {
   const indices: GalleryHeaderIndexEntry[] = [];
+  let currentYearLabel: string | undefined;
+  let currentYearRowKey: string | undefined;
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
     if (row?.type === "yearHeader") {
+      currentYearLabel = row.label;
+      currentYearRowKey = row.rowKey;
       indices.push({
         index: i,
         rowKey: row.rowKey,
@@ -236,6 +244,8 @@ export function buildGalleryHeaderIndices(
         label: row.label,
         type: "dayHeader",
         dayKey: row.dayKey,
+        yearLabel: currentYearLabel,
+        yearRowKey: currentYearRowKey,
       });
     }
   }
@@ -251,10 +261,7 @@ export interface GalleryStickySection {
   yearRowKey?: string;
 }
 
-function toStickySection(
-  entry: GalleryHeaderIndexEntry,
-  yearEntry?: GalleryHeaderIndexEntry,
-): GalleryStickySection {
+function toStickySection(entry: GalleryHeaderIndexEntry): GalleryStickySection {
   if (entry.type === "yearHeader") {
     return {
       label: entry.label,
@@ -267,8 +274,8 @@ function toStickySection(
     rowKey: entry.rowKey,
     headerKind: "dayHeader",
     dayKey: entry.dayKey,
-    yearLabel: yearEntry?.label,
-    yearRowKey: yearEntry?.rowKey,
+    yearLabel: entry.yearLabel,
+    yearRowKey: entry.yearRowKey,
   };
 }
 
@@ -297,18 +304,5 @@ export function stickySectionForIndex(
   }
 
   const nearest = headerIndices[end]!;
-  if (nearest.type === "yearHeader") {
-    return toStickySection(nearest);
-  }
-
-  let yearEntry: GalleryHeaderIndexEntry | undefined;
-  for (let i = end; i >= 0; i--) {
-    const entry = headerIndices[i]!;
-    if (entry.type === "yearHeader") {
-      yearEntry = entry;
-      break;
-    }
-  }
-
-  return toStickySection(nearest, yearEntry);
+  return toStickySection(nearest);
 }

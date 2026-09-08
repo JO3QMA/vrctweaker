@@ -502,11 +502,16 @@ const emptyStickyOverlay: StickyOverlayState = {
   showYearContext: false,
 };
 
-function firstVisibleVirtualItem(
+function anchorVirtualItemForSticky(
   vItems: VirtualItem[],
   scrollTop: number,
 ): VirtualItem | undefined {
-  return vItems.find((v) => v.start + v.size > scrollTop);
+  const firstVisible = vItems.find((v) => v.start + v.size > scrollTop);
+  if (firstVisible) {
+    return firstVisible;
+  }
+  // All rendered rows are above scrollTop (e.g. after a scroll jump).
+  return vItems[vItems.length - 1];
 }
 
 function isHeaderPinnedAtScrollTop(v: VirtualItem, scrollTop: number): boolean {
@@ -549,8 +554,11 @@ const stickyOverlay = computed((): StickyOverlayState => {
 
   const scrollTop = scrollEl.scrollTop;
   const clientHeight = scrollEl.clientHeight;
-  const firstVisible = firstVisibleVirtualItem(vItems, scrollTop) ?? vItems[0];
-  const firstIdx = firstVisible?.index ?? 0;
+  const firstVisible = anchorVirtualItemForSticky(vItems, scrollTop);
+  if (!firstVisible) {
+    return emptyStickyOverlay;
+  }
+  const firstIdx = firstVisible.index;
   const section = stickySectionForIndex(firstIdx, galleryHeaderIndices.value);
   if (!section) {
     return emptyStickyOverlay;
@@ -1411,5 +1419,8 @@ onMounted(() => {
 
 .gallery-section-label {
   min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 </style>

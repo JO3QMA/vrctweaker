@@ -172,7 +172,24 @@ describe("buildGalleryHeaderIndices", () => {
       type: "dayHeader",
       dayKey: expect.stringMatching(/^\d+-\d+-\d+$/),
       rowKey: expect.stringMatching(/^hdr-d-/),
+      yearLabel: "2025年",
+      yearRowKey: "hdr-y-2025",
     });
+  });
+
+  it("embeds year context on day headers across many days in one year", () => {
+    const shots = Array.from({ length: 70 }, (_, i) => {
+      const d = new Date(Date.UTC(2024, 0, 1 + i));
+      return shot(`d-${i}`, d.toISOString());
+    });
+    const rows = buildGalleryVirtualRows(shots, 2);
+    const indices = buildGalleryHeaderIndices(rows);
+    const dayHeaders = indices.filter((e) => e.type === "dayHeader");
+    expect(dayHeaders).toHaveLength(70);
+    for (const day of dayHeaders) {
+      expect(day.yearLabel).toBe("2024年");
+      expect(day.yearRowKey).toBe("hdr-y-2024");
+    }
   });
 });
 
