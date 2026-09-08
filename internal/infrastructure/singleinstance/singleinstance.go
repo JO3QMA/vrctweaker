@@ -3,6 +3,7 @@ package singleinstance
 
 import (
 	"errors"
+	"log"
 	"sync"
 )
 
@@ -20,6 +21,7 @@ type Guard struct {
 	name       string
 	onActivate func()
 	activateMu sync.Mutex
+	invokeMu   sync.Mutex
 	pending    bool
 	startMu    sync.Mutex
 	started    bool
@@ -80,6 +82,7 @@ func (g *Guard) NotifyExisting() error {
 // Any activation requests received before registration are coalesced to at most one
 // pending activation and drained once when the callback is registered.
 // Passing nil clears the callback and discards any queued activation.
+// Callbacks are serialized; they must not block indefinitely.
 func (g *Guard) SetOnActivate(fn func()) {
 	g.activateMu.Lock()
 	g.onActivate = fn
@@ -89,7 +92,7 @@ func (g *Guard) SetOnActivate(fn func()) {
 	if fn == nil || !pending {
 		return
 	}
-	fn()
+	g.runActivate(fn)
 }
 
 // Start binds the activation listener. Call immediately after a successful Acquire,
@@ -130,6 +133,17 @@ func (g *Guard) dispatchActivate() {
 		return
 	}
 	g.activateMu.Unlock()
+	g.runActivate(fn)
+}
+
+func (g *Guard) runActivate(fn func()) {
+	g.invokeMu.Lock()
+	defer g.invokeMu.Unlock()
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("singleinstance: activation callback panic: %v", r)
+		}
+	}()
 	fn()
 }
 

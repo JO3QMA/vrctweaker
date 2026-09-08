@@ -3,6 +3,7 @@
 package singleinstance
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -19,7 +20,10 @@ import (
 )
 
 const (
-	activateMessage = "activate"
+	activateMessage      = "activate"
+	activateDialTimeout  = 2 * time.Second
+	activateDialInterval = 100 * time.Millisecond
+	activateReadTimeout  = 2 * time.Second
 	// sunPathMax is the maximum Unix domain socket path length (excluding NUL).
 	sunPathMax = 104
 )
@@ -87,7 +91,7 @@ func (s *stubGuard) acquire() (bool, error) {
 	}
 	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
 		_ = file.Close()
-		if errno, ok := err.(syscall.Errno); ok && (errno == syscall.EWOULDBLOCK || errno == syscall.EAGAIN) {
+		if errors.Is(err, syscall.EWOULDBLOCK) || errors.Is(err, syscall.EAGAIN) {
 			return false, nil
 		}
 		return false, err
@@ -96,12 +100,29 @@ func (s *stubGuard) acquire() (bool, error) {
 	return true, nil
 }
 
+func dialActivationSocket(network, addr string) (net.Conn, error) {
+	deadline := time.Now().Add(activateDialTimeout)
+	var lastErr error
+	for {
+		conn, err := net.Dial(network, addr)
+		if err == nil {
+			return conn, nil
+		}
+		lastErr = err
+		if time.Now().After(deadline) {
+			break
+		}
+		time.Sleep(activateDialInterval)
+	}
+	return nil, lastErr
+}
+
 func (s *stubGuard) notifyExisting() error {
 	network, addr, err := s.resolveSocket()
 	if err != nil {
 		return err
 	}
-	conn, err := net.Dial(network, addr)
+	conn, err := dialActivationSocket(network, addr)
 	if err != nil {
 		return fmt.Errorf("singleinstance: existing instance could not be activated: %w", err)
 	}
@@ -134,11 +155,6 @@ func (s *stubGuard) start(stop <-chan struct{}, dispatch func()) error {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-		defer func() {
-			if r := recover(); r != nil {
-				log.Printf("singleinstance: activation listener panic: %v", r)
-			}
-		}()
 		for {
 			select {
 			case <-stop:
@@ -164,8 +180,12 @@ func (s *stubGuard) start(stop <-chan struct{}, dispatch func()) error {
 				_ = conn.Close()
 				continue
 			}
+			_ = conn.SetDeadline(time.Now().Add(activateReadTimeout))
 			buf := make([]byte, len(activateMessage))
-			_, _ = io.ReadFull(conn, buf)
+			if _, err := io.ReadFull(conn, buf); err != nil {
+				_ = conn.Close()
+				continue
+			}
 			_ = conn.Close()
 			if string(buf) == activateMessage {
 				dispatch()

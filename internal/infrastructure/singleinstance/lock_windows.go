@@ -86,7 +86,8 @@ func (w *winGuard) signalEvent() error {
 }
 
 func (w *winGuard) start(stop <-chan struct{}, dispatch func()) error {
-	if w.event == 0 {
+	eventHandle := w.event
+	if eventHandle == 0 {
 		return nil
 	}
 	w.listener.Add(1)
@@ -98,7 +99,7 @@ func (w *winGuard) start(stop <-chan struct{}, dispatch func()) error {
 				return
 			default:
 			}
-			status, err := windows.WaitForSingleObject(w.event, 200)
+			status, err := windows.WaitForSingleObject(eventHandle, 200)
 			if err != nil {
 				return
 			}
@@ -114,6 +115,7 @@ func (w *winGuard) start(stop <-chan struct{}, dispatch func()) error {
 }
 
 func (w *winGuard) release() {
+	w.listener.Wait()
 	if w.event != 0 {
 		_ = windows.CloseHandle(w.event)
 		w.event = 0
@@ -123,7 +125,6 @@ func (w *winGuard) release() {
 		_ = windows.CloseHandle(w.mutex)
 		w.mutex = 0
 	}
-	w.listener.Wait()
 }
 
 var (
