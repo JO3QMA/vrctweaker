@@ -20,7 +20,7 @@ test.describe("Gallery", () => {
     );
 
     const grid = page.getByTestId("gallery-grid-scroll");
-    const empty = page.getByText("スクリーンショットがありません");
+    const empty = page.getByTestId("gallery-empty");
 
     await expect(grid.or(empty)).toBeVisible({ timeout: 15_000 });
     await expect(empty).toBeHidden();
