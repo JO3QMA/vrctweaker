@@ -41,7 +41,7 @@ async function close() {
   align-items: center;
   justify-content: space-between;
   height: 36px;
-  padding: 0 0.5rem;
+  padding: 0 var(--space-action-group);
   background: var(--color-bg-elevated);
   border-bottom: 1px solid var(--color-border);
   user-select: none;
@@ -49,8 +49,8 @@ async function close() {
 }
 
 .title-bar-text {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: var(--font-size-12);
+  font-weight: var(--font-weight-500);
   color: var(--color-text-secondary);
 }
 
@@ -65,7 +65,7 @@ async function close() {
   border: none;
   background: transparent;
   color: var(--color-text-secondary);
-  font-size: 16px;
+  font-size: var(--font-size-16);
   line-height: 1;
   cursor: pointer;
   transition:
@@ -81,5 +81,14 @@ async function close() {
 .title-bar-btn.close:hover {
   background: var(--color-danger);
   color: var(--color-text-inverse);
+}
+
+.title-bar-btn:focus {
+  outline: none;
+}
+
+.title-bar-btn:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: calc(-1 * var(--focus-ring-offset));
 }
 </style>

@@ -84,14 +84,25 @@ const settingsItem = computed(() => ({
   line-height: 42px;
 }
 
-.sidebar-nav :deep(.el-menu-item:hover),
-.sidebar-nav :deep(.el-menu-item.is-active) {
+.sidebar-nav :deep(.el-menu-item:hover) {
   background: var(--color-bg-muted) !important;
   color: var(--color-text-primary) !important;
 }
 
 .sidebar-nav :deep(.el-menu-item.is-active) {
+  background: var(--color-bg-muted) !important;
+  color: var(--color-brand) !important;
+  font-weight: var(--font-weight-600);
   border-left: 3px solid var(--color-brand);
+}
+
+.sidebar-nav :deep(.el-menu-item:focus) {
+  outline: none;
+}
+
+.sidebar-nav :deep(.el-menu-item:focus-visible) {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: calc(-1 * var(--focus-ring-offset));
 }
 
 .sidebar-footer {

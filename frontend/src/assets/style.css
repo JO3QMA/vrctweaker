@@ -109,6 +109,11 @@
 
   /* Outside scale: preserves legacy section toggle (14px). Adoption → --icon-size-default. */
   --icon-size-legacy-toggle: 14px;
+
+  /* Focus ring (shell chrome + shared interactive) */
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+  --focus-ring-color: var(--color-brand);
 }
 
 /* ─── Element Plus dark theme CSS variable overrides ───────────── */
@@ -370,6 +375,12 @@ a:hover {
   color: var(--color-text-primary);
 }
 
+.section-card__toggle:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: var(--radius);
+}
+
 .section-card__toggle-icon {
   flex-shrink: 0;
   font-size: var(--icon-size-default);
@@ -408,4 +419,14 @@ a:hover {
 
 .vt-icon--size-large {
   font-size: var(--icon-size-large);
+}
+
+/* Shared keyboard focus ring (shell chrome; apply via class or matching selectors) */
+.vt-focus-ring:focus {
+  outline: none;
+}
+
+.vt-focus-ring:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
 }
