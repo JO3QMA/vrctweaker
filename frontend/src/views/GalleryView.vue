@@ -1159,16 +1159,16 @@ onMounted(() => {
   align-items: center;
   gap: var(--space-action-group);
   flex: 1 1 auto;
-  min-width: min(100%, 16rem);
+  min-width: 16rem;
 }
 
 .filters-actions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--space-action-group);
-  flex: 0 0 auto;
-  margin-left: auto;
+  flex: 1 1 auto;
 }
 
 .gallery-world-filter {
@@ -1181,7 +1181,6 @@ onMounted(() => {
   flex: 1 1 16rem;
   min-width: 16rem;
   max-width: 22rem;
-  width: 100%;
 }
 
 /* Toolbar control height alignment (Element Plus default size) */
