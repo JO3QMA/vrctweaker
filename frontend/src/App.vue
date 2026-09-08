@@ -80,7 +80,7 @@ watch(
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--bg-primary);
+  background: var(--color-bg-base);
 }
 
 .app-body {
@@ -96,11 +96,11 @@ watch(
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: 1.5rem;
+  padding: var(--space-section);
 }
 
 .main-content--bare {
-  padding: 1rem 1.25rem;
+  padding: var(--space-block);
 }
 
 .router-outlet-host {
