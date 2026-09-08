@@ -3,47 +3,51 @@
     <h1 class="page-title">{{ t("routes.gallery") }}</h1>
 
     <div class="filters">
-      <VtInput
-        v-model="filterWorldSearch"
-        data-testid="gallery-world-filter"
-        type="search"
-        :placeholder="t('gallery.searchPlaceholder')"
-        clearable
-        class="gallery-world-filter"
-        @keyup.enter="onFilterEnter"
-      >
-        <template #prefix>
-          <VtIcon size="default"><Search /></VtIcon>
-        </template>
-      </VtInput>
-      <el-date-picker
-        v-model="filterDateRange"
-        data-testid="gallery-date-range"
-        type="daterange"
-        :start-placeholder="t('gallery.dateRangeStart')"
-        :end-placeholder="t('gallery.dateRangeEnd')"
-        format="YYYY-MM-DD"
-        value-format="YYYY-MM-DD"
-        clearable
-        class="gallery-date-range"
-        @change="onFilterEnter"
-      />
-      <VtButton
-        variant="tertiary"
-        :disabled="loading || scanning"
-        @click="onRefreshClick"
-      >
-        {{ t("common.refresh") }}
-      </VtButton>
-      <VtButton
-        variant="secondary"
-        data-testid="gallery-scan-folder"
-        :disabled="loading || scanning"
-        :loading="scanning"
-        @click="scanFolder"
-      >
-        {{ scanning ? t("gallery.scanning") : t("gallery.scanFolder") }}
-      </VtButton>
+      <div class="filters-criteria">
+        <VtInput
+          v-model="filterWorldSearch"
+          data-testid="gallery-world-filter"
+          type="search"
+          :placeholder="t('gallery.searchPlaceholder')"
+          clearable
+          class="gallery-world-filter"
+          @keyup.enter="onFilterEnter"
+        >
+          <template #prefix>
+            <VtIcon size="default"><Search /></VtIcon>
+          </template>
+        </VtInput>
+        <el-date-picker
+          v-model="filterDateRange"
+          data-testid="gallery-date-range"
+          type="daterange"
+          :start-placeholder="t('gallery.dateRangeStart')"
+          :end-placeholder="t('gallery.dateRangeEnd')"
+          format="YYYY-MM-DD"
+          value-format="YYYY-MM-DD"
+          clearable
+          class="gallery-date-range"
+          @change="onFilterEnter"
+        />
+      </div>
+      <div class="filters-actions">
+        <VtButton
+          variant="tertiary"
+          :disabled="loading || scanning"
+          @click="onRefreshClick"
+        >
+          {{ t("common.refresh") }}
+        </VtButton>
+        <VtButton
+          variant="secondary"
+          data-testid="gallery-scan-folder"
+          :disabled="loading || scanning"
+          :loading="scanning"
+          @click="scanFolder"
+        >
+          {{ scanning ? t("gallery.scanning") : t("gallery.scanFolder") }}
+        </VtButton>
+      </div>
     </div>
 
     <VtAlert v-if="loadError" variant="danger" :title="loadError" />
@@ -1144,21 +1148,55 @@ onMounted(() => {
 .filters {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-action-group);
   align-items: center;
+  gap: var(--space-form-field) var(--space-block);
   flex-shrink: 0;
 }
 
+.filters-criteria {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-action-group);
+  flex: 1 1 auto;
+  min-width: min(100%, 16rem);
+}
+
+.filters-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-action-group);
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
 .gallery-world-filter {
-  flex: 1;
+  flex: 1 1 12rem;
   min-width: 12rem;
-  max-width: 400px;
+  max-width: 28rem;
 }
 
 .gallery-date-range {
-  flex: 0 1 auto;
+  flex: 1 1 16rem;
   min-width: 16rem;
-  max-width: 320px;
+  max-width: 22rem;
+  width: 100%;
+}
+
+/* Toolbar control height alignment (Element Plus default size) */
+.filters :deep(.el-input__wrapper),
+.filters :deep(.el-date-editor.el-input__wrapper) {
+  height: var(--el-component-size);
+  box-sizing: border-box;
+}
+
+.filters :deep(.el-range-editor .el-range-input) {
+  height: 100%;
+}
+
+.filters-actions :deep(.el-button) {
+  height: var(--el-component-size);
 }
 
 .gallery-body {

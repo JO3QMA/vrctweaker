@@ -10,7 +10,7 @@ const meta = {
     docs: {
       description: {
         component:
-          "Flat thumbnail grid with sticky day section headers. Year dividers appear when the calendar year changes; day labels omit the year (e.g. 9月4日). Filter bar: world search and date range picker.",
+          "Flat thumbnail grid with sticky day section headers. Year dividers appear when the calendar year changes; day labels omit the year (e.g. 9月4日). Filter toolbar: criteria group (world search + date range) and actions group (refresh + scan folder), height-aligned at default control size.",
       },
     },
   },
