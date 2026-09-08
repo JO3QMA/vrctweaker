@@ -170,6 +170,19 @@ func TestSetOnActivateNilDiscardsPending(t *testing.T) {
 	}
 }
 
+func TestSetOnActivateCoalescesPendingActivations(t *testing.T) {
+	g := NewNamed("vrctweaker-test-" + uuid.NewString())
+	g.dispatchActivate()
+	g.dispatchActivate()
+	g.dispatchActivate()
+
+	var count atomic.Int32
+	g.SetOnActivate(func() { count.Add(1) })
+	if count.Load() != 1 {
+		t.Fatalf("pending activations coalesced to one callback, got %d calls", count.Load())
+	}
+}
+
 func TestAbstractActivateAddrIncludesUID(t *testing.T) {
 	addr := abstractActivateAddr("VRChatTweaker")
 	want := fmt.Sprintf("@VRChatTweaker_%d_activate", os.Getuid())

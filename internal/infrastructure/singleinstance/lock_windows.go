@@ -5,7 +5,6 @@ package singleinstance
 import (
 	"fmt"
 	"sync"
-	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -141,14 +140,16 @@ func (w *winGuard) activateWindowByTitle(title string) error {
 	if err != nil {
 		return err
 	}
-	hwnd, _, err := procFindWindowW.Call(0, uintptr(unsafe.Pointer(titlePtr)))
+	hwnd, _, _ := procFindWindowW.Call(0, uintptr(unsafe.Pointer(titlePtr)))
 	if hwnd == 0 {
-		if err != nil && err != syscall.Errno(0) {
-			return err
+		if errno := windows.GetLastError(); errno != windows.ERROR_SUCCESS {
+			return errno
 		}
 		return fmt.Errorf("window not found")
 	}
 	procShowWindow.Call(hwnd, swRestore)
-	procSetForegroundWindow.Call(hwnd)
+	if ret, _, _ := procSetForegroundWindow.Call(hwnd); ret == 0 {
+		return fmt.Errorf("SetForegroundWindow failed")
+	}
 	return nil
 }

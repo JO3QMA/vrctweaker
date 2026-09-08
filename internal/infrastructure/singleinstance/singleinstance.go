@@ -20,7 +20,7 @@ type Guard struct {
 	name       string
 	onActivate func()
 	activateMu sync.Mutex
-	pending    int
+	pending    bool
 	startMu    sync.Mutex
 	started    bool
 	startErr   error
@@ -48,9 +48,14 @@ func NewNamed(name string) *Guard {
 // Acquire tries to become the sole running instance.
 // When acquired is false, another instance already holds the lock.
 func (g *Guard) Acquire() (acquired bool, err error) {
+	g.releaseMu.Lock()
+	defer g.releaseMu.Unlock()
+	if g.released {
+		return false, errGuardReleased
+	}
 	g.platformMu.Lock()
 	defer g.platformMu.Unlock()
-	if g.released || g.platform == nil {
+	if g.platform == nil {
 		return false, errGuardReleased
 	}
 	return g.platform.acquire()
@@ -58,6 +63,11 @@ func (g *Guard) Acquire() (acquired bool, err error) {
 
 // NotifyExisting asks the running instance to activate its main window.
 func (g *Guard) NotifyExisting() error {
+	g.releaseMu.Lock()
+	defer g.releaseMu.Unlock()
+	if g.released {
+		return errGuardReleased
+	}
 	g.platformMu.Lock()
 	defer g.platformMu.Unlock()
 	if g.platform == nil {
@@ -67,20 +77,19 @@ func (g *Guard) NotifyExisting() error {
 }
 
 // SetOnActivate registers a callback for second-launch activation requests.
-// Any activation requests received before registration are queued and drained once.
-// Passing nil clears the callback and discards any queued activations.
+// Any activation requests received before registration are coalesced to at most one
+// pending activation and drained once when the callback is registered.
+// Passing nil clears the callback and discards any queued activation.
 func (g *Guard) SetOnActivate(fn func()) {
 	g.activateMu.Lock()
 	g.onActivate = fn
 	pending := g.pending
-	g.pending = 0
+	g.pending = false
 	g.activateMu.Unlock()
-	if fn == nil {
+	if fn == nil || !pending {
 		return
 	}
-	for i := 0; i < pending; i++ {
-		fn()
-	}
+	fn()
 }
 
 // Start binds the activation listener. Call immediately after a successful Acquire,
@@ -93,13 +102,22 @@ func (g *Guard) Start() error {
 	}
 	g.started = true
 
+	g.releaseMu.Lock()
+	if g.released {
+		g.releaseMu.Unlock()
+		g.startErr = errGuardReleased
+		return g.startErr
+	}
 	g.platformMu.Lock()
-	defer g.platformMu.Unlock()
-	if g.released || g.platform == nil {
+	if g.platform == nil {
+		g.platformMu.Unlock()
+		g.releaseMu.Unlock()
 		g.startErr = errGuardReleased
 		return g.startErr
 	}
 	g.startErr = g.platform.start(g.stopCh, g.dispatchActivate)
+	g.platformMu.Unlock()
+	g.releaseMu.Unlock()
 	return g.startErr
 }
 
@@ -107,7 +125,7 @@ func (g *Guard) dispatchActivate() {
 	g.activateMu.Lock()
 	fn := g.onActivate
 	if fn == nil {
-		g.pending++
+		g.pending = true
 		g.activateMu.Unlock()
 		return
 	}

@@ -30,6 +30,7 @@ type stubGuard struct {
 	sockPath    string
 	sockNetwork string
 	sockAddr    string
+	sockBound   bool
 	lockFile    *os.File
 	listener    net.Listener
 	wg          sync.WaitGroup
@@ -68,7 +69,7 @@ func (s *stubGuard) resolveSocket() (network, addr string, err error) {
 	}
 	tmpAddr := filepath.Join(os.TempDir(), fmt.Sprintf("%s-%d.sock", s.name, os.Getuid()))
 	if len(tmpAddr) >= sunPathMax {
-		return "", "", fmt.Errorf("singleinstance: activation socket path too long (%d bytes): %q", len(s.sockPath), s.sockPath)
+		return "", "", fmt.Errorf("singleinstance: activation socket path too long (%d bytes): %q", len(tmpAddr), tmpAddr)
 	}
 	return "unix", tmpAddr, nil
 }
@@ -100,10 +101,6 @@ func (s *stubGuard) notifyExisting() error {
 	if err != nil {
 		return err
 	}
-	if s.sockNetwork == "" {
-		s.sockNetwork = network
-		s.sockAddr = addr
-	}
 	conn, err := net.Dial(network, addr)
 	if err != nil {
 		return fmt.Errorf("singleinstance: existing instance could not be activated: %w", err)
@@ -133,9 +130,15 @@ func (s *stubGuard) start(stop <-chan struct{}, dispatch func()) error {
 		return fmt.Errorf("singleinstance: failed to bind activation socket at %q: %w", addr, err)
 	}
 	s.listener = ln
+	s.sockBound = true
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("singleinstance: activation listener panic: %v", r)
+			}
+		}()
 		for {
 			select {
 			case <-stop:
@@ -157,6 +160,7 @@ func (s *stubGuard) start(stop <-chan struct{}, dispatch func()) error {
 				return
 			}
 			if !authorizedPeer(conn) {
+				log.Printf("singleinstance: rejected unauthorized activation request from %q", conn.RemoteAddr())
 				_ = conn.Close()
 				continue
 			}
@@ -177,7 +181,7 @@ func (s *stubGuard) release() {
 		s.listener = nil
 	}
 	s.wg.Wait()
-	if s.sockAddr != "" && !strings.HasPrefix(s.sockAddr, "@") {
+	if s.sockBound && s.sockAddr != "" && !strings.HasPrefix(s.sockAddr, "@") {
 		if err := os.Remove(s.sockAddr); err != nil && !os.IsNotExist(err) {
 			log.Printf("singleinstance: failed to remove activation socket %q: %v", s.sockAddr, err)
 		}
