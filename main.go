@@ -74,7 +74,7 @@ func main() {
 		}
 		os.Exit(0)
 	}
-	if err := instanceGuard.Start(); err != nil {
+	if err = instanceGuard.Start(); err != nil {
 		log.Fatal("single instance listener: ", err)
 	}
 	defer instanceGuard.Release()
