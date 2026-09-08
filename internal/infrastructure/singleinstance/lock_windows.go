@@ -47,7 +47,7 @@ func (w *winGuard) acquire() (bool, error) {
 		_ = windows.CloseHandle(mutex)
 		return false, fmt.Errorf("singleinstance event name: %w", err)
 	}
-	event, err := windows.CreateEvent(nil, false, false, eventName)
+	event, err := windows.CreateEvent(nil, 0, 0, eventName)
 	if err != nil {
 		_ = windows.ReleaseMutex(mutex)
 		_ = windows.CloseHandle(mutex)
