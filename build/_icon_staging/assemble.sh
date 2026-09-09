@@ -2,15 +2,11 @@
 # Decode staged base64 chunks into exact VT app icons. DO NOT regenerate/redraw icons.
 set -euo pipefail
 cd "$(dirname "$0")"
-
 PNG_OUT="../appicon.png"
 ICO_OUT="../windows/icon.ico"
 mkdir -p "$(dirname "$ICO_OUT")"
-
-# Strip whitespace/newlines then decode
-tr -d '\n\r\t ' < <(cat $(ls appicon.png.b64.[0-9]* | sort)) | base64 -d > "$PNG_OUT"
-tr -d '\n\r\t ' < <(cat $(ls icon.ico.b64.[0-9]* | sort)) | base64 -d > "$ICO_OUT"
-
+cat $(ls appicon.png.b64.[0-9]* | sort) | tr -d '\n\r\t ' | base64 -d > "$PNG_OUT"
+cat $(ls icon.ico.b64.[0-9]* | sort) | tr -d '\n\r\t ' | base64 -d > "$ICO_OUT"
 PNG_SIZE=$(wc -c < "$PNG_OUT" | tr -d ' ')
 ICO_SIZE=$(wc -c < "$ICO_OUT" | tr -d ' ')
 echo "appicon.png size=$PNG_SIZE"
