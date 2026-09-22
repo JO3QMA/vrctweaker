@@ -75,7 +75,6 @@ function formatYAxisTickSeconds(sec: number): string {
   return formatPlayTimeAxisTickLabel(sec, {
     hour: t("chart.hour"),
     minute: t("chart.minute"),
-    second: t("chart.second"),
   });
 }
 

@@ -1,5 +1,3 @@
-import type { PlayDurationUnits } from "../utils/formatPlayDuration";
-
 export const PLAY_TIME_TEN_MINUTES_SEC = 10 * 60;
 export const PLAY_TIME_THIRTY_MINUTES_SEC = 30 * 60;
 export const PLAY_TIME_ONE_HOUR_SEC = 60 * 60;
@@ -47,9 +45,6 @@ export function playTimeChartYAxisTicks(maxY: number): number[] {
     for (let s = 0; s <= maxY; s += PLAY_TIME_THIRTY_MINUTES_SEC) {
       ticks.push(s);
     }
-    if (ticks[ticks.length - 1] !== maxY) {
-      ticks.push(maxY);
-    }
     return ticks;
   }
   const maxHours = maxY / PLAY_TIME_ONE_HOUR_SEC;
@@ -64,12 +59,17 @@ export function playTimeChartYAxisTicks(maxY: number): number[] {
   return ticks;
 }
 
+export type PlayTimeAxisLabelUnits = {
+  hour: string;
+  minute: string;
+};
+
 export function formatPlayTimeAxisTickLabel(
   sec: number,
-  units: PlayDurationUnits,
+  units: PlayTimeAxisLabelUnits,
 ): string {
   if (sec >= PLAY_TIME_ONE_HOUR_SEC && sec % PLAY_TIME_ONE_HOUR_SEC === 0) {
     return `${sec / PLAY_TIME_ONE_HOUR_SEC}${units.hour}`;
   }
-  return `${sec / 60}${units.minute}`;
+  return `${Math.floor(sec / 60)}${units.minute}`;
 }

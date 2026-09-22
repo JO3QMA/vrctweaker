@@ -54,7 +54,7 @@ describe("playTimeChartYAxisTicks", () => {
 });
 
 describe("formatPlayTimeAxisTickLabel", () => {
-  const units = { hour: "時間", minute: "分", second: "秒" };
+  const units = { hour: "時間", minute: "分" };
 
   it("labels exact minute grid values without rounding", () => {
     expect(formatPlayTimeAxisTickLabel(0, units)).toBe("0分");
