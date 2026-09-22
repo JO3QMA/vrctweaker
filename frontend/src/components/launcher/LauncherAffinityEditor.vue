@@ -7,8 +7,8 @@ import VtCheckbox from "../VtCheckbox.vue";
 import VtInput from "../VtInput.vue";
 import { App } from "../../wails/app";
 import {
-  allCoresAllowedMask,
   coreStatesFromMask,
+  DEFAULT_LOGICAL_PROCESSOR_COUNT,
   formatAffinityHex,
   hasHiddenBitsAbove,
   hiddenMaskAbove,
@@ -20,8 +20,6 @@ import {
 
 const props = defineProps<{
   modelValue: string;
-  /** Remount key when switching launch profiles. */
-  profileKey: string;
 }>();
 
 const emit = defineEmits<{
@@ -30,7 +28,7 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 
-const coreCount = ref(16);
+const coreCount = ref(DEFAULT_LOGICAL_PROCESSOR_COUNT);
 const coreStates = ref<boolean[]>([]);
 const hiddenMask = ref(0n);
 const parseFailed = ref(false);
@@ -80,7 +78,6 @@ function syncFromModelValue(raw: string) {
   hiddenMask.value = hiddenMaskAbove(parsed.mask, coreCount.value);
   coreStates.value = coreStatesFromMask(parsed.mask, coreCount.value);
   hexDraft.value = formatAffinityHex(parsed.mask);
-  overflowDismissed.value = false;
 }
 
 function emitMask(mask: bigint) {
@@ -125,28 +122,16 @@ function onHexDraftKeydown(e: KeyboardEvent) {
   }
 }
 
-function seedAllAllowedIfEmpty() {
-  if (props.modelValue.trim() !== "") {
-    return;
-  }
-  const mask = allCoresAllowedMask(coreCount.value);
-  coreStates.value = coreStatesFromMask(mask, coreCount.value);
-  hiddenMask.value = 0n;
-  emitMask(mask);
-}
-
 async function loadCoreCount() {
-  const n = await App.getLogicalProcessorCount();
-  coreCount.value = n > 0 ? n : 16;
+  let n = DEFAULT_LOGICAL_PROCESSOR_COUNT;
+  try {
+    n = await App.getLogicalProcessorCount();
+  } catch {
+    n = DEFAULT_LOGICAL_PROCESSOR_COUNT;
+  }
+  coreCount.value = n > 0 ? n : DEFAULT_LOGICAL_PROCESSOR_COUNT;
   coreStates.value = coreStatesFromMask(0n, coreCount.value);
 }
-
-watch(
-  () => props.profileKey,
-  () => {
-    overflowDismissed.value = false;
-  },
-);
 
 watch(
   () => props.modelValue,
@@ -159,7 +144,6 @@ watch(
 onMounted(async () => {
   await loadCoreCount();
   syncFromModelValue(props.modelValue);
-  seedAllAllowedIfEmpty();
 });
 </script>
 
@@ -218,7 +202,7 @@ onMounted(async () => {
       role="group"
       :aria-label="t('launcher.affinityGridAria')"
     >
-      <template v-for="index in coreCount" :key="`${profileKey}-c${index - 1}`">
+      <template v-for="index in coreCount" :key="`affinity-core-${index - 1}`">
         <div
           v-if="index === 17"
           class="affinity-ccd-divider"

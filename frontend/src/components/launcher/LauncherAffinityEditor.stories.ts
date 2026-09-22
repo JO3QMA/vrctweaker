@@ -13,7 +13,6 @@ const meta = {
   ],
   args: {
     modelValue: "FFFF",
-    profileKey: "story-default",
   },
 } satisfies Meta<typeof LauncherAffinityEditor>;
 
@@ -23,13 +22,11 @@ type Story = StoryObj<typeof meta>;
 export const Default32Cores: Story = {
   args: {
     modelValue: "FFFFFFFF",
-    profileKey: "story-default",
   },
 };
 
 export const LowerCcdOnly: Story = {
   args: {
     modelValue: "FFFF",
-    profileKey: "story-lower-ccd",
   },
 };

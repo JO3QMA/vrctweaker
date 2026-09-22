@@ -9,6 +9,7 @@ import {
   wailsapp,
 } from "../../wailsjs/go/models";
 import type * as WailsApp from "../../wailsjs/go/wailsapp/App";
+import { DEFAULT_LOGICAL_PROCESSOR_COUNT } from "../utils/affinityMask";
 
 /** Data fields only (wailsjs model classes may include convertValues). */
 type WailsDTO<T> = Omit<T, "convertValues">;
@@ -162,7 +163,7 @@ function logicalProcessorCountFallback(): number {
   ) {
     return navigator.hardwareConcurrency;
   }
-  return 16;
+  return DEFAULT_LOGICAL_PROCESSOR_COUNT;
 }
 
 function asCookieApp(a: AppBindings): AppBindings & CookieLinkageAppBindings {

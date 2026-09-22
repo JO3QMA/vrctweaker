@@ -1440,4 +1440,25 @@ describe("LauncherView", () => {
 
     expect(wrapper.find('[data-testid="unsaved-banner"]').exists()).toBe(false);
   });
+
+  it("blocks save when no visible affinity cores are selected", async () => {
+    vi.spyOn(showToast, "error").mockImplementation(() => ({
+      close: vi.fn(),
+    }));
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+    await openAdvancedCollapse(wrapper);
+    await checkInput(wrapper, "affinity-enabled-checkbox").setValue(true);
+    await flushPromises();
+    await wrapper
+      .find('[data-testid="affinity-suppress-all"]')
+      .trigger("click");
+    await flushPromises();
+    mockMergeLaunchArgsForGUI.mockClear();
+    await wrapper.find(".btn-save").trigger("click");
+    await flushPromises();
+    expect(mockMergeLaunchArgsForGUI).not.toHaveBeenCalled();
+  });
 });

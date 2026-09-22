@@ -524,7 +524,6 @@
                         <LauncherAffinityEditor
                           :key="selected?.id ?? 'none'"
                           v-model="launchArgs.affinity"
-                          :profile-key="selected?.id ?? 'none'"
                         />
                       </div>
                     </div>
@@ -638,6 +637,9 @@ import LauncherAffinityEditor from "../components/launcher/LauncherAffinityEdito
 import {
   parseAffinityHex,
   affinityVisibleSelectionIssue,
+  allCoresAllowedMask,
+  formatAffinityHex,
+  DEFAULT_LOGICAL_PROCESSOR_COUNT,
 } from "../utils/affinityMask";
 import {
   App,
@@ -891,8 +893,22 @@ function onOscEnabledChange() {
   if (!valueOptionsEnabled.osc) launchArgs.value.osc = "";
 }
 
-function onAffinityEnabledChange() {
-  if (!valueOptionsEnabled.affinity) launchArgs.value.affinity = "";
+async function onAffinityEnabledChange() {
+  if (!valueOptionsEnabled.affinity) {
+    launchArgs.value.affinity = "";
+    return;
+  }
+  if (launchArgs.value.affinity.trim() !== "") {
+    return;
+  }
+  let coreCount = DEFAULT_LOGICAL_PROCESSOR_COUNT;
+  try {
+    coreCount = await App.getLogicalProcessorCount();
+  } catch {
+    /* fall back to default count */
+  }
+  const n = coreCount > 0 ? coreCount : DEFAULT_LOGICAL_PROCESSOR_COUNT;
+  launchArgs.value.affinity = formatAffinityHex(allCoresAllowedMask(n));
 }
 
 function onCustomArmRatioEnabledChange() {
@@ -1062,8 +1078,13 @@ async function affinityBlocksLaunch(): Promise<boolean> {
     showToast.error(t("launcher.affinityErrInvalid"));
     return true;
   }
-  const coreCount = await App.getLogicalProcessorCount();
-  const n = coreCount > 0 ? coreCount : 16;
+  let coreCount = 0;
+  try {
+    coreCount = await App.getLogicalProcessorCount();
+  } catch {
+    return false;
+  }
+  const n = coreCount > 0 ? coreCount : DEFAULT_LOGICAL_PROCESSOR_COUNT;
   const issue = affinityVisibleSelectionIssue(parsed.mask, n);
   if (issue === "hiddenOnly") {
     showToast.error(t("launcher.affinityHiddenOnlyWarning"));

@@ -3,6 +3,8 @@ export type AffinityParseResult =
 
 const HEX_RE = /^[0-9a-fA-F]*$/;
 
+export const DEFAULT_LOGICAL_PROCESSOR_COUNT = 16;
+
 export function parseAffinityHex(raw: string): AffinityParseResult {
   let s = raw.trim();
   if (s.startsWith("0x") || s.startsWith("0X")) {
@@ -25,8 +27,11 @@ export function formatAffinityHex(mask: bigint): string {
   return mask.toString(16).toUpperCase();
 }
 
-export function isValidAffinityMask(mask: bigint): boolean {
-  return mask > 0n;
+export function allCoresAllowedMask(coreCount: number): bigint {
+  if (coreCount <= 0) {
+    return 0n;
+  }
+  return (1n << BigInt(coreCount)) - 1n;
 }
 
 /** True when at least one logical core in 0..coreCount-1 is allowed. */
@@ -59,13 +64,6 @@ export function affinityVisibleSelectionIssue(
     return "hiddenOnly";
   }
   return "empty";
-}
-
-export function allCoresAllowedMask(coreCount: number): bigint {
-  if (coreCount <= 0) {
-    return 0n;
-  }
-  return (1n << BigInt(coreCount)) - 1n;
 }
 
 export function coreStatesFromMask(mask: bigint, coreCount: number): boolean[] {
