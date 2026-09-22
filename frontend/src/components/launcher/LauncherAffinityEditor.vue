@@ -5,7 +5,6 @@ import VtAlert from "../VtAlert.vue";
 import VtButton from "../VtButton.vue";
 import VtCheckbox from "../VtCheckbox.vue";
 import VtInput from "../VtInput.vue";
-import { App } from "../../wails/app";
 import {
   coreStatesFromMask,
   DEFAULT_LOGICAL_PROCESSOR_COUNT,
@@ -14,9 +13,9 @@ import {
   hiddenMaskAbove,
   mergeVisibleWithHidden,
   parseAffinityHex,
-  hasAnyVisibleCoreSelected,
   affinityVisibleSelectionIssue,
 } from "../../utils/affinityMask";
+import { resolveLogicalProcessorCount } from "../../utils/affinityProcessorCount";
 
 const props = defineProps<{
   modelValue: string;
@@ -29,6 +28,7 @@ const emit = defineEmits<{
 const { t } = useI18n();
 
 const coreCount = ref(DEFAULT_LOGICAL_PROCESSOR_COUNT);
+const coreCountReady = ref(false);
 const coreStates = ref<boolean[]>([]);
 const hiddenMask = ref(0n);
 const parseFailed = ref(false);
@@ -51,9 +51,6 @@ const validationError = computed(() => {
   if (parseFailed.value) {
     return t("launcher.affinityErrInvalid");
   }
-  if (hasAnyVisibleCoreSelected(coreStates.value)) {
-    return "";
-  }
   const issue = affinityVisibleSelectionIssue(fullMask.value, coreCount.value);
   if (issue === "hiddenOnly") {
     return t("launcher.affinityHiddenOnlyWarning");
@@ -75,7 +72,12 @@ function syncFromModelValue(raw: string) {
     hiddenMask.value = 0n;
     return;
   }
-  hiddenMask.value = hiddenMaskAbove(parsed.mask, coreCount.value);
+  const prevHidden = hiddenMask.value;
+  const nextHidden = hiddenMaskAbove(parsed.mask, coreCount.value);
+  if (nextHidden !== prevHidden) {
+    overflowDismissed.value = false;
+  }
+  hiddenMask.value = nextHidden;
   coreStates.value = coreStatesFromMask(parsed.mask, coreCount.value);
   hexDraft.value = formatAffinityHex(parsed.mask);
 }
@@ -123,26 +125,21 @@ function onHexDraftKeydown(e: KeyboardEvent) {
 }
 
 async function loadCoreCount() {
-  let n = DEFAULT_LOGICAL_PROCESSOR_COUNT;
-  try {
-    n = await App.getLogicalProcessorCount();
-  } catch {
-    n = DEFAULT_LOGICAL_PROCESSOR_COUNT;
-  }
-  coreCount.value = n > 0 ? n : DEFAULT_LOGICAL_PROCESSOR_COUNT;
+  coreCount.value = await resolveLogicalProcessorCount();
   coreStates.value = coreStatesFromMask(0n, coreCount.value);
 }
 
 watch(
   () => props.modelValue,
   (v) => {
+    if (!coreCountReady.value) return;
     syncFromModelValue(v);
   },
-  { immediate: true },
 );
 
 onMounted(async () => {
   await loadCoreCount();
+  coreCountReady.value = true;
   syncFromModelValue(props.modelValue);
 });
 </script>

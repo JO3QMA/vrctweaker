@@ -1,5 +1,4 @@
-export type AffinityParseResult =
-  { ok: true; mask: bigint } | { ok: false; raw: string };
+export type AffinityParseResult = { ok: true; mask: bigint } | { ok: false };
 
 const HEX_RE = /^[0-9a-fA-F]*$/;
 
@@ -14,7 +13,7 @@ export function parseAffinityHex(raw: string): AffinityParseResult {
     return { ok: true, mask: 0n };
   }
   if (!HEX_RE.test(s)) {
-    return { ok: false, raw };
+    return { ok: false };
   }
   return { ok: true, mask: BigInt(`0x${s}`) };
 }
@@ -44,10 +43,6 @@ export function hasVisibleAllowedCore(
   }
   const visible = mask & allCoresAllowedMask(coreCount);
   return visible !== 0n;
-}
-
-export function hasAnyVisibleCoreSelected(states: boolean[]): boolean {
-  return states.some(Boolean);
 }
 
 export type AffinityVisibleSelectionIssue = "empty" | "hiddenOnly";

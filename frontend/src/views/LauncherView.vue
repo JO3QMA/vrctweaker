@@ -639,8 +639,8 @@ import {
   affinityVisibleSelectionIssue,
   allCoresAllowedMask,
   formatAffinityHex,
-  DEFAULT_LOGICAL_PROCESSOR_COUNT,
 } from "../utils/affinityMask";
+import { resolveLogicalProcessorCount } from "../utils/affinityProcessorCount";
 import {
   App,
   type LaunchProfileDTO,
@@ -901,13 +901,8 @@ async function onAffinityEnabledChange() {
   if (launchArgs.value.affinity.trim() !== "") {
     return;
   }
-  let coreCount = DEFAULT_LOGICAL_PROCESSOR_COUNT;
-  try {
-    coreCount = await App.getLogicalProcessorCount();
-  } catch {
-    /* fall back to default count */
-  }
-  const n = coreCount > 0 ? coreCount : DEFAULT_LOGICAL_PROCESSOR_COUNT;
+  const n = await resolveLogicalProcessorCount();
+  if (!valueOptionsEnabled.affinity) return;
   launchArgs.value.affinity = formatAffinityHex(allCoresAllowedMask(n));
 }
 
@@ -1078,13 +1073,7 @@ async function affinityBlocksLaunch(): Promise<boolean> {
     showToast.error(t("launcher.affinityErrInvalid"));
     return true;
   }
-  let coreCount = 0;
-  try {
-    coreCount = await App.getLogicalProcessorCount();
-  } catch {
-    return false;
-  }
-  const n = coreCount > 0 ? coreCount : DEFAULT_LOGICAL_PROCESSOR_COUNT;
+  const n = await resolveLogicalProcessorCount();
   const issue = affinityVisibleSelectionIssue(parsed.mask, n);
   if (issue === "hiddenOnly") {
     showToast.error(t("launcher.affinityHiddenOnlyWarning"));
