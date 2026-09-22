@@ -154,6 +154,17 @@ function emptyCookieLinkageStatus(): CookieLinkageStatusDTO {
   };
 }
 
+function logicalProcessorCountFallback(): number {
+  if (
+    typeof navigator !== "undefined" &&
+    typeof navigator.hardwareConcurrency === "number" &&
+    navigator.hardwareConcurrency > 0
+  ) {
+    return navigator.hardwareConcurrency;
+  }
+  return 16;
+}
+
 function asCookieApp(a: AppBindings): AppBindings & CookieLinkageAppBindings {
   return a as AppBindings & CookieLinkageAppBindings;
 }
@@ -715,6 +726,16 @@ export const App = {
   getAutomationRuntimeStatus: bindGo((a) => a.GetAutomationRuntimeStatus(), {
     available: true,
   }),
+  getLogicalProcessorCount: bindGo(
+    (a) =>
+      (
+        a as AppBindings & {
+          GetLogicalProcessorCount?: () => Promise<number>;
+        }
+      ).GetLogicalProcessorCount?.() ??
+      Promise.resolve(logicalProcessorCountFallback()),
+    logicalProcessorCountFallback(),
+  ),
   listDetectedPowerPlans: bindGo((a) => a.ListDetectedPowerPlans(), []),
   vrchatConfigExists: bindGo((a) => a.VRChatConfigExists(), false),
   /**

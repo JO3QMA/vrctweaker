@@ -32,6 +32,7 @@ vi.mock("../../wails/app", async (importOriginal) => {
       saveLaunchProfile: mockSaveLaunchProfile,
       deleteLaunchProfile: mockDeleteLaunchProfile,
       launchVRChatWithArgs: mockLaunchVRChatWithArgs,
+      getLogicalProcessorCount: vi.fn().mockResolvedValue(16),
     },
   };
 });

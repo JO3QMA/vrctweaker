@@ -521,12 +521,10 @@
                         v-if="valueOptionsEnabled.affinity"
                         class="sub-options"
                       >
-                        <VtInput
+                        <LauncherAffinityEditor
+                          :key="selected?.id ?? 'none'"
                           v-model="launchArgs.affinity"
-                          :placeholder="t('launcher.affinityPh')"
-                          data-testid="affinity-input"
-                          size="small"
-                          style="max-width: 200px"
+                          :profile-key="selected?.id ?? 'none'"
                         />
                       </div>
                     </div>
@@ -636,6 +634,8 @@ import VtCheckbox from "../components/VtCheckbox.vue";
 import VtIcon from "../components/VtIcon.vue";
 import VtInput from "../components/VtInput.vue";
 import VtTag from "../components/VtTag.vue";
+import LauncherAffinityEditor from "../components/launcher/LauncherAffinityEditor.vue";
+import { isValidAffinityMask, parseAffinityHex } from "../utils/affinityMask";
 import {
   App,
   type LaunchProfileDTO,
@@ -1050,8 +1050,25 @@ function sanitizeLaunchArgs(a: LaunchArgsParsedDTO): LaunchArgsParsedDTO {
   return base;
 }
 
+function affinityBlocksLaunch(): boolean {
+  if (!valueOptionsEnabled.affinity) {
+    return false;
+  }
+  const parsed = parseAffinityHex(launchArgs.value.affinity);
+  if (!parsed.ok) {
+    showToast.error(t("launcher.affinityErrInvalid"));
+    return true;
+  }
+  if (!isValidAffinityMask(parsed.mask)) {
+    showToast.error(t("launcher.affinityErrEmpty"));
+    return true;
+  }
+  return false;
+}
+
 async function save(): Promise<boolean> {
   if (!selected.value) return false;
+  if (affinityBlocksLaunch()) return false;
   const gen = ++profileSaveGen;
   try {
     const argsStr = await App.mergeLaunchArgsForGUI(
@@ -1084,6 +1101,7 @@ async function save(): Promise<boolean> {
 
 async function launch() {
   if (!selected.value) return;
+  if (affinityBlocksLaunch()) return;
   const argsStr = await App.mergeLaunchArgsForGUI(
     sanitizeLaunchArgs(launchArgs.value),
   );
