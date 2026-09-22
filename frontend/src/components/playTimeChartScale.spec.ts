@@ -30,7 +30,12 @@ describe("playTimeChartYAxisTicks", () => {
     expect(playTimeChartYAxisTicks(30 * 60)).toEqual([0, 600, 1200, 1800]);
   });
 
-  it("steps by whole hours when max is above one hour", () => {
+  it("steps by 30 minutes between one and four hours", () => {
+    const ticks = playTimeChartYAxisTicks(2 * 3600);
+    expect(ticks).toEqual([0, 1800, 3600, 5400, 7200]);
+  });
+
+  it("steps by whole hours when max is four hours or more", () => {
     const ticks = playTimeChartYAxisTicks(4 * 3600);
     expect(ticks[0]).toBe(0);
     expect(ticks[ticks.length - 1]).toBe(4 * 3600);

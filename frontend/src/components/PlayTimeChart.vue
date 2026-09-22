@@ -84,9 +84,11 @@ function measurePlot(canvas: HTMLCanvasElement): PlotMetrics {
   const cssW = canvas.clientWidth || 300;
   const cssH = canvas.clientHeight || 280;
   const { plotW, plotH } = clampedPlotSize(cssW, cssH, PAD);
-  const maxY = playTimeChartMaxY(
-    Math.max(0, ...props.series.map((s) => s.seconds)),
+  const maxSeconds = props.series.reduce(
+    (max, s) => Math.max(max, s.seconds),
+    0,
   );
+  const maxY = playTimeChartMaxY(Math.max(0, maxSeconds));
   return { cssW, cssH, plotW, plotH, maxY };
 }
 
