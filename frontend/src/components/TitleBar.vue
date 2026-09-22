@@ -1,6 +1,16 @@
 <template>
   <div class="title-bar" style="--wails-draggable: drag">
-    <span class="title-bar-text">{{ t("app.name") }}</span>
+    <div class="title-bar-brand">
+      <img
+        class="title-bar-icon"
+        :src="appIconUrl"
+        :alt="t('app.name')"
+        width="16"
+        height="16"
+        data-testid="title-bar-app-icon"
+      />
+      <span class="title-bar-text">{{ t("app.name") }}</span>
+    </div>
     <div class="title-bar-actions" style="--wails-draggable: no-drag">
       <button class="title-bar-btn vt-focus-ring--inset" @click="minimize">
         −
@@ -17,6 +27,7 @@
 
 <script setup lang="ts">
 import { useI18n } from "vue-i18n";
+import appIconUrl from "../../../build/appicon.png";
 import { App } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
 import { formatError } from "../utils/formatError";
@@ -52,6 +63,20 @@ async function close() {
   border-bottom: 1px solid var(--color-border);
   user-select: none;
   flex-shrink: 0;
+}
+
+.title-bar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-inline-tight);
+  min-width: 0;
+}
+
+.title-bar-icon {
+  width: var(--icon-size-16);
+  height: var(--icon-size-16);
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .title-bar-text {
