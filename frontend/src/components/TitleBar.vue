@@ -2,12 +2,14 @@
   <div class="title-bar" style="--wails-draggable: drag">
     <div class="title-bar-brand">
       <img
+        v-show="showAppIcon"
         class="title-bar-icon"
         :src="appIconUrl"
         :alt="t('app.name')"
         width="16"
         height="16"
         data-testid="title-bar-app-icon"
+        @error="showAppIcon = false"
       />
       <span class="title-bar-text">{{ t("app.name") }}</span>
     </div>
@@ -26,7 +28,9 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
 import { useI18n } from "vue-i18n";
+// Wails app icon (same file as build/appicon.png used for binaries and tray).
 import appIconUrl from "../../../build/appicon.png";
 import { App } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
@@ -34,6 +38,7 @@ import { formatError } from "../utils/formatError";
 import { showToast } from "../utils/showToast";
 
 const { t } = useI18n();
+const showAppIcon = ref(true);
 
 function minimize() {
   getRuntime()?.WindowMinimise?.();
@@ -83,6 +88,9 @@ async function close() {
   font-size: var(--font-size-12);
   font-weight: var(--font-weight-500);
   color: var(--color-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .title-bar-actions {
