@@ -9,6 +9,7 @@ import {
   wailsapp,
 } from "../../wailsjs/go/models";
 import type * as WailsApp from "../../wailsjs/go/wailsapp/App";
+import { DEFAULT_LOGICAL_PROCESSOR_COUNT } from "../utils/affinityMask";
 
 /** Data fields only (wailsjs model classes may include convertValues). */
 type WailsDTO<T> = Omit<T, "convertValues">;
@@ -152,6 +153,17 @@ function emptyCookieLinkageStatus(): CookieLinkageStatusDTO {
     configPath: "",
     riskAcknowledged: false,
   };
+}
+
+export function logicalProcessorCountFallback(): number {
+  if (
+    typeof navigator !== "undefined" &&
+    typeof navigator.hardwareConcurrency === "number" &&
+    navigator.hardwareConcurrency > 0
+  ) {
+    return navigator.hardwareConcurrency;
+  }
+  return DEFAULT_LOGICAL_PROCESSOR_COUNT;
 }
 
 function asCookieApp(a: AppBindings): AppBindings & CookieLinkageAppBindings {
@@ -715,6 +727,17 @@ export const App = {
   getAutomationRuntimeStatus: bindGo((a) => a.GetAutomationRuntimeStatus(), {
     available: true,
   }),
+  getLogicalProcessorCount: (): Promise<number> =>
+    callApp(
+      (a) =>
+        (
+          a as AppBindings & {
+            GetLogicalProcessorCount?: () => Promise<number>;
+          }
+        ).GetLogicalProcessorCount?.() ??
+        Promise.resolve(logicalProcessorCountFallback()),
+      logicalProcessorCountFallback(),
+    ),
   listDetectedPowerPlans: bindGo((a) => a.ListDetectedPowerPlans(), []),
   vrchatConfigExists: bindGo((a) => a.VRChatConfigExists(), false),
   /**

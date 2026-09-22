@@ -192,6 +192,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
       window.go.wailsapp = window.go.wailsapp || {};
       window.go.wailsapp.App = {
         LaunchProfiles: () => Promise.resolve(launchProfiles),
+        GetLogicalProcessorCount: () => Promise.resolve(16),
         SaveLaunchProfile: (p) => {
           const next = Object.assign({}, p);
           if (!next.id) {

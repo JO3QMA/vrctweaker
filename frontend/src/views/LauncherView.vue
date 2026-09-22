@@ -521,12 +521,9 @@
                         v-if="valueOptionsEnabled.affinity"
                         class="sub-options"
                       >
-                        <VtInput
+                        <LauncherAffinityEditor
+                          :key="selected?.id ?? 'none'"
                           v-model="launchArgs.affinity"
-                          :placeholder="t('launcher.affinityPh')"
-                          data-testid="affinity-input"
-                          size="small"
-                          style="max-width: 200px"
                         />
                       </div>
                     </div>
@@ -636,6 +633,14 @@ import VtCheckbox from "../components/VtCheckbox.vue";
 import VtIcon from "../components/VtIcon.vue";
 import VtInput from "../components/VtInput.vue";
 import VtTag from "../components/VtTag.vue";
+import LauncherAffinityEditor from "../components/launcher/LauncherAffinityEditor.vue";
+import {
+  parseAffinityHex,
+  affinitySelectionI18nKey,
+  allCoresAllowedMask,
+  formatAffinityHex,
+} from "../utils/affinityMask";
+import { resolveLogicalProcessorCount } from "../utils/affinityProcessorCount";
 import {
   App,
   type LaunchProfileDTO,
@@ -721,6 +726,7 @@ const sidebarOpen = ref(readSidebarOpenPreference());
 const advancedCollapseActive = ref<string[]>([]);
 /** Bumped on state-changing save/create; skip post-await updates after unmount. */
 let profileSaveGen = 0;
+const affinityInitPending = ref(false);
 
 function showSaveError(e: unknown) {
   showToast.error(formatError(e, t("launcher.errSave")));
@@ -888,8 +894,26 @@ function onOscEnabledChange() {
   if (!valueOptionsEnabled.osc) launchArgs.value.osc = "";
 }
 
-function onAffinityEnabledChange() {
-  if (!valueOptionsEnabled.affinity) launchArgs.value.affinity = "";
+async function onAffinityEnabledChange() {
+  if (!valueOptionsEnabled.affinity) {
+    affinityInitPending.value = false;
+    launchArgs.value.affinity = "";
+    return;
+  }
+  if (launchArgs.value.affinity.trim() !== "") {
+    return;
+  }
+  affinityInitPending.value = true;
+  try {
+    const idBefore = selected.value?.id;
+    const n = await resolveLogicalProcessorCount();
+    if (!valueOptionsEnabled.affinity) return;
+    if (selected.value?.id !== idBefore) return;
+    if (launchArgs.value.affinity.trim() !== "") return;
+    launchArgs.value.affinity = formatAffinityHex(allCoresAllowedMask(n));
+  } finally {
+    affinityInitPending.value = false;
+  }
 }
 
 function onCustomArmRatioEnabledChange() {
@@ -1050,8 +1074,39 @@ function sanitizeLaunchArgs(a: LaunchArgsParsedDTO): LaunchArgsParsedDTO {
   return base;
 }
 
+async function affinityBlocksLaunch(): Promise<boolean> {
+  if (!valueOptionsEnabled.affinity) {
+    return false;
+  }
+  if (launchArgs.value.affinity.trim() === "") {
+    if (affinityInitPending.value) {
+      return false;
+    }
+    const n = await resolveLogicalProcessorCount();
+    const key = affinitySelectionI18nKey(0n, n);
+    if (key) {
+      showToast.error(t(key));
+      return true;
+    }
+    return false;
+  }
+  const parsed = parseAffinityHex(launchArgs.value.affinity);
+  if (!parsed.ok) {
+    showToast.error(t("launcher.affinityErrInvalid"));
+    return true;
+  }
+  const n = await resolveLogicalProcessorCount();
+  const key = affinitySelectionI18nKey(parsed.mask, n);
+  if (key) {
+    showToast.error(t(key));
+    return true;
+  }
+  return false;
+}
+
 async function save(): Promise<boolean> {
   if (!selected.value) return false;
+  if (await affinityBlocksLaunch()) return false;
   const gen = ++profileSaveGen;
   try {
     const argsStr = await App.mergeLaunchArgsForGUI(
@@ -1084,6 +1139,7 @@ async function save(): Promise<boolean> {
 
 async function launch() {
   if (!selected.value) return;
+  if (await affinityBlocksLaunch()) return;
   const argsStr = await App.mergeLaunchArgsForGUI(
     sanitizeLaunchArgs(launchArgs.value),
   );
