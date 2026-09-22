@@ -16,6 +16,6 @@ describe("TitleBar", () => {
     });
     const icon = wrapper.get('[data-testid="title-bar-app-icon"]');
     expect(icon.attributes("alt")).toBe("VRChat Tweaker");
-    expect(icon.attributes("src")).toBeTruthy();
+    expect(icon.attributes("src")).toMatch(/appicon\.png$/);
   });
 });

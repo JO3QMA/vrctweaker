@@ -2,7 +2,7 @@
   <div class="title-bar" style="--wails-draggable: drag">
     <div class="title-bar-brand">
       <img
-        v-show="showAppIcon"
+        v-if="showAppIcon"
         class="title-bar-icon"
         :src="appIconUrl"
         :alt="t('app.name')"
@@ -30,8 +30,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { useI18n } from "vue-i18n";
-// Wails app icon (same file as build/appicon.png used for binaries and tray).
-import appIconUrl from "../../../build/appicon.png";
 import { App } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
 import { formatError } from "../utils/formatError";
@@ -39,6 +37,8 @@ import { showToast } from "../utils/showToast";
 
 const { t } = useI18n();
 const showAppIcon = ref(true);
+// Vite public/ → dist root; keep in sync with build/appicon.png (Wails binary / tray).
+const appIconUrl = `${import.meta.env.BASE_URL}appicon.png`;
 
 function minimize() {
   getRuntime()?.WindowMinimise?.();
