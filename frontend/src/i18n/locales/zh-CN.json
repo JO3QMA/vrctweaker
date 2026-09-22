@@ -161,6 +161,7 @@
     "affinityOverflowDismiss": "关闭",
     "affinityErrInvalid": "亲和性十六进制格式无效",
     "affinityErrEmpty": "请至少选择一个允许的核心",
+    "affinityHiddenOnlyWarning": "请至少勾选一个当前显示的核心。目前仅有其他 PC 保留的上位位有效。",
     "customArgs": "自定义参数（高级）",
     "setAsDefault": "设为默认",
     "save": "保存",

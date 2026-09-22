@@ -161,6 +161,7 @@
     "affinityOverflowDismiss": "닫기",
     "affinityErrInvalid": "affinity 16진 값이 올바르지 않습니다",
     "affinityErrEmpty": "허용할 코어를 하나 이상 선택하세요",
+    "affinityHiddenOnlyWarning": "표시된 코어를 하나 이상 선택하세요. 다른 PC 마스크의 상위 비트만 활성화되어 있습니다.",
     "customArgs": "사용자 지정 인수 (고급)",
     "setAsDefault": "기본값으로 설정",
     "save": "저장",

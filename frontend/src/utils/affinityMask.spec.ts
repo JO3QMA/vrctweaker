@@ -8,7 +8,8 @@ import {
   hasHiddenBitsAbove,
   allCoresAllowedMask,
   mergeVisibleWithHidden,
-  isValidAffinityMask,
+  hasVisibleAllowedCore,
+  affinityVisibleSelectionIssue,
 } from "./affinityMask";
 
 describe("parseAffinityHex", () => {
@@ -76,9 +77,18 @@ describe("hasHiddenBitsAbove", () => {
   });
 });
 
-describe("isValidAffinityMask", () => {
-  it("requires at least one allowed bit", () => {
-    expect(isValidAffinityMask(0n)).toBe(false);
-    expect(isValidAffinityMask(1n)).toBe(true);
+describe("hasVisibleAllowedCore", () => {
+  it("requires a bit within coreCount", () => {
+    expect(hasVisibleAllowedCore(0xffffn, 16)).toBe(true);
+    expect(hasVisibleAllowedCore(1n << 16n, 16)).toBe(false);
+    expect(hasVisibleAllowedCore((1n << 16n) | 1n, 32)).toBe(true);
+  });
+});
+
+describe("affinityVisibleSelectionIssue", () => {
+  it("classifies empty vs hidden-only", () => {
+    expect(affinityVisibleSelectionIssue(0n, 16)).toBe("empty");
+    expect(affinityVisibleSelectionIssue(1n << 16n, 16)).toBe("hiddenOnly");
+    expect(affinityVisibleSelectionIssue(3n, 16)).toBe(null);
   });
 });

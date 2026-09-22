@@ -635,7 +635,10 @@ import VtIcon from "../components/VtIcon.vue";
 import VtInput from "../components/VtInput.vue";
 import VtTag from "../components/VtTag.vue";
 import LauncherAffinityEditor from "../components/launcher/LauncherAffinityEditor.vue";
-import { isValidAffinityMask, parseAffinityHex } from "../utils/affinityMask";
+import {
+  parseAffinityHex,
+  affinityVisibleSelectionIssue,
+} from "../utils/affinityMask";
 import {
   App,
   type LaunchProfileDTO,
@@ -1050,7 +1053,7 @@ function sanitizeLaunchArgs(a: LaunchArgsParsedDTO): LaunchArgsParsedDTO {
   return base;
 }
 
-function affinityBlocksLaunch(): boolean {
+async function affinityBlocksLaunch(): Promise<boolean> {
   if (!valueOptionsEnabled.affinity) {
     return false;
   }
@@ -1059,7 +1062,14 @@ function affinityBlocksLaunch(): boolean {
     showToast.error(t("launcher.affinityErrInvalid"));
     return true;
   }
-  if (!isValidAffinityMask(parsed.mask)) {
+  const coreCount = await App.getLogicalProcessorCount();
+  const n = coreCount > 0 ? coreCount : 16;
+  const issue = affinityVisibleSelectionIssue(parsed.mask, n);
+  if (issue === "hiddenOnly") {
+    showToast.error(t("launcher.affinityHiddenOnlyWarning"));
+    return true;
+  }
+  if (issue === "empty") {
     showToast.error(t("launcher.affinityErrEmpty"));
     return true;
   }
@@ -1068,7 +1078,7 @@ function affinityBlocksLaunch(): boolean {
 
 async function save(): Promise<boolean> {
   if (!selected.value) return false;
-  if (affinityBlocksLaunch()) return false;
+  if (await affinityBlocksLaunch()) return false;
   const gen = ++profileSaveGen;
   try {
     const argsStr = await App.mergeLaunchArgsForGUI(
@@ -1101,7 +1111,7 @@ async function save(): Promise<boolean> {
 
 async function launch() {
   if (!selected.value) return;
-  if (affinityBlocksLaunch()) return;
+  if (await affinityBlocksLaunch()) return;
   const argsStr = await App.mergeLaunchArgsForGUI(
     sanitizeLaunchArgs(launchArgs.value),
   );

@@ -29,6 +29,38 @@ export function isValidAffinityMask(mask: bigint): boolean {
   return mask > 0n;
 }
 
+/** True when at least one logical core in 0..coreCount-1 is allowed. */
+export function hasVisibleAllowedCore(
+  mask: bigint,
+  coreCount: number,
+): boolean {
+  if (coreCount <= 0) {
+    return false;
+  }
+  const visible = mask & allCoresAllowedMask(coreCount);
+  return visible !== 0n;
+}
+
+export function hasAnyVisibleCoreSelected(states: boolean[]): boolean {
+  return states.some(Boolean);
+}
+
+export type AffinityVisibleSelectionIssue = "empty" | "hiddenOnly";
+
+/** When no visible core is allowed; null if selection is OK. */
+export function affinityVisibleSelectionIssue(
+  mask: bigint,
+  coreCount: number,
+): AffinityVisibleSelectionIssue | null {
+  if (hasVisibleAllowedCore(mask, coreCount)) {
+    return null;
+  }
+  if (hiddenMaskAbove(mask, coreCount) > 0n) {
+    return "hiddenOnly";
+  }
+  return "empty";
+}
+
 export function allCoresAllowedMask(coreCount: number): bigint {
   if (coreCount <= 0) {
     return 0n;

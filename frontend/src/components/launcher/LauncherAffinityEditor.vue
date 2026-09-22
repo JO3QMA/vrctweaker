@@ -14,6 +14,8 @@ import {
   hiddenMaskAbove,
   mergeVisibleWithHidden,
   parseAffinityHex,
+  hasAnyVisibleCoreSelected,
+  affinityVisibleSelectionIssue,
 } from "../../utils/affinityMask";
 
 const props = defineProps<{
@@ -51,7 +53,14 @@ const validationError = computed(() => {
   if (parseFailed.value) {
     return t("launcher.affinityErrInvalid");
   }
-  if (fullMask.value === 0n) {
+  if (hasAnyVisibleCoreSelected(coreStates.value)) {
+    return "";
+  }
+  const issue = affinityVisibleSelectionIssue(fullMask.value, coreCount.value);
+  if (issue === "hiddenOnly") {
+    return t("launcher.affinityHiddenOnlyWarning");
+  }
+  if (issue === "empty") {
     return t("launcher.affinityErrEmpty");
   }
   return "";
@@ -152,8 +161,6 @@ onMounted(async () => {
   syncFromModelValue(props.modelValue);
   seedAllAllowedIfEmpty();
 });
-
-defineExpose({ validationError });
 </script>
 
 <template>

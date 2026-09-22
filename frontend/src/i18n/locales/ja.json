@@ -161,6 +161,7 @@
     "affinityOverflowDismiss": "閉じる",
     "affinityErrInvalid": "アフィニティの16進が不正です",
     "affinityErrEmpty": "許可するコアを1つ以上選んでください",
+    "affinityHiddenOnlyWarning": "表示中のコアを1つ以上選んでください。この PC では他マシン由来の上位ビットだけが有効になっています。",
     "customArgs": "カスタム引数（上級者向け）",
     "setAsDefault": "デフォルトに設定",
     "save": "保存",

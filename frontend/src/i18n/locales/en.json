@@ -161,6 +161,7 @@
     "affinityOverflowDismiss": "Dismiss",
     "affinityErrInvalid": "Invalid affinity hex",
     "affinityErrEmpty": "Select at least one allowed core",
+    "affinityHiddenOnlyWarning": "Select at least one visible core. This PC cannot edit cores preserved from another machine's mask.",
     "customArgs": "Custom arguments (advanced)",
     "setAsDefault": "Set as default",
     "save": "Save",
