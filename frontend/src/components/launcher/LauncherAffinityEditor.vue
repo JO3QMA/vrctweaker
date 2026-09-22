@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import VtAlert from "../VtAlert.vue";
 import VtButton from "../VtButton.vue";
+import VtCheckbox from "../VtCheckbox.vue";
 import VtInput from "../VtInput.vue";
 import { App } from "../../wails/app";
 import {
@@ -82,9 +83,9 @@ function applyCoreStates(states: boolean[]) {
   emitMask(mergeVisibleWithHidden(states, hiddenMask.value));
 }
 
-function toggleCore(index: number) {
+function setCoreAllowed(index: number, allowed: boolean) {
   const next = [...coreStates.value];
-  next[index] = !next[index];
+  next[index] = allowed;
   applyCoreStates(next);
 }
 
@@ -217,20 +218,16 @@ defineExpose({ validationError });
           role="separator"
           :aria-label="t('launcher.affinityCcdDivider')"
         />
-        <button
-          type="button"
-          class="affinity-core-toggle"
-          :class="{ active: coreStates[index - 1] }"
+        <VtCheckbox
+          class="affinity-core-checkbox"
+          :model-value="coreStates[index - 1]"
+          size="small"
           :data-testid="`affinity-core-${index - 1}`"
-          :aria-pressed="coreStates[index - 1]"
           :aria-label="t('launcher.affinityCoreAria', { n: index - 1 })"
-          @click="toggleCore(index - 1)"
+          @update:model-value="setCoreAllowed(index - 1, $event)"
         >
-          <span class="affinity-core-label">C{{ index - 1 }}</span>
-          <span class="affinity-core-state" aria-hidden="true">{{
-            coreStates[index - 1] ? "■" : "□"
-          }}</span>
-        </button>
+          C{{ index - 1 }}
+        </VtCheckbox>
       </template>
     </div>
 
@@ -298,29 +295,9 @@ defineExpose({ validationError });
   margin: var(--space-inline-tight) 0;
 }
 
-.affinity-core-toggle {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-  padding: var(--space-inline-tight);
-  border: 1px solid var(--color-border);
-  border-radius: 4px;
-  background: var(--color-bg-muted);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-10);
-  cursor: pointer;
-}
-
-.affinity-core-toggle.active {
-  border-color: var(--color-brand);
-  background: var(--color-bg-elevated);
-  color: var(--color-text-primary);
-}
-
-.affinity-core-state {
+.affinity-core-checkbox {
+  margin: 0;
   font-size: var(--font-size-12);
-  line-height: 1;
 }
 
 .affinity-validation {

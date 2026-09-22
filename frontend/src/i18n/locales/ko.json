@@ -150,7 +150,7 @@
     "oscPh": "예: 9000:127.0.0.1:9001",
     "affinity": "스레드 친화성 (--affinity=FFFF)",
     "affinityPh": "16진 비트마스크",
-    "affinityHelp": "■ 표시 코어는 VRChat 스레드가 사용할 수 있는 논리 코어입니다. AMD 2CCD에서는 0–15와 16–31이 다른 다이에 있는 경우가 많습니다.",
+    "affinityHelp": "선택한 코어는 VRChat 스레드가 사용할 수 있는 논리 코어입니다. AMD 2CCD에서는 0–15와 16–31이 다른 다이에 있는 경우가 많습니다.",
     "affinityAllowAll": "모두 허용",
     "affinitySuppressAll": "표시 중 모두 억제",
     "affinityGridAria": "스레드 affinity 논리 코어",

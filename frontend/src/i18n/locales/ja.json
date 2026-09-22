@@ -150,7 +150,7 @@
     "oscPh": "例: 9000:127.0.0.1:9001",
     "affinity": "スレッドアフィニティ（--affinity=FFFF）",
     "affinityPh": "16進ビットマスク",
-    "affinityHelp": "■ のコアは VRChat がスレッドを載せてよい論理コアです。AMD の 2CCD 構成では 0–15 と 16–31 がダイを跨ぐことが多いため、使う側を絞ると CCD 跨ぎを抑えやすくなります。",
+    "affinityHelp": "チェックしたコアは VRChat がスレッドを載せてよい論理コアです。AMD の 2CCD 構成では 0–15 と 16–31 がダイを跨ぐことが多いため、使う側を絞ると CCD 跨ぎを抑えやすくなります。",
     "affinityAllowAll": "すべて許可",
     "affinitySuppressAll": "表示中をすべて抑制",
     "affinityGridAria": "スレッドアフィニティ用の論理コア",

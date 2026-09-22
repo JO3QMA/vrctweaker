@@ -150,7 +150,7 @@
     "oscPh": "e.g. 9000:127.0.0.1:9001",
     "affinity": "Thread affinity (--affinity=FFFF)",
     "affinityPh": "Hex bitmask",
-    "affinityHelp": "Filled (■) cores are allowed for VRChat threads. On many AMD CPUs, cores 0–15 and 16–31 are on different dies; keeping threads on one group reduces cross-CCD latency.",
+    "affinityHelp": "Checked cores are allowed for VRChat threads. On many AMD CPUs, cores 0–15 and 16–31 are on different dies; keeping threads on one group reduces cross-CCD latency.",
     "affinityAllowAll": "Allow all",
     "affinitySuppressAll": "Suppress all visible",
     "affinityGridAria": "Logical CPU cores for thread affinity",

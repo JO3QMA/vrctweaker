@@ -150,7 +150,7 @@
     "oscPh": "例：9000:127.0.0.1:9001",
     "affinity": "執行緒親和性（--affinity=FFFF）",
     "affinityPh": "十六進位元遮罩",
-    "affinityHelp": "■ 表示的核心允許 VRChat 執行緒使用。AMD 雙 CCD 時，0–15 與 16–31 常位於不同晶片，限制在一側可減少跨 CCD 延遲。",
+    "affinityHelp": "勾選的核心允許 VRChat 執行緒使用。AMD 雙 CCD 時，0–15 與 16–31 常位於不同晶片，限制在一側可減少跨 CCD 延遲。",
     "affinityAllowAll": "全部允許",
     "affinitySuppressAll": "抑制目前顯示的全部",
     "affinityGridAria": "執行緒親和性邏輯核心",
