@@ -29,7 +29,9 @@ const { t } = useI18n();
 
 const coreCount = ref(DEFAULT_LOGICAL_PROCESSOR_COUNT);
 const coreCountReady = ref(false);
-const coreStates = ref<boolean[]>([]);
+const coreStates = ref<boolean[]>(
+  coreStatesFromMask(0n, DEFAULT_LOGICAL_PROCESSOR_COUNT),
+);
 const hiddenMask = ref(0n);
 const parseFailed = ref(false);
 const overflowDismissed = ref(false);
@@ -113,8 +115,13 @@ function commitHexDraft() {
     return;
   }
   parseFailed.value = false;
-  hiddenMask.value = hiddenMaskAbove(parsed.mask, coreCount.value);
+  const nextHidden = hiddenMaskAbove(parsed.mask, coreCount.value);
+  if (nextHidden !== hiddenMask.value) {
+    overflowDismissed.value = false;
+  }
+  hiddenMask.value = nextHidden;
   coreStates.value = coreStatesFromMask(parsed.mask, coreCount.value);
+  hexDraft.value = formatAffinityHex(parsed.mask);
   emitMask(parsed.mask);
 }
 

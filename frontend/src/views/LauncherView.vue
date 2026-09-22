@@ -901,8 +901,10 @@ async function onAffinityEnabledChange() {
   if (launchArgs.value.affinity.trim() !== "") {
     return;
   }
+  const idBefore = selected.value?.id;
   const n = await resolveLogicalProcessorCount();
   if (!valueOptionsEnabled.affinity) return;
+  if (selected.value?.id !== idBefore) return;
   launchArgs.value.affinity = formatAffinityHex(allCoresAllowedMask(n));
 }
 
@@ -1071,6 +1073,10 @@ async function affinityBlocksLaunch(): Promise<boolean> {
   const parsed = parseAffinityHex(launchArgs.value.affinity);
   if (!parsed.ok) {
     showToast.error(t("launcher.affinityErrInvalid"));
+    return true;
+  }
+  if (parsed.mask === 0n) {
+    showToast.error(t("launcher.affinityErrEmpty"));
     return true;
   }
   const n = await resolveLogicalProcessorCount();

@@ -5,32 +5,52 @@ vi.mock("../wails/app", () => ({
   App: {
     getLogicalProcessorCount: vi.fn(),
   },
+  logicalProcessorCountFallback: vi.fn(() => DEFAULT_LOGICAL_PROCESSOR_COUNT),
 }));
 
-import { App } from "../wails/app";
-import { resolveLogicalProcessorCount } from "./affinityProcessorCount";
+import { App, logicalProcessorCountFallback } from "../wails/app";
+import {
+  normalizeLogicalProcessorCount,
+  resolveLogicalProcessorCount,
+} from "./affinityProcessorCount";
+
+describe("normalizeLogicalProcessorCount", () => {
+  it("accepts positive integers up to 512", () => {
+    expect(normalizeLogicalProcessorCount(24)).toBe(24);
+    expect(normalizeLogicalProcessorCount(512)).toBe(512);
+  });
+
+  it("falls back for invalid values", () => {
+    vi.mocked(logicalProcessorCountFallback).mockReturnValue(8);
+    expect(normalizeLogicalProcessorCount(0)).toBe(8);
+    expect(normalizeLogicalProcessorCount(3.5)).toBe(8);
+    expect(normalizeLogicalProcessorCount(Number.NaN)).toBe(8);
+    expect(normalizeLogicalProcessorCount(513)).toBe(8);
+  });
+});
 
 describe("resolveLogicalProcessorCount", () => {
   beforeEach(() => {
     vi.mocked(App.getLogicalProcessorCount).mockReset();
+    vi.mocked(logicalProcessorCountFallback).mockReturnValue(
+      DEFAULT_LOGICAL_PROCESSOR_COUNT,
+    );
   });
 
-  it("returns count from App when positive", async () => {
+  it("returns normalized count from App when valid", async () => {
     vi.mocked(App.getLogicalProcessorCount).mockResolvedValue(24);
     await expect(resolveLogicalProcessorCount()).resolves.toBe(24);
   });
 
-  it("falls back when count is zero", async () => {
+  it("falls back when count is invalid", async () => {
     vi.mocked(App.getLogicalProcessorCount).mockResolvedValue(0);
-    await expect(resolveLogicalProcessorCount()).resolves.toBe(
-      DEFAULT_LOGICAL_PROCESSOR_COUNT,
-    );
+    vi.mocked(logicalProcessorCountFallback).mockReturnValue(12);
+    await expect(resolveLogicalProcessorCount()).resolves.toBe(12);
   });
 
   it("falls back when App throws", async () => {
     vi.mocked(App.getLogicalProcessorCount).mockRejectedValue(new Error("ipc"));
-    await expect(resolveLogicalProcessorCount()).resolves.toBe(
-      DEFAULT_LOGICAL_PROCESSOR_COUNT,
-    );
+    vi.mocked(logicalProcessorCountFallback).mockReturnValue(12);
+    await expect(resolveLogicalProcessorCount()).resolves.toBe(12);
   });
 });
