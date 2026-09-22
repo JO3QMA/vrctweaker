@@ -10,6 +10,7 @@ import {
   mergeVisibleWithHidden,
   hasVisibleAllowedCore,
   affinityVisibleSelectionIssue,
+  affinitySelectionI18nKey,
 } from "./affinityMask";
 
 describe("parseAffinityHex", () => {
@@ -90,5 +91,15 @@ describe("affinityVisibleSelectionIssue", () => {
     expect(affinityVisibleSelectionIssue(0n, 16)).toBe("empty");
     expect(affinityVisibleSelectionIssue(1n << 16n, 16)).toBe("hiddenOnly");
     expect(affinityVisibleSelectionIssue(3n, 16)).toBe(null);
+  });
+});
+
+describe("affinitySelectionI18nKey", () => {
+  it("maps issues to launcher i18n keys", () => {
+    expect(affinitySelectionI18nKey(0n, 16)).toBe("launcher.affinityErrEmpty");
+    expect(affinitySelectionI18nKey(1n << 16n, 16)).toBe(
+      "launcher.affinityHiddenOnlyWarning",
+    );
+    expect(affinitySelectionI18nKey(3n, 16)).toBe(null);
   });
 });

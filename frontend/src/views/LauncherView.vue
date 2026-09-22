@@ -636,7 +636,7 @@ import VtTag from "../components/VtTag.vue";
 import LauncherAffinityEditor from "../components/launcher/LauncherAffinityEditor.vue";
 import {
   parseAffinityHex,
-  affinityVisibleSelectionIssue,
+  affinitySelectionI18nKey,
   allCoresAllowedMask,
   formatAffinityHex,
 } from "../utils/affinityMask";
@@ -726,6 +726,7 @@ const sidebarOpen = ref(readSidebarOpenPreference());
 const advancedCollapseActive = ref<string[]>([]);
 /** Bumped on state-changing save/create; skip post-await updates after unmount. */
 let profileSaveGen = 0;
+const affinityInitPending = ref(false);
 
 function showSaveError(e: unknown) {
   showToast.error(formatError(e, t("launcher.errSave")));
@@ -895,17 +896,24 @@ function onOscEnabledChange() {
 
 async function onAffinityEnabledChange() {
   if (!valueOptionsEnabled.affinity) {
+    affinityInitPending.value = false;
     launchArgs.value.affinity = "";
     return;
   }
   if (launchArgs.value.affinity.trim() !== "") {
     return;
   }
-  const idBefore = selected.value?.id;
-  const n = await resolveLogicalProcessorCount();
-  if (!valueOptionsEnabled.affinity) return;
-  if (selected.value?.id !== idBefore) return;
-  launchArgs.value.affinity = formatAffinityHex(allCoresAllowedMask(n));
+  affinityInitPending.value = true;
+  try {
+    const idBefore = selected.value?.id;
+    const n = await resolveLogicalProcessorCount();
+    if (!valueOptionsEnabled.affinity) return;
+    if (selected.value?.id !== idBefore) return;
+    if (launchArgs.value.affinity.trim() !== "") return;
+    launchArgs.value.affinity = formatAffinityHex(allCoresAllowedMask(n));
+  } finally {
+    affinityInitPending.value = false;
+  }
 }
 
 function onCustomArmRatioEnabledChange() {
@@ -1070,23 +1078,27 @@ async function affinityBlocksLaunch(): Promise<boolean> {
   if (!valueOptionsEnabled.affinity) {
     return false;
   }
+  if (launchArgs.value.affinity.trim() === "") {
+    if (affinityInitPending.value) {
+      return false;
+    }
+    const n = await resolveLogicalProcessorCount();
+    const key = affinitySelectionI18nKey(0n, n);
+    if (key) {
+      showToast.error(t(key));
+      return true;
+    }
+    return false;
+  }
   const parsed = parseAffinityHex(launchArgs.value.affinity);
   if (!parsed.ok) {
     showToast.error(t("launcher.affinityErrInvalid"));
     return true;
   }
-  if (parsed.mask === 0n) {
-    showToast.error(t("launcher.affinityErrEmpty"));
-    return true;
-  }
   const n = await resolveLogicalProcessorCount();
-  const issue = affinityVisibleSelectionIssue(parsed.mask, n);
-  if (issue === "hiddenOnly") {
-    showToast.error(t("launcher.affinityHiddenOnlyWarning"));
-    return true;
-  }
-  if (issue === "empty") {
-    showToast.error(t("launcher.affinityErrEmpty"));
+  const key = affinitySelectionI18nKey(parsed.mask, n);
+  if (key) {
+    showToast.error(t(key));
     return true;
   }
   return false;

@@ -4,6 +4,9 @@ const HEX_RE = /^[0-9a-fA-F]*$/;
 
 export const DEFAULT_LOGICAL_PROCESSOR_COUNT = 16;
 
+/** Visual divider before this core index (typical 16+16 CCD layout). */
+export const AFFINITY_CCD_CORE_BOUNDARY = 16;
+
 export function parseAffinityHex(raw: string): AffinityParseResult {
   let s = raw.trim();
   if (s.startsWith("0x") || s.startsWith("0X")) {
@@ -59,6 +62,23 @@ export function affinityVisibleSelectionIssue(
     return "hiddenOnly";
   }
   return "empty";
+}
+
+export type AffinitySelectionI18nKey =
+  "launcher.affinityErrEmpty" | "launcher.affinityHiddenOnlyWarning";
+
+export function affinitySelectionI18nKey(
+  mask: bigint,
+  coreCount: number,
+): AffinitySelectionI18nKey | null {
+  const issue = affinityVisibleSelectionIssue(mask, coreCount);
+  if (issue === "hiddenOnly") {
+    return "launcher.affinityHiddenOnlyWarning";
+  }
+  if (issue === "empty") {
+    return "launcher.affinityErrEmpty";
+  }
+  return null;
 }
 
 export function coreStatesFromMask(mask: bigint, coreCount: number): boolean[] {

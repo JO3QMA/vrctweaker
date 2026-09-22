@@ -8,12 +8,13 @@ import VtInput from "../VtInput.vue";
 import {
   coreStatesFromMask,
   DEFAULT_LOGICAL_PROCESSOR_COUNT,
+  AFFINITY_CCD_CORE_BOUNDARY,
   formatAffinityHex,
   hasHiddenBitsAbove,
   hiddenMaskAbove,
   mergeVisibleWithHidden,
   parseAffinityHex,
-  affinityVisibleSelectionIssue,
+  affinitySelectionI18nKey,
 } from "../../utils/affinityMask";
 import { resolveLogicalProcessorCount } from "../../utils/affinityProcessorCount";
 
@@ -53,14 +54,8 @@ const validationError = computed(() => {
   if (parseFailed.value) {
     return t("launcher.affinityErrInvalid");
   }
-  const issue = affinityVisibleSelectionIssue(fullMask.value, coreCount.value);
-  if (issue === "hiddenOnly") {
-    return t("launcher.affinityHiddenOnlyWarning");
-  }
-  if (issue === "empty") {
-    return t("launcher.affinityErrEmpty");
-  }
-  return "";
+  const key = affinitySelectionI18nKey(fullMask.value, coreCount.value);
+  return key ? t(key) : "";
 });
 
 function syncFromModelValue(raw: string) {
@@ -180,7 +175,7 @@ onMounted(async () => {
       </VtButton>
     </VtAlert>
 
-    <div class="affinity-bulk">
+    <div v-if="coreCountReady" class="affinity-bulk">
       <VtButton
         variant="secondary"
         size="small"
@@ -200,13 +195,14 @@ onMounted(async () => {
     </div>
 
     <div
+      v-if="coreCountReady"
       class="affinity-core-grid"
       role="group"
       :aria-label="t('launcher.affinityGridAria')"
     >
       <template v-for="index in coreCount" :key="`affinity-core-${index - 1}`">
         <div
-          v-if="index === 17"
+          v-if="index === AFFINITY_CCD_CORE_BOUNDARY + 1"
           class="affinity-ccd-divider"
           role="separator"
           :aria-label="t('launcher.affinityCcdDivider')"
