@@ -28,6 +28,11 @@ import {
   clampedPlotSize,
   syncCanvasBuffer,
 } from "./playTimeChartGeometry";
+import {
+  formatPlayTimeAxisTickLabel,
+  playTimeChartMaxY,
+  playTimeChartYAxisTicks,
+} from "./playTimeChartScale";
 
 export interface PlayTimeDayPoint {
   date: string;
@@ -67,20 +72,11 @@ function readCssVar(name: string, fallback: string): string {
 }
 
 function formatYAxisTickSeconds(sec: number): string {
-  if (sec >= 3600) {
-    return `${Math.floor(sec / 3600)}${t("chart.hour")}`;
-  }
-  if (sec >= 60) {
-    return `${Math.floor(sec / 60)}${t("chart.minute")}`;
-  }
-  return `${sec}${t("chart.second")}`;
-}
-
-function niceMax(seconds: number): number {
-  if (seconds <= 0) return 60;
-  const raw = seconds * 1.1;
-  const step = raw <= 60 ? 10 : raw <= 3600 ? 300 : 1800;
-  return Math.ceil(raw / step) * step;
+  return formatPlayTimeAxisTickLabel(sec, {
+    hour: t("chart.hour"),
+    minute: t("chart.minute"),
+    second: t("chart.second"),
+  });
 }
 
 /** Measure plot geometry without touching the canvas buffer. */
@@ -88,7 +84,9 @@ function measurePlot(canvas: HTMLCanvasElement): PlotMetrics {
   const cssW = canvas.clientWidth || 300;
   const cssH = canvas.clientHeight || 280;
   const { plotW, plotH } = clampedPlotSize(cssW, cssH, PAD);
-  const maxY = niceMax(Math.max(0, ...props.series.map((s) => s.seconds)));
+  const maxY = playTimeChartMaxY(
+    Math.max(0, ...props.series.map((s) => s.seconds)),
+  );
   return { cssW, cssH, plotW, plotH, maxY };
 }
 
@@ -128,15 +126,14 @@ function draw(): void {
   ctx.clearRect(0, 0, cssW, cssH);
   if (props.series.length === 0) return;
 
-  const ticks = 4;
+  const yAxisTicks = playTimeChartYAxisTicks(maxY);
   ctx.strokeStyle = border;
   ctx.fillStyle = textMuted;
   ctx.lineWidth = 1;
   ctx.font = "12px sans-serif";
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
-  for (let i = 0; i <= ticks; i++) {
-    const v = (maxY * i) / ticks;
+  for (const v of yAxisTicks) {
     const y = PAD.top + plotH - (v / maxY) * plotH;
     ctx.beginPath();
     ctx.moveTo(PAD.left, y);
