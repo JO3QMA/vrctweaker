@@ -74,14 +74,18 @@ function syncFromModelValue(raw: string) {
     hiddenMask.value = 0n;
     return;
   }
+  applyParsedMask(parsed.mask);
+}
+
+function applyParsedMask(mask: bigint) {
   const prevHidden = hiddenMask.value;
-  const nextHidden = hiddenMaskAbove(parsed.mask, coreCount.value);
+  const nextHidden = hiddenMaskAbove(mask, coreCount.value);
   if (nextHidden !== prevHidden) {
     overflowDismissed.value = false;
   }
   hiddenMask.value = nextHidden;
-  coreStates.value = coreStatesFromMask(parsed.mask, coreCount.value);
-  hexDraft.value = formatAffinityHex(parsed.mask);
+  coreStates.value = coreStatesFromMask(mask, coreCount.value);
+  hexDraft.value = formatAffinityHex(mask);
 }
 
 function emitMask(mask: bigint) {
@@ -115,13 +119,7 @@ function commitHexDraft() {
     return;
   }
   parseFailed.value = false;
-  const nextHidden = hiddenMaskAbove(parsed.mask, coreCount.value);
-  if (nextHidden !== hiddenMask.value) {
-    overflowDismissed.value = false;
-  }
-  hiddenMask.value = nextHidden;
-  coreStates.value = coreStatesFromMask(parsed.mask, coreCount.value);
-  hexDraft.value = formatAffinityHex(parsed.mask);
+  applyParsedMask(parsed.mask);
   emitMask(parsed.mask);
 }
 

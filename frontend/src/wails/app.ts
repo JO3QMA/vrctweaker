@@ -737,7 +737,7 @@ export const App = {
         ).GetLogicalProcessorCount?.() ??
         Promise.resolve(logicalProcessorCountFallback()),
       logicalProcessorCountFallback(),
-    ).catch(() => logicalProcessorCountFallback()),
+    ),
   listDetectedPowerPlans: bindGo((a) => a.ListDetectedPowerPlans(), []),
   vrchatConfigExists: bindGo((a) => a.VRChatConfigExists(), false),
   /**

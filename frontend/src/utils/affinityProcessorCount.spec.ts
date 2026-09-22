@@ -21,11 +21,11 @@ describe("normalizeLogicalProcessorCount", () => {
   });
 
   it("falls back for invalid values", () => {
-    vi.mocked(logicalProcessorCountFallback).mockReturnValue(8);
-    expect(normalizeLogicalProcessorCount(0)).toBe(8);
-    expect(normalizeLogicalProcessorCount(3.5)).toBe(8);
-    expect(normalizeLogicalProcessorCount(Number.NaN)).toBe(8);
-    expect(normalizeLogicalProcessorCount(513)).toBe(8);
+    vi.mocked(logicalProcessorCountFallback).mockReturnValue(600);
+    expect(normalizeLogicalProcessorCount(0)).toBe(512);
+    expect(normalizeLogicalProcessorCount(3.5)).toBe(512);
+    expect(normalizeLogicalProcessorCount(Number.NaN)).toBe(512);
+    expect(normalizeLogicalProcessorCount(513)).toBe(512);
   });
 });
 
@@ -50,7 +50,7 @@ describe("resolveLogicalProcessorCount", () => {
 
   it("falls back when App throws", async () => {
     vi.mocked(App.getLogicalProcessorCount).mockRejectedValue(new Error("ipc"));
-    vi.mocked(logicalProcessorCountFallback).mockReturnValue(12);
-    await expect(resolveLogicalProcessorCount()).resolves.toBe(12);
+    vi.mocked(logicalProcessorCountFallback).mockReturnValue(600);
+    await expect(resolveLogicalProcessorCount()).resolves.toBe(512);
   });
 });
