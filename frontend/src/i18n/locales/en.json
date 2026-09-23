@@ -408,6 +408,8 @@
     "powerSection": "Power",
     "appSection": "Application",
     "appVersion": "Version {version}",
+    "unofficialDisclaimer": "VRChat Tweaker is not an official VRChat product and is not affiliated with VRChat Inc.",
+    "dataStorageNote": "Sign-in credentials are stored in the Windows Credential Manager when available. The app database and settings are stored under %AppData%\\Roaming\\vrchat-tweaker\\.",
     "closeToTray": "Close to system tray",
     "closeToTrayHint": "The close button hides the window to the system tray instead of quitting. Automation and log watchers keep running (Windows only). Turn off to quit when closing.",
     "suppressSleep": "Suppress sleep while VRChat is running",

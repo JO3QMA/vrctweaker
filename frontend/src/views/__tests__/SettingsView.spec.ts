@@ -158,6 +158,12 @@ describe("SettingsView", () => {
       wrapper.get('[data-testid="settings-app-version"]').text(),
     ).toContain("0.1.0");
     expect(
+      wrapper.get('[data-testid="settings-app-disclaimer"]').text(),
+    ).toContain("非公式");
+    expect(
+      wrapper.get('[data-testid="settings-app-data-storage"]').text(),
+    ).toContain("vrchat-tweaker");
+    expect(
       (
         wrapper.find(".setting-row .el-input-number input")
           .element as HTMLInputElement
