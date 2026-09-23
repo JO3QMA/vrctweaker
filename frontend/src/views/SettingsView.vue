@@ -495,7 +495,11 @@ onMounted(async () => {
   galleryAutoEnrichMetadata.value = await App.getGalleryAutoEnrichMetadata();
   suppressSleepWhileVRChat.value = await App.getSuppressSleepWhileVRChat();
   closeToTray.value = await App.getCloseToTray();
-  appVersion.value = await App.getAppVersion();
+  try {
+    appVersion.value = await App.getAppVersion();
+  } catch {
+    appVersion.value = "dev";
+  }
   const ps = await App.getPathSettings();
   pathSettings.vrchatPathWindows = ps.vrchatPathWindows;
   pathSettings.steamPathLinux = ps.steamPathLinux;
