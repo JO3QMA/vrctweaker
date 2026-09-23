@@ -79,6 +79,11 @@ func (g *Guard) Acquire() (acquired bool, err error) {
 	return true, nil
 }
 
+// ActivateWindow brings the configured main window to the foreground using native APIs.
+func (g *Guard) ActivateWindow() error {
+	return ActivateWindowByTitle(g.windowTitle)
+}
+
 // NotifyExisting asks the running instance to activate its main window.
 func (g *Guard) NotifyExisting() error {
 	g.releaseMu.Lock()

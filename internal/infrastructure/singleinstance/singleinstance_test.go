@@ -178,6 +178,13 @@ func TestAbstractActivateAddrIncludesUIDAndFingerprint(t *testing.T) {
 	}
 }
 
+func TestGuardActivateWindowNoOpOffWindows(t *testing.T) {
+	g := NewNamedWithWindowTitle("vrctweaker-test-"+uuid.NewString(), "VRChat Tweaker")
+	if err := g.ActivateWindow(); err != nil {
+		t.Fatalf("ActivateWindow: %v", err)
+	}
+}
+
 func TestAcquireBindsListener(t *testing.T) {
 	name := "vrctweaker-test-" + uuid.NewString()
 	holder := NewNamed(name)
