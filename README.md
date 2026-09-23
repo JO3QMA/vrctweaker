@@ -107,6 +107,8 @@ make test-e2e
 
 `main` への push / PR で `.github/workflows/ci.yml` が `make lint` と `make test` を実行します。
 
+Storybook の静的ビルドは `.github/workflows/storybook-pages.yml` で Cloudflare Pages にデプロイできます（セットアップ: [`docs/storybook-cloudflare-pages.md`](./docs/storybook-cloudflare-pages.md)）。
+
 ## ライセンス
 
 このリポジトリのライセンスは各 `package.json` / 依存パッケージの表記に従います。アプリ内の **Licenses** 画面でも確認できます。
