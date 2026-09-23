@@ -11,7 +11,7 @@
         height="16"
         draggable="false"
         data-testid="title-bar-app-icon"
-        @error="showAppIcon = false"
+        @error="handleAppIconError"
       />
       <span class="title-bar-text">{{ t("app.name") }}</span>
     </div>
@@ -41,6 +41,11 @@ const { t } = useI18n();
 const showAppIcon = ref(true);
 // Copied from build/appicon.png via `pnpm run sync-appicon` (predev / build).
 const appIconUrl = `${import.meta.env.BASE_URL}appicon.png`;
+
+function handleAppIconError() {
+  console.warn("Title bar app icon failed to load:", appIconUrl);
+  showAppIcon.value = false;
+}
 
 function minimize() {
   getRuntime()?.WindowMinimise?.();
