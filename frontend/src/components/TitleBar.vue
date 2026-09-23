@@ -5,9 +5,11 @@
         v-if="showAppIcon"
         class="title-bar-icon"
         :src="appIconUrl"
-        :alt="t('app.name')"
+        alt=""
+        aria-hidden="true"
         width="16"
         height="16"
+        draggable="false"
         data-testid="title-bar-app-icon"
         @error="showAppIcon = false"
       />
@@ -37,7 +39,7 @@ import { showToast } from "../utils/showToast";
 
 const { t } = useI18n();
 const showAppIcon = ref(true);
-// Vite public/ → dist root; keep in sync with build/appicon.png (Wails binary / tray).
+// Copied from build/appicon.png via `pnpm run sync-appicon` (predev / build).
 const appIconUrl = `${import.meta.env.BASE_URL}appicon.png`;
 
 function minimize() {
@@ -88,6 +90,7 @@ async function close() {
   font-size: var(--font-size-12);
   font-weight: var(--font-weight-500);
   color: var(--color-text-secondary);
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

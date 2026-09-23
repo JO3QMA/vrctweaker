@@ -15,7 +15,9 @@ describe("TitleBar", () => {
       global: { plugins: [i18n] },
     });
     const icon = wrapper.get('[data-testid="title-bar-app-icon"]');
-    expect(icon.attributes("alt")).toBe("VRChat Tweaker");
+    expect(icon.attributes("alt")).toBe("");
+    expect(icon.attributes("aria-hidden")).toBe("true");
+    expect(icon.attributes("draggable")).toBe("false");
     expect(icon.attributes("src")).toMatch(/appicon\.png$/);
   });
 });
