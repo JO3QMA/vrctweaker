@@ -1078,7 +1078,7 @@ func (a *App) startVRChatPipeline() {
 	a.pipelineCancel = cancel
 	cfg := vrchatpipeline.Config{
 		AuthToken: token,
-		UserAgent: vrchatapi.UserAgent,
+		UserAgent: vrchatapi.UserAgent(),
 		OnReconnect: func(ctx context.Context) error {
 			err := a.identity.PipelineReconnectRestSync(ctx)
 			if err != nil {

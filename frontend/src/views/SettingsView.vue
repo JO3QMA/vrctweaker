@@ -201,6 +201,12 @@
       <template #header>
         <span>{{ t("settings.appSection") }}</span>
       </template>
+      <p
+        class="app-version-line text-body-sm"
+        data-testid="settings-app-version"
+      >
+        {{ t("settings.appVersion", { version: appVersion }) }}
+      </p>
       <div class="setting-row power-setting-row">
         <div class="power-toggle-label">
           <span>{{ t("settings.closeToTray") }}</span>
@@ -401,6 +407,7 @@ const logRetentionDays = ref(30);
 const galleryAutoEnrichMetadata = ref(true);
 const suppressSleepWhileVRChat = ref(false);
 const closeToTray = ref(true);
+const appVersion = ref("");
 const maintenanceError = ref("");
 const maintenanceLoading = ref(false);
 const pathSettings = reactive<PathSettingsDTO>({
@@ -488,6 +495,7 @@ onMounted(async () => {
   galleryAutoEnrichMetadata.value = await App.getGalleryAutoEnrichMetadata();
   suppressSleepWhileVRChat.value = await App.getSuppressSleepWhileVRChat();
   closeToTray.value = await App.getCloseToTray();
+  appVersion.value = await App.getAppVersion();
   const ps = await App.getPathSettings();
   pathSettings.vrchatPathWindows = ps.vrchatPathWindows;
   pathSettings.steamPathLinux = ps.steamPathLinux;
@@ -862,6 +870,11 @@ function doClearFriendsCache() {
   align-items: center;
   gap: var(--space-block);
   margin-bottom: var(--space-action-group);
+}
+
+.app-version-line {
+  margin: 0 0 var(--space-block);
+  color: var(--color-text-secondary);
 }
 
 .power-setting-row {

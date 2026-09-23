@@ -103,7 +103,7 @@ func (c *Client) do(ctx context.Context, method, path string, body interface{}) 
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", UserAgent)
+	req.Header.Set("User-Agent", UserAgent())
 
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

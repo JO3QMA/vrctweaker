@@ -407,6 +407,7 @@
     "pathHint": "VRChat 실행 및 로그 감시에 사용합니다. launch.exe를 지정하세요. 비우면 기본 경로를 사용합니다. output_log는 로그 폴더를 지정하세요(비우면 기본 폴더). 폴더 안에서 증가 중인 output_log*.txt를 병렬로 감시합니다.",
     "powerSection": "전원",
     "appSection": "앱",
+    "appVersion": "버전 {version}",
     "closeToTray": "닫을 때 시스템 트레이로 숨기기",
     "closeToTrayHint": "닫기 버튼으로 종료하지 않고 시스템 트레이에 상주합니다. 자동화와 로그 감시는 계속됩니다(Windows만). 끄면 닫을 때 종료합니다.",
     "suppressSleep": "VRChat 실행 중 절전 방지",

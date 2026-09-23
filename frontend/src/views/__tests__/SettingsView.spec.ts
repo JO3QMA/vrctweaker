@@ -67,6 +67,7 @@ function setupAppMocks() {
   vi.spyOn(App, "getLogRetentionDays").mockResolvedValue(45);
   vi.spyOn(App, "getSuppressSleepWhileVRChat").mockResolvedValue(true);
   vi.spyOn(App, "getCloseToTray").mockResolvedValue(true);
+  vi.spyOn(App, "getAppVersion").mockResolvedValue("0.1.0");
   vi.spyOn(App, "getPathSettings").mockResolvedValue({
     ...defaultPathSettings,
   });
@@ -136,6 +137,10 @@ describe("SettingsView", () => {
     expect(App.getLogRetentionDays).toHaveBeenCalled();
     expect(App.getSuppressSleepWhileVRChat).toHaveBeenCalled();
     expect(App.getCloseToTray).toHaveBeenCalled();
+    expect(App.getAppVersion).toHaveBeenCalled();
+    expect(
+      wrapper.get('[data-testid="settings-app-version"]').text(),
+    ).toContain("0.1.0");
     expect(
       (
         wrapper.find(".setting-row .el-input-number input")
