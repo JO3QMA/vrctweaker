@@ -4,9 +4,11 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
+    "sync-appicon": "node scripts/sync-appicon.mjs",
+    "predev": "pnpm run sync-appicon",
     "dev": "vite",
     "dev:e2e": "vite --mode e2e",
-    "build": "pnpm run licenses:generate && vue-tsc -b && vite build",
+    "build": "pnpm run licenses:generate && pnpm run sync-appicon && vue-tsc -b && vite build",
     "licenses:generate": "license-checker --json --out src/data/licenses.json",
     "postinstall": "pnpm run licenses:generate",
     "preview": "vite preview",

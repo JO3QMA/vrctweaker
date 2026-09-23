@@ -1,6 +1,20 @@
 <template>
   <div class="title-bar" style="--wails-draggable: drag">
-    <span class="title-bar-text">{{ t("app.name") }}</span>
+    <div class="title-bar-brand">
+      <img
+        v-if="showAppIcon"
+        class="title-bar-icon"
+        :src="appIconUrl"
+        alt=""
+        aria-hidden="true"
+        width="16"
+        height="16"
+        draggable="false"
+        data-testid="title-bar-app-icon"
+        @error="handleAppIconError"
+      />
+      <span class="title-bar-text">{{ t("app.name") }}</span>
+    </div>
     <div class="title-bar-actions" style="--wails-draggable: no-drag">
       <button class="title-bar-btn vt-focus-ring--inset" @click="minimize">
         −
@@ -16,6 +30,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from "vue";
 import { useI18n } from "vue-i18n";
 import { App } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
@@ -23,6 +38,14 @@ import { formatError } from "../utils/formatError";
 import { showToast } from "../utils/showToast";
 
 const { t } = useI18n();
+const showAppIcon = ref(true);
+// Copied from build/appicon.png via `pnpm run sync-appicon` (predev / build).
+const appIconUrl = `${import.meta.env.BASE_URL}appicon.png`;
+
+function handleAppIconError() {
+  console.warn("Title bar app icon failed to load:", appIconUrl);
+  showAppIcon.value = false;
+}
 
 function minimize() {
   getRuntime()?.WindowMinimise?.();
@@ -54,10 +77,28 @@ async function close() {
   flex-shrink: 0;
 }
 
+.title-bar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-inline-tight);
+  min-width: 0;
+}
+
+.title-bar-icon {
+  width: var(--icon-size-16);
+  height: var(--icon-size-16);
+  flex-shrink: 0;
+  object-fit: contain;
+}
+
 .title-bar-text {
   font-size: var(--font-size-12);
   font-weight: var(--font-weight-500);
   color: var(--color-text-secondary);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .title-bar-actions {
