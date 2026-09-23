@@ -38,7 +38,7 @@ type Client struct {
 func NewClient() *Client {
 	return &Client{
 		BaseURL:   DefaultBaseURL,
-		UserAgent: vrchatapi.UserAgent,
+		UserAgent: vrchatapi.UserAgent(),
 	}
 }
 
@@ -125,7 +125,7 @@ func (c *Client) fetchJSON(ctx context.Context, path string, dest any) error {
 	}
 	ua := strings.TrimSpace(c.UserAgent)
 	if ua == "" {
-		ua = vrchatapi.UserAgent
+		ua = vrchatapi.UserAgent()
 	}
 	req.Header.Set("User-Agent", ua)
 	req.Header.Set("Accept", "application/json")

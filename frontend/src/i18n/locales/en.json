@@ -407,6 +407,7 @@
     "pathHint": "Used to launch VRChat and watch logs. Set launch.exe (direct VRChat.exe forces offline). Leave empty for defaults. For output_log, set the …\\VRChat\\VRChat log folder (empty uses the default). Growing output_log*.txt files in that folder are watched in parallel.",
     "powerSection": "Power",
     "appSection": "Application",
+    "appVersion": "Version {version}",
     "closeToTray": "Close to system tray",
     "closeToTrayHint": "The close button hides the window to the system tray instead of quitting. Automation and log watchers keep running (Windows only). Turn off to quit when closing.",
     "suppressSleep": "Suppress sleep while VRChat is running",

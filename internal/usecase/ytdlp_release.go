@@ -13,12 +13,12 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"vrchat-tweaker/internal/appversion"
 )
 
 // DefaultYTDLPReleasesLatestURL is the GitHub API URL for the latest yt-dlp release.
 const DefaultYTDLPReleasesLatestURL = "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest"
-
-const userAgentGitHub = "VRChatTweaker/1.0.0 (+https://github.com/JO3QMA/vrctweaker)"
 
 const ytdlpExeName = "yt-dlp.exe"
 
@@ -139,7 +139,7 @@ func (u *YTDLPUpdater) FetchLatestRelease(ctx context.Context) (YTDLPReleaseInfo
 		return YTDLPReleaseInfo{}, err
 	}
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", userAgentGitHub)
+	req.Header.Set("User-Agent", appversion.UserAgent())
 
 	resp, err := u.httpClient().Do(req)
 	if err != nil {
@@ -292,7 +292,7 @@ func downloadToFile(ctx context.Context, client *http.Client, url, dest string) 
 	if err != nil {
 		return err
 	}
-	req.Header.Set("User-Agent", userAgentGitHub)
+	req.Header.Set("User-Agent", appversion.UserAgent())
 
 	resp, err := client.Do(req)
 	if err != nil {

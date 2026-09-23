@@ -68,6 +68,7 @@ export function withSettingsWails(preset: SettingsViewWailsPreset): Decorator {
       SetSuppressSleepWhileVRChat: (_on: boolean) => Promise.resolve(),
       GetCloseToTray: () => Promise.resolve(true),
       SetCloseToTray: (_on: boolean) => Promise.resolve(),
+      GetAppVersion: () => Promise.resolve("0.1.0"),
       RequestClose: () => Promise.resolve(),
       ValidatePath: (_path: string) => Promise.resolve(true),
       ValidateOutputLogPath: (_path: string) => Promise.resolve(true),
