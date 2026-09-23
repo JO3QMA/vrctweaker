@@ -73,7 +73,7 @@ describe("VrcUserCacheDetail", () => {
         username: "detail_user",
         bio: "Hello\nWorld",
         statusDescription: "Building worlds",
-        bioLinksJson: '["https://example.com/a","https://example.com/b"]',
+        bioLinksJson: '["https://example.com/a","https://twitter.com/user"]',
       }),
     );
     await flushPromises();
@@ -81,10 +81,13 @@ describe("VrcUserCacheDetail", () => {
     expect(wrapper.find(".profile-handle").text()).toBe("@detail_user");
     expect(wrapper.find(".profile-bio").text()).toBe("Hello\nWorld");
     expect(wrapper.find(".profile-status-desc").text()).toBe("Building worlds");
-    const links = wrapper.findAll(".profile-bio-links a");
+    const links = wrapper.findAll('[data-testid="bio-link-chip"]');
     expect(links).toHaveLength(2);
     expect(links[0]?.attributes("href")).toBe("https://example.com/a");
-    expect(links[1]?.text()).toBe("https://example.com/b");
+    expect(links[0]?.attributes("data-site")).toBe("link");
+    expect(links[0]?.text()).toContain("example.com");
+    expect(links[1]?.attributes("data-site")).toBe("twitter");
+    expect(links[1]?.text()).toContain("X");
   });
 
   it("emits favoriteChange when favorite checkbox toggles", async () => {
@@ -258,9 +261,10 @@ describe("VrcUserCacheDetail", () => {
     await flushPromises();
 
     const text = wrapper.find(".el-descriptions").text();
-    expect(text).toContain("2025-01-01T00:00:00Z");
-    expect(text).toContain("2025-01-02T00:00:00Z");
-    expect(text).toContain("2025-01-03T00:00:00Z");
+    expect(text).not.toContain("2025-01-01T00:00:00Z");
+    expect(text).not.toContain("2025-01-02T00:00:00Z");
+    expect(text).not.toContain("2025-01-03T00:00:00Z");
+    expect(text).toMatch(/2025/);
     expect(text).toContain("fk_abc");
     expect(wrapper.find('a[href="https://cdn/avatar-big.png"]').exists()).toBe(
       true,

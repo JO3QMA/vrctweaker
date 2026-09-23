@@ -36,8 +36,9 @@ export const sampleFriendsList: UserCacheDTO[] = [
     statusDescription: "イベントワールド（ダミー）",
     bio: "VRChat 中心に活動しています。\n気軽に Join してください（ダミー文面）。",
     bioLinksJson: JSON.stringify([
-      "https://example.invalid/social/profile-join",
-      "https://example.invalid/link/booth-dummy",
+      "https://twitter.com/sample_user",
+      "https://booth.pm/items/1234567",
+      "https://misskey.io/@sample",
     ]),
     location:
       "wrld_aaaaaaaa-bbbb-4ccc-dddd-eeeeeeeeeeee:12345~group(grp_00000000-0000-4000-8000-000000000001)~groupAccessType(public)",
