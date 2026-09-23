@@ -38,6 +38,7 @@ func ParseProductVersionFromWailsJSON(data []byte) (string, error) {
 }
 
 // ApplyWailsJSON sets Version from embedded wails.json when productVersion is present.
+// On JSON parse error it returns the error and leaves Version unchanged (default "dev").
 func ApplyWailsJSON(data []byte) error {
 	ver, err := ParseProductVersionFromWailsJSON(data)
 	if err != nil {

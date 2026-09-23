@@ -10,6 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"vrchat-tweaker/internal/appversion"
 )
 
 func TestYtdlpExeAssetFromReleaseJSON(t *testing.T) {
@@ -69,8 +71,10 @@ func TestFetchLatestRelease_httptest(t *testing.T) {
   ]
 }`
 	var srvURL string
+	var gotUA string
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/latest", func(w http.ResponseWriter, r *http.Request) {
+		gotUA = r.Header.Get("User-Agent")
 		body := strings.ReplaceAll(relJSON, "PLACEHOLDER", srvURL+"/bin/yt-dlp.exe")
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(body))
@@ -92,6 +96,10 @@ func TestFetchLatestRelease_httptest(t *testing.T) {
 	}
 	if !strings.HasSuffix(info.DownloadURL, "/bin/yt-dlp.exe") {
 		t.Fatalf("dl %q", info.DownloadURL)
+	}
+	wantUA := appversion.UserAgent()
+	if gotUA != wantUA {
+		t.Fatalf("User-Agent: got %q, want %q", gotUA, wantUA)
 	}
 }
 
