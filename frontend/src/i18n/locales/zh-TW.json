@@ -408,6 +408,8 @@
     "powerSection": "電源",
     "appSection": "應用程式",
     "appVersion": "版本 {version}",
+    "unofficialDisclaimer": "VRChat Tweaker 並非 VRChat 官方產品，與 VRChat Inc. 無任何關聯，屬非官方工具。",
+    "dataStorageNote": "登入資訊會保存在 Windows 憑證管理器等位置。應用程式資料庫與設定保存在 %AppData%\\Roaming\\vrchat-tweaker\\。",
     "closeToTray": "關閉時縮到系統匣",
     "closeToTrayHint": "按關閉按鈕時不結束程式，改為常駐系統匣。自動化與日誌監看會繼續（僅 Windows）。關閉此選項則關閉時結束程式。",
     "suppressSleep": "VRChat 執行時防止睡眠",

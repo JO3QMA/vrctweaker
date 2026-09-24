@@ -207,6 +207,22 @@
       >
         {{ t("settings.appVersion", { version: appVersion }) }}
       </p>
+      <el-text
+        type="info"
+        size="small"
+        class="hint block-hint app-meta-note"
+        data-testid="settings-app-disclaimer"
+      >
+        {{ t("settings.unofficialDisclaimer") }}
+      </el-text>
+      <el-text
+        type="info"
+        size="small"
+        class="hint block-hint app-meta-note"
+        data-testid="settings-app-data-storage"
+      >
+        {{ t("settings.dataStorageNote") }}
+      </el-text>
       <div class="setting-row power-setting-row">
         <div class="power-toggle-label">
           <span>{{ t("settings.closeToTray") }}</span>
@@ -877,8 +893,14 @@ function doClearFriendsCache() {
 }
 
 .app-version-line {
-  margin: 0 0 var(--space-block);
+  margin: 0 0 var(--space-inline-tight);
   color: var(--color-text-secondary);
+}
+
+.app-meta-note {
+  margin-top: 0;
+  margin-bottom: var(--space-block);
+  max-width: 42rem;
 }
 
 .power-setting-row {

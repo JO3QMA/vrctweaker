@@ -408,6 +408,8 @@
     "powerSection": "電源",
     "appSection": "アプリ",
     "appVersion": "バージョン {version}",
+    "unofficialDisclaimer": "VRChat Tweaker は VRChat 公式の製品ではなく、VRChat 株式会社とは無関係の非公式ツールです。",
+    "dataStorageNote": "ログイン情報は Windows の資格情報ストア等に保存されます。アプリのデータベースと設定は %AppData%\\Roaming\\vrchat-tweaker\\ に保存されます。",
     "closeToTray": "閉じるときにタスクトレイに格納",
     "closeToTrayHint": "ウィンドウの×ボタンで終了せずタスクトレイに常駐します。オートメーションやログ監視は継続します（Windows のみ）。オフにすると閉じる操作で終了します。",
     "suppressSleep": "VRChat 起動中はスリープを抑制",
