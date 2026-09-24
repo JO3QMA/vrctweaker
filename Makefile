@@ -3,7 +3,9 @@
 
 LEFTHOOK_VERSION ?= v2.1.12
 
-.PHONY: all build build-native build-windows build-front build-back dev-wails lint fmt test test-e2e setup-e2e setup-hooks link-var clean help
+.PHONY: all build build-native build-windows build-front build-back dev-wails lint fmt test test-e2e setup-e2e setup-hooks link-var clean help package-windows release-zip
+
+RELEASE_DIST ?= dist
 
 # デフォルトターゲット
 all: build
@@ -21,6 +23,13 @@ build-native:
 ## Windows 版のみビルド（linux/WSL からは mingw-w64 が必要）
 build-windows:
 	wails build -platform windows/amd64
+
+## Windows 頒布 zip（CI と同じレイアウト: exe + LICENSE + README.txt + checksums.txt）
+package-windows: build-windows
+	mkdir -p $(RELEASE_DIST)
+	go run ./cmd/package-windows --root $(CURDIR) --exe build/bin/vrchat-tweaker.exe --out $(RELEASE_DIST)
+
+release-zip: package-windows
 
 ## フロントエンドのみビルド
 build-front:
@@ -119,6 +128,8 @@ help:
 	@echo "  make build         - フルビルド（native + Windows）"
 	@echo "  make build-native  - ネイティブプラットフォームのみビルド"
 	@echo "  make build-windows - Windows 版のみビルド"
+	@echo "  make package-windows - Windows zip を dist/ に生成（build-windows 含む）"
+	@echo "  make release-zip   - package-windows のエイリアス"
 	@echo "  make build-front   - フロントエンドのみビルド"
 	@echo "  make build-back    - バックエンド（Go）のみビルド"
 	@echo "  make dev-wails     - Wails dev（xvfb 付き・ヘッドレス向け）"
