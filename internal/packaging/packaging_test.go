@@ -68,6 +68,20 @@ func TestReleaseNotesFromChangelog(t *testing.T) {
 	}
 }
 
+func TestReleaseNotesFromChangelog_CRLF(t *testing.T) {
+	const cl = "## [0.2.0] - 2026-01-01\r\n\r\n### Added\r\n- crlf-line\r\n"
+	notes, err := ReleaseNotesFromChangelog([]byte(cl), "0.2.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(notes, "\r") {
+		t.Fatalf("unexpected CR in notes: %q", notes)
+	}
+	if !strings.Contains(notes, "crlf-line") {
+		t.Fatalf("notes %q", notes)
+	}
+}
+
 func TestBuildWindowsReleaseZip_layout(t *testing.T) {
 	dir := t.TempDir()
 	exePath := filepath.Join(dir, "app.exe")

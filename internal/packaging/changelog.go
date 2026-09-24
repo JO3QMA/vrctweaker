@@ -11,7 +11,9 @@ func ReleaseNotesFromChangelog(data []byte, version string) (string, error) {
 	if ver == "" {
 		return "", fmt.Errorf("packaging: changelog version is required")
 	}
-	lines := strings.Split(string(data), "\n")
+	normalized := strings.ReplaceAll(string(data), "\r\n", "\n")
+	normalized = strings.ReplaceAll(normalized, "\r", "\n")
+	lines := strings.Split(normalized, "\n")
 	var body []string
 	capturing := false
 	for _, line := range lines {

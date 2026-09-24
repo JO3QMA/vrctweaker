@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -73,6 +74,37 @@ func FormatChecksumsTXT(files map[string][]byte) string {
 	return b.String()
 }
 
+func formatChecksumsFromHex(nameToHash map[string]string) string {
+	names := make([]string, 0, len(nameToHash))
+	for name := range nameToHash {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	var b strings.Builder
+	for _, name := range names {
+		b.WriteString(nameToHash[name])
+		b.WriteString("  ")
+		b.WriteString(name)
+		b.WriteByte('\n')
+	}
+	return b.String()
+}
+
+func sha256HexFile(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer func() {
+		_ = f.Close()
+	}()
+	h := sha256.New()
+	if _, copyErr := io.Copy(h, f); copyErr != nil {
+		return "", copyErr
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
 // BuildWindowsReleaseInput describes inputs for BuildWindowsReleaseZip.
 type BuildWindowsReleaseInput struct {
 	Version     string
@@ -87,41 +119,37 @@ func BuildWindowsReleaseZip(in BuildWindowsReleaseInput) (zipSHA256 string, err 
 	if strings.TrimSpace(in.Version) == "" {
 		return "", fmt.Errorf("packaging: version is required")
 	}
-	exeData, err := os.ReadFile(in.ExePath)
+	exeHash, err := sha256HexFile(in.ExePath)
 	if err != nil {
-		return "", fmt.Errorf("packaging: read exe: %w", err)
+		return "", fmt.Errorf("packaging: hash exe: %w", err)
 	}
-	licenseData, err := os.ReadFile(in.LicensePath)
+	licenseHash, err := sha256HexFile(in.LicensePath)
 	if err != nil {
-		return "", fmt.Errorf("packaging: read license: %w", err)
+		return "", fmt.Errorf("packaging: hash license: %w", err)
 	}
 
 	readme := UserReadmeTXT(in.Version)
-	checksums := FormatChecksumsTXT(map[string][]byte{
-		WindowsExeName: exeData,
-		"LICENSE":      licenseData,
-		ReadmeFileName: []byte(readme),
+	readmeSum := sha256.Sum256([]byte(readme))
+	readmeHash := hex.EncodeToString(readmeSum[:])
+	checksums := formatChecksumsFromHex(map[string]string{
+		WindowsExeName: exeHash,
+		"LICENSE":      licenseHash,
+		ReadmeFileName: readmeHash,
 	})
 
 	if mkdirErr := os.MkdirAll(filepath.Dir(in.OutputZip), 0o755); mkdirErr != nil {
 		return "", mkdirErr
 	}
 	tmpZip := in.OutputZip + ".tmp"
-	if writeErr := writeZip(tmpZip, map[string][]byte{
-		WindowsExeName:    exeData,
-		"LICENSE":         licenseData,
-		ReadmeFileName:    []byte(readme),
-		ChecksumsFileName: []byte(checksums),
-	}); writeErr != nil {
+	zipSHA256, writeErr := writeReleaseZip(tmpZip, []releaseZipEntry{
+		{name: WindowsExeName, path: in.ExePath},
+		{name: "LICENSE", path: in.LicensePath},
+		{name: ReadmeFileName, data: []byte(readme)},
+		{name: ChecksumsFileName, data: []byte(checksums)},
+	})
+	if writeErr != nil {
 		return "", writeErr
 	}
-	zipBytes, readErr := os.ReadFile(tmpZip)
-	if readErr != nil {
-		_ = os.Remove(tmpZip)
-		return "", readErr
-	}
-	sum := sha256.Sum256(zipBytes)
-	zipSHA256 = hex.EncodeToString(sum[:])
 	if renameErr := os.Rename(tmpZip, in.OutputZip); renameErr != nil {
 		_ = os.Remove(tmpZip)
 		return "", renameErr
@@ -129,46 +157,79 @@ func BuildWindowsReleaseZip(in BuildWindowsReleaseInput) (zipSHA256 string, err 
 	return zipSHA256, nil
 }
 
-func writeZip(path string, files map[string][]byte) error {
+type releaseZipEntry struct {
+	name string
+	path string
+	data []byte
+}
+
+func writeReleaseZip(path string, entries []releaseZipEntry) (zipSHA256 string, err error) {
 	f, err := os.Create(path)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer func() {
 		_ = f.Close()
 	}()
-	zw := zip.NewWriter(f)
-	names := make([]string, 0, len(files))
-	for name := range files {
-		names = append(names, name)
+
+	zipHasher := sha256.New()
+	mw := io.MultiWriter(f, zipHasher)
+	zw := zip.NewWriter(mw)
+
+	names := make([]string, 0, len(entries))
+	for _, e := range entries {
+		names = append(names, e.name)
 	}
 	sort.Strings(names)
+
 	for _, name := range names {
+		var entry releaseZipEntry
+		for _, e := range entries {
+			if e.name == name {
+				entry = e
+				break
+			}
+		}
 		w, createErr := zw.Create(name)
 		if createErr != nil {
 			_ = zw.Close()
 			_ = os.Remove(path)
-			return createErr
+			return "", createErr
 		}
-		if _, writeErr := w.Write(files[name]); writeErr != nil {
+		if entry.data != nil {
+			if _, writeErr := w.Write(entry.data); writeErr != nil {
+				_ = zw.Close()
+				_ = os.Remove(path)
+				return "", writeErr
+			}
+			continue
+		}
+		src, openErr := os.Open(entry.path)
+		if openErr != nil {
 			_ = zw.Close()
 			_ = os.Remove(path)
-			return writeErr
+			return "", openErr
+		}
+		_, copyErr := io.Copy(w, src)
+		closeErr := src.Close()
+		if copyErr != nil {
+			_ = zw.Close()
+			_ = os.Remove(path)
+			return "", copyErr
+		}
+		if closeErr != nil {
+			_ = zw.Close()
+			_ = os.Remove(path)
+			return "", closeErr
 		}
 	}
 	if closeErr := zw.Close(); closeErr != nil {
 		_ = os.Remove(path)
-		return closeErr
+		return "", closeErr
 	}
-	return nil
-}
-
-// FileSHA256Hex returns the SHA256 hex digest of a file.
-func FileSHA256Hex(path string) (string, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return "", err
+	if syncErr := f.Sync(); syncErr != nil {
+		_ = os.Remove(path)
+		return "", syncErr
 	}
-	sum := sha256.Sum256(data)
-	return hex.EncodeToString(sum[:]), nil
+	return hex.EncodeToString(zipHasher.Sum(nil)), nil
 }

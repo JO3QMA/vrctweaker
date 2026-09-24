@@ -117,7 +117,7 @@ install-front:
 
 ## クリーン（ビルド成果物の削除）
 clean:
-	rm -rf frontend/dist build/bin
+	rm -rf frontend/dist build/bin $(RELEASE_DIST)
 	go clean -cache
 
 ## ヘルプ
