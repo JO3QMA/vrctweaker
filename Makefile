@@ -2,8 +2,9 @@
 # フルビルド、front/backendビルド、lint、fmt、test、e2e を実行
 
 LEFTHOOK_VERSION ?= v2.1.12
+WAILS_VERSION ?= v2.12.0
 
-.PHONY: all build build-native build-windows build-front build-back dev-wails lint fmt test test-e2e setup-e2e setup-hooks link-var clean help package-windows release-zip
+.PHONY: all build build-native build-windows build-front build-back dev-wails ensure-wails lint fmt test test-e2e setup-e2e setup-hooks link-var clean help package-windows release-zip
 
 RELEASE_DIST ?= dist
 
@@ -16,12 +17,16 @@ all: build
 ## Linux/WSL から Windows クロスコンパイルには mingw-w64 が必要
 build: build-native build-windows
 
+## Wails CLI（未インストール時のみ go install）
+ensure-wails:
+	@command -v wails >/dev/null 2>&1 || go install github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION)
+
 ## ネイティブプラットフォームのみビルド
-build-native:
+build-native: ensure-wails
 	wails build
 
 ## Windows 版のみビルド（linux/WSL からは mingw-w64 が必要）
-build-windows:
+build-windows: ensure-wails
 	wails build -platform windows/amd64
 
 ## Windows 頒布 zip（CI と同じレイアウト: exe + LICENSE + README.txt + checksums.txt）
@@ -41,7 +46,7 @@ build-back:
 
 ## Wails 開発サーバ（DISPLAY 無し環境向け: DevContainer 等では xvfb で仮想 X を用意）
 ## ブラウザは VSCode のポート転送で http://localhost:34115 を開く
-dev-wails:
+dev-wails: ensure-wails
 	xvfb-run -a wails dev
 
 # --- Lint ---
@@ -79,7 +84,7 @@ test: test-back test-front
 
 ## バックエンドテスト（go test）
 test-back:
-	go test -v -race -cover ./internal/...
+	go test -v -race -cover ./cmd/... ./internal/...
 
 ## フロントエンドテスト（Vitest）
 test-front:

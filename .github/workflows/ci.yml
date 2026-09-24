@@ -74,7 +74,10 @@ jobs:
           version: v2.11.4
 
       - name: Test
-        run: go test -v -race -cover ./internal/...
+        run: go test -v -race -cover ./cmd/... ./internal/...
+
+      - name: Build cmd packages
+        run: go build ./cmd/...
 
   vue:
     name: Vue Frontend

@@ -29,6 +29,9 @@ func main() {
 	if version == "" {
 		fail("wails.json info.productVersion is empty")
 	}
+	if err := appversion.ValidateProductVersion(version); err != nil {
+		fail("%v", err)
+	}
 
 	exePath := *exe
 	if !filepath.IsAbs(exePath) {
@@ -43,7 +46,11 @@ func main() {
 		out = filepath.Join(*root, out)
 	}
 
-	zipName := packaging.WindowsZipBaseName(version) + ".zip"
+	baseName, err := packaging.WindowsZipBaseName(version)
+	if err != nil {
+		fail("%v", err)
+	}
+	zipName := baseName + ".zip"
 	zipPath := filepath.Join(out, zipName)
 	zipSHA, err := packaging.BuildWindowsReleaseZip(packaging.BuildWindowsReleaseInput{
 		Version:     version,

@@ -28,6 +28,17 @@ func TestParseProductVersionFromWailsJSON(t *testing.T) {
 	}
 }
 
+func TestValidateProductVersion(t *testing.T) {
+	if err := ValidateProductVersion("1.0.0"); err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []string{"", "../x", "a/b", "1..2"} {
+		if err := ValidateProductVersion(bad); err == nil {
+			t.Fatalf("expected error for %q", bad)
+		}
+	}
+}
+
 func TestParseProductVersionFromWailsJSON_missing(t *testing.T) {
 	got, err := ParseProductVersionFromWailsJSON([]byte(`{"info":{}}`))
 	if err != nil {

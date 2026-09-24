@@ -6,6 +6,7 @@
 
 1. `wails.json` の `info.productVersion` と `CHANGELOG.md` の版セクションを更新し、main にマージする。
 2. タグ `v<productVersion>` を push する（例: `v0.1.0`）。`.github/workflows/release.yml` が走る。
+   - サードパーティ Action は **コミット SHA 固定**（`release.yml` 内コメントのタグ名で更新）。現状: `pnpm/action-setup` v6、`softprops/action-gh-release` v3.0.3。
 3. CI が `make test` 相当（Go + フロント Vitest）のあと、**Windows のみ** ビルドし zip を作成する。
 4. GitHub に **draft Release** が作られる（従来どおり）。Release ノートに **zip の SHA256** と CHANGELOG 抜粋が入る。
 5. 下記スモークを **draft の zip** で実施し、問題なければ Release を **Publish** する。

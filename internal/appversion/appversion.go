@@ -24,6 +24,21 @@ func UserAgent() string {
 	return fmt.Sprintf("VRChat Tweaker/%s (+%s)", Version, issuesURL)
 }
 
+// ValidateProductVersion rejects versions that could escape intended archive naming.
+func ValidateProductVersion(version string) error {
+	v := strings.TrimSpace(version)
+	if v == "" {
+		return fmt.Errorf("appversion: productVersion is empty")
+	}
+	if strings.Contains(v, "..") {
+		return fmt.Errorf("appversion: productVersion must not contain \"..\"")
+	}
+	if strings.ContainsAny(v, `/\`) {
+		return fmt.Errorf("appversion: productVersion must not contain path separators")
+	}
+	return nil
+}
+
 // ParseProductVersionFromWailsJSON reads info.productVersion from wails.json bytes.
 func ParseProductVersionFromWailsJSON(data []byte) (string, error) {
 	var cfg struct {

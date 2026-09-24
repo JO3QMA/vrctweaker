@@ -6,10 +6,13 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"vrchat-tweaker/internal/appversion"
 )
 
 const (
@@ -21,12 +24,12 @@ const (
 )
 
 // WindowsZipBaseName returns the archive file base name (without .zip) for a release version.
-func WindowsZipBaseName(version string) string {
-	v := strings.TrimSpace(version)
-	if v == "" {
-		v = "unknown"
+func WindowsZipBaseName(version string) (string, error) {
+	if err := appversion.ValidateProductVersion(version); err != nil {
+		return "", err
 	}
-	return fmt.Sprintf("vrchat-tweaker-v%s-windows-amd64", v)
+	v := strings.TrimSpace(version)
+	return fmt.Sprintf("vrchat-tweaker-v%s-windows-amd64", v), nil
 }
 
 // UserReadmeTXT is the user-facing README shipped inside the Windows zip.
@@ -74,37 +77,6 @@ func FormatChecksumsTXT(files map[string][]byte) string {
 	return b.String()
 }
 
-func formatChecksumsFromHex(nameToHash map[string]string) string {
-	names := make([]string, 0, len(nameToHash))
-	for name := range nameToHash {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	var b strings.Builder
-	for _, name := range names {
-		b.WriteString(nameToHash[name])
-		b.WriteString("  ")
-		b.WriteString(name)
-		b.WriteByte('\n')
-	}
-	return b.String()
-}
-
-func sha256HexFile(path string) (string, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer func() {
-		_ = f.Close()
-	}()
-	h := sha256.New()
-	if _, copyErr := io.Copy(h, f); copyErr != nil {
-		return "", copyErr
-	}
-	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
 // BuildWindowsReleaseInput describes inputs for BuildWindowsReleaseZip.
 type BuildWindowsReleaseInput struct {
 	Version     string
@@ -116,25 +88,23 @@ type BuildWindowsReleaseInput struct {
 // BuildWindowsReleaseZip stages README.txt and checksums.txt, then writes the release zip.
 // It returns the SHA256 hex digest of the zip file.
 func BuildWindowsReleaseZip(in BuildWindowsReleaseInput) (zipSHA256 string, err error) {
-	if strings.TrimSpace(in.Version) == "" {
-		return "", fmt.Errorf("packaging: version is required")
+	if err := appversion.ValidateProductVersion(in.Version); err != nil {
+		return "", err
 	}
-	exeHash, err := sha256HexFile(in.ExePath)
+	exeData, err := os.ReadFile(in.ExePath)
 	if err != nil {
-		return "", fmt.Errorf("packaging: hash exe: %w", err)
+		return "", fmt.Errorf("packaging: read exe: %w", err)
 	}
-	licenseHash, err := sha256HexFile(in.LicensePath)
+	licenseData, err := os.ReadFile(in.LicensePath)
 	if err != nil {
-		return "", fmt.Errorf("packaging: hash license: %w", err)
+		return "", fmt.Errorf("packaging: read license: %w", err)
 	}
 
 	readme := UserReadmeTXT(in.Version)
-	readmeSum := sha256.Sum256([]byte(readme))
-	readmeHash := hex.EncodeToString(readmeSum[:])
-	checksums := formatChecksumsFromHex(map[string]string{
-		WindowsExeName: exeHash,
-		"LICENSE":      licenseHash,
-		ReadmeFileName: readmeHash,
+	checksums := FormatChecksumsTXT(map[string][]byte{
+		WindowsExeName: exeData,
+		"LICENSE":      licenseData,
+		ReadmeFileName: []byte(readme),
 	})
 
 	if mkdirErr := os.MkdirAll(filepath.Dir(in.OutputZip), 0o755); mkdirErr != nil {
@@ -142,8 +112,8 @@ func BuildWindowsReleaseZip(in BuildWindowsReleaseInput) (zipSHA256 string, err 
 	}
 	tmpZip := in.OutputZip + ".tmp"
 	zipSHA256, writeErr := writeReleaseZip(tmpZip, []releaseZipEntry{
-		{name: WindowsExeName, path: in.ExePath},
-		{name: "LICENSE", path: in.LicensePath},
+		{name: WindowsExeName, data: exeData},
+		{name: "LICENSE", data: licenseData},
 		{name: ReadmeFileName, data: []byte(readme)},
 		{name: ChecksumsFileName, data: []byte(checksums)},
 	})
@@ -159,8 +129,14 @@ func BuildWindowsReleaseZip(in BuildWindowsReleaseInput) (zipSHA256 string, err 
 
 type releaseZipEntry struct {
 	name string
-	path string
 	data []byte
+}
+
+func zipEntryFileMode(name string) fs.FileMode {
+	if strings.EqualFold(name, WindowsExeName) || strings.HasSuffix(strings.ToLower(name), ".exe") {
+		return 0o755
+	}
+	return 0o644
 }
 
 func writeReleaseZip(path string, entries []releaseZipEntry) (zipSHA256 string, err error) {
@@ -190,37 +166,21 @@ func writeReleaseZip(path string, entries []releaseZipEntry) (zipSHA256 string, 
 				break
 			}
 		}
-		w, createErr := zw.Create(name)
+		hdr := &zip.FileHeader{
+			Name:   name,
+			Method: zip.Deflate,
+		}
+		hdr.SetMode(zipEntryFileMode(name))
+		w, createErr := zw.CreateHeader(hdr)
 		if createErr != nil {
 			_ = zw.Close()
 			_ = os.Remove(path)
 			return "", createErr
 		}
-		if entry.data != nil {
-			if _, writeErr := w.Write(entry.data); writeErr != nil {
-				_ = zw.Close()
-				_ = os.Remove(path)
-				return "", writeErr
-			}
-			continue
-		}
-		src, openErr := os.Open(entry.path)
-		if openErr != nil {
+		if _, writeErr := w.Write(entry.data); writeErr != nil {
 			_ = zw.Close()
 			_ = os.Remove(path)
-			return "", openErr
-		}
-		_, copyErr := io.Copy(w, src)
-		closeErr := src.Close()
-		if copyErr != nil {
-			_ = zw.Close()
-			_ = os.Remove(path)
-			return "", copyErr
-		}
-		if closeErr != nil {
-			_ = zw.Close()
-			_ = os.Remove(path)
-			return "", closeErr
+			return "", writeErr
 		}
 	}
 	if closeErr := zw.Close(); closeErr != nil {

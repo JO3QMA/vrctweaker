@@ -6,7 +6,7 @@ on:
       - 'v*'
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: release-${{ github.ref }}
@@ -27,9 +27,7 @@ jobs:
           go-version: '1.25'
           cache-dependency-path: go.sum
 
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 9
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
 
       - uses: actions/setup-node@v7
         with:
@@ -51,7 +49,10 @@ jobs:
         run: cd frontend && pnpm install --frozen-lockfile && pnpm run build
 
       - name: Test
-        run: go test -v -race -cover ./internal/...
+        run: go test -v -race -cover ./cmd/... ./internal/...
+
+      - name: Build cmd packages
+        run: go build ./cmd/...
 
   test-vue:
     name: Test (Frontend)
@@ -67,9 +68,7 @@ jobs:
           go-version: '1.25'
           cache-dependency-path: go.sum
 
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 9
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
 
       - uses: actions/setup-node@v7
         with:
@@ -98,6 +97,8 @@ jobs:
     needs: [test-go, test-vue]
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      contents: write
     env:
       GOMODCACHE: ${{ github.workspace }}/.gomodcache
     steps:
@@ -108,9 +109,7 @@ jobs:
           go-version: '1.25'
           cache-dependency-path: go.sum
 
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 9
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6
 
       - uses: actions/setup-node@v7
         with:
@@ -152,25 +151,24 @@ jobs:
       - name: Prepare release notes
         id: notes
         shell: bash
+        env:
+          RELEASE_VERSION: ${{ steps.package.outputs.version }}
+          ZIP_SHA256: ${{ steps.package.outputs.zip_sha256 }}
         run: |
           set -euo pipefail
-          VERSION="${{ steps.package.outputs.version }}"
+          VERSION="$RELEASE_VERSION"
           BODY="$RUNNER_TEMP/body.md"
           {
             echo "Windows zip for **VRChat Tweaker** v${VERSION}."
             echo ""
-            echo "**SHA256 (zip):** \`${{ steps.package.outputs.zip_sha256 }}\`"
+            echo "**SHA256 (zip):** \`${ZIP_SHA256}\`"
             echo ""
-            if go run ./cmd/release-notes --version "$VERSION" --changelog CHANGELOG.md; then
-              true
-            else
-              echo "_No CHANGELOG section for this version._"
-            fi
+            go run ./cmd/release-notes --version "$VERSION" --changelog CHANGELOG.md || echo "_No CHANGELOG section for this version._"
           } > "$BODY"
           echo "path=$BODY" >> "$GITHUB_OUTPUT"
 
       - name: Create Release
-        uses: softprops/action-gh-release@v5
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           draft: true
           body_path: ${{ steps.notes.outputs.path }}

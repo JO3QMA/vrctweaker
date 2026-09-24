@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,8 +39,20 @@ func TestFormatChecksumsTXT(t *testing.T) {
 }
 
 func TestWindowsZipBaseName(t *testing.T) {
-	if WindowsZipBaseName("0.1.0") != "vrchat-tweaker-v0.1.0-windows-amd64" {
-		t.Fatal(WindowsZipBaseName("0.1.0"))
+	got, err := WindowsZipBaseName("0.1.0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != "vrchat-tweaker-v0.1.0-windows-amd64" {
+		t.Fatal(got)
+	}
+}
+
+func TestWindowsZipBaseName_rejectsPathTraversal(t *testing.T) {
+	for _, ver := range []string{"../evil", "1.0/2", "1..0"} {
+		if _, err := WindowsZipBaseName(ver); err == nil {
+			t.Fatalf("expected error for version %q", ver)
+		}
 	}
 }
 
@@ -120,6 +133,18 @@ func TestBuildWindowsReleaseZip_layout(t *testing.T) {
 	for _, want := range []string{WindowsExeName, "LICENSE", ReadmeFileName, ChecksumsFileName} {
 		if !names[want] {
 			t.Fatalf("missing %q in zip, have %v", want, names)
+		}
+	}
+	for _, f := range r.File {
+		var wantMode fs.FileMode
+		switch f.Name {
+		case WindowsExeName:
+			wantMode = 0o755
+		default:
+			wantMode = 0o644
+		}
+		if f.Mode() != wantMode {
+			t.Fatalf("file %q mode %#o want %#o", f.Name, f.Mode(), wantMode)
 		}
 	}
 
