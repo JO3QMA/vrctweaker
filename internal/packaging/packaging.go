@@ -88,7 +88,7 @@ type BuildWindowsReleaseInput struct {
 // BuildWindowsReleaseZip stages README.txt and checksums.txt, then writes the release zip.
 // It returns the SHA256 hex digest of the zip file.
 func BuildWindowsReleaseZip(in BuildWindowsReleaseInput) (zipSHA256 string, err error) {
-	if err := appversion.ValidateProductVersion(in.Version); err != nil {
+	if err = appversion.ValidateProductVersion(in.Version); err != nil {
 		return "", err
 	}
 	exeData, err := os.ReadFile(in.ExePath)
