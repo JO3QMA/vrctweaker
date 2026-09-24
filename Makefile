@@ -2,8 +2,13 @@
 # フルビルド、front/backendビルド、lint、fmt、test、e2e を実行
 
 LEFTHOOK_VERSION ?= v2.1.12
+WAILS_VERSION ?= v2.12.0
 
-.PHONY: all build build-native build-windows build-front build-back dev-wails lint fmt test test-e2e setup-e2e setup-hooks link-var clean help
+export PATH := $(shell go env GOPATH)/bin:$(PATH)
+
+.PHONY: all build build-native build-windows build-front build-back dev-wails ensure-wails lint fmt test test-e2e setup-e2e setup-hooks link-var clean help package-windows release-zip
+
+RELEASE_DIST ?= dist
 
 # デフォルトターゲット
 all: build
@@ -14,13 +19,28 @@ all: build
 ## Linux/WSL から Windows クロスコンパイルには mingw-w64 が必要
 build: build-native build-windows
 
+## Wails CLI（未インストールまたはバージョン不一致時に go install）
+ensure-wails:
+	@if ! command -v wails >/dev/null 2>&1; then \
+		go install github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION); \
+	elif ! wails version 2>/dev/null | grep -Fq "$(WAILS_VERSION)"; then \
+		go install github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION); \
+	fi
+
 ## ネイティブプラットフォームのみビルド
-build-native:
+build-native: ensure-wails
 	wails build
 
 ## Windows 版のみビルド（linux/WSL からは mingw-w64 が必要）
-build-windows:
+build-windows: ensure-wails
 	wails build -platform windows/amd64
+
+## Windows 頒布 zip（CI と同じレイアウト: exe + LICENSE + README.txt + checksums.txt）
+package-windows: build-windows
+	mkdir -p $(RELEASE_DIST)
+	go run ./cmd/package-windows --root $(CURDIR) --exe build/bin/vrchat-tweaker.exe --out $(RELEASE_DIST)
+
+release-zip: package-windows
 
 ## フロントエンドのみビルド
 build-front:
@@ -32,7 +52,7 @@ build-back:
 
 ## Wails 開発サーバ（DISPLAY 無し環境向け: DevContainer 等では xvfb で仮想 X を用意）
 ## ブラウザは VSCode のポート転送で http://localhost:34115 を開く
-dev-wails:
+dev-wails: ensure-wails
 	xvfb-run -a wails dev
 
 # --- Lint ---
@@ -70,7 +90,7 @@ test: test-back test-front
 
 ## バックエンドテスト（go test）
 test-back:
-	go test -v -race -cover ./internal/...
+	go test -v -race -cover ./cmd/... ./internal/...
 
 ## フロントエンドテスト（Vitest）
 test-front:
@@ -108,7 +128,7 @@ install-front:
 
 ## クリーン（ビルド成果物の削除）
 clean:
-	rm -rf frontend/dist build/bin
+	rm -rf frontend/dist build/bin $(RELEASE_DIST)
 	go clean -cache
 
 ## ヘルプ
@@ -119,6 +139,8 @@ help:
 	@echo "  make build         - フルビルド（native + Windows）"
 	@echo "  make build-native  - ネイティブプラットフォームのみビルド"
 	@echo "  make build-windows - Windows 版のみビルド"
+	@echo "  make package-windows - Windows zip を dist/ に生成（build-windows 含む）"
+	@echo "  make release-zip   - package-windows のエイリアス"
 	@echo "  make build-front   - フロントエンドのみビルド"
 	@echo "  make build-back    - バックエンド（Go）のみビルド"
 	@echo "  make dev-wails     - Wails dev（xvfb 付き・ヘッドレス向け）"
