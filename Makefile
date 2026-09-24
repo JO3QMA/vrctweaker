@@ -4,6 +4,8 @@
 LEFTHOOK_VERSION ?= v2.1.12
 WAILS_VERSION ?= v2.12.0
 
+export PATH := $(shell go env GOPATH)/bin:$(PATH)
+
 .PHONY: all build build-native build-windows build-front build-back dev-wails ensure-wails lint fmt test test-e2e setup-e2e setup-hooks link-var clean help package-windows release-zip
 
 RELEASE_DIST ?= dist
@@ -17,9 +19,13 @@ all: build
 ## Linux/WSL から Windows クロスコンパイルには mingw-w64 が必要
 build: build-native build-windows
 
-## Wails CLI（未インストール時のみ go install）
+## Wails CLI（未インストールまたはバージョン不一致時に go install）
 ensure-wails:
-	@command -v wails >/dev/null 2>&1 || go install github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION)
+	@if ! command -v wails >/dev/null 2>&1; then \
+		go install github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION); \
+	elif ! wails version 2>/dev/null | grep -Fq "$(WAILS_VERSION)"; then \
+		go install github.com/wailsapp/wails/v2/cmd/wails@$(WAILS_VERSION); \
+	fi
 
 ## ネイティブプラットフォームのみビルド
 build-native: ensure-wails

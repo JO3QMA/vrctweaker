@@ -144,8 +144,17 @@ func writeReleaseZip(path string, entries []releaseZipEntry) (zipSHA256 string, 
 	if err != nil {
 		return "", err
 	}
+	keepFile := false
 	defer func() {
-		_ = f.Close()
+		closeErr := f.Close()
+		if closeErr != nil {
+			if err == nil {
+				err = closeErr
+			}
+		}
+		if !keepFile {
+			_ = os.Remove(path)
+		}
 	}()
 
 	zipHasher := sha256.New()
@@ -173,23 +182,18 @@ func writeReleaseZip(path string, entries []releaseZipEntry) (zipSHA256 string, 
 		hdr.SetMode(zipEntryFileMode(name))
 		w, createErr := zw.CreateHeader(hdr)
 		if createErr != nil {
-			_ = zw.Close()
-			_ = os.Remove(path)
 			return "", createErr
 		}
 		if _, writeErr := w.Write(entry.data); writeErr != nil {
-			_ = zw.Close()
-			_ = os.Remove(path)
 			return "", writeErr
 		}
 	}
 	if closeErr := zw.Close(); closeErr != nil {
-		_ = os.Remove(path)
 		return "", closeErr
 	}
 	if syncErr := f.Sync(); syncErr != nil {
-		_ = os.Remove(path)
 		return "", syncErr
 	}
+	keepFile = true
 	return hex.EncodeToString(zipHasher.Sum(nil)), nil
 }

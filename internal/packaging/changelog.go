@@ -1,9 +1,13 @@
 package packaging
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 )
+
+// ErrNoChangelogSection is returned when CHANGELOG.md has no section for the requested version.
+var ErrNoChangelogSection = errors.New("packaging: no changelog section for version")
 
 // ReleaseNotesFromChangelog extracts the section for version (e.g. "0.1.0") from CHANGELOG.md bytes.
 func ReleaseNotesFromChangelog(data []byte, version string) (string, error) {
@@ -36,7 +40,7 @@ func ReleaseNotesFromChangelog(data []byte, version string) (string, error) {
 		}
 	}
 	if !capturing {
-		return "", fmt.Errorf("packaging: no changelog section for version %q", ver)
+		return "", fmt.Errorf("%w %q", ErrNoChangelogSection, ver)
 	}
 	text := strings.TrimSpace(strings.Join(body, "\n"))
 	if text == "" {

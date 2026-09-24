@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"io"
 	"io/fs"
 	"os"
@@ -78,6 +79,13 @@ func TestReleaseNotesFromChangelog(t *testing.T) {
 	}
 	if strings.Contains(notes, "foo") {
 		t.Fatalf("unexpected unreleased section")
+	}
+}
+
+func TestReleaseNotesFromChangelog_missingSection(t *testing.T) {
+	_, err := ReleaseNotesFromChangelog([]byte("## [0.1.0]\n\n- x\n"), "9.9.9")
+	if !errors.Is(err, ErrNoChangelogSection) {
+		t.Fatalf("err = %v, want ErrNoChangelogSection", err)
 	}
 }
 
