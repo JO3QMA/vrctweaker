@@ -1,6 +1,6 @@
 module vrchat-tweaker
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/fsnotify/fsnotify v1.10.1
@@ -9,12 +9,12 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	github.com/tadvi/systray v0.0.0-20190226123456-11a2b8fa57af
-	github.com/wailsapp/wails/v2 v2.15.0
+	github.com/wailsapp/wails/v2 v2.16.0
 	github.com/yuin/gopher-lua v1.1.2
 	github.com/zalando/go-keyring v0.2.8
-	golang.org/x/image v0.45.0
-	golang.org/x/sys v0.47.0
-	modernc.org/sqlite v1.58.0
+	golang.org/x/image v0.46.0
+	golang.org/x/sys v0.48.0
+	modernc.org/sqlite v1.59.0
 )
 
 require (
@@ -52,8 +52,8 @@ require (
 	github.com/wailsapp/mimetype v1.4.1 // indirect
 	golang.org/x/crypto v0.54.0 // indirect
 	golang.org/x/net v0.57.0 // indirect
-	golang.org/x/text v0.41.0 // indirect
-	modernc.org/libc v1.75.6 // indirect
+	golang.org/x/text v0.42.0 // indirect
+	modernc.org/libc v1.75.7 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.12.1 // indirect
 )

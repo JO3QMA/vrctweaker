@@ -2,7 +2,7 @@
 # フルビルド、front/backendビルド、lint、fmt、test、e2e を実行
 
 LEFTHOOK_VERSION ?= v2.1.12
-WAILS_VERSION ?= v2.12.0
+WAILS_VERSION ?= $(shell tr -d ' \n\r' < var/wails-cli-version)
 
 export PATH := $(shell go env GOPATH)/bin:$(PATH)
 
