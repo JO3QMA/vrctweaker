@@ -122,6 +122,25 @@ func TestAutomation_runLog_displayNameNoUserId(t *testing.T) {
 	}
 }
 
+func TestAutomation_runLog_friendLeft_displayNameNoUserId(t *testing.T) {
+	ctx := context.Background()
+	repo := &mockAutomationItemRepo{}
+	repo.items = []*automation.AutomationItem{{
+		ID: "a", Name: "f", Kind: automation.KindRule, IsEnabled: true,
+		TriggerType: automation.EventFriendLeft,
+		ActionsJSON: `[{"type":"change_status","payload":{"status":"busy"}}]`,
+	}}
+	uc := newTestAutomationUseCase(repo, &mockStatusSetter{})
+	uc.displayNamer = staticDisplayNamer("Friend B")
+	if err := uc.OnFriendLeft(ctx, "usr_secret"); err != nil {
+		t.Fatal(err)
+	}
+	logs := uc.GetRunLog()
+	if len(logs) != 1 || logs[0].ContextLabel != "Friend B" {
+		t.Fatalf("logs %#v", logs)
+	}
+}
+
 type staticDisplayNamer string
 
 func (s staticDisplayNamer) DisplayNameFor(context.Context, string) string {

@@ -99,6 +99,15 @@ func (uc *AutomationUseCase) RuntimeStatus() automation.RuntimeStatus {
 
 // OnFriendJoined enqueues a friend_joined event (live tail only).
 func (uc *AutomationUseCase) OnFriendJoined(ctx context.Context, vrcUserID string) error {
+	return uc.publishFriendEncounterEvent(ctx, automation.EventFriendJoined, vrcUserID)
+}
+
+// OnFriendLeft enqueues a friend_left event when a friend leaves the instance (live tail only).
+func (uc *AutomationUseCase) OnFriendLeft(ctx context.Context, vrcUserID string) error {
+	return uc.publishFriendEncounterEvent(ctx, automation.EventFriendLeft, vrcUserID)
+}
+
+func (uc *AutomationUseCase) publishFriendEncounterEvent(ctx context.Context, typ, vrcUserID string) error {
 	if vrcUserID == "" {
 		return nil
 	}
@@ -106,7 +115,7 @@ func (uc *AutomationUseCase) OnFriendJoined(ctx context.Context, vrcUserID strin
 		return nil
 	}
 	ev := automation.Event{
-		Type: automation.EventFriendJoined,
+		Type: typ,
 		Payload: map[string]interface{}{
 			"vrc_user_id": vrcUserID,
 		},

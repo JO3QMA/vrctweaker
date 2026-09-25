@@ -317,6 +317,7 @@
     "delete": "삭제",
     "cancel": "취소",
     "triggerFriendJoined": "친구 참가 시",
+    "triggerFriendLeft": "친구 퇴장 시",
     "triggerSchedule": "스케줄 (매분 평가)",
     "triggerVrchatProcess": "VRChat 프로세스 상태 변화",
     "triggerAfk": "AFK 감지 시",

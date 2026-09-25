@@ -317,6 +317,7 @@
     "delete": "刪除",
     "cancel": "取消",
     "triggerFriendJoined": "好友加入時",
+    "triggerFriendLeft": "好友離開時",
     "triggerSchedule": "排程（每分鐘評估）",
     "triggerVrchatProcess": "VRChat 程序狀態變化",
     "triggerAfk": "偵測到 AFK 時",

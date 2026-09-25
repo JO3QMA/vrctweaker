@@ -167,4 +167,16 @@ describe("editorToDto", () => {
       { type: "friend_is", vrcUserId: "usr_x" },
     ]);
   });
+
+  it("keeps friend_is for friend_left", () => {
+    const dto = editorToDto(
+      baseEditor({
+        triggerType: "friend_left",
+        friendUserId: "usr_y",
+      }),
+    );
+    expect(JSON.parse(dto.conditionsJson ?? "[]")).toEqual([
+      { type: "friend_is", vrcUserId: "usr_y" },
+    ]);
+  });
 });

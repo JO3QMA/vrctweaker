@@ -317,6 +317,7 @@
     "delete": "Delete",
     "cancel": "Cancel",
     "triggerFriendJoined": "When a friend joins",
+    "triggerFriendLeft": "When a friend leaves",
     "triggerSchedule": "Schedule (evaluated every minute)",
     "triggerVrchatProcess": "VRChat process state change",
     "triggerAfk": "When AFK detected",

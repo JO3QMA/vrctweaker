@@ -11,6 +11,7 @@ const (
 // Event names (catalog v1).
 const (
 	EventFriendJoined  = "friend_joined"
+	EventFriendLeft    = "friend_left"
 	EventScheduleTick  = "schedule.tick"
 	EventVRChatProcess = "vrchat.process"
 )
@@ -25,6 +26,7 @@ const (
 // Legacy trigger constants (friend_joined matches EventFriendJoined).
 const (
 	TriggerFriendJoined = EventFriendJoined
+	TriggerFriendLeft   = EventFriendLeft
 	TriggerAFKDetected  = "afk_detected"
 )
 

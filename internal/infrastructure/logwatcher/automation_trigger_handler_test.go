@@ -8,19 +8,25 @@ import (
 	"vrchat-tweaker/internal/domain/activity"
 )
 
-type stubFriendJoinedAutomation struct {
-	called []string
+type stubFriendEncounterAutomation struct {
+	joined []string
+	left   []string
 	err    error
 }
 
-func (s *stubFriendJoinedAutomation) OnFriendJoined(_ context.Context, vrcUserID string) error {
-	s.called = append(s.called, vrcUserID)
+func (s *stubFriendEncounterAutomation) OnFriendJoined(_ context.Context, vrcUserID string) error {
+	s.joined = append(s.joined, vrcUserID)
+	return s.err
+}
+
+func (s *stubFriendEncounterAutomation) OnFriendLeft(_ context.Context, vrcUserID string) error {
+	s.left = append(s.left, vrcUserID)
 	return s.err
 }
 
 func TestAutomationTriggerHandler_FriendJoined(t *testing.T) {
 	ctx := context.Background()
-	auto := &stubFriendJoinedAutomation{}
+	auto := &stubFriendEncounterAutomation{}
 	h := NewAutomationTriggerHandler(auto, ctx, nil)
 
 	h.Handle(&activity.EncounterEvent{
@@ -28,20 +34,36 @@ func TestAutomationTriggerHandler_FriendJoined(t *testing.T) {
 		VRCUserID:   "usr_join01",
 		DisplayName: "Friend",
 	})
-	if len(auto.called) != 1 || auto.called[0] != "usr_join01" {
-		t.Fatalf("called = %v", auto.called)
+	if len(auto.joined) != 1 || auto.joined[0] != "usr_join01" {
+		t.Fatalf("joined = %v", auto.joined)
 	}
 
-	h.Handle(&activity.EncounterEvent{Action: activity.EncounterActionLeave, VRCUserID: "usr_join01"})
 	h.Handle(nil)
-	if len(auto.called) != 1 {
-		t.Fatalf("leave/nil should not trigger, got %d calls", len(auto.called))
+	if len(auto.joined) != 1 {
+		t.Fatalf("nil should not trigger, got %d join calls", len(auto.joined))
+	}
+}
+
+func TestAutomationTriggerHandler_FriendLeft(t *testing.T) {
+	ctx := context.Background()
+	auto := &stubFriendEncounterAutomation{}
+	h := NewAutomationTriggerHandler(auto, ctx, nil)
+
+	h.Handle(&activity.EncounterEvent{
+		Action:    activity.EncounterActionLeave,
+		VRCUserID: "usr_leave01",
+	})
+	if len(auto.left) != 1 || auto.left[0] != "usr_leave01" {
+		t.Fatalf("left = %v", auto.left)
+	}
+	if len(auto.joined) != 0 {
+		t.Fatalf("leave should not call join, got %v", auto.joined)
 	}
 }
 
 func TestAutomationTriggerHandler_OnFriendJoinedErrorLogged(t *testing.T) {
 	var logs []string
-	auto := &stubFriendJoinedAutomation{err: errors.New("boom")}
+	auto := &stubFriendEncounterAutomation{err: errors.New("boom")}
 	h := NewAutomationTriggerHandler(auto, context.Background(), func(format string, args ...any) {
 		logs = append(logs, format)
 	})
@@ -54,8 +76,23 @@ func TestAutomationTriggerHandler_OnFriendJoinedErrorLogged(t *testing.T) {
 	}
 }
 
+func TestAutomationTriggerHandler_OnFriendLeftErrorLogged(t *testing.T) {
+	var logs []string
+	auto := &stubFriendEncounterAutomation{err: errors.New("boom")}
+	h := NewAutomationTriggerHandler(auto, context.Background(), func(format string, args ...any) {
+		logs = append(logs, format)
+	})
+	h.Handle(&activity.EncounterEvent{
+		Action:    activity.EncounterActionLeave,
+		VRCUserID: "usr_err",
+	})
+	if len(logs) == 0 {
+		t.Fatal("expected log on OnFriendLeft error")
+	}
+}
+
 func TestNewAutomationTriggerHandler_defaultLogger(t *testing.T) {
-	h := NewAutomationTriggerHandler(&stubFriendJoinedAutomation{}, context.Background(), nil)
+	h := NewAutomationTriggerHandler(&stubFriendEncounterAutomation{}, context.Background(), nil)
 	if h.logger == nil {
 		t.Fatal("expected default logger")
 	}
