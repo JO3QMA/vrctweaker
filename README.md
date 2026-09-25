@@ -45,6 +45,8 @@ VRChat 周辺のログ・スクリーンショット・フレンド情報など�
 
 ### 開発環境
 
+Go と Wails CLI のバージョンは [`var/build-tool-versions.env`](./var/build-tool-versions.env) を単一ソースとしています（CI・Makefile・Dev Container と揃えてください）。
+
 #### 推奨: Dev Container
 
 VS Code / Cursor の **Reopen in Container** で `.devcontainer/` を開くと、Go・pnpm・Playwright・`gh` が揃います。

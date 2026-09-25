@@ -1,5 +1,5 @@
 name: Setup Wails CLI
-description: Install Wails CLI at the version in var/wails-cli-version
+description: Install Wails CLI at WAILS_CLI_VERSION in var/build-tool-versions.env (requires Go on PATH)
 
 runs:
   using: composite
@@ -8,9 +8,17 @@ runs:
       shell: bash
       run: |
         set -euo pipefail
-        version="$(tr -d ' \n\r' < var/wails-cli-version)"
-        if [[ -z "$version" ]]; then
-          echo "var/wails-cli-version is empty" >&2
+        envfile=var/build-tool-versions.env
+        if [[ ! -f "$envfile" ]]; then
+          echo "$envfile not found" >&2
           exit 1
         fi
-        go install "github.com/wailsapp/wails/v2/cmd/wails@${version}"
+        set -a
+        # shellcheck disable=SC1091
+        source "$envfile"
+        set +a
+        if [[ -z "${WAILS_CLI_VERSION:-}" ]]; then
+          echo "WAILS_CLI_VERSION must be set in $envfile" >&2
+          exit 1
+        fi
+        go install "github.com/wailsapp/wails/v2/cmd/wails@${WAILS_CLI_VERSION}"

@@ -26,14 +26,16 @@ RUN arch=$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || echo "x86_64-li
   && ln -sf /usr/include/webkitgtk-4.1 /usr/include/webkitgtk-4.0 \
   && ln -sf /usr/lib/${arch}/pkgconfig/webkit2gtk-4.1.pc /usr/lib/${arch}/pkgconfig/webkit2gtk-4.0.pc
 
-# Wails CLI (version from var/wails-cli-version)
-COPY var/wails-cli-version /tmp/wails-cli-version
-RUN version="$(tr -d ' \n\r' < /tmp/wails-cli-version)" \
-  && go install "github.com/wailsapp/wails/v2/cmd/wails@${version}"
+# Wails CLI (GO_VERSION / WAILS_CLI_VERSION from var/build-tool-versions.env)
+# devcontainer ベースイメージの go-1-XX は GO_VERSION と揃えること
+COPY var/build-tool-versions.env /tmp/build-tool-versions.env
+RUN set -a \
+  && source /tmp/build-tool-versions.env \
+  && set +a \
+  && go install "github.com/wailsapp/wails/v2/cmd/wails@${WAILS_CLI_VERSION}"
 
 # golangci-lint v2 (must match .golangci.yml version: "2" and CI action)
 RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
 
 # Git pre-commit hooks (pin with Makefile LEFTHOOK_VERSION)
 RUN go install github.com/evilmartians/lefthook/v2/cmd/lefthook@v2.1.12
-

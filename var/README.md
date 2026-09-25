@@ -38,7 +38,7 @@ Agent や手元の調査では次のパスを使ってください。
 
 ## 補足
 
-- **Wails CLI バージョン**: `var/wails-cli-version`（1 行。Makefile・CI・devcontainer が参照）
+- **ビルドツールのバージョン**: [`build-tool-versions.env`](./build-tool-versions.env)（`GO_VERSION` / `WAILS_CLI_VERSION`。Makefile・CI・devcontainer が参照）
 
 Wails アプリ本体のデータ保存先は変更しません（Windows 実行時は従来どおり `%AppData%\Roaming\vrchat-tweaker\`）。
 `var/` は WSL 上の Cursor Agent や CLI から Windows 側の実データを読むための窓口です。

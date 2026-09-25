@@ -1,0 +1,49 @@
+name: Setup build tools
+description: Install Go toolchain and Wails CLI from var/build-tool-versions.env
+
+inputs:
+  cache-dependency-path:
+    description: Path to go.sum for Go module cache
+    required: false
+    default: go.sum
+  install-wails:
+    description: Install Wails CLI after Go setup
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    - name: Load build tool versions
+      id: bt
+      shell: bash
+      run: |
+        set -euo pipefail
+        envfile=var/build-tool-versions.env
+        if [[ ! -f "$envfile" ]]; then
+          echo "$envfile not found" >&2
+          exit 1
+        fi
+        set -a
+        # shellcheck disable=SC1091
+        source "$envfile"
+        set +a
+        if [[ -z "${GO_VERSION:-}" || -z "${WAILS_CLI_VERSION:-}" ]]; then
+          echo "GO_VERSION and WAILS_CLI_VERSION must be set in $envfile" >&2
+          exit 1
+        fi
+        echo "go_version=${GO_VERSION}" >> "$GITHUB_OUTPUT"
+        echo "wails_cli_version=${WAILS_CLI_VERSION}" >> "$GITHUB_OUTPUT"
+
+    - uses: actions/setup-go@v7
+      with:
+        go-version: ${{ steps.bt.outputs.go_version }}
+        cache-dependency-path: ${{ inputs.cache-dependency-path }}
+
+    - name: Install Wails CLI
+      if: inputs.install-wails == 'true'
+      shell: bash
+      run: |
+        set -euo pipefail
+        version="${{ steps.bt.outputs.wails_cli_version }}"
+        go install "github.com/wailsapp/wails/v2/cmd/wails@${version}"
