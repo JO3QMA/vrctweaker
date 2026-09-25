@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/devcontainers/go:1
+FROM mcr.microsoft.com/devcontainers/go:1-1.26
 
 # Bind-mount target for host Windows VRChat LocalLow (see devcontainer.json mounts)
 RUN mkdir -p /home/vscode/.local/share/VRChat/VRChat \

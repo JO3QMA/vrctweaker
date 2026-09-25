@@ -40,7 +40,7 @@ VRChat 周辺のログ・スクリーンショット・フレンド情報など�
 
 ### 技術スタック
 
-- **Backend**: Go 1.25, SQLite, Wails v2
+- **Backend**: Go 1.26, SQLite, Wails v2
 - **Frontend**: Vue 3, TypeScript, Element Plus, Vite, Vitest, Playwright, Storybook
 
 ### 開発環境
@@ -55,7 +55,7 @@ WSL 上でホストの VRChat フォルダ（`/mnt/c/...`）をマウントす�
 
 | ツール | 用途 |
 |--------|------|
-| Go 1.25+ | バックエンド |
+| Go 1.26+ | バックエンド |
 | [Wails CLI v2](https://wails.io/docs/gettingstarted/installation) | デスクトップアプリのビルド・開発 |
 | Node.js 20+ / pnpm | フロントエンド |
 | golangci-lint | Go の Lint |
