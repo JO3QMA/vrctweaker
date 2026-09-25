@@ -1,0 +1,16 @@
+name: Setup Wails CLI
+description: Install Wails CLI at the version in var/wails-cli-version
+
+runs:
+  using: composite
+  steps:
+    - name: Install Wails CLI
+      shell: bash
+      run: |
+        set -euo pipefail
+        version="$(tr -d ' \n\r' < var/wails-cli-version)"
+        if [[ -z "$version" ]]; then
+          echo "var/wails-cli-version is empty" >&2
+          exit 1
+        fi
+        go install "github.com/wailsapp/wails/v2/cmd/wails@${version}"

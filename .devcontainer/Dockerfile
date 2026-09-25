@@ -26,8 +26,10 @@ RUN arch=$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null || echo "x86_64-li
   && ln -sf /usr/include/webkitgtk-4.1 /usr/include/webkitgtk-4.0 \
   && ln -sf /usr/lib/${arch}/pkgconfig/webkit2gtk-4.1.pc /usr/lib/${arch}/pkgconfig/webkit2gtk-4.0.pc
 
-# Wails CLI (global install)
-RUN go install github.com/wailsapp/wails/v2/cmd/wails@latest
+# Wails CLI (version from var/wails-cli-version)
+COPY var/wails-cli-version /tmp/wails-cli-version
+RUN version="$(tr -d ' \n\r' < /tmp/wails-cli-version)" \
+  && go install "github.com/wailsapp/wails/v2/cmd/wails@${version}"
 
 # golangci-lint v2 (must match .golangci.yml version: "2" and CI action)
 RUN go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
