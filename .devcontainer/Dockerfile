@@ -32,6 +32,7 @@ COPY var/build-tool-versions.env /tmp/build-tool-versions.env
 RUN set -a \
   && source /tmp/build-tool-versions.env \
   && set +a \
+  && : "${WAILS_CLI_VERSION:?WAILS_CLI_VERSION must be set in var/build-tool-versions.env}" \
   && go install "github.com/wailsapp/wails/v2/cmd/wails@${WAILS_CLI_VERSION}"
 
 # golangci-lint v2 (must match .golangci.yml version: "2" and CI action)

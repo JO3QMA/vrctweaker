@@ -4,6 +4,9 @@
 LEFTHOOK_VERSION ?= v2.1.12
 -include var/build-tool-versions.env
 WAILS_VERSION ?= $(WAILS_CLI_VERSION)
+ifeq ($(strip $(WAILS_VERSION)),)
+$(error WAILS_CLI_VERSION is not set in var/build-tool-versions.env)
+endif
 
 export PATH := $(shell go env GOPATH)/bin:$(PATH)
 
