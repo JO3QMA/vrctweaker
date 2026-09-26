@@ -301,6 +301,35 @@ func TestAutomationUseCase_OnFriendJoined(t *testing.T) {
 	}
 }
 
+func TestAutomationUseCase_OnFriendLeft(t *testing.T) {
+	ctx := context.Background()
+	repo := &mockAutomationItemRepo{}
+	repo.seedRules([]*automation.AutomationRule{
+		{
+			ID:            "1",
+			TriggerType:   automation.TriggerFriendLeft,
+			ActionType:    automation.ActionChangeStatus,
+			ActionPayload: `{"status":"ask me"}`,
+			IsEnabled:     true,
+		},
+	})
+	setter := &mockStatusSetter{}
+	uc := newTestAutomationUseCase(repo, setter)
+	if err := uc.OnFriendLeft(ctx, "usr_friend"); err != nil {
+		t.Fatal(err)
+	}
+	called := setter.getCalled()
+	if len(called) != 1 || called[0] != "ask me" {
+		t.Fatalf("want [ask me], got %v", called)
+	}
+	if err := uc.OnFriendLeft(ctx, ""); err != nil {
+		t.Fatal(err)
+	}
+	if len(setter.getCalled()) != 1 {
+		t.Fatalf("empty user id should not run again, got %v", setter.getCalled())
+	}
+}
+
 func TestAutomationUseCase_runChangeStatus_edgeCases(t *testing.T) {
 	ctx := context.Background()
 	setter := &mockStatusSetter{}

@@ -162,7 +162,10 @@ func (uc *AutomationUseCase) handleItem(ctx context.Context, item *automation.Au
 }
 
 func (uc *AutomationUseCase) contextLabel(ctx context.Context, ev automation.Event) string {
-	if ev.Type != automation.EventFriendJoined || uc.displayNamer == nil || ev.Payload == nil {
+	if uc.displayNamer == nil || ev.Payload == nil {
+		return ""
+	}
+	if ev.Type != automation.EventFriendJoined && ev.Type != automation.EventFriendLeft {
 		return ""
 	}
 	id, _ := ev.Payload["vrc_user_id"].(string)

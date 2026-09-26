@@ -146,7 +146,10 @@
               </VtCheckbox>
             </el-form-item>
             <el-form-item
-              v-if="editor.triggerType === 'friend_joined'"
+              v-if="
+                editor.triggerType === 'friend_joined' ||
+                editor.triggerType === 'friend_left'
+              "
               :label="t('automation.conditionFriendIs')"
             >
               <VtSelect
@@ -414,6 +417,7 @@ const isDirty = computed(
 
 const triggerOptions = computed(() => [
   { value: "friend_joined", label: t("automation.triggerFriendJoined") },
+  { value: "friend_left", label: t("automation.triggerFriendLeft") },
   { value: "schedule.tick", label: t("automation.triggerSchedule") },
   { value: "vrchat.process", label: t("automation.triggerVrchatProcess") },
 ]);

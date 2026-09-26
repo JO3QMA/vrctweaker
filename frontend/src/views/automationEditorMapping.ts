@@ -99,8 +99,12 @@ export function editorToDto(state: EditorState): AutomationItemDTO {
   }
   const conds: Array<{ type: string; vrcUserId?: string }> = [];
   if (state.vrchatRunning) conds.push({ type: "vrchat_running" });
-  // friend_is only applies to friend_joined; leftover picker state must not block schedule/process.
-  if (state.triggerType === "friend_joined" && state.friendUserId) {
+  // friend_is only applies to friend encounter triggers; leftover picker state must not block schedule/process.
+  if (
+    (state.triggerType === "friend_joined" ||
+      state.triggerType === "friend_left") &&
+    state.friendUserId
+  ) {
     conds.push({ type: "friend_is", vrcUserId: state.friendUserId });
   }
   dto.conditionsJson = JSON.stringify(conds);

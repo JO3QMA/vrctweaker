@@ -58,7 +58,7 @@ func EvalItem(item *AutomationItem, ctx *EvalContext) (bool, error) {
 func CompatibleConditions(trigger string, conds []Condition) []Condition {
 	out := make([]Condition, 0, len(conds))
 	for _, c := range conds {
-		if c.Type == "friend_is" && trigger != EventFriendJoined {
+		if c.Type == "friend_is" && trigger != EventFriendJoined && trigger != EventFriendLeft {
 			continue
 		}
 		out = append(out, c)
