@@ -208,11 +208,30 @@ func TestSessionCorrelator_SessionStartEmptyInstanceIgnored(t *testing.T) {
 	}
 }
 
-func TestSessionCorrelator_UnhandledParsedEventsReturnNil(t *testing.T) {
+func TestSessionCorrelator_AvatarSwitch_afterJoin(t *testing.T) {
+	base := time.Date(2026, 3, 18, 0, 2, 0, 0, time.UTC)
 	c := &SessionCorrelator{}
-	base := time.Now()
-	if cmds := c.Apply(&AvatarSwitchEvent{DisplayName: "A", AvatarName: "B", OccurredAt: base}); cmds != nil {
-		t.Fatalf("AvatarSwitch commands = %+v, want nil", cmds)
+	c.Apply(&SessionEvent{Type: SessionEventStart, InstanceID: testFullInstance, OccurredAt: base})
+	c.Apply(&EncounterEvent{
+		VRCUserID:     "usr_friend",
+		DisplayName:   "FriendA",
+		Action:        EncounterActionJoin,
+		InstanceID:    testFullInstance,
+		EncounteredAt: base,
+	})
+	cmds := c.Apply(&AvatarSwitchEvent{DisplayName: "FriendA", AvatarName: "CuteAvatar", OccurredAt: base.Add(time.Minute)})
+	if len(cmds) != 1 {
+		t.Fatalf("cmds = %+v", cmds)
+	}
+	sw, ok := cmds[0].(RecordFriendAvatarSwitchCmd)
+	if !ok {
+		t.Fatalf("type = %T", cmds[0])
+	}
+	if sw.VRCUserID != "usr_friend" || sw.AvatarName != "CuteAvatar" || sw.DisplayName != "FriendA" {
+		t.Fatalf("switch %+v", sw)
+	}
+	if sw.InstanceID != testFullInstance || sw.WorldID != testWorldID {
+		t.Fatalf("context instance/world: %+v", sw)
 	}
 }
 

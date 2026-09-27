@@ -1171,6 +1171,73 @@ func (m *memVideoPlaybackRepo) DeleteOlderThan(_ context.Context, before time.Ti
 	return n, nil
 }
 
+type memFriendAvatarRepo struct {
+	rows []*activity.FriendAvatarObservation
+}
+
+func (m *memFriendAvatarRepo) Save(_ context.Context, o *activity.FriendAvatarObservation) error {
+	m.rows = append(m.rows, o)
+	return nil
+}
+
+func (m *memFriendAvatarRepo) ListUsageSummariesByVRCUserID(_ context.Context, vrcUserID, displayName string) ([]*activity.FriendAvatarUsageSummary, error) {
+	var sums []*activity.FriendAvatarUsageSummary
+	counts := map[string]int64{}
+	first := map[string]time.Time{}
+	last := map[string]time.Time{}
+	for _, r := range m.rows {
+		if r.VRCUserID != vrcUserID && (r.VRCUserID != "" || r.DisplayName != displayName) {
+			continue
+		}
+		counts[r.AvatarName]++
+		if first[r.AvatarName].IsZero() || r.ObservedAt.Before(first[r.AvatarName]) {
+			first[r.AvatarName] = r.ObservedAt
+		}
+		if last[r.AvatarName].IsZero() || r.ObservedAt.After(last[r.AvatarName]) {
+			last[r.AvatarName] = r.ObservedAt
+		}
+	}
+	for name, n := range counts {
+		sums = append(sums, &activity.FriendAvatarUsageSummary{
+			AvatarName:  name,
+			UseCount:    n,
+			FirstSeenAt: first[name],
+			LastSeenAt:  last[name],
+		})
+	}
+	return sums, nil
+}
+
+func (m *memFriendAvatarRepo) DeleteOlderThan(_ context.Context, before time.Time) (int64, error) {
+	return 0, nil
+}
+
+func (m *memFriendAvatarRepo) DeleteAll(_ context.Context) (int64, error) {
+	n := int64(len(m.rows))
+	m.rows = nil
+	return n, nil
+}
+
+func TestActivityUseCase_FriendAvatarSwitch_applyAndList(t *testing.T) {
+	ctx := context.Background()
+	avatarRepo := &memFriendAvatarRepo{}
+	uc := NewActivityUseCase(&fakePlaySessionRepo{}, &memEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil).
+		WithFriendAvatarObservationRepo(avatarRepo)
+	at := time.Date(2026, 3, 18, 12, 0, 0, 0, time.UTC)
+	if err := uc.ApplyCommand(ctx, "/log.txt", activity.RecordFriendAvatarSwitchCmd{
+		VRCUserID: "usr_x", DisplayName: "Pal", AvatarName: "Fox", At: at,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(avatarRepo.rows) != 1 {
+		t.Fatalf("rows = %d", len(avatarRepo.rows))
+	}
+	list, err := uc.ListFriendAvatarUsageByVRCUserID(ctx, "usr_x")
+	if err != nil || len(list) != 1 || list[0].AvatarName != "Fox" || list[0].UseCount != 1 {
+		t.Fatalf("list = %+v err=%v", list, err)
+	}
+}
+
 func TestActivityUseCase_VideoPlayback_applyCommandsAndList(t *testing.T) {
 	ctx := context.Background()
 	video := &memVideoPlaybackRepo{

@@ -38,6 +38,13 @@ export type LaunchArgsParsedDTO = WailsDTO<launcher.LaunchArgsParsed>;
 export type ScreenshotDTO = WailsDTO<wailsapp.ScreenshotDTO>;
 export type ScreenshotSearchDTO = WailsDTO<wailsapp.ScreenshotSearchDTO>;
 export type UserEncounterDTO = WailsDTO<wailsapp.UserEncounterDTO>;
+/** Friend avatar usage summary row (bindings.FriendAvatarUsageDTO). */
+export type FriendAvatarUsageDTO = {
+  avatarName: string;
+  useCount: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+};
 /** Video playback history row (bindings.VideoPlaybackDTO); local until wails generate. */
 export type VideoPlaybackDTO = {
   id: string;
@@ -679,6 +686,17 @@ export const App = {
   ),
   encountersByVRCUserID: bindGo(
     (a, vrcUserID: string) => a.EncountersByVRCUserID(vrcUserID),
+    [],
+  ),
+  friendAvatarUsageByVRCUserID: bindGo(
+    (a, vrcUserID: string) =>
+      (
+        a as AppBindings & {
+          FriendAvatarUsageByVRCUserID?: (
+            id: string,
+          ) => Promise<FriendAvatarUsageDTO[]>;
+        }
+      ).FriendAvatarUsageByVRCUserID?.(vrcUserID) ?? Promise.resolve([]),
     [],
   ),
   encountersByWorldID: bindGo(

@@ -253,6 +253,14 @@
     "colWorldName": "世界名称",
     "colInstance": "实例"
   },
+  "friendAvatars": {
+    "empty": "尚无从日志记录的模型。",
+    "fetchFailedGeneric": "无法加载模型列表。",
+    "colAvatarName": "模型名称",
+    "colLastSeen": "最后确认",
+    "colFirstSeen": "首次确认",
+    "colCount": "次数"
+  },
   "friends": {
     "title": "好友",
     "loginRequired": "刷新好友列表需要先登录。请在设置中登录。",
@@ -523,6 +531,7 @@
     "copyDisplayName": "复制显示名称",
     "tabDetail": "详情",
     "tabEncounters": "相遇记录",
+    "tabAvatars": "模型",
     "state": "状态 (state)",
     "location": "位置",
     "developerType": "开发者类型",

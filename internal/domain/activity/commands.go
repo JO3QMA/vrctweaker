@@ -71,3 +71,13 @@ type CompleteVideoPlaybackSuccessCmd struct {
 	ResolvedURL string
 	At          time.Time
 }
+
+// RecordFriendAvatarSwitchCmd records a friend's avatar change from output_log.
+type RecordFriendAvatarSwitchCmd struct {
+	VRCUserID   string
+	DisplayName string
+	AvatarName  string
+	InstanceID  string
+	WorldID     string
+	At          time.Time
+}

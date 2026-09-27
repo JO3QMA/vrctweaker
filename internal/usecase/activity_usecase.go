@@ -87,13 +87,14 @@ func parseDateRange(fromISO, toISO string) (from, to time.Time, err error) {
 
 // ActivityUseCase handles log parsing, play sessions, and user encounters.
 type ActivityUseCase struct {
-	playRepo      playSessionRepo
-	encounterRepo userEncounterRepo
-	settingsRepo  appSettingsRepo
-	userCacheRepo userCacheRepo
-	worldRepo     worldInfoRepo
-	videoRepo     videoPlaybackRepo
-	checkpointMu  sync.Mutex
+	playRepo         playSessionRepo
+	encounterRepo    userEncounterRepo
+	settingsRepo     appSettingsRepo
+	userCacheRepo    userCacheRepo
+	worldRepo        worldInfoRepo
+	videoRepo        videoPlaybackRepo
+	friendAvatarRepo friendAvatarObservationRepo
+	checkpointMu     sync.Mutex
 }
 
 // NewActivityUseCase creates a new ActivityUseCase.
@@ -116,6 +117,12 @@ func NewActivityUseCase(
 // WithVideoPlaybackRepo attaches the video playback history repository.
 func (uc *ActivityUseCase) WithVideoPlaybackRepo(r videoPlaybackRepo) *ActivityUseCase {
 	uc.videoRepo = r
+	return uc
+}
+
+// WithFriendAvatarObservationRepo enables log-derived friend avatar usage persistence.
+func (uc *ActivityUseCase) WithFriendAvatarObservationRepo(r friendAvatarObservationRepo) *ActivityUseCase {
+	uc.friendAvatarRepo = r
 	return uc
 }
 
@@ -180,9 +187,58 @@ func (uc *ActivityUseCase) ApplyCommand(ctx context.Context, logSource string, c
 		return uc.CompleteVideoPlaybackFailure(ctx, logSource, c.URL, c.FailureReason, c.At)
 	case activity.CompleteVideoPlaybackSuccessCmd:
 		return uc.CompleteVideoPlaybackSuccess(ctx, logSource, c.URL, c.ResolvedURL, c.At)
+	case activity.RecordFriendAvatarSwitchCmd:
+		return uc.RecordFriendAvatarSwitchAt(ctx, logSource, c.VRCUserID, c.DisplayName, c.AvatarName, c.InstanceID, c.WorldID, c.At)
 	default:
 		return nil
 	}
+}
+
+// RecordFriendAvatarSwitchAt persists one avatar switch observation from output_log.
+func (uc *ActivityUseCase) RecordFriendAvatarSwitchAt(ctx context.Context, logSource, vrcUserID, displayName, avatarName, instanceID, worldID string, at time.Time) error {
+	if uc.friendAvatarRepo == nil || avatarName == "" || displayName == "" {
+		return nil
+	}
+	uid := strings.TrimSpace(vrcUserID)
+	return uc.friendAvatarRepo.Save(ctx, &activity.FriendAvatarObservation{
+		ID:            uuid.New().String(),
+		VRCUserID:     uid,
+		DisplayName:   displayName,
+		AvatarName:    avatarName,
+		InstanceID:    instanceID,
+		WorldID:       worldID,
+		LogSourcePath: logSource,
+		ObservedAt:    at,
+	})
+}
+
+// ListFriendAvatarUsageByVRCUserID returns aggregated avatar usage for a friend profile tab.
+func (uc *ActivityUseCase) ListFriendAvatarUsageByVRCUserID(ctx context.Context, vrcUserID string) ([]*activity.FriendAvatarUsageSummary, error) {
+	if uc.friendAvatarRepo == nil {
+		return []*activity.FriendAvatarUsageSummary{}, nil
+	}
+	vrcUserID = strings.TrimSpace(vrcUserID)
+	if vrcUserID == "" {
+		return []*activity.FriendAvatarUsageSummary{}, nil
+	}
+	displayName := ""
+	if uc.userCacheRepo != nil {
+		row, err := uc.userCacheRepo.GetByVRCUserID(ctx, vrcUserID)
+		if err != nil {
+			return nil, err
+		}
+		if row != nil {
+			displayName = row.DisplayName
+		}
+	}
+	rows, err := uc.friendAvatarRepo.ListUsageSummariesByVRCUserID(ctx, vrcUserID, displayName)
+	if err != nil {
+		return nil, err
+	}
+	if rows == nil {
+		return []*activity.FriendAvatarUsageSummary{}, nil
+	}
+	return rows, nil
 }
 
 // RecordEncounter saves a join/leave event (uses current time).
@@ -638,7 +694,14 @@ func (uc *ActivityUseCase) RotateEncounters(ctx context.Context) (int64, error) 
 			return 0, err
 		}
 	}
-	return encDeleted + playDeleted + videoDeleted, nil
+	var avatarDeleted int64
+	if uc.friendAvatarRepo != nil {
+		avatarDeleted, err = uc.friendAvatarRepo.DeleteOlderThan(ctx, before)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return encDeleted + playDeleted + videoDeleted + avatarDeleted, nil
 }
 
 // ListVideoPlaybackHistory returns video playback attempts with world display names (newest first).

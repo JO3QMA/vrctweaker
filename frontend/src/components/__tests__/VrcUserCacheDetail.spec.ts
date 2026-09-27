@@ -157,6 +157,25 @@ describe("VrcUserCacheDetail", () => {
     expect(text).toContain("author_tag");
   });
 
+  it("switches to avatars tab", async () => {
+    const wrapper = mountDetail(minimalUser(), {
+      FriendAvatarList: {
+        template: '<div data-testid="avatar-list-stub" />',
+      },
+    });
+    await flushPromises();
+
+    const tabs = wrapper.findAll(".el-tabs__item");
+    const avatarsTab = tabs.find((t) => t.text().includes("アバター"));
+    await avatarsTab?.trigger("click");
+    await flushPromises();
+    await nextTick();
+
+    expect(wrapper.find('[data-testid="avatar-list-stub"]').exists()).toBe(
+      true,
+    );
+  });
+
   it("switches to encounters tab", async () => {
     const wrapper = mountDetail(minimalUser(), {
       EncounterHistoryList: {

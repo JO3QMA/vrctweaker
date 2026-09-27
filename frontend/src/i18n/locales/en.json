@@ -253,6 +253,14 @@
     "colWorldName": "World name",
     "colInstance": "Instance"
   },
+  "friendAvatars": {
+    "empty": "No avatars recorded from logs yet.",
+    "fetchFailedGeneric": "Failed to load avatar list.",
+    "colAvatarName": "Avatar name",
+    "colLastSeen": "Last seen",
+    "colFirstSeen": "First seen",
+    "colCount": "Times seen"
+  },
   "friends": {
     "title": "Friends",
     "loginRequired": "You must be logged in to refresh the friends list. Log in from Settings.",
@@ -523,6 +531,7 @@
     "copyDisplayName": "Copy display name",
     "tabDetail": "Details",
     "tabEncounters": "Encounters",
+    "tabAvatars": "Avatars",
     "state": "State (state)",
     "location": "Location",
     "developerType": "Developer type",

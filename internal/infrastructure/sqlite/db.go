@@ -202,6 +202,18 @@ func schemaStatements() []string {
 		`CREATE INDEX IF NOT EXISTS idx_user_encounters_vrc_user_id ON user_encounters(vrc_user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_user_encounters_left_at ON user_encounters(left_at)`,
 		`CREATE INDEX IF NOT EXISTS idx_user_encounters_joined_at ON user_encounters(joined_at)`,
+		`CREATE TABLE IF NOT EXISTS friend_avatar_observations (
+			id TEXT PRIMARY KEY,
+			vrc_user_id TEXT NOT NULL DEFAULT '',
+			display_name TEXT NOT NULL,
+			avatar_name TEXT NOT NULL,
+			instance_id TEXT,
+			world_id TEXT,
+			log_source_path TEXT,
+			observed_at TEXT NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_friend_avatar_obs_vrc_user_id ON friend_avatar_observations(vrc_user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_friend_avatar_obs_observed_at ON friend_avatar_observations(observed_at)`,
 		`CREATE INDEX IF NOT EXISTS idx_play_sessions_start_time ON play_sessions(start_time)`,
 		`CREATE TABLE IF NOT EXISTS users_cache (
 			vrc_user_id TEXT PRIMARY KEY,

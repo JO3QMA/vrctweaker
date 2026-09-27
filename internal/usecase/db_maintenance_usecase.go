@@ -12,27 +12,30 @@ import (
 
 // DBMaintenanceUseCase handles DB maintenance operations (Vacuum, Clear).
 type DBMaintenanceUseCase struct {
-	db             *sql.DB
-	encounterRepo  userEncounterRepo
-	screenshotRepo screenshotRepo
-	userCacheRepo  userCacheRepo
-	appSettings    appSettingsRepo
+	db               *sql.DB
+	encounterRepo    userEncounterRepo
+	friendAvatarRepo friendAvatarObservationRepo
+	screenshotRepo   screenshotRepo
+	userCacheRepo    userCacheRepo
+	appSettings      appSettingsRepo
 }
 
 // NewDBMaintenanceUseCase creates a new DBMaintenanceUseCase.
 func NewDBMaintenanceUseCase(
 	db *sql.DB,
 	encounterRepo userEncounterRepo,
+	friendAvatarRepo friendAvatarObservationRepo,
 	screenshotRepo screenshotRepo,
 	userCacheRepo userCacheRepo,
 	appSettings appSettingsRepo,
 ) *DBMaintenanceUseCase {
 	return &DBMaintenanceUseCase{
-		db:             db,
-		encounterRepo:  encounterRepo,
-		screenshotRepo: screenshotRepo,
-		userCacheRepo:  userCacheRepo,
-		appSettings:    appSettings,
+		db:               db,
+		encounterRepo:    encounterRepo,
+		friendAvatarRepo: friendAvatarRepo,
+		screenshotRepo:   screenshotRepo,
+		userCacheRepo:    userCacheRepo,
+		appSettings:      appSettings,
 	}
 }
 
@@ -43,7 +46,18 @@ func (uc *DBMaintenanceUseCase) VacuumDb(ctx context.Context) error {
 
 // ClearEncounters deletes all user encounters. Returns affected row count.
 func (uc *DBMaintenanceUseCase) ClearEncounters(ctx context.Context) (int64, error) {
-	return uc.encounterRepo.DeleteAll(ctx)
+	n, err := uc.encounterRepo.DeleteAll(ctx)
+	if err != nil {
+		return 0, err
+	}
+	if uc.friendAvatarRepo != nil {
+		extra, err := uc.friendAvatarRepo.DeleteAll(ctx)
+		if err != nil {
+			return n, err
+		}
+		n += extra
+	}
+	return n, nil
 }
 
 // ClearScreenshots deletes all screenshots. Returns affected row count.

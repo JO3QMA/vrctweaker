@@ -36,6 +36,21 @@ test.describe("Detail views", () => {
     );
   });
 
+  test("user-profile avatars tab shows log-derived avatar table", async ({
+    page,
+  }) => {
+    const query = new URLSearchParams({
+      vrcUserId: E2E_TEST_USER_ID,
+      displayName: E2E_TEST_USER_DISPLAY_NAME,
+    }).toString();
+    await page.goto(`/#/user-profile?${query}`);
+    await page.getByRole("tab", { name: "アバター" }).click();
+    const table = page.getByTestId("friend-avatar-list").locator(".el-table");
+    await expect(table).toBeVisible();
+    await expect(table.locator(".el-table__row")).toHaveCount(2);
+    await expect(table.getByText("E2E Avatar Alpha")).toBeVisible();
+  });
+
   test("user-profile shows display name from ResolveUserProfileNavigation", async ({
     page,
   }) => {

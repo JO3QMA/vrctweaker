@@ -253,6 +253,14 @@
     "colWorldName": "ワールド名",
     "colInstance": "インスタンス"
   },
+  "friendAvatars": {
+    "empty": "ログから記録されたアバターはまだありません。",
+    "fetchFailedGeneric": "アバター一覧の取得に失敗しました。",
+    "colAvatarName": "アバター名",
+    "colLastSeen": "最終確認",
+    "colFirstSeen": "初回確認",
+    "colCount": "回数"
+  },
   "friends": {
     "title": "フレンド",
     "loginRequired": "フレンド一覧の更新にはログインが必要です。設定画面でログインしてください。",
@@ -523,6 +531,7 @@
     "copyDisplayName": "表示名をコピー",
     "tabDetail": "詳細",
     "tabEncounters": "遭遇履歴",
+    "tabAvatars": "アバター",
     "state": "状態 (state)",
     "location": "ロケーション",
     "developerType": "開発者種別",

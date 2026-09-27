@@ -253,6 +253,14 @@
     "colWorldName": "世界名稱",
     "colInstance": "實例"
   },
+  "friendAvatars": {
+    "empty": "尚無從日誌記錄的角色。",
+    "fetchFailedGeneric": "無法載入角色列表。",
+    "colAvatarName": "角色名稱",
+    "colLastSeen": "最後確認",
+    "colFirstSeen": "首次確認",
+    "colCount": "次數"
+  },
   "friends": {
     "title": "好友",
     "loginRequired": "重新整理好友列表需要先登入。請至設定登入。",
@@ -523,6 +531,7 @@
     "copyDisplayName": "複製顯示名稱",
     "tabDetail": "詳細",
     "tabEncounters": "相遇紀錄",
+    "tabAvatars": "角色",
     "state": "狀態 (state)",
     "location": "位置",
     "developerType": "開發者類型",

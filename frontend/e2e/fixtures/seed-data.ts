@@ -150,6 +150,38 @@ export const SEED_SCREENSHOTS: SeedScreenshot[] = [
   },
 ];
 
+export interface SeedFriendAvatarUsage {
+  vrcUserId: string;
+  avatarName: string;
+  useCount: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+}
+
+export const SEED_FRIEND_AVATAR_USAGE: SeedFriendAvatarUsage[] = [
+  {
+    vrcUserId: E2E_TEST_USER_ID,
+    avatarName: "E2E Avatar Alpha",
+    useCount: 2,
+    firstSeenAt: "2025-06-01T10:05:00Z",
+    lastSeenAt: "2025-06-02T12:00:00Z",
+  },
+  {
+    vrcUserId: E2E_TEST_USER_ID,
+    avatarName: "E2E Avatar Beta",
+    useCount: 1,
+    firstSeenAt: "2025-06-01T11:00:00Z",
+    lastSeenAt: "2025-06-01T11:00:00Z",
+  },
+];
+
+export function friendAvatarUsageByVrcUserId(
+  list: SeedFriendAvatarUsage[],
+  vrcUserId: string,
+): SeedFriendAvatarUsage[] {
+  return list.filter((row) => row.vrcUserId === vrcUserId);
+}
+
 export const SEED_ENCOUNTERS: SeedEncounter[] = [
   {
     id: "enc_e2e_001",

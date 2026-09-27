@@ -253,6 +253,14 @@
     "colWorldName": "월드 이름",
     "colInstance": "인스턴스"
   },
+  "friendAvatars": {
+    "empty": "로그에 기록된 아바타가 없습니다.",
+    "fetchFailedGeneric": "아바타 목록을 불러오지 못했습니다.",
+    "colAvatarName": "아바타 이름",
+    "colLastSeen": "마지막 확인",
+    "colFirstSeen": "처음 확인",
+    "colCount": "횟수"
+  },
   "friends": {
     "title": "친구",
     "loginRequired": "친구 목록을 새로 고치려면 로그인이 필요합니다. 설정에서 로그인하세요.",
@@ -523,6 +531,7 @@
     "copyDisplayName": "표시 이름 복사",
     "tabDetail": "상세",
     "tabEncounters": "조우 기록",
+    "tabAvatars": "아바타",
     "state": "상태 (state)",
     "location": "위치",
     "developerType": "개발자 유형",
