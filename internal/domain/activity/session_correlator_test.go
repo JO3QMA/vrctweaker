@@ -235,6 +235,29 @@ func TestSessionCorrelator_AvatarSwitch_afterJoin(t *testing.T) {
 	}
 }
 
+func TestSessionCorrelator_AvatarSwitch_displayNameCollisionInvalidatesMapping(t *testing.T) {
+	base := time.Date(2026, 3, 18, 0, 2, 0, 0, time.UTC)
+	c := &SessionCorrelator{}
+	c.Apply(&SessionEvent{Type: SessionEventStart, InstanceID: testFullInstance, OccurredAt: base})
+	join := func(id string) {
+		c.Apply(&EncounterEvent{
+			VRCUserID: id, DisplayName: "SameName", Action: EncounterActionJoin,
+			InstanceID: testFullInstance, EncounteredAt: base,
+		})
+	}
+	join("usr_first")
+	join("usr_second")
+
+	cmds := c.Apply(&AvatarSwitchEvent{DisplayName: "SameName", AvatarName: "Av", OccurredAt: base.Add(time.Minute)})
+	if len(cmds) != 1 {
+		t.Fatalf("cmds = %+v", cmds)
+	}
+	sw := cmds[0].(RecordFriendAvatarSwitchCmd)
+	if sw.VRCUserID != "" {
+		t.Fatalf("collision must not attribute avatar to either user, got %q", sw.VRCUserID)
+	}
+}
+
 func TestSessionCorrelator_VideoPlayback_attemptOpenAndSuccess(t *testing.T) {
 	base := time.Date(2026, 3, 18, 0, 1, 0, 0, time.UTC)
 	const url = "https://youtu.be/abc"

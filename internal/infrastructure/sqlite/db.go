@@ -122,19 +122,55 @@ func ensureActivityLogSourceColumns(db *sql.DB) error {
 }
 
 func ensureFriendAvatarObservationDedupIndex(db *sql.DB) error {
-	// Dedupe before UNIQUE index (re-import may have inserted duplicate natural keys).
-	if _, err := db.Exec(`DELETE FROM friend_avatar_observations
-		WHERE id NOT IN (
-			SELECT MIN(id) FROM friend_avatar_observations
-			GROUP BY log_source_path, display_name, avatar_name, observed_at
-		)`); err != nil {
-		return fmt.Errorf("friend avatar observations dedupe: %w", err)
+	const indexName = "idx_friend_avatar_obs_natural"
+	indexMissing, err := friendAvatarDedupIndexMissing(db, indexName)
+	if err != nil {
+		return err
 	}
-	_, err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_friend_avatar_obs_natural ON friend_avatar_observations(log_source_path, display_name, avatar_name, observed_at)`)
+	needDedupe := indexMissing
+	if !indexMissing {
+		needDedupe, err = friendAvatarObservationsHaveDuplicates(db)
+		if err != nil {
+			return err
+		}
+	}
+	if needDedupe {
+		if _, err := db.Exec(`DELETE FROM friend_avatar_observations
+			WHERE id NOT IN (
+				SELECT MIN(id) FROM friend_avatar_observations
+				GROUP BY log_source_path, display_name, avatar_name, observed_at
+			)`); err != nil {
+			return fmt.Errorf("friend avatar observations dedupe: %w", err)
+		}
+	}
+	_, err = db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS ` + indexName + ` ON friend_avatar_observations(log_source_path, display_name, avatar_name, observed_at)`)
 	if err != nil {
 		return fmt.Errorf("friend avatar observations unique index: %w", err)
 	}
 	return nil
+}
+
+func friendAvatarDedupIndexMissing(db *sql.DB, indexName string) (bool, error) {
+	var n int
+	err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = ?`, indexName).Scan(&n)
+	if err != nil {
+		return false, fmt.Errorf("friend avatar observations index check: %w", err)
+	}
+	return n == 0, nil
+}
+
+func friendAvatarObservationsHaveDuplicates(db *sql.DB) (bool, error) {
+	var exists int
+	err := db.QueryRow(`SELECT EXISTS (
+		SELECT 1 FROM friend_avatar_observations
+		GROUP BY log_source_path, display_name, avatar_name, observed_at
+		HAVING COUNT(*) > 1
+		LIMIT 1
+	)`).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("friend avatar observations duplicate check: %w", err)
+	}
+	return exists == 1, nil
 }
 
 func ensureScreenshotEnrichmentTable(db *sql.DB) error {

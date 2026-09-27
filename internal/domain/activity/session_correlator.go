@@ -71,7 +71,12 @@ func (c *SessionCorrelator) Apply(event ParsedEvent) []any {
 				if c.displayNameToVRCUserID == nil {
 					c.displayNameToVRCUserID = make(map[string]string)
 				}
-				c.displayNameToVRCUserID[e.DisplayName] = e.VRCUserID
+				existing, ok := c.displayNameToVRCUserID[e.DisplayName]
+				if ok && existing != e.VRCUserID {
+					delete(c.displayNameToVRCUserID, e.DisplayName)
+				} else {
+					c.displayNameToVRCUserID[e.DisplayName] = e.VRCUserID
+				}
 			}
 			return []any{RecordEncounterJoinCmd{
 				VRCUserID:   e.VRCUserID,

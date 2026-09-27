@@ -1180,12 +1180,11 @@ func (m *memFriendAvatarRepo) Save(_ context.Context, o *activity.FriendAvatarOb
 	return nil
 }
 
-func (m *memFriendAvatarRepo) ListUsageSummariesByVRCUserID(_ context.Context, vrcUserID, displayName string) ([]*activity.FriendAvatarUsageSummary, error) {
+func (m *memFriendAvatarRepo) ListUsageSummariesByVRCUserID(_ context.Context, vrcUserID string) ([]*activity.FriendAvatarUsageSummary, error) {
 	var sums []*activity.FriendAvatarUsageSummary
 	counts := map[string]int64{}
 	first := map[string]time.Time{}
 	last := map[string]time.Time{}
-	_ = displayName
 	for _, r := range m.rows {
 		if r.VRCUserID != vrcUserID {
 			continue
@@ -1217,6 +1216,41 @@ func (m *memFriendAvatarRepo) DeleteAll(_ context.Context) (int64, error) {
 	n := int64(len(m.rows))
 	m.rows = nil
 	return n, nil
+}
+
+func TestActivityUseCase_FriendAvatarSwitch_skipsUnresolvedVRCUserID(t *testing.T) {
+	ctx := context.Background()
+	avatarRepo := &memFriendAvatarRepo{}
+	uc := NewActivityUseCase(&fakePlaySessionRepo{}, &memEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, nil, nil).
+		WithFriendAvatarObservationRepo(avatarRepo)
+	at := time.Date(2026, 3, 18, 12, 0, 0, 0, time.UTC)
+	if err := uc.ApplyCommand(ctx, "/log.txt", activity.RecordFriendAvatarSwitchCmd{
+		VRCUserID: "", DisplayName: "Pal", AvatarName: "Fox", At: at,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(avatarRepo.rows) != 0 {
+		t.Fatalf("rows = %d, want 0 until join resolves id", len(avatarRepo.rows))
+	}
+}
+
+func TestActivityUseCase_ListFriendAvatarUsage_ignoresUserCacheGetError(t *testing.T) {
+	ctx := context.Background()
+	avatarRepo := &memFriendAvatarRepo{}
+	users := &errActivityUserCacheRepo{getErr: errors.New("cache down")}
+	uc := NewActivityUseCase(&fakePlaySessionRepo{}, &memEncounterRepo{}, &fakeAppSettingsRepo{m: make(map[string]string)}, users, nil).
+		WithFriendAvatarObservationRepo(avatarRepo)
+	at := time.Date(2026, 3, 18, 12, 0, 0, 0, time.UTC)
+	_ = avatarRepo.Save(ctx, &activity.FriendAvatarObservation{
+		ID: "1", VRCUserID: "usr_x", DisplayName: "Pal", AvatarName: "Fox", ObservedAt: at,
+	})
+	list, err := uc.ListFriendAvatarUsageByVRCUserID(ctx, "usr_x")
+	if err != nil {
+		t.Fatalf("list must not fail on user cache: %v", err)
+	}
+	if len(list) != 1 || list[0].AvatarName != "Fox" {
+		t.Fatalf("list = %+v", list)
+	}
 }
 
 func TestActivityUseCase_FriendAvatarSwitch_applyAndList(t *testing.T) {

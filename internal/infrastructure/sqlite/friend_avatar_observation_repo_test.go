@@ -38,7 +38,7 @@ func TestFriendAvatarObservationRepository_saveAndSummarize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	sums, err := repo.ListUsageSummariesByVRCUserID(ctx, "usr_a", "Alpha")
+	sums, err := repo.ListUsageSummariesByVRCUserID(ctx, "usr_a")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -47,5 +47,32 @@ func TestFriendAvatarObservationRepository_saveAndSummarize(t *testing.T) {
 	}
 	if sums[0].AvatarName != "Av1" || sums[0].UseCount != 2 {
 		t.Fatalf("resolved rows only: %+v", sums[0])
+	}
+}
+
+func TestFriendAvatarObservationRepository_listSkipsCorruptObservedAt(t *testing.T) {
+	db := openTestDB(t)
+	t.Cleanup(func() { _ = db.Close() })
+	if err := applySchema(db); err != nil {
+		t.Fatal(err)
+	}
+	ctx := context.Background()
+	tGood := time.Date(2026, 1, 10, 12, 0, 0, 0, time.UTC)
+	_, err := db.ExecContext(ctx, `INSERT INTO friend_avatar_observations (
+		id, vrc_user_id, display_name, avatar_name, instance_id, world_id, log_source_path, observed_at
+	) VALUES (?, ?, ?, ?, '', '', '/log.txt', ?), (?, ?, ?, ?, '', '', '/log.txt', ?)`,
+		"good", "usr_a", "A", "AvOK", tGood.Format(time.RFC3339),
+		"bad", "usr_a", "A", "AvBad", "not-rfc3339",
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	repo := NewFriendAvatarObservationRepository(db)
+	sums, err := repo.ListUsageSummariesByVRCUserID(ctx, "usr_a")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sums) != 1 || sums[0].AvatarName != "AvOK" {
+		t.Fatalf("want only valid timestamp row: %+v", sums)
 	}
 }

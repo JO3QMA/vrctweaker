@@ -36,16 +36,11 @@ func (r *FriendAvatarObservationRepository) Save(ctx context.Context, o *activit
 }
 
 // ListUsageSummariesByVRCUserID returns aggregated avatar usage for a friend (newest last_seen first).
-func (r *FriendAvatarObservationRepository) ListUsageSummariesByVRCUserID(ctx context.Context, vrcUserID, displayName string) ([]*activity.FriendAvatarUsageSummary, error) {
+func (r *FriendAvatarObservationRepository) ListUsageSummariesByVRCUserID(ctx context.Context, vrcUserID string) ([]*activity.FriendAvatarUsageSummary, error) {
 	vrcUserID = strings.TrimSpace(vrcUserID)
-	displayName = strings.TrimSpace(displayName)
 	if vrcUserID == "" {
 		return []*activity.FriendAvatarUsageSummary{}, nil
 	}
-	// Only rows with a resolved vrc_user_id are aggregated. Unresolved observations
-	// (vrc_user_id = '') are excluded: matching by display_name alone would mix
-	// different users who share the same display name.
-	_ = displayName
 	query := `SELECT avatar_name, COUNT(*), MIN(observed_at), MAX(observed_at)
 		FROM friend_avatar_observations
 		WHERE vrc_user_id = ?
@@ -67,11 +62,11 @@ func (r *FriendAvatarObservationRepository) ListUsageSummariesByVRCUserID(ctx co
 		}
 		first, err := time.Parse(time.RFC3339, firstISO)
 		if err != nil {
-			return nil, fmt.Errorf("parse first_seen: %w", err)
+			continue
 		}
 		last, err := time.Parse(time.RFC3339, lastISO)
 		if err != nil {
-			return nil, fmt.Errorf("parse last_seen: %w", err)
+			continue
 		}
 		list = append(list, &activity.FriendAvatarUsageSummary{
 			AvatarName:  name,

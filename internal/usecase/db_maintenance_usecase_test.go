@@ -159,6 +159,24 @@ func TestDBMaintenanceUseCase_VacuumDb(t *testing.T) {
 	}
 }
 
+type maintFriendAvatarRepo struct {
+	deleteAllN   int64
+	deleteAllErr error
+}
+
+func (m *maintFriendAvatarRepo) Save(context.Context, *activity.FriendAvatarObservation) error {
+	return nil
+}
+func (m *maintFriendAvatarRepo) ListUsageSummariesByVRCUserID(context.Context, string) ([]*activity.FriendAvatarUsageSummary, error) {
+	return nil, nil
+}
+func (m *maintFriendAvatarRepo) DeleteOlderThan(context.Context, time.Time) (int64, error) {
+	return 0, nil
+}
+func (m *maintFriendAvatarRepo) DeleteAll(context.Context) (int64, error) {
+	return m.deleteAllN, m.deleteAllErr
+}
+
 func TestDBMaintenanceUseCase_ClearEncounters(t *testing.T) {
 	ctx := context.Background()
 	er := &maintEncounterRepo{deleteAllN: 7}
@@ -171,6 +189,15 @@ func TestDBMaintenanceUseCase_ClearEncounters(t *testing.T) {
 	_, err = uc.ClearEncounters(ctx)
 	if err == nil {
 		t.Fatal("want error")
+	}
+}
+
+func TestDBMaintenanceUseCase_ClearEncounters_sumsAvatarRows(t *testing.T) {
+	ctx := context.Background()
+	uc := NewDBMaintenanceUseCase(nil, &maintEncounterRepo{deleteAllN: 4}, &maintFriendAvatarRepo{deleteAllN: 3}, &maintScreenshotRepo{}, &maintUserCacheRepo{}, newMockSettingsRepo())
+	n, err := uc.ClearEncounters(ctx)
+	if err != nil || n != 7 {
+		t.Fatalf("ClearEncounters: n=%d err=%v", n, err)
 	}
 }
 

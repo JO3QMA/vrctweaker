@@ -362,8 +362,8 @@ const en = {
     vacuumConfirm: "Optimize the database (VACUUM). Continue?",
     vacuumDone: "Database optimization finished",
     clearEncountersConfirm:
-      "Delete all encounter logs (user_encounters). Continue?",
-    clearEncountersDone: "Deleted {n} encounter log(s)",
+      "Delete all encounter logs (user_encounters) and friend avatar usage history (friend_avatar_observations). Continue?",
+    clearEncountersDone: "Deleted {n} encounter and avatar usage row(s)",
     clearScreenshotsConfirm:
       "Delete all screenshot index rows (screenshots). Continue?",
     clearScreenshotsDone: "Deleted {n} screenshot index row(s)",
@@ -766,8 +766,8 @@ const ja = deepMerge(en, {
     vacuumConfirm: "データベースを最適化（VACUUM）します。よろしいですか？",
     vacuumDone: "DBの最適化が完了しました",
     clearEncountersConfirm:
-      "遭遇ログ（user_encounters）をすべて削除します。よろしいですか？",
-    clearEncountersDone: "{n}件の遭遇ログを削除しました",
+      "遭遇ログ（user_encounters）とフレンドアバター利用履歴（friend_avatar_observations）をすべて削除します。よろしいですか？",
+    clearEncountersDone: "{n}件の遭遇ログ・アバター利用履歴を削除しました",
     clearScreenshotsConfirm:
       "スクリーンショットインデックス（screenshots）をすべて削除します。よろしいですか？",
     clearScreenshotsDone: "{n}件のスクショインデックスを削除しました",
@@ -1151,8 +1151,9 @@ const ko = deepMerge(en, {
     errOperation: "작업 실패",
     vacuumConfirm: "데이터베이스를 최적화(VACUUM)할까요?",
     vacuumDone: "DB 최적화가 완료되었습니다",
-    clearEncountersConfirm: "모든 조우 로그(user_encounters)를 삭제할까요?",
-    clearEncountersDone: "조우 로그 {n}건 삭제",
+    clearEncountersConfirm:
+      "모든 조우 로그(user_encounters)와 친구 아바타 이용 기록(friend_avatar_observations)을 삭제할까요?",
+    clearEncountersDone: "조우 로그·아바타 이용 기록 {n}건 삭제",
     clearScreenshotsConfirm: "스크린샷 인덱스를 모두 삭제할까요?",
     clearScreenshotsDone: "스크린샷 인덱스 {n}건 삭제",
     clearFriendsConfirm: "users_cache의 모든 행을 삭제할까요?",
@@ -1523,8 +1524,9 @@ const zhTW = deepMerge(en, {
     errOperation: "操作失敗",
     vacuumConfirm: "要最佳化資料庫 (VACUUM) 嗎？",
     vacuumDone: "資料庫最佳化完成",
-    clearEncountersConfirm: "要刪除所有相遇紀錄 (user_encounters) 嗎？",
-    clearEncountersDone: "已刪除 {n} 筆相遇紀錄",
+    clearEncountersConfirm:
+      "要刪除所有相遇紀錄 (user_encounters) 與好友 Avatar 使用紀錄 (friend_avatar_observations) 嗎？",
+    clearEncountersDone: "已刪除 {n} 筆相遇與 Avatar 使用紀錄",
     clearScreenshotsConfirm: "要刪除所有截圖索引嗎？",
     clearScreenshotsDone: "已刪除 {n} 筆截圖索引",
     clearFriendsConfirm: "要刪除 users_cache 的所有列嗎？",
@@ -1894,8 +1896,9 @@ const zhCN = deepMerge(en, {
     errOperation: "操作失败",
     vacuumConfirm: "要优化数据库 (VACUUM) 吗？",
     vacuumDone: "数据库优化完成",
-    clearEncountersConfirm: "要删除所有相遇记录 (user_encounters) 吗？",
-    clearEncountersDone: "已删除 {n} 条相遇记录",
+    clearEncountersConfirm:
+      "要删除所有相遇记录 (user_encounters) 与好友 Avatar 使用记录 (friend_avatar_observations) 吗？",
+    clearEncountersDone: "已删除 {n} 条相遇与 Avatar 使用记录",
     clearScreenshotsConfirm: "要删除所有截图索引吗？",
     clearScreenshotsDone: "已删除 {n} 条截图索引",
     clearFriendsConfirm: "要删除 users_cache 的所有行吗？",

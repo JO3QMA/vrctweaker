@@ -200,6 +200,9 @@ func (uc *ActivityUseCase) RecordFriendAvatarSwitchAt(ctx context.Context, logSo
 		return nil
 	}
 	uid := strings.TrimSpace(vrcUserID)
+	if uid == "" {
+		return nil
+	}
 	return uc.friendAvatarRepo.Save(ctx, &activity.FriendAvatarObservation{
 		ID:            uuid.New().String(),
 		VRCUserID:     uid,
@@ -221,17 +224,7 @@ func (uc *ActivityUseCase) ListFriendAvatarUsageByVRCUserID(ctx context.Context,
 	if vrcUserID == "" {
 		return []*activity.FriendAvatarUsageSummary{}, nil
 	}
-	displayName := ""
-	if uc.userCacheRepo != nil {
-		row, err := uc.userCacheRepo.GetByVRCUserID(ctx, vrcUserID)
-		if err != nil {
-			return nil, err
-		}
-		if row != nil {
-			displayName = row.DisplayName
-		}
-	}
-	rows, err := uc.friendAvatarRepo.ListUsageSummariesByVRCUserID(ctx, vrcUserID, displayName)
+	rows, err := uc.friendAvatarRepo.ListUsageSummariesByVRCUserID(ctx, vrcUserID)
 	if err != nil {
 		return nil, err
 	}

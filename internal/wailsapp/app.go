@@ -1289,7 +1289,7 @@ func (a *App) VacuumDb() error {
 	return a.dbMaintenance.VacuumDb(a.ctx)
 }
 
-// ClearEncounters deletes all user encounters. Returns affected row count.
+// ClearEncounters deletes all user encounters and friend avatar observations. Returns total deleted row count.
 func (a *App) ClearEncounters() (int64, error) {
 	return a.dbMaintenance.ClearEncounters(a.ctx)
 }
