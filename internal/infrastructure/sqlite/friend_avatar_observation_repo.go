@@ -28,7 +28,7 @@ func (r *FriendAvatarObservationRepository) Save(ctx context.Context, o *activit
 	if strings.ContainsAny(o.AvatarName, "\n\r") || strings.ContainsAny(o.DisplayName, "\n\r") {
 		return fmt.Errorf("friend avatar observation: invalid name")
 	}
-	_, err := r.db.ExecContext(ctx, `INSERT INTO friend_avatar_observations (
+	_, err := r.db.ExecContext(ctx, `INSERT OR IGNORE INTO friend_avatar_observations (
 		id, vrc_user_id, display_name, avatar_name, instance_id, world_id, log_source_path, observed_at
 	) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 		o.ID, o.VRCUserID, o.DisplayName, o.AvatarName, o.InstanceID, o.WorldID, o.LogSourcePath, o.ObservedAt.Format(time.RFC3339))
@@ -42,17 +42,16 @@ func (r *FriendAvatarObservationRepository) ListUsageSummariesByVRCUserID(ctx co
 	if vrcUserID == "" {
 		return []*activity.FriendAvatarUsageSummary{}, nil
 	}
+	// Only rows with a resolved vrc_user_id are aggregated. Unresolved observations
+	// (vrc_user_id = '') are excluded: matching by display_name alone would mix
+	// different users who share the same display name.
+	_ = displayName
 	query := `SELECT avatar_name, COUNT(*), MIN(observed_at), MAX(observed_at)
 		FROM friend_avatar_observations
-		WHERE vrc_user_id = ?`
-	args := []any{vrcUserID}
-	if displayName != "" {
-		query += ` OR (vrc_user_id = '' AND display_name = ?)`
-		args = append(args, displayName)
-	}
-	query += ` GROUP BY avatar_name ORDER BY MAX(observed_at) DESC`
+		WHERE vrc_user_id = ?
+		GROUP BY avatar_name ORDER BY MAX(observed_at) DESC`
 
-	rows, err := r.db.QueryContext(ctx, query, args...)
+	rows, err := r.db.QueryContext(ctx, query, vrcUserID)
 	if err != nil {
 		return nil, err
 	}

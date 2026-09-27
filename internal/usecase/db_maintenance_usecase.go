@@ -51,11 +51,9 @@ func (uc *DBMaintenanceUseCase) ClearEncounters(ctx context.Context) (int64, err
 		return 0, err
 	}
 	if uc.friendAvatarRepo != nil {
-		extra, err := uc.friendAvatarRepo.DeleteAll(ctx)
-		if err != nil {
+		if _, err := uc.friendAvatarRepo.DeleteAll(ctx); err != nil {
 			return n, err
 		}
-		n += extra
 	}
 	return n, nil
 }

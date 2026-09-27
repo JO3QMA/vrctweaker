@@ -92,6 +92,10 @@ func applySchema(db *sql.DB) error {
 		return err
 	}
 
+	if err := ensureFriendAvatarObservationDedupIndex(db); err != nil {
+		return err
+	}
+
 	if err := MigrateAutomationRules(context.Background(), db); err != nil {
 		return fmt.Errorf("migrate automation rules: %w", err)
 	}
@@ -113,6 +117,22 @@ func ensureActivityLogSourceColumns(db *sql.DB) error {
 		if err := addColumnIfMissing(db, c.table, c.name, c.decl); err != nil {
 			return fmt.Errorf("%s.%s: %w", c.table, c.name, err)
 		}
+	}
+	return nil
+}
+
+func ensureFriendAvatarObservationDedupIndex(db *sql.DB) error {
+	// Dedupe before UNIQUE index (re-import may have inserted duplicate natural keys).
+	if _, err := db.Exec(`DELETE FROM friend_avatar_observations
+		WHERE id NOT IN (
+			SELECT MIN(id) FROM friend_avatar_observations
+			GROUP BY log_source_path, display_name, avatar_name, observed_at
+		)`); err != nil {
+		return fmt.Errorf("friend avatar observations dedupe: %w", err)
+	}
+	_, err := db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_friend_avatar_obs_natural ON friend_avatar_observations(log_source_path, display_name, avatar_name, observed_at)`)
+	if err != nil {
+		return fmt.Errorf("friend avatar observations unique index: %w", err)
 	}
 	return nil
 }
@@ -214,6 +234,7 @@ func schemaStatements() []string {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_friend_avatar_obs_vrc_user_id ON friend_avatar_observations(vrc_user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_friend_avatar_obs_observed_at ON friend_avatar_observations(observed_at)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_friend_avatar_obs_natural ON friend_avatar_observations(log_source_path, display_name, avatar_name, observed_at)`,
 		`CREATE INDEX IF NOT EXISTS idx_play_sessions_start_time ON play_sessions(start_time)`,
 		`CREATE TABLE IF NOT EXISTS users_cache (
 			vrc_user_id TEXT PRIMARY KEY,

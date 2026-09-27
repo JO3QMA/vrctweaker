@@ -312,7 +312,7 @@ const props = withDefaults(
   },
 );
 
-const detailTab = ref<"detail" | "encounters">("detail");
+const detailTab = ref<"detail" | "encounters" | "avatars">("detail");
 
 const detailRoot = ref<HTMLElement | null>(null);
 const nameAnchor = ref<HTMLElement | null>(null);

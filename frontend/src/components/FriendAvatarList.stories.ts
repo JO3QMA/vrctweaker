@@ -1,24 +1,28 @@
-import type { Meta, StoryObj } from "@storybook/vue3-vite";
+import type { Decorator, Meta, StoryObj } from "@storybook/vue3-vite";
 import FriendAvatarList from "./FriendAvatarList.vue";
 import { withWailsApp } from "../stories/wailsDecorator";
+
+function withFriendAvatarWails(
+  overrides: Record<string, unknown> = {},
+): Decorator {
+  return withWailsApp({
+    FriendAvatarUsageByVRCUserID: () =>
+      Promise.resolve([
+        {
+          avatarName: "Story Avatar",
+          useCount: 3,
+          firstSeenAt: "2026-01-01T12:00:00.000Z",
+          lastSeenAt: "2026-02-01T12:00:00.000Z",
+        },
+      ]),
+    ...overrides,
+  });
+}
 
 const meta = {
   title: "Components/FriendAvatarList",
   component: FriendAvatarList,
   tags: ["autodocs"],
-  decorators: [
-    withWailsApp({
-      FriendAvatarUsageByVRCUserID: () =>
-        Promise.resolve([
-          {
-            avatarName: "Story Avatar",
-            useCount: 3,
-            firstSeenAt: "2026-01-01T12:00:00.000Z",
-            lastSeenAt: "2026-02-01T12:00:00.000Z",
-          },
-        ]),
-    }),
-  ],
   parameters: {
     layout: "padded",
   },
@@ -28,6 +32,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 export const Default: Story = {
+  decorators: [withFriendAvatarWails()],
   args: { userId: "usr_story" },
   render: (args) => ({
     components: { FriendAvatarList },
@@ -44,7 +49,7 @@ export const Default: Story = {
 
 export const Empty: Story = {
   decorators: [
-    withWailsApp({
+    withFriendAvatarWails({
       FriendAvatarUsageByVRCUserID: () => Promise.resolve([]),
     }),
   ],

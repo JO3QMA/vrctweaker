@@ -1185,8 +1185,9 @@ func (m *memFriendAvatarRepo) ListUsageSummariesByVRCUserID(_ context.Context, v
 	counts := map[string]int64{}
 	first := map[string]time.Time{}
 	last := map[string]time.Time{}
+	_ = displayName
 	for _, r := range m.rows {
-		if r.VRCUserID != vrcUserID && (r.VRCUserID != "" || r.DisplayName != displayName) {
+		if r.VRCUserID != vrcUserID {
 			continue
 		}
 		counts[r.AvatarName]++

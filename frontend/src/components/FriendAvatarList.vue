@@ -68,24 +68,33 @@ const loading = ref(false);
 const error = ref<string | null>(null);
 const rows = ref<FriendAvatarUsageDTO[]>([]);
 
+let loadToken = 0;
+
 const canLoad = computed(() => Boolean(props.userId?.trim()));
 
 async function load(): Promise<void> {
   if (!canLoad.value) {
+    loadToken += 1;
     rows.value = [];
     error.value = null;
     loading.value = false;
     return;
   }
+  const token = ++loadToken;
   loading.value = true;
   error.value = null;
   try {
-    rows.value = await App.friendAvatarUsageByVRCUserID(props.userId!.trim());
+    const result = await App.friendAvatarUsageByVRCUserID(props.userId!.trim());
+    if (token !== loadToken) return;
+    rows.value = result;
   } catch (e) {
+    if (token !== loadToken) return;
     rows.value = [];
     error.value = friendAvatarListFetchErrorMessage(e, t);
   } finally {
-    loading.value = false;
+    if (token === loadToken) {
+      loading.value = false;
+    }
   }
 }
 

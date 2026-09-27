@@ -53,4 +53,53 @@ describe("FriendAvatarList", () => {
     await flushPromises();
     expect(wrapper.text()).toContain("アバター一覧の取得に失敗しました");
   });
+
+  it("ignores stale fetch when userId changes quickly", async () => {
+    let resolveFirst!: (
+      rows: {
+        avatarName: string;
+        useCount: number;
+        firstSeenAt: string;
+        lastSeenAt: string;
+      }[],
+    ) => void;
+    const firstPromise = new Promise<
+      {
+        avatarName: string;
+        useCount: number;
+        firstSeenAt: string;
+        lastSeenAt: string;
+      }[]
+    >((resolve) => {
+      resolveFirst = resolve;
+    });
+    mockFetch.mockImplementationOnce(() => firstPromise);
+    mockFetch.mockResolvedValueOnce([
+      {
+        avatarName: "Current",
+        useCount: 1,
+        firstSeenAt: "2026-01-01T00:00:00.000Z",
+        lastSeenAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+
+    const wrapper = mount(FriendAvatarList, {
+      props: { userId: "usr_old" },
+    });
+    await wrapper.setProps({ userId: "usr_new" });
+    await flushPromises();
+    expect(wrapper.text()).toContain("Current");
+
+    resolveFirst([
+      {
+        avatarName: "Stale",
+        useCount: 9,
+        firstSeenAt: "2026-01-01T00:00:00.000Z",
+        lastSeenAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    await flushPromises();
+    expect(wrapper.text()).toContain("Current");
+    expect(wrapper.text()).not.toContain("Stale");
+  });
 });
