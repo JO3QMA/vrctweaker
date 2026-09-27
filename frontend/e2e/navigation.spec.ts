@@ -93,7 +93,9 @@ test.describe("Navigation", () => {
     );
     await expect(instanceLink).toHaveAttribute(
       "title",
-      E2E_ENCOUNTER_INSTANCE_KEY,
+      new RegExp(
+        `パブリック #88577.*\\(${E2E_ENCOUNTER_INSTANCE_KEY.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\)`,
+      ),
     );
   });
 

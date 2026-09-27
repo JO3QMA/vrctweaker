@@ -134,6 +134,7 @@ describe("EncounterHistoryList", () => {
     expect(link.text()).toContain("🇯🇵");
     expect(link.attributes("href")).toContain("vrchat.com/home/launch");
     expect(link.attributes("href")).toContain("worldId=wrld_w");
+    expect(link.attributes("aria-label")).toContain("VRChat で開く");
   });
 
   it("shows translated fallback when fetch rejects with non-Error", async () => {

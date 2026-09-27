@@ -252,6 +252,7 @@
     "colDisplayName": "Display name",
     "colWorldName": "World name",
     "colInstance": "Instance",
+    "openInVrchat": "Open in VRChat: {text}",
     "regionFallback": "[{code}]",
     "instanceType": {
       "public": "Public",

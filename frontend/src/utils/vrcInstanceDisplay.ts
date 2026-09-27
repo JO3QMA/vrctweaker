@@ -15,6 +15,9 @@ type InstancePrivacy =
   | "groupMembers"
   | "unknown";
 
+const VRCHAT_WORLD_PREFIX = "wrld_";
+const VRCHAT_LAUNCH_BASE_URL = "https://vrchat.com/home/launch";
+
 const REGION_FLAG: Record<string, string> = {
   jp: "🇯🇵",
   use: "🇺🇸",
@@ -26,7 +29,7 @@ function parseWorldAndRest(
   instanceKey: string,
 ): { worldId: string; rest: string } | null {
   const key = instanceKey.trim();
-  if (!key.startsWith("wrld_")) return null;
+  if (!key.startsWith(VRCHAT_WORLD_PREFIX)) return null;
   const colon = key.indexOf(":");
   if (colon <= 0) return null;
   const worldId = key.slice(0, colon);
@@ -37,9 +40,18 @@ function parseWorldAndRest(
 
 function instanceShortName(rest: string): string {
   const tilde = rest.indexOf("~");
-  return tilde >= 0 ? rest.slice(0, tilde) : rest;
+  const short = tilde >= 0 ? rest.slice(0, tilde) : rest;
+  return short || rest;
 }
 
+/**
+ * Derives display privacy from VRChat instance segments (the part after the first `~`).
+ *
+ * Processing is left-to-right. Restrictive markers (`hidden`, `friends`, `private`, `group`,
+ * `groupAccessType`) overwrite the previous privacy when matched. `canRequestInvite` does not
+ * set privacy alone; it upgrades `invite` to `invitePlus` when it appears after `private(...)`
+ * or when privacy is already `invite` (typical key order: `…~private(usr)~canRequestInvite`).
+ */
 function detectPrivacy(segments: string[]): InstancePrivacy {
   let privacy: InstancePrivacy = "public";
   let sawPrivate = false;
@@ -115,7 +127,7 @@ export function vrcInstanceWebLaunchUrl(instanceKey: string): string | null {
     worldId: parsed.worldId,
     instanceId: parsed.rest,
   });
-  return `https://vrchat.com/home/launch?${params.toString()}`;
+  return `${VRCHAT_LAUNCH_BASE_URL}?${params.toString()}`;
 }
 
 /** Human-readable instance label + link metadata for encounter history cells. */
@@ -128,6 +140,7 @@ export function formatVrcInstanceCell(
   const href = vrcInstanceWebLaunchUrl(instanceKey);
   if (!href) return null;
 
+  const trimmedKey = instanceKey.trim();
   const shortName = instanceShortName(parsed.rest);
   const segmentPart = parsed.rest.includes("~")
     ? parsed.rest.slice(parsed.rest.indexOf("~") + 1)
@@ -142,6 +155,6 @@ export function formatVrcInstanceCell(
   return {
     text,
     href,
-    title: instanceKey.trim(),
+    title: `${text} (${trimmedKey})`,
   };
 }

@@ -252,6 +252,7 @@
     "colDisplayName": "表示名",
     "colWorldName": "ワールド名",
     "colInstance": "インスタンス",
+    "openInVrchat": "VRChat で開く: {text}",
     "regionFallback": "[{code}]",
     "instanceType": {
       "public": "パブリック",

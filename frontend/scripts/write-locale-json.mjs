@@ -223,6 +223,7 @@ const en = {
     colDisplayName: "Display name",
     colWorldName: "World name",
     colInstance: "Instance",
+    openInVrchat: "Open in VRChat: {text}",
     regionFallback: "[{code}]",
     instanceType: {
       public: "Public",
@@ -640,6 +641,7 @@ const ja = deepMerge(en, {
     colDisplayName: "表示名",
     colWorldName: "ワールド名",
     colInstance: "インスタンス",
+    openInVrchat: "VRChat で開く: {text}",
     regionFallback: "[{code}]",
     instanceType: {
       public: "パブリック",
@@ -1046,6 +1048,7 @@ const ko = deepMerge(en, {
     colDisplayName: "표시 이름",
     colWorldName: "월드 이름",
     colInstance: "인스턴스",
+    openInVrchat: "VRChat에서 열기: {text}",
     regionFallback: "[{code}]",
     instanceType: {
       public: "퍼블릭",
@@ -1433,6 +1436,7 @@ const zhTW = deepMerge(en, {
     colDisplayName: "顯示名稱",
     colWorldName: "世界名稱",
     colInstance: "實例",
+    openInVrchat: "在 VRChat 中開啟：{text}",
     regionFallback: "[{code}]",
     instanceType: {
       public: "公開",
@@ -1816,6 +1820,7 @@ const zhCN = deepMerge(en, {
     colDisplayName: "显示名称",
     colWorldName: "世界名称",
     colInstance: "实例",
+    openInVrchat: "在 VRChat 中打开：{text}",
     regionFallback: "[{code}]",
     instanceType: {
       public: "公开",

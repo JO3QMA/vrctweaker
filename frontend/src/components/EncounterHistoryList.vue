@@ -52,21 +52,7 @@
           min-width="160"
         >
           <template #default="{ row }">
-            <a
-              v-if="instanceCell(row.instanceId)"
-              class="encounter-instance-link"
-              :href="instanceCell(row.instanceId)!.href"
-              :title="instanceCell(row.instanceId)!.title"
-              target="_blank"
-              rel="noopener noreferrer"
-              data-testid="encounter-instance-link"
-            >
-              {{ instanceCell(row.instanceId)!.text }}
-            </a>
-            <span v-else-if="row.instanceId" class="mono">{{
-              row.instanceId
-            }}</span>
-            <span v-else>{{ t("common.dash") }}</span>
+            <EncounterHistoryInstanceCell :instance-id="row.instanceId" />
           </template>
         </el-table-column>
       </el-table>
@@ -78,25 +64,17 @@
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import VtAlert from "./VtAlert.vue";
+import EncounterHistoryInstanceCell from "./EncounterHistoryInstanceCell.vue";
 import { App, type UserEncounterDTO } from "../wails/app";
 import {
   ENCOUNTER_LOG_TIME_COL_WIDTH,
   formatEncounterLogTimestamp,
 } from "../utils/formatEncounteredAt";
-import {
-  formatVrcInstanceCell,
-  type VrcInstanceCell,
-} from "../utils/vrcInstanceDisplay";
 
 const { t } = useI18n();
 
 function formatEncounterLocal(iso: string): string {
   return formatEncounterLogTimestamp(iso) ?? t("common.dash");
-}
-
-function instanceCell(instanceId?: string): VrcInstanceCell | null {
-  if (!instanceId?.trim()) return null;
-  return formatVrcInstanceCell(instanceId, t);
 }
 
 const props = withDefaults(
@@ -172,22 +150,5 @@ watch(
 
 .encounter-log-time {
   white-space: nowrap;
-}
-
-.mono {
-  font-family: monospace;
-  font-size: var(--font-size-12);
-  word-break: break-all;
-}
-
-.encounter-instance-link {
-  color: var(--color-brand);
-  text-decoration: none;
-  font-size: var(--font-size-12);
-}
-
-.encounter-instance-link:hover {
-  text-decoration: underline;
-  color: var(--color-brand-hover);
 }
 </style>

@@ -252,6 +252,7 @@
     "colDisplayName": "표시 이름",
     "colWorldName": "월드 이름",
     "colInstance": "인스턴스",
+    "openInVrchat": "VRChat에서 열기: {text}",
     "regionFallback": "[{code}]",
     "instanceType": {
       "public": "퍼블릭",

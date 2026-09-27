@@ -8,6 +8,9 @@ const t = (key: string, params?: Record<string, string>) => {
   if (key === "encounterHistory.regionFallback" && params?.code) {
     return `[${params.code}]`;
   }
+  if (key === "encounterHistory.openInVrchat" && params?.text) {
+    return `Open in VRChat: ${params.text}`;
+  }
   const map: Record<string, string> = {
     "encounterHistory.instanceType.public": "Public",
     "encounterHistory.instanceType.friendsPlus": "Friends+",
@@ -38,14 +41,12 @@ describe("vrcInstanceWebLaunchUrl", () => {
 
 describe("formatVrcInstanceCell", () => {
   it("formats public instance with region flag", () => {
-    const cell = formatVrcInstanceCell(
-      "wrld_db637cfb-64f8-4109-977b-6b755482f133:88577~region(jp)",
-      t,
-    );
+    const key = "wrld_db637cfb-64f8-4109-977b-6b755482f133:88577~region(jp)";
+    const cell = formatVrcInstanceCell(key, t);
     expect(cell).toEqual({
       text: "Public #88577 🇯🇵",
       href: "https://vrchat.com/home/launch?worldId=wrld_db637cfb-64f8-4109-977b-6b755482f133&instanceId=88577%7Eregion%28jp%29",
-      title: "wrld_db637cfb-64f8-4109-977b-6b755482f133:88577~region(jp)",
+      title: `Public #88577 🇯🇵 (${key})`,
     });
   });
 
@@ -60,5 +61,35 @@ describe("formatVrcInstanceCell", () => {
 
   it("returns null for non-parseable instance id", () => {
     expect(formatVrcInstanceCell("inst_1", t)).toBeNull();
+  });
+
+  it("uses invite+ when private and canRequestInvite follow VRChat segment order", () => {
+    const cell = formatVrcInstanceCell(
+      "wrld_x:64190~private(usr_x)~canRequestInvite~region(jp)",
+      t,
+    );
+    expect(cell?.text).toBe("Invite+ #64190 🇯🇵");
+  });
+
+  it("stays invite when canRequestInvite precedes private (non-standard order)", () => {
+    const cell = formatVrcInstanceCell(
+      "wrld_x:64190~canRequestInvite~private(usr_x)",
+      t,
+    );
+    expect(cell?.text).toBe("Invite #64190");
+  });
+
+  it("uses group access type when present after group marker", () => {
+    const cell = formatVrcInstanceCell(
+      "wrld_x:100~group(grp_x)~groupAccessType(public)",
+      t,
+    );
+    expect(cell?.text).toBe("Group Public #100");
+  });
+
+  it("keeps short name when rest starts with tilde", () => {
+    const key = "wrld_x:~usr_segment";
+    const cell = formatVrcInstanceCell(key, t);
+    expect(cell?.text).toBe("Public #~usr_segment");
   });
 });
