@@ -5,5 +5,8 @@ export function friendAvatarListFetchErrorMessage(
   _err: unknown,
   t: ComposerTranslation,
 ): string {
+  if (import.meta.env.DEV && _err) {
+    console.error("[FriendAvatarList] fetch failed:", _err);
+  }
   return t("friendAvatars.fetchFailedGeneric");
 }

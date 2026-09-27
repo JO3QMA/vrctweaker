@@ -80,11 +80,19 @@ async function load(): Promise<void> {
     loading.value = false;
     return;
   }
+  const userId = props.userId;
+  if (!userId?.trim()) {
+    loadToken += 1;
+    rows.value = [];
+    error.value = null;
+    loading.value = false;
+    return;
+  }
   const token = ++loadToken;
   loading.value = true;
   error.value = null;
   try {
-    const result = await App.friendAvatarUsageByVRCUserID(props.userId!.trim());
+    const result = await App.friendAvatarUsageByVRCUserID(userId.trim());
     if (token !== loadToken) return;
     rows.value = result;
   } catch (e) {
