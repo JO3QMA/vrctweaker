@@ -17,8 +17,7 @@ const t = i18n.global.t as (
 describe("formatVrcInstanceLabel", () => {
   it("formats public instance with region code", () => {
     const key = "wrld_db637cfb-64f8-4109-977b-6b755482f133:88577~region(jp)";
-    const publicLabel = t("vrc.instanceType.public");
-    expect(formatVrcInstanceLabel(key, t)).toBe(`${publicLabel} #88577 [JP]`);
+    expect(formatVrcInstanceLabel(key, t)).toBe("Public #88577 [JP]");
   });
 
   it("maps legacy region alias use to US", () => {
@@ -32,9 +31,8 @@ describe("formatVrcInstanceLabel", () => {
       "wrld_abc:41550~hidden(usr_x)~region(aus)",
       t,
     );
-    const friendsPlus = t("vrc.instanceType.friendsPlus");
     const region = t("vrc.regionFallback", { code: "AUS" });
-    expect(text).toBe(`${friendsPlus} #41550 ${region}`);
+    expect(text).toBe(`Friends+ #41550 ${region}`);
   });
 
   it("returns null for non-parseable instance id", () => {
@@ -46,8 +44,7 @@ describe("formatVrcInstanceLabel", () => {
       "wrld_x:64190~private(usr_x)~canRequestInvite~region(jp)",
       t,
     );
-    const invitePlus = t("vrc.instanceType.invitePlus");
-    expect(text).toBe(`${invitePlus} #64190 [JP]`);
+    expect(text).toBe("Invite+ #64190 [JP]");
   });
 
   it("stays invite when canRequestInvite precedes private (non-standard order)", () => {
@@ -55,8 +52,7 @@ describe("formatVrcInstanceLabel", () => {
       "wrld_x:64190~canRequestInvite~private(usr_x)",
       t,
     );
-    const invite = t("vrc.instanceType.invite");
-    expect(text).toBe(`${invite} #64190`);
+    expect(text).toBe("Invite #64190");
   });
 
   it("uses group access type when present after group marker", () => {
@@ -64,13 +60,11 @@ describe("formatVrcInstanceLabel", () => {
       "wrld_x:100~group(grp_x)~groupAccessType(public)",
       t,
     );
-    const groupPublic = t("vrc.instanceType.groupPublic");
-    expect(text).toBe(`${groupPublic} #100`);
+    expect(text).toBe("Group Public #100");
   });
 
   it("keeps full rest when numeric short name is empty (leading tilde)", () => {
     const key = "wrld_x:~usr_segment";
-    const publicLabel = t("vrc.instanceType.public");
-    expect(formatVrcInstanceLabel(key, t)).toBe(`${publicLabel} #~usr_segment`);
+    expect(formatVrcInstanceLabel(key, t)).toBe("Public #~usr_segment");
   });
 });

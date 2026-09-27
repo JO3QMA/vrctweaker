@@ -37,8 +37,7 @@ describe("VrcInstanceKeyLabel", () => {
   it("renders labeled text for a parseable wrld instance key", () => {
     const instanceKey = "wrld_w:88577~region(jp)";
     const wrapper = mountLabel({ instanceKey });
-    const publicLabel = ja.vrc.instanceType.public;
-    expect(wrapper.text()).toContain(`${publicLabel} #88577`);
+    expect(wrapper.text()).toContain("Public #88577");
     expect(wrapper.text()).toContain("[JP]");
   });
 });

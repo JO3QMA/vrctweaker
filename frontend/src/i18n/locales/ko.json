@@ -55,17 +55,7 @@
     "secondLong": "초"
   },
   "vrc": {
-    "regionFallback": "[{code}]",
-    "instanceType": {
-      "public": "퍼블릭",
-      "friendsPlus": "프렌즈+",
-      "friends": "프렌즈",
-      "invite": "초대",
-      "invitePlus": "초대+",
-      "groupPublic": "그룹 공개",
-      "groupPlus": "그룹+",
-      "groupMembers": "그룹 멤버"
-    }
+    "regionFallback": "[{code}]"
   },
   "dashboard": {
     "presenceChange": {
@@ -264,7 +254,8 @@
     "colLeave": "퇴장",
     "colDisplayName": "표시 이름",
     "colWorldName": "월드 이름",
-    "colInstance": "인스턴스"
+    "colInstance": "인스턴스",
+    "openInVrchat": "VRChat에서 열기: {text}"
   },
   "friends": {
     "title": "친구",

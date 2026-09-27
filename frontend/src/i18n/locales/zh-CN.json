@@ -55,17 +55,7 @@
     "secondLong": "秒"
   },
   "vrc": {
-    "regionFallback": "[{code}]",
-    "instanceType": {
-      "public": "公开",
-      "friendsPlus": "好友+",
-      "friends": "好友",
-      "invite": "邀请",
-      "invitePlus": "邀请+",
-      "groupPublic": "群组公开",
-      "groupPlus": "群组+",
-      "groupMembers": "群组成员"
-    }
+    "regionFallback": "[{code}]"
   },
   "dashboard": {
     "presenceChange": {
@@ -264,7 +254,8 @@
     "colLeave": "离开",
     "colDisplayName": "显示名称",
     "colWorldName": "世界名称",
-    "colInstance": "实例"
+    "colInstance": "实例",
+    "openInVrchat": "在 VRChat 中打开：{text}"
   },
   "friends": {
     "title": "好友",

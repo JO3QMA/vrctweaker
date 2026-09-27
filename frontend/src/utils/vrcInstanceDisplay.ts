@@ -13,6 +13,18 @@ type InstancePrivacy =
   | "groupPlus"
   | "groupMembers";
 
+/** VRChat instance access type labels (English only, locale-independent). */
+const INSTANCE_TYPE_LABEL: Record<InstancePrivacy, string> = {
+  public: "Public",
+  friendsPlus: "Friends+",
+  friends: "Friends",
+  invite: "Invite",
+  invitePlus: "Invite+",
+  groupPublic: "Group Public",
+  groupPlus: "Group+",
+  groupMembers: "Group Members",
+};
+
 const VRCHAT_WORLD_PREFIX = "wrld_";
 
 const REGION_CODE: Record<string, string> = {
@@ -114,12 +126,8 @@ function regionSuffix(region: string, t: VrcInstanceTranslate): string {
   });
 }
 
-function privacyLabel(
-  privacy: InstancePrivacy,
-  t: VrcInstanceTranslate,
-): string {
-  const key = `vrc.instanceType.${privacy}`;
-  return t(key);
+function privacyLabel(privacy: InstancePrivacy): string {
+  return INSTANCE_TYPE_LABEL[privacy];
 }
 
 /**
@@ -140,7 +148,7 @@ export function formatVrcInstanceLabel(
   const segments = segmentPart ? segmentPart.split("~") : [];
   const privacy = detectPrivacy(segments);
   const region = extractRegion(segments);
-  const label = `${privacyLabel(privacy, t)} #${shortName}`;
+  const label = `${privacyLabel(privacy)} #${shortName}`;
   const suffix = regionSuffix(region, t);
   return suffix ? `${label} ${suffix}` : label;
 }
