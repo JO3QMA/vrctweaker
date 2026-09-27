@@ -1,28 +1,21 @@
 import { describe, it, expect } from "vitest";
+import { createI18n } from "vue-i18n";
+import en from "../i18n/locales/en.json";
 import {
   formatVrcInstanceCell,
   vrcInstanceWebLaunchUrl,
 } from "./vrcInstanceDisplay";
 
-const t = (key: string, params?: Record<string, string>) => {
-  if (key === "encounterHistory.regionFallback" && params?.code) {
-    return `[${params.code}]`;
-  }
-  if (key === "encounterHistory.openInVrchat" && params?.text) {
-    return `Open in VRChat: ${params.text}`;
-  }
-  const map: Record<string, string> = {
-    "encounterHistory.instanceType.public": "Public",
-    "encounterHistory.instanceType.friendsPlus": "Friends+",
-    "encounterHistory.instanceType.friends": "Friends",
-    "encounterHistory.instanceType.invite": "Invite",
-    "encounterHistory.instanceType.invitePlus": "Invite+",
-    "encounterHistory.instanceType.groupPublic": "Group Public",
-    "encounterHistory.instanceType.groupPlus": "Group+",
-    "encounterHistory.instanceType.groupMembers": "Group Members",
-  };
-  return map[key] ?? key;
-};
+const i18n = createI18n({
+  legacy: false,
+  locale: "en",
+  messages: { en },
+});
+
+const t = i18n.global.t as (
+  key: string,
+  params?: Record<string, string>,
+) => string;
 
 describe("vrcInstanceWebLaunchUrl", () => {
   it("builds vrchat.com launch URL from a full instance key", () => {
@@ -42,11 +35,18 @@ describe("formatVrcInstanceCell", () => {
   it("formats public instance with region code", () => {
     const key = "wrld_db637cfb-64f8-4109-977b-6b755482f133:88577~region(jp)";
     const cell = formatVrcInstanceCell(key, t);
+    const publicLabel = t("encounterHistory.instanceType.public");
     expect(cell).toEqual({
-      text: "Public #88577 [JP]",
+      text: `${publicLabel} #88577 [JP]`,
       href: "https://vrchat.com/home/launch?worldId=wrld_db637cfb-64f8-4109-977b-6b755482f133&instanceId=88577%7Eregion%28jp%29",
-      title: `Public #88577 [JP] (${key})`,
+      title: `${publicLabel} #88577 [JP] (${key})`,
     });
+  });
+
+  it("maps legacy region alias use to US", () => {
+    const cell = formatVrcInstanceCell("wrld_x:100~region(use)", t);
+    expect(cell?.text).toContain("[US]");
+    expect(cell?.text).not.toContain("[USE]");
   });
 
   it("formats friends+ with unknown region fallback", () => {
@@ -54,7 +54,9 @@ describe("formatVrcInstanceCell", () => {
       "wrld_abc:41550~hidden(usr_x)~region(aus)",
       t,
     );
-    expect(cell?.text).toBe("Friends+ #41550 [AUS]");
+    const friendsPlus = t("encounterHistory.instanceType.friendsPlus");
+    const region = t("encounterHistory.regionFallback", { code: "AUS" });
+    expect(cell?.text).toBe(`${friendsPlus} #41550 ${region}`);
     expect(cell?.href).toContain("worldId=wrld_abc");
   });
 
@@ -67,7 +69,8 @@ describe("formatVrcInstanceCell", () => {
       "wrld_x:64190~private(usr_x)~canRequestInvite~region(jp)",
       t,
     );
-    expect(cell?.text).toBe("Invite+ #64190 [JP]");
+    const invitePlus = t("encounterHistory.instanceType.invitePlus");
+    expect(cell?.text).toBe(`${invitePlus} #64190 [JP]`);
   });
 
   it("stays invite when canRequestInvite precedes private (non-standard order)", () => {
@@ -75,7 +78,8 @@ describe("formatVrcInstanceCell", () => {
       "wrld_x:64190~canRequestInvite~private(usr_x)",
       t,
     );
-    expect(cell?.text).toBe("Invite #64190");
+    const invite = t("encounterHistory.instanceType.invite");
+    expect(cell?.text).toBe(`${invite} #64190`);
   });
 
   it("uses group access type when present after group marker", () => {
@@ -83,12 +87,14 @@ describe("formatVrcInstanceCell", () => {
       "wrld_x:100~group(grp_x)~groupAccessType(public)",
       t,
     );
-    expect(cell?.text).toBe("Group Public #100");
+    const groupPublic = t("encounterHistory.instanceType.groupPublic");
+    expect(cell?.text).toBe(`${groupPublic} #100`);
   });
 
-  it("keeps short name when rest starts with tilde", () => {
+  it("keeps full rest when numeric short name is empty (leading tilde)", () => {
     const key = "wrld_x:~usr_segment";
     const cell = formatVrcInstanceCell(key, t);
-    expect(cell?.text).toBe("Public #~usr_segment");
+    const publicLabel = t("encounterHistory.instanceType.public");
+    expect(cell?.text).toBe(`${publicLabel} #~usr_segment`);
   });
 });

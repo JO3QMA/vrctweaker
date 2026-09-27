@@ -15,10 +15,12 @@ type InstancePrivacy =
   | "groupMembers";
 
 const VRCHAT_WORLD_PREFIX = "wrld_";
+/** VRChat client launch URL; centralized here until a shared urls module exists. */
 const VRCHAT_LAUNCH_BASE_URL = "https://vrchat.com/home/launch";
 
 const REGION_CODE: Record<string, string> = {
   jp: "[JP]",
+  /** Legacy VRChat region alias (same as `us`). */
   use: "[US]",
   us: "[US]",
   eu: "[EU]",
@@ -45,10 +47,16 @@ function buildLaunchUrl(parsed: { worldId: string; rest: string }): string {
   return `${VRCHAT_LAUNCH_BASE_URL}?${params.toString()}`;
 }
 
+/**
+ * Instance number before the first `~` in the post-colon rest segment.
+ * When the key starts with `~` (no numeric prefix), the slice is empty and we
+ * fall back to the full rest so the UI still shows a distinguishable fragment.
+ */
 function instanceShortName(rest: string): string {
-  const tilde = rest.indexOf("~");
-  const short = tilde >= 0 ? rest.slice(0, tilde) : rest;
-  return short || rest;
+  const base = rest.trim();
+  const tilde = base.indexOf("~");
+  const short = tilde >= 0 ? base.slice(0, tilde).trim() : base;
+  return short || base;
 }
 
 /**
@@ -128,7 +136,11 @@ function privacyLabel(
   return t(key);
 }
 
-/** VRChat website launch URL for a stored VRChat instance key, or null if not parseable. */
+/**
+ * VRChat website launch URL for a stored VRChat instance key, or null if not parseable.
+ *
+ * @internal exported for unit tests only
+ */
 export function vrcInstanceWebLaunchUrl(instanceKey: string): string | null {
   const parsed = parseWorldAndRest(instanceKey);
   if (!parsed) return null;
