@@ -11,6 +11,7 @@
   >
     {{ cell.text }}
   </a>
+  <!-- Unparseable but non-empty id: raw mono text, no launch link (see formatVrcInstanceCell). -->
   <span v-else-if="trimmedId" class="mono">{{ trimmedId }}</span>
   <span v-else>{{ t("common.dash") }}</span>
 </template>

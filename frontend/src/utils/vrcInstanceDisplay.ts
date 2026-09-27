@@ -135,7 +135,11 @@ export function vrcInstanceWebLaunchUrl(instanceKey: string): string | null {
   return buildLaunchUrl(parsed);
 }
 
-/** Human-readable instance label + link metadata for encounter history cells. */
+/**
+ * Human-readable instance label + link metadata for encounter history cells.
+ * Returns null when the key cannot be parsed into a launch URL (legacy inst_*,
+ * wrld_* without `:`, empty rest, etc.). UI should fall back to showing the raw stored id.
+ */
 export function formatVrcInstanceCell(
   instanceKey: string,
   t: (key: string, params?: Record<string, string>) => string,
