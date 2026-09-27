@@ -102,6 +102,9 @@ export const E2E_SELF_USER_ID = "usr_e2e_self";
 /** ギャラリー・遭遇履歴（ワールド別）で共有するワールド ID */
 export const E2E_WORLD_ID = "wrld_e2e_gallery";
 
+/** Public instance key for encounter history E2E (no embedded user ids). */
+export const E2E_ENCOUNTER_INSTANCE_KEY = `${E2E_WORLD_ID}:88577~region(jp)`;
+
 export const E2E_TEST_USER_DISPLAY_NAME = "E2E Test User";
 
 export const E2E_SELF_DISPLAY_NAME = "E2E Self User";
@@ -157,7 +160,7 @@ export const SEED_ENCOUNTERS: SeedEncounter[] = [
     displayName: E2E_TEST_USER_DISPLAY_NAME,
     worldId: E2E_WORLD_ID,
     worldDisplayName: "E2E Gallery World",
-    instanceId: "inst_e2e_001",
+    instanceId: E2E_ENCOUNTER_INSTANCE_KEY,
     joinedAt: "2025-06-01T10:00:00Z",
     leftAt: "2025-06-01T11:30:00Z",
   },
@@ -167,7 +170,7 @@ export const SEED_ENCOUNTERS: SeedEncounter[] = [
     displayName: "E2E Visitor",
     worldId: E2E_WORLD_ID,
     worldDisplayName: "E2E Gallery World",
-    instanceId: "inst_e2e_001",
+    instanceId: E2E_ENCOUNTER_INSTANCE_KEY,
     joinedAt: "2025-06-01T10:15:00Z",
     leftAt: "2025-06-01T10:45:00Z",
   },

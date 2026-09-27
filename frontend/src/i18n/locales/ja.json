@@ -251,7 +251,19 @@
     "colLeave": "退室",
     "colDisplayName": "表示名",
     "colWorldName": "ワールド名",
-    "colInstance": "インスタンス"
+    "colInstance": "インスタンス",
+    "regionFallback": "[{code}]",
+    "instanceType": {
+      "public": "パブリック",
+      "friendsPlus": "フレンド+",
+      "friends": "フレンド",
+      "invite": "招待",
+      "invitePlus": "招待+",
+      "groupPublic": "グループ公開",
+      "groupPlus": "グループ+",
+      "groupMembers": "グループメンバー",
+      "unknown": "インスタンス"
+    }
   },
   "friends": {
     "title": "フレンド",

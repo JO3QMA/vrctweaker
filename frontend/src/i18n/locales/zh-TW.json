@@ -251,7 +251,19 @@
     "colLeave": "離開",
     "colDisplayName": "顯示名稱",
     "colWorldName": "世界名稱",
-    "colInstance": "實例"
+    "colInstance": "實例",
+    "regionFallback": "[{code}]",
+    "instanceType": {
+      "public": "公開",
+      "friendsPlus": "好友+",
+      "friends": "好友",
+      "invite": "邀請",
+      "invitePlus": "邀請+",
+      "groupPublic": "群組公開",
+      "groupPlus": "群組+",
+      "groupMembers": "群組成員",
+      "unknown": "實例"
+    }
   },
   "friends": {
     "title": "好友",

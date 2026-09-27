@@ -251,7 +251,19 @@
     "colLeave": "Left",
     "colDisplayName": "Display name",
     "colWorldName": "World name",
-    "colInstance": "Instance"
+    "colInstance": "Instance",
+    "regionFallback": "[{code}]",
+    "instanceType": {
+      "public": "Public",
+      "friendsPlus": "Friends+",
+      "friends": "Friends",
+      "invite": "Invite",
+      "invitePlus": "Invite+",
+      "groupPublic": "Group Public",
+      "groupPlus": "Group+",
+      "groupMembers": "Group Members",
+      "unknown": "Instance"
+    }
   },
   "friends": {
     "title": "Friends",
