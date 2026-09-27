@@ -80,6 +80,19 @@ const en = {
     minuteLong: "minutes",
     secondLong: "seconds",
   },
+  vrc: {
+    regionFallback: "[{code}]",
+    instanceType: {
+      public: "Public",
+      friendsPlus: "Friends+",
+      friends: "Friends",
+      invite: "Invite",
+      invitePlus: "Invite+",
+      groupPublic: "Group Public",
+      groupPlus: "Group+",
+      groupMembers: "Group Members",
+    },
+  },
   dashboard: {
     launch: "Launch VRChat",
     launchWithProfile: "Launch VRChat ({name})",
@@ -485,6 +498,19 @@ const ja = deepMerge(en, {
     minuteLong: "分",
     secondLong: "秒",
   },
+  vrc: {
+    regionFallback: "[{code}]",
+    instanceType: {
+      public: "パブリック",
+      friendsPlus: "フレンド+",
+      friends: "フレンド",
+      invite: "招待",
+      invitePlus: "招待+",
+      groupPublic: "グループ公開",
+      groupPlus: "グループ+",
+      groupMembers: "グループメンバー",
+    },
+  },
   dashboard: {
     launch: "VRChat 起動",
     launchWithProfile: "VRChat 起動 ({name})",
@@ -884,6 +910,19 @@ const ko = deepMerge(en, {
     minuteLong: "분",
     secondLong: "초",
   },
+  vrc: {
+    regionFallback: "[{code}]",
+    instanceType: {
+      public: "퍼블릭",
+      friendsPlus: "프렌즈+",
+      friends: "프렌즈",
+      invite: "초대",
+      invitePlus: "초대+",
+      groupPublic: "그룹 공개",
+      groupPlus: "그룹+",
+      groupMembers: "그룹 멤버",
+    },
+  },
   dashboard: {
     launch: "VRChat 실행",
     launchWithProfile: "VRChat 실행 ({name})",
@@ -1260,6 +1299,19 @@ const zhTW = deepMerge(en, {
     minuteLong: "分",
     secondLong: "秒",
   },
+  vrc: {
+    regionFallback: "[{code}]",
+    instanceType: {
+      public: "公開",
+      friendsPlus: "好友+",
+      friends: "好友",
+      invite: "邀請",
+      invitePlus: "邀請+",
+      groupPublic: "群組公開",
+      groupPlus: "群組+",
+      groupMembers: "群組成員",
+    },
+  },
   dashboard: {
     launch: "啟動 VRChat",
     launchWithProfile: "啟動 VRChat（{name}）",
@@ -1631,6 +1683,19 @@ const zhCN = deepMerge(en, {
     hourLong: "小时",
     minuteLong: "分",
     secondLong: "秒",
+  },
+  vrc: {
+    regionFallback: "[{code}]",
+    instanceType: {
+      public: "公开",
+      friendsPlus: "好友+",
+      friends: "好友",
+      invite: "邀请",
+      invitePlus: "邀请+",
+      groupPublic: "群组公开",
+      groupPlus: "群组+",
+      groupMembers: "群组成员",
+    },
   },
   dashboard: {
     launch: "启动 VRChat",

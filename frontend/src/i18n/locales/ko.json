@@ -54,6 +54,19 @@
     "minuteLong": "분",
     "secondLong": "초"
   },
+  "vrc": {
+    "regionFallback": "[{code}]",
+    "instanceType": {
+      "public": "퍼블릭",
+      "friendsPlus": "프렌즈+",
+      "friends": "프렌즈",
+      "invite": "초대",
+      "invitePlus": "초대+",
+      "groupPublic": "그룹 공개",
+      "groupPlus": "그룹+",
+      "groupMembers": "그룹 멤버"
+    }
+  },
   "dashboard": {
     "presenceChange": {
       "title": "상태",

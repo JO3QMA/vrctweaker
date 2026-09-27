@@ -54,6 +54,19 @@
     "minuteLong": "分",
     "secondLong": "秒"
   },
+  "vrc": {
+    "regionFallback": "[{code}]",
+    "instanceType": {
+      "public": "パブリック",
+      "friendsPlus": "フレンド+",
+      "friends": "フレンド",
+      "invite": "招待",
+      "invitePlus": "招待+",
+      "groupPublic": "グループ公開",
+      "groupPlus": "グループ+",
+      "groupMembers": "グループメンバー"
+    }
+  },
   "dashboard": {
     "presenceChange": {
       "title": "ステータス変更",

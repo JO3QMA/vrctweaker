@@ -54,6 +54,19 @@
     "minuteLong": "分",
     "secondLong": "秒"
   },
+  "vrc": {
+    "regionFallback": "[{code}]",
+    "instanceType": {
+      "public": "公开",
+      "friendsPlus": "好友+",
+      "friends": "好友",
+      "invite": "邀请",
+      "invitePlus": "邀请+",
+      "groupPublic": "群组公开",
+      "groupPlus": "群组+",
+      "groupMembers": "群组成员"
+    }
+  },
   "dashboard": {
     "presenceChange": {
       "title": "状态",
