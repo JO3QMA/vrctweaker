@@ -135,12 +135,12 @@ func ensureFriendAvatarObservationDedupIndex(db *sql.DB) error {
 		}
 	}
 	if needDedupe {
-		if _, err := db.Exec(`DELETE FROM friend_avatar_observations
+		if _, dedupeErr := db.Exec(`DELETE FROM friend_avatar_observations
 			WHERE id NOT IN (
 				SELECT MIN(id) FROM friend_avatar_observations
 				GROUP BY log_source_path, display_name, avatar_name, observed_at
-			)`); err != nil {
-			return fmt.Errorf("friend avatar observations dedupe: %w", err)
+			)`); dedupeErr != nil {
+			return fmt.Errorf("friend avatar observations dedupe: %w", dedupeErr)
 		}
 	}
 	_, err = db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS ` + indexName + ` ON friend_avatar_observations(log_source_path, display_name, avatar_name, observed_at)`)
