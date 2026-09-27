@@ -234,7 +234,6 @@ const en = {
       groupPublic: "Group Public",
       groupPlus: "Group+",
       groupMembers: "Group Members",
-      unknown: "Instance",
     },
   },
   friends: {
@@ -652,7 +651,6 @@ const ja = deepMerge(en, {
       groupPublic: "グループ公開",
       groupPlus: "グループ+",
       groupMembers: "グループメンバー",
-      unknown: "インスタンス",
     },
   },
   friends: {
@@ -1059,7 +1057,6 @@ const ko = deepMerge(en, {
       groupPublic: "그룹 공개",
       groupPlus: "그룹+",
       groupMembers: "그룹 멤버",
-      unknown: "인스턴스",
     },
   },
   friends: {
@@ -1447,7 +1444,6 @@ const zhTW = deepMerge(en, {
       groupPublic: "群組公開",
       groupPlus: "群組+",
       groupMembers: "群組成員",
-      unknown: "實例",
     },
   },
   friends: {
@@ -1831,7 +1827,6 @@ const zhCN = deepMerge(en, {
       groupPublic: "群组公开",
       groupPlus: "群组+",
       groupMembers: "群组成员",
-      unknown: "实例",
     },
   },
   friends: {

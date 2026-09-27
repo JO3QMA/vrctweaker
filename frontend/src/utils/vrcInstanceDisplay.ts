@@ -12,17 +12,16 @@ type InstancePrivacy =
   | "invitePlus"
   | "groupPublic"
   | "groupPlus"
-  | "groupMembers"
-  | "unknown";
+  | "groupMembers";
 
 const VRCHAT_WORLD_PREFIX = "wrld_";
 const VRCHAT_LAUNCH_BASE_URL = "https://vrchat.com/home/launch";
 
-const REGION_FLAG: Record<string, string> = {
-  jp: "🇯🇵",
-  use: "🇺🇸",
-  us: "🇺🇸",
-  eu: "🇪🇺",
+const REGION_CODE: Record<string, string> = {
+  jp: "[JP]",
+  use: "[US]",
+  us: "[US]",
+  eu: "[EU]",
 };
 
 function parseWorldAndRest(
@@ -36,6 +35,14 @@ function parseWorldAndRest(
   const rest = key.slice(colon + 1).trim();
   if (!rest) return null;
   return { worldId, rest };
+}
+
+function buildLaunchUrl(parsed: { worldId: string; rest: string }): string {
+  const params = new URLSearchParams({
+    worldId: parsed.worldId,
+    instanceId: parsed.rest,
+  });
+  return `${VRCHAT_LAUNCH_BASE_URL}?${params.toString()}`;
 }
 
 function instanceShortName(rest: string): string {
@@ -104,8 +111,10 @@ function regionSuffix(
   t: (key: string, params?: Record<string, string>) => string,
 ): string {
   if (!region) return "";
-  const flag = REGION_FLAG[region.toLowerCase()];
-  if (flag) return flag;
+  const regionKey = region.toLowerCase();
+  if (Object.prototype.hasOwnProperty.call(REGION_CODE, regionKey)) {
+    return REGION_CODE[regionKey];
+  }
   return t("encounterHistory.regionFallback", {
     code: region.toUpperCase(),
   });
@@ -123,11 +132,7 @@ function privacyLabel(
 export function vrcInstanceWebLaunchUrl(instanceKey: string): string | null {
   const parsed = parseWorldAndRest(instanceKey);
   if (!parsed) return null;
-  const params = new URLSearchParams({
-    worldId: parsed.worldId,
-    instanceId: parsed.rest,
-  });
-  return `${VRCHAT_LAUNCH_BASE_URL}?${params.toString()}`;
+  return buildLaunchUrl(parsed);
 }
 
 /** Human-readable instance label + link metadata for encounter history cells. */
@@ -137,8 +142,7 @@ export function formatVrcInstanceCell(
 ): VrcInstanceCell | null {
   const parsed = parseWorldAndRest(instanceKey);
   if (!parsed) return null;
-  const href = vrcInstanceWebLaunchUrl(instanceKey);
-  if (!href) return null;
+  const href = buildLaunchUrl(parsed);
 
   const trimmedKey = instanceKey.trim();
   const shortName = instanceShortName(parsed.rest);

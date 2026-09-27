@@ -20,7 +20,6 @@ const t = (key: string, params?: Record<string, string>) => {
     "encounterHistory.instanceType.groupPublic": "Group Public",
     "encounterHistory.instanceType.groupPlus": "Group+",
     "encounterHistory.instanceType.groupMembers": "Group Members",
-    "encounterHistory.instanceType.unknown": "Instance",
   };
   return map[key] ?? key;
 };
@@ -40,13 +39,13 @@ describe("vrcInstanceWebLaunchUrl", () => {
 });
 
 describe("formatVrcInstanceCell", () => {
-  it("formats public instance with region flag", () => {
+  it("formats public instance with region code", () => {
     const key = "wrld_db637cfb-64f8-4109-977b-6b755482f133:88577~region(jp)";
     const cell = formatVrcInstanceCell(key, t);
     expect(cell).toEqual({
-      text: "Public #88577 🇯🇵",
+      text: "Public #88577 [JP]",
       href: "https://vrchat.com/home/launch?worldId=wrld_db637cfb-64f8-4109-977b-6b755482f133&instanceId=88577%7Eregion%28jp%29",
-      title: `Public #88577 🇯🇵 (${key})`,
+      title: `Public #88577 [JP] (${key})`,
     });
   });
 
@@ -68,7 +67,7 @@ describe("formatVrcInstanceCell", () => {
       "wrld_x:64190~private(usr_x)~canRequestInvite~region(jp)",
       t,
     );
-    expect(cell?.text).toBe("Invite+ #64190 🇯🇵");
+    expect(cell?.text).toBe("Invite+ #64190 [JP]");
   });
 
   it("stays invite when canRequestInvite precedes private (non-standard order)", () => {

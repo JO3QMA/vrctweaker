@@ -131,7 +131,7 @@ describe("EncounterHistoryList", () => {
 
     const link = wrapper.get('[data-testid="encounter-instance-link"]');
     expect(link.text()).toContain("パブリック #88577");
-    expect(link.text()).toContain("🇯🇵");
+    expect(link.text()).toContain("[JP]");
     expect(link.attributes("href")).toContain("vrchat.com/home/launch");
     expect(link.attributes("href")).toContain("worldId=wrld_w");
     expect(link.attributes("aria-label")).toContain("VRChat で開く");

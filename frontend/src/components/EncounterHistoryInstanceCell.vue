@@ -11,7 +11,7 @@
   >
     {{ cell.text }}
   </a>
-  <span v-else-if="instanceId" class="mono">{{ instanceId }}</span>
+  <span v-else-if="trimmedId" class="mono">{{ trimmedId }}</span>
   <span v-else>{{ t("common.dash") }}</span>
 </template>
 
@@ -26,8 +26,10 @@ const props = defineProps<{
 
 const { t } = useI18n();
 
+const trimmedId = computed(() => props.instanceId?.trim() ?? "");
+
 const cell = computed(() => {
-  const id = props.instanceId?.trim();
+  const id = trimmedId.value;
   if (!id) return null;
   return formatVrcInstanceCell(id, t);
 });
@@ -46,7 +48,7 @@ const cell = computed(() => {
 }
 
 .mono {
-  font-family: var(--font-family-ui);
+  font-family: ui-monospace, monospace;
   font-size: var(--font-size-12);
   word-break: break-all;
 }
