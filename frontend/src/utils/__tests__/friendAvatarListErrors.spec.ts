@@ -9,7 +9,7 @@ describe("friendAvatarListFetchErrorMessage", () => {
     vi.restoreAllMocks();
   });
 
-  it("returns generic i18n key", () => {
+  it("returns generic i18n key without exposing raw errors", () => {
     expect(friendAvatarListFetchErrorMessage(new Error("secret path"), t)).toBe(
       "friendAvatars.fetchFailedGeneric",
     );
