@@ -77,16 +77,6 @@ export interface SeedAutomationItem {
   scriptSource?: string;
 }
 
-export interface SeedAutomationRule {
-  id: string;
-  name: string;
-  triggerType: string;
-  conditionJson: string;
-  actionType: string;
-  actionPayload: string;
-  isEnabled: boolean;
-}
-
 export interface SeedUserProfileNavigation {
   user: SeedFriend;
   openInFriendsView: boolean;
@@ -293,18 +283,6 @@ export const SEED_AUTOMATION_ITEMS: SeedAutomationItem[] = [
     actionsJson: JSON.stringify([
       { type: "change_status", payload: { status: "busy" } },
     ]),
-  },
-];
-
-export const SEED_AUTOMATION_RULES: SeedAutomationRule[] = [
-  {
-    id: "rule_e2e_001",
-    name: "E2E AFK → Busy",
-    triggerType: "afk_detected",
-    conditionJson: "{}",
-    actionType: "change_status",
-    actionPayload: "busy",
-    isEnabled: true,
   },
 ];
 

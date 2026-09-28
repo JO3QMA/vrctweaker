@@ -15,7 +15,6 @@ import (
 	"github.com/gen2brain/beeep"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"vrchat-tweaker/internal/domain/activity"
-	"vrchat-tweaker/internal/domain/automation"
 	"vrchat-tweaker/internal/domain/launcher"
 	"vrchat-tweaker/internal/domain/media"
 	"vrchat-tweaker/internal/domain/vrchatconfig"
@@ -1261,28 +1260,6 @@ func (a *App) GetSelfProfile(forceRefresh bool) (UserCacheDTO, error) {
 // SetFavorite updates a friend's favorite flag.
 func (a *App) SetFavorite(vrcUserID string, favorite bool) error {
 	return a.identity.SetFavorite(a.ctx, vrcUserID, favorite)
-}
-
-// --- Automation bindings ---
-
-// ListAutomationRules returns all automation rules.
-func (a *App) ListAutomationRules() ([]*automation.AutomationRule, error) {
-	return a.automation.ListRules(a.ctx)
-}
-
-// SaveAutomationRule persists an automation rule.
-func (a *App) SaveAutomationRule(rule automation.AutomationRule) error {
-	return a.automation.SaveRule(a.ctx, &rule)
-}
-
-// DeleteAutomationRule removes an automation rule by ID.
-func (a *App) DeleteAutomationRule(id string) error {
-	return a.automation.DeleteRule(a.ctx, id)
-}
-
-// ToggleAutomationRule enables or disables an automation rule.
-func (a *App) ToggleAutomationRule(id string, enabled bool) error {
-	return a.automation.ToggleRule(a.ctx, id, enabled)
 }
 
 // --- DB Maintenance bindings ---

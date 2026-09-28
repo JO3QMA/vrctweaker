@@ -15,7 +15,6 @@ import {
   E2E_TEST_USER_ID,
   SEED_ACTIVITY_STATS,
   SEED_AUTOMATION_ITEMS,
-  SEED_AUTOMATION_RULES,
   SEED_ENCOUNTERS,
   SEED_FRIEND_AVATAR_USAGE,
   SEED_FRIENDS,
@@ -42,7 +41,6 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
   const friendAvatarUsageJson = JSON.stringify(SEED_FRIEND_AVATAR_USAGE);
   const friendsJson = JSON.stringify(SEED_FRIENDS);
   const activityStatsJson = JSON.stringify(SEED_ACTIVITY_STATS);
-  const automationRulesJson = JSON.stringify(SEED_AUTOMATION_RULES);
   const automationItemsJson = JSON.stringify(SEED_AUTOMATION_ITEMS);
   const vrchatConfigJson = JSON.stringify(SEED_VRCHAT_CONFIG);
   const e2eTestUserIdJson = JSON.stringify(E2E_TEST_USER_ID);
@@ -91,7 +89,6 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
       const friendAvatarUsage = ${friendAvatarUsageJson};
       const friends = ${friendsJson};
       const activityStats = ${activityStatsJson};
-      const automationRules = ${automationRulesJson};
       const automationItems = ${automationItemsJson};
       const vrchatConfig = ${vrchatConfigJson};
       const e2eTestUserId = ${e2eTestUserIdJson};
@@ -427,10 +424,6 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         ResolveVRChatAssetCachePath: () =>
           Promise.resolve('C:\\\\VRChat\\\\Cache'),
         ClearVRChatAssetCache: () => Promise.resolve(0),
-        ListAutomationRules: () => Promise.resolve(automationRules),
-        SaveAutomationRule: () => Promise.resolve(),
-        DeleteAutomationRule: () => Promise.resolve(),
-        ToggleAutomationRule: () => Promise.resolve(),
         ListAutomationItems: () => Promise.resolve(automationItems),
         SaveAutomationItem: () => Promise.resolve(),
         DeleteAutomationItem: () => Promise.resolve(),

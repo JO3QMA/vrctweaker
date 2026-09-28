@@ -123,7 +123,7 @@ func TestRepositories_returnErrorWhenDBClosed(t *testing.T) {
 
 	t.Run("Automation", func(t *testing.T) {
 		db := openTestDB(t)
-		repo := NewAutomationRuleRepository(db)
+		repo := NewAutomationItemRepository(db)
 		_ = db.Close()
 		if _, err := repo.List(ctx); err == nil {
 			t.Fatal("List expected error")
@@ -155,7 +155,10 @@ func TestRepositories_returnErrorWhenDBClosed(t *testing.T) {
 		if err := mediaRepo.Save(ctx, &media.Screenshot{ID: "s", FilePath: "/x"}); err == nil {
 			t.Fatal("screenshot Save expected error")
 		}
-		if err := NewAutomationRuleRepository(db).Save(ctx, &automation.AutomationRule{ID: "r", Name: "R"}); err == nil {
+		if err := NewAutomationItemRepository(db).Save(ctx, &automation.AutomationItem{
+			ID: "r", Name: "R", Kind: automation.KindRule, TriggerType: automation.TriggerAFKDetected,
+			ActionsJSON: `[{"type":"change_status","payload":{"status":"busy"}}]`,
+		}); err == nil {
 			t.Fatal("automation Save expected error")
 		}
 	})
