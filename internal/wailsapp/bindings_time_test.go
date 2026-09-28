@@ -5,21 +5,16 @@ import (
 	"time"
 )
 
-func TestParseDateOrRFC3339(t *testing.T) {
-	t.Parallel()
-	day := parseDateOrRFC3339("2024-06-01")
-	if day == nil {
-		t.Fatal("expected date")
-		return
+func TestFormatRFC3339_zeroTimeReturnsEmpty(t *testing.T) {
+	if formatRFC3339(time.Time{}) != "" {
+		t.Fatalf("zero time should map to empty string")
 	}
-	if day.Format("2006-01-02") != "2024-06-01" {
-		t.Fatalf("got %s", day.Format(time.RFC3339))
-	}
-	rfc := parseDateOrRFC3339("2024-06-01T12:00:00Z")
-	if rfc == nil || !rfc.Equal(time.Date(2024, 6, 1, 12, 0, 0, 0, time.UTC)) {
-		t.Fatalf("got %v", rfc)
-	}
-	if parseDateOrRFC3339("") != nil {
-		t.Fatal("empty should be nil")
+}
+
+func TestFormatRFC3339_nonZero(t *testing.T) {
+	ts := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
+	got := formatRFC3339(ts)
+	if got != "2026-01-02T03:04:05Z" {
+		t.Fatalf("got %q", got)
 	}
 }

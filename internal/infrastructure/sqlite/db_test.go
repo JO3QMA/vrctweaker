@@ -287,6 +287,83 @@ func TestApplySchema_idempotent(t *testing.T) {
 	}
 }
 
+func TestEnsureFriendAvatarObservationDedupIndex_skipsDuplicateProbeWhenIndexPresent(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if err := applySchema(db); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 3; i++ {
+		if err := ensureFriendAvatarObservationDedupIndex(db); err != nil {
+			t.Fatalf("iteration %d: %v", i, err)
+		}
+	}
+}
+
+func TestEnsureFriendAvatarObservationDedupIndex_skipsDeleteWhenNoDuplicates(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if err := applySchema(db); err != nil {
+		t.Fatal(err)
+	}
+	var before int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM friend_avatar_observations`).Scan(&before); err != nil {
+		t.Fatal(err)
+	}
+	if err := ensureFriendAvatarObservationDedupIndex(db); err != nil {
+		t.Fatal(err)
+	}
+	var after int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM friend_avatar_observations`).Scan(&after); err != nil {
+		t.Fatal(err)
+	}
+	if before != after {
+		t.Fatalf("dedupe must not delete when index exists and no duplicates: before=%d after=%d", before, after)
+	}
+}
+
+func TestEnsureFriendAvatarObservationDedupIndex_dedupesDuplicates(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if err := applySchema(db); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`DROP INDEX IF EXISTS idx_friend_avatar_obs_natural`); err != nil {
+		t.Fatal(err)
+	}
+	ts := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339)
+	for _, id := range []string{"a", "b"} {
+		_, err := db.Exec(`INSERT INTO friend_avatar_observations (
+			id, vrc_user_id, display_name, avatar_name, instance_id, world_id, log_source_path, observed_at
+		) VALUES (?, 'usr', 'N', 'Av', '', '', '/log', ?)`, id, ts)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := ensureFriendAvatarObservationDedupIndex(db); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM friend_avatar_observations`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Fatalf("duplicate rows = %d, want 1", n)
+	}
+}
+
 func TestOpen_rejectsInvalidDataDir(t *testing.T) {
 	_, err := Open("/proc/self/mem/not-a-directory")
 	if err == nil {

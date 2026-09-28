@@ -92,6 +92,10 @@ func applySchema(db *sql.DB) error {
 		return err
 	}
 
+	if err := ensureFriendAvatarObservationDedupIndex(db); err != nil {
+		return err
+	}
+
 	if err := MigrateAutomationRules(context.Background(), db); err != nil {
 		return fmt.Errorf("migrate automation rules: %w", err)
 	}
@@ -115,6 +119,41 @@ func ensureActivityLogSourceColumns(db *sql.DB) error {
 		}
 	}
 	return nil
+}
+
+func ensureFriendAvatarObservationDedupIndex(db *sql.DB) error {
+	const indexName = "idx_friend_avatar_obs_natural"
+	indexMissing, err := friendAvatarDedupIndexMissing(db, indexName)
+	if err != nil {
+		return err
+	}
+	// Once the UNIQUE index exists, duplicates cannot remain; skip the GROUP BY
+	// duplicate probe on every startup. Only run DELETE dedupe when the index is
+	// still missing (first migration or after a forced DROP).
+	needDedupe := indexMissing
+	if needDedupe {
+		if _, dedupeErr := db.Exec(`DELETE FROM friend_avatar_observations
+			WHERE id NOT IN (
+				SELECT MIN(id) FROM friend_avatar_observations
+				GROUP BY log_source_path, display_name, avatar_name, observed_at
+			)`); dedupeErr != nil {
+			return fmt.Errorf("friend avatar observations dedupe: %w", dedupeErr)
+		}
+	}
+	_, err = db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS ` + indexName + ` ON friend_avatar_observations(log_source_path, display_name, avatar_name, observed_at)`)
+	if err != nil {
+		return fmt.Errorf("friend avatar observations unique index: %w", err)
+	}
+	return nil
+}
+
+func friendAvatarDedupIndexMissing(db *sql.DB, indexName string) (bool, error) {
+	var n int
+	err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = ?`, indexName).Scan(&n)
+	if err != nil {
+		return false, fmt.Errorf("friend avatar observations index check: %w", err)
+	}
+	return n == 0, nil
 }
 
 func ensureScreenshotEnrichmentTable(db *sql.DB) error {
@@ -202,6 +241,19 @@ func schemaStatements() []string {
 		`CREATE INDEX IF NOT EXISTS idx_user_encounters_vrc_user_id ON user_encounters(vrc_user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_user_encounters_left_at ON user_encounters(left_at)`,
 		`CREATE INDEX IF NOT EXISTS idx_user_encounters_joined_at ON user_encounters(joined_at)`,
+		`CREATE TABLE IF NOT EXISTS friend_avatar_observations (
+			id TEXT PRIMARY KEY,
+			vrc_user_id TEXT NOT NULL DEFAULT '',
+			display_name TEXT NOT NULL,
+			avatar_name TEXT NOT NULL,
+			instance_id TEXT,
+			world_id TEXT,
+			log_source_path TEXT,
+			observed_at TEXT NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_friend_avatar_obs_vrc_user_id ON friend_avatar_observations(vrc_user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_friend_avatar_obs_observed_at ON friend_avatar_observations(observed_at)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_friend_avatar_obs_natural ON friend_avatar_observations(log_source_path, display_name, avatar_name, observed_at)`,
 		`CREATE INDEX IF NOT EXISTS idx_play_sessions_start_time ON play_sessions(start_time)`,
 		`CREATE TABLE IF NOT EXISTS users_cache (
 			vrc_user_id TEXT PRIMARY KEY,

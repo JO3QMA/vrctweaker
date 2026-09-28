@@ -257,6 +257,14 @@
     "colInstance": "インスタンス",
     "openInVrchat": "VRChat で開く: {text}"
   },
+  "friendAvatars": {
+    "empty": "ログから記録されたアバターはまだありません。",
+    "fetchFailedGeneric": "アバター一覧の取得に失敗しました。",
+    "colAvatarName": "アバター名",
+    "colLastSeen": "最終確認",
+    "colFirstSeen": "初回確認",
+    "colCount": "回数"
+  },
   "friends": {
     "title": "フレンド",
     "loginRequired": "フレンド一覧の更新にはログインが必要です。設定画面でログインしてください。",
@@ -461,8 +469,8 @@
     "errOperation": "操作に失敗しました",
     "vacuumConfirm": "データベースを最適化（VACUUM）します。よろしいですか？",
     "vacuumDone": "DBの最適化が完了しました",
-    "clearEncountersConfirm": "遭遇ログ（user_encounters）をすべて削除します。よろしいですか？",
-    "clearEncountersDone": "{n}件の遭遇ログを削除しました",
+    "clearEncountersConfirm": "遭遇ログ（user_encounters）とフレンドアバター利用履歴（friend_avatar_observations）をすべて削除します。よろしいですか？",
+    "clearEncountersDone": "{n}件の遭遇ログ・アバター利用履歴を削除しました",
     "clearScreenshotsConfirm": "スクリーンショットインデックス（screenshots）をすべて削除します。よろしいですか？",
     "clearScreenshotsDone": "{n}件のスクショインデックスを削除しました",
     "clearFriendsConfirm": "ユーザーキャッシュ（users_cache）の全行（自分・フレンド・遭遇ログ由来のユーザー）を削除します。よろしいですか？",
@@ -527,6 +535,7 @@
     "copyDisplayName": "表示名をコピー",
     "tabDetail": "詳細",
     "tabEncounters": "遭遇履歴",
+    "tabAvatars": "アバター",
     "state": "状態 (state)",
     "location": "ロケーション",
     "developerType": "開発者種別",

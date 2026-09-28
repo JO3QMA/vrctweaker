@@ -257,6 +257,14 @@
     "colInstance": "인스턴스",
     "openInVrchat": "VRChat에서 열기: {text}"
   },
+  "friendAvatars": {
+    "empty": "로그에 기록된 아바타가 없습니다.",
+    "fetchFailedGeneric": "아바타 목록을 불러오지 못했습니다.",
+    "colAvatarName": "아바타 이름",
+    "colLastSeen": "마지막 확인",
+    "colFirstSeen": "처음 확인",
+    "colCount": "횟수"
+  },
   "friends": {
     "title": "친구",
     "loginRequired": "친구 목록을 새로 고치려면 로그인이 필요합니다. 설정에서 로그인하세요.",
@@ -461,8 +469,8 @@
     "errOperation": "작업 실패",
     "vacuumConfirm": "데이터베이스를 최적화(VACUUM)할까요?",
     "vacuumDone": "DB 최적화가 완료되었습니다",
-    "clearEncountersConfirm": "모든 조우 로그(user_encounters)를 삭제할까요?",
-    "clearEncountersDone": "조우 로그 {n}건 삭제",
+    "clearEncountersConfirm": "모든 조우 로그(user_encounters)와 친구 아바타 이용 기록(friend_avatar_observations)을 삭제할까요?",
+    "clearEncountersDone": "조우 로그·아바타 이용 기록 {n}건 삭제",
     "clearScreenshotsConfirm": "스크린샷 인덱스를 모두 삭제할까요?",
     "clearScreenshotsDone": "스크린샷 인덱스 {n}건 삭제",
     "clearFriendsConfirm": "users_cache의 모든 행을 삭제할까요?",
@@ -527,6 +535,7 @@
     "copyDisplayName": "표시 이름 복사",
     "tabDetail": "상세",
     "tabEncounters": "조우 기록",
+    "tabAvatars": "아바타",
     "state": "상태 (state)",
     "location": "위치",
     "developerType": "개발자 유형",

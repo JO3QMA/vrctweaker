@@ -13,6 +13,8 @@ type SessionCorrelator struct {
 	lastLeftWorldID    string
 	// pendingVideo is FIFO of Open video playback attempt URLs on this Log source.
 	pendingVideo []string
+	// displayNameToVRCUserID maps encounter display names to ids within the current log replay context.
+	displayNameToVRCUserID map[string]string
 }
 
 // Reset clears correlation state before reading a new output_log file from offset 0.
@@ -23,6 +25,7 @@ func (c *SessionCorrelator) Reset() {
 	c.lastLeftInstanceID = ""
 	c.lastLeftWorldID = ""
 	c.pendingVideo = nil
+	c.displayNameToVRCUserID = nil
 }
 
 // Apply consumes one parsed event and returns commands to persist. AvatarSwitch yields nil.
@@ -46,6 +49,8 @@ func (c *SessionCorrelator) Apply(event ParsedEvent) []any {
 			RoomName: e.RoomName,
 			At:       e.OccurredAt,
 		}}
+	case *AvatarSwitchEvent:
+		return c.applyAvatarSwitch(e)
 	case *EncounterEvent:
 		inst := e.InstanceID
 		if inst == "" {
@@ -62,6 +67,17 @@ func (c *SessionCorrelator) Apply(event ParsedEvent) []any {
 			wid = c.pendingDestinationWorldID
 		}
 		if e.Action == EncounterActionJoin {
+			if e.VRCUserID != "" && e.DisplayName != "" {
+				if c.displayNameToVRCUserID == nil {
+					c.displayNameToVRCUserID = make(map[string]string)
+				}
+				existing, ok := c.displayNameToVRCUserID[e.DisplayName]
+				if ok && existing != e.VRCUserID {
+					delete(c.displayNameToVRCUserID, e.DisplayName)
+				} else {
+					c.displayNameToVRCUserID[e.DisplayName] = e.VRCUserID
+				}
+			}
 			return []any{RecordEncounterJoinCmd{
 				VRCUserID:   e.VRCUserID,
 				DisplayName: e.DisplayName,
@@ -88,6 +104,40 @@ func (c *SessionCorrelator) Apply(event ParsedEvent) []any {
 	default:
 		return nil
 	}
+}
+
+func (c *SessionCorrelator) applyAvatarSwitch(e *AvatarSwitchEvent) []any {
+	if e == nil || e.AvatarName == "" || e.DisplayName == "" {
+		return nil
+	}
+	if e.VRCUserID != "" {
+		if c.displayNameToVRCUserID == nil {
+			c.displayNameToVRCUserID = make(map[string]string)
+		}
+		existing, ok := c.displayNameToVRCUserID[e.DisplayName]
+		if ok && existing != e.VRCUserID {
+			delete(c.displayNameToVRCUserID, e.DisplayName)
+		} else {
+			c.displayNameToVRCUserID[e.DisplayName] = e.VRCUserID
+		}
+	}
+	vrcUserID := ""
+	if c.displayNameToVRCUserID != nil {
+		vrcUserID = c.displayNameToVRCUserID[e.DisplayName]
+	}
+	inst := c.sessionInstanceID
+	wid := c.sessionWorldID
+	if wid == "" {
+		wid = c.pendingDestinationWorldID
+	}
+	return []any{RecordFriendAvatarSwitchCmd{
+		VRCUserID:   vrcUserID,
+		DisplayName: e.DisplayName,
+		AvatarName:  e.AvatarName,
+		InstanceID:  inst,
+		WorldID:     wid,
+		At:          e.OccurredAt,
+	}}
 }
 
 func (c *SessionCorrelator) applyVideoAttempt(e *VideoPlaybackEvent) []any {

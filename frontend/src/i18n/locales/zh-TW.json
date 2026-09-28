@@ -257,6 +257,14 @@
     "colInstance": "實例",
     "openInVrchat": "在 VRChat 中開啟：{text}"
   },
+  "friendAvatars": {
+    "empty": "尚無從日誌記錄的 Avatar。",
+    "fetchFailedGeneric": "無法載入 Avatar 列表。",
+    "colAvatarName": "Avatar 名稱",
+    "colLastSeen": "最後確認",
+    "colFirstSeen": "首次確認",
+    "colCount": "次數"
+  },
   "friends": {
     "title": "好友",
     "loginRequired": "重新整理好友列表需要先登入。請至設定登入。",
@@ -461,8 +469,8 @@
     "errOperation": "操作失敗",
     "vacuumConfirm": "要最佳化資料庫 (VACUUM) 嗎？",
     "vacuumDone": "資料庫最佳化完成",
-    "clearEncountersConfirm": "要刪除所有相遇紀錄 (user_encounters) 嗎？",
-    "clearEncountersDone": "已刪除 {n} 筆相遇紀錄",
+    "clearEncountersConfirm": "要刪除所有相遇紀錄 (user_encounters) 與好友 Avatar 使用紀錄 (friend_avatar_observations) 嗎？",
+    "clearEncountersDone": "已刪除 {n} 筆相遇紀錄與 Avatar",
     "clearScreenshotsConfirm": "要刪除所有截圖索引嗎？",
     "clearScreenshotsDone": "已刪除 {n} 筆截圖索引",
     "clearFriendsConfirm": "要刪除 users_cache 的所有列嗎？",
@@ -527,6 +535,7 @@
     "copyDisplayName": "複製顯示名稱",
     "tabDetail": "詳細",
     "tabEncounters": "相遇紀錄",
+    "tabAvatars": "Avatar",
     "state": "狀態 (state)",
     "location": "位置",
     "developerType": "開發者類型",

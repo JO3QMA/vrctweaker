@@ -263,6 +263,14 @@
               hide-display-name-column
             />
           </el-tab-pane>
+          <el-tab-pane
+            v-if="variant !== 'self'"
+            :label="t('userDetail.tabAvatars')"
+            name="avatars"
+            lazy
+          >
+            <FriendAvatarList :user-id="selected.vrcUserId" />
+          </el-tab-pane>
         </el-tabs>
       </div>
     </el-card>
@@ -274,6 +282,7 @@ import { CopyDocument } from "@element-plus/icons-vue";
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import EncounterHistoryList from "./EncounterHistoryList.vue";
+import FriendAvatarList from "./FriendAvatarList.vue";
 import VrcStatusTag from "./VrcStatusTag.vue";
 import VrcUserTagChip from "./VrcUserTagChip.vue";
 import VtButton from "./VtButton.vue";
@@ -303,7 +312,7 @@ const props = withDefaults(
   },
 );
 
-const detailTab = ref<"detail" | "encounters">("detail");
+const detailTab = ref<"detail" | "encounters" | "avatars">("detail");
 
 const detailRoot = ref<HTMLElement | null>(null);
 const nameAnchor = ref<HTMLElement | null>(null);

@@ -17,6 +17,7 @@ import {
   SEED_AUTOMATION_ITEMS,
   SEED_AUTOMATION_RULES,
   SEED_ENCOUNTERS,
+  SEED_FRIEND_AVATAR_USAGE,
   SEED_FRIENDS,
   SEED_LAUNCH_PROFILES,
   SEED_PATH_SETTINGS,
@@ -38,6 +39,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
   const pathSettingsJson = JSON.stringify(SEED_PATH_SETTINGS);
   const screenshotsJson = JSON.stringify(SEED_SCREENSHOTS);
   const encountersJson = JSON.stringify(SEED_ENCOUNTERS);
+  const friendAvatarUsageJson = JSON.stringify(SEED_FRIEND_AVATAR_USAGE);
   const friendsJson = JSON.stringify(SEED_FRIENDS);
   const activityStatsJson = JSON.stringify(SEED_ACTIVITY_STATS);
   const automationRulesJson = JSON.stringify(SEED_AUTOMATION_RULES);
@@ -86,6 +88,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
       const pathSettings = ${pathSettingsJson};
       const screenshots = ${screenshotsJson};
       const encounters = ${encountersJson};
+      const friendAvatarUsage = ${friendAvatarUsageJson};
       const friends = ${friendsJson};
       const activityStats = ${activityStatsJson};
       const automationRules = ${automationRulesJson};
@@ -140,6 +143,10 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
 
       function encountersByWorldId(list, worldId) {
         return list.filter(function(e) { return e.worldId === worldId; });
+      }
+
+      function friendAvatarUsageByVrcUserId(list, vrcUserId) {
+        return list.filter(function(r) { return r.vrcUserId === vrcUserId; });
       }
 
       function resolveUserProfileNavigation(vrcUserId) {
@@ -364,6 +371,10 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         Encounters: () => Promise.resolve(encounters),
         EncountersByVRCUserID: (vrcUserId) =>
           Promise.resolve(encountersByVrcUserId(encounters, vrcUserId)),
+        FriendAvatarUsageByVRCUserID: (vrcUserId) =>
+          Promise.resolve(
+            friendAvatarUsageByVrcUserId(friendAvatarUsage, vrcUserId),
+          ),
         EncountersByWorldID: (worldId) =>
           Promise.resolve(encountersByWorldId(encounters, worldId)),
         RotateEncounters: () => Promise.resolve(0),

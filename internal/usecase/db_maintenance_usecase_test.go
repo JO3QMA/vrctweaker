@@ -149,6 +149,7 @@ func TestDBMaintenanceUseCase_VacuumDb(t *testing.T) {
 	uc := NewDBMaintenanceUseCase(
 		db,
 		&maintEncounterRepo{},
+		nil,
 		&maintScreenshotRepo{},
 		&maintUserCacheRepo{},
 		newMockSettingsRepo(),
@@ -158,10 +159,28 @@ func TestDBMaintenanceUseCase_VacuumDb(t *testing.T) {
 	}
 }
 
+type maintFriendAvatarRepo struct {
+	deleteAllN   int64
+	deleteAllErr error
+}
+
+func (m *maintFriendAvatarRepo) Save(context.Context, *activity.FriendAvatarObservation) error {
+	return nil
+}
+func (m *maintFriendAvatarRepo) ListUsageSummariesByVRCUserID(context.Context, string) ([]*activity.FriendAvatarUsageSummary, error) {
+	return nil, nil
+}
+func (m *maintFriendAvatarRepo) DeleteOlderThan(context.Context, time.Time) (int64, error) {
+	return 0, nil
+}
+func (m *maintFriendAvatarRepo) DeleteAll(context.Context) (int64, error) {
+	return m.deleteAllN, m.deleteAllErr
+}
+
 func TestDBMaintenanceUseCase_ClearEncounters(t *testing.T) {
 	ctx := context.Background()
 	er := &maintEncounterRepo{deleteAllN: 7}
-	uc := NewDBMaintenanceUseCase(nil, er, &maintScreenshotRepo{}, &maintUserCacheRepo{}, newMockSettingsRepo())
+	uc := NewDBMaintenanceUseCase(nil, er, nil, &maintScreenshotRepo{}, &maintUserCacheRepo{}, newMockSettingsRepo())
 	n, err := uc.ClearEncounters(ctx)
 	if err != nil || n != 7 {
 		t.Fatalf("ClearEncounters: n=%d err=%v", n, err)
@@ -173,10 +192,19 @@ func TestDBMaintenanceUseCase_ClearEncounters(t *testing.T) {
 	}
 }
 
+func TestDBMaintenanceUseCase_ClearEncounters_sumsAvatarRows(t *testing.T) {
+	ctx := context.Background()
+	uc := NewDBMaintenanceUseCase(nil, &maintEncounterRepo{deleteAllN: 4}, &maintFriendAvatarRepo{deleteAllN: 3}, &maintScreenshotRepo{}, &maintUserCacheRepo{}, newMockSettingsRepo())
+	n, err := uc.ClearEncounters(ctx)
+	if err != nil || n != 7 {
+		t.Fatalf("ClearEncounters: n=%d err=%v", n, err)
+	}
+}
+
 func TestDBMaintenanceUseCase_ClearScreenshots(t *testing.T) {
 	ctx := context.Background()
 	sr := &maintScreenshotRepo{deleteAllN: 3}
-	uc := NewDBMaintenanceUseCase(nil, &maintEncounterRepo{}, sr, &maintUserCacheRepo{}, newMockSettingsRepo())
+	uc := NewDBMaintenanceUseCase(nil, &maintEncounterRepo{}, nil, sr, &maintUserCacheRepo{}, newMockSettingsRepo())
 	n, err := uc.ClearScreenshots(ctx)
 	if err != nil || n != 3 {
 		t.Fatalf("ClearScreenshots: n=%d err=%v", n, err)
@@ -191,7 +219,7 @@ func TestDBMaintenanceUseCase_ClearScreenshots(t *testing.T) {
 func TestDBMaintenanceUseCase_ClearFriendsCache_noAppSettings(t *testing.T) {
 	ctx := context.Background()
 	ur := &maintUserCacheRepo{deleteAllN: 5}
-	uc := NewDBMaintenanceUseCase(nil, &maintEncounterRepo{}, &maintScreenshotRepo{}, ur, nil)
+	uc := NewDBMaintenanceUseCase(nil, &maintEncounterRepo{}, nil, &maintScreenshotRepo{}, ur, nil)
 	n, err := uc.ClearFriendsCache(ctx)
 	if err != nil || n != 5 {
 		t.Fatalf("ClearFriendsCache: n=%d err=%v", n, err)
@@ -203,7 +231,7 @@ func TestDBMaintenanceUseCase_ClearFriendsCache_clearsSyncKey(t *testing.T) {
 	settingsRepo := newMockSettingsRepo()
 	settingsRepo.m[identity.SettingVRChatFriendsSyncedAt] = "2024-01-01T00:00:00Z"
 	ur := &maintUserCacheRepo{deleteAllN: 2}
-	uc := NewDBMaintenanceUseCase(nil, &maintEncounterRepo{}, &maintScreenshotRepo{}, ur, settingsRepo)
+	uc := NewDBMaintenanceUseCase(nil, &maintEncounterRepo{}, nil, &maintScreenshotRepo{}, ur, settingsRepo)
 	n, err := uc.ClearFriendsCache(ctx)
 	if err != nil || n != 2 {
 		t.Fatalf("ClearFriendsCache: n=%d err=%v", n, err)
@@ -216,7 +244,7 @@ func TestDBMaintenanceUseCase_ClearFriendsCache_clearsSyncKey(t *testing.T) {
 func TestDBMaintenanceUseCase_ClearFriendsCache_deleteAllErr(t *testing.T) {
 	ctx := context.Background()
 	ur := &maintUserCacheRepo{deleteAllErr: errors.New("cache")}
-	uc := NewDBMaintenanceUseCase(nil, &maintEncounterRepo{}, &maintScreenshotRepo{}, ur, newMockSettingsRepo())
+	uc := NewDBMaintenanceUseCase(nil, &maintEncounterRepo{}, nil, &maintScreenshotRepo{}, ur, newMockSettingsRepo())
 	_, err := uc.ClearFriendsCache(ctx)
 	if err == nil {
 		t.Fatal("want error")
@@ -228,7 +256,7 @@ func TestDBMaintenanceUseCase_ClearFriendsCache_setSyncKeyErr(t *testing.T) {
 	settingsRepo := newMockSettingsRepo()
 	settingsRepo.setErr = errors.New("set failed")
 	ur := &maintUserCacheRepo{deleteAllN: 1}
-	uc := NewDBMaintenanceUseCase(nil, &maintEncounterRepo{}, &maintScreenshotRepo{}, ur, settingsRepo)
+	uc := NewDBMaintenanceUseCase(nil, &maintEncounterRepo{}, nil, &maintScreenshotRepo{}, ur, settingsRepo)
 	n, err := uc.ClearFriendsCache(ctx)
 	if err == nil {
 		t.Fatal("want error")

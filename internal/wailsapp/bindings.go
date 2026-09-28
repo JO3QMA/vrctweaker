@@ -180,6 +180,27 @@ func toScreenshotFilter(d ScreenshotSearchDTO) *media.ScreenshotFilter {
 	return f
 }
 
+// FriendAvatarUsageDTO is aggregated avatar usage for one friend profile tab row.
+type FriendAvatarUsageDTO struct {
+	AvatarName  string `json:"avatarName"`
+	UseCount    int64  `json:"useCount"`
+	FirstSeenAt string `json:"firstSeenAt"`
+	LastSeenAt  string `json:"lastSeenAt"`
+}
+
+func toFriendAvatarUsageDTOs(list []*activity.FriendAvatarUsageSummary) []FriendAvatarUsageDTO {
+	out := make([]FriendAvatarUsageDTO, len(list))
+	for i, row := range list {
+		out[i] = FriendAvatarUsageDTO{
+			AvatarName:  row.AvatarName,
+			UseCount:    row.UseCount,
+			FirstSeenAt: formatRFC3339(row.FirstSeenAt),
+			LastSeenAt:  formatRFC3339(row.LastSeenAt),
+		}
+	}
+	return out
+}
+
 // UserEncounterDTO is the frontend-facing encounter (one row = one stay in an instance).
 type UserEncounterDTO struct {
 	ID                string `json:"id"`

@@ -51,3 +51,10 @@ type videoPlaybackRepo interface {
 	ListWithContext(ctx context.Context) ([]*activity.VideoPlaybackWithContext, error)
 	DeleteOlderThan(ctx context.Context, before time.Time) (int64, error)
 }
+
+type friendAvatarObservationRepo interface {
+	Save(ctx context.Context, o *activity.FriendAvatarObservation) error
+	ListUsageSummariesByVRCUserID(ctx context.Context, vrcUserID string) ([]*activity.FriendAvatarUsageSummary, error)
+	DeleteOlderThan(ctx context.Context, before time.Time) (int64, error)
+	DeleteAll(ctx context.Context) (int64, error)
+}

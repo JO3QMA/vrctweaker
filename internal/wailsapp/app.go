@@ -110,6 +110,7 @@ func (a *App) startup(ctx context.Context) {
 	playRepo := sqlite.NewPlaySessionRepository(db)
 	encounterRepo := sqlite.NewUserEncounterRepository(db)
 	videoPlaybackRepo := sqlite.NewVideoPlaybackRepository(db)
+	friendAvatarRepo := sqlite.NewFriendAvatarObservationRepository(db)
 	userCacheRepo := sqlite.NewUserCacheRepository(db)
 	worldRepo := sqlite.NewWorldInfoRepository(db)
 	automationRepo := sqlite.NewAutomationItemRepository(db)
@@ -139,7 +140,8 @@ func (a *App) startup(ctx context.Context) {
 		Settings:     settingsRepo,
 	})
 	a.activity = usecase.NewActivityUseCase(playRepo, encounterRepo, settingsRepo, userCacheRepo, worldRepo).
-		WithVideoPlaybackRepo(videoPlaybackRepo)
+		WithVideoPlaybackRepo(videoPlaybackRepo).
+		WithFriendAvatarObservationRepo(friendAvatarRepo)
 	a.identity = usecase.NewIdentityUseCase(userCacheRepo, apiClient, credStore, settingsRepo, notify)
 	a.identity.SetSelfCacheChangedHook(func() {
 		runtime.EventsEmit(a.ctx, selfCacheChangedEvent, struct{}{})
@@ -151,7 +153,7 @@ func (a *App) startup(ctx context.Context) {
 	})
 	a.automation.Start(ctx)
 	a.settings = usecase.NewSettingsUseCase(settingsRepo)
-	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(db, encounterRepo, mediaRepo, userCacheRepo, settingsRepo)
+	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(db, encounterRepo, friendAvatarRepo, mediaRepo, userCacheRepo, settingsRepo)
 	a.ytdlp = usecase.NewYTDLPMaintainUseCase(a.settings, usecase.NewYTDLPUpdater())
 	a.cookieLinkage = usecase.NewCookieLinkageUseCase(a.settings)
 	a.serverStatus = statuspage.NewClient()
@@ -969,6 +971,21 @@ func (a *App) VideoPlaybackHistory() ([]VideoPlaybackDTO, error) {
 	return toVideoPlaybackDTOs(list), nil
 }
 
+// FriendAvatarUsageByVRCUserID returns aggregated avatar usage for a friend (from output_log).
+func (a *App) FriendAvatarUsageByVRCUserID(vrcUserID string) ([]FriendAvatarUsageDTO, error) {
+	if a.activity == nil {
+		return []FriendAvatarUsageDTO{}, nil
+	}
+	if strings.TrimSpace(vrcUserID) == "" {
+		return []FriendAvatarUsageDTO{}, nil
+	}
+	list, err := a.activity.ListFriendAvatarUsageByVRCUserID(a.ctx, vrcUserID)
+	if err != nil {
+		return nil, err
+	}
+	return toFriendAvatarUsageDTOs(list), nil
+}
+
 // EncountersByVRCUserID returns encounters for the given VRChat user id. Empty id yields an empty slice.
 func (a *App) EncountersByVRCUserID(vrcUserID string) ([]UserEncounterDTO, error) {
 	if strings.TrimSpace(vrcUserID) == "" {
@@ -1275,7 +1292,8 @@ func (a *App) VacuumDb() error {
 	return a.dbMaintenance.VacuumDb(a.ctx)
 }
 
-// ClearEncounters deletes all user encounters. Returns affected row count.
+// ClearEncounters deletes all user encounters and friend avatar observations.
+// Returns total deleted row count. Does not delete video_playback_history (see RotateEncounters for retention cleanup that includes video rows).
 func (a *App) ClearEncounters() (int64, error) {
 	return a.dbMaintenance.ClearEncounters(a.ctx)
 }

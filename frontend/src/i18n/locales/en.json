@@ -257,6 +257,14 @@
     "colInstance": "Instance",
     "openInVrchat": "Open in VRChat: {text}"
   },
+  "friendAvatars": {
+    "empty": "No avatars recorded from logs yet.",
+    "fetchFailedGeneric": "Failed to load avatar list.",
+    "colAvatarName": "Avatar name",
+    "colLastSeen": "Last seen",
+    "colFirstSeen": "First seen",
+    "colCount": "Times seen"
+  },
   "friends": {
     "title": "Friends",
     "loginRequired": "You must be logged in to refresh the friends list. Log in from Settings.",
@@ -461,8 +469,8 @@
     "errOperation": "Operation failed",
     "vacuumConfirm": "Optimize the database (VACUUM). Continue?",
     "vacuumDone": "Database optimization finished",
-    "clearEncountersConfirm": "Delete all encounter logs (user_encounters). Continue?",
-    "clearEncountersDone": "Deleted {n} encounter log(s)",
+    "clearEncountersConfirm": "Delete all encounter logs (user_encounters) and friend avatar usage history (friend_avatar_observations). Continue?",
+    "clearEncountersDone": "Deleted {n} encounter and avatar usage row(s)",
     "clearScreenshotsConfirm": "Delete all screenshot index rows (screenshots). Continue?",
     "clearScreenshotsDone": "Deleted {n} screenshot index row(s)",
     "clearFriendsConfirm": "Delete all rows in users_cache (self, friends, encounter users). Continue?",
@@ -527,6 +535,7 @@
     "copyDisplayName": "Copy display name",
     "tabDetail": "Details",
     "tabEncounters": "Encounters",
+    "tabAvatars": "Avatars",
     "state": "State (state)",
     "location": "Location",
     "developerType": "Developer type",
