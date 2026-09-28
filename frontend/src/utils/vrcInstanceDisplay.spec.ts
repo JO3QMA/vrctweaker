@@ -83,4 +83,24 @@ describe("formatVrcInstanceLabel", () => {
   it("returns null when privacy segments are not recognized", () => {
     expect(formatVrcInstanceLabel("wrld_x:100~unknown_marker", t)).toBeNull();
   });
+
+  it("ignores nonce segments on real instance keys", () => {
+    const text = formatVrcInstanceLabel(
+      "wrld_x:12345~private(usr_x)~region(jp)~nonce(abc)",
+      t,
+    );
+    expect(text).toBe("Invite #12345 [JP]");
+  });
+
+  it("trims whitespace around privacy and region segments", () => {
+    const text = formatVrcInstanceLabel(
+      "wrld_x:100~ private(usr_x) ~ region(jp) ",
+      t,
+    );
+    expect(text).toBe("Invite #100 [JP]");
+  });
+
+  it("returns null for malformed privacy segment prefixes", () => {
+    expect(formatVrcInstanceLabel("wrld_x:100~hidden(", t)).toBeNull();
+  });
 });

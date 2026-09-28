@@ -51,16 +51,12 @@ function parseWorldAndRest(
   return { worldId, rest };
 }
 
-/**
- * Instance number before the first `~` in the post-colon rest segment.
- * When the key starts with `~` (no numeric prefix), the slice is empty and we
- * fall back to the full rest so the UI still shows a distinguishable fragment.
- */
+/** Instance number before the first `~` in the post-colon rest segment. */
 function instanceShortName(rest: string): string {
   const base = rest.trim();
   const tilde = base.indexOf("~");
   const short = tilde >= 0 ? base.slice(0, tilde).trim() : base;
-  return short || base;
+  return short || "";
 }
 
 function isCanRequestInviteSegment(segment: string): boolean {
@@ -73,11 +69,12 @@ function isKnownPrivacySegment(segment: string): boolean {
   if (isCanRequestInviteSegment(lower)) return true;
   if (lower === "grp") return true;
   if (/^region\([^)]*\)$/.test(lower)) return true;
+  if (/^nonce\([^)]*\)$/.test(lower)) return true;
   if (
-    lower.startsWith("hidden(") ||
-    lower.startsWith("friends(") ||
-    lower.startsWith("private(") ||
-    lower.startsWith("group(")
+    /^hidden\([^)]*\)$/.test(lower) ||
+    /^friends\([^)]*\)$/.test(lower) ||
+    /^private\([^)]*\)$/.test(lower) ||
+    /^group\([^)]*\)$/.test(lower)
   ) {
     return true;
   }
@@ -100,31 +97,34 @@ function detectPrivacy(segments: string[]): InstancePrivacy {
   let hasCanRequestInvite = false;
   let hasPrivate = false;
   for (const seg of segments) {
-    const lower = seg.toLowerCase();
+    const lower = seg.toLowerCase().trim();
     if (isCanRequestInviteSegment(lower)) {
       hasCanRequestInvite = true;
       continue;
     }
-    if (lower.startsWith("hidden(")) {
+    if (/^nonce\([^)]*\)$/.test(lower)) {
+      continue;
+    }
+    if (/^hidden\([^)]*\)$/.test(lower)) {
       privacy = "friendsPlus";
       continue;
     }
-    if (lower.startsWith("friends(")) {
+    if (/^friends\([^)]*\)$/.test(lower)) {
       privacy = "friends";
       continue;
     }
-    if (lower.startsWith("private(")) {
+    if (/^private\([^)]*\)$/.test(lower)) {
       hasPrivate = true;
       privacy = "invite";
       continue;
     }
-    if (lower === "grp" || lower.startsWith("group(")) {
+    if (lower === "grp" || /^group\([^)]*\)$/.test(lower)) {
       privacy = "groupMembers";
       continue;
     }
-    const groupAccess = lower.match(/^groupaccesstype\(([^)]*)\)/);
+    const groupAccess = lower.match(/^groupaccesstype\(([^)]*)\)$/);
     if (groupAccess) {
-      const access = groupAccess[1];
+      const access = groupAccess[1].trim();
       if (access === "public") privacy = "groupPublic";
       else if (access === "plus") privacy = "groupPlus";
       else privacy = "groupMembers";
@@ -138,7 +138,10 @@ function detectPrivacy(segments: string[]): InstancePrivacy {
 
 function extractRegion(segments: string[]): string {
   for (const seg of segments) {
-    const m = seg.match(/^region\(([^)]*)\)$/i);
+    const m = seg
+      .trim()
+      .toLowerCase()
+      .match(/^region\(([^)]*)\)$/);
     if (m) return m[1].trim();
   }
   return "";
@@ -171,6 +174,7 @@ export function formatVrcInstanceLabel(
   if (!parsed) return null;
 
   const shortName = instanceShortName(parsed.rest);
+  if (!shortName) return null;
   const segmentPart = parsed.rest.includes("~")
     ? parsed.rest.slice(parsed.rest.indexOf("~") + 1)
     : "";
