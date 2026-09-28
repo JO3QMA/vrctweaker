@@ -54,6 +54,9 @@
     "minuteLong": "分",
     "secondLong": "秒"
   },
+  "vrc": {
+    "regionFallback": "[{code}]"
+  },
   "dashboard": {
     "presenceChange": {
       "title": "状态",
@@ -251,7 +254,8 @@
     "colLeave": "离开",
     "colDisplayName": "显示名称",
     "colWorldName": "世界名称",
-    "colInstance": "实例"
+    "colInstance": "实例",
+    "openInVrchat": "在 VRChat 中打开：{text}"
   },
   "friends": {
     "title": "好友",

@@ -54,6 +54,9 @@
     "minuteLong": "minutes",
     "secondLong": "seconds"
   },
+  "vrc": {
+    "regionFallback": "[{code}]"
+  },
   "dashboard": {
     "presenceChange": {
       "title": "Status",
@@ -251,7 +254,8 @@
     "colLeave": "Left",
     "colDisplayName": "Display name",
     "colWorldName": "World name",
-    "colInstance": "Instance"
+    "colInstance": "Instance",
+    "openInVrchat": "Open in VRChat: {text}"
   },
   "friends": {
     "title": "Friends",

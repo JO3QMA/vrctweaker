@@ -254,7 +254,9 @@
             v-if="selected.enrichmentInstanceId"
             :label="t('gallery.instanceId')"
           >
-            {{ selected.enrichmentInstanceId }}
+            <VrcInstanceKeyLabel
+              :instance-key="selected.enrichmentInstanceId"
+            />
           </el-descriptions-item>
           <el-descriptions-item :label="t('gallery.filePath')">
             <VtButton
@@ -311,6 +313,7 @@ import VtAlert from "../components/VtAlert.vue";
 import VtButton from "../components/VtButton.vue";
 import VtIcon from "../components/VtIcon.vue";
 import VtInput from "../components/VtInput.vue";
+import VrcInstanceKeyLabel from "../components/VrcInstanceKeyLabel.vue";
 import {
   ref,
   onMounted,

@@ -54,6 +54,9 @@
     "minuteLong": "분",
     "secondLong": "초"
   },
+  "vrc": {
+    "regionFallback": "[{code}]"
+  },
   "dashboard": {
     "presenceChange": {
       "title": "상태",
@@ -251,7 +254,8 @@
     "colLeave": "퇴장",
     "colDisplayName": "표시 이름",
     "colWorldName": "월드 이름",
-    "colInstance": "인스턴스"
+    "colInstance": "인스턴스",
+    "openInVrchat": "VRChat에서 열기: {text}"
   },
   "friends": {
     "title": "친구",
