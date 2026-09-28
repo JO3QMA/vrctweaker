@@ -80,10 +80,7 @@ async function load(): Promise<void> {
     loading.value = false;
     return;
   }
-  const userId = props.userId?.trim();
-  if (!userId) {
-    return;
-  }
+  const userId = props.userId!.trim();
   const token = ++loadToken;
   loading.value = true;
   error.value = null;

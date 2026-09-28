@@ -46,6 +46,7 @@ func (uc *DBMaintenanceUseCase) VacuumDb(ctx context.Context) error {
 
 // ClearEncounters deletes all user encounters and friend avatar observations.
 // Returns the sum of deleted encounter and avatar observation row counts.
+// video_playback_history is intentionally not cleared here (unlike RotateEncounters retention).
 func (uc *DBMaintenanceUseCase) ClearEncounters(ctx context.Context) (int64, error) {
 	n, err := uc.encounterRepo.DeleteAll(ctx)
 	if err != nil {

@@ -127,13 +127,10 @@ func ensureFriendAvatarObservationDedupIndex(db *sql.DB) error {
 	if err != nil {
 		return err
 	}
+	// Once the UNIQUE index exists, duplicates cannot remain; skip the GROUP BY
+	// duplicate probe on every startup. Only run DELETE dedupe when the index is
+	// still missing (first migration or after a forced DROP).
 	needDedupe := indexMissing
-	if !indexMissing {
-		needDedupe, err = friendAvatarObservationsHaveDuplicates(db)
-		if err != nil {
-			return err
-		}
-	}
 	if needDedupe {
 		if _, dedupeErr := db.Exec(`DELETE FROM friend_avatar_observations
 			WHERE id NOT IN (
@@ -157,20 +154,6 @@ func friendAvatarDedupIndexMissing(db *sql.DB, indexName string) (bool, error) {
 		return false, fmt.Errorf("friend avatar observations index check: %w", err)
 	}
 	return n == 0, nil
-}
-
-func friendAvatarObservationsHaveDuplicates(db *sql.DB) (bool, error) {
-	var exists int
-	err := db.QueryRow(`SELECT EXISTS (
-		SELECT 1 FROM friend_avatar_observations
-		GROUP BY log_source_path, display_name, avatar_name, observed_at
-		HAVING COUNT(*) > 1
-		LIMIT 1
-	)`).Scan(&exists)
-	if err != nil {
-		return false, fmt.Errorf("friend avatar observations duplicate check: %w", err)
-	}
-	return exists == 1, nil
 }
 
 func ensureScreenshotEnrichmentTable(db *sql.DB) error {

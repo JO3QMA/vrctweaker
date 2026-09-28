@@ -110,6 +110,17 @@ func (c *SessionCorrelator) applyAvatarSwitch(e *AvatarSwitchEvent) []any {
 	if e == nil || e.AvatarName == "" || e.DisplayName == "" {
 		return nil
 	}
+	if e.VRCUserID != "" {
+		if c.displayNameToVRCUserID == nil {
+			c.displayNameToVRCUserID = make(map[string]string)
+		}
+		existing, ok := c.displayNameToVRCUserID[e.DisplayName]
+		if ok && existing != e.VRCUserID {
+			delete(c.displayNameToVRCUserID, e.DisplayName)
+		} else {
+			c.displayNameToVRCUserID[e.DisplayName] = e.VRCUserID
+		}
+	}
 	vrcUserID := ""
 	if c.displayNameToVRCUserID != nil {
 		vrcUserID = c.displayNameToVRCUserID[e.DisplayName]

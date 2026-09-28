@@ -235,6 +235,41 @@ func TestSessionCorrelator_AvatarSwitch_afterJoin(t *testing.T) {
 	}
 }
 
+func TestSessionCorrelator_AvatarSwitch_vrcUserIDOnEventUpdatesMapping(t *testing.T) {
+	base := time.Date(2026, 3, 18, 0, 2, 0, 0, time.UTC)
+	c := &SessionCorrelator{}
+	c.Apply(&SessionEvent{Type: SessionEventStart, InstanceID: testFullInstance, OccurredAt: base})
+	cmds := c.Apply(&AvatarSwitchEvent{
+		VRCUserID:   "usr_from_switch",
+		DisplayName: "FriendA",
+		AvatarName:  "Av",
+		OccurredAt:  base.Add(time.Minute),
+	})
+	if len(cmds) != 1 {
+		t.Fatalf("cmds = %+v", cmds)
+	}
+	sw := cmds[0].(RecordFriendAvatarSwitchCmd)
+	if sw.VRCUserID != "usr_from_switch" {
+		t.Fatalf("VRCUserID = %q, want usr_from_switch", sw.VRCUserID)
+	}
+}
+
+func TestSessionCorrelator_AvatarSwitch_vrcUserIDOnEvent_collisionInvalidatesMapping(t *testing.T) {
+	base := time.Date(2026, 3, 18, 0, 2, 0, 0, time.UTC)
+	c := &SessionCorrelator{}
+	c.Apply(&SessionEvent{Type: SessionEventStart, InstanceID: testFullInstance, OccurredAt: base})
+	c.Apply(&AvatarSwitchEvent{
+		VRCUserID: "usr_a", DisplayName: "SameName", AvatarName: "Av1", OccurredAt: base,
+	})
+	cmds := c.Apply(&AvatarSwitchEvent{
+		VRCUserID: "usr_b", DisplayName: "SameName", AvatarName: "Av2", OccurredAt: base.Add(time.Minute),
+	})
+	sw := cmds[0].(RecordFriendAvatarSwitchCmd)
+	if sw.VRCUserID != "" {
+		t.Fatalf("collision must clear mapping, got %q", sw.VRCUserID)
+	}
+}
+
 func TestSessionCorrelator_AvatarSwitch_displayNameCollisionInvalidatesMapping(t *testing.T) {
 	base := time.Date(2026, 3, 18, 0, 2, 0, 0, time.UTC)
 	c := &SessionCorrelator{}

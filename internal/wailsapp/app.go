@@ -973,6 +973,9 @@ func (a *App) VideoPlaybackHistory() ([]VideoPlaybackDTO, error) {
 
 // FriendAvatarUsageByVRCUserID returns aggregated avatar usage for a friend (from output_log).
 func (a *App) FriendAvatarUsageByVRCUserID(vrcUserID string) ([]FriendAvatarUsageDTO, error) {
+	if a.activity == nil {
+		return []FriendAvatarUsageDTO{}, nil
+	}
 	if strings.TrimSpace(vrcUserID) == "" {
 		return []FriendAvatarUsageDTO{}, nil
 	}
@@ -1289,7 +1292,8 @@ func (a *App) VacuumDb() error {
 	return a.dbMaintenance.VacuumDb(a.ctx)
 }
 
-// ClearEncounters deletes all user encounters and friend avatar observations. Returns total deleted row count.
+// ClearEncounters deletes all user encounters and friend avatar observations.
+// Returns total deleted row count. Does not delete video_playback_history (see RotateEncounters for retention cleanup that includes video rows).
 func (a *App) ClearEncounters() (int64, error) {
 	return a.dbMaintenance.ClearEncounters(a.ctx)
 }

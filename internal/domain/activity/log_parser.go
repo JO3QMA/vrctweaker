@@ -85,6 +85,7 @@ func (RoomNameEvent) Kind() EventKind { return EventKindRoomName }
 
 // AvatarSwitchEvent is emitted for Switching <user> to avatar <name>.
 type AvatarSwitchEvent struct {
+	VRCUserID   string
 	DisplayName string
 	AvatarName  string
 	OccurredAt  time.Time

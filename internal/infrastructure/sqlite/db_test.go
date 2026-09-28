@@ -287,6 +287,23 @@ func TestApplySchema_idempotent(t *testing.T) {
 	}
 }
 
+func TestEnsureFriendAvatarObservationDedupIndex_skipsDuplicateProbeWhenIndexPresent(t *testing.T) {
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if err := applySchema(db); err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i < 3; i++ {
+		if err := ensureFriendAvatarObservationDedupIndex(db); err != nil {
+			t.Fatalf("iteration %d: %v", i, err)
+		}
+	}
+}
+
 func TestEnsureFriendAvatarObservationDedupIndex_skipsDeleteWhenNoDuplicates(t *testing.T) {
 	dir := t.TempDir()
 	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db"))
