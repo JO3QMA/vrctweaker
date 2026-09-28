@@ -73,6 +73,14 @@ describe("formatVrcInstanceLabel", () => {
 
   it("keeps full rest when numeric short name is empty (leading tilde)", () => {
     const key = "wrld_x:~usr_segment";
-    expect(formatVrcInstanceLabel(key, t)).toBe("Public #~usr_segment");
+    expect(formatVrcInstanceLabel(key, t)).toBeNull();
+  });
+
+  it("labels group shorthand grp segment as group members", () => {
+    expect(formatVrcInstanceLabel("wrld_1:1~grp", t)).toBe("Group Members #1");
+  });
+
+  it("returns null when privacy segments are not recognized", () => {
+    expect(formatVrcInstanceLabel("wrld_x:100~unknown_marker", t)).toBeNull();
   });
 });

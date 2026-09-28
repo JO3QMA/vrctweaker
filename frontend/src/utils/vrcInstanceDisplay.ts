@@ -13,7 +13,10 @@ type InstancePrivacy =
   | "groupPlus"
   | "groupMembers";
 
-/** VRChat instance access type labels (English only, locale-independent). */
+/**
+ * VRChat access-type words stay English in all UI locales (product choice).
+ * Region suffixes still use `vrc.regionFallback` / `REGION_CODE` via `t`.
+ */
 const INSTANCE_TYPE_LABEL: Record<InstancePrivacy, string> = {
   public: "Public",
   friendsPlus: "Friends+",
@@ -64,6 +67,27 @@ function isCanRequestInviteSegment(segment: string): boolean {
   return /^canrequestinvite(\([^)]*\))?$/i.test(segment.trim());
 }
 
+function isKnownPrivacySegment(segment: string): boolean {
+  const lower = segment.toLowerCase().trim();
+  if (!lower) return true;
+  if (isCanRequestInviteSegment(lower)) return true;
+  if (lower === "grp") return true;
+  if (/^region\([^)]*\)$/i.test(lower)) return true;
+  if (
+    lower.startsWith("hidden(") ||
+    lower.startsWith("friends(") ||
+    lower.startsWith("private(") ||
+    lower.startsWith("group(")
+  ) {
+    return true;
+  }
+  return /^groupaccesstype\([^)]*\)/i.test(lower);
+}
+
+function hasUnknownPrivacySegment(segments: string[]): boolean {
+  return segments.some((seg) => !isKnownPrivacySegment(seg));
+}
+
 /**
  * Derives display privacy from VRChat instance segments (the part after the first `~`).
  *
@@ -94,7 +118,7 @@ function detectPrivacy(segments: string[]): InstancePrivacy {
       privacy = "invite";
       continue;
     }
-    if (lower.startsWith("group(")) {
+    if (lower === "grp" || lower.startsWith("group(")) {
       privacy = "groupMembers";
       continue;
     }
@@ -106,7 +130,7 @@ function detectPrivacy(segments: string[]): InstancePrivacy {
       else privacy = "groupMembers";
     }
   }
-  if (hasCanRequestInvite && (hasPrivate || privacy === "invite")) {
+  if (hasCanRequestInvite && hasPrivate) {
     privacy = "invitePlus";
   }
   return privacy;
@@ -151,6 +175,7 @@ export function formatVrcInstanceLabel(
     ? parsed.rest.slice(parsed.rest.indexOf("~") + 1)
     : "";
   const segments = segmentPart ? segmentPart.split("~") : [];
+  if (hasUnknownPrivacySegment(segments)) return null;
   const privacy = detectPrivacy(segments);
   const region = extractRegion(segments);
   const label = `${privacyLabel(privacy)} #${shortName}`;

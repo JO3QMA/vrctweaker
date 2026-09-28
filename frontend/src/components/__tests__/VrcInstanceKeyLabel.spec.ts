@@ -39,5 +39,8 @@ describe("VrcInstanceKeyLabel", () => {
     const wrapper = mountLabel({ instanceKey });
     expect(wrapper.text()).toContain("Public #88577");
     expect(wrapper.text()).toContain("[JP]");
+    expect(wrapper.get(".vrc-instance-key-label").attributes("title")).toBe(
+      `${wrapper.text()} (${instanceKey})`,
+    );
   });
 });

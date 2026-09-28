@@ -1,5 +1,10 @@
 <template>
-  <span v-if="label" class="vrc-instance-key-label">{{ label }}</span>
+  <span
+    v-if="label"
+    class="vrc-instance-key-label"
+    :title="`${label} (${trimmedKey})`"
+    >{{ label }}</span
+  >
   <span v-else-if="trimmedKey" class="vrc-instance-key-label mono">{{
     trimmedKey
   }}</span>
