@@ -47,12 +47,20 @@ describe("formatVrcInstanceLabel", () => {
     expect(text).toBe("Invite+ #64190 [JP]");
   });
 
-  it("stays invite when canRequestInvite precedes private (non-standard order)", () => {
+  it("uses invite+ when canRequestInvite and private appear in any order", () => {
     const text = formatVrcInstanceLabel(
       "wrld_x:64190~canRequestInvite~private(usr_x)",
       t,
     );
-    expect(text).toBe("Invite #64190");
+    expect(text).toBe("Invite+ #64190");
+  });
+
+  it("uses invite+ when canRequestInvite includes user id segment", () => {
+    const text = formatVrcInstanceLabel(
+      "wrld_x:100~canRequestInvite(usr_x)~private(usr_x)",
+      t,
+    );
+    expect(text).toBe("Invite+ #100");
   });
 
   it("uses group access type when present after group marker", () => {

@@ -60,23 +60,25 @@ function instanceShortName(rest: string): string {
   return short || base;
 }
 
+function isCanRequestInviteSegment(segment: string): boolean {
+  return /^canrequestinvite(\([^)]*\))?$/i.test(segment.trim());
+}
+
 /**
  * Derives display privacy from VRChat instance segments (the part after the first `~`).
  *
- * Processing is left-to-right. Restrictive markers (`hidden`, `friends`, `private`, `group`,
- * `groupAccessType`) overwrite the previous privacy when matched. `canRequestInvite` does not
- * set privacy alone; it upgrades `invite` to `invitePlus` when it appears after `private(...)`
- * or when privacy is already `invite` (typical key order: `…~private(usr)~canRequestInvite`).
+ * Restrictive markers are applied left-to-right. `canRequestInvite` (with or without `(...)`)
+ * is collected during the pass; after all segments, invite becomes invite+ when both private
+ * and can-request-invite are present (segment order independent).
  */
 function detectPrivacy(segments: string[]): InstancePrivacy {
   let privacy: InstancePrivacy = "public";
-  let sawPrivate = false;
+  let hasCanRequestInvite = false;
+  let hasPrivate = false;
   for (const seg of segments) {
     const lower = seg.toLowerCase();
-    if (lower === "canrequestinvite" || lower === "canrequestinvite()") {
-      if (sawPrivate || privacy === "invite") {
-        privacy = "invitePlus";
-      }
+    if (isCanRequestInviteSegment(lower)) {
+      hasCanRequestInvite = true;
       continue;
     }
     if (lower.startsWith("hidden(")) {
@@ -88,7 +90,7 @@ function detectPrivacy(segments: string[]): InstancePrivacy {
       continue;
     }
     if (lower.startsWith("private(")) {
-      sawPrivate = true;
+      hasPrivate = true;
       privacy = "invite";
       continue;
     }
@@ -103,6 +105,9 @@ function detectPrivacy(segments: string[]): InstancePrivacy {
       else if (access === "plus") privacy = "groupPlus";
       else privacy = "groupMembers";
     }
+  }
+  if (hasCanRequestInvite && (hasPrivate || privacy === "invite")) {
+    privacy = "invitePlus";
   }
   return privacy;
 }
