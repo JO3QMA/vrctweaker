@@ -13,7 +13,7 @@ var vrchatAvatarIDPattern = regexp.MustCompile(
 
 const avatarCacheWalkMaxEntries = 8000
 
-// FindLocalAvatarCachePath searches under cacheRoot for a directory whose path contains avatarID.
+// FindLocalAvatarCachePath searches under cacheRoot for a directory whose base name equals avatarID.
 // Returns ("", nil) when not found or avatarID is invalid.
 func FindLocalAvatarCachePath(cacheRoot, avatarID string) (string, error) {
 	avatarID = strings.TrimSpace(avatarID)
@@ -42,8 +42,9 @@ func FindLocalAvatarCachePath(cacheRoot, avatarID string) (string, error) {
 		if !d.IsDir() {
 			return nil
 		}
-		if strings.Contains(path, avatarID) && len(path) >= len(found) {
+		if filepath.Base(path) == avatarID {
 			found = path
+			return filepath.SkipAll
 		}
 		return nil
 	})

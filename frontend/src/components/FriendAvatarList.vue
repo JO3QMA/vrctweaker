@@ -97,6 +97,7 @@ import {
   formatEncounterLogTimestamp,
 } from "../utils/formatEncounteredAt";
 import { friendAvatarListFetchErrorMessage } from "../utils/friendAvatarListErrors";
+import { showToast } from "../utils/showToast";
 import { copyTextToClipboard } from "../utils/vrcUserCacheDisplay";
 
 const { t } = useI18n();
@@ -119,12 +120,22 @@ const canLoad = computed(() => Boolean(props.userId?.trim()));
 
 async function copyAvatarId(avatarId?: string): Promise<void> {
   if (!avatarId?.trim()) return;
-  await copyTextToClipboard(avatarId.trim());
+  try {
+    await copyTextToClipboard(avatarId.trim());
+    showToast.success(t("friendAvatars.copyAvatarIdSuccess"));
+  } catch {
+    showToast.error(t("friendAvatars.copyAvatarIdError"));
+  }
 }
 
 async function copyCachePath(path?: string): Promise<void> {
   if (!path?.trim()) return;
-  await copyTextToClipboard(path.trim());
+  try {
+    await copyTextToClipboard(path.trim());
+    showToast.success(t("friendAvatars.copyCachePathSuccess"));
+  } catch {
+    showToast.error(t("friendAvatars.copyCachePathError"));
+  }
 }
 
 async function load(): Promise<void> {

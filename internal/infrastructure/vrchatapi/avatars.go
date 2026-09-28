@@ -12,7 +12,7 @@ import (
 // Avatar is a minimal GET /avatars/{id} payload for display name resolution.
 type Avatar struct {
 	ID   string `json:"id"`
-	Name string `json:"name"`
+	Name string `json:"displayName"`
 }
 
 // GetAvatar fetches avatar metadata by id (requires auth).

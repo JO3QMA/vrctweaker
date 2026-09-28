@@ -4,11 +4,19 @@ import { createI18n } from "vue-i18n";
 import ja from "../../i18n/locales/ja.json";
 import FriendAvatarList from "../FriendAvatarList.vue";
 import { App } from "../../wails/app";
+import * as showToastModule from "../../utils/showToast";
 import * as vrcUserCacheDisplay from "../../utils/vrcUserCacheDisplay";
 
 vi.mock("../../wails/app", () => ({
   App: {
     friendAvatarUsageByVRCUserID: vi.fn(),
+  },
+}));
+
+vi.mock("../../utils/showToast", () => ({
+  showToast: {
+    success: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
@@ -30,6 +38,8 @@ describe("FriendAvatarList", () => {
   beforeEach(() => {
     mockFetch.mockReset();
     mockFetch.mockResolvedValue([]);
+    vi.mocked(showToastModule.showToast.success).mockClear();
+    vi.mocked(showToastModule.showToast.error).mockClear();
   });
 
   it("loads avatar usage for user id", async () => {
@@ -66,10 +76,38 @@ describe("FriendAvatarList", () => {
     const btn = wrapper.get('[data-testid="friend-avatar-copy-id-Fox"]');
     expect(btn.attributes("aria-label")).toBe(ja.friendAvatars.copyAvatarId);
     await btn.trigger("click");
+    await flushPromises();
     expect(copySpy).toHaveBeenCalledWith(
       "avtr_11111111-2222-3333-4444-555555555555",
     );
+    expect(showToastModule.showToast.success).toHaveBeenCalledWith(
+      ja.friendAvatars.copyAvatarIdSuccess,
+    );
     copySpy.mockRestore();
+  });
+
+  it("shows toast error when avatar id copy fails", async () => {
+    vi.spyOn(vrcUserCacheDisplay, "copyTextToClipboard").mockRejectedValue(
+      new Error("denied"),
+    );
+    mockFetch.mockResolvedValue([
+      {
+        avatarName: "Fox",
+        avatarId: "avtr_11111111-2222-3333-4444-555555555555",
+        useCount: 1,
+        firstSeenAt: "2026-01-01T00:00:00.000Z",
+        lastSeenAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    const wrapper = mountList();
+    await flushPromises();
+    await wrapper
+      .get('[data-testid="friend-avatar-copy-id-Fox"]')
+      .trigger("click");
+    await flushPromises();
+    expect(showToastModule.showToast.error).toHaveBeenCalledWith(
+      ja.friendAvatars.copyAvatarIdError,
+    );
   });
 
   it("shows empty message when no rows", async () => {

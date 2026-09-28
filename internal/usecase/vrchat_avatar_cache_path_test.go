@@ -9,8 +9,8 @@ import (
 func TestFindLocalAvatarCachePath_findsDirectoryContainingAvatarID(t *testing.T) {
 	root := t.TempDir()
 	avatarID := "avtr_11111111-2222-3333-4444-555555555555"
-	target := filepath.Join(root, "bundle", avatarID, "data")
-	if err := os.MkdirAll(target, 0700); err != nil {
+	avatarDir := filepath.Join(root, "bundle", avatarID)
+	if err := os.MkdirAll(filepath.Join(avatarDir, "data"), 0700); err != nil {
 		t.Fatal(err)
 	}
 
@@ -18,8 +18,29 @@ func TestFindLocalAvatarCachePath_findsDirectoryContainingAvatarID(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got != target {
-		t.Fatalf("got %q want %q", got, target)
+	if got != avatarDir {
+		t.Fatalf("got %q want %q", got, avatarDir)
+	}
+}
+
+func TestFindLocalAvatarCachePath_ignoresPathContainingIDWithoutExactBase(t *testing.T) {
+	root := t.TempDir()
+	avatarID := "avtr_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+	decoy := filepath.Join(root, "decoy_"+avatarID+"_suffix")
+	if err := os.MkdirAll(decoy, 0700); err != nil {
+		t.Fatal(err)
+	}
+	avatarDir := filepath.Join(root, avatarID)
+	if err := os.MkdirAll(avatarDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := FindLocalAvatarCachePath(root, avatarID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != avatarDir {
+		t.Fatalf("got %q want %q", got, avatarDir)
 	}
 }
 

@@ -61,23 +61,29 @@ export function jsonStringArray(raw: string | undefined): string[] {
 }
 
 export async function copyTextToClipboard(text: string): Promise<void> {
-  const value = text || "";
-  if (!value) return;
+  if (!text) return;
   try {
-    await navigator.clipboard.writeText(value);
-  } catch {
-    const ta = document.createElement("textarea");
-    ta.value = value;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "fixed";
-    ta.style.left = "-9999px";
-    document.body.appendChild(ta);
-    ta.select();
-    try {
-      document.execCommand("copy");
-    } finally {
-      document.body.removeChild(ta);
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
     }
+  } catch {
+    // fall through to execCommand fallback
+  }
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.position = "fixed";
+  ta.style.left = "-9999px";
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    const ok = document.execCommand("copy");
+    if (!ok) {
+      throw new Error("copy failed");
+    }
+  } finally {
+    document.body.removeChild(ta);
   }
 }
 

@@ -172,6 +172,8 @@ type mockAPIClient struct {
 	getUser             *vrchatapi.Friend
 	getUserErr          error
 	getUserCalls        int
+	getAvatar           *vrchatapi.Avatar
+	getAvatarErr        error
 	setStatusErr        error
 	setStatusDescErr    error
 	setStatusDescCalls  int
@@ -216,7 +218,10 @@ func (m *mockAPIClient) GetUser(_ context.Context, _ string) (*vrchatapi.Friend,
 }
 
 func (m *mockAPIClient) GetAvatar(_ context.Context, _ string) (*vrchatapi.Avatar, error) {
-	return nil, nil
+	if m.getAvatarErr != nil {
+		return nil, m.getAvatarErr
+	}
+	return m.getAvatar, nil
 }
 
 func (m *mockAPIClient) SetUserStatus(_ context.Context, _ string, _ vrchatapi.UserStatus) error {
@@ -1509,5 +1514,44 @@ func TestIdentityUseCase_Logout_returnsSelfDeleteError(t *testing.T) {
 	err := uc.Logout(ctx)
 	if err == nil || !strings.Contains(err.Error(), "self delete failed") {
 		t.Fatalf("Logout err = %v", err)
+	}
+}
+
+func TestIdentityUseCase_AvatarDisplayName(t *testing.T) {
+	ctx := context.Background()
+	uc := NewIdentityUseCase(
+		&mockUserCacheRepo{},
+		&mockAPIClient{},
+		vrchatapi.NewStubCredentialStore(),
+		newMockSettingsRepo(),
+		nil,
+	)
+	name, err := uc.AvatarDisplayName(ctx, "avtr_11111111-2222-3333-4444-555555555555")
+	if err != nil {
+		t.Fatalf("AvatarDisplayName: %v", err)
+	}
+	if name != "" {
+		t.Fatalf("want empty when not logged in, got %q", name)
+	}
+
+	uc = NewIdentityUseCase(
+		&mockUserCacheRepo{},
+		&mockAPIClient{
+			token: "tok",
+			getAvatar: &vrchatapi.Avatar{
+				ID:   "avtr_11111111-2222-3333-4444-555555555555",
+				Name: "Fox",
+			},
+		},
+		vrchatapi.NewStubCredentialStore(),
+		newMockSettingsRepo(),
+		nil,
+	)
+	name, err = uc.AvatarDisplayName(ctx, "avtr_11111111-2222-3333-4444-555555555555")
+	if err != nil {
+		t.Fatalf("AvatarDisplayName: %v", err)
+	}
+	if name != "Fox" {
+		t.Fatalf("got %q want Fox", name)
 	}
 }

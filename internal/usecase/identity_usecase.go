@@ -540,7 +540,10 @@ func (uc *IdentityUseCase) AvatarDisplayName(ctx context.Context, avatarID strin
 		return "", nil
 	}
 	loggedIn, err := uc.IsLoggedIn(ctx)
-	if err != nil || !loggedIn {
+	if err != nil {
+		return "", err
+	}
+	if !loggedIn {
 		return "", nil
 	}
 	av, err := uc.apiClient.GetAvatar(ctx, avatarID)
