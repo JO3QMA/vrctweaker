@@ -86,7 +86,7 @@ test.describe("Navigation", () => {
     );
     const instanceLink = page.getByTestId("encounter-instance-link").first();
     await expect(instanceLink).toBeVisible();
-    await expect(instanceLink).toContainText("パブリック #88577");
+    await expect(instanceLink).toContainText("Public #88577 [JP]");
     await expect(instanceLink).toHaveAttribute(
       "href",
       `https://vrchat.com/home/launch?worldId=${E2E_WORLD_ID}&instanceId=88577%7Eregion%28jp%29`,
@@ -94,7 +94,7 @@ test.describe("Navigation", () => {
     await expect(instanceLink).toHaveAttribute(
       "title",
       new RegExp(
-        `パブリック #88577.*\\(${E2E_ENCOUNTER_INSTANCE_KEY.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\)`,
+        `Public #88577 \\[JP\\].*\\(${E2E_ENCOUNTER_INSTANCE_KEY.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\)`,
       ),
     );
   });
