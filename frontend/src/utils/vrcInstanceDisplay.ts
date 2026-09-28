@@ -178,17 +178,10 @@ function privacyLabel(privacy: InstancePrivacy): string {
   return INSTANCE_TYPE_LABEL[privacy];
 }
 
-/**
- * Human-readable label for a stored VRChat instance key (e.g. public #88577 [JP]).
- * Returns null when the key cannot be parsed (legacy inst_*, malformed wrld_* , etc.).
- */
-export function formatVrcInstanceLabel(
-  instanceKey: string,
+function formatVrcInstanceLabelFromParsed(
+  parsed: { worldId: string; rest: string },
   t: VrcInstanceTranslate,
 ): string | null {
-  const parsed = parseWorldAndRest(instanceKey);
-  if (!parsed) return null;
-
   const shortName = instanceShortName(parsed.rest);
   if (!shortName) return null;
   const segmentPart = parsed.rest.includes("~")
@@ -204,9 +197,21 @@ export function formatVrcInstanceLabel(
 }
 
 /**
+ * Human-readable label for a stored VRChat instance key (e.g. public #88577 [JP]).
+ * Returns null when the key cannot be parsed (legacy inst_*, malformed wrld_* , etc.).
+ */
+export function formatVrcInstanceLabel(
+  instanceKey: string,
+  t: VrcInstanceTranslate,
+): string | null {
+  const parsed = parseWorldAndRest(instanceKey);
+  if (!parsed) return null;
+  return formatVrcInstanceLabelFromParsed(parsed, t);
+}
+
+/**
  * VRChat website launch URL for a stored VRChat instance key, or null if not parseable.
- *
- * @internal exported for unit tests only
+ * Exported for reuse in production (`formatVrcInstanceCell`) and unit tests.
  */
 export function vrcInstanceWebLaunchUrl(instanceKey: string): string | null {
   const parsed = parseWorldAndRest(instanceKey);
@@ -222,14 +227,14 @@ export function formatVrcInstanceCell(
   instanceKey: string,
   t: VrcInstanceTranslate,
 ): VrcInstanceCell | null {
-  const text = formatVrcInstanceLabel(instanceKey, t);
+  const parsed = parseWorldAndRest(instanceKey);
+  if (!parsed) return null;
+  const text = formatVrcInstanceLabelFromParsed(parsed, t);
   if (!text) return null;
-  const href = vrcInstanceWebLaunchUrl(instanceKey);
-  if (!href) return null;
   const trimmedKey = instanceKey.trim();
   return {
     text,
-    href,
+    href: buildLaunchUrl(parsed),
     title: `${text} (${trimmedKey})`,
   };
 }
