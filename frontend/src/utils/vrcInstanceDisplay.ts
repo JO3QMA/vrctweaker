@@ -64,7 +64,7 @@ function instanceShortName(rest: string): string {
 }
 
 function isCanRequestInviteSegment(segment: string): boolean {
-  return /^canrequestinvite(\([^)]*\))?$/i.test(segment.trim());
+  return /^canrequestinvite(\([^)]*\))?$/.test(segment.trim());
 }
 
 function isKnownPrivacySegment(segment: string): boolean {
@@ -72,7 +72,7 @@ function isKnownPrivacySegment(segment: string): boolean {
   if (!lower) return true;
   if (isCanRequestInviteSegment(lower)) return true;
   if (lower === "grp") return true;
-  if (/^region\([^)]*\)$/i.test(lower)) return true;
+  if (/^region\([^)]*\)$/.test(lower)) return true;
   if (
     lower.startsWith("hidden(") ||
     lower.startsWith("friends(") ||
@@ -81,7 +81,7 @@ function isKnownPrivacySegment(segment: string): boolean {
   ) {
     return true;
   }
-  return /^groupaccesstype\([^)]*\)/i.test(lower);
+  return /^groupaccesstype\([^)]*\)$/.test(lower);
 }
 
 function hasUnknownPrivacySegment(segments: string[]): boolean {
