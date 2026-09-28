@@ -3,7 +3,6 @@ package sqlite
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"log"
 
 	"vrchat-tweaker/internal/domain/automation"
@@ -215,29 +214,4 @@ func MigrateAutomationRules(ctx context.Context, db *sql.DB) error {
 		log.Printf("automation migrate: skipped %d legacy rules", skipped)
 	}
 	return tx.Commit()
-}
-
-// ItemToLegacyRule maps a rule item to the old DTO for compat bindings.
-func ItemToLegacyRule(item *automation.AutomationItem) *automation.AutomationRule {
-	if item == nil || item.Kind != automation.KindRule {
-		return nil
-	}
-	r := &automation.AutomationRule{
-		ID:            item.ID,
-		Name:          item.Name,
-		TriggerType:   item.TriggerType,
-		ConditionJSON: item.ConditionsJSON,
-		IsEnabled:     item.IsEnabled,
-	}
-	steps, err := automation.ParseActions(item.ActionsJSON)
-	if err != nil || len(steps) == 0 {
-		return r
-	}
-	r.ActionType = steps[0].Type
-	payload, err := json.Marshal(steps[0].Payload)
-	if err != nil {
-		return r
-	}
-	r.ActionPayload = string(payload)
-	return r
 }

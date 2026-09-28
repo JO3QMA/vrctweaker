@@ -1,13 +1,7 @@
 // Wails app bindings - calls Go backend methods
 // When running in Wails, window.go.wailsapp.App is injected
 
-import {
-  activity,
-  automation,
-  launcher,
-  usecase,
-  wailsapp,
-} from "../../wailsjs/go/models";
+import { activity, launcher, usecase, wailsapp } from "../../wailsjs/go/models";
 import type * as WailsApp from "../../wailsjs/go/wailsapp/App";
 import { DEFAULT_LOGICAL_PROCESSOR_COUNT } from "../utils/affinityMask";
 
@@ -67,7 +61,6 @@ export type VRChatCurrentUserDTO = WailsDTO<wailsapp.VRChatCurrentUserDTO>;
 export type DailyPlaySecondsDTO = WailsDTO<activity.DailyPlaySeconds>;
 export type TopWorldDTO = WailsDTO<activity.TopWorldSummary>;
 export type ActivityStatsDTO = WailsDTO<activity.ActivityStats>;
-export type AutomationRuleDTO = WailsDTO<automation.AutomationRule>;
 export type AutomationItemDTO = WailsDTO<wailsapp.AutomationItemDTO>;
 export type AutomationRunLogEntryDTO =
   WailsDTO<wailsapp.AutomationRunLogEntryDTO>;
@@ -716,19 +709,6 @@ export const App = {
     "",
   ),
   clearVRChatAssetCache: bindGo((a) => a.ClearVRChatAssetCache(), 0),
-  listAutomationRules: bindGo((a) => a.ListAutomationRules(), []),
-  saveAutomationRule: bindGo(
-    (a, rule: AutomationRuleDTO) => a.SaveAutomationRule(rule),
-    undefined,
-  ),
-  deleteAutomationRule: bindGo(
-    (a, id: string) => a.DeleteAutomationRule(id),
-    undefined,
-  ),
-  toggleAutomationRule: bindGo(
-    (a, id: string, enabled: boolean) => a.ToggleAutomationRule(id, enabled),
-    undefined,
-  ),
   listAutomationItems: bindGo((a) => a.ListAutomationItems(), []),
   saveAutomationItem: bindGo(
     (a, item: AutomationItemDTO) => a.SaveAutomationItem(item),

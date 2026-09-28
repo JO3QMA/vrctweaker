@@ -20,6 +20,15 @@ type VRChatProcessChecker interface {
 	VRChatRunning() (bool, error)
 }
 
+// EvalContext provides data for rule evaluation.
+type EvalContext struct {
+	TriggerType     string
+	Payload         map[string]interface{}
+	VRChatRunning   bool
+	VRChatRunningOK bool
+	Now             time.Time // wall time for schedule matching; zero → time.Now
+}
+
 // EvalItem returns whether a rule item should run its actions.
 func EvalItem(item *AutomationItem, ctx *EvalContext) (bool, error) {
 	if item == nil || !item.IsEnabled || item.Kind != KindRule {
