@@ -1,8 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { APP_ROUTES } from "./fixtures/app-routes";
 import {
+  E2E_ENCOUNTER_INSTANCE_KEY,
   E2E_TEST_USER_DISPLAY_NAME,
   E2E_TEST_USER_ID,
+  E2E_WORLD_ID,
 } from "./fixtures/seed-data";
 import { getMockWailsInitScript } from "./fixtures/mock-wails";
 
@@ -81,6 +83,19 @@ test.describe("Navigation", () => {
     );
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
       "ユーザー別 遭遇履歴",
+    );
+    const instanceLink = page.getByTestId("encounter-instance-link").first();
+    await expect(instanceLink).toBeVisible();
+    await expect(instanceLink).toContainText("Public #88577 [JP]");
+    await expect(instanceLink).toHaveAttribute(
+      "href",
+      `https://vrchat.com/home/launch?worldId=${E2E_WORLD_ID}&instanceId=88577%7Eregion%28jp%29`,
+    );
+    await expect(instanceLink).toHaveAttribute(
+      "title",
+      new RegExp(
+        `Public #88577 \\[JP\\].*\\(${E2E_ENCOUNTER_INSTANCE_KEY.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\)`,
+      ),
     );
   });
 

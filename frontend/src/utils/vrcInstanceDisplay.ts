@@ -3,6 +3,12 @@ export type VrcInstanceTranslate = (
   params?: Record<string, string>,
 ) => string;
 
+export type VrcInstanceCell = {
+  text: string;
+  href: string;
+  title: string;
+};
+
 type InstancePrivacy =
   | "public"
   | "friendsPlus"
@@ -29,6 +35,8 @@ const INSTANCE_TYPE_LABEL: Record<InstancePrivacy, string> = {
 };
 
 const VRCHAT_WORLD_PREFIX = "wrld_";
+/** VRChat client launch URL; centralized here until a shared urls module exists. */
+const VRCHAT_LAUNCH_BASE_URL = "https://vrchat.com/home/launch";
 
 const REGION_CODE: Record<string, string> = {
   jp: "[JP]",
@@ -49,6 +57,14 @@ function parseWorldAndRest(
   const rest = key.slice(colon + 1).trim();
   if (!rest) return null;
   return { worldId, rest };
+}
+
+function buildLaunchUrl(parsed: { worldId: string; rest: string }): string {
+  const params = new URLSearchParams({
+    worldId: parsed.worldId,
+    instanceId: parsed.rest,
+  });
+  return `${VRCHAT_LAUNCH_BASE_URL}?${params.toString()}`;
 }
 
 /** Instance number before the first `~` in the post-colon rest segment. */
@@ -162,17 +178,10 @@ function privacyLabel(privacy: InstancePrivacy): string {
   return INSTANCE_TYPE_LABEL[privacy];
 }
 
-/**
- * Human-readable label for a stored VRChat instance key (e.g. public #88577 [JP]).
- * Returns null when the key cannot be parsed (legacy inst_*, malformed wrld_* , etc.).
- */
-export function formatVrcInstanceLabel(
-  instanceKey: string,
+function formatVrcInstanceLabelFromParsed(
+  parsed: { worldId: string; rest: string },
   t: VrcInstanceTranslate,
 ): string | null {
-  const parsed = parseWorldAndRest(instanceKey);
-  if (!parsed) return null;
-
   const shortName = instanceShortName(parsed.rest);
   if (!shortName) return null;
   const segmentPart = parsed.rest.includes("~")
@@ -185,4 +194,47 @@ export function formatVrcInstanceLabel(
   const label = `${privacyLabel(privacy)} #${shortName}`;
   const suffix = regionSuffix(region, t);
   return suffix ? `${label} ${suffix}` : label;
+}
+
+/**
+ * Human-readable label for a stored VRChat instance key (e.g. public #88577 [JP]).
+ * Returns null when the key cannot be parsed (legacy inst_*, malformed wrld_* , etc.).
+ */
+export function formatVrcInstanceLabel(
+  instanceKey: string,
+  t: VrcInstanceTranslate,
+): string | null {
+  const parsed = parseWorldAndRest(instanceKey);
+  if (!parsed) return null;
+  return formatVrcInstanceLabelFromParsed(parsed, t);
+}
+
+/**
+ * VRChat website launch URL for a stored VRChat instance key, or null if not parseable.
+ * Exported for reuse in production (`formatVrcInstanceCell`) and unit tests.
+ */
+export function vrcInstanceWebLaunchUrl(instanceKey: string): string | null {
+  const parsed = parseWorldAndRest(instanceKey);
+  if (!parsed) return null;
+  return buildLaunchUrl(parsed);
+}
+
+/**
+ * Human-readable instance label + link metadata for encounter history cells.
+ * Returns null when the key cannot be labeled (same rules as `formatVrcInstanceLabel`).
+ */
+export function formatVrcInstanceCell(
+  instanceKey: string,
+  t: VrcInstanceTranslate,
+): VrcInstanceCell | null {
+  const parsed = parseWorldAndRest(instanceKey);
+  if (!parsed) return null;
+  const text = formatVrcInstanceLabelFromParsed(parsed, t);
+  if (!text) return null;
+  const trimmedKey = instanceKey.trim();
+  return {
+    text,
+    href: buildLaunchUrl(parsed),
+    title: `${text} (${trimmedKey})`,
+  };
 }

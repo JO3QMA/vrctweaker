@@ -62,7 +62,7 @@ export const userProfileEncounters: UserEncounterDTO[] = [
     id: "up-story-1",
     vrcUserId: "usr_story",
     displayName: "Story User",
-    instanceId: "inst_1",
+    instanceId: "wrld_1:53938~region(jp)",
     worldId: "wrld_1",
     worldDisplayName: "Test World",
     joinedAt: "2026-02-01T10:00:00+09:00",

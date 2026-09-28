@@ -116,6 +116,27 @@ describe("EncounterHistoryList", () => {
     expect(wrapper.text()).toContain("network down");
   });
 
+  it("renders instance as labeled link for VRChat instance keys", async () => {
+    vi.mocked(wailsApp.App.encountersByVRCUserID).mockResolvedValue([
+      {
+        ...sampleEncounter,
+        instanceId: "wrld_w:88577~region(jp)",
+      },
+    ]);
+
+    const wrapper = mount(EncounterHistoryList, {
+      props: { mode: "user", userId: "u1" },
+    });
+    await flushPromises();
+
+    const link = wrapper.get('[data-testid="encounter-instance-link"]');
+    expect(link.text()).toContain("Public #88577");
+    expect(link.text()).toContain("[JP]");
+    expect(link.attributes("href")).toContain("vrchat.com/home/launch");
+    expect(link.attributes("href")).toContain("worldId=wrld_w");
+    expect(link.attributes("aria-label")).toContain("VRChat で開く");
+  });
+
   it("shows translated fallback when fetch rejects with non-Error", async () => {
     vi.mocked(wailsApp.App.encountersByVRCUserID).mockRejectedValue("boom");
 

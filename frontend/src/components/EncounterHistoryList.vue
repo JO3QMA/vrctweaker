@@ -49,10 +49,10 @@
         </el-table-column>
         <el-table-column
           :label="t('encounterHistory.colInstance')"
-          min-width="120"
+          min-width="160"
         >
           <template #default="{ row }">
-            <span class="mono">{{ row.instanceId || t("common.dash") }}</span>
+            <EncounterHistoryInstanceCell :instance-id="row.instanceId" />
           </template>
         </el-table-column>
       </el-table>
@@ -64,6 +64,7 @@
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import VtAlert from "./VtAlert.vue";
+import EncounterHistoryInstanceCell from "./EncounterHistoryInstanceCell.vue";
 import { App, type UserEncounterDTO } from "../wails/app";
 import {
   ENCOUNTER_LOG_TIME_COL_WIDTH,
@@ -149,11 +150,5 @@ watch(
 
 .encounter-log-time {
   white-space: nowrap;
-}
-
-.mono {
-  font-family: monospace;
-  font-size: var(--font-size-12);
-  word-break: break-all;
 }
 </style>
