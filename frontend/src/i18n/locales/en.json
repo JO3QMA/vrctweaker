@@ -54,6 +54,9 @@
     "minuteLong": "minutes",
     "secondLong": "seconds"
   },
+  "vrc": {
+    "regionFallback": "[{code}]"
+  },
   "dashboard": {
     "presenceChange": {
       "title": "Status",
@@ -252,18 +255,7 @@
     "colDisplayName": "Display name",
     "colWorldName": "World name",
     "colInstance": "Instance",
-    "openInVrchat": "Open in VRChat: {text}",
-    "regionFallback": "[{code}]",
-    "instanceType": {
-      "public": "Public",
-      "friendsPlus": "Friends+",
-      "friends": "Friends",
-      "invite": "Invite",
-      "invitePlus": "Invite+",
-      "groupPublic": "Group Public",
-      "groupPlus": "Group+",
-      "groupMembers": "Group Members"
-    }
+    "openInVrchat": "Open in VRChat: {text}"
   },
   "friends": {
     "title": "Friends",

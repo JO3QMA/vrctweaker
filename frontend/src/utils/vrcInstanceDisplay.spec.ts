@@ -3,6 +3,7 @@ import { createI18n } from "vue-i18n";
 import en from "../i18n/locales/en.json";
 import {
   formatVrcInstanceCell,
+  formatVrcInstanceLabel,
   vrcInstanceWebLaunchUrl,
 } from "./vrcInstanceDisplay";
 
@@ -31,70 +32,109 @@ describe("vrcInstanceWebLaunchUrl", () => {
   });
 });
 
-describe("formatVrcInstanceCell", () => {
+describe("formatVrcInstanceLabel", () => {
   it("formats public instance with region code", () => {
     const key = "wrld_db637cfb-64f8-4109-977b-6b755482f133:88577~region(jp)";
-    const cell = formatVrcInstanceCell(key, t);
-    const publicLabel = t("encounterHistory.instanceType.public");
-    expect(cell).toEqual({
-      text: `${publicLabel} #88577 [JP]`,
-      href: "https://vrchat.com/home/launch?worldId=wrld_db637cfb-64f8-4109-977b-6b755482f133&instanceId=88577%7Eregion%28jp%29",
-      title: `${publicLabel} #88577 [JP] (${key})`,
-    });
+    expect(formatVrcInstanceLabel(key, t)).toBe("Public #88577 [JP]");
   });
 
   it("maps legacy region alias use to US", () => {
-    const cell = formatVrcInstanceCell("wrld_x:100~region(use)", t);
-    expect(cell?.text).toContain("[US]");
-    expect(cell?.text).not.toContain("[USE]");
+    const text = formatVrcInstanceLabel("wrld_x:100~region(use)", t);
+    expect(text).toContain("[US]");
+    expect(text).not.toContain("[USE]");
   });
 
   it("formats friends+ with unknown region fallback", () => {
-    const cell = formatVrcInstanceCell(
+    const text = formatVrcInstanceLabel(
       "wrld_abc:41550~hidden(usr_x)~region(aus)",
       t,
     );
-    const friendsPlus = t("encounterHistory.instanceType.friendsPlus");
-    const region = t("encounterHistory.regionFallback", { code: "AUS" });
-    expect(cell?.text).toBe(`${friendsPlus} #41550 ${region}`);
-    expect(cell?.href).toContain("worldId=wrld_abc");
+    const region = t("vrc.regionFallback", { code: "AUS" });
+    expect(text).toBe(`Friends+ #41550 ${region}`);
   });
 
   it("returns null for non-parseable instance id", () => {
-    expect(formatVrcInstanceCell("inst_1", t)).toBeNull();
+    expect(formatVrcInstanceLabel("inst_1", t)).toBeNull();
   });
 
   it("uses invite+ when private and canRequestInvite follow VRChat segment order", () => {
-    const cell = formatVrcInstanceCell(
+    const text = formatVrcInstanceLabel(
       "wrld_x:64190~private(usr_x)~canRequestInvite~region(jp)",
       t,
     );
-    const invitePlus = t("encounterHistory.instanceType.invitePlus");
-    expect(cell?.text).toBe(`${invitePlus} #64190 [JP]`);
+    expect(text).toBe("Invite+ #64190 [JP]");
   });
 
-  it("stays invite when canRequestInvite precedes private (non-standard order)", () => {
-    const cell = formatVrcInstanceCell(
+  it("uses invite+ when canRequestInvite and private appear in any order", () => {
+    const text = formatVrcInstanceLabel(
       "wrld_x:64190~canRequestInvite~private(usr_x)",
       t,
     );
-    const invite = t("encounterHistory.instanceType.invite");
-    expect(cell?.text).toBe(`${invite} #64190`);
+    expect(text).toBe("Invite+ #64190");
+  });
+
+  it("uses invite+ when canRequestInvite includes user id segment", () => {
+    const text = formatVrcInstanceLabel(
+      "wrld_x:100~canRequestInvite(usr_x)~private(usr_x)",
+      t,
+    );
+    expect(text).toBe("Invite+ #100");
   });
 
   it("uses group access type when present after group marker", () => {
-    const cell = formatVrcInstanceCell(
+    const text = formatVrcInstanceLabel(
       "wrld_x:100~group(grp_x)~groupAccessType(public)",
       t,
     );
-    const groupPublic = t("encounterHistory.instanceType.groupPublic");
-    expect(cell?.text).toBe(`${groupPublic} #100`);
+    expect(text).toBe("Group Public #100");
   });
 
-  it("keeps full rest when numeric short name is empty (leading tilde)", () => {
+  it("returns null when numeric short name is empty (leading tilde)", () => {
     const key = "wrld_x:~usr_segment";
+    expect(formatVrcInstanceLabel(key, t)).toBeNull();
+  });
+
+  it("labels group shorthand grp segment as group members", () => {
+    expect(formatVrcInstanceLabel("wrld_1:1~grp", t)).toBe("Group Members #1");
+  });
+
+  it("returns null when privacy segments are not recognized", () => {
+    expect(formatVrcInstanceLabel("wrld_x:100~unknown_marker", t)).toBeNull();
+  });
+
+  it("ignores nonce segments on real instance keys", () => {
+    const text = formatVrcInstanceLabel(
+      "wrld_x:12345~private(usr_x)~region(jp)~nonce(abc)",
+      t,
+    );
+    expect(text).toBe("Invite #12345 [JP]");
+  });
+
+  it("trims whitespace around privacy and region segments", () => {
+    const text = formatVrcInstanceLabel(
+      "wrld_x:100~ private(usr_x) ~ region(jp) ",
+      t,
+    );
+    expect(text).toBe("Invite #100 [JP]");
+  });
+
+  it("returns null for malformed privacy segment prefixes", () => {
+    expect(formatVrcInstanceLabel("wrld_x:100~hidden(", t)).toBeNull();
+  });
+});
+
+describe("formatVrcInstanceCell", () => {
+  it("combines shared label with launch URL metadata", () => {
+    const key = "wrld_db637cfb-64f8-4109-977b-6b755482f133:88577~region(jp)";
     const cell = formatVrcInstanceCell(key, t);
-    const publicLabel = t("encounterHistory.instanceType.public");
-    expect(cell?.text).toBe(`${publicLabel} #~usr_segment`);
+    expect(cell).toEqual({
+      text: "Public #88577 [JP]",
+      href: "https://vrchat.com/home/launch?worldId=wrld_db637cfb-64f8-4109-977b-6b755482f133&instanceId=88577%7Eregion%28jp%29",
+      title: `Public #88577 [JP] (${key})`,
+    });
+  });
+
+  it("returns null when label rules reject the key", () => {
+    expect(formatVrcInstanceCell("wrld_x:~usr_segment", t)).toBeNull();
   });
 });

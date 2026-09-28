@@ -44,8 +44,7 @@ describe("EncounterHistoryInstanceCell", () => {
     const instanceId = "wrld_w:88577~region(jp)";
     const wrapper = mountCell({ instanceId });
     const link = wrapper.get('[data-testid="encounter-instance-link"]');
-    const publicLabel = ja.encounterHistory.instanceType.public;
-    expect(link.text()).toContain(`${publicLabel} #88577`);
+    expect(link.text()).toContain("Public #88577");
     expect(link.text()).toContain("[JP]");
     expect(link.attributes("href")).toContain("vrchat.com/home/launch");
     expect(link.attributes("href")).toContain("worldId=wrld_w");

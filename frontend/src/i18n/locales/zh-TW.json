@@ -54,6 +54,9 @@
     "minuteLong": "分",
     "secondLong": "秒"
   },
+  "vrc": {
+    "regionFallback": "[{code}]"
+  },
   "dashboard": {
     "presenceChange": {
       "title": "狀態",
@@ -252,18 +255,7 @@
     "colDisplayName": "顯示名稱",
     "colWorldName": "世界名稱",
     "colInstance": "實例",
-    "openInVrchat": "在 VRChat 中開啟：{text}",
-    "regionFallback": "[{code}]",
-    "instanceType": {
-      "public": "公開",
-      "friendsPlus": "好友+",
-      "friends": "好友",
-      "invite": "邀請",
-      "invitePlus": "邀請+",
-      "groupPublic": "群組公開",
-      "groupPlus": "群組+",
-      "groupMembers": "群組成員"
-    }
+    "openInVrchat": "在 VRChat 中開啟：{text}"
   },
   "friends": {
     "title": "好友",

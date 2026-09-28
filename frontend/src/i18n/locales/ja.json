@@ -54,6 +54,9 @@
     "minuteLong": "分",
     "secondLong": "秒"
   },
+  "vrc": {
+    "regionFallback": "[{code}]"
+  },
   "dashboard": {
     "presenceChange": {
       "title": "ステータス変更",
@@ -252,18 +255,7 @@
     "colDisplayName": "表示名",
     "colWorldName": "ワールド名",
     "colInstance": "インスタンス",
-    "openInVrchat": "VRChat で開く: {text}",
-    "regionFallback": "[{code}]",
-    "instanceType": {
-      "public": "パブリック",
-      "friendsPlus": "フレンド+",
-      "friends": "フレンド",
-      "invite": "招待",
-      "invitePlus": "招待+",
-      "groupPublic": "グループ公開",
-      "groupPlus": "グループ+",
-      "groupMembers": "グループメンバー"
-    }
+    "openInVrchat": "VRChat で開く: {text}"
   },
   "friends": {
     "title": "フレンド",

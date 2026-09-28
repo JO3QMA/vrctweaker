@@ -80,6 +80,9 @@ const en = {
     minuteLong: "minutes",
     secondLong: "seconds",
   },
+  vrc: {
+    regionFallback: "[{code}]",
+  },
   dashboard: {
     launch: "Launch VRChat",
     launchWithProfile: "Launch VRChat ({name})",
@@ -224,17 +227,6 @@ const en = {
     colWorldName: "World name",
     colInstance: "Instance",
     openInVrchat: "Open in VRChat: {text}",
-    regionFallback: "[{code}]",
-    instanceType: {
-      public: "Public",
-      friendsPlus: "Friends+",
-      friends: "Friends",
-      invite: "Invite",
-      invitePlus: "Invite+",
-      groupPublic: "Group Public",
-      groupPlus: "Group+",
-      groupMembers: "Group Members",
-    },
   },
   friends: {
     title: "Friends",
@@ -497,6 +489,9 @@ const ja = deepMerge(en, {
     minuteLong: "分",
     secondLong: "秒",
   },
+  vrc: {
+    regionFallback: "[{code}]",
+  },
   dashboard: {
     launch: "VRChat 起動",
     launchWithProfile: "VRChat 起動 ({name})",
@@ -641,17 +636,6 @@ const ja = deepMerge(en, {
     colWorldName: "ワールド名",
     colInstance: "インスタンス",
     openInVrchat: "VRChat で開く: {text}",
-    regionFallback: "[{code}]",
-    instanceType: {
-      public: "パブリック",
-      friendsPlus: "フレンド+",
-      friends: "フレンド",
-      invite: "招待",
-      invitePlus: "招待+",
-      groupPublic: "グループ公開",
-      groupPlus: "グループ+",
-      groupMembers: "グループメンバー",
-    },
   },
   friends: {
     title: "フレンド",
@@ -908,6 +892,9 @@ const ko = deepMerge(en, {
     minuteLong: "분",
     secondLong: "초",
   },
+  vrc: {
+    regionFallback: "[{code}]",
+  },
   dashboard: {
     launch: "VRChat 실행",
     launchWithProfile: "VRChat 실행 ({name})",
@@ -1047,17 +1034,6 @@ const ko = deepMerge(en, {
     colWorldName: "월드 이름",
     colInstance: "인스턴스",
     openInVrchat: "VRChat에서 열기: {text}",
-    regionFallback: "[{code}]",
-    instanceType: {
-      public: "퍼블릭",
-      friendsPlus: "프렌즈+",
-      friends: "프렌즈",
-      invite: "초대",
-      invitePlus: "초대+",
-      groupPublic: "그룹 공개",
-      groupPlus: "그룹+",
-      groupMembers: "그룹 멤버",
-    },
   },
   friends: {
     title: "친구",
@@ -1296,6 +1272,9 @@ const zhTW = deepMerge(en, {
     minuteLong: "分",
     secondLong: "秒",
   },
+  vrc: {
+    regionFallback: "[{code}]",
+  },
   dashboard: {
     launch: "啟動 VRChat",
     launchWithProfile: "啟動 VRChat（{name}）",
@@ -1434,17 +1413,6 @@ const zhTW = deepMerge(en, {
     colWorldName: "世界名稱",
     colInstance: "實例",
     openInVrchat: "在 VRChat 中開啟：{text}",
-    regionFallback: "[{code}]",
-    instanceType: {
-      public: "公開",
-      friendsPlus: "好友+",
-      friends: "好友",
-      invite: "邀請",
-      invitePlus: "邀請+",
-      groupPublic: "群組公開",
-      groupPlus: "群組+",
-      groupMembers: "群組成員",
-    },
   },
   friends: {
     title: "好友",
@@ -1680,6 +1648,9 @@ const zhCN = deepMerge(en, {
     minuteLong: "分",
     secondLong: "秒",
   },
+  vrc: {
+    regionFallback: "[{code}]",
+  },
   dashboard: {
     launch: "启动 VRChat",
     launchWithProfile: "启动 VRChat（{name}）",
@@ -1817,17 +1788,6 @@ const zhCN = deepMerge(en, {
     colWorldName: "世界名称",
     colInstance: "实例",
     openInVrchat: "在 VRChat 中打开：{text}",
-    regionFallback: "[{code}]",
-    instanceType: {
-      public: "公开",
-      friendsPlus: "好友+",
-      friends: "好友",
-      invite: "邀请",
-      invitePlus: "邀请+",
-      groupPublic: "群组公开",
-      groupPlus: "群组+",
-      groupMembers: "群组成员",
-    },
   },
   friends: {
     title: "好友",
