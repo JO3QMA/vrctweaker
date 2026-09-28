@@ -215,6 +215,10 @@ func (m *mockAPIClient) GetUser(_ context.Context, _ string) (*vrchatapi.Friend,
 	return m.getUser, nil
 }
 
+func (m *mockAPIClient) GetAvatar(_ context.Context, _ string) (*vrchatapi.Avatar, error) {
+	return nil, nil
+}
+
 func (m *mockAPIClient) SetUserStatus(_ context.Context, _ string, _ vrchatapi.UserStatus) error {
 	return m.setStatusErr
 }

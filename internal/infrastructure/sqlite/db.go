@@ -96,11 +96,19 @@ func applySchema(db *sql.DB) error {
 		return err
 	}
 
+	if err := ensureUsersCacheColumns(db); err != nil {
+		return err
+	}
+
 	if err := MigrateAutomationRules(context.Background(), db); err != nil {
 		return fmt.Errorf("migrate automation rules: %w", err)
 	}
 
 	return applyDataMigrations(db)
+}
+
+func ensureUsersCacheColumns(db *sql.DB) error {
+	return addColumnIfMissing(db, "users_cache", "current_avatar_id", "TEXT")
 }
 
 func ensureActivityLogSourceColumns(db *sql.DB) error {
@@ -273,6 +281,7 @@ func schemaStatements() []string {
 			profile_pic_override_thumbnail TEXT,
 			bio TEXT,
 			bio_links_json TEXT,
+			current_avatar_id TEXT,
 			current_avatar_image_url TEXT,
 			current_avatar_tags_json TEXT,
 			developer_type TEXT,

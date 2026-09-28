@@ -261,6 +261,10 @@
     "empty": "ログから記録されたアバターはまだありません。",
     "fetchFailedGeneric": "アバター一覧の取得に失敗しました。",
     "colAvatarName": "アバター名",
+    "colCachePath": "ローカルキャッシュ",
+    "copyAvatarId": "アバター ID をコピー",
+    "copyCachePath": "ローカルキャッシュのパスをコピー",
+    "cachePathMissing": "ローカルに未キャッシュ",
     "colLastSeen": "最終確認",
     "colFirstSeen": "初回確認",
     "colCount": "回数"

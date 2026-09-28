@@ -22,7 +22,7 @@ func NewUserCacheRepository(db *sql.DB) *UserCacheRepository {
 
 const userCacheSelectCols = `vrc_user_id, display_name, status, is_favorite, last_updated, first_seen_at, last_contact_at,
 	user_kind, session_fingerprint, username, status_description, user_state, avatar_thumbnail_url, user_icon_url, profile_pic_override_thumbnail,
-	bio, bio_links_json, current_avatar_image_url, current_avatar_tags_json, developer_type, friend_key, image_url, last_platform, location,
+	bio, bio_links_json, current_avatar_id, current_avatar_image_url, current_avatar_tags_json, developer_type, friend_key, image_url, last_platform, location,
 	last_login, last_activity, last_mobile, platform, profile_pic_override, tags_json`
 
 const userCacheUpsertExcluded = `display_name = excluded.display_name,
@@ -41,6 +41,7 @@ const userCacheUpsertExcluded = `display_name = excluded.display_name,
 		profile_pic_override_thumbnail = excluded.profile_pic_override_thumbnail,
 		bio = excluded.bio,
 		bio_links_json = excluded.bio_links_json,
+		current_avatar_id = excluded.current_avatar_id,
 		current_avatar_image_url = excluded.current_avatar_image_url,
 		current_avatar_tags_json = excluded.current_avatar_tags_json,
 		developer_type = excluded.developer_type,
@@ -67,7 +68,7 @@ func userCacheRowArgs(u *identity.UserCache, uk identity.UserKind, fs, lc interf
 		u.VRCUserID, u.DisplayName, nullString(u.Status), isFav, u.LastUpdated.Format(time.RFC3339), fs, lc, string(uk), nullString(u.SessionFingerprint),
 		nullString(u.Username), nullString(u.StatusDescription), nullString(u.UserState),
 		nullString(u.AvatarThumbnailURL), nullString(u.UserIconURL), nullString(u.ProfilePicOverrideThumbnail),
-		nullString(u.Bio), nullString(u.BioLinksJSON), nullString(u.CurrentAvatarImageURL), nullString(u.CurrentAvatarTagsJSON),
+		nullString(u.Bio), nullString(u.BioLinksJSON), nullString(u.CurrentAvatarID), nullString(u.CurrentAvatarImageURL), nullString(u.CurrentAvatarTagsJSON),
 		nullString(u.DeveloperType), nullString(u.FriendKey), nullString(u.ImageURL), nullString(u.LastPlatform), nullString(u.Location),
 		nullString(u.LastLogin), nullString(u.LastActivity), nullString(u.LastMobile), nullString(u.Platform),
 		nullString(u.ProfilePicOverride), nullString(u.TagsJSON),
@@ -132,7 +133,7 @@ func (r *UserCacheRepository) Save(ctx context.Context, u *identity.UserCache) e
 	}
 	args := userCacheRowArgs(u, uk, fs, lc)
 	q := `INSERT INTO users_cache (` + userCacheSelectCols + `)
-		VALUES (` + userCachePlaceholders(30) + `) ON CONFLICT(vrc_user_id) DO UPDATE SET ` + userCacheUpsertExcluded
+		VALUES (` + userCachePlaceholders(31) + `) ON CONFLICT(vrc_user_id) DO UPDATE SET ` + userCacheUpsertExcluded
 	_, err := r.db.ExecContext(ctx, q, args...)
 	return err
 }
@@ -165,7 +166,7 @@ func (r *UserCacheRepository) SaveBatch(ctx context.Context, users []*identity.U
 	defer func() { _ = tx.Rollback() }()
 
 	q := `INSERT INTO users_cache (` + userCacheSelectCols + `)
-		VALUES (` + userCachePlaceholders(30) + `) ON CONFLICT(vrc_user_id) DO UPDATE SET ` + userCacheUpsertExcluded
+		VALUES (` + userCachePlaceholders(31) + `) ON CONFLICT(vrc_user_id) DO UPDATE SET ` + userCacheUpsertExcluded
 	stmt, err := tx.PrepareContext(ctx, q)
 	if err != nil {
 		return err
@@ -257,7 +258,7 @@ func (r *UserCacheRepository) UpsertSelf(ctx context.Context, u *identity.UserCa
 	}
 
 	args := userCacheRowArgs(u, identity.UserKindSelf, fs, lc)
-	q := `INSERT INTO users_cache (` + userCacheSelectCols + `) VALUES (` + userCachePlaceholders(30) + `)`
+	q := `INSERT INTO users_cache (` + userCacheSelectCols + `) VALUES (` + userCachePlaceholders(31) + `)`
 	if _, err := tx.ExecContext(ctx, q, args...); err != nil {
 		return err
 	}
@@ -287,13 +288,13 @@ func scanUserCacheScanner(sc interface {
 }) (*identity.UserCache, error) {
 	var vrcUserID, displayName, lastUpdated, userKindStr string
 	var status, sessionFP, username, statusDesc, userState, avatarURL, iconURL, profilePic sql.NullString
-	var bio, bioLinks, curAvImg, curAvTags, devType, friendKey, imageURL, lastPlat, location sql.NullString
+	var bio, bioLinks, curAvID, curAvImg, curAvTags, devType, friendKey, imageURL, lastPlat, location sql.NullString
 	var lastLogin, lastAct, lastMob, platform, profilePicOv, tagsJSON sql.NullString
 	var isFav int
 	var firstSeen, lastContact sql.NullString
 	if err := sc.Scan(&vrcUserID, &displayName, &status, &isFav, &lastUpdated, &firstSeen, &lastContact,
 		&userKindStr, &sessionFP, &username, &statusDesc, &userState, &avatarURL, &iconURL, &profilePic,
-		&bio, &bioLinks, &curAvImg, &curAvTags, &devType, &friendKey, &imageURL, &lastPlat, &location,
+		&bio, &bioLinks, &curAvID, &curAvImg, &curAvTags, &devType, &friendKey, &imageURL, &lastPlat, &location,
 		&lastLogin, &lastAct, &lastMob, &platform, &profilePicOv, &tagsJSON); err != nil {
 		return nil, err
 	}
@@ -322,6 +323,7 @@ func scanUserCacheScanner(sc interface {
 		ProfilePicOverrideThumbnail: sessionStr(profilePic),
 		Bio:                         sessionStr(bio),
 		BioLinksJSON:                sessionStr(bioLinks),
+		CurrentAvatarID:             sessionStr(curAvID),
 		CurrentAvatarImageURL:       sessionStr(curAvImg),
 		CurrentAvatarTagsJSON:       sessionStr(curAvTags),
 		DeveloperType:               sessionStr(devType),

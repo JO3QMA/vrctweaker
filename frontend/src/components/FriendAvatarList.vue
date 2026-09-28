@@ -9,9 +9,50 @@
       <el-table v-else :data="rows" style="width: 100%" size="small" stripe>
         <el-table-column
           :label="t('friendAvatars.colAvatarName')"
-          min-width="160"
-          prop="avatarName"
-        />
+          min-width="200"
+        >
+          <template #default="{ row }">
+            <div class="avatar-name-cell">
+              <span class="avatar-name">{{ row.avatarName }}</span>
+              <VtButton
+                variant="tertiary"
+                link
+                :disabled="!row.avatarId"
+                :title="t('friendAvatars.copyAvatarId')"
+                :aria-label="t('friendAvatars.copyAvatarId')"
+                :data-testid="`friend-avatar-copy-id-${row.avatarName}`"
+                @click="copyAvatarId(row.avatarId)"
+              >
+                <VtIcon size="compact"><CopyDocument /></VtIcon>
+              </VtButton>
+            </div>
+          </template>
+        </el-table-column>
+        <el-table-column
+          :label="t('friendAvatars.colCachePath')"
+          min-width="220"
+        >
+          <template #default="{ row }">
+            <div v-if="row.localCachePath" class="cache-path-cell">
+              <span class="mono cache-path" :title="row.localCachePath">{{
+                row.localCachePath
+              }}</span>
+              <VtButton
+                variant="tertiary"
+                link
+                :title="t('friendAvatars.copyCachePath')"
+                :aria-label="t('friendAvatars.copyCachePath')"
+                :data-testid="`friend-avatar-copy-path-${row.avatarName}`"
+                @click="copyCachePath(row.localCachePath)"
+              >
+                <VtIcon size="compact"><CopyDocument /></VtIcon>
+              </VtButton>
+            </div>
+            <span v-else class="cache-missing">{{
+              t("friendAvatars.cachePathMissing")
+            }}</span>
+          </template>
+        </el-table-column>
         <el-table-column
           :label="t('friendAvatars.colLastSeen')"
           :width="ENCOUNTER_LOG_TIME_COL_WIDTH"
@@ -44,15 +85,19 @@
 </template>
 
 <script setup lang="ts">
+import { CopyDocument } from "@element-plus/icons-vue";
 import { computed, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import VtAlert from "./VtAlert.vue";
+import VtButton from "./VtButton.vue";
+import VtIcon from "./VtIcon.vue";
 import { App, type FriendAvatarUsageDTO } from "../wails/app";
 import {
   ENCOUNTER_LOG_TIME_COL_WIDTH,
   formatEncounterLogTimestamp,
 } from "../utils/formatEncounteredAt";
 import { friendAvatarListFetchErrorMessage } from "../utils/friendAvatarListErrors";
+import { copyTextToClipboard } from "../utils/vrcUserCacheDisplay";
 
 const { t } = useI18n();
 
@@ -71,6 +116,16 @@ const rows = ref<FriendAvatarUsageDTO[]>([]);
 let loadToken = 0;
 
 const canLoad = computed(() => Boolean(props.userId?.trim()));
+
+async function copyAvatarId(avatarId?: string): Promise<void> {
+  if (!avatarId?.trim()) return;
+  await copyTextToClipboard(avatarId.trim());
+}
+
+async function copyCachePath(path?: string): Promise<void> {
+  if (!path?.trim()) return;
+  await copyTextToClipboard(path.trim());
+}
 
 async function load(): Promise<void> {
   if (!canLoad.value) {
@@ -124,5 +179,36 @@ watch(
 
 .friend-avatar-log-time {
   white-space: nowrap;
+}
+
+.avatar-name-cell,
+.cache-path-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-inline-tight);
+  min-width: 0;
+}
+
+.avatar-name {
+  min-width: 0;
+  word-break: break-word;
+}
+
+.cache-path {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--font-size-12);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cache-missing {
+  color: var(--color-text-muted);
+  font-size: var(--font-size-12);
+}
+
+.mono {
+  font-family: ui-monospace, monospace;
 }
 </style>

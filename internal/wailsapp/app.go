@@ -982,7 +982,23 @@ func (a *App) FriendAvatarUsageByVRCUserID(vrcUserID string) ([]FriendAvatarUsag
 	if err != nil {
 		return nil, err
 	}
-	return toFriendAvatarUsageDTOs(list), nil
+	friend, _ := a.identity.CachedUserByVRCUserID(a.ctx, vrcUserID)
+	currentAvatarName := ""
+	if friend != nil && strings.TrimSpace(friend.CurrentAvatarID) != "" {
+		name, nameErr := a.identity.AvatarDisplayName(a.ctx, friend.CurrentAvatarID)
+		if nameErr == nil {
+			currentAvatarName = name
+		}
+	}
+	cacheRoot := ""
+	if a.assetCache != nil {
+		resolved, resolveErr := a.assetCache.ResolvePath()
+		if resolveErr == nil {
+			cacheRoot = resolved
+		}
+	}
+	enriched := usecase.EnrichFriendAvatarUsages(list, friend, currentAvatarName, cacheRoot)
+	return toFriendAvatarUsageDTOs(enriched), nil
 }
 
 // EncountersByVRCUserID returns encounters for the given VRChat user id. Empty id yields an empty slice.

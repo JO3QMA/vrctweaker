@@ -261,6 +261,10 @@
     "empty": "No avatars recorded from logs yet.",
     "fetchFailedGeneric": "Failed to load avatar list.",
     "colAvatarName": "Avatar name",
+    "colCachePath": "Local cache",
+    "copyAvatarId": "Copy avatar ID",
+    "copyCachePath": "Copy local cache path",
+    "cachePathMissing": "Not in local cache",
     "colLastSeen": "Last seen",
     "colFirstSeen": "First seen",
     "colCount": "Times seen"

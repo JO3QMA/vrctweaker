@@ -27,6 +27,7 @@ type UserCache struct {
 	// List Friends API (GET /auth/user/friends); primarily populated for user_kind=friend.
 	Bio                   string
 	BioLinksJSON          string
+	CurrentAvatarID       string
 	CurrentAvatarImageURL string
 	CurrentAvatarTagsJSON string
 	DeveloperType         string
@@ -106,6 +107,7 @@ func (u *UserCache) MergeFromAPIFriend(apiUser *UserCache) {
 	u.ProfilePicOverrideThumbnail = apiUser.ProfilePicOverrideThumbnail
 	u.Bio = apiUser.Bio
 	u.BioLinksJSON = apiUser.BioLinksJSON
+	u.CurrentAvatarID = apiUser.CurrentAvatarID
 	u.CurrentAvatarImageURL = apiUser.CurrentAvatarImageURL
 	u.CurrentAvatarTagsJSON = apiUser.CurrentAvatarTagsJSON
 	u.DeveloperType = apiUser.DeveloperType
@@ -152,6 +154,7 @@ func (u *UserCache) applyAPIProfileFields(api *UserCache) {
 	u.ProfilePicOverrideThumbnail = api.ProfilePicOverrideThumbnail
 	u.Bio = api.Bio
 	u.BioLinksJSON = api.BioLinksJSON
+	u.CurrentAvatarID = api.CurrentAvatarID
 	u.CurrentAvatarImageURL = api.CurrentAvatarImageURL
 	u.CurrentAvatarTagsJSON = api.CurrentAvatarTagsJSON
 	u.DeveloperType = api.DeveloperType

@@ -11,6 +11,7 @@ type VRChatAPIClient interface {
 	GetCurrentUser(ctx context.Context) (*CurrentUserProfile, error)
 	GetFriends(ctx context.Context) ([]Friend, error)
 	GetUser(ctx context.Context, userID string) (*Friend, error)
+	GetAvatar(ctx context.Context, avatarID string) (*Avatar, error)
 	SetUserStatus(ctx context.Context, userID string, status UserStatus) error
 	SetUserStatusDescription(ctx context.Context, userID string, description string) error
 	SetUserStatusAndDescription(ctx context.Context, userID string, status UserStatus, description string) error

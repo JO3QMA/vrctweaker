@@ -60,14 +60,14 @@ export function jsonStringArray(raw: string | undefined): string[] {
   }
 }
 
-export async function copyDisplayName(name: string): Promise<void> {
-  const text = name || "";
-  if (!text) return;
+export async function copyTextToClipboard(text: string): Promise<void> {
+  const value = text || "";
+  if (!value) return;
   try {
-    await navigator.clipboard.writeText(text);
+    await navigator.clipboard.writeText(value);
   } catch {
     const ta = document.createElement("textarea");
-    ta.value = text;
+    ta.value = value;
     ta.setAttribute("readonly", "");
     ta.style.position = "fixed";
     ta.style.left = "-9999px";
@@ -79,4 +79,8 @@ export async function copyDisplayName(name: string): Promise<void> {
       document.body.removeChild(ta);
     }
   }
+}
+
+export async function copyDisplayName(name: string): Promise<void> {
+  await copyTextToClipboard(name);
 }

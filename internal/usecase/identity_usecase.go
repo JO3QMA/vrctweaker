@@ -528,6 +528,31 @@ func jsonStringSlice(s []string) string {
 	return string(b)
 }
 
+// CachedUserByVRCUserID returns users_cache without refreshing from the API.
+func (uc *IdentityUseCase) CachedUserByVRCUserID(ctx context.Context, vrcUserID string) (*identity.UserCache, error) {
+	return uc.userCacheRepo.GetByVRCUserID(ctx, strings.TrimSpace(vrcUserID))
+}
+
+// AvatarDisplayName resolves the VRChat avatar display name for an id when logged in.
+func (uc *IdentityUseCase) AvatarDisplayName(ctx context.Context, avatarID string) (string, error) {
+	avatarID = strings.TrimSpace(avatarID)
+	if avatarID == "" {
+		return "", nil
+	}
+	loggedIn, err := uc.IsLoggedIn(ctx)
+	if err != nil || !loggedIn {
+		return "", nil
+	}
+	av, err := uc.apiClient.GetAvatar(ctx, avatarID)
+	if err != nil {
+		return "", uc.handleSessionError(err)
+	}
+	if av == nil {
+		return "", nil
+	}
+	return strings.TrimSpace(av.Name), nil
+}
+
 func userCacheFromFriend(f vrchatapi.Friend, isFavorite bool, now time.Time) *identity.UserCache {
 	return &identity.UserCache{
 		VRCUserID:                   f.ID,
@@ -544,6 +569,7 @@ func userCacheFromFriend(f vrchatapi.Friend, isFavorite bool, now time.Time) *id
 		ProfilePicOverrideThumbnail: f.ProfilePicOverrideThumbnail,
 		Bio:                         f.Bio,
 		BioLinksJSON:                jsonStringSlice(f.BioLinks),
+		CurrentAvatarID:             strings.TrimSpace(f.CurrentAvatar),
 		CurrentAvatarImageURL:       f.CurrentAvatarImageURL,
 		CurrentAvatarTagsJSON:       jsonStringSlice(f.CurrentAvatarTags),
 		DeveloperType:               f.DeveloperType,

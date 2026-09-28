@@ -15,6 +15,7 @@ import (
 type Friend struct {
 	Bio                            string   `json:"bio"`
 	BioLinks                       []string `json:"bioLinks"`
+	CurrentAvatar                  string   `json:"currentAvatar"`
 	CurrentAvatarImageURL          string   `json:"currentAvatarImageUrl"`
 	CurrentAvatarThumbnailImageURL string   `json:"currentAvatarThumbnailImageUrl"`
 	CurrentAvatarTags              []string `json:"currentAvatarTags"`

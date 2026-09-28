@@ -35,6 +35,8 @@ export type UserEncounterDTO = WailsDTO<wailsapp.UserEncounterDTO>;
 /** Friend avatar usage summary row (bindings.FriendAvatarUsageDTO). */
 export type FriendAvatarUsageDTO = {
   avatarName: string;
+  avatarId?: string;
+  localCachePath?: string;
   useCount: number;
   firstSeenAt: string;
   lastSeenAt: string;
