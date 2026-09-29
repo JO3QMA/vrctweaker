@@ -1,5 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
-import { SPACING_PATTERNS, SPACING_SCALE_PX } from "./spacingTokens";
+import {
+  SPACING_PATTERNS,
+  SPACING_SCALE_PX,
+  spacingScaleVar,
+} from "./spacingTokens";
 import "./Spacing.stories.css";
 
 const catalogParameters = {
@@ -18,7 +22,10 @@ type Story = StoryObj<typeof meta>;
 export const Scale: Story = {
   name: "Spacing scale",
   render: () => ({
-    setup: () => ({ scale: SPACING_SCALE_PX }),
+    setup: () => ({
+      scale: SPACING_SCALE_PX,
+      spacingVar: spacingScaleVar,
+    }),
     template: `
       <div class="spacing-story">
         <h2>Spacing scale</h2>
@@ -26,7 +33,7 @@ export const Scale: Story = {
         <div v-for="px in scale" :key="px" class="spacing-story-scale-row">
           <div
             class="spacing-story-scale-bar"
-            :style="{ width: 'var(--space-' + px + ')' }"
+            :style="{ width: 'var(' + spacingVar(px) + ')' }"
           />
           <span class="spacing-story-scale-label">--space-{{ px }}</span>
         </div>

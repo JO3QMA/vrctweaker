@@ -5,11 +5,12 @@ const ROOT_BLOCK_RE = /:root\s*\{([\s\S]*?)\}/;
 
 /** Extract custom properties declared on `:root` from a stylesheet fragment. */
 export function parseStyleCssRootDeclarations(css: string): RootCssVarMap {
-  const match = ROOT_BLOCK_RE.exec(css);
+  const cssWithoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
+  const match = ROOT_BLOCK_RE.exec(cssWithoutComments);
   if (!match) {
     throw new Error(":root block not found in stylesheet");
   }
-  const withoutComments = match[1].replace(/\/\*[\s\S]*?\*\//g, "");
+  const withoutComments = match[1];
   const result: RootCssVarMap = {};
   for (const part of withoutComments.split(";")) {
     const trimmed = part.trim();

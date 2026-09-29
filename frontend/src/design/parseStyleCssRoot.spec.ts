@@ -34,6 +34,16 @@ describe("parseStyleCssRoot", () => {
     expect(parseCssPxLength("calc(1px)")).toBeNull();
   });
 
+  it("parses :root when a comment inside the block contains }", () => {
+    const vars = parseStyleCssRootDeclarations(`
+      :root {
+        /* legacy } marker */
+        --color-brand: #abc;
+      }
+    `);
+    expect(vars["--color-brand"]).toBe("#abc");
+  });
+
   it("collects numeric scale steps from a parsed map", () => {
     const vars = parseStyleCssRootDeclarations(`
       :root {

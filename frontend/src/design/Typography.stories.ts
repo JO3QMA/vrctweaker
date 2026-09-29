@@ -8,6 +8,7 @@ import {
   FONT_WEIGHT_SCALE,
   LINE_HEIGHT_PATTERNS,
   TEXT_STYLES,
+  fontSizeScaleVar,
 } from "./typographyTokens";
 import "./Typography.stories.css";
 
@@ -27,14 +28,17 @@ type Story = StoryObj<typeof meta>;
 export const FontSizeScale: Story = {
   name: "Font size scale",
   render: () => ({
-    setup: () => ({ scale: FONT_SIZE_SCALE_PX }),
+    setup: () => ({
+      scale: FONT_SIZE_SCALE_PX,
+      fontSizeVar: fontSizeScaleVar,
+    }),
     template: `
       <div class="typography-story">
         <h2>Font size scale</h2>
         <p>Numeric tokens (<code>--font-size-*</code>, px). Body default is 14.</p>
         <div v-for="px in scale" :key="px" class="typography-story-scale-row">
           <span class="typography-story-scale-label">--font-size-{{ px }}</span>
-          <span :style="{ fontSize: 'var(--font-size-' + px + ')' }">The quick brown fox</span>
+          <span :style="{ fontSize: 'var(' + fontSizeVar(px) + ')' }">The quick brown fox</span>
         </div>
       </div>
     `,

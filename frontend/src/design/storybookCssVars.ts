@@ -3,7 +3,7 @@ export function readRootCssCustomProperty(varName: `--${string}`): string {
   if (typeof document === "undefined") {
     return "";
   }
-  const prop = varName.startsWith("--") ? varName.slice(2) : varName;
+  const prop = varName.startsWith("--") ? varName : `--${varName}`;
   return getComputedStyle(document.documentElement)
     .getPropertyValue(prop)
     .trim();
