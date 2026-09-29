@@ -1519,7 +1519,36 @@ func TestIdentityUseCase_Logout_returnsSelfDeleteError(t *testing.T) {
 	}
 }
 
-func TestIdentityUseCase_AvatarDisplayName(t *testing.T) {
+type memAvatarNameCache struct {
+	rows    map[string]*identity.AvatarNameCache
+	saveErr error
+}
+
+func (m *memAvatarNameCache) Get(_ context.Context, avatarID string) (*identity.AvatarNameCache, error) {
+	if m.rows == nil {
+		return nil, nil
+	}
+	row := m.rows[strings.TrimSpace(avatarID)]
+	if row == nil {
+		return nil, nil
+	}
+	cpy := *row
+	return &cpy, nil
+}
+
+func (m *memAvatarNameCache) Upsert(_ context.Context, row *identity.AvatarNameCache) error {
+	if m.saveErr != nil {
+		return m.saveErr
+	}
+	if m.rows == nil {
+		m.rows = map[string]*identity.AvatarNameCache{}
+	}
+	cpy := *row
+	m.rows[strings.TrimSpace(row.AvatarID)] = &cpy
+	return nil
+}
+
+func TestIdentityUseCase_AvatarDisplayName_notLoggedInWithoutCache(t *testing.T) {
 	ctx := context.Background()
 	uc := NewIdentityUseCase(
 		&mockUserCacheRepo{},
@@ -1528,6 +1557,7 @@ func TestIdentityUseCase_AvatarDisplayName(t *testing.T) {
 		newMockSettingsRepo(),
 		nil,
 	)
+	uc.SetAvatarNameCacheRepo(&memAvatarNameCache{})
 	name, err := uc.AvatarDisplayName(ctx, "avtr_11111111-2222-3333-4444-555555555555")
 	if err != nil {
 		t.Fatalf("AvatarDisplayName: %v", err)
@@ -1535,40 +1565,93 @@ func TestIdentityUseCase_AvatarDisplayName(t *testing.T) {
 	if name != "" {
 		t.Fatalf("want empty when not logged in, got %q", name)
 	}
+}
 
+func TestIdentityUseCase_AvatarDisplayName_freshCacheSkipsAPI(t *testing.T) {
+	ctx := context.Background()
+	avatarID := "avtr_11111111-2222-3333-4444-555555555555"
+	cache := &memAvatarNameCache{rows: map[string]*identity.AvatarNameCache{
+		avatarID: {AvatarID: avatarID, Name: "Fox", FetchedAt: time.Now().Add(-time.Hour)},
+	}}
 	apiClient := &mockAPIClient{
-		token: "tok",
-		getAvatar: &vrchatapi.Avatar{
-			ID:   "avtr_11111111-2222-3333-4444-555555555555",
-			Name: "Fox",
-		},
+		token:     "tok",
+		getAvatar: &vrchatapi.Avatar{ID: avatarID, Name: "FromAPI"},
 	}
-	uc = NewIdentityUseCase(
-		&mockUserCacheRepo{},
-		apiClient,
-		vrchatapi.NewStubCredentialStore(),
-		newMockSettingsRepo(),
-		nil,
-	)
-	name, err = uc.AvatarDisplayName(ctx, "avtr_11111111-2222-3333-4444-555555555555")
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	uc.SetAvatarNameCacheRepo(cache)
+	name, err := uc.AvatarDisplayName(ctx, avatarID)
 	if err != nil {
-		t.Fatalf("AvatarDisplayName: %v", err)
+		t.Fatal(err)
 	}
 	if name != "Fox" {
 		t.Fatalf("got %q want Fox", name)
 	}
+	if apiClient.getAvatarCalls != 0 {
+		t.Fatalf("GetAvatar calls %d, want 0 within AvatarNameCacheTTL", apiClient.getAvatarCalls)
+	}
+}
+
+func TestIdentityUseCase_AvatarDisplayName_staleCacheRefreshes(t *testing.T) {
+	ctx := context.Background()
+	avatarID := "avtr_11111111-2222-3333-4444-555555555555"
+	cache := &memAvatarNameCache{rows: map[string]*identity.AvatarNameCache{
+		avatarID: {
+			AvatarID:  avatarID,
+			Name:      "Old",
+			FetchedAt: time.Now().Add(-identity.AvatarNameCacheTTL - time.Minute),
+		},
+	}}
+	apiClient := &mockAPIClient{
+		token:     "tok",
+		getAvatar: &vrchatapi.Avatar{ID: avatarID, Name: "New"},
+	}
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	uc.SetAvatarNameCacheRepo(cache)
+	name, err := uc.AvatarDisplayName(ctx, avatarID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if name != "New" {
+		t.Fatalf("got %q want New", name)
+	}
 	if apiClient.getAvatarCalls != 1 {
-		t.Fatalf("getAvatar calls %d want 1", apiClient.getAvatarCalls)
+		t.Fatalf("GetAvatar calls %d, want 1", apiClient.getAvatarCalls)
+	}
+	stored := cache.rows[avatarID]
+	if stored == nil || stored.Name != "New" || time.Since(stored.FetchedAt) > time.Minute {
+		t.Fatalf("stored %+v", stored)
 	}
 
-	name, err = uc.AvatarDisplayName(ctx, "avtr_11111111-2222-3333-4444-555555555555")
+	name, err = uc.AvatarDisplayName(ctx, avatarID)
 	if err != nil {
-		t.Fatalf("AvatarDisplayName cached: %v", err)
+		t.Fatal(err)
 	}
-	if name != "Fox" {
-		t.Fatalf("cached got %q want Fox", name)
+	if name != "New" || apiClient.getAvatarCalls != 1 {
+		t.Fatalf("name %q calls %d after refresh", name, apiClient.getAvatarCalls)
+	}
+}
+
+func TestIdentityUseCase_AvatarDisplayName_apiErrFallsBackToStale(t *testing.T) {
+	ctx := context.Background()
+	avatarID := "avtr_11111111-2222-3333-4444-555555555555"
+	cache := &memAvatarNameCache{rows: map[string]*identity.AvatarNameCache{
+		avatarID: {
+			AvatarID:  avatarID,
+			Name:      "Stale",
+			FetchedAt: time.Now().Add(-identity.AvatarNameCacheTTL - time.Minute),
+		},
+	}}
+	apiClient := &mockAPIClient{token: "tok", getAvatarErr: errors.New("network")}
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	uc.SetAvatarNameCacheRepo(cache)
+	name, err := uc.AvatarDisplayName(ctx, avatarID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if name != "Stale" {
+		t.Fatalf("got %q want Stale", name)
 	}
 	if apiClient.getAvatarCalls != 1 {
-		t.Fatalf("getAvatar calls after cache %d want 1", apiClient.getAvatarCalls)
+		t.Fatalf("GetAvatar calls %d, want 1", apiClient.getAvatarCalls)
 	}
 }

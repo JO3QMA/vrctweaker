@@ -21,3 +21,9 @@ type userCacheRepo interface {
 	DeleteSelfRows(ctx context.Context) error
 	ListContactsNeedingProfileResolution(ctx context.Context) ([]*identity.UserCache, error)
 }
+
+// avatarNameCacheRepo persists avatar id → display name with fetched_at for TTL.
+type avatarNameCacheRepo interface {
+	Get(ctx context.Context, avatarID string) (*identity.AvatarNameCache, error)
+	Upsert(ctx context.Context, row *identity.AvatarNameCache) error
+}

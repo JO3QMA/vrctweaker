@@ -98,6 +98,13 @@ func TestApplySchema_canonicalColumns(t *testing.T) {
 	if !thumbs["jpeg_blob"] || thumbs["webp_blob"] {
 		t.Fatalf("screenshot_thumbnails: want jpeg_blob only, got %#v", thumbs)
 	}
+
+	avatarCache := columnNames(t, db, "avatar_cache")
+	for _, col := range []string{"avatar_id", "name", "fetched_at"} {
+		if !avatarCache[col] {
+			t.Fatalf("avatar_cache missing column %q", col)
+		}
+	}
 }
 
 func TestOpen_setsBusyTimeoutAndWAL(t *testing.T) {
