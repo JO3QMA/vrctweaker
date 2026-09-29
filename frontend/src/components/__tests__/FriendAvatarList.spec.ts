@@ -1,7 +1,11 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createI18n } from "vue-i18n";
+import ja from "../../i18n/locales/ja.json";
 import FriendAvatarList from "../FriendAvatarList.vue";
 import { App } from "../../wails/app";
+import * as showToastModule from "../../utils/showToast";
+import * as vrcUserCacheDisplay from "../../utils/vrcUserCacheDisplay";
 
 vi.mock("../../wails/app", () => ({
   App: {
@@ -9,12 +13,33 @@ vi.mock("../../wails/app", () => ({
   },
 }));
 
+vi.mock("../../utils/showToast", () => ({
+  showToast: {
+    success: vi.fn(),
+    error: vi.fn(),
+  },
+}));
+
 const mockFetch = vi.mocked(App.friendAvatarUsageByVRCUserID);
+
+function mountList(props: { userId?: string } = { userId: "usr_test" }) {
+  const i18n = createI18n({
+    legacy: false,
+    locale: "ja",
+    messages: { ja },
+  });
+  return mount(FriendAvatarList, {
+    props,
+    global: { plugins: [i18n] },
+  });
+}
 
 describe("FriendAvatarList", () => {
   beforeEach(() => {
     mockFetch.mockReset();
     mockFetch.mockResolvedValue([]);
+    vi.mocked(showToastModule.showToast.success).mockClear();
+    vi.mocked(showToastModule.showToast.error).mockClear();
   });
 
   it("loads avatar usage for user id", async () => {
@@ -26,19 +51,146 @@ describe("FriendAvatarList", () => {
         lastSeenAt: "2026-01-02T00:00:00.000Z",
       },
     ]);
-    const wrapper = mount(FriendAvatarList, {
-      props: { userId: "usr_test" },
-    });
+    const wrapper = mountList();
     await flushPromises();
     expect(mockFetch).toHaveBeenCalledWith("usr_test");
     expect(wrapper.text()).toContain("Fox");
     expect(wrapper.find(".el-table").exists()).toBe(true);
   });
 
+  it("copies avatar id when copy control is used", async () => {
+    const copySpy = vi
+      .spyOn(vrcUserCacheDisplay, "copyTextToClipboard")
+      .mockResolvedValue();
+    mockFetch.mockResolvedValue([
+      {
+        avatarName: "Fox",
+        avatarId: "avtr_11111111-2222-3333-4444-555555555555",
+        useCount: 1,
+        firstSeenAt: "2026-01-01T00:00:00.000Z",
+        lastSeenAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    const wrapper = mountList();
+    await flushPromises();
+    const btn = wrapper.get(
+      '[data-testid="friend-avatar-copy-id-avtr_11111111-2222-3333-4444-555555555555"]',
+    );
+    expect(btn.attributes("aria-label")).toBe(ja.friendAvatars.copyAvatarId);
+    await btn.trigger("click");
+    await flushPromises();
+    expect(copySpy).toHaveBeenCalledWith(
+      "avtr_11111111-2222-3333-4444-555555555555",
+    );
+    expect(showToastModule.showToast.success).toHaveBeenCalledWith(
+      ja.friendAvatars.copyAvatarIdSuccess,
+    );
+    copySpy.mockRestore();
+  });
+
+  it("shows toast error when avatar id copy fails", async () => {
+    vi.spyOn(vrcUserCacheDisplay, "copyTextToClipboard").mockRejectedValue(
+      new Error("denied"),
+    );
+    mockFetch.mockResolvedValue([
+      {
+        avatarName: "Fox",
+        avatarId: "avtr_11111111-2222-3333-4444-555555555555",
+        useCount: 1,
+        firstSeenAt: "2026-01-01T00:00:00.000Z",
+        lastSeenAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    const wrapper = mountList();
+    await flushPromises();
+    await wrapper
+      .get(
+        '[data-testid="friend-avatar-copy-id-avtr_11111111-2222-3333-4444-555555555555"]',
+      )
+      .trigger("click");
+    await flushPromises();
+    expect(showToastModule.showToast.error).toHaveBeenCalledWith(
+      ja.friendAvatars.copyAvatarIdError,
+    );
+  });
+
+  it("shows cache path missing when local path is empty", async () => {
+    mockFetch.mockResolvedValue([
+      {
+        avatarName: "Fox",
+        avatarId: "avtr_11111111-2222-3333-4444-555555555555",
+        useCount: 1,
+        firstSeenAt: "2026-01-01T00:00:00.000Z",
+        lastSeenAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    const wrapper = mountList();
+    await flushPromises();
+    expect(wrapper.text()).toContain(ja.friendAvatars.cachePathMissing);
+    expect(
+      wrapper.find('[data-testid^="friend-avatar-copy-path-"]').exists(),
+    ).toBe(false);
+  });
+
+  it("copies cache path when copy control is used", async () => {
+    const copySpy = vi
+      .spyOn(vrcUserCacheDisplay, "copyTextToClipboard")
+      .mockResolvedValue();
+    const path = "/cache/avtr_11111111-2222-3333-4444-555555555555";
+    mockFetch.mockResolvedValue([
+      {
+        avatarName: "Fox",
+        avatarId: "avtr_11111111-2222-3333-4444-555555555555",
+        localCachePath: path,
+        useCount: 1,
+        firstSeenAt: "2026-01-01T00:00:00.000Z",
+        lastSeenAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    const wrapper = mountList();
+    await flushPromises();
+    await wrapper
+      .get(
+        '[data-testid="friend-avatar-copy-path-avtr_11111111-2222-3333-4444-555555555555"]',
+      )
+      .trigger("click");
+    await flushPromises();
+    expect(copySpy).toHaveBeenCalledWith(path);
+    expect(showToastModule.showToast.success).toHaveBeenCalledWith(
+      ja.friendAvatars.copyCachePathSuccess,
+    );
+    copySpy.mockRestore();
+  });
+
+  it("shows toast error when cache path copy fails", async () => {
+    vi.spyOn(vrcUserCacheDisplay, "copyTextToClipboard").mockRejectedValue(
+      new Error("denied"),
+    );
+    mockFetch.mockResolvedValue([
+      {
+        avatarName: "Fox",
+        avatarId: "avtr_11111111-2222-3333-4444-555555555555",
+        localCachePath: "/cache/path",
+        useCount: 1,
+        firstSeenAt: "2026-01-01T00:00:00.000Z",
+        lastSeenAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    const wrapper = mountList();
+    await flushPromises();
+    await wrapper
+      .get(
+        '[data-testid="friend-avatar-copy-path-avtr_11111111-2222-3333-4444-555555555555"]',
+      )
+      .trigger("click");
+    await flushPromises();
+    expect(showToastModule.showToast.error).toHaveBeenCalledWith(
+      ja.friendAvatars.copyCachePathError,
+    );
+  });
+
   it("shows empty message when no rows", async () => {
-    const wrapper = mount(FriendAvatarList, {
-      props: { userId: "usr_test" },
-    });
+    const wrapper = mountList();
     await flushPromises();
     expect(wrapper.text()).toContain(
       "ログから記録されたアバターはまだありません",
@@ -47,9 +199,7 @@ describe("FriendAvatarList", () => {
 
   it("shows generic error on fetch failure", async () => {
     mockFetch.mockRejectedValue(new Error("friend avatar usage: db locked"));
-    const wrapper = mount(FriendAvatarList, {
-      props: { userId: "usr_test" },
-    });
+    const wrapper = mountList();
     await flushPromises();
     expect(wrapper.text()).toContain("アバター一覧の取得に失敗しました");
   });
@@ -83,9 +233,7 @@ describe("FriendAvatarList", () => {
       },
     ]);
 
-    const wrapper = mount(FriendAvatarList, {
-      props: { userId: "usr_old" },
-    });
+    const wrapper = mountList({ userId: "usr_old" });
     await wrapper.setProps({ userId: "usr_new" });
     await flushPromises();
     expect(wrapper.text()).toContain("Current");

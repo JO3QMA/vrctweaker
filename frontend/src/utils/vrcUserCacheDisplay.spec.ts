@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { UserCacheDTO } from "../wails/app";
 import {
   copyDisplayName,
+  copyTextToClipboard,
   friendDetailStickyHeaderVisible,
   friendIsOffline,
   friendLocationLabel,
@@ -163,6 +164,18 @@ describe("copyDisplayName", () => {
     expect(writeText).toHaveBeenCalledWith("hello");
   });
 
+  it("does not throw when copy fails", async () => {
+    vi.stubGlobal("navigator", {});
+    Object.defineProperty(document, "execCommand", {
+      value: vi.fn().mockReturnValue(false),
+      configurable: true,
+    });
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
+    await expect(copyDisplayName("x")).resolves.toBeUndefined();
+    debugSpy.mockRestore();
+    Reflect.deleteProperty(document, "execCommand");
+  });
+
   it("falls back to execCommand when clipboard throws", async () => {
     writeText.mockRejectedValueOnce(new Error("denied"));
     vi.stubGlobal("navigator", { clipboard: { writeText } });
@@ -178,5 +191,30 @@ describe("copyDisplayName", () => {
     } finally {
       Reflect.deleteProperty(document, "execCommand");
     }
+  });
+});
+
+describe("copyTextToClipboard execCommand fallback", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    Reflect.deleteProperty(document, "execCommand");
+  });
+
+  it("does not throw when execCommand returns undefined", async () => {
+    vi.stubGlobal("navigator", {});
+    Object.defineProperty(document, "execCommand", {
+      value: vi.fn(),
+      configurable: true,
+    });
+    await expect(copyTextToClipboard("x")).resolves.toBeUndefined();
+  });
+
+  it("throws when execCommand returns false", async () => {
+    vi.stubGlobal("navigator", {});
+    Object.defineProperty(document, "execCommand", {
+      value: vi.fn().mockReturnValue(false),
+      configurable: true,
+    });
+    await expect(copyTextToClipboard("x")).rejects.toThrow("copy failed");
   });
 });

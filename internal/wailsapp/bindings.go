@@ -6,6 +6,7 @@ import (
 	"vrchat-tweaker/internal/domain/launcher"
 	"vrchat-tweaker/internal/domain/media"
 	"vrchat-tweaker/internal/domain/vrchatconfig"
+	"vrchat-tweaker/internal/usecase"
 )
 
 // LaunchProfileDTO is the frontend-facing launch profile.
@@ -182,20 +183,24 @@ func toScreenshotFilter(d ScreenshotSearchDTO) *media.ScreenshotFilter {
 
 // FriendAvatarUsageDTO is aggregated avatar usage for one friend profile tab row.
 type FriendAvatarUsageDTO struct {
-	AvatarName  string `json:"avatarName"`
-	UseCount    int64  `json:"useCount"`
-	FirstSeenAt string `json:"firstSeenAt"`
-	LastSeenAt  string `json:"lastSeenAt"`
+	AvatarName     string `json:"avatarName"`
+	AvatarID       string `json:"avatarId,omitempty"`
+	LocalCachePath string `json:"localCachePath,omitempty"`
+	UseCount       int64  `json:"useCount"`
+	FirstSeenAt    string `json:"firstSeenAt"`
+	LastSeenAt     string `json:"lastSeenAt"`
 }
 
-func toFriendAvatarUsageDTOs(list []*activity.FriendAvatarUsageSummary) []FriendAvatarUsageDTO {
+func toFriendAvatarUsageDTOs(list []usecase.EnrichedFriendAvatarUsage) []FriendAvatarUsageDTO {
 	out := make([]FriendAvatarUsageDTO, len(list))
 	for i, row := range list {
 		out[i] = FriendAvatarUsageDTO{
-			AvatarName:  row.AvatarName,
-			UseCount:    row.UseCount,
-			FirstSeenAt: formatRFC3339(row.FirstSeenAt),
-			LastSeenAt:  formatRFC3339(row.LastSeenAt),
+			AvatarName:     row.AvatarName,
+			AvatarID:       row.AvatarID,
+			LocalCachePath: row.LocalCachePath,
+			UseCount:       row.UseCount,
+			FirstSeenAt:    formatRFC3339(row.FirstSeenAt),
+			LastSeenAt:     formatRFC3339(row.LastSeenAt),
 		}
 	}
 	return out
@@ -302,6 +307,7 @@ type UserCacheDTO struct {
 	ProfilePicOverrideThumbnail string `json:"profilePicOverrideThumbnail,omitempty"`
 	Bio                         string `json:"bio,omitempty"`
 	BioLinksJSON                string `json:"bioLinksJson,omitempty"`
+	CurrentAvatarID             string `json:"currentAvatarId,omitempty"`
 	CurrentAvatarImageURL       string `json:"currentAvatarImageUrl,omitempty"`
 	CurrentAvatarTagsJSON       string `json:"currentAvatarTagsJson,omitempty"`
 	DeveloperType               string `json:"developerType,omitempty"`
@@ -342,6 +348,7 @@ func toUserCacheDTO(f *identity.UserCache) UserCacheDTO {
 		ProfilePicOverrideThumbnail: f.ProfilePicOverrideThumbnail,
 		Bio:                         f.Bio,
 		BioLinksJSON:                f.BioLinksJSON,
+		CurrentAvatarID:             f.CurrentAvatarID,
 		CurrentAvatarImageURL:       f.CurrentAvatarImageURL,
 		CurrentAvatarTagsJSON:       f.CurrentAvatarTagsJSON,
 		DeveloperType:               f.DeveloperType,

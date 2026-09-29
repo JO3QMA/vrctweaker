@@ -60,23 +60,43 @@ export function jsonStringArray(raw: string | undefined): string[] {
   }
 }
 
-export async function copyDisplayName(name: string): Promise<void> {
-  const text = name || "";
+export async function copyTextToClipboard(text: string): Promise<void> {
   if (!text) return;
   try {
-    await navigator.clipboard.writeText(text);
+    if (navigator?.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
   } catch {
-    const ta = document.createElement("textarea");
-    ta.value = text;
-    ta.setAttribute("readonly", "");
-    ta.style.position = "fixed";
-    ta.style.left = "-9999px";
-    document.body.appendChild(ta);
-    ta.select();
-    try {
-      document.execCommand("copy");
-    } finally {
-      document.body.removeChild(ta);
+    // fall through to execCommand fallback
+  }
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.setAttribute("readonly", "");
+  ta.style.position = "fixed";
+  ta.style.left = "-9999px";
+  document.body.appendChild(ta);
+  ta.select();
+  try {
+    const ok = document.execCommand("copy");
+    if (ok === false) {
+      throw new Error("copy failed");
+    }
+  } finally {
+    document.body.removeChild(ta);
+  }
+}
+
+/**
+ * Copies a display name to the clipboard. Failures are ignored (silent UX);
+ * in dev builds a debug line is logged when copy is not possible.
+ */
+export async function copyDisplayName(name: string): Promise<void> {
+  try {
+    await copyTextToClipboard(name);
+  } catch {
+    if (import.meta.env.DEV) {
+      console.debug("copyDisplayName: clipboard copy failed");
     }
   }
 }

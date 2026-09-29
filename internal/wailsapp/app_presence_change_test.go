@@ -76,6 +76,9 @@ func (m *mockAPIClientPresence) GetFriends(context.Context) ([]vrchatapi.Friend,
 func (m *mockAPIClientPresence) GetUser(context.Context, string) (*vrchatapi.Friend, error) {
 	return nil, nil
 }
+func (m *mockAPIClientPresence) GetAvatar(context.Context, string) (*vrchatapi.Avatar, error) {
+	return nil, nil
+}
 func (m *mockAPIClientPresence) SetUserStatus(context.Context, string, vrchatapi.UserStatus) error {
 	return nil
 }

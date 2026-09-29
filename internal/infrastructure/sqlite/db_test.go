@@ -65,7 +65,7 @@ func TestApplySchema_canonicalColumns(t *testing.T) {
 		"first_seen_at", "last_contact_at", "user_kind", "session_fingerprint", "username",
 		"status_description", "user_state", "avatar_thumbnail_url", "user_icon_url",
 		"profile_pic_override_thumbnail",
-		"bio", "bio_links_json", "current_avatar_image_url", "current_avatar_tags_json",
+		"bio", "bio_links_json", "current_avatar_id", "current_avatar_image_url", "current_avatar_tags_json",
 		"developer_type", "friend_key", "image_url", "last_platform", "location",
 		"last_login", "last_activity", "last_mobile", "platform", "profile_pic_override", "tags_json",
 	} {
