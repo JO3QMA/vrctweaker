@@ -83,8 +83,8 @@ func TestFindLocalAvatarCachePath_truncatedWhenWalkLimitExceeded(t *testing.T) {
 	}
 
 	target := filepath.Join(root, "zzz", avatarID)
-	if err := os.MkdirAll(target, 0700); err != nil {
-		t.Fatal(err)
+	if mkdirErr := os.MkdirAll(target, 0700); mkdirErr != nil {
+		t.Fatal(mkdirErr)
 	}
 	got, err = findLocalAvatarCachePathWithLimit(root, avatarID, 50)
 	if err != nil {
