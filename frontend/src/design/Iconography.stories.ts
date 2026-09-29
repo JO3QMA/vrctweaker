@@ -39,7 +39,7 @@ export const Scale: Story = {
       <div class="iconography-story">
         <h2>Icon size scale</h2>
         <p>Square slot via <code>font-size</code> on <code>VtIcon</code> / <code>el-icon</code>.</p>
-        <div v-for="pattern in patterns" :key="pattern.scaleVar" class="iconography-story-size-row">
+        <div v-for="pattern in patterns" :key="pattern.varName" class="iconography-story-size-row">
           <VtIcon :size="pattern.name">
             <Search />
           </VtIcon>

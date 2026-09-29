@@ -28,7 +28,9 @@ export function parseStyleCssRootDeclarations(css: string): RootCssVarMap {
     const trimmed = part.trim();
     if (!trimmed) continue;
     const colon = trimmed.indexOf(":");
-    if (colon < 0) continue;
+    if (colon < 0) {
+      throw new Error(`malformed declaration in :root block: ${trimmed}`);
+    }
     const name = trimmed.slice(0, colon).trim();
     const value = trimmed.slice(colon + 1).trim();
     if (name.startsWith("--")) {

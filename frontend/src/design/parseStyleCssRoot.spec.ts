@@ -34,6 +34,16 @@ describe("parseStyleCssRoot", () => {
     expect(parseCssPxLength("calc(1px)")).toBeNull();
   });
 
+  it("rejects malformed declarations in :root", () => {
+    expect(() =>
+      parseStyleCssRootDeclarations(`
+        :root {
+          not-a-custom-property
+        }
+      `),
+    ).toThrow(/malformed declaration/);
+  });
+
   it("rejects more than one :root block", () => {
     expect(() =>
       parseStyleCssRootDeclarations(`
