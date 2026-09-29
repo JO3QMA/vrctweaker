@@ -41,6 +41,12 @@
   font-weight: 600;
 }
 
+.color-story-swatch-resolved {
+  font-size: var(--font-size-12);
+  color: var(--color-text-muted);
+  font-family: ui-monospace, monospace;
+}
+
 .color-story-swatch-label {
   font-family: ui-monospace, monospace;
   font-size: 0.8rem;

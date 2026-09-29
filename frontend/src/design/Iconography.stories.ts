@@ -11,6 +11,7 @@ import {
   ICON_SIZE_PATTERNS,
   VT_ICON_SIZES,
 } from "./iconTokens";
+import { readRootCssCustomProperty } from "./storybookCssVars";
 import "./Iconography.stories.css";
 
 const catalogParameters = {
@@ -30,7 +31,10 @@ export const Scale: Story = {
   name: "Icon size scale",
   render: () => ({
     components: { VtIcon, Search },
-    setup: () => ({ patterns: ICON_SIZE_PATTERNS }),
+    setup: () => ({
+      patterns: ICON_SIZE_PATTERNS,
+      resolve: readRootCssCustomProperty,
+    }),
     template: `
       <div class="iconography-story">
         <h2>Icon size scale</h2>
@@ -39,7 +43,10 @@ export const Scale: Story = {
           <VtIcon :size="pattern.name">
             <Search />
           </VtIcon>
-          <span>{{ pattern.scaleVar }} · {{ pattern.px }}px</span>
+          <span>
+            <code>{{ pattern.scaleVar }}</code>
+            <span class="iconography-story-resolved">{{ resolve(pattern.scaleVar) }}</span>
+          </span>
         </div>
       </div>
     `,
@@ -49,7 +56,11 @@ export const Scale: Story = {
 export const Patterns: Story = {
   name: "Icon size pattern catalog",
   render: () => ({
-    setup: () => ({ patterns: ICON_SIZE_PATTERNS, legacy: ICON_SIZE_LEGACY }),
+    setup: () => ({
+      patterns: ICON_SIZE_PATTERNS,
+      legacy: ICON_SIZE_LEGACY,
+      resolve: readRootCssCustomProperty,
+    }),
     template: `
       <div class="iconography-story">
         <h2>Icon size pattern catalog</h2>
@@ -58,19 +69,19 @@ export const Patterns: Story = {
             <tr>
               <th>Pattern</th>
               <th>Delegates to</th>
-              <th>px</th>
+              <th>Resolved</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in patterns" :key="row.varName">
               <td><code>{{ row.varName }}</code> (VtIcon <code>{{ row.name }}</code>)</td>
               <td><code>{{ row.scaleVar }}</code></td>
-              <td>{{ row.px }}</td>
+              <td>{{ resolve(row.varName) }}</td>
             </tr>
             <tr>
               <td><code>{{ legacy.toggle.varName }}</code> (legacy)</td>
               <td><code>{{ legacy.toggle.delegatesTo }}</code></td>
-              <td>{{ legacy.toggle.px }} → adoption: <code>{{ legacy.toggle.adoptionTarget }}</code></td>
+              <td>{{ resolve(legacy.toggle.varName) }} → adoption: <code>{{ legacy.toggle.adoptionTarget }}</code></td>
             </tr>
           </tbody>
         </table>

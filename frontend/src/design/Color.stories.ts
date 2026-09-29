@@ -7,6 +7,7 @@ import {
   SEMANTIC_COLOR_TOKENS,
   SERVER_STATUS_COLOR_TOKENS,
 } from "./colorTokens";
+import { readRootCssCustomProperty } from "./storybookCssVars";
 import "./Color.stories.css";
 
 const catalogParameters = {
@@ -30,7 +31,12 @@ function swatchStory(
   return {
     name: title,
     render: () => ({
-      setup: () => ({ title, description, rows }),
+      setup: () => ({
+        title,
+        description,
+        rows,
+        resolve: readRootCssCustomProperty,
+      }),
       template: `
         <div class="color-story">
           <h2>{{ title }}</h2>
@@ -42,6 +48,7 @@ function swatchStory(
                 :style="{ background: 'var(' + row.varName + ')' }"
               />
               <span class="color-story-swatch-label">{{ row.varName }}</span>
+              <span class="color-story-swatch-resolved">{{ resolve(row.varName) }}</span>
             </div>
           </div>
         </div>
@@ -59,7 +66,10 @@ export const Brand: Story = swatchStory(
 export const Neutral: Story = {
   name: "Neutral color",
   render: () => ({
-    setup: () => ({ rows: NEUTRAL_COLOR_TOKENS }),
+    setup: () => ({
+      rows: NEUTRAL_COLOR_TOKENS,
+      resolve: readRootCssCustomProperty,
+    }),
     template: `
       <div class="color-story">
         <h2>Neutral color</h2>
@@ -82,6 +92,7 @@ export const Neutral: Story = {
               :style="{ background: 'var(' + row.varName + ')' }"
             />
             <span class="color-story-swatch-label">{{ row.varName }}</span>
+            <span class="color-story-swatch-resolved">{{ resolve(row.varName) }}</span>
             <span v-if="row.legacyAlias" class="color-story-swatch-label">alias: {{ row.legacyAlias }}</span>
           </div>
         </div>
@@ -105,7 +116,10 @@ export const ServerStatus: Story = swatchStory(
 export const Presence: Story = {
   name: "Presence color",
   render: () => ({
-    setup: () => ({ rows: PRESENCE_COLOR_TOKENS }),
+    setup: () => ({
+      rows: PRESENCE_COLOR_TOKENS,
+      resolve: readRootCssCustomProperty,
+    }),
     template: `
       <div class="color-story">
         <h2>Presence color</h2>
@@ -133,8 +147,8 @@ export const Presence: Story = {
           <tbody>
             <tr v-for="row in rows" :key="row.name">
               <td>{{ row.name }}</td>
-              <td><code>{{ row.bgVar }}</code></td>
-              <td><code>{{ row.borderVar }}</code></td>
+              <td><code>{{ row.bgVar }}</code> · {{ resolve(row.bgVar) }}</td>
+              <td><code>{{ row.borderVar }}</code> · {{ resolve(row.borderVar) }}</td>
             </tr>
           </tbody>
         </table>

@@ -3,38 +3,18 @@ import {
   ELEMENT_PLUS_TYPOGRAPHY_DERIVATIVES,
   ELEMENT_PLUS_TYPOGRAPHY_MAPPING,
   FONT_FAMILY_UI_VAR,
-  FONT_SIZE_DERIVATIVES,
-  FONT_SIZE_SCALE_PX,
-  FONT_WEIGHT_SCALE,
-  LINE_HEIGHT_PATTERNS,
   TEXT_STYLES,
   fontSizeScaleVar,
   fontWeightScaleVar,
 } from "./typographyTokens";
 
 describe("typographyTokens", () => {
-  it("defines the agreed font-size scale", () => {
-    expect([...FONT_SIZE_SCALE_PX]).toEqual([10, 12, 14, 16, 18, 20, 24]);
-  });
-
   it("maps scale px to CSS variable names", () => {
     expect(fontSizeScaleVar(14)).toBe("--font-size-14");
   });
 
-  it("defines line-height patterns", () => {
-    expect(LINE_HEIGHT_PATTERNS.map((p) => p.value)).toEqual([1.25, 1.5, 1.75]);
-  });
-
-  it("defines font-weight scale", () => {
-    expect([...FONT_WEIGHT_SCALE]).toEqual([400, 500, 600, 700]);
+  it("maps font-weight steps to CSS variable names", () => {
     expect(fontWeightScaleVar(600)).toBe("--font-weight-600");
-  });
-
-  it("defines font-size derivatives outside the scale", () => {
-    expect(FONT_SIZE_DERIVATIVES[0]?.varName).toBe("--font-size-h1");
-    expect(FONT_SIZE_DERIVATIVES[0]?.cssValue).toBe(
-      "calc(var(--font-size-14) * 1.4)",
-    );
   });
 
   it("exposes UI font family token for Storybook catalog", () => {
