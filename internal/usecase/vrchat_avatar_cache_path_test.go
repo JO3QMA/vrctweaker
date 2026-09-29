@@ -8,6 +8,28 @@ import (
 	"testing"
 )
 
+func TestFindLocalAvatarCachePath_resolvesSymlinkRoot(t *testing.T) {
+	root := t.TempDir()
+	realCache := filepath.Join(root, "real")
+	avatarID := "avtr_11111111-2222-3333-4444-555555555555"
+	avatarDir := filepath.Join(realCache, avatarID)
+	if err := os.MkdirAll(avatarDir, 0700); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(root, "link")
+	if err := os.Symlink(realCache, link); err != nil {
+		t.Fatal(err)
+	}
+
+	got, err := FindLocalAvatarCachePath(link, avatarID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != avatarDir {
+		t.Fatalf("got %q want %q", got, avatarDir)
+	}
+}
+
 func TestFindLocalAvatarCachePath_findsDirectoryContainingAvatarID(t *testing.T) {
 	root := t.TempDir()
 	avatarID := "avtr_11111111-2222-3333-4444-555555555555"

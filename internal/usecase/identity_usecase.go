@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -22,6 +23,8 @@ type IdentityUseCase struct {
 	settingsRepo       appSettingsRepo
 	notify             func(title, message string) error // optional; nil skips online notifications
 	onSelfCacheChanged func()
+	avatarNameCache    map[string]string
+	avatarNameCacheMu  sync.RWMutex
 }
 
 // NewIdentityUseCase creates a new IdentityUseCase.
@@ -34,11 +37,12 @@ func NewIdentityUseCase(
 	notify func(title, message string) error,
 ) *IdentityUseCase {
 	return &IdentityUseCase{
-		userCacheRepo: userCacheRepo,
-		apiClient:     apiClient,
-		credStore:     credStore,
-		settingsRepo:  settingsRepo,
-		notify:        notify,
+		userCacheRepo:   userCacheRepo,
+		apiClient:       apiClient,
+		credStore:       credStore,
+		settingsRepo:    settingsRepo,
+		notify:          notify,
+		avatarNameCache: make(map[string]string),
 	}
 }
 
@@ -533,12 +537,21 @@ func (uc *IdentityUseCase) CachedUserByVRCUserID(ctx context.Context, vrcUserID 
 	return uc.userCacheRepo.GetByVRCUserID(ctx, strings.TrimSpace(vrcUserID))
 }
 
-// AvatarDisplayName resolves the VRChat avatar display name for an id when logged in.
+// AvatarDisplayName resolves the VRChat avatar name for an id when logged in.
+// Results are cached in memory by avatar id for the process lifetime.
+// API calls use a shorter timeout than the default client (5s) to avoid blocking friend UI.
 func (uc *IdentityUseCase) AvatarDisplayName(ctx context.Context, avatarID string) (string, error) {
 	avatarID = strings.TrimSpace(avatarID)
 	if avatarID == "" {
 		return "", nil
 	}
+	uc.avatarNameCacheMu.RLock()
+	if name, ok := uc.avatarNameCache[avatarID]; ok {
+		uc.avatarNameCacheMu.RUnlock()
+		return name, nil
+	}
+	uc.avatarNameCacheMu.RUnlock()
+
 	loggedIn, err := uc.IsLoggedIn(ctx)
 	if err != nil {
 		return "", err
@@ -546,14 +559,20 @@ func (uc *IdentityUseCase) AvatarDisplayName(ctx context.Context, avatarID strin
 	if !loggedIn {
 		return "", nil
 	}
-	av, err := uc.apiClient.GetAvatar(ctx, avatarID)
+	apiCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	av, err := uc.apiClient.GetAvatar(apiCtx, avatarID)
 	if err != nil {
 		return "", uc.handleSessionError(err)
 	}
 	if av == nil {
 		return "", nil
 	}
-	return strings.TrimSpace(av.Name), nil
+	name := strings.TrimSpace(av.Name)
+	uc.avatarNameCacheMu.Lock()
+	uc.avatarNameCache[avatarID] = name
+	uc.avatarNameCacheMu.Unlock()
+	return name, nil
 }
 
 func userCacheFromFriend(f vrchatapi.Friend, isFavorite bool, now time.Time) *identity.UserCache {

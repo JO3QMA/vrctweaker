@@ -1,6 +1,8 @@
 package usecase
 
 import (
+	"errors"
+	"log"
 	"strings"
 	"time"
 
@@ -24,9 +26,11 @@ type AvatarCachePathFinder func(cacheRoot, avatarID string) (string, error)
 // EnrichFriendAvatarUsages attaches avatar IDs (current equipped match only) and optional cache paths.
 //
 // Avatar ID attachment uses a name-match heuristic: only the log row whose avatar name equals the
-// friend's current equipped avatar display name (case-insensitive) receives currentAvatarId.
-// Historical rows and ambiguous cases (same display name on different avatars, stale cache names)
+// friend's current equipped avatar name from the API (case-insensitive) receives currentAvatarId.
+// Historical rows and ambiguous cases (same name on different avatars, stale cache names)
 // intentionally get no avatarId — the UI keeps name-only rows without inventing IDs.
+//
+// findPath is optional; when multiple values are passed, only findPath[0] is used.
 func EnrichFriendAvatarUsages(
 	list []*activity.FriendAvatarUsageSummary,
 	friend *identity.UserCache,
@@ -63,6 +67,8 @@ func EnrichFriendAvatarUsages(
 				p, err := finder(cacheRoot, avatarID)
 				if err == nil {
 					localPath = p
+				} else if errors.Is(err, ErrAvatarCacheWalkTruncated) {
+					log.Printf("[enrich] avatar cache directory walk hit entry limit before match")
 				}
 				pathByAvatarID[avatarID] = localPath
 			}

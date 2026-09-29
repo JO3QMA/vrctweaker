@@ -114,6 +114,81 @@ describe("FriendAvatarList", () => {
     );
   });
 
+  it("shows cache path missing when local path is empty", async () => {
+    mockFetch.mockResolvedValue([
+      {
+        avatarName: "Fox",
+        avatarId: "avtr_11111111-2222-3333-4444-555555555555",
+        useCount: 1,
+        firstSeenAt: "2026-01-01T00:00:00.000Z",
+        lastSeenAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    const wrapper = mountList();
+    await flushPromises();
+    expect(wrapper.text()).toContain(ja.friendAvatars.cachePathMissing);
+    expect(
+      wrapper.find('[data-testid^="friend-avatar-copy-path-"]').exists(),
+    ).toBe(false);
+  });
+
+  it("copies cache path when copy control is used", async () => {
+    const copySpy = vi
+      .spyOn(vrcUserCacheDisplay, "copyTextToClipboard")
+      .mockResolvedValue();
+    const path = "/cache/avtr_11111111-2222-3333-4444-555555555555";
+    mockFetch.mockResolvedValue([
+      {
+        avatarName: "Fox",
+        avatarId: "avtr_11111111-2222-3333-4444-555555555555",
+        localCachePath: path,
+        useCount: 1,
+        firstSeenAt: "2026-01-01T00:00:00.000Z",
+        lastSeenAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    const wrapper = mountList();
+    await flushPromises();
+    await wrapper
+      .get(
+        '[data-testid="friend-avatar-copy-path-avtr_11111111-2222-3333-4444-555555555555"]',
+      )
+      .trigger("click");
+    await flushPromises();
+    expect(copySpy).toHaveBeenCalledWith(path);
+    expect(showToastModule.showToast.success).toHaveBeenCalledWith(
+      ja.friendAvatars.copyCachePathSuccess,
+    );
+    copySpy.mockRestore();
+  });
+
+  it("shows toast error when cache path copy fails", async () => {
+    vi.spyOn(vrcUserCacheDisplay, "copyTextToClipboard").mockRejectedValue(
+      new Error("denied"),
+    );
+    mockFetch.mockResolvedValue([
+      {
+        avatarName: "Fox",
+        avatarId: "avtr_11111111-2222-3333-4444-555555555555",
+        localCachePath: "/cache/path",
+        useCount: 1,
+        firstSeenAt: "2026-01-01T00:00:00.000Z",
+        lastSeenAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
+    const wrapper = mountList();
+    await flushPromises();
+    await wrapper
+      .get(
+        '[data-testid="friend-avatar-copy-path-avtr_11111111-2222-3333-4444-555555555555"]',
+      )
+      .trigger("click");
+    await flushPromises();
+    expect(showToastModule.showToast.error).toHaveBeenCalledWith(
+      ja.friendAvatars.copyCachePathError,
+    );
+  });
+
   it("shows empty message when no rows", async () => {
     const wrapper = mountList();
     await flushPromises();

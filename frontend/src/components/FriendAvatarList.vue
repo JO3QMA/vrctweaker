@@ -20,7 +20,11 @@
                 :disabled="!row.avatarId?.trim()"
                 :title="t('friendAvatars.copyAvatarId')"
                 :aria-label="t('friendAvatars.copyAvatarId')"
-                :data-testid="`friend-avatar-copy-id-${row.avatarId}`"
+                :data-testid="
+                  row.avatarId?.trim()
+                    ? `friend-avatar-copy-id-${row.avatarId}`
+                    : undefined
+                "
                 @click="copyAvatarId(row.avatarId)"
               >
                 <VtIcon size="compact"><CopyDocument /></VtIcon>
@@ -118,24 +122,36 @@ let loadToken = 0;
 
 const canLoad = computed(() => Boolean(props.userId?.trim()));
 
-async function copyAvatarId(avatarId?: string): Promise<void> {
-  if (!avatarId?.trim()) return;
+async function copyToClipboardWithToast(
+  text: string | undefined,
+  successKey:
+    "friendAvatars.copyAvatarIdSuccess" | "friendAvatars.copyCachePathSuccess",
+  errorKey:
+    "friendAvatars.copyAvatarIdError" | "friendAvatars.copyCachePathError",
+): Promise<void> {
+  if (!text?.trim()) return;
   try {
-    await copyTextToClipboard(avatarId.trim());
-    showToast.success(t("friendAvatars.copyAvatarIdSuccess"));
+    await copyTextToClipboard(text.trim());
+    showToast.success(t(successKey));
   } catch {
-    showToast.error(t("friendAvatars.copyAvatarIdError"));
+    showToast.error(t(errorKey));
   }
 }
 
+async function copyAvatarId(avatarId?: string): Promise<void> {
+  await copyToClipboardWithToast(
+    avatarId,
+    "friendAvatars.copyAvatarIdSuccess",
+    "friendAvatars.copyAvatarIdError",
+  );
+}
+
 async function copyCachePath(path?: string): Promise<void> {
-  if (!path?.trim()) return;
-  try {
-    await copyTextToClipboard(path.trim());
-    showToast.success(t("friendAvatars.copyCachePathSuccess"));
-  } catch {
-    showToast.error(t("friendAvatars.copyCachePathError"));
-  }
+  await copyToClipboardWithToast(
+    path,
+    "friendAvatars.copyCachePathSuccess",
+    "friendAvatars.copyCachePathError",
+  );
 }
 
 async function load(): Promise<void> {

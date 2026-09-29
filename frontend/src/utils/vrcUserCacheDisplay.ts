@@ -87,6 +87,16 @@ export async function copyTextToClipboard(text: string): Promise<void> {
   }
 }
 
+/**
+ * Copies a display name to the clipboard. Failures are ignored (silent UX);
+ * in dev builds a debug line is logged when copy is not possible.
+ */
 export async function copyDisplayName(name: string): Promise<void> {
-  await copyTextToClipboard(name);
+  try {
+    await copyTextToClipboard(name);
+  } catch {
+    if (import.meta.env.DEV) {
+      console.debug("copyDisplayName: clipboard copy failed");
+    }
+  }
 }

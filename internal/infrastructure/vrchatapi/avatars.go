@@ -11,9 +11,10 @@ import (
 )
 
 // Avatar is a minimal GET /avatars/{id} payload for display name resolution.
+// VRChat returns the avatar title in the "name" field (not displayName).
 type Avatar struct {
 	ID   string `json:"id"`
-	Name string `json:"displayName"`
+	Name string `json:"name"`
 }
 
 // GetAvatar fetches avatar metadata by id (requires auth).

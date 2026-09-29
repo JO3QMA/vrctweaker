@@ -164,6 +164,18 @@ describe("copyDisplayName", () => {
     expect(writeText).toHaveBeenCalledWith("hello");
   });
 
+  it("does not throw when copy fails", async () => {
+    vi.stubGlobal("navigator", {});
+    Object.defineProperty(document, "execCommand", {
+      value: vi.fn().mockReturnValue(false),
+      configurable: true,
+    });
+    const debugSpy = vi.spyOn(console, "debug").mockImplementation(() => {});
+    await expect(copyDisplayName("x")).resolves.toBeUndefined();
+    debugSpy.mockRestore();
+    Reflect.deleteProperty(document, "execCommand");
+  });
+
   it("falls back to execCommand when clipboard throws", async () => {
     writeText.mockRejectedValueOnce(new Error("denied"));
     vi.stubGlobal("navigator", { clipboard: { writeText } });

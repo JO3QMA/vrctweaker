@@ -34,6 +34,11 @@ func findLocalAvatarCachePathWithLimit(cacheRoot, avatarID string, maxEntries in
 	if root == "" {
 		return "", nil
 	}
+	resolvedRoot, symErr := filepath.EvalSymlinks(root)
+	if symErr != nil {
+		return "", nil
+	}
+	root = resolvedRoot
 	info, err := os.Stat(root)
 	if err != nil || !info.IsDir() {
 		return "", nil

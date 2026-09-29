@@ -17,8 +17,8 @@ func TestClient_GetAvatar_ok(t *testing.T) {
 			return
 		}
 		_ = json.NewEncoder(w).Encode(map[string]string{
-			"id":          avatarID,
-			"displayName": "Test Avatar",
+			"id":   avatarID,
+			"name": "Test Avatar",
 		})
 	}))
 	t.Cleanup(srv.Close)
@@ -40,7 +40,7 @@ func TestClient_GetAvatar_emptyIDInResponse(t *testing.T) {
 	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]string{
-			"displayName": "No ID",
+			"name": "No ID",
 		})
 	}))
 	t.Cleanup(srv.Close)
@@ -62,8 +62,8 @@ func TestClient_GetAvatar_pathEscape(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		gotPath = r.URL.Path
 		_ = json.NewEncoder(w).Encode(map[string]string{
-			"id":          avatarID,
-			"displayName": "Test",
+			"id":   avatarID,
+			"name": "Test",
 		})
 	}))
 	t.Cleanup(srv.Close)
