@@ -426,9 +426,10 @@ func (uc *IdentityUseCase) SetStatusAndDescription(ctx context.Context, status, 
 var ErrProfileNotInCache = errors.New("user not in cache; log in to load profile from VRChat")
 
 // ResolveUserProfileForNavigation loads or refreshes a user row via cache and GET /users/{id} when logged in.
-// When forceRefresh is false and the cached row has a display name whose LastUpdated is within UserCacheTTL,
-// GET /users/{id} is skipped. forceRefresh always calls the API. Pipeline backfill (pipelineTryResolveUserProfile)
-// does not use this TTL and still calls GetUser.
+// When forceRefresh is false and the cached row is an API profile snapshot whose LastUpdated is within UserCacheTTL,
+// GET /users/{id} is skipped. Log-derived contacts (display name and LastUpdated only) stay fetch targets.
+// forceRefresh always calls the API. Pipeline backfill (pipelineTryResolveUserProfile) does not use this TTL
+// and still calls GetUser.
 // The second return value is true when the row should be shown in the friends list view (user_kind friend).
 // The third is true when the row is the logged-in user (Self profile /me).
 func (uc *IdentityUseCase) ResolveUserProfileForNavigation(ctx context.Context, vrcUserID string, forceRefresh bool) (*identity.UserCache, bool, bool, error) {
@@ -487,8 +488,10 @@ func (uc *IdentityUseCase) ResolveUserProfileForNavigation(ctx context.Context, 
 	return row, row.UserKind == identity.UserKindFriend, false, nil
 }
 
-// userProfileCacheFresh reports whether a users_cache row is new enough to skip GET /users/{id}.
-// A blank display name is not a usable snapshot (pipeline stubs), so navigation still fetches.
+// userProfileCacheFresh reports whether a users_cache row can skip GET /users/{id}.
+// MergeFromLog stores a display name and LastUpdated without bio, avatar, or username.
+// Those contact rows stay unresolved until an API snapshot is present: non-empty Username
+// or CurrentAvatarID. A blank display name is not a usable snapshot (pipeline stubs).
 func userProfileCacheFresh(row *identity.UserCache) bool {
 	if row == nil || row.LastUpdated.IsZero() {
 		return false
@@ -496,7 +499,19 @@ func userProfileCacheFresh(row *identity.UserCache) bool {
 	if strings.TrimSpace(row.DisplayName) == "" {
 		return false
 	}
+	if !profileSnapshotFromAPI(row) {
+		return false
+	}
 	return time.Since(row.LastUpdated) < identity.UserCacheTTL
+}
+
+// profileSnapshotFromAPI reports whether the row carries fields written by GetUser or the friends list.
+// Log merge never sets Username or CurrentAvatarID.
+func profileSnapshotFromAPI(row *identity.UserCache) bool {
+	if row == nil {
+		return false
+	}
+	return strings.TrimSpace(row.Username) != "" || strings.TrimSpace(row.CurrentAvatarID) != ""
 }
 
 func (uc *IdentityUseCase) isLoggedInSelfID(ctx context.Context, vrcUserID string) (bool, error) {

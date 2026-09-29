@@ -1256,7 +1256,8 @@ func (a *App) Friends() ([]UserCacheDTO, error) {
 }
 
 // ResolveUserProfileNavigation returns routing hints. Logged-in GET /users/{id} is skipped when
-// users_cache.LastUpdated is within UserCacheTTL (forceRefresh is reserved for an explicit refresh).
+// the cached row has an API profile snapshot (username or current avatar) and LastUpdated is
+// within UserCacheTTL. Log-only contacts are still fetched. forceRefresh is reserved for an explicit refresh.
 func (a *App) ResolveUserProfileNavigation(vrcUserID string) (UserProfileNavigationDTO, error) {
 	u, openFriends, openSelf, err := a.identity.ResolveUserProfileForNavigation(a.ctx, vrcUserID, false)
 	if err != nil {

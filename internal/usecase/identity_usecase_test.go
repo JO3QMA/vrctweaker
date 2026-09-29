@@ -1325,6 +1325,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_freshCache_ski
 	row := &identity.UserCache{
 		VRCUserID:   "u1",
 		DisplayName: "Cached",
+		Username:    "cached_user",
 		UserKind:    identity.UserKindFriend,
 		LastUpdated: time.Now().Add(-time.Hour),
 	}
@@ -1356,6 +1357,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_staleCache_cal
 	row := &identity.UserCache{
 		VRCUserID:   "u1",
 		DisplayName: "Old",
+		Username:    "old_user",
 		UserKind:    identity.UserKindContact,
 		LastUpdated: time.Now().Add(-identity.UserCacheTTL - time.Minute),
 	}
@@ -1387,6 +1389,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_staleCache_api
 	row := &identity.UserCache{
 		VRCUserID:   "u1",
 		DisplayName: "StaleCached",
+		Username:    "stale_user",
 		UserKind:    identity.UserKindFriend,
 		LastUpdated: time.Now().Add(-identity.UserCacheTTL - time.Minute),
 	}
@@ -1410,6 +1413,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_forceRefresh_b
 	row := &identity.UserCache{
 		VRCUserID:   "u1",
 		DisplayName: "Cached",
+		Username:    "cached_user",
 		UserKind:    identity.UserKindContact,
 		LastUpdated: time.Now(),
 	}
@@ -1461,6 +1465,125 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_emptyName_notT
 	}
 	if apiClient.getUserCalls != 1 {
 		t.Fatalf("GetUser calls %d, want 1 for unnamed cache row", apiClient.getUserCalls)
+	}
+}
+
+func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_logContact_callsGetUser(t *testing.T) {
+	ctx := context.Background()
+	// MergeFromLog sets display name and LastUpdated only. That is not an API profile snapshot.
+	row := &identity.UserCache{
+		VRCUserID:   "u1",
+		DisplayName: "FromLog",
+		UserKind:    identity.UserKindContact,
+		LastUpdated: time.Now().Add(-time.Hour),
+	}
+	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
+	apiClient := &mockAPIClient{
+		token: "tok",
+		getUser: &vrchatapi.Friend{
+			ID: "u1", DisplayName: "FromAPI", Username: "api_user", IsFriend: false, Status: "active",
+			CurrentAvatar: "avtr_from_api",
+		},
+	}
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "u1", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if openSelf || openF {
+		t.Fatalf("openSelf=%v openF=%v", openSelf, openF)
+	}
+	if u.DisplayName != "FromAPI" || u.Username != "api_user" {
+		t.Fatalf("profile = %+v, want API snapshot", u)
+	}
+	if apiClient.getUserCalls != 1 {
+		t.Fatalf("GetUser calls %d, want 1 for log-derived contact", apiClient.getUserCalls)
+	}
+}
+
+func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_avatarOnlySnapshot_skipsGetUser(t *testing.T) {
+	ctx := context.Background()
+	row := &identity.UserCache{
+		VRCUserID:       "u1",
+		DisplayName:     "Cached",
+		CurrentAvatarID: "avtr_cached",
+		UserKind:        identity.UserKindContact,
+		LastUpdated:     time.Now().Add(-time.Hour),
+	}
+	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
+	apiClient := &mockAPIClient{
+		token: "tok",
+		getUser: &vrchatapi.Friend{
+			ID: "u1", DisplayName: "FromAPI", IsFriend: false, Status: "active",
+		},
+	}
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	u, _, _, err := uc.ResolveUserProfileForNavigation(ctx, "u1", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.DisplayName != "Cached" {
+		t.Fatalf("displayName %q", u.DisplayName)
+	}
+	if apiClient.getUserCalls != 0 {
+		t.Fatalf("GetUser calls %d, want 0 when current avatar marks an API snapshot", apiClient.getUserCalls)
+	}
+}
+
+func TestUserProfileCacheFresh(t *testing.T) {
+	t.Parallel()
+	now := time.Now()
+	freshAt := now.Add(-time.Hour)
+	staleAt := now.Add(-identity.UserCacheTTL - time.Minute)
+	tests := []struct {
+		name string
+		row  *identity.UserCache
+		want bool
+	}{
+		{name: "nil", row: nil, want: false},
+		{
+			name: "zero timestamp",
+			row:  &identity.UserCache{DisplayName: "A", Username: "a"},
+			want: false,
+		},
+		{
+			name: "blank display name",
+			row:  &identity.UserCache{DisplayName: "  ", Username: "a", LastUpdated: freshAt},
+			want: false,
+		},
+		{
+			name: "log contact display name only",
+			row:  &identity.UserCache{DisplayName: "FromLog", UserKind: identity.UserKindContact, LastUpdated: freshAt},
+			want: false,
+		},
+		{
+			name: "whitespace api fields",
+			row:  &identity.UserCache{DisplayName: "A", Username: "  ", CurrentAvatarID: " ", LastUpdated: freshAt},
+			want: false,
+		},
+		{
+			name: "username within ttl",
+			row:  &identity.UserCache{DisplayName: "A", Username: "a", LastUpdated: freshAt},
+			want: true,
+		},
+		{
+			name: "avatar id within ttl",
+			row:  &identity.UserCache{DisplayName: "A", CurrentAvatarID: "avtr_1", LastUpdated: freshAt},
+			want: true,
+		},
+		{
+			name: "username older than ttl",
+			row:  &identity.UserCache{DisplayName: "A", Username: "a", LastUpdated: staleAt},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := userProfileCacheFresh(tt.row); got != tt.want {
+				t.Fatalf("userProfileCacheFresh() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
