@@ -89,7 +89,7 @@ func TestClient_Login_twoFactorRequiredWithoutCode(t *testing.T) {
 }
 
 func TestClient_Login_twoFactorSuccess(t *testing.T) {
-	t.Parallel()
+	// Serial: parallel package tests have flaked with CloseIdleConnections on the shared transport.
 	var authUserCalls int
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {

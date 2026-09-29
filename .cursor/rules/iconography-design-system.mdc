@@ -63,7 +63,7 @@ Legacy（v1 見た目不変）: `--icon-size-legacy-toggle` → `--font-size-14`
 
 ## Storybook
 
-`frontend/src/design/Iconography.stories.ts` が正本。変更時はストーリーも更新する。
+`frontend/src/design/Iconography.stories.ts` が正本。px の正本は `style.css`；`iconTokens.ts` はカテゴリ用。ずれは `styleTokenContract.spec.ts` で検知。変更時は CSS・カタログ・ストーリーを揃える。
 
 ## 関連
 
