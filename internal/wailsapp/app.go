@@ -15,6 +15,7 @@ import (
 	"github.com/gen2brain/beeep"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"vrchat-tweaker/internal/domain/activity"
+	"vrchat-tweaker/internal/domain/identity"
 	"vrchat-tweaker/internal/domain/launcher"
 	"vrchat-tweaker/internal/domain/media"
 	"vrchat-tweaker/internal/domain/vrchatconfig"
@@ -982,12 +983,15 @@ func (a *App) FriendAvatarUsageByVRCUserID(vrcUserID string) ([]FriendAvatarUsag
 	if err != nil {
 		return nil, err
 	}
-	friend, _ := a.identity.CachedUserByVRCUserID(a.ctx, vrcUserID)
+	var friend *identity.UserCache
 	currentAvatarName := ""
-	if friend != nil && strings.TrimSpace(friend.CurrentAvatarID) != "" {
-		name, nameErr := a.identity.AvatarDisplayName(a.ctx, friend.CurrentAvatarID)
-		if nameErr == nil {
-			currentAvatarName = name
+	if a.identity != nil {
+		friend, _ = a.identity.CachedUserByVRCUserID(a.ctx, vrcUserID)
+		if friend != nil && strings.TrimSpace(friend.CurrentAvatarID) != "" {
+			name, nameErr := a.identity.AvatarDisplayName(a.ctx, friend.CurrentAvatarID)
+			if nameErr == nil {
+				currentAvatarName = name
+			}
 		}
 	}
 	cacheRoot := ""

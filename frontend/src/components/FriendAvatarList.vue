@@ -17,10 +17,10 @@
               <VtButton
                 variant="tertiary"
                 link
-                :disabled="!row.avatarId"
+                :disabled="!row.avatarId?.trim()"
                 :title="t('friendAvatars.copyAvatarId')"
                 :aria-label="t('friendAvatars.copyAvatarId')"
-                :data-testid="`friend-avatar-copy-id-${row.avatarName}`"
+                :data-testid="`friend-avatar-copy-id-${row.avatarId}`"
                 @click="copyAvatarId(row.avatarId)"
               >
                 <VtIcon size="compact"><CopyDocument /></VtIcon>
@@ -42,7 +42,7 @@
                 link
                 :title="t('friendAvatars.copyCachePath')"
                 :aria-label="t('friendAvatars.copyCachePath')"
-                :data-testid="`friend-avatar-copy-path-${row.avatarName}`"
+                :data-testid="`friend-avatar-copy-path-${row.avatarId || row.avatarName}`"
                 @click="copyCachePath(row.localCachePath)"
               >
                 <VtIcon size="compact"><CopyDocument /></VtIcon>

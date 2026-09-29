@@ -73,7 +73,9 @@ describe("FriendAvatarList", () => {
     ]);
     const wrapper = mountList();
     await flushPromises();
-    const btn = wrapper.get('[data-testid="friend-avatar-copy-id-Fox"]');
+    const btn = wrapper.get(
+      '[data-testid="friend-avatar-copy-id-avtr_11111111-2222-3333-4444-555555555555"]',
+    );
     expect(btn.attributes("aria-label")).toBe(ja.friendAvatars.copyAvatarId);
     await btn.trigger("click");
     await flushPromises();
@@ -102,7 +104,9 @@ describe("FriendAvatarList", () => {
     const wrapper = mountList();
     await flushPromises();
     await wrapper
-      .get('[data-testid="friend-avatar-copy-id-Fox"]')
+      .get(
+        '[data-testid="friend-avatar-copy-id-avtr_11111111-2222-3333-4444-555555555555"]',
+      )
       .trigger("click");
     await flushPromises();
     expect(showToastModule.showToast.error).toHaveBeenCalledWith(

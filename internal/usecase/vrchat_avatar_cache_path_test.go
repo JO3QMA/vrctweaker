@@ -1,6 +1,8 @@
 package usecase
 
 import (
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -61,5 +63,34 @@ func TestFindLocalAvatarCachePath_emptyWhenMissing(t *testing.T) {
 	}
 	if got != "" {
 		t.Fatalf("got %q", got)
+	}
+}
+
+func TestFindLocalAvatarCachePath_truncatedWhenWalkLimitExceeded(t *testing.T) {
+	root := t.TempDir()
+	avatarID := "avtr_11111111-2222-3333-4444-555555555555"
+	for i := 0; i < 6; i++ {
+		if err := os.MkdirAll(filepath.Join(root, fmt.Sprintf("noise%04d", i)), 0700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	got, err := findLocalAvatarCachePathWithLimit(root, avatarID, 3)
+	if !errors.Is(err, ErrAvatarCacheWalkTruncated) {
+		t.Fatalf("err = %v want ErrAvatarCacheWalkTruncated", err)
+	}
+	if got != "" {
+		t.Fatalf("got %q want empty", got)
+	}
+
+	target := filepath.Join(root, "zzz", avatarID)
+	if err := os.MkdirAll(target, 0700); err != nil {
+		t.Fatal(err)
+	}
+	got, err = findLocalAvatarCachePathWithLimit(root, avatarID, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != target {
+		t.Fatalf("got %q want %q", got, target)
 	}
 }

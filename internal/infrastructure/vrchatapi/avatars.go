@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -21,7 +22,7 @@ func (c *Client) GetAvatar(ctx context.Context, avatarID string) (*Avatar, error
 	if avatarID == "" {
 		return nil, fmt.Errorf("empty avatar id")
 	}
-	path := "/avatars/" + avatarID
+	path := "/avatars/" + url.PathEscape(avatarID)
 	resp, err := c.do(ctx, http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
@@ -34,6 +35,9 @@ func (c *Client) GetAvatar(ctx context.Context, avatarID string) (*Avatar, error
 	var av Avatar
 	if err := json.Unmarshal(body, &av); err != nil {
 		return nil, fmt.Errorf("decode avatar: %w", err)
+	}
+	if strings.TrimSpace(av.ID) == "" {
+		return nil, fmt.Errorf("avatar response missing id")
 	}
 	return &av, nil
 }

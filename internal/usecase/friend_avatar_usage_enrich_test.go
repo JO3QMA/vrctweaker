@@ -44,3 +44,40 @@ func TestEnrichFriendAvatarUsages_resolvesCachePath(t *testing.T) {
 		t.Fatalf("path %q", out[0].LocalCachePath)
 	}
 }
+
+func TestEnrichFriendAvatarUsages_skipsNilRows(t *testing.T) {
+	now := time.Now()
+	list := []*activity.FriendAvatarUsageSummary{
+		nil,
+		{AvatarName: "Keep", UseCount: 1, FirstSeenAt: now, LastSeenAt: now},
+		nil,
+	}
+	out := EnrichFriendAvatarUsages(list, nil, "", "")
+	if len(out) != 1 {
+		t.Fatalf("len %d want 1", len(out))
+	}
+	if out[0].AvatarName != "Keep" {
+		t.Fatalf("name %q", out[0].AvatarName)
+	}
+}
+
+func TestEnrichFriendAvatarUsages_memoizesCachePathLookup(t *testing.T) {
+	now := time.Now()
+	id := "avtr_aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+	list := []*activity.FriendAvatarUsageSummary{
+		{AvatarName: "A", UseCount: 1, FirstSeenAt: now, LastSeenAt: now},
+		{AvatarName: "A", UseCount: 2, FirstSeenAt: now, LastSeenAt: now},
+	}
+	friend := &identity.UserCache{CurrentAvatarID: id}
+	calls := 0
+	out := EnrichFriendAvatarUsages(list, friend, "A", "/cache", func(root, avatarID string) (string, error) {
+		calls++
+		return "/cache/found", nil
+	})
+	if calls != 1 {
+		t.Fatalf("finder calls %d want 1", calls)
+	}
+	if out[0].LocalCachePath != "/cache/found" || out[1].LocalCachePath != "/cache/found" {
+		t.Fatalf("paths %q %q", out[0].LocalCachePath, out[1].LocalCachePath)
+	}
+}

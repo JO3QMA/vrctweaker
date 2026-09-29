@@ -22,6 +22,11 @@ type EnrichedFriendAvatarUsage struct {
 type AvatarCachePathFinder func(cacheRoot, avatarID string) (string, error)
 
 // EnrichFriendAvatarUsages attaches avatar IDs (current equipped match only) and optional cache paths.
+//
+// Avatar ID attachment uses a name-match heuristic: only the log row whose avatar name equals the
+// friend's current equipped avatar display name (case-insensitive) receives currentAvatarId.
+// Historical rows and ambiguous cases (same display name on different avatars, stale cache names)
+// intentionally get no avatarId — the UI keeps name-only rows without inventing IDs.
 func EnrichFriendAvatarUsages(
 	list []*activity.FriendAvatarUsageSummary,
 	friend *identity.UserCache,
@@ -39,8 +44,9 @@ func EnrichFriendAvatarUsages(
 	}
 	currentName := strings.TrimSpace(currentAvatarName)
 
-	out := make([]EnrichedFriendAvatarUsage, len(list))
-	for i, row := range list {
+	pathByAvatarID := make(map[string]string)
+	out := make([]EnrichedFriendAvatarUsage, 0, len(list))
+	for _, row := range list {
 		if row == nil {
 			continue
 		}
@@ -51,19 +57,24 @@ func EnrichFriendAvatarUsages(
 		}
 		localPath := ""
 		if avatarID != "" && strings.TrimSpace(cacheRoot) != "" {
-			p, err := finder(cacheRoot, avatarID)
-			if err == nil {
-				localPath = p
+			if cached, ok := pathByAvatarID[avatarID]; ok {
+				localPath = cached
+			} else {
+				p, err := finder(cacheRoot, avatarID)
+				if err == nil {
+					localPath = p
+				}
+				pathByAvatarID[avatarID] = localPath
 			}
 		}
-		out[i] = EnrichedFriendAvatarUsage{
+		out = append(out, EnrichedFriendAvatarUsage{
 			AvatarName:     row.AvatarName,
 			AvatarID:       avatarID,
 			LocalCachePath: localPath,
 			UseCount:       row.UseCount,
 			FirstSeenAt:    row.FirstSeenAt,
 			LastSeenAt:     row.LastSeenAt,
-		}
+		})
 	}
 	return out
 }

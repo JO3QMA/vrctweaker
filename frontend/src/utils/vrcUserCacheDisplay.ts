@@ -79,7 +79,7 @@ export async function copyTextToClipboard(text: string): Promise<void> {
   ta.select();
   try {
     const ok = document.execCommand("copy");
-    if (!ok) {
+    if (ok === false) {
       throw new Error("copy failed");
     }
   } finally {
