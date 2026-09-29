@@ -143,6 +143,7 @@ func (a *App) startup(ctx context.Context) {
 		WithVideoPlaybackRepo(videoPlaybackRepo).
 		WithFriendAvatarObservationRepo(friendAvatarRepo)
 	a.identity = usecase.NewIdentityUseCase(userCacheRepo, apiClient, credStore, settingsRepo, notify)
+	a.identity.SetAvatarNameCacheRepo(sqlite.NewAvatarNameCacheRepository(db))
 	a.identity.SetSelfCacheChangedHook(func() {
 		runtime.EventsEmit(a.ctx, selfCacheChangedEvent, struct{}{})
 	})

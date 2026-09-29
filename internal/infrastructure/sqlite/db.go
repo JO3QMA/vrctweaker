@@ -345,5 +345,10 @@ func schemaStatements() []string {
 			source_mod_unix INTEGER NOT NULL,
 			FOREIGN KEY (screenshot_id) REFERENCES screenshots(id) ON DELETE CASCADE
 		)`,
+		`CREATE TABLE IF NOT EXISTS avatar_cache (
+			avatar_id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			fetched_at TEXT NOT NULL
+		)`,
 	}
 }
