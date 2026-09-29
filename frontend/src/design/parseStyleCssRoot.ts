@@ -1,16 +1,28 @@
 /** Parsed `--name: value` entries from a `:root { ... }` block (comments stripped). */
 export type RootCssVarMap = Record<string, string>;
 
-const ROOT_BLOCK_RE = /:root\s*\{([\s\S]*?)\}/;
+const ROOT_BLOCK_RE = /:root\s*\{([\s\S]*?)\}/g;
 
-/** Extract custom properties declared on `:root` from a stylesheet fragment. */
+/**
+ * Extract custom properties declared on `:root` from a stylesheet fragment.
+ * ponytail: regex-only parser for contract tests — single flat `:root` in style.css;
+ * no `url()`/`calc()` values with `;`, no nested blocks, no `var(--x, fallback)`.
+ */
 export function parseStyleCssRootDeclarations(css: string): RootCssVarMap {
   const cssWithoutComments = css.replace(/\/\*[\s\S]*?\*\//g, "");
-  const match = ROOT_BLOCK_RE.exec(cssWithoutComments);
-  if (!match) {
+  const blocks: string[] = [];
+  let match: RegExpExecArray | null;
+  const re = new RegExp(ROOT_BLOCK_RE.source, ROOT_BLOCK_RE.flags);
+  while ((match = re.exec(cssWithoutComments)) !== null) {
+    blocks.push(match[1]);
+  }
+  if (blocks.length === 0) {
     throw new Error(":root block not found in stylesheet");
   }
-  const withoutComments = match[1];
+  if (blocks.length > 1) {
+    throw new Error(`expected one :root block, found ${blocks.length}`);
+  }
+  const withoutComments = blocks[0];
   const result: RootCssVarMap = {};
   for (const part of withoutComments.split(";")) {
     const trimmed = part.trim();
@@ -28,7 +40,10 @@ export function parseStyleCssRootDeclarations(css: string): RootCssVarMap {
 
 const VAR_REF_RE = /^var\(\s*(--[\w-]+)\s*\)$/;
 
-/** Resolve a single `var(--x)` hop in a parsed map (no computed/calc). */
+/**
+ * Resolve a single `var(--x)` hop in a parsed map (no computed/calc).
+ * Returns `""` when the name is missing, the reference chain breaks, or depth is exceeded.
+ */
 export function resolveCssVarInMap(
   vars: RootCssVarMap,
   varName: `--${string}`,

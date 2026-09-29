@@ -34,6 +34,15 @@ describe("parseStyleCssRoot", () => {
     expect(parseCssPxLength("calc(1px)")).toBeNull();
   });
 
+  it("rejects more than one :root block", () => {
+    expect(() =>
+      parseStyleCssRootDeclarations(`
+        :root { --a: 1; }
+        :root { --b: 2; }
+      `),
+    ).toThrow(/expected one :root block/);
+  });
+
   it("parses :root when a comment inside the block contains }", () => {
     const vars = parseStyleCssRootDeclarations(`
       :root {

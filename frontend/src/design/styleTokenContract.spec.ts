@@ -121,7 +121,7 @@ describe("style.css ↔ design token catalogs", () => {
     }
   });
 
-  it("matches legacy icon size token in style.css", () => {
+  it("matches legacy icon size token in style.css (literal px, not a var() delegate)", () => {
     const legacy = ICON_SIZE_LEGACY.toggle;
     expect(root[legacy.varName]).toBe(legacy.delegatesTo);
     expect(parseCssPxLength(root[legacy.varName] ?? "")).toBe(legacy.px);

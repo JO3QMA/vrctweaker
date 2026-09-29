@@ -36,9 +36,9 @@ export const FontSizeScale: Story = {
       <div class="typography-story">
         <h2>Font size scale</h2>
         <p>Numeric tokens (<code>--font-size-*</code>, px). Body default is 14.</p>
-        <div v-for="px in scale" :key="px" class="typography-story-scale-row">
-          <span class="typography-story-scale-label">--font-size-{{ px }}</span>
-          <span :style="{ fontSize: 'var(' + fontSizeVar(px) + ')' }">The quick brown fox</span>
+        <div v-for="step in scale" :key="step" class="typography-story-scale-row">
+          <span class="typography-story-scale-label">--font-size-{{ step }}</span>
+          <span :style="{ fontSize: 'var(' + fontSizeVar(step) + ')' }">The quick brown fox</span>
         </div>
       </div>
     `,

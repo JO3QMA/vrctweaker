@@ -30,12 +30,12 @@ export const Scale: Story = {
       <div class="spacing-story">
         <h2>Spacing scale</h2>
         <p>Numeric tokens (<code>--space-*</code>, px). Use for layout when no pattern fits.</p>
-        <div v-for="px in scale" :key="px" class="spacing-story-scale-row">
+        <div v-for="step in scale" :key="step" class="spacing-story-scale-row">
           <div
             class="spacing-story-scale-bar"
-            :style="{ width: 'var(' + spacingVar(px) + ')' }"
+            :style="{ width: 'var(' + spacingVar(step) + ')' }"
           />
-          <span class="spacing-story-scale-label">--space-{{ px }}</span>
+          <span class="spacing-story-scale-label">--space-{{ step }}</span>
         </div>
       </div>
     `,
