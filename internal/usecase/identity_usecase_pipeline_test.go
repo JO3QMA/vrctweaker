@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 
 	"vrchat-tweaker/internal/domain/identity"
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
@@ -362,6 +363,36 @@ func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_createsUnresolve
 	}
 	if saved.Status != "active" || saved.Platform != "web" {
 		t.Fatalf("presence: status=%q platform=%q", saved.Status, saved.Platform)
+	}
+}
+
+func TestIdentityUseCase_HandleVRChatPipelineEvent_friendActive_backfillIgnoresProfileTTL(t *testing.T) {
+	t.Parallel()
+	repo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{
+		"usr_new": {
+			VRCUserID:   "usr_new",
+			DisplayName: "Known",
+			UserKind:    identity.UserKindContact,
+			LastUpdated: time.Now(),
+		},
+	}}
+	api := &mockAPIClient{
+		token: "tok",
+		getUser: &vrchatapi.Friend{
+			ID: "usr_new", DisplayName: "Resolved", Status: "active", IsFriend: true,
+		},
+	}
+	uc := NewIdentityUseCase(repo, api, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	payload := []byte(`{"userId":"usr_new","platform":"web"}`)
+	if err := uc.HandleVRChatPipelineEvent(context.Background(), "friend-active", payload); err != nil {
+		t.Fatal(err)
+	}
+	if api.getUserCalls != 1 {
+		t.Fatalf("GetUser calls = %d, want 1 (pipeline backfill ignores UserCacheTTL)", api.getUserCalls)
+	}
+	saved := repo.getByID["usr_new"]
+	if saved == nil || saved.DisplayName != "Resolved" {
+		t.Fatalf("saved = %+v", saved)
 	}
 }
 

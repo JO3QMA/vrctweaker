@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log"
 	"strings"
-	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -17,14 +16,13 @@ import (
 
 // IdentityUseCase handles VRChat auth, friends, and status.
 type IdentityUseCase struct {
-	userCacheRepo      userCacheRepo
-	apiClient          vrchatapi.VRChatAPIClient
-	credStore          vrchatapi.CredentialStore
-	settingsRepo       appSettingsRepo
-	notify             func(title, message string) error // optional; nil skips online notifications
-	onSelfCacheChanged func()
-	avatarNameCache    map[string]string
-	avatarNameCacheMu  sync.RWMutex
+	userCacheRepo       userCacheRepo
+	apiClient           vrchatapi.VRChatAPIClient
+	credStore           vrchatapi.CredentialStore
+	settingsRepo        appSettingsRepo
+	notify              func(title, message string) error // optional; nil skips online notifications
+	onSelfCacheChanged  func()
+	avatarNameCacheRepo avatarNameCacheRepo
 }
 
 // NewIdentityUseCase creates a new IdentityUseCase.
@@ -37,13 +35,18 @@ func NewIdentityUseCase(
 	notify func(title, message string) error,
 ) *IdentityUseCase {
 	return &IdentityUseCase{
-		userCacheRepo:   userCacheRepo,
-		apiClient:       apiClient,
-		credStore:       credStore,
-		settingsRepo:    settingsRepo,
-		notify:          notify,
-		avatarNameCache: make(map[string]string),
+		userCacheRepo: userCacheRepo,
+		apiClient:     apiClient,
+		credStore:     credStore,
+		settingsRepo:  settingsRepo,
+		notify:        notify,
 	}
+}
+
+// SetAvatarNameCacheRepo attaches the SQLite avatar display-name cache.
+// AvatarNameCacheTTL is 30 days, the same window as UserCacheTTL.
+func (uc *IdentityUseCase) SetAvatarNameCacheRepo(r avatarNameCacheRepo) {
+	uc.avatarNameCacheRepo = r
 }
 
 // SetSelfCacheChangedHook registers a callback when the self users_cache row may have changed.
@@ -426,9 +429,13 @@ func (uc *IdentityUseCase) SetStatusAndDescription(ctx context.Context, status, 
 var ErrProfileNotInCache = errors.New("user not in cache; log in to load profile from VRChat")
 
 // ResolveUserProfileForNavigation loads or refreshes a user row via cache and GET /users/{id} when logged in.
+// When forceRefresh is false and the cached row is an API profile snapshot whose LastUpdated is within UserCacheTTL,
+// GET /users/{id} is skipped. Log-derived contacts (display name and LastUpdated only) stay fetch targets.
+// forceRefresh always calls the API. Pipeline backfill (pipelineTryResolveUserProfile) does not use this TTL
+// and still calls GetUser.
 // The second return value is true when the row should be shown in the friends list view (user_kind friend).
 // The third is true when the row is the logged-in user (Self profile /me).
-func (uc *IdentityUseCase) ResolveUserProfileForNavigation(ctx context.Context, vrcUserID string) (*identity.UserCache, bool, bool, error) {
+func (uc *IdentityUseCase) ResolveUserProfileForNavigation(ctx context.Context, vrcUserID string, forceRefresh bool) (*identity.UserCache, bool, bool, error) {
 	id := strings.TrimSpace(vrcUserID)
 	if id == "" {
 		return nil, false, false, fmt.Errorf("empty vrc user id")
@@ -443,7 +450,7 @@ func (uc *IdentityUseCase) ResolveUserProfileForNavigation(ctx context.Context, 
 			return nil, false, false, selfErr
 		}
 		if isSelf {
-			row, profileErr := uc.GetSelfProfile(ctx, false)
+			row, profileErr := uc.GetSelfProfile(ctx, forceRefresh)
 			if profileErr != nil {
 				return nil, false, false, profileErr
 			}
@@ -458,6 +465,9 @@ func (uc *IdentityUseCase) ResolveUserProfileForNavigation(ctx context.Context, 
 		if row == nil {
 			return nil, false, false, ErrProfileNotInCache
 		}
+		return row, row.UserKind == identity.UserKindFriend, false, nil
+	}
+	if !forceRefresh && userProfileCacheFresh(row) {
 		return row, row.UserKind == identity.UserKindFriend, false, nil
 	}
 	// Token is already in memory via UnlockSession – no credStore read needed.
@@ -479,6 +489,32 @@ func (uc *IdentityUseCase) ResolveUserProfileForNavigation(ctx context.Context, 
 		return nil, false, false, err
 	}
 	return row, row.UserKind == identity.UserKindFriend, false, nil
+}
+
+// userProfileCacheFresh reports whether a users_cache row can skip GET /users/{id}.
+// MergeFromLog stores a display name and LastUpdated without bio, avatar, or username.
+// Those contact rows stay unresolved until an API snapshot is present: non-empty Username
+// or CurrentAvatarID. A blank display name is not a usable snapshot (pipeline stubs).
+func userProfileCacheFresh(row *identity.UserCache) bool {
+	if row == nil || row.LastUpdated.IsZero() {
+		return false
+	}
+	if strings.TrimSpace(row.DisplayName) == "" {
+		return false
+	}
+	if !profileSnapshotFromAPI(row) {
+		return false
+	}
+	return time.Since(row.LastUpdated) < identity.UserCacheTTL
+}
+
+// profileSnapshotFromAPI reports whether the row carries fields written by GetUser or the friends list.
+// Log merge never sets Username or CurrentAvatarID.
+func profileSnapshotFromAPI(row *identity.UserCache) bool {
+	if row == nil {
+		return false
+	}
+	return strings.TrimSpace(row.Username) != "" || strings.TrimSpace(row.CurrentAvatarID) != ""
 }
 
 func (uc *IdentityUseCase) isLoggedInSelfID(ctx context.Context, vrcUserID string) (bool, error) {
@@ -538,41 +574,78 @@ func (uc *IdentityUseCase) CachedUserByVRCUserID(ctx context.Context, vrcUserID 
 }
 
 // AvatarDisplayName resolves the VRChat avatar name for an id when logged in.
-// Results are cached in memory by avatar id for the process lifetime.
-// API calls use a shorter timeout than the default client (5s) to avoid blocking friend UI.
+// A row in avatar_cache whose fetched_at is within AvatarNameCacheTTL (30 days, same as UserCacheTTL)
+// is returned without GET /avatars/{id}. API calls use a 5s timeout. A failed refresh falls back to
+// any stored name, including a stale one, so a restart still shows the last known name offline.
 func (uc *IdentityUseCase) AvatarDisplayName(ctx context.Context, avatarID string) (string, error) {
 	avatarID = strings.TrimSpace(avatarID)
 	if avatarID == "" {
 		return "", nil
 	}
-	uc.avatarNameCacheMu.RLock()
-	if name, ok := uc.avatarNameCache[avatarID]; ok {
-		uc.avatarNameCacheMu.RUnlock()
-		return name, nil
+	if strings.ContainsAny(avatarID, "\n\r") {
+		return "", fmt.Errorf("invalid avatar id")
 	}
-	uc.avatarNameCacheMu.RUnlock()
-
+	var cached *identity.AvatarNameCache
+	if uc.avatarNameCacheRepo != nil {
+		row, err := uc.avatarNameCacheRepo.Get(ctx, avatarID)
+		if err != nil {
+			return "", err
+		}
+		cached = row
+		if avatarNameCacheFresh(row) {
+			return row.Name, nil
+		}
+	}
 	loggedIn, err := uc.IsLoggedIn(ctx)
 	if err != nil {
 		return "", err
 	}
 	if !loggedIn {
+		if cached != nil {
+			return cached.Name, nil
+		}
 		return "", nil
 	}
 	apiCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	av, err := uc.apiClient.GetAvatar(apiCtx, avatarID)
 	if err != nil {
-		return "", uc.handleSessionError(err)
+		err = uc.handleSessionError(err)
+		if cached != nil && strings.TrimSpace(cached.Name) != "" {
+			return cached.Name, nil
+		}
+		return "", err
 	}
 	if av == nil {
+		if cached != nil {
+			return cached.Name, nil
+		}
 		return "", nil
 	}
 	name := strings.TrimSpace(av.Name)
-	uc.avatarNameCacheMu.Lock()
-	uc.avatarNameCache[avatarID] = name
-	uc.avatarNameCacheMu.Unlock()
+	if name == "" {
+		if cached != nil {
+			return cached.Name, nil
+		}
+		return "", nil
+	}
+	if uc.avatarNameCacheRepo != nil {
+		if err := uc.avatarNameCacheRepo.Upsert(ctx, &identity.AvatarNameCache{
+			AvatarID:  avatarID,
+			Name:      name,
+			FetchedAt: time.Now().UTC(),
+		}); err != nil {
+			return "", err
+		}
+	}
 	return name, nil
+}
+
+func avatarNameCacheFresh(row *identity.AvatarNameCache) bool {
+	if row == nil || row.FetchedAt.IsZero() || strings.TrimSpace(row.Name) == "" {
+		return false
+	}
+	return time.Since(row.FetchedAt) < identity.AvatarNameCacheTTL
 }
 
 func userCacheFromFriend(f vrchatapi.Friend, isFavorite bool, now time.Time) *identity.UserCache {

@@ -874,7 +874,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_saveError(t *testing.T)
 		getUser: &vrchatapi.Friend{ID: "u9", DisplayName: "Nine", IsFriend: true},
 	}
 	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
-	_, _, _, err := uc.ResolveUserProfileForNavigation(ctx, "u9")
+	_, _, _, err := uc.ResolveUserProfileForNavigation(ctx, "u9", false)
 	if err == nil {
 		t.Fatal("expected save error")
 	}
@@ -882,7 +882,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_saveError(t *testing.T)
 
 func TestIdentityUseCase_ResolveUserProfileForNavigation_emptyID(t *testing.T) {
 	uc := NewIdentityUseCase(&mockUserCacheRepo{}, &mockAPIClient{}, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
-	_, _, _, err := uc.ResolveUserProfileForNavigation(context.Background(), "  ")
+	_, _, _, err := uc.ResolveUserProfileForNavigation(context.Background(), "  ", false)
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -1199,7 +1199,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_notLoggedIn_cacheHit(t 
 	apiClient := &mockAPIClient{}
 	settingsRepo := newMockSettingsRepo()
 	uc := NewIdentityUseCase(userRepo, apiClient, credStore, settingsRepo, nil)
-	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "u1")
+	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "u1", false)
 	if err != nil {
 		t.Fatalf("Resolve: %v", err)
 	}
@@ -1223,7 +1223,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_notLoggedIn_friendOpens
 	row := &identity.UserCache{VRCUserID: "u1", DisplayName: "F", UserKind: identity.UserKindFriend}
 	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
 	uc := NewIdentityUseCase(userRepo, &mockAPIClient{}, credStore, newMockSettingsRepo(), nil)
-	_, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "u1")
+	_, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "u1", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1240,7 +1240,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_notLoggedIn_miss(t *tes
 	credStore := vrchatapi.NewStubCredentialStore()
 	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{}}
 	uc := NewIdentityUseCase(userRepo, &mockAPIClient{}, credStore, newMockSettingsRepo(), nil)
-	_, _, _, err := uc.ResolveUserProfileForNavigation(ctx, "missing")
+	_, _, _, err := uc.ResolveUserProfileForNavigation(ctx, "missing", false)
 	if !errors.Is(err, ErrProfileNotInCache) {
 		t.Fatalf("want ErrProfileNotInCache, got %v", err)
 	}
@@ -1259,7 +1259,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_newContactFrom
 		},
 	}
 	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
-	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "usr_new")
+	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "usr_new", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1290,7 +1290,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_friendFromAPI(
 		},
 	}
 	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
-	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "usr_f")
+	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "usr_f", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1308,7 +1308,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_apiErr_fallsBa
 	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
 	apiClient := &mockAPIClient{token: "tok", getUserErr: errors.New("network")}
 	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
-	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "u1")
+	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "u1", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1317,6 +1317,273 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_apiErr_fallsBa
 	}
 	if openF || u.DisplayName != "Cached" {
 		t.Fatalf("openF=%v u=%+v", openF, u)
+	}
+}
+
+func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_freshCache_skipsGetUser(t *testing.T) {
+	ctx := context.Background()
+	row := &identity.UserCache{
+		VRCUserID:   "u1",
+		DisplayName: "Cached",
+		Username:    "cached_user",
+		UserKind:    identity.UserKindFriend,
+		LastUpdated: time.Now().Add(-time.Hour),
+	}
+	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
+	apiClient := &mockAPIClient{
+		token: "tok",
+		getUser: &vrchatapi.Friend{
+			ID: "u1", DisplayName: "FromAPI", IsFriend: true, Status: "active",
+		},
+	}
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "u1", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if openSelf || !openF {
+		t.Fatalf("openSelf=%v openF=%v", openSelf, openF)
+	}
+	if u.DisplayName != "Cached" {
+		t.Fatalf("displayName %q", u.DisplayName)
+	}
+	if apiClient.getUserCalls != 0 {
+		t.Fatalf("GetUser calls %d, want 0 when cache is within UserCacheTTL", apiClient.getUserCalls)
+	}
+}
+
+func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_staleCache_callsGetUser(t *testing.T) {
+	ctx := context.Background()
+	row := &identity.UserCache{
+		VRCUserID:   "u1",
+		DisplayName: "Old",
+		Username:    "old_user",
+		UserKind:    identity.UserKindContact,
+		LastUpdated: time.Now().Add(-identity.UserCacheTTL - time.Minute),
+	}
+	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
+	apiClient := &mockAPIClient{
+		token: "tok",
+		getUser: &vrchatapi.Friend{
+			ID: "u1", DisplayName: "Fresh", IsFriend: true, Status: "active",
+		},
+	}
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "u1", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if openSelf || !openF {
+		t.Fatalf("openSelf=%v openF=%v", openSelf, openF)
+	}
+	if u.DisplayName != "Fresh" {
+		t.Fatalf("displayName %q", u.DisplayName)
+	}
+	if apiClient.getUserCalls != 1 {
+		t.Fatalf("GetUser calls %d, want 1 when cache is older than UserCacheTTL", apiClient.getUserCalls)
+	}
+}
+
+func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_staleCache_apiErr_fallsBack(t *testing.T) {
+	ctx := context.Background()
+	row := &identity.UserCache{
+		VRCUserID:   "u1",
+		DisplayName: "StaleCached",
+		Username:    "stale_user",
+		UserKind:    identity.UserKindFriend,
+		LastUpdated: time.Now().Add(-identity.UserCacheTTL - time.Minute),
+	}
+	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
+	apiClient := &mockAPIClient{token: "tok", getUserErr: errors.New("network")}
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "u1", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if openSelf || !openF || u.DisplayName != "StaleCached" {
+		t.Fatalf("openSelf=%v openF=%v u=%+v", openSelf, openF, u)
+	}
+	if apiClient.getUserCalls != 1 {
+		t.Fatalf("GetUser calls %d, want 1", apiClient.getUserCalls)
+	}
+}
+
+func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_forceRefresh_bypassesFreshCache(t *testing.T) {
+	ctx := context.Background()
+	row := &identity.UserCache{
+		VRCUserID:   "u1",
+		DisplayName: "Cached",
+		Username:    "cached_user",
+		UserKind:    identity.UserKindContact,
+		LastUpdated: time.Now(),
+	}
+	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
+	apiClient := &mockAPIClient{
+		token: "tok",
+		getUser: &vrchatapi.Friend{
+			ID: "u1", DisplayName: "Forced", IsFriend: false, Status: "active",
+		},
+	}
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "u1", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if openSelf || openF {
+		t.Fatalf("openSelf=%v openF=%v", openSelf, openF)
+	}
+	if u.DisplayName != "Forced" {
+		t.Fatalf("displayName %q", u.DisplayName)
+	}
+	if apiClient.getUserCalls != 1 {
+		t.Fatalf("GetUser calls %d, want 1 when forceRefresh", apiClient.getUserCalls)
+	}
+}
+
+func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_emptyName_notTreatedFresh(t *testing.T) {
+	ctx := context.Background()
+	row := &identity.UserCache{
+		VRCUserID:   "u1",
+		DisplayName: "  ",
+		UserKind:    identity.UserKindContact,
+		LastUpdated: time.Now(),
+	}
+	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
+	apiClient := &mockAPIClient{
+		token: "tok",
+		getUser: &vrchatapi.Friend{
+			ID: "u1", DisplayName: "Named", IsFriend: false, Status: "active",
+		},
+	}
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	u, _, _, err := uc.ResolveUserProfileForNavigation(ctx, "u1", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.DisplayName != "Named" {
+		t.Fatalf("displayName %q", u.DisplayName)
+	}
+	if apiClient.getUserCalls != 1 {
+		t.Fatalf("GetUser calls %d, want 1 for unnamed cache row", apiClient.getUserCalls)
+	}
+}
+
+func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_logContact_callsGetUser(t *testing.T) {
+	ctx := context.Background()
+	// MergeFromLog sets display name and LastUpdated only. That is not an API profile snapshot.
+	row := &identity.UserCache{
+		VRCUserID:   "u1",
+		DisplayName: "FromLog",
+		UserKind:    identity.UserKindContact,
+		LastUpdated: time.Now().Add(-time.Hour),
+	}
+	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
+	apiClient := &mockAPIClient{
+		token: "tok",
+		getUser: &vrchatapi.Friend{
+			ID: "u1", DisplayName: "FromAPI", Username: "api_user", IsFriend: false, Status: "active",
+			CurrentAvatar: "avtr_from_api",
+		},
+	}
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "u1", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if openSelf || openF {
+		t.Fatalf("openSelf=%v openF=%v", openSelf, openF)
+	}
+	if u.DisplayName != "FromAPI" || u.Username != "api_user" {
+		t.Fatalf("profile = %+v, want API snapshot", u)
+	}
+	if apiClient.getUserCalls != 1 {
+		t.Fatalf("GetUser calls %d, want 1 for log-derived contact", apiClient.getUserCalls)
+	}
+}
+
+func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_avatarOnlySnapshot_skipsGetUser(t *testing.T) {
+	ctx := context.Background()
+	row := &identity.UserCache{
+		VRCUserID:       "u1",
+		DisplayName:     "Cached",
+		CurrentAvatarID: "avtr_cached",
+		UserKind:        identity.UserKindContact,
+		LastUpdated:     time.Now().Add(-time.Hour),
+	}
+	userRepo := &mockUserCacheRepo{getByID: map[string]*identity.UserCache{"u1": row}}
+	apiClient := &mockAPIClient{
+		token: "tok",
+		getUser: &vrchatapi.Friend{
+			ID: "u1", DisplayName: "FromAPI", IsFriend: false, Status: "active",
+		},
+	}
+	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	u, _, _, err := uc.ResolveUserProfileForNavigation(ctx, "u1", false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.DisplayName != "Cached" {
+		t.Fatalf("displayName %q", u.DisplayName)
+	}
+	if apiClient.getUserCalls != 0 {
+		t.Fatalf("GetUser calls %d, want 0 when current avatar marks an API snapshot", apiClient.getUserCalls)
+	}
+}
+
+func TestUserProfileCacheFresh(t *testing.T) {
+	t.Parallel()
+	now := time.Now()
+	freshAt := now.Add(-time.Hour)
+	staleAt := now.Add(-identity.UserCacheTTL - time.Minute)
+	tests := []struct {
+		name string
+		row  *identity.UserCache
+		want bool
+	}{
+		{name: "nil", row: nil, want: false},
+		{
+			name: "zero timestamp",
+			row:  &identity.UserCache{DisplayName: "A", Username: "a"},
+			want: false,
+		},
+		{
+			name: "blank display name",
+			row:  &identity.UserCache{DisplayName: "  ", Username: "a", LastUpdated: freshAt},
+			want: false,
+		},
+		{
+			name: "log contact display name only",
+			row:  &identity.UserCache{DisplayName: "FromLog", UserKind: identity.UserKindContact, LastUpdated: freshAt},
+			want: false,
+		},
+		{
+			name: "whitespace api fields",
+			row:  &identity.UserCache{DisplayName: "A", Username: "  ", CurrentAvatarID: " ", LastUpdated: freshAt},
+			want: false,
+		},
+		{
+			name: "username within ttl",
+			row:  &identity.UserCache{DisplayName: "A", Username: "a", LastUpdated: freshAt},
+			want: true,
+		},
+		{
+			name: "avatar id within ttl",
+			row:  &identity.UserCache{DisplayName: "A", CurrentAvatarID: "avtr_1", LastUpdated: freshAt},
+			want: true,
+		},
+		{
+			name: "username older than ttl",
+			row:  &identity.UserCache{DisplayName: "A", Username: "a", LastUpdated: staleAt},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := userProfileCacheFresh(tt.row); got != tt.want {
+				t.Fatalf("userProfileCacheFresh() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
@@ -1342,7 +1609,7 @@ func TestIdentityUseCase_ResolveUserProfileForNavigation_loggedIn_selfOpensSelfP
 		},
 	}
 	uc := NewIdentityUseCase(userRepo, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
-	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "usr_self")
+	u, openF, openSelf, err := uc.ResolveUserProfileForNavigation(ctx, "usr_self", false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1519,7 +1786,36 @@ func TestIdentityUseCase_Logout_returnsSelfDeleteError(t *testing.T) {
 	}
 }
 
-func TestIdentityUseCase_AvatarDisplayName(t *testing.T) {
+type memAvatarNameCache struct {
+	rows    map[string]*identity.AvatarNameCache
+	saveErr error
+}
+
+func (m *memAvatarNameCache) Get(_ context.Context, avatarID string) (*identity.AvatarNameCache, error) {
+	if m.rows == nil {
+		return nil, nil
+	}
+	row := m.rows[strings.TrimSpace(avatarID)]
+	if row == nil {
+		return nil, nil
+	}
+	cpy := *row
+	return &cpy, nil
+}
+
+func (m *memAvatarNameCache) Upsert(_ context.Context, row *identity.AvatarNameCache) error {
+	if m.saveErr != nil {
+		return m.saveErr
+	}
+	if m.rows == nil {
+		m.rows = map[string]*identity.AvatarNameCache{}
+	}
+	cpy := *row
+	m.rows[strings.TrimSpace(row.AvatarID)] = &cpy
+	return nil
+}
+
+func TestIdentityUseCase_AvatarDisplayName_notLoggedInWithoutCache(t *testing.T) {
 	ctx := context.Background()
 	uc := NewIdentityUseCase(
 		&mockUserCacheRepo{},
@@ -1528,6 +1824,7 @@ func TestIdentityUseCase_AvatarDisplayName(t *testing.T) {
 		newMockSettingsRepo(),
 		nil,
 	)
+	uc.SetAvatarNameCacheRepo(&memAvatarNameCache{})
 	name, err := uc.AvatarDisplayName(ctx, "avtr_11111111-2222-3333-4444-555555555555")
 	if err != nil {
 		t.Fatalf("AvatarDisplayName: %v", err)
@@ -1535,40 +1832,93 @@ func TestIdentityUseCase_AvatarDisplayName(t *testing.T) {
 	if name != "" {
 		t.Fatalf("want empty when not logged in, got %q", name)
 	}
+}
 
+func TestIdentityUseCase_AvatarDisplayName_freshCacheSkipsAPI(t *testing.T) {
+	ctx := context.Background()
+	avatarID := "avtr_11111111-2222-3333-4444-555555555555"
+	cache := &memAvatarNameCache{rows: map[string]*identity.AvatarNameCache{
+		avatarID: {AvatarID: avatarID, Name: "Fox", FetchedAt: time.Now().Add(-time.Hour)},
+	}}
 	apiClient := &mockAPIClient{
-		token: "tok",
-		getAvatar: &vrchatapi.Avatar{
-			ID:   "avtr_11111111-2222-3333-4444-555555555555",
-			Name: "Fox",
-		},
+		token:     "tok",
+		getAvatar: &vrchatapi.Avatar{ID: avatarID, Name: "FromAPI"},
 	}
-	uc = NewIdentityUseCase(
-		&mockUserCacheRepo{},
-		apiClient,
-		vrchatapi.NewStubCredentialStore(),
-		newMockSettingsRepo(),
-		nil,
-	)
-	name, err = uc.AvatarDisplayName(ctx, "avtr_11111111-2222-3333-4444-555555555555")
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	uc.SetAvatarNameCacheRepo(cache)
+	name, err := uc.AvatarDisplayName(ctx, avatarID)
 	if err != nil {
-		t.Fatalf("AvatarDisplayName: %v", err)
+		t.Fatal(err)
 	}
 	if name != "Fox" {
 		t.Fatalf("got %q want Fox", name)
 	}
+	if apiClient.getAvatarCalls != 0 {
+		t.Fatalf("GetAvatar calls %d, want 0 within AvatarNameCacheTTL", apiClient.getAvatarCalls)
+	}
+}
+
+func TestIdentityUseCase_AvatarDisplayName_staleCacheRefreshes(t *testing.T) {
+	ctx := context.Background()
+	avatarID := "avtr_11111111-2222-3333-4444-555555555555"
+	cache := &memAvatarNameCache{rows: map[string]*identity.AvatarNameCache{
+		avatarID: {
+			AvatarID:  avatarID,
+			Name:      "Old",
+			FetchedAt: time.Now().Add(-identity.AvatarNameCacheTTL - time.Minute),
+		},
+	}}
+	apiClient := &mockAPIClient{
+		token:     "tok",
+		getAvatar: &vrchatapi.Avatar{ID: avatarID, Name: "New"},
+	}
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	uc.SetAvatarNameCacheRepo(cache)
+	name, err := uc.AvatarDisplayName(ctx, avatarID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if name != "New" {
+		t.Fatalf("got %q want New", name)
+	}
 	if apiClient.getAvatarCalls != 1 {
-		t.Fatalf("getAvatar calls %d want 1", apiClient.getAvatarCalls)
+		t.Fatalf("GetAvatar calls %d, want 1", apiClient.getAvatarCalls)
+	}
+	stored := cache.rows[avatarID]
+	if stored == nil || stored.Name != "New" || time.Since(stored.FetchedAt) > time.Minute {
+		t.Fatalf("stored %+v", stored)
 	}
 
-	name, err = uc.AvatarDisplayName(ctx, "avtr_11111111-2222-3333-4444-555555555555")
+	name, err = uc.AvatarDisplayName(ctx, avatarID)
 	if err != nil {
-		t.Fatalf("AvatarDisplayName cached: %v", err)
+		t.Fatal(err)
 	}
-	if name != "Fox" {
-		t.Fatalf("cached got %q want Fox", name)
+	if name != "New" || apiClient.getAvatarCalls != 1 {
+		t.Fatalf("name %q calls %d after refresh", name, apiClient.getAvatarCalls)
+	}
+}
+
+func TestIdentityUseCase_AvatarDisplayName_apiErrFallsBackToStale(t *testing.T) {
+	ctx := context.Background()
+	avatarID := "avtr_11111111-2222-3333-4444-555555555555"
+	cache := &memAvatarNameCache{rows: map[string]*identity.AvatarNameCache{
+		avatarID: {
+			AvatarID:  avatarID,
+			Name:      "Stale",
+			FetchedAt: time.Now().Add(-identity.AvatarNameCacheTTL - time.Minute),
+		},
+	}}
+	apiClient := &mockAPIClient{token: "tok", getAvatarErr: errors.New("network")}
+	uc := NewIdentityUseCase(&mockUserCacheRepo{}, apiClient, vrchatapi.NewStubCredentialStore(), newMockSettingsRepo(), nil)
+	uc.SetAvatarNameCacheRepo(cache)
+	name, err := uc.AvatarDisplayName(ctx, avatarID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if name != "Stale" {
+		t.Fatalf("got %q want Stale", name)
 	}
 	if apiClient.getAvatarCalls != 1 {
-		t.Fatalf("getAvatar calls after cache %d want 1", apiClient.getAvatarCalls)
+		t.Fatalf("GetAvatar calls %d, want 1", apiClient.getAvatarCalls)
 	}
 }
