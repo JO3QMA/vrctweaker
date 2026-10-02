@@ -1,0 +1,84 @@
+# Build Storybook and deploy the static site to Cloudflare Pages.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   CLOUDFLARE_API_TOKEN  — API token with "Cloudflare Pages — Edit"
+#   CLOUDFLARE_ACCOUNT_ID — Cloudflare account ID (Dashboard → Workers & Pages → Overview)
+#
+# Optional repository variables (Settings → Secrets and variables → Actions → Variables):
+#   CLOUDFLARE_PAGES_PROJECT_NAME — Pages project name (default: vrctweaker-storybook)
+#
+# Secrets may also live in a GitHub Environment named "storybook-pages" if you prefer
+# scoped credentials; point the deploy job's `environment` key at that name.
+#
+# Setup guide: docs/storybook-cloudflare-pages.md
+
+name: Storybook (Cloudflare Pages)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/storybook-pages.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/storybook-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  deployments: write
+
+concurrency:
+  group: storybook-pages-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  PAGES_PROJECT_NAME: ${{ vars.CLOUDFLARE_PAGES_PROJECT_NAME || 'vrctweaker-storybook' }}
+
+jobs:
+  build-and-deploy:
+    name: Build & deploy Storybook
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install frontend dependencies
+        run: cd frontend && pnpm install --frozen-lockfile
+
+      - name: Build Storybook
+        run: cd frontend && pnpm run build-storybook
+
+      - name: Deploy to Cloudflare Pages
+        id: deploy
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
+          packageManager: pnpm
+          command: >-
+            pages deploy frontend/storybook-static
+            --project-name=${{ env.PAGES_PROJECT_NAME }}
+            --branch=${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+
+      - name: Print deployment URLs
+        if: steps.deploy.outputs.deployment-url != ''
+        run: |
+          echo "Production / deployment URL: ${{ steps.deploy.outputs.deployment-url }}"
+          echo "Branch alias URL: ${{ steps.deploy.outputs.pages-deployment-alias-url }}"
