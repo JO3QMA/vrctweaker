@@ -1,6 +1,10 @@
-import { ref } from "vue";
+import { readonly, ref } from "vue";
 
 const manualOpen = ref(false);
+
+export function resetFirstLaunchGuideForTest(): void {
+  manualOpen.value = false;
+}
 
 export function useFirstLaunchGuide() {
   function requestFirstLaunchGuide(): void {
@@ -12,7 +16,7 @@ export function useFirstLaunchGuide() {
   }
 
   return {
-    manualOpen,
+    manualOpen: readonly(manualOpen),
     requestFirstLaunchGuide,
     clearManualFirstLaunchRequest,
   };

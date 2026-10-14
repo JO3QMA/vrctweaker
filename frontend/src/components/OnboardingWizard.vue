@@ -72,26 +72,37 @@
               show-password
             />
           </el-form-item>
-          <el-form-item :label="t('settings.twoFactor')">
+          <el-form-item
+            v-if="twoFactorRequired"
+            :label="t('settings.twoFactor')"
+            data-testid="onboarding-login-2fa-field"
+          >
             <VtInput
               v-model="loginForm.twoFactorCode"
+              data-testid="onboarding-login-2fa"
               :placeholder="t('settings.twoFactorPh')"
               autocomplete="one-time-code"
             />
           </el-form-item>
-          <VtAlert
+          <p
+            v-if="twoFactorRequired && !loginError"
+            class="login-2fa-hint text-body-sm"
+          >
+            {{ t("settings.twoFactorRequiredHint") }}
+          </p>
+          <p
             v-if="loginError"
-            variant="danger"
-            :title="loginError"
-            class="login-error"
-          />
+            class="login-inline-error text-body-sm"
+            data-testid="onboarding-login-error"
+            role="alert"
+          >
+            {{ loginError }}
+          </p>
           <VtButton
             variant="primary"
             data-testid="onboarding-login-submit"
             :loading="loginLoading"
-            :disabled="
-              loginLoading || !loginForm.username || !loginForm.password
-            "
+            :disabled="loginSubmitDisabled"
             @click="submitLogin"
           >
             {{ loginLoading ? t("settings.loggingIn") : t("settings.login") }}
@@ -161,16 +172,19 @@
 
     <footer class="onboarding-footer">
       <VtButton
+        v-if="step < 2"
         variant="tertiary"
         data-testid="onboarding-skip-step"
         @click="skipStep"
       >
         {{ t("onboarding.skipStep") }}
       </VtButton>
+      <span v-else class="onboarding-footer-spacer" />
       <VtButton
         variant="primary"
         data-testid="onboarding-next"
         :loading="nextLoading"
+        :disabled="nextDisabled"
         @click="goNext"
       >
         {{ nextLabel }}
@@ -187,8 +201,9 @@ import VtButton from "./VtButton.vue";
 import VtInput from "./VtInput.vue";
 import VtTag from "./VtTag.vue";
 import { App } from "@/wails/app";
-import type { OnboardingFolderDefaultsDTO } from "@/wails/app";
+import type { OnboardingFolderDefaultsDTO, PathSettingsDTO } from "@/wails/app";
 import { useSessionUnlock } from "@/composables/useSessionUnlock";
+import { isLoginTwoFactorRequired } from "@/utils/vrchatLoginResult";
 
 const emit = defineEmits<{
   finished: [];
@@ -216,6 +231,7 @@ const loginForm = reactive({
 });
 const loginError = ref("");
 const loginLoading = ref(false);
+const twoFactorRequired = ref(false);
 
 const foldersLoading = ref(true);
 const folderSaveError = ref("");
@@ -226,6 +242,28 @@ const folderDefs = reactive<OnboardingFolderDefaultsDTO>({
   outputLogPath: "",
   pictureOutputFolder: "",
 });
+const savedPathSettings = reactive<PathSettingsDTO>({
+  vrchatPathWindows: "",
+  steamPathLinux: "",
+  outputLogPath: "",
+});
+const folderTouched = reactive({
+  vrchatPathWindows: false,
+  steamPathLinux: false,
+  outputLogPath: false,
+  pictureOutputFolder: false,
+});
+
+const loginSubmitDisabled = computed(() => {
+  if (loginLoading.value) return true;
+  if (!loginForm.username || !loginForm.password) return true;
+  if (twoFactorRequired.value && !loginForm.twoFactorCode.trim()) return true;
+  return false;
+});
+
+const nextDisabled = computed(
+  () => nextLoading.value || (step.value === 1 && foldersLoading.value),
+);
 
 const stepTitle = computed(() => {
   if (step.value === 0) return t("onboarding.stepLogin");
@@ -362,7 +400,13 @@ async function loadFolderDefaults(): Promise<void> {
   foldersLoading.value = true;
   folderSaveError.value = "";
   try {
-    const defs = await App.getOnboardingFolderDefaults();
+    const [saved, defs] = await Promise.all([
+      App.getPathSettings(),
+      App.getOnboardingFolderDefaults(),
+    ]);
+    savedPathSettings.vrchatPathWindows = saved.vrchatPathWindows ?? "";
+    savedPathSettings.steamPathLinux = saved.steamPathLinux ?? "";
+    savedPathSettings.outputLogPath = saved.outputLogPath ?? "";
     folderDefs.vrchatPathWindows = defs.vrchatPathWindows ?? "";
     folderDefs.steamPathLinux = defs.steamPathLinux ?? "";
     folderDefs.outputLogPath = defs.outputLogPath ?? "";
@@ -390,6 +434,7 @@ async function submitLogin(): Promise<void> {
     );
     if (result.ok) {
       loginCompleted.value = true;
+      twoFactorRequired.value = false;
       loginForm.username = "";
       loginForm.password = "";
       loginForm.twoFactorCode = "";
@@ -397,20 +442,46 @@ async function submitLogin(): Promise<void> {
         await persistAfterLogin(result.plaintextToken);
       }
       await refreshLoginState();
+    } else if (isLoginTwoFactorRequired(result.error)) {
+      twoFactorRequired.value = true;
+      loginError.value = "";
     } else {
       loginError.value = result.error || t("settings.errLogin");
     }
+  } catch (e) {
+    loginError.value = formatBackendError(e, t("settings.errLogin"));
   } finally {
     loginLoading.value = false;
   }
+}
+
+function buildFolderSavePayload() {
+  return {
+    vrchatPathWindows: folderDefs.vrchatPathWindows,
+    steamPathLinux: folderDefs.steamPathLinux,
+    outputLogPath: folderDefs.outputLogPath,
+    pictureOutputFolder: folderDefs.pictureOutputFolder,
+    applyVrchatPathWindows: folderTouched.vrchatPathWindows,
+    applySteamPathLinux: folderTouched.steamPathLinux,
+    applyOutputLogPath: folderTouched.outputLogPath,
+    applyPictureOutputFolder: folderTouched.pictureOutputFolder,
+  };
 }
 
 async function saveFolders(): Promise<boolean> {
   folderSaveError.value = "";
   nextLoading.value = true;
   try {
-    await App.saveOnboardingFolderSettings({ ...folderDefs });
-    foldersSaved.value = true;
+    const payload = buildFolderSavePayload();
+    const anyTouched =
+      payload.applyVrchatPathWindows ||
+      payload.applySteamPathLinux ||
+      payload.applyOutputLogPath ||
+      payload.applyPictureOutputFolder;
+    if (anyTouched) {
+      await App.saveOnboardingFolderSettings(payload);
+    }
+    foldersSaved.value = anyTouched;
     return true;
   } catch (e) {
     folderSaveError.value = formatBackendError(e, t("settings.errOperation"));
@@ -430,6 +501,7 @@ async function finishWizard(): Promise<void> {
 }
 
 async function goNext(): Promise<void> {
+  if (nextLoading.value) return;
   if (step.value === 0) {
     if (loggedIn.value) {
       loginCompleted.value = true;
@@ -438,6 +510,7 @@ async function goNext(): Promise<void> {
     return;
   }
   if (step.value === 1) {
+    if (foldersLoading.value) return;
     const ok = await saveFolders();
     if (!ok) return;
     step.value = 2;
@@ -456,45 +529,73 @@ function skipStep(): void {
     step.value = 2;
     return;
   }
-  void finishWizard();
 }
 
 function skipAll(): void {
   void finishWizard();
 }
 
+async function withFolderDialogError(fn: () => Promise<void>): Promise<void> {
+  folderSaveError.value = "";
+  try {
+    await fn();
+  } catch (e) {
+    folderSaveError.value = formatBackendError(e, t("settings.errOperation"));
+  }
+}
+
 async function changeOutputLogPath(): Promise<void> {
-  const dir = await App.openDirectoryDialog(
-    t("settings.titlePickLogDirShort"),
-    dirOfPath(folderDefs.outputLogPath),
-  );
-  if (dir) folderDefs.outputLogPath = dir;
+  await withFolderDialogError(async () => {
+    const dir = await App.openDirectoryDialog(
+      t("settings.titlePickLogDirShort"),
+      folderDefs.outputLogPath || "",
+    );
+    if (dir) {
+      folderDefs.outputLogPath = dir;
+      folderTouched.outputLogPath = true;
+    }
+  });
 }
 
 async function changePictureFolder(): Promise<void> {
-  const dir = await App.openDirectoryDialog(
-    t("onboarding.titlePickPictureFolder"),
-    dirOfPath(folderDefs.pictureOutputFolder),
-  );
-  if (dir) folderDefs.pictureOutputFolder = dir;
+  await withFolderDialogError(async () => {
+    const dir = await App.openDirectoryDialog(
+      t("onboarding.titlePickPictureFolder"),
+      folderDefs.pictureOutputFolder || "",
+    );
+    if (dir) {
+      folderDefs.pictureOutputFolder = dir;
+      folderTouched.pictureOutputFolder = true;
+    }
+  });
 }
 
 async function changeVrchatPath(): Promise<void> {
-  const path = await App.openFileDialog(
-    t("settings.titlePickVrchatExe"),
-    dirOfPath(folderDefs.vrchatPathWindows),
-    "*.exe",
-  );
-  if (path) folderDefs.vrchatPathWindows = path;
+  await withFolderDialogError(async () => {
+    const path = await App.openFileDialog(
+      t("settings.titlePickVrchatExe"),
+      dirOfPath(folderDefs.vrchatPathWindows),
+      "*.exe",
+    );
+    if (path) {
+      folderDefs.vrchatPathWindows = path;
+      folderTouched.vrchatPathWindows = true;
+    }
+  });
 }
 
 async function changeSteamPath(): Promise<void> {
-  const path = await App.openFileDialog(
-    t("settings.titlePickSteam"),
-    dirOfPath(folderDefs.steamPathLinux),
-    "",
-  );
-  if (path) folderDefs.steamPathLinux = path;
+  await withFolderDialogError(async () => {
+    const path = await App.openFileDialog(
+      t("settings.titlePickSteam"),
+      dirOfPath(folderDefs.steamPathLinux),
+      "",
+    );
+    if (path) {
+      folderDefs.steamPathLinux = path;
+      folderTouched.steamPathLinux = true;
+    }
+  });
 }
 </script>
 
@@ -580,6 +681,20 @@ async function changeSteamPath(): Promise<void> {
   display: flex;
   flex-direction: column;
   gap: var(--space-form-field);
+}
+
+.login-inline-error {
+  margin: 0;
+  color: var(--color-danger);
+}
+
+.login-2fa-hint {
+  margin: 0 0 var(--space-form-field);
+  color: var(--color-text-secondary);
+}
+
+.onboarding-footer-spacer {
+  flex: 1;
 }
 
 .login-done {

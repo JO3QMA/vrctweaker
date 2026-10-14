@@ -34,7 +34,7 @@
         </div>
         <div v-else-if="filteredEncounters.length === 0" class="empty">
           <p class="empty-title">{{ t("activity.noEncounters") }}</p>
-          <p class="empty-hint text-body-sm">
+          <p v-if="encounters.length === 0" class="empty-hint text-body-sm">
             {{ t("activity.noEncountersHint") }}
           </p>
         </div>

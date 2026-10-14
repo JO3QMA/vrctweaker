@@ -444,6 +444,7 @@
     "passwordPh": "비밀번호",
     "twoFactor": "2FA 코드 (선택)",
     "twoFactorPh": "6자리 코드",
+    "twoFactorRequiredHint": "인증 앱의 6자리 코드를 입력한 뒤 다시 로그인하세요.",
     "loggingIn": "로그인 중...",
     "login": "로그인",
     "pathSection": "경로",

@@ -9,6 +9,12 @@ const meta: Meta<typeof OnboardingWizard> = {
   decorators: [
     withWailsApp({
       IsLoggedIn: () => Promise.resolve(false),
+      GetPathSettings: () =>
+        Promise.resolve({
+          vrchatPathWindows: "",
+          steamPathLinux: "",
+          outputLogPath: "",
+        }),
       GetOnboardingFolderDefaults: () =>
         Promise.resolve({
           vrchatPathWindows:
@@ -17,10 +23,21 @@ const meta: Meta<typeof OnboardingWizard> = {
           outputLogPath: "C:\\Users\\You\\AppData\\LocalLow\\VRChat\\VRChat",
           pictureOutputFolder: "C:\\Users\\You\\Pictures\\VRChat",
         }),
+      GetSelfProfile: () =>
+        Promise.resolve({ displayName: "Story User", vrcUserId: "" }),
+      Login: () =>
+        Promise.resolve({
+          ok: false,
+          error: "Storybook ではログインできません",
+        }),
       SetFirstLaunchGuideCompleted: () => Promise.resolve(),
       SaveOnboardingFolderSettings: () => Promise.resolve(),
-      OpenDirectoryDialog: () => Promise.resolve(""),
-      OpenFileDialog: () => Promise.resolve(""),
+      OpenDirectoryDialog: (_title: string, _initial: string) =>
+        Promise.resolve("C:\\Users\\You\\Pictures\\VRChat"),
+      OpenFileDialog: () =>
+        Promise.resolve(
+          "C:\\Program Files (x86)\\Steam\\steamapps\\common\\VRChat\\launch.exe",
+        ),
     }),
     () => ({
       template: '<div style="height: 100vh"><story /></div>',

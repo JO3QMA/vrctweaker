@@ -57,7 +57,12 @@ func (uc *SettingsUseCase) ResolveOnboardingFolderDefaults(
 	if defaultPictureFolder != nil {
 		pic, picErr := defaultPictureFolder()
 		if picErr == nil {
-			out.PictureOutputFolder = strings.TrimSpace(pic)
+			pic = strings.TrimSpace(pic)
+			if pic != "" {
+				if info, statErr := os.Stat(pic); statErr == nil && info != nil && info.IsDir() {
+					out.PictureOutputFolder = pic
+				}
+			}
 		}
 	}
 	return &out, nil

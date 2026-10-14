@@ -444,6 +444,7 @@
     "passwordPh": "密码",
     "twoFactor": "2FA 代码（可选）",
     "twoFactorPh": "6 位代码",
+    "twoFactorRequiredHint": "请输入验证器应用的 6 位代码，然后再次登录。",
     "loggingIn": "登录中...",
     "login": "登录",
     "pathSection": "路径",

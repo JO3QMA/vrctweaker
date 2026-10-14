@@ -53,13 +53,15 @@ async function loadFirstLaunchGuideState(): Promise<void> {
     firstLaunchGuideCompleted.value =
       await WailsApp.getFirstLaunchGuideCompleted();
   } catch {
-    firstLaunchGuideCompleted.value = false;
+    // Keep wizard hidden on transient backend errors (avoid re-showing for existing users).
+    firstLaunchGuideCompleted.value = true;
   }
 }
 
 function onOnboardingFinished(): void {
   firstLaunchGuideCompleted.value = true;
   clearManualFirstLaunchRequest();
+  beginStartupUnlock().catch(() => undefined);
 }
 
 async function initLocaleFromBackend(): Promise<void> {
@@ -78,13 +80,12 @@ async function initLocaleFromBackend(): Promise<void> {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   void initLocaleFromBackend();
-  void loadFirstLaunchGuideState();
-  // Best-effort: attempt to restore the previous session via the credential blob.
-  // The result (unlocked / needs-relogin) is reflected in Go-side IsLoggedIn state
-  // which individual views query via App.isLoggedIn().
-  beginStartupUnlock().catch(() => undefined);
+  await loadFirstLaunchGuideState();
+  if (firstLaunchGuideCompleted.value && !manualOpen.value) {
+    beginStartupUnlock().catch(() => undefined);
+  }
 });
 
 watch(

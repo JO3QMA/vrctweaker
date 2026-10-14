@@ -63,6 +63,9 @@ func TestResolveOnboardingFolderDefaults_fillsOutputLogFromDefaultDir(t *testing
 func TestResolveOnboardingFolderDefaults_pictureFromCallback(t *testing.T) {
 	dir := t.TempDir()
 	pic := filepath.Join(dir, "MyPics", "VRChat")
+	if err := os.MkdirAll(pic, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	uc := NewSettingsUseCase(&fakeAppSettingsRepo{m: map[string]string{}})
 	got, err := uc.ResolveOnboardingFolderDefaults(context.Background(), func() (string, error) {
 		return pic, nil

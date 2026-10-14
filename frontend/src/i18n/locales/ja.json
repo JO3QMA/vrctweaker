@@ -444,6 +444,7 @@
     "passwordPh": "パスワード",
     "twoFactor": "2FAコード（オプション）",
     "twoFactorPh": "6桁の認証コード",
+    "twoFactorRequiredHint": "認証アプリの6桁コードを入力して、もう一度ログインを押してください。",
     "loggingIn": "ログイン中...",
     "login": "ログイン",
     "pathSection": "パス設定",

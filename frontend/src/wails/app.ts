@@ -63,6 +63,13 @@ export type OnboardingFolderDefaultsDTO = {
   outputLogPath: string;
   pictureOutputFolder: string;
 };
+
+export type OnboardingFolderSaveDTO = OnboardingFolderDefaultsDTO & {
+  applyVrchatPathWindows: boolean;
+  applySteamPathLinux: boolean;
+  applyOutputLogPath: boolean;
+  applyPictureOutputFolder: boolean;
+};
 export type YTDLPMaintainStatusDTO = WailsDTO<usecase.YTDLPMaintainStatus>;
 export type LoginResultDTO = WailsDTO<wailsapp.LoginResultDTO>;
 export type VRChatCurrentUserDTO = WailsDTO<wailsapp.VRChatCurrentUserDTO>;
@@ -543,8 +550,7 @@ export const App = {
     },
   ),
   saveOnboardingFolderSettings: bindGo(
-    (a, dto: OnboardingFolderDefaultsDTO) =>
-      a.SaveOnboardingFolderSettings(dto),
+    (a, dto: OnboardingFolderSaveDTO) => a.SaveOnboardingFolderSettings(dto),
     undefined,
   ),
   getSuppressSleepWhileVRChat: bindGo(

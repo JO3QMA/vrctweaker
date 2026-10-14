@@ -444,6 +444,7 @@
     "passwordPh": "Password",
     "twoFactor": "2FA code (optional)",
     "twoFactorPh": "6-digit code",
+    "twoFactorRequiredHint": "Enter the 6-digit code from your authenticator app, then sign in again.",
     "loggingIn": "Signing in…",
     "login": "Sign in",
     "pathSection": "Paths",

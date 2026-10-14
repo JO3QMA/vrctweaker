@@ -3,12 +3,14 @@ import { mount, flushPromises } from "@vue/test-utils";
 import OnboardingWizard from "../OnboardingWizard.vue";
 import { App } from "@/wails/app";
 import { resetSessionUnlockForStorybook } from "@/composables/useSessionUnlock";
+import { LOGIN_TWO_FACTOR_REQUIRED_MARKER } from "@/utils/vrchatLoginResult";
 
 vi.mock("@/wails/app", () => ({
   App: {
     isLoggedIn: vi.fn(),
     getSelfProfile: vi.fn(),
     login: vi.fn(),
+    getPathSettings: vi.fn(),
     getOnboardingFolderDefaults: vi.fn(),
     saveOnboardingFolderSettings: vi.fn(),
     setFirstLaunchGuideCompleted: vi.fn(),
@@ -25,6 +27,11 @@ describe("OnboardingWizard", () => {
       displayName: "Tester",
       vrcUserId: "usr_test",
     } as never);
+    vi.mocked(App.getPathSettings).mockResolvedValue({
+      vrchatPathWindows: "",
+      steamPathLinux: "",
+      outputLogPath: "",
+    });
     vi.mocked(App.getOnboardingFolderDefaults).mockResolvedValue({
       vrchatPathWindows: "C:\\VRChat\\launch.exe",
       steamPathLinux: "/usr/bin/steam",
@@ -73,11 +80,59 @@ describe("OnboardingWizard", () => {
     await flushPromises();
     await wrapper.find('[data-testid="onboarding-next"]').trigger("click");
     await flushPromises();
-    expect(App.saveOnboardingFolderSettings).toHaveBeenCalled();
+    expect(App.saveOnboardingFolderSettings).not.toHaveBeenCalled();
     await wrapper.find('[data-testid="onboarding-next"]').trigger("click");
     await flushPromises();
     expect(App.setFirstLaunchGuideCompleted).toHaveBeenCalledWith(true);
     expect(wrapper.emitted("finished")).toBeTruthy();
+  });
+
+  it("shows login error below fields and keeps username", async () => {
+    vi.mocked(App.login).mockResolvedValue({
+      ok: false,
+      error: "invalid credentials",
+    });
+    const wrapper = mount(OnboardingWizard);
+    await flushPromises();
+    await wrapper
+      .find('[data-testid="onboarding-login-username"]')
+      .setValue("user1");
+    await wrapper
+      .find('[data-testid="onboarding-login-password"]')
+      .setValue("secret");
+    await wrapper
+      .find('[data-testid="onboarding-login-submit"]')
+      .trigger("click");
+    await flushPromises();
+    expect(
+      wrapper.find('[data-testid="onboarding-login-error"]').text(),
+    ).toContain("invalid credentials");
+    expect(App.login).toHaveBeenCalledWith("user1", "secret", undefined);
+  });
+
+  it("reveals 2FA field without error when required", async () => {
+    vi.mocked(App.login).mockResolvedValue({
+      ok: false,
+      error: LOGIN_TWO_FACTOR_REQUIRED_MARKER,
+    });
+    const wrapper = mount(OnboardingWizard);
+    await flushPromises();
+    await wrapper
+      .find('[data-testid="onboarding-login-username"]')
+      .setValue("user1");
+    await wrapper
+      .find('[data-testid="onboarding-login-password"]')
+      .setValue("secret");
+    await wrapper
+      .find('[data-testid="onboarding-login-submit"]')
+      .trigger("click");
+    await flushPromises();
+    expect(
+      wrapper.find('[data-testid="onboarding-login-2fa-field"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="onboarding-login-error"]').exists(),
+    ).toBe(false);
   });
 
   it("skip all finishes without saving folders", async () => {
