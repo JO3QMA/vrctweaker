@@ -41,8 +41,8 @@ func TestResolveOnboardingFolderDefaults_fillsOutputLogFromDefaultDir(t *testing
 	if err != nil {
 		t.Skip(err)
 	}
-	if err := os.MkdirAll(cfgDir, 0o755); err != nil {
-		t.Skip(err)
+	if mkErr := os.MkdirAll(cfgDir, 0o755); mkErr != nil {
+		t.Skip(mkErr)
 	}
 	uc := NewSettingsUseCase(&fakeAppSettingsRepo{m: map[string]string{}})
 	got, err := uc.ResolveOnboardingFolderDefaults(context.Background(), func() (string, error) {

@@ -17,8 +17,8 @@ func TestSettingsUseCase_FirstLaunchGuideCompleted_roundtrip(t *testing.T) {
 	if done {
 		t.Fatal("want false by default")
 	}
-	if err := uc.SetFirstLaunchGuideCompleted(ctx, true); err != nil {
-		t.Fatalf("SetFirstLaunchGuideCompleted: %v", err)
+	if setErr := uc.SetFirstLaunchGuideCompleted(ctx, true); setErr != nil {
+		t.Fatalf("SetFirstLaunchGuideCompleted: %v", setErr)
 	}
 	done, err = uc.GetFirstLaunchGuideCompleted(ctx)
 	if err != nil || !done {
