@@ -23,6 +23,22 @@ describe("LicensesView", () => {
     );
   });
 
+  it("shows unofficial disclaimer and legal doc links", async () => {
+    await router.push("/licenses");
+    await router.isReady();
+    const wrapper = mount(LicensesView, {
+      global: {
+        plugins: [router],
+      },
+    });
+    expect(
+      wrapper.find('[data-testid="licenses-unofficial-disclaimer"]').text(),
+    ).toContain("非公式");
+    expect(
+      wrapper.find('[data-testid="legal-link-privacy"]').attributes("href"),
+    ).toContain("privacy-policy-ja.md");
+  });
+
   it("renders npm licenses section with table", async () => {
     await router.push("/licenses");
     await router.isReady();

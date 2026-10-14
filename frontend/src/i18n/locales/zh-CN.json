@@ -389,6 +389,12 @@
       "subsystemUnavailable": "无法初始化自动化子系统。"
     }
   },
+  "legal": {
+    "privacyPolicy": "隐私政策",
+    "termsOfUse": "使用条款与免责声明",
+    "settingsIntro": "有关数据处理与使用条件，请参阅以下文档。",
+    "licensesIntro": "除开源许可外，数据处理与使用条件请参阅以下文档。"
+  },
   "licenses": {
     "title": "OSS 许可",
     "intro": "本应用程序使用的开源软件许可列表。",

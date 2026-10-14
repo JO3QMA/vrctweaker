@@ -28,7 +28,7 @@ zip には実行ファイル（例: `vrchat-tweaker.exe`）と同梱ファイル
 
 1. zip を任意のフォルダに展開します（例: `C:\Apps\VRChat-Tweaker\`）。
 2. **インストーラは不要** です。展開したフォルダ内の `vrchat-tweaker.exe` を起動します。
-3. 初回起動時、Windows の SmartScreen 等で警告が出る場合があります。信頼できる入手元（BOOTH / 公式 GitHub Release）から取得した場合のみ、表示に従って実行を許可してください。
+3. 初回起動時、Windows の SmartScreen 等で警告が出る場合があります（本アプリは **コード署名していません**）。信頼できる入手元（BOOTH / 公式 GitHub Release）から取得した場合のみ、**「詳細情報」→「実行」**（英語 UI では **More info** → **Run anyway**）で起動してください。GitHub Release 本文の **zip SHA256** と `Get-FileHash` の結果を照合することを推奨します（手順は [README のインストール節](../../README.md#インストールzipと-smartscreen)）。
 4. ショートカットが必要なら、`.exe` を右クリック → **ショートカットの作成**、またはタスクバーへピン留めしてください。
 
 アップデート時は、新しい zip でフォルダを上書きするか、別フォルダに展開して設定を引き継ぐ運用を推奨します（自動更新機能は初回版ではありません）。
@@ -77,6 +77,9 @@ zip には実行ファイル（例: `vrchat-tweaker.exe`）と同梱ファイル
 
 Bug report / Feature request テンプレートに沿って、再現手順・期待動作・環境（Windows 版、Tweaker のバージョン）を記載してください。
 
-## ライセンス
+## ライセンス・法的文書
 
 本ソフトウェアは [MIT License](../../LICENSE) の下で公開されています。同梱の **OSS ライセンス** はアプリ内 Settings → OSS ライセンス一覧からも確認できます。
+
+- [プライバシーポリシー（日本語）](../legal/privacy-policy-ja.md) / [English](../legal/privacy-policy-en.md)
+- [利用規約・免責（日本語）](../legal/terms-ja.md) / [English](../legal/terms-en.md)

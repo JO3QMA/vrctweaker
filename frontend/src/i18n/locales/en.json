@@ -389,6 +389,12 @@
       "subsystemUnavailable": "Could not initialize the automation subsystem."
     }
   },
+  "legal": {
+    "privacyPolicy": "Privacy Policy",
+    "termsOfUse": "Terms of Use & Disclaimer",
+    "settingsIntro": "See the following documents for data handling and terms of use.",
+    "licensesIntro": "In addition to open-source licenses, see the documents below for data handling and terms."
+  },
   "licenses": {
     "title": "OSS licenses",
     "intro": "Licenses for open-source software used by this application.",

@@ -10,6 +10,27 @@ VRChat 周辺のログ・スクリーンショット・フレンド情報など�
 | 対応 OS | **Windows 10 / 11** のみ（Linux / macOS は未サポート） |
 | 配布 | **BOOTH** および **[GitHub Releases](https://github.com/JO3QMA/vrctweaker/releases)** から Windows 用 zip |
 | はじめ方 | **[Getting Started（利用ガイド）](./docs/user/getting-started.md)** — インストール、初回起動、ログイン、データ保存場所、トラブルシュート |
+| プライバシー | **[プライバシーポリシー](./docs/legal/privacy-policy-ja.md)**（[English](./docs/legal/privacy-policy-en.md)） |
+| 利用条件 | **[利用規約・免責](./docs/legal/terms-ja.md)**（[English](./docs/legal/terms-en.md)） |
+
+### インストール（zip）と SmartScreen
+
+本アプリは **コード署名を行いません**。初回起動時に Windows Defender SmartScreen が「不明な発行元」等の警告を表示することがあります。**BOOTH** または **[公式 GitHub Releases](https://github.com/JO3QMA/vrctweaker/releases)** から取得した zip であることを確認したうえで、次の手順で実行してください。
+
+1. 警告ダイアログで **「詳細情報」**（英語 UI の場合は **More info**）をクリック
+2. **「実行」**（**Run anyway**）をクリック
+
+zip を任意のフォルダに展開し、`vrchat-tweaker.exe` を起動します（インストーラはありません）。詳細は [Getting Started](./docs/user/getting-started.md#インストールzip) を参照してください。
+
+#### zip の SHA256 検証
+
+各 **GitHub Release の本文（Release notes）** に、配布 zip 全体の SHA256 ハッシュが記載されます。ダウンロード後にローカルで照合してください。
+
+```powershell
+Get-FileHash -Path .\vrchat-tweaker-v0.0.0-windows-amd64.zip -Algorithm SHA256
+```
+
+zip に同梱される `checksums.txt` は、**展開後の同梱ファイル**（`vrchat-tweaker.exe` / `LICENSE` / `README.txt`）の SHA256 です。Release 本文の値は **zip ファイル自体**のハッシュです。用途が異なる点に注意してください。
 
 ### 主な機能
 
@@ -25,8 +46,8 @@ VRChat 周辺のログ・スクリーンショット・フレンド情報など�
 
 ### VRChat 非公式・データの取り扱い
 
-- **VRChat Tweaker は VRChat 公式の製品ではありません。** VRChat 株式会社とは無関係の非公式ツールです。
-- VRChat にログインする場合、セッション情報は **Windows の資格情報ストア等** に保存されます。アプリの SQLite データベースや設定は **`%AppData%\Roaming\vrchat-tweaker\`** に保存されます。詳細は [Getting Started](./docs/user/getting-started.md#データの保存場所windows) を参照してください。
+- **VRChat Tweaker は VRChat 公式の製品ではありません。** VRChat 株式会社とは無関係の非公式ツールです。利用時は VRChat の利用規約等を遵守してください（[利用規約・免責](./docs/legal/terms-ja.md)）。
+- VRChat にログインする場合、セッション情報は **Windows の資格情報ストア等** に保存されます。アプリの SQLite データベースや設定は **`%AppData%\Roaming\vrchat-tweaker\`** に保存されます。詳細は [Getting Started](./docs/user/getting-started.md#データの保存場所windows) および [プライバシーポリシー](./docs/legal/privacy-policy-ja.md) を参照してください。
 
 ### サポート
 
