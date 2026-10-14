@@ -7,6 +7,7 @@ package w32systray
 
 import (
 	"errors"
+	"log"
 	"path/filepath"
 	"syscall"
 	"unsafe"
@@ -115,6 +116,10 @@ var (
 	procPostMessage           = user32.MustFindProc("PostMessageW")
 	procPostQuitMessage       = user32.MustFindProc("PostQuitMessage")
 	procRegisterWindowMessage = user32.MustFindProc("RegisterWindowMessageW")
+	procDestroyWindow         = user32.MustFindProc("DestroyWindow")
+	procDestroyIcon           = user32.MustFindProc("DestroyIcon")
+	procDestroyMenu           = user32.MustFindProc("DestroyMenu")
+	procUnregisterClassW      = user32.MustFindProc("UnregisterClassW")
 
 	LoadImage  = user32.MustFindProc("LoadImageW")
 	LoadIcon   = user32.MustFindProc("LoadIconW")
@@ -209,40 +214,30 @@ type Systray struct {
 	Menu []*MenuItem
 
 	wmTaskbarCreated uint32
+	notifyClassName  *uint16
 	iconHandle       HICON
+	iconOwned        bool
 	tooltip          string
 	visible          bool
+	destroyed        bool
 }
 
 func New() (*Systray, error) {
 	ni := &Systray{lclick: func() {}, rclick: func() {}}
 
-	const mainClassName = "VRChatTweaker.SystrayHost"
-	ni.hinst, _ = RegisterWindow(mainClassName, ni.WinProc)
-
-	mhwnd, _, _ := CreateWindowEx.Call(
-		WS_EX_CONTROLPARENT,
-		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr(mainClassName))),
-		0,
-		WS_OVERLAPPEDWINDOW|WS_CLIPSIBLINGS,
-		CW_USEDEFAULT,
-		CW_USEDEFAULT,
-		CW_USEDEFAULT,
-		CW_USEDEFAULT,
-		0,
-		0,
-		0,
-		0)
-	if mhwnd == 0 {
-		return nil, errors.New("create main win failed")
-	}
-
 	const notifyIconClassName = "VRChatTweaker.NotifyIcon"
-	RegisterWindow(notifyIconClassName, ni.WinProc)
+	ni.notifyClassName = syscall.StringToUTF16Ptr(notifyIconClassName)
+	ni.hinst, err := RegisterWindow(notifyIconClassName, ni.WinProc)
+	if err != nil {
+		return nil, err
+	}
 
 	taskbarCreated, _, _ := procRegisterWindowMessage.Call(
 		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr("TaskbarCreated"))),
 	)
+	if taskbarCreated == 0 {
+		return nil, errors.New("register TaskbarCreated message failed")
+	}
 	ni.wmTaskbarCreated = uint32(taskbarCreated)
 
 	hwnd, _, _ := CreateWindowEx.Call(
@@ -259,10 +254,11 @@ func New() (*Systray, error) {
 		0,
 		0)
 	if hwnd == 0 {
+		ni.destroyWindowClass()
 		return nil, errors.New("create notify win failed")
 	}
 
-	ni.hwnd = HWND(hwnd) // Important to keep this inside struct.
+	ni.hwnd = HWND(hwnd)
 
 	nid := NOTIFYICONDATA{
 		HWnd:             HWND(hwnd),
@@ -275,6 +271,7 @@ func New() (*Systray, error) {
 
 	ret, _, _ := Shell_NotifyIcon.Call(NIM_ADD, uintptr(unsafe.Pointer(&nid)))
 	if ret == 0 {
+		_ = ni.Destroy()
 		return nil, errors.New("shell notify create failed")
 	}
 
@@ -282,6 +279,8 @@ func New() (*Systray, error) {
 
 	ret, _, _ = Shell_NotifyIcon.Call(NIM_SETVERSION, uintptr(unsafe.Pointer(&nid)))
 	if ret == 0 {
+		_ = Shell_NotifyIcon.Call(NIM_DELETE, uintptr(unsafe.Pointer(&nid)))
+		_ = ni.Destroy()
 		return nil, errors.New("shell notify version failed")
 	}
 
@@ -303,7 +302,11 @@ func (p *Systray) AppendSeparator() {
 	p.Menu = append(p.Menu, &MenuItem{Separator: true})
 }
 
+// Stop removes the notification icon. Prefer Destroy for full resource cleanup.
 func (p *Systray) Stop() error {
+	if p.destroyed || p.hwnd == 0 {
+		return nil
+	}
 	nid := NOTIFYICONDATA{
 		UID:  p.id,
 		HWnd: HWND(p.hwnd),
@@ -315,6 +318,42 @@ func (p *Systray) Stop() error {
 		return errors.New("shell notify delete failed")
 	}
 	return nil
+}
+
+// Destroy removes the tray icon and releases Win32 handles (HWND, owned HICON, window class).
+func (p *Systray) Destroy() error {
+	if p.destroyed {
+		return nil
+	}
+	p.destroyed = true
+	if err := p.Stop(); err != nil {
+		log.Printf("w32systray: notify icon delete: %v", err)
+	}
+	p.releaseOwnedIcon()
+	if p.hwnd != 0 {
+		_, _, _ = procDestroyWindow.Call(uintptr(p.hwnd))
+		p.hwnd = 0
+	}
+	p.destroyWindowClass()
+	return nil
+}
+
+func (p *Systray) releaseOwnedIcon() {
+	if p.iconOwned && p.iconHandle != 0 {
+		_, _, _ = procDestroyIcon.Call(uintptr(p.iconHandle))
+	}
+	p.iconHandle = 0
+	p.iconOwned = false
+}
+
+func (p *Systray) destroyWindowClass() {
+	if p.notifyClassName == nil || p.hinst == 0 {
+		return
+	}
+	_, _, _ = procUnregisterClassW.Call(
+		uintptr(unsafe.Pointer(p.notifyClassName)),
+		uintptr(p.hinst),
+	)
 }
 
 // Quit ends the Run message loop on the thread that created the tray window.
@@ -333,7 +372,7 @@ func (p *Systray) Show(iconResID uint16, hint string) error {
 		icon, _, _ = LoadIcon.Call(0, uintptr(IDI_APPLICATION))
 	}
 
-	err := p.SetIcon(HICON(icon))
+	err := p.setIcon(HICON(icon), false)
 	if err != nil {
 		return err
 	}
@@ -344,27 +383,38 @@ func (p *Systray) Show(iconResID uint16, hint string) error {
 	return p.SetVisible(true)
 }
 
-func loadIconFile(file string) (HICON, error) {
+func loadIconFile(file string) (HICON, bool, error) {
 	path, err := filepath.Abs(file)
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
 	icon, err := NewIconFromFile(path)
 	if err != nil {
-		return 0, err
+		return 0, false, err
 	}
-	return HICON(icon), nil
+	return HICON(icon), true, nil
+}
+
+func copyUTF16Field(dst []uint16, src string) {
+	u := syscall.StringToUTF16(src)
+	if len(u) > len(dst) {
+		u = u[:len(dst)]
+		if len(u) > 0 {
+			u[len(u)-1] = 0
+		}
+	}
+	copy(dst, u)
 }
 
 // ShowCustom shows custom tray icon.
 func (p *Systray) ShowCustom(file string, hint string) error {
-	hicon, err := loadIconFile(file)
+	hicon, owned, err := loadIconFile(file)
 	if err != nil {
 		icon, _, _ := LoadIcon.Call(0, uintptr(IDI_APPLICATION))
-		hicon = HICON(icon)
+		hicon, owned = HICON(icon), false
 	}
 
-	err = p.SetIcon(hicon)
+	err = p.setIcon(hicon, owned)
 	if err != nil {
 		return err
 	}
@@ -392,7 +442,7 @@ func (p *Systray) SetTooltip(tooltip string) error {
 	nid.CbSize = uint32(unsafe.Sizeof(nid))
 
 	nid.UFlags = NIF_TIP
-	copy(nid.SzTip[:], syscall.StringToUTF16(tooltip))
+	copyUTF16Field(nid.SzTip[:], tooltip)
 
 	ret, _, _ := Shell_NotifyIcon.Call(NIM_MODIFY, uintptr(unsafe.Pointer(&nid)))
 	if ret == 0 {
@@ -413,8 +463,8 @@ func (p *Systray) ShowMessage(title, msg string, bigIcon bool) error {
 	nid.CbSize = uint32(unsafe.Sizeof(nid))
 
 	nid.UFlags = NIF_INFO
-	copy(nid.SzInfoTitle[:], syscall.StringToUTF16(title))
-	copy(nid.SzInfo[:], syscall.StringToUTF16(msg))
+	copyUTF16Field(nid.SzInfoTitle[:], title)
+	copyUTF16Field(nid.SzInfo[:], msg)
 
 	ret, _, _ := Shell_NotifyIcon.Call(NIM_MODIFY, uintptr(unsafe.Pointer(&nid)))
 	if ret == 0 {
@@ -445,9 +495,18 @@ func (p *Systray) SetVisible(visible bool) error {
 }
 
 func (p *Systray) SetIcon(hicon HICON) error {
+	return p.setIcon(hicon, false)
+}
+
+func (p *Systray) setIcon(hicon HICON, owned bool) error {
 	if hicon != 0 {
+		if owned && p.iconOwned && p.iconHandle != 0 && p.iconHandle != hicon {
+			_, _, _ = procDestroyIcon.Call(uintptr(p.iconHandle))
+		}
 		p.iconHandle = hicon
+		p.iconOwned = owned
 	}
+	// hicon==0 clears the shell icon only; p.iconHandle is kept for TaskbarCreated re-register.
 	nid := NOTIFYICONDATA{
 		UID:  p.id,
 		HWnd: HWND(p.hwnd),
@@ -471,7 +530,11 @@ func (p *Systray) SetIcon(hicon HICON) error {
 func (p *Systray) WinProc(hwnd HWND, msg uint32, wparam, lparam uintptr) uintptr {
 	switch msg {
 	case p.wmTaskbarCreated:
-		_ = p.reregisterNotifyIcon()
+		if p.wmTaskbarCreated != 0 {
+			if err := p.reregisterNotifyIcon(); err != nil {
+				log.Printf("w32systray: TaskbarCreated reregister: %v", err)
+			}
+		}
 	case NotifyIconMessageId:
 		if lparam == WM_LBUTTONUP {
 			p.lclick()
@@ -492,7 +555,9 @@ func (p *Systray) WinProc(hwnd HWND, msg uint32, wparam, lparam uintptr) uintptr
 			if cmdMsgID >= MenuItemMsgID && cmdMsgID < (MenuItemMsgID+len(p.Menu)) {
 				itemIndex := cmdMsgID - MenuItemMsgID
 				menuItem := p.Menu[itemIndex]
-				menuItem.OnClick()
+				if menuItem.OnClick != nil {
+					menuItem.OnClick()
+				}
 			}
 		}
 	}
@@ -549,7 +614,7 @@ func (p *Systray) Run() error {
 		}
 
 		if msg.Message == WMTrayShutdown {
-			_ = p.Stop()
+			_ = p.Destroy()
 			return nil
 		}
 
@@ -568,6 +633,9 @@ func (p *Systray) displayMenu(menuItems []*MenuItem) error {
 		return errors.New("can not create menu")
 	}
 	menu := HMENU(ret)
+	defer func() {
+		_, _, _ = procDestroyMenu.Call(uintptr(menu))
+	}()
 
 	for index, item := range menuItems {
 		var ret bool
