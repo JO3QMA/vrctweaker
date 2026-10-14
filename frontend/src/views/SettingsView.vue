@@ -207,6 +207,18 @@
       >
         {{ t("settings.appVersion", { version: appVersion }) }}
       </p>
+      <div class="onboarding-reopen-row">
+        <VtButton
+          variant="secondary"
+          data-testid="settings-open-onboarding"
+          @click="openFirstLaunchGuide"
+        >
+          {{ t("settings.openFirstLaunchGuide") }}
+        </VtButton>
+        <el-text type="info" size="small" class="hint block-hint">
+          {{ t("settings.openFirstLaunchGuideHint") }}
+        </el-text>
+      </div>
       <el-text
         type="info"
         size="small"
@@ -376,6 +388,7 @@ import {
 import { App } from "../wails/app";
 import type { PathSettingsDTO, UserCacheDTO } from "../wails/app";
 import { friendThumbUrl } from "../utils/vrcUserCacheDisplay";
+import { useFirstLaunchGuide } from "../composables/useFirstLaunchGuide";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
 import { isAppLocale, setLanguage } from "../i18n";
 import { showToast } from "../utils/showToast";
@@ -389,6 +402,11 @@ const {
 } = useSessionUnlock();
 
 const { t, locale } = useI18n();
+const { requestFirstLaunchGuide } = useFirstLaunchGuide();
+
+function openFirstLaunchGuide(): void {
+  requestFirstLaunchGuide();
+}
 
 const isLoggedIn = ref(false);
 const selfProfile = ref<UserCacheDTO | null>(null);
@@ -890,6 +908,14 @@ function doClearFriendsCache() {
   align-items: center;
   gap: var(--space-block);
   margin-bottom: var(--space-action-group);
+}
+
+.onboarding-reopen-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-action-group);
+  margin: var(--space-block) 0;
 }
 
 .app-version-line {

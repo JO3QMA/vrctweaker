@@ -33,7 +33,10 @@
           {{ t("common.loading") }}
         </div>
         <div v-else-if="filteredEncounters.length === 0" class="empty">
-          {{ t("activity.noEncounters") }}
+          <p class="empty-title">{{ t("activity.noEncounters") }}</p>
+          <p class="empty-hint text-body-sm">
+            {{ t("activity.noEncountersHint") }}
+          </p>
         </div>
         <el-table
           v-else
@@ -127,7 +130,8 @@
     >
       <div v-if="statsLoading" class="loading">{{ t("common.loading") }}</div>
       <div v-else-if="!statsRangeFrom" class="empty-stats">
-        {{ t("activity.noData") }}
+        <p class="empty-title">{{ t("activity.noData") }}</p>
+        <p class="empty-hint text-body-sm">{{ t("activity.noDataHint") }}</p>
       </div>
       <PlayTimeChart v-else :series="dailyPlayChartSeries" />
     </CollapsibleSectionCard>
@@ -477,6 +481,15 @@ onUnmounted(() => {
   padding: var(--space-page);
   text-align: center;
   color: var(--color-text-secondary);
+}
+
+.empty-title {
+  margin: 0;
+}
+
+.empty-hint {
+  margin: var(--space-action-group) 0 0;
+  color: var(--color-text-muted);
 }
 
 .timeline-time {

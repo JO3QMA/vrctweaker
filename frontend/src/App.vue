@@ -2,6 +2,10 @@
   <el-config-provider :locale="elLocale">
     <div class="app-layout">
       <TitleBar />
+      <OnboardingWizard
+        v-if="showOnboardingWizard"
+        @finished="onOnboardingFinished"
+      />
       <div class="app-body">
         <Sidebar v-if="!bareLayout" />
         <main
@@ -22,11 +26,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import TitleBar from "./components/TitleBar.vue";
 import Sidebar from "./components/Sidebar.vue";
+import OnboardingWizard from "./components/OnboardingWizard.vue";
+import { useFirstLaunchGuide } from "./composables/useFirstLaunchGuide";
 import { useSessionUnlock } from "./composables/useSessionUnlock";
 import { elLocale, isAppLocale, setLanguage } from "./i18n";
 import { App as WailsApp } from "./wails/app";
@@ -36,6 +42,25 @@ const { t, locale } = useI18n();
 const bareLayout = computed(() => route.meta.bare === true);
 
 const { beginStartupUnlock } = useSessionUnlock();
+const { manualOpen, clearManualFirstLaunchRequest } = useFirstLaunchGuide();
+const firstLaunchGuideCompleted = ref(true);
+const showOnboardingWizard = computed(
+  () => !firstLaunchGuideCompleted.value || manualOpen.value,
+);
+
+async function loadFirstLaunchGuideState(): Promise<void> {
+  try {
+    firstLaunchGuideCompleted.value =
+      await WailsApp.getFirstLaunchGuideCompleted();
+  } catch {
+    firstLaunchGuideCompleted.value = false;
+  }
+}
+
+function onOnboardingFinished(): void {
+  firstLaunchGuideCompleted.value = true;
+  clearManualFirstLaunchRequest();
+}
 
 async function initLocaleFromBackend(): Promise<void> {
   try {
@@ -55,6 +80,7 @@ async function initLocaleFromBackend(): Promise<void> {
 
 onMounted(() => {
   void initLocaleFromBackend();
+  void loadFirstLaunchGuideState();
   // Best-effort: attempt to restore the previous session via the credential blob.
   // The result (unlocked / needs-relogin) is reflected in Go-side IsLoggedIn state
   // which individual views query via App.isLoggedIn().

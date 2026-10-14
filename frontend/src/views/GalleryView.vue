@@ -101,6 +101,13 @@
         >
           <h2 class="gallery-empty-title text-h3">{{ emptyTitle }}</h2>
           <p class="gallery-empty-body text-body-sm">{{ emptyBody }}</p>
+          <p
+            v-if="showEmptySyncAction"
+            class="gallery-empty-hint text-caption"
+            data-testid="gallery-empty-hint"
+          >
+            {{ t("gallery.emptyHint") }}
+          </p>
           <VtButton
             v-if="showEmptySyncAction"
             variant="primary"
@@ -1313,6 +1320,12 @@ onMounted(() => {
   margin: 0;
   max-width: 28rem;
   color: var(--color-text-secondary);
+}
+
+.gallery-empty-hint {
+  margin: var(--space-action-group) 0 0;
+  max-width: 28rem;
+  color: var(--color-text-muted);
 }
 
 .gallery-empty-title {
