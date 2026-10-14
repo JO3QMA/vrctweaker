@@ -307,7 +307,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
           autoApplySupported: true,
         }),
         DismissAppUpdate: () => Promise.resolve(),
-        ApplyAppUpdate: () => Promise.resolve(),
+        ApplyAppUpdate: (_version) => Promise.resolve(),
         OpenAppReleasePage: () => Promise.resolve(),
         RequestClose: () => Promise.resolve(),
         RuntimeIsWindows: () => Promise.resolve(true),

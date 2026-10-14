@@ -9,9 +9,9 @@ func ScheduleReplaceAndRestart(string, string, int) error {
 	return fmt.Errorf("appupdate: auto apply is Windows only")
 }
 
-// WorkDir returns a staging path (unused on non-Windows).
-func WorkDir(installDir string) string {
-	return installDir
+// WorkDir is unused on non-Windows; returns empty to avoid polluting installDir.
+func WorkDir(string) string {
+	return ""
 }
 
 // CleanupWorkDir is a no-op on non-Windows.

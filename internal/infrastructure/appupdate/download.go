@@ -10,9 +10,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"vrchat-tweaker/internal/appversion"
+	gh "vrchat-tweaker/internal/infrastructure/github"
 )
+
+const maxReleaseZipDownloadBytes = 600 << 20 // 600 MiB
 
 // Downloader fetches release zips over HTTPS.
 type Downloader struct {
@@ -24,7 +28,7 @@ func (d *Downloader) httpClient() *http.Client {
 	if d != nil && d.HTTPClient != nil {
 		return d.HTTPClient
 	}
-	return http.DefaultClient
+	return &http.Client{Timeout: 5 * time.Minute}
 }
 
 func (d *Downloader) ua() string {
@@ -34,11 +38,25 @@ func (d *Downloader) ua() string {
 	return appversion.UserAgent()
 }
 
+func validateExpectedSHA256(expected string) (string, error) {
+	expected = strings.ToLower(strings.TrimSpace(expected))
+	if len(expected) != 64 {
+		return "", fmt.Errorf("appupdate: invalid expected sha256 length")
+	}
+	if _, err := hex.DecodeString(expected); err != nil {
+		return "", fmt.Errorf("appupdate: invalid expected sha256: %w", err)
+	}
+	return expected, nil
+}
+
 // DownloadFile saves url to destPath and verifies expectedSHA256 (hex, lowercase).
 func (d *Downloader) DownloadFile(ctx context.Context, url, destPath, expectedSHA256 string) error {
-	expectedSHA256 = strings.ToLower(strings.TrimSpace(expectedSHA256))
-	if len(expectedSHA256) != 64 {
-		return fmt.Errorf("appupdate: invalid expected sha256")
+	expectedSHA256, err := validateExpectedSHA256(expectedSHA256)
+	if err != nil {
+		return err
+	}
+	if valErr := gh.ValidateReleaseDownloadURL(url); valErr != nil {
+		return fmt.Errorf("appupdate: %w", valErr)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -65,10 +83,17 @@ func (d *Downloader) DownloadFile(ctx context.Context, url, destPath, expectedSH
 	tmpPath := tmp.Name()
 	hasher := sha256.New()
 	mw := io.MultiWriter(tmp, hasher)
-	if _, copyErr := io.Copy(mw, resp.Body); copyErr != nil {
+	limited := io.LimitReader(resp.Body, maxReleaseZipDownloadBytes+1)
+	n, copyErr := io.Copy(mw, limited)
+	if copyErr != nil {
 		_ = tmp.Close()
 		_ = os.Remove(tmpPath)
 		return fmt.Errorf("appupdate: write: %w", copyErr)
+	}
+	if n > maxReleaseZipDownloadBytes {
+		_ = tmp.Close()
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("appupdate: download exceeds size limit")
 	}
 	if err := tmp.Close(); err != nil {
 		_ = os.Remove(tmpPath)

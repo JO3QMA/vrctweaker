@@ -8,6 +8,6 @@ import (
 )
 
 // ApplyUpdate is only supported on Windows.
-func (uc *AppUpdateUseCase) ApplyUpdate(_ context.Context, _, _ string) error {
+func (uc *AppUpdateUseCase) ApplyUpdate(_ context.Context, _ string) error {
 	return errors.New(ErrAppUpdateUnsupportedSent)
 }

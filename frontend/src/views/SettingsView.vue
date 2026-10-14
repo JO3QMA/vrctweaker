@@ -652,9 +652,11 @@ async function saveSuppressSleepWhileVRChat() {
 }
 
 async function saveAppUpdateAutoCheck() {
+  const attempted = appUpdateAutoCheck.value;
   try {
-    await App.setAppUpdateAutoCheck(appUpdateAutoCheck.value);
+    await App.setAppUpdateAutoCheck(attempted);
   } catch (e) {
+    appUpdateAutoCheck.value = !attempted;
     showToast.error(formatBackendError(e, t("settings.errUpdateAutoCheck")));
   }
 }
@@ -665,10 +667,6 @@ async function checkAppUpdate() {
   appUpdateCheckLoading.value = true;
   try {
     const st = await checkManual();
-    if (st.checkError) {
-      appUpdateCheckError.value = t("settings.errAppUpdateCheck");
-      return;
-    }
     if (st.updateAvailable) {
       appUpdateStatusLine.value = t("settings.appUpdateAvailable", {
         version: st.latestVersion,

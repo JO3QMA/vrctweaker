@@ -14,7 +14,7 @@ func TestCompareProductVersion(t *testing.T) {
 		{"v1.2.3", "1.2.3", 0},
 		{"dev", "1.0.0", -1},
 		{"1.0.0", "dev", 1},
-		{"0.9.0-beta", "0.9.0", 0},
+		{"0.9.0-beta", "0.9.0", -1},
 	}
 	for _, tc := range cases {
 		got := CompareProductVersion(tc.a, tc.b)

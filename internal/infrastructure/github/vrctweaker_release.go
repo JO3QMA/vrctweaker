@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"vrchat-tweaker/internal/appversion"
 )
@@ -52,13 +52,6 @@ type ReleaseClient struct {
 	SkipURLValidation bool // tests only
 }
 
-func (c *ReleaseClient) httpClient() *http.Client {
-	if c != nil && c.HTTPClient != nil {
-		return c.HTTPClient
-	}
-	return http.DefaultClient
-}
-
 func (c *ReleaseClient) latestURL() string {
 	if c != nil && strings.TrimSpace(c.ReleasesLatestURL) != "" {
 		return strings.TrimSpace(c.ReleasesLatestURL)
@@ -73,32 +66,13 @@ func (c *ReleaseClient) ua() string {
 	return appversion.UserAgent()
 }
 
-var allowedReleaseDownloadHosts = map[string]struct{}{
-	"github.com":                           {},
-	"objects.githubusercontent.com":        {},
-	"release-assets.githubusercontent.com": {},
-}
+const maxReleaseAPIResponseBytes = 1 << 20 // 1 MiB
 
-func validateDownloadURL(raw string, skip bool) error {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return errors.New("download URL is empty")
+func (c *ReleaseClient) defaultHTTPClient() *http.Client {
+	if c != nil && c.HTTPClient != nil {
+		return c.HTTPClient
 	}
-	if skip {
-		return nil
-	}
-	parsed, err := url.Parse(raw)
-	if err != nil {
-		return fmt.Errorf("invalid download URL: %w", err)
-	}
-	if parsed.Scheme != "https" {
-		return errors.New("download URL must use https")
-	}
-	host := strings.ToLower(parsed.Hostname())
-	if _, ok := allowedReleaseDownloadHosts[host]; !ok {
-		return fmt.Errorf("download host %q is not allowed", host)
-	}
-	return nil
+	return &http.Client{Timeout: 15 * time.Second}
 }
 
 // FetchLatestStable returns the latest non-prerelease release with Windows zip asset and body SHA256.
@@ -110,7 +84,7 @@ func (c *ReleaseClient) FetchLatestStable(ctx context.Context) (VRCTweakerReleas
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", c.ua())
 
-	resp, err := c.httpClient().Do(req)
+	resp, err := c.defaultHTTPClient().Do(req)
 	if err != nil {
 		return VRCTweakerRelease{}, fmt.Errorf("github releases: %w", err)
 	}
@@ -119,7 +93,7 @@ func (c *ReleaseClient) FetchLatestStable(ctx context.Context) (VRCTweakerReleas
 		slurp, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return VRCTweakerRelease{}, fmt.Errorf("github releases: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(slurp)))
 	}
-	data, err := io.ReadAll(resp.Body)
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxReleaseAPIResponseBytes))
 	if err != nil {
 		return VRCTweakerRelease{}, fmt.Errorf("github releases: read body: %w", err)
 	}

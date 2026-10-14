@@ -4,20 +4,39 @@ package usecase
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
+	"vrchat-tweaker/internal/appversion"
 	"vrchat-tweaker/internal/infrastructure/appupdate"
+	gh "vrchat-tweaker/internal/infrastructure/github"
 )
 
-// ApplyUpdate downloads the zip, verifies SHA256, and schedules replacement on Windows.
-func (uc *AppUpdateUseCase) ApplyUpdate(ctx context.Context, downloadURL, zipSHA256 string) error {
-	downloadURL = strings.TrimSpace(downloadURL)
-	zipSHA256 = strings.ToLower(strings.TrimSpace(zipSHA256))
-	if downloadURL == "" || zipSHA256 == "" {
-		return fmt.Errorf("%s missing download metadata", errPrefixAppUpdate)
+func (uc *AppUpdateUseCase) resolveReleaseForApply(ctx context.Context, expectedVersion string) (gh.VRCTweakerRelease, error) {
+	if uc.releases == nil {
+		return gh.VRCTweakerRelease{}, errors.New("release client not configured")
+	}
+	expectedVersion = appversion.NormalizeProductVersion(expectedVersion)
+	if expectedVersion == "" {
+		return gh.VRCTweakerRelease{}, fmt.Errorf("%s version is empty", errPrefixAppUpdate)
+	}
+	rel, err := uc.releases.FetchLatestStable(ctx)
+	if err != nil {
+		return gh.VRCTweakerRelease{}, err
+	}
+	if appversion.NormalizeProductVersion(rel.Version) != expectedVersion {
+		return gh.VRCTweakerRelease{}, fmt.Errorf("%s release metadata changed; check again", errPrefixAppUpdate)
+	}
+	return rel, nil
+}
+
+// ApplyUpdate downloads the zip for latestVersion (re-fetched from GitHub), verifies SHA256, and schedules replacement.
+func (uc *AppUpdateUseCase) ApplyUpdate(ctx context.Context, latestVersion string) error {
+	rel, err := uc.resolveReleaseForApply(ctx, latestVersion)
+	if err != nil {
+		return err
 	}
 	exePath, err := os.Executable()
 	if err != nil {
@@ -35,17 +54,18 @@ func (uc *AppUpdateUseCase) ApplyUpdate(ctx context.Context, downloadURL, zipSHA
 	}
 
 	zipPath := filepath.Join(work, "package.zip")
-	if dlErr := uc.downloader.DownloadFile(ctx, downloadURL, zipPath, zipSHA256); dlErr != nil {
+	if dlErr := uc.downloader.DownloadFile(ctx, rel.DownloadURL, zipPath, rel.ZipSHA256); dlErr != nil {
 		appupdate.CleanupWorkDir(work)
 		return fmt.Errorf("%s download: %w", errPrefixAppUpdate, dlErr)
 	}
-	stagedExe, extractErr := appupdate.ExtractWindowsExe(zipPath, filepath.Join(work, "staging"))
+	stagingDir := filepath.Join(work, "staging")
+	stagedExe, extractErr := appupdate.ExtractWindowsExe(zipPath, stagingDir)
 	if extractErr != nil {
 		appupdate.CleanupWorkDir(work)
 		return fmt.Errorf("%s extract: %w", errPrefixAppUpdate, extractErr)
 	}
 	pid := appupdate.CurrentPID()
-	if schedErr := appupdate.ScheduleReplaceAndRestart(exePath, stagedExe, pid); schedErr != nil {
+	if schedErr := appupdate.ScheduleReplaceAndRestart(work, exePath, stagedExe, pid); schedErr != nil {
 		appupdate.CleanupWorkDir(work)
 		return fmt.Errorf("%s schedule: %w", errPrefixAppUpdate, schedErr)
 	}

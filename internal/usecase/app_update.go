@@ -3,8 +3,10 @@ package usecase
 import (
 	"context"
 	"errors"
+	"net/http"
 	"runtime"
 	"strings"
+	"time"
 
 	"vrchat-tweaker/internal/appversion"
 	"vrchat-tweaker/internal/infrastructure/appupdate"
@@ -42,13 +44,22 @@ type AppUpdateUseCase struct {
 	downloader *appupdate.Downloader
 }
 
+const (
+	appUpdateReleaseHTTPTimeout  = 15 * time.Second
+	appUpdateDownloadHTTPTimeout = 5 * time.Minute
+)
+
 // NewAppUpdateUseCase wires dependencies with defaults.
 func NewAppUpdateUseCase(settings *SettingsUseCase, releases *gh.ReleaseClient, downloader *appupdate.Downloader) *AppUpdateUseCase {
 	if releases == nil {
-		releases = &gh.ReleaseClient{}
+		releases = &gh.ReleaseClient{HTTPClient: &http.Client{Timeout: appUpdateReleaseHTTPTimeout}}
+	} else if releases.HTTPClient == nil {
+		releases.HTTPClient = &http.Client{Timeout: appUpdateReleaseHTTPTimeout}
 	}
 	if downloader == nil {
-		downloader = &appupdate.Downloader{}
+		downloader = &appupdate.Downloader{HTTPClient: &http.Client{Timeout: appUpdateDownloadHTTPTimeout}}
+	} else if downloader.HTTPClient == nil {
+		downloader.HTTPClient = &http.Client{Timeout: appUpdateDownloadHTTPTimeout}
 	}
 	return &AppUpdateUseCase{
 		settings:   settings,
@@ -96,6 +107,7 @@ func (uc *AppUpdateUseCase) DismissUpdate(ctx context.Context, version string) e
 	if err := appversion.ValidateProductVersion(version); err != nil {
 		return err
 	}
+	version = appversion.NormalizeProductVersion(version)
 	return uc.settings.Set(ctx, keyDismissedUpdateVersion, version)
 }
 
@@ -141,7 +153,7 @@ func (uc *AppUpdateUseCase) CheckForUpdate(ctx context.Context, manual bool) (Ap
 	if derr != nil {
 		return st, derr
 	}
-	if strings.TrimSpace(dismissed) == rel.Version {
+	if appversion.NormalizeProductVersion(dismissed) == appversion.NormalizeProductVersion(rel.Version) {
 		return st, nil
 	}
 	st.ShouldPrompt = true

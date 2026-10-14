@@ -45,7 +45,7 @@ func TestReleaseClient_FetchLatestStable(t *testing.T) {
 			"prerelease": false,
 			"draft": false,
 			"body": "**SHA256 (zip):** `+"`%s`"+`",
-			"assets": [{"name":"vrchat-tweaker-v0.3.0-windows-amd64.zip","browser_download_url":"https://github.com/x/y.zip"}]
+			"assets": [{"name":"vrchat-tweaker-v0.3.0-windows-amd64.zip","browser_download_url":"https://github.com/JO3QMA/vrctweaker/releases/download/v0.3.0/vrchat-tweaker-v0.3.0-windows-amd64.zip"}]
 		}`, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
 		_, _ = w.Write([]byte(payload))
 	}))
@@ -54,7 +54,7 @@ func TestReleaseClient_FetchLatestStable(t *testing.T) {
 	c := &ReleaseClient{
 		HTTPClient:        srv.Client(),
 		ReleasesLatestURL: srv.URL,
-		SkipURLValidation: true,
+		SkipURLValidation: false,
 	}
 	rel, err := c.FetchLatestStable(context.Background())
 	if err != nil {

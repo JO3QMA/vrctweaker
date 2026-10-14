@@ -7,12 +7,15 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"vrchat-tweaker/internal/appversion"
+	gh "vrchat-tweaker/internal/infrastructure/github"
 	"vrchat-tweaker/internal/usecase"
 )
 
 var errAppUpdateNotInitialized = errors.New("app update not initialized")
 
 const appUpdateAvailableEvent = "app:update-available"
+
+const appUpdateStartupDelay = 2 * time.Second
 
 // GetAppUpdateAutoCheck returns whether startup should check for updates.
 func (a *App) GetAppUpdateAutoCheck() (bool, error) {
@@ -46,12 +49,12 @@ func (a *App) DismissAppUpdate(version string) error {
 	return a.appUpdate.DismissUpdate(a.ctx, version)
 }
 
-// ApplyAppUpdate downloads and applies a Windows release zip, then quits for restart.
-func (a *App) ApplyAppUpdate(downloadURL, zipSHA256 string) error {
+// ApplyAppUpdate downloads and applies the release for latestVersion, then quits for restart.
+func (a *App) ApplyAppUpdate(latestVersion string) error {
 	if a.appUpdate == nil {
 		return errAppUpdateNotInitialized
 	}
-	if err := a.appUpdate.ApplyUpdate(a.ctx, downloadURL, zipSHA256); err != nil {
+	if err := a.appUpdate.ApplyUpdate(a.ctx, latestVersion); err != nil {
 		return err
 	}
 	if a.ctx != nil {
@@ -65,6 +68,9 @@ func (a *App) OpenAppReleasePage(url string) error {
 	if a.ctx == nil {
 		return errAppUpdateNotInitialized
 	}
+	if err := gh.ValidateReleasePageURL(url); err != nil {
+		return err
+	}
 	runtime.BrowserOpenURL(a.ctx, url)
 	return nil
 }
@@ -74,7 +80,13 @@ func (a *App) startAppUpdateCheckOnStartup() {
 		return
 	}
 	go func() {
-		time.Sleep(2 * time.Second)
+		timer := time.NewTimer(appUpdateStartupDelay)
+		defer timer.Stop()
+		select {
+		case <-a.ctx.Done():
+			return
+		case <-timer.C:
+		}
 		enabled, err := a.appUpdate.GetAutoCheckEnabled(a.ctx)
 		if err != nil {
 			log.Printf("app update: auto check setting: %v", err)

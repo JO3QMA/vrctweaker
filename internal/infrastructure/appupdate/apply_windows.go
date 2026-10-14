@@ -7,13 +7,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 )
 
 // ScheduleReplaceAndRestart launches a helper that waits for pid, replaces targetExe with stagedExe, and restarts.
-func ScheduleReplaceAndRestart(targetExe, stagedExe string, pid int) error {
+func ScheduleReplaceAndRestart(workDir, targetExe, stagedExe string, pid int) error {
 	targetExe, err := filepath.Abs(targetExe)
 	if err != nil {
 		return err
@@ -22,13 +21,19 @@ func ScheduleReplaceAndRestart(targetExe, stagedExe string, pid int) error {
 	if err != nil {
 		return err
 	}
+	workDir, err = filepath.Abs(workDir)
+	if err != nil {
+		return err
+	}
 	if pid <= 0 {
 		return fmt.Errorf("appupdate: invalid pid")
 	}
-	installDir := filepath.Dir(targetExe)
 	backupExe := targetExe + ".bak"
-	scriptPath := filepath.Join(installDir, ".vrchat-tweaker-update.ps1")
-	script := buildReplaceScript(targetExe, stagedExe, backupExe, pid)
+	scriptPath := filepath.Join(workDir, fmt.Sprintf("replace-%d.ps1", pid))
+	script := buildReplaceScript(targetExe, stagedExe, backupExe, stagedExe, workDir, scriptPath, pid)
+	if err := os.MkdirAll(workDir, 0o700); err != nil {
+		return fmt.Errorf("appupdate: work dir: %w", err)
+	}
 	if err := os.WriteFile(scriptPath, []byte(script), 0o600); err != nil {
 		return fmt.Errorf("appupdate: write helper script: %w", err)
 	}
@@ -38,23 +43,28 @@ func ScheduleReplaceAndRestart(targetExe, stagedExe string, pid int) error {
 		"-ExecutionPolicy", "Bypass",
 		"-File", scriptPath,
 	)
-	cmd.Dir = installDir
+	cmd.Dir = filepath.Dir(targetExe)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("appupdate: start helper: %w", err)
 	}
 	return nil
 }
 
-func buildReplaceScript(targetExe, stagedExe, backupExe string, pid int) string {
-	// Paths are embedded from trusted local resolution; escape single quotes for PowerShell.
+func buildReplaceScript(targetExe, stagedExe, backupExe, stagedCleanup, workDir, scriptPath string, pid int) string {
 	targetQ := psQuote(targetExe)
 	stagedQ := psQuote(stagedExe)
 	backupQ := psQuote(backupExe)
+	stagedCleanupQ := psQuote(stagedCleanup)
+	workQ := psQuote(workDir)
+	scriptQ := psQuote(scriptPath)
 	return strings.TrimSpace(fmt.Sprintf(`
 $ErrorActionPreference = 'Stop'
 $target = %s
 $staged = %s
 $backup = %s
+$stagedCleanup = %s
+$workDir = %s
+$scriptPath = %s
 $targetPid = %d
 try {
   $proc = Get-Process -Id $targetPid -ErrorAction SilentlyContinue
@@ -64,14 +74,17 @@ try {
   if (Test-Path $target) { Move-Item -LiteralPath $target -Destination $backup -Force }
   Copy-Item -LiteralPath $staged -Destination $target -Force
   Start-Process -FilePath $target
-  if (Test-Path $backup) { Remove-Item -LiteralPath $backup -Force }
 } catch {
-  if ((Test-Path $backup) -and -not (Test-Path $target)) {
+  if (Test-Path $backup) {
+    if (Test-Path $target) { Remove-Item -LiteralPath $target -Force }
     Move-Item -LiteralPath $backup -Destination $target -Force
   }
   exit 1
+} finally {
+  if (Test-Path $stagedCleanup) { Remove-Item -LiteralPath $stagedCleanup -Force -ErrorAction SilentlyContinue }
+  if (Test-Path $scriptPath) { Remove-Item -LiteralPath $scriptPath -Force -ErrorAction SilentlyContinue }
 }
-`, targetQ, stagedQ, backupQ, pid)) + "\n"
+`, targetQ, stagedQ, backupQ, stagedCleanupQ, workQ, scriptQ, pid)) + "\n"
 }
 
 func psQuote(s string) string {

@@ -103,7 +103,7 @@ type AppUpdateAppBindings = {
   SetAppUpdateAutoCheck: (enabled: boolean) => Promise<void>;
   CheckForAppUpdate: () => Promise<AppUpdateStatusDTO>;
   DismissAppUpdate: (version: string) => Promise<void>;
-  ApplyAppUpdate: (downloadURL: string, zipSHA256: string) => Promise<void>;
+  ApplyAppUpdate: (latestVersion: string) => Promise<void>;
   OpenAppReleasePage: (url: string) => Promise<void>;
 };
 
@@ -587,8 +587,8 @@ export const App = {
     undefined,
   ),
   applyAppUpdate: bindGo(
-    (a, downloadURL: string, zipSHA256: string) =>
-      asAppUpdateApp(a).ApplyAppUpdate(downloadURL, zipSHA256),
+    (a, latestVersion: string) =>
+      asAppUpdateApp(a).ApplyAppUpdate(latestVersion),
     undefined,
   ),
   openAppReleasePage: bindGo(

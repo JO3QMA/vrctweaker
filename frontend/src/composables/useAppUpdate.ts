@@ -14,7 +14,7 @@ function openDialog(st: AppUpdateStatusDTO) {
 
 export function useAppUpdate() {
   function bindEvents() {
-    if (eventsBound) return;
+    if (eventsBound) return undefined;
     const rt = getRuntime();
     const off = rt?.EventsOn?.("app:update-available", (data?: unknown) => {
       const st = data as AppUpdateStatusDTO | undefined;
@@ -22,6 +22,7 @@ export function useAppUpdate() {
         openDialog(st);
       }
     });
+    if (!off) return undefined;
     eventsBound = true;
     return off;
   }
@@ -35,19 +36,24 @@ export function useAppUpdate() {
   }
 
   async function dismissLater() {
-    const v = status.value?.latestVersion;
-    if (v) {
-      await App.dismissAppUpdate(v);
+    try {
+      const v = status.value?.latestVersion;
+      if (v) {
+        await App.dismissAppUpdate(v);
+      }
+    } finally {
+      dialogVisible.value = false;
     }
-    dialogVisible.value = false;
   }
 
   async function applyUpdate() {
     const st = status.value;
-    if (!st?.downloadUrl || !st.zipSha256) return;
+    if (!st?.latestVersion) {
+      throw new Error("app update: missing version");
+    }
     applying.value = true;
     try {
-      await App.applyAppUpdate(st.downloadUrl, st.zipSha256);
+      await App.applyAppUpdate(st.latestVersion);
     } finally {
       applying.value = false;
     }
@@ -55,12 +61,10 @@ export function useAppUpdate() {
 
   async function openReleasePage() {
     const url = status.value?.releasePageUrl;
-    if (!url) return;
+    if (!url) {
+      throw new Error("app update: missing release page url");
+    }
     await App.openAppReleasePage(url);
-  }
-
-  function closeDialog() {
-    dialogVisible.value = false;
   }
 
   return {
@@ -72,7 +76,6 @@ export function useAppUpdate() {
     dismissLater,
     applyUpdate,
     openReleasePage,
-    closeDialog,
   };
 }
 

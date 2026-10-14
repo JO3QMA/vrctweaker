@@ -4,8 +4,9 @@
     :title="t('appUpdate.title')"
     width="520px"
     :close-on-click-modal="false"
+    :show-close="false"
+    :close-on-press-escape="false"
     data-testid="app-update-dialog"
-    @close="onClose"
   >
     <p class="version-line text-body-sm">
       {{
@@ -64,26 +65,17 @@ const {
   dismissLater,
   applyUpdate,
   openReleasePage,
-  closeDialog,
 } = useAppUpdateLifecycle();
 
 function onLater() {
   void dismissLater();
 }
 
-function onClose() {
-  closeDialog();
-}
-
 async function onApply() {
   try {
     await applyUpdate();
-  } catch (e) {
-    const msg =
-      e instanceof Error && e.message.includes("app update:")
-        ? t("appUpdate.errApply")
-        : t("appUpdate.errApply");
-    showToast.error(msg);
+  } catch {
+    showToast.error(t("appUpdate.errApply"));
   }
 }
 

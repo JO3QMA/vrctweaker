@@ -11,6 +11,8 @@ import (
 	"vrchat-tweaker/internal/packaging"
 )
 
+const maxWindowsExeUncompressedBytes = 256 << 20 // 256 MiB
+
 // ExtractWindowsExe extracts vrchat-tweaker.exe from a release zip into destDir.
 func ExtractWindowsExe(zipPath, destDir string) (exePath string, err error) {
 	zipPath = strings.TrimSpace(zipPath)
@@ -28,10 +30,23 @@ func ExtractWindowsExe(zipPath, destDir string) (exePath string, err error) {
 
 	var found *zip.File
 	for _, f := range r.File {
-		if filepath.Base(f.Name) == packaging.WindowsExeName {
-			found = f
-			break
+		if f.FileInfo().IsDir() {
+			continue
 		}
+		if !strings.EqualFold(filepath.Base(f.Name), packaging.WindowsExeName) {
+			continue
+		}
+		size := f.UncompressedSize64
+		if size == 0 {
+			size = uint64(f.UncompressedSize)
+		}
+		if size == 0 || size > maxWindowsExeUncompressedBytes {
+			return "", fmt.Errorf("appupdate: exe size out of range")
+		}
+		if found != nil {
+			return "", fmt.Errorf("appupdate: duplicate exe in zip")
+		}
+		found = f
 	}
 	if found == nil {
 		return "", fmt.Errorf("appupdate: %q not in zip", packaging.WindowsExeName)
@@ -57,9 +72,15 @@ func extractZipFile(f *zip.File, destPath string) error {
 	tmpPath := tmp.Name()
 	defer func() { _ = os.Remove(tmpPath) }()
 
-	if _, err := io.Copy(tmp, rc); err != nil {
+	limited := io.LimitReader(rc, maxWindowsExeUncompressedBytes+1)
+	n, err := io.Copy(tmp, limited)
+	if err != nil {
 		_ = tmp.Close()
 		return fmt.Errorf("appupdate: extract: %w", err)
+	}
+	if n > maxWindowsExeUncompressedBytes {
+		_ = tmp.Close()
+		return fmt.Errorf("appupdate: exe exceeds size limit")
 	}
 	if err := tmp.Chmod(0o755); err != nil {
 		_ = tmp.Close()
