@@ -46,7 +46,7 @@ border-color: var(--color-border);
 
 ## Storybook
 
-`frontend/src/design/Color.stories.ts` がスウォッチとマッピング表の正本。変更時は `colorTokens.ts` とストーリーも更新する。
+`frontend/src/design/Color.stories.ts` がスウォッチとマッピング表の正本。hex の正本は `style.css`；`colorTokens.ts` はカテゴリ用。ずれは `styleTokenContract.spec.ts` で検知。変更時は CSS・カタログ・ストーリーを揃える。
 
 ## 関連
 

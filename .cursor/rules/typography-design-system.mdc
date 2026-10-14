@@ -64,7 +64,7 @@ font-family: var(--font-family-ui);
 
 ## Storybook
 
-`frontend/src/design/Typography.stories.ts` がスケール・Text style・EP mapping の正本。変更時は `typographyTokens.ts` とストーリーも更新する。
+`frontend/src/design/Typography.stories.ts` がスケール・Text style・EP mapping の正本。px / 比率の正本は `style.css`；`typographyTokens.ts` はカテゴリ用。ずれは `styleTokenContract.spec.ts` で検知。変更時は CSS・カタログ・ストーリーを揃える。
 
 ## 関連
 
