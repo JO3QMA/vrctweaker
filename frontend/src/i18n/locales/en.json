@@ -483,7 +483,24 @@
     "clearScreenshotsDone": "Deleted {n} screenshot index row(s)",
     "clearFriendsConfirm": "Delete all rows in users_cache (self, friends, encounter users). Continue?",
     "clearFriendsDone": "Deleted {n} friends cache row(s)",
-    "errOutputLogMustBeDir": "output_log must be a log folder (directory)"
+    "errOutputLogMustBeDir": "output_log must be a log folder (directory)",
+    "updateAutoCheck": "Check for updates on startup",
+    "updateAutoCheckHint": "Notify when a new stable release is available (pre-releases are excluded).",
+    "checkAppUpdate": "Check for updates",
+    "appUpdateAvailable": "Version {version} is available",
+    "appUpdateUpToDate": "You are on the latest version",
+    "errUpdateAutoCheck": "Could not save automatic update check setting",
+    "errAppUpdateCheck": "Could not check for updates"
+  },
+  "appUpdate": {
+    "title": "Application update",
+    "versionLine": "Current {current} → Latest {latest}",
+    "releaseNotes": "Release notes",
+    "later": "Later",
+    "apply": "Update now",
+    "openRelease": "Open release page",
+    "errApply": "Could not apply the update",
+    "errOpenRelease": "Could not open the browser"
   },
   "settingsLanguages": {
     "ja": "日本語",

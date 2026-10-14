@@ -483,7 +483,24 @@
     "clearScreenshotsDone": "{n}件のスクショインデックスを削除しました",
     "clearFriendsConfirm": "ユーザーキャッシュ（users_cache）の全行（自分・フレンド・遭遇ログ由来のユーザー）を削除します。よろしいですか？",
     "clearFriendsDone": "{n}件のフレンドキャッシュを削除しました",
-    "errOutputLogMustBeDir": "output_log はログフォルダ（ディレクトリ）を指定してください"
+    "errOutputLogMustBeDir": "output_log はログフォルダ（ディレクトリ）を指定してください",
+    "updateAutoCheck": "起動時に更新を確認",
+    "updateAutoCheckHint": "安定版の新しいリリースがあるときに通知します（プレリリースは対象外）。",
+    "checkAppUpdate": "更新を確認",
+    "appUpdateAvailable": "新しいバージョン {version} が利用可能です",
+    "appUpdateUpToDate": "お使いのバージョンは最新です",
+    "errUpdateAutoCheck": "自動確認の設定を保存できませんでした",
+    "errAppUpdateCheck": "更新の確認に失敗しました"
+  },
+  "appUpdate": {
+    "title": "アプリの更新",
+    "versionLine": "現在 {current} → 最新 {latest}",
+    "releaseNotes": "リリースノート",
+    "later": "後で",
+    "apply": "今すぐ更新",
+    "openRelease": "Release ページを開く",
+    "errApply": "更新の適用に失敗しました",
+    "errOpenRelease": "ブラウザを開けませんでした"
   },
   "settingsLanguages": {
     "ja": "日本語",

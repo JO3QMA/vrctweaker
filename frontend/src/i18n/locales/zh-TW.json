@@ -483,7 +483,24 @@
     "clearScreenshotsDone": "已刪除 {n} 筆截圖索引",
     "clearFriendsConfirm": "要刪除 users_cache 的所有列嗎？",
     "clearFriendsDone": "已刪除 {n} 筆好友快取",
-    "errOutputLogMustBeDir": "output_log 必須是日誌資料夾（目錄）"
+    "errOutputLogMustBeDir": "output_log 必須是日誌資料夾（目錄）",
+    "updateAutoCheck": "啟動時檢查更新",
+    "updateAutoCheckHint": "有新的穩定版發行時通知（不含預發行版）。",
+    "checkAppUpdate": "檢查更新",
+    "appUpdateAvailable": "有新版本 {version} 可用",
+    "appUpdateUpToDate": "目前已是最新版本",
+    "errUpdateAutoCheck": "無法儲存自動檢查設定",
+    "errAppUpdateCheck": "檢查更新失敗"
+  },
+  "appUpdate": {
+    "title": "應用程式更新",
+    "versionLine": "目前 {current} → 最新 {latest}",
+    "releaseNotes": "發行說明",
+    "later": "稍後",
+    "apply": "立即更新",
+    "openRelease": "開啟發行頁面",
+    "errApply": "套用更新失敗",
+    "errOpenRelease": "無法開啟瀏覽器"
   },
   "settingsLanguages": {
     "ja": "日本語",
