@@ -3,19 +3,34 @@
 package tray
 
 import (
+	"runtime"
 	"sync"
 
-	"github.com/tadvi/systray"
+	"golang.org/x/sys/windows"
+
+	"vrchat-tweaker/internal/infrastructure/tray/w32systray"
 )
 
 type windowsManager struct {
-	mu    sync.Mutex
-	tray  *systray.Systray
-	start bool
+	mu           sync.Mutex
+	running      bool
+	trayThreadID uint32
+	stopWaiter   chan error
+
+	startReq chan startRequest
+}
+
+type startRequest struct {
+	cfg  Config
+	resp chan error
 }
 
 func newManager() Manager {
-	return &windowsManager{}
+	m := &windowsManager{
+		startReq: make(chan startRequest),
+	}
+	go m.trayThread()
+	return m
 }
 
 func (m *windowsManager) Supported() bool { return true }
@@ -23,56 +38,81 @@ func (m *windowsManager) Supported() bool { return true }
 func (m *windowsManager) Running() bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return m.start
+	return m.running
 }
 
 func (m *windowsManager) Start(cfg Config) error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if m.start {
+	if m.Running() {
 		return nil
 	}
-
-	tray, err := systray.New()
-	if err != nil {
-		return err
-	}
-	if err := tray.ShowCustom(cfg.IconPath, cfg.Tooltip); err != nil {
-		_ = tray.Stop()
-		return err
-	}
-
-	onShow := cfg.OnShow
-	if onShow == nil {
-		onShow = func() {}
-	}
-	onQuit := cfg.OnQuit
-	if onQuit == nil {
-		onQuit = func() {}
-	}
-
-	tray.OnClick(onShow)
-	tray.AppendMenu(cfg.MenuShowLabel, onShow)
-	tray.AppendSeparator()
-	tray.AppendMenu(cfg.MenuQuitLabel, onQuit)
-
-	m.tray = tray
-	m.start = true
-
-	go func() {
-		_ = tray.Run()
-	}()
-	return nil
+	resp := make(chan error, 1)
+	m.startReq <- startRequest{cfg: cfg, resp: resp}
+	return <-resp
 }
 
 func (m *windowsManager) Stop() error {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-	if !m.start || m.tray == nil {
+	if !m.Running() {
 		return nil
 	}
-	err := m.tray.Stop()
-	m.tray = nil
-	m.start = false
-	return err
+	waiter := make(chan error, 1)
+	m.mu.Lock()
+	m.stopWaiter = waiter
+	tid := m.trayThreadID
+	m.mu.Unlock()
+
+	if tid != 0 {
+		_ = windows.PostThreadMessage(tid, w32systray.WMTrayShutdown, 0, 0)
+	}
+	return <-waiter
+}
+
+// trayThread owns the Win32 HWND and message loop on a single OS thread.
+func (m *windowsManager) trayThread() {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+	m.trayThreadID = windows.GetCurrentThreadId()
+
+	for {
+		req := <-m.startReq
+		m.runSession(req)
+	}
+}
+
+func (m *windowsManager) runSession(req startRequest) {
+	tray, err := w32systray.New()
+	if err != nil {
+		req.resp <- err
+		return
+	}
+	if err := tray.ShowCustom(req.cfg.IconPath, req.cfg.Tooltip); err != nil {
+		_ = tray.Stop()
+		req.resp <- err
+		return
+	}
+
+	onShow := req.cfg.OnShow
+	onQuit := req.cfg.OnQuit
+
+	tray.OnClick(func() { runAsync(onShow) })
+	tray.AppendMenu(req.cfg.MenuShowLabel, func() { runAsync(onShow) })
+	tray.AppendSeparator()
+	tray.AppendMenu(req.cfg.MenuQuitLabel, func() { runAsync(onQuit) })
+
+	req.resp <- nil
+
+	m.mu.Lock()
+	m.running = true
+	m.mu.Unlock()
+
+	_ = tray.Run()
+
+	m.mu.Lock()
+	m.running = false
+	waiter := m.stopWaiter
+	m.stopWaiter = nil
+	m.mu.Unlock()
+
+	if waiter != nil {
+		waiter <- nil
+	}
 }
