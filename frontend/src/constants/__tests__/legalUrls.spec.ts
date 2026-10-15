@@ -6,6 +6,8 @@ describe("legalUrls", () => {
     expect(legalDocLocale("ja")).toBe("ja");
     expect(legalDocLocale("en")).toBe("en");
     expect(legalDocLocale("ko")).toBe("en");
+    expect(legalDocLocale("")).toBe("en");
+    expect(privacyPolicyUrl("")).toContain("privacy-policy-en.md");
   });
 
   it("builds stable GitHub doc URLs", () => {

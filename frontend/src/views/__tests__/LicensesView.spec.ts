@@ -18,7 +18,7 @@ describe("LicensesView", () => {
       },
     });
     expect(wrapper.find(".page-title").text()).toBe("OSS ライセンス");
-    expect(wrapper.find(".intro").text()).toContain(
+    expect(wrapper.find(".intro-with-siblings").text()).toContain(
       "オープンソースソフトウェア",
     );
   });

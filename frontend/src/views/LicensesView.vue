@@ -1,7 +1,7 @@
 <template>
   <div class="licenses-view">
     <h1 class="page-title">{{ t("licenses.title") }}</h1>
-    <p class="text-body-sm intro">
+    <p class="text-body-sm intro-with-siblings">
       {{ t("licenses.intro") }}
     </p>
     <el-text
@@ -149,7 +149,8 @@ function truncateUrl(url: string): string {
   max-width: 900px;
 }
 
-.intro {
+/* Tighter than other views' intro: unofficial note + legal links follow immediately. */
+.intro-with-siblings {
   display: block;
   margin: 0 0 var(--space-block);
   line-height: var(--line-height-relaxed);

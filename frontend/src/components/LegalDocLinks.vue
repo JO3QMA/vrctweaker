@@ -39,6 +39,7 @@ defineProps<{
 
 const { locale, t } = useI18n();
 
+// URL language: see legalDocLocale (ja only; other locales → EN legal docs).
 const privacyUrl = computed(() => privacyPolicyUrl(locale.value));
 const termsUrl = computed(() => termsOfUseUrl(locale.value));
 </script>
