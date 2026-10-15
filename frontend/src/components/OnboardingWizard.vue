@@ -220,6 +220,7 @@ const step = ref(0);
 const nextLoading = ref(false);
 
 const loggedIn = ref(false);
+const loginStateLoading = ref(true);
 const displayName = ref("");
 const loginSkipped = ref(false);
 const loginCompleted = ref(false);
@@ -262,7 +263,11 @@ const loginSubmitDisabled = computed(() => {
 });
 
 const nextDisabled = computed(
-  () => nextLoading.value || (step.value === 1 && foldersLoading.value),
+  () =>
+    nextLoading.value ||
+    loginStateLoading.value ||
+    loginLoading.value ||
+    (step.value === 1 && foldersLoading.value),
 );
 
 const stepTitle = computed(() => {
@@ -381,18 +386,25 @@ function formatBackendError(e: unknown, fallback: string): string {
 }
 
 async function refreshLoginState(): Promise<void> {
+  loginStateLoading.value = true;
   try {
-    loggedIn.value = await App.isLoggedIn();
-  } catch {
-    loggedIn.value = false;
-  }
-  if (loggedIn.value) {
     try {
-      const profile = await App.getSelfProfile(false);
-      displayName.value = profile.displayName?.trim() ?? "";
+      loggedIn.value = await App.isLoggedIn();
     } catch {
+      loggedIn.value = false;
+    }
+    if (loggedIn.value) {
+      try {
+        const profile = await App.getSelfProfile(false);
+        displayName.value = profile.displayName?.trim() ?? "";
+      } catch {
+        displayName.value = "";
+      }
+    } else {
       displayName.value = "";
     }
+  } finally {
+    loginStateLoading.value = false;
   }
 }
 
@@ -418,9 +430,9 @@ async function loadFolderDefaults(): Promise<void> {
   }
 }
 
-onMounted(() => {
-  void refreshLoginState();
-  void loadFolderDefaults();
+onMounted(async () => {
+  await refreshLoginState();
+  await loadFolderDefaults();
 });
 
 async function submitLogin(): Promise<void> {
@@ -503,6 +515,8 @@ async function finishWizard(): Promise<void> {
 async function goNext(): Promise<void> {
   if (nextLoading.value) return;
   if (step.value === 0) {
+    if (loginStateLoading.value || loginLoading.value) return;
+    await refreshLoginState();
     if (loggedIn.value) {
       loginCompleted.value = true;
     }
@@ -531,8 +545,8 @@ function skipStep(): void {
   }
 }
 
-function skipAll(): void {
-  void finishWizard();
+async function skipAll(): Promise<void> {
+  await finishWizard();
 }
 
 async function withFolderDialogError(fn: () => Promise<void>): Promise<void> {

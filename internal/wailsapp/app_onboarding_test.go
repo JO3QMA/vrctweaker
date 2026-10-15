@@ -71,3 +71,24 @@ func TestApp_SaveOnboardingFolderSettings_onlyTouchedFields(t *testing.T) {
 		t.Fatalf("vrchat should stay saved: %q", ps.VRChatPathWindows)
 	}
 }
+
+func TestApp_SaveOnboardingFolderSettings_applyEmptyDoesNotClear(t *testing.T) {
+	repo := &memSettingsRepo{m: map[string]string{
+		"vrchat_path_windows": "C:\\saved\\launch.exe",
+	}}
+	a := &App{ctx: context.Background(), settings: usecase.NewSettingsUseCase(repo)}
+	err := a.SaveOnboardingFolderSettings(OnboardingFolderSaveDTO{
+		VrchatPathWindows:      "",
+		ApplyVrchatPathWindows: true,
+	})
+	if err != nil {
+		t.Fatalf("SaveOnboardingFolderSettings: %v", err)
+	}
+	ps, err := a.settings.GetPathSettings(a.ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ps.VRChatPathWindows != "C:\\saved\\launch.exe" {
+		t.Fatalf("vrchat cleared: %q", ps.VRChatPathWindows)
+	}
+}

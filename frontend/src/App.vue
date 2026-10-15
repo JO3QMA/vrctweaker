@@ -36,6 +36,13 @@ import { useFirstLaunchGuide } from "./composables/useFirstLaunchGuide";
 import { useSessionUnlock } from "./composables/useSessionUnlock";
 import { elLocale, isAppLocale, setLanguage } from "./i18n";
 import { App as WailsApp } from "./wails/app";
+import { isSettingsNotInitializedError } from "./utils/firstLaunchGuideErrors";
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 const route = useRoute();
 const { t, locale } = useI18n();
@@ -49,12 +56,26 @@ const showOnboardingWizard = computed(
 );
 
 async function loadFirstLaunchGuideState(): Promise<void> {
-  try {
-    firstLaunchGuideCompleted.value =
-      await WailsApp.getFirstLaunchGuideCompleted();
-  } catch {
-    // Keep wizard hidden on transient backend errors (avoid re-showing for existing users).
-    firstLaunchGuideCompleted.value = true;
+  const maxAttempts = 8;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      firstLaunchGuideCompleted.value =
+        await WailsApp.getFirstLaunchGuideCompleted();
+      return;
+    } catch (e) {
+      if (isSettingsNotInitializedError(e) && attempt < maxAttempts - 1) {
+        await delay(50 * (attempt + 1));
+        continue;
+      }
+      if (isSettingsNotInitializedError(e)) {
+        // Backend still starting: show wizard so first launch is not skipped.
+        firstLaunchGuideCompleted.value = false;
+        return;
+      }
+      // Other errors: keep hidden for existing users (avoid repeat wizard on transient failures).
+      firstLaunchGuideCompleted.value = true;
+      return;
+    }
   }
 }
 

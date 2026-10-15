@@ -34,7 +34,7 @@ const meta: Meta<typeof OnboardingWizard> = {
       SaveOnboardingFolderSettings: () => Promise.resolve(),
       OpenDirectoryDialog: (_title: string, _initial: string) =>
         Promise.resolve("C:\\Users\\You\\Pictures\\VRChat"),
-      OpenFileDialog: () =>
+      OpenFileDialog: (_title: string, _initial: string, _filter: string) =>
         Promise.resolve(
           "C:\\Program Files (x86)\\Steam\\steamapps\\common\\VRChat\\launch.exe",
         ),

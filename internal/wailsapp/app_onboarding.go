@@ -2,6 +2,7 @@ package wailsapp
 
 import (
 	"errors"
+	"os"
 	"strings"
 
 	"vrchat-tweaker/internal/domain/vrchatconfig"
@@ -78,7 +79,7 @@ func (a *App) resolveOnboardingPictureFolder() (string, error) {
 	return a.DefaultVRChatPictureFolder()
 }
 
-// SaveOnboardingFolderSettings persists only wizard fields marked with Apply*.
+// SaveOnboardingFolderSettings persists only wizard fields marked with Apply* and non-empty values.
 func (a *App) SaveOnboardingFolderSettings(save OnboardingFolderSaveDTO) error {
 	if a.settings == nil {
 		return errSettingsNotInitialized
@@ -90,31 +91,61 @@ func (a *App) SaveOnboardingFolderSettings(save OnboardingFolderSaveDTO) error {
 	if current == nil {
 		current = &usecase.PathSettings{}
 	}
+	backup := *current
 	ps := *current
+	pathChanged := false
+
 	if save.ApplyVrchatPathWindows {
-		ps.VRChatPathWindows = strings.TrimSpace(save.VrchatPathWindows)
+		trimmed := strings.TrimSpace(save.VrchatPathWindows)
+		if trimmed != "" && trimmed != ps.VRChatPathWindows {
+			ps.VRChatPathWindows = trimmed
+			pathChanged = true
+		}
 	}
 	if save.ApplySteamPathLinux {
-		ps.SteamPathLinux = strings.TrimSpace(save.SteamPathLinux)
+		trimmed := strings.TrimSpace(save.SteamPathLinux)
+		if trimmed != "" && trimmed != ps.SteamPathLinux {
+			ps.SteamPathLinux = trimmed
+			pathChanged = true
+		}
 	}
 	if save.ApplyOutputLogPath {
-		ps.OutputLogPath = strings.TrimSpace(save.OutputLogPath)
+		trimmed := strings.TrimSpace(save.OutputLogPath)
+		if trimmed != "" && trimmed != ps.OutputLogPath {
+			ps.OutputLogPath = trimmed
+			pathChanged = true
+		}
 	}
-	if save.ApplyVrchatPathWindows || save.ApplySteamPathLinux || save.ApplyOutputLogPath {
+
+	pic := ""
+	if save.ApplyPictureOutputFolder {
+		pic = strings.TrimSpace(save.PictureOutputFolder)
+		if pic != "" {
+			info, statErr := os.Stat(pic)
+			if statErr != nil || info == nil || !info.IsDir() {
+				return errors.New("picture output folder is not an accessible directory")
+			}
+		}
+	}
+
+	if pathChanged {
 		if err := a.settings.SetPathSettings(a.ctx, &ps); err != nil {
 			return err
 		}
 	}
-	if save.ApplyPictureOutputFolder {
-		pic := strings.TrimSpace(save.PictureOutputFolder)
-		if pic == "" {
-			return nil
-		}
+
+	if pic != "" {
 		if a.vrchatConfigRepo == nil {
 			return errors.New("vrchat config repository is not initialized")
 		}
-		return a.writeVRChatPictureOutputFolder(pic)
+		if err := a.writeVRChatPictureOutputFolder(pic); err != nil {
+			if pathChanged {
+				_ = a.settings.SetPathSettings(a.ctx, &backup)
+			}
+			return err
+		}
 	}
+
 	return nil
 }
 
