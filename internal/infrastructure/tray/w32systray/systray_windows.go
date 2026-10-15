@@ -83,6 +83,7 @@ const (
 
 	TPM_LEFTALIGN = 0x0000
 	WM_NULL       = 0
+	PM_NOREMOVE   = 0x0000
 )
 
 var (
@@ -97,6 +98,7 @@ var (
 	user32 = syscall.MustLoadDLL("user32.dll")
 
 	GetMessage       = user32.MustFindProc("GetMessageW")
+	PeekMessage      = user32.MustFindProc("PeekMessageW")
 	IsDialogMessage  = user32.MustFindProc("IsDialogMessageW")
 	TranslateMessage = user32.MustFindProc("TranslateMessage")
 	DispatchMessage  = user32.MustFindProc("DispatchMessageW")
@@ -304,7 +306,11 @@ func (p *Systray) AppendSeparator() {
 
 // Stop removes the notification icon. Prefer Destroy for full resource cleanup.
 func (p *Systray) Stop() error {
-	if p.destroyed || p.hwnd == 0 {
+	return p.deleteNotifyIcon()
+}
+
+func (p *Systray) deleteNotifyIcon() error {
+	if p.hwnd == 0 {
 		return nil
 	}
 	nid := NOTIFYICONDATA{
@@ -320,15 +326,21 @@ func (p *Systray) Stop() error {
 	return nil
 }
 
+// EnsureMessageQueue creates the per-thread message queue before cross-thread posts.
+func (p *Systray) EnsureMessageQueue() {
+	var msg MSG
+	_, _, _ = PeekMessage.Call(uintptr(unsafe.Pointer(&msg)), 0, 0, 0, PM_NOREMOVE)
+}
+
 // Destroy removes the tray icon and releases Win32 handles (HWND, owned HICON, window class).
 func (p *Systray) Destroy() error {
 	if p.destroyed {
 		return nil
 	}
-	p.destroyed = true
-	if err := p.Stop(); err != nil {
+	if err := p.deleteNotifyIcon(); err != nil {
 		log.Printf("w32systray: notify icon delete: %v", err)
 	}
+	p.destroyed = true
 	p.releaseOwnedIcon()
 	if p.hwnd != 0 {
 		_, _, _ = procDestroyWindow.Call(uintptr(p.hwnd))
@@ -356,7 +368,8 @@ func (p *Systray) destroyWindowClass() {
 	)
 }
 
-// Quit ends the Run message loop on the thread that created the tray window.
+// Quit ends the Run message loop. Must be called on the tray thread; other goroutines
+// should use PostThreadMessage with WMTrayShutdown instead.
 func (p *Systray) Quit() {
 	procPostQuitMessage.Call(0)
 }
@@ -410,6 +423,7 @@ func copyUTF16Field(dst []uint16, src string) {
 func (p *Systray) ShowCustom(file string, hint string) error {
 	hicon, owned, err := loadIconFile(file)
 	if err != nil {
+		log.Printf("w32systray: load icon %q failed, falling back to default: %v", file, err)
 		icon, _, _ := LoadIcon.Call(0, uintptr(IDI_APPLICATION))
 		hicon, owned = HICON(icon), false
 	}
@@ -426,15 +440,22 @@ func (p *Systray) ShowCustom(file string, hint string) error {
 }
 
 func (p *Systray) OnClick(fn func()) {
+	if fn == nil {
+		p.lclick = func() {}
+		return
+	}
 	p.lclick = fn
 }
 
 func (p *Systray) OnRightClick(fn func()) {
+	if fn == nil {
+		p.rclick = func() {}
+		return
+	}
 	p.rclick = fn
 }
 
 func (p *Systray) SetTooltip(tooltip string) error {
-	p.tooltip = tooltip
 	nid := NOTIFYICONDATA{
 		UID:  p.id,
 		HWnd: HWND(p.hwnd),
@@ -448,6 +469,7 @@ func (p *Systray) SetTooltip(tooltip string) error {
 	if ret == 0 {
 		return errors.New("shell notify tooltip failed")
 	}
+	p.tooltip = tooltip
 	return nil
 }
 
@@ -468,13 +490,12 @@ func (p *Systray) ShowMessage(title, msg string, bigIcon bool) error {
 
 	ret, _, _ := Shell_NotifyIcon.Call(NIM_MODIFY, uintptr(unsafe.Pointer(&nid)))
 	if ret == 0 {
-		return errors.New("shell notify tooltip failed")
+		return errors.New("shell notify balloon failed")
 	}
 	return nil
 }
 
 func (p *Systray) SetVisible(visible bool) error {
-	p.visible = visible
 	nid := NOTIFYICONDATA{
 		UID:  p.id,
 		HWnd: HWND(p.hwnd),
@@ -489,8 +510,9 @@ func (p *Systray) SetVisible(visible bool) error {
 
 	ret, _, _ := Shell_NotifyIcon.Call(NIM_MODIFY, uintptr(unsafe.Pointer(&nid)))
 	if ret == 0 {
-		return errors.New("shell notify tooltip failed")
+		return errors.New("shell notify visibility failed")
 	}
+	p.visible = visible
 	return nil
 }
 
@@ -500,8 +522,11 @@ func (p *Systray) SetIcon(hicon HICON) error {
 
 func (p *Systray) setIcon(hicon HICON, owned bool) error {
 	if hicon != 0 {
-		if owned && p.iconOwned && p.iconHandle != 0 && p.iconHandle != hicon {
+		if p.iconHandle != 0 && p.iconHandle != hicon && p.iconOwned {
 			_, _, _ = procDestroyIcon.Call(uintptr(p.iconHandle))
+		}
+		if hicon == p.iconHandle && p.iconOwned {
+			owned = true
 		}
 		p.iconHandle = hicon
 		p.iconOwned = owned
@@ -537,12 +562,16 @@ func (p *Systray) WinProc(hwnd HWND, msg uint32, wparam, lparam uintptr) uintptr
 		}
 	case NotifyIconMessageId:
 		if lparam == WM_LBUTTONUP {
-			p.lclick()
+			if p.lclick != nil {
+				p.lclick()
+			}
 			if len(p.Menu) > 0 {
 				p.displayMenu(p.Menu)
 			}
 		} else if lparam == WM_RBUTTONUP {
-			p.rclick()
+			if p.rclick != nil {
+				p.rclick()
+			}
 			if len(p.Menu) > 0 {
 				p.displayMenu(p.Menu)
 			}
@@ -589,7 +618,7 @@ func (p *Systray) reregisterNotifyIcon() error {
 	}
 
 	if p.iconHandle != 0 {
-		if err := p.SetIcon(p.iconHandle); err != nil {
+		if err := p.setIcon(p.iconHandle, p.iconOwned); err != nil {
 			return err
 		}
 	}

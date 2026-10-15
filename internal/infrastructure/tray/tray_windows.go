@@ -15,10 +15,11 @@ import (
 type windowsManager struct {
 	mu           sync.Mutex
 	running      bool
+	starting     bool
+	stopping     bool
+	stopPending  bool
 	trayThreadID uint32
-	// stopWaiter receives exactly one value when the in-flight Stop() completes.
-	// Concurrent Stop() calls wait on the same channel instead of overwriting it.
-	stopWaiter chan error
+	stopWaiters  stopWaiterSet
 
 	startReq chan startRequest
 }
@@ -41,15 +42,16 @@ func (m *windowsManager) Supported() bool { return true }
 func (m *windowsManager) Running() bool {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	return m.running
+	return m.running || m.starting
 }
 
 func (m *windowsManager) Start(cfg Config) error {
 	m.mu.Lock()
-	if m.running {
+	if m.running || m.starting || m.stopping {
 		m.mu.Unlock()
 		return nil
 	}
+	m.starting = true
 	m.mu.Unlock()
 
 	resp := make(chan error, 1)
@@ -59,38 +61,71 @@ func (m *windowsManager) Start(cfg Config) error {
 
 func (m *windowsManager) Stop() error {
 	m.mu.Lock()
-	if !m.running {
+	if !m.running && !m.starting {
 		m.mu.Unlock()
 		return nil
 	}
-	if m.stopWaiter != nil {
-		waiter := m.stopWaiter
+	if m.stopping {
+		waiter := m.stopWaiters.add()
 		m.mu.Unlock()
 		return <-waiter
 	}
-	waiter := make(chan error, 1)
-	m.stopWaiter = waiter
+	m.stopping = true
+	m.stopPending = true
+	waiter := m.stopWaiters.add()
 	tid := m.trayThreadID
+	onlyStarting := m.starting && !m.running
 	m.mu.Unlock()
 
+	if onlyStarting {
+		// runSession will observe stopPending before going live.
+		return <-waiter
+	}
+
 	if tid == 0 {
-		m.signalStopWaiter(waiter, fmt.Errorf("tray: thread id not ready"))
+		m.abortStop(fmt.Errorf("tray: thread id not ready"))
 		return <-waiter
 	}
 	if err := windows.PostThreadMessage(tid, w32systray.WMTrayShutdown, 0, 0); err != nil {
-		m.signalStopWaiter(waiter, fmt.Errorf("tray: PostThreadMessage: %w", err))
+		m.abortStop(fmt.Errorf("tray: PostThreadMessage: %w", err))
 		return <-waiter
 	}
 	return <-waiter
 }
 
-func (m *windowsManager) signalStopWaiter(waiter chan error, err error) {
+func (m *windowsManager) abortStop(err error) {
 	m.mu.Lock()
-	if m.stopWaiter == waiter {
-		m.stopWaiter = nil
-	}
+	m.stopPending = false
+	m.stopping = false
+	m.running = false
+	m.starting = false
+	waiters := m.stopWaiters
+	m.stopWaiters = stopWaiterSet{}
 	m.mu.Unlock()
-	waiter <- err
+	waiters.complete(err)
+}
+
+func (m *windowsManager) finishStop(err error) {
+	m.mu.Lock()
+	m.running = false
+	m.starting = false
+	m.stopping = false
+	m.stopPending = false
+	waiters := m.stopWaiters
+	m.stopWaiters = stopWaiterSet{}
+	m.mu.Unlock()
+	waiters.complete(err)
+}
+
+func (m *windowsManager) sessionFailed(err error) {
+	m.mu.Lock()
+	m.starting = false
+	m.running = false
+	hasWaiters := m.stopping || len(m.stopWaiters.waiters) > 0
+	m.mu.Unlock()
+	if hasWaiters {
+		m.finishStop(err)
+	}
 }
 
 // trayThread owns the Win32 HWND and message loop on a single OS thread.
@@ -111,25 +146,42 @@ func (m *windowsManager) trayThread() {
 func (m *windowsManager) runSession(req startRequest) {
 	tray, err := w32systray.New()
 	if err != nil {
+		m.sessionFailed(err)
 		req.resp <- err
 		return
 	}
 	if err := tray.ShowCustom(req.cfg.IconPath, req.cfg.Tooltip); err != nil {
 		_ = tray.Destroy()
+		m.sessionFailed(err)
 		req.resp <- err
+		return
+	}
+
+	if m.consumeStopPending(tray) {
+		req.resp <- nil
 		return
 	}
 
 	onShow := req.cfg.OnShow
 	onQuit := req.cfg.OnQuit
 
-	var handlers sync.WaitGroup
-	tray.OnClick(func() { runAsync(&handlers, onShow) })
-	tray.AppendMenu(req.cfg.MenuShowLabel, func() { runAsync(&handlers, onShow) })
+	var showHandlers sync.WaitGroup
+	tray.OnClick(func() { runAsync(&showHandlers, onShow) })
+	tray.AppendMenu(req.cfg.MenuShowLabel, func() { runAsync(&showHandlers, onShow) })
 	tray.AppendSeparator()
-	tray.AppendMenu(req.cfg.MenuQuitLabel, func() { runAsync(&handlers, onQuit) })
+	// Quit must not join showHandlers: it calls Stop() and would deadlock if we
+	// Wait() on the group before signaling stop waiters.
+	tray.AppendMenu(req.cfg.MenuQuitLabel, func() { runAsync(nil, onQuit) })
+
+	tray.EnsureMessageQueue()
+
+	if m.consumeStopPending(tray) {
+		req.resp <- nil
+		return
+	}
 
 	m.mu.Lock()
+	m.starting = false
 	m.running = true
 	m.mu.Unlock()
 	req.resp <- nil
@@ -137,15 +189,21 @@ func (m *windowsManager) runSession(req startRequest) {
 	_ = tray.Run()
 	_ = tray.Destroy()
 
-	handlers.Wait()
+	m.finishStop(nil)
+	showHandlers.Wait()
+}
 
+func (m *windowsManager) consumeStopPending(tray *w32systray.Systray) bool {
 	m.mu.Lock()
-	m.running = false
-	waiter := m.stopWaiter
-	m.stopWaiter = nil
-	m.mu.Unlock()
-
-	if waiter != nil {
-		waiter <- nil
+	pending := m.stopPending
+	if pending {
+		m.stopPending = false
 	}
+	m.mu.Unlock()
+	if !pending {
+		return false
+	}
+	_ = tray.Destroy()
+	m.finishStop(nil)
+	return true
 }
