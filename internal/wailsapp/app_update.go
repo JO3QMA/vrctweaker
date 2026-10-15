@@ -103,6 +103,9 @@ func (a *App) startAppUpdateCheckOnStartup() {
 		if !st.ShouldPrompt {
 			return
 		}
+		if a.ctx.Err() != nil {
+			return
+		}
 		runtime.EventsEmit(a.ctx, appUpdateAvailableEvent, st)
 	}()
 }

@@ -2,17 +2,21 @@ import { onMounted, onUnmounted, ref } from "vue";
 import { App, type AppUpdateStatusDTO } from "../wails/app";
 import { getRuntime } from "../wails/runtime";
 
-const dialogVisible = ref(false);
-const status = ref<AppUpdateStatusDTO | null>(null);
-const applying = ref(false);
-let eventsBound = false;
+/**
+ * Single shared store: SettingsView manual checks and AppUpdateDialog must share
+ * dialogVisible/status so a settings-triggered check opens the global dialog.
+ */
+function createAppUpdateStore() {
+  const dialogVisible = ref(false);
+  const status = ref<AppUpdateStatusDTO | null>(null);
+  const applying = ref(false);
+  let eventsBound = false;
 
-function openDialog(st: AppUpdateStatusDTO) {
-  status.value = st;
-  dialogVisible.value = true;
-}
+  function openDialog(st: AppUpdateStatusDTO) {
+    status.value = st;
+    dialogVisible.value = true;
+  }
 
-export function useAppUpdate() {
   function bindEvents() {
     if (eventsBound) return undefined;
     const rt = getRuntime();
@@ -24,7 +28,10 @@ export function useAppUpdate() {
     });
     if (!off) return undefined;
     eventsBound = true;
-    return off;
+    return () => {
+      off();
+      eventsBound = false;
+    };
   }
 
   async function checkManual(): Promise<AppUpdateStatusDTO> {
@@ -77,6 +84,12 @@ export function useAppUpdate() {
     applyUpdate,
     openReleasePage,
   };
+}
+
+const appUpdateStore = createAppUpdateStore();
+
+export function useAppUpdate() {
+  return appUpdateStore;
 }
 
 export function useAppUpdateLifecycle() {

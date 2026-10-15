@@ -10,6 +10,12 @@ type versionCore struct {
 	prerelease bool
 }
 
+// IsDevelopmentVersion reports dev/empty builds that should not prompt for self-update.
+func IsDevelopmentVersion(version string) bool {
+	v := strings.TrimSpace(version)
+	return v == "" || v == "dev"
+}
+
 // CompareProductVersion compares two product version strings (e.g. 1.2.3).
 // Returns -1 if a < b, 0 if equal, 1 if a > b.
 // Non-semver or "dev" current is treated as older than any valid release version.

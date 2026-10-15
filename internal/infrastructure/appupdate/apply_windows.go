@@ -8,7 +8,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"time"
+
+	"golang.org/x/sys/windows"
 )
 
 // ScheduleReplaceAndRestart launches a helper that waits for pid, replaces targetExe with stagedExe, and restarts.
@@ -43,6 +46,7 @@ func ScheduleReplaceAndRestart(workDir, targetExe, stagedExe string, pid int) er
 		"-ExecutionPolicy", "Bypass",
 		"-File", scriptPath,
 	)
+	setUpdateHelperProcessAttrs(cmd)
 	cmd.Dir = filepath.Dir(targetExe)
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("appupdate: start helper: %w", err)
@@ -89,6 +93,12 @@ try {
 
 func psQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", "''") + "'"
+}
+
+func setUpdateHelperProcessAttrs(cmd *exec.Cmd) {
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		CreationFlags: windows.CREATE_NEW_PROCESS_GROUP | windows.CREATE_BREAKAWAY_FROM_JOB,
+	}
 }
 
 // WorkDir returns a directory under installDir for update staging artifacts.

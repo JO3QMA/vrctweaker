@@ -86,6 +86,9 @@ func (c *ReleaseClient) FetchLatestStable(ctx context.Context) (VRCTweakerReleas
 
 	resp, err := c.defaultHTTPClient().Do(req)
 	if err != nil {
+		if resp != nil && resp.Body != nil {
+			_ = resp.Body.Close()
+		}
 		return VRCTweakerRelease{}, fmt.Errorf("github releases: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()

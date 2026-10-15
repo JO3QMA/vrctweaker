@@ -125,6 +125,9 @@ func (uc *AppUpdateUseCase) CheckForUpdate(ctx context.Context, manual bool) (Ap
 		CurrentVersion:     appversion.Version,
 		AutoApplySupported: runtime.GOOS == "windows",
 	}
+	if appversion.IsDevelopmentVersion(st.CurrentVersion) {
+		return st, nil
+	}
 	if uc.releases == nil {
 		return st, errors.New("release client not configured")
 	}

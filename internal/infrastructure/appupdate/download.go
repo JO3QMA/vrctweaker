@@ -66,6 +66,9 @@ func (d *Downloader) DownloadFile(ctx context.Context, url, destPath, expectedSH
 
 	resp, err := d.httpClient().Do(req)
 	if err != nil {
+		if resp != nil && resp.Body != nil {
+			_ = resp.Body.Close()
+		}
 		return fmt.Errorf("appupdate: download: %w", err)
 	}
 	defer func() { _ = resp.Body.Close() }()

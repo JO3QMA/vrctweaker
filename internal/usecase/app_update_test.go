@@ -33,6 +33,27 @@ func (s *memSettings) GetAll(_ context.Context) (map[string]string, error) {
 	return out, nil
 }
 
+func TestAppUpdateUseCase_CheckForUpdate_skipsWhenDevVersion(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		t.Error("unexpected release fetch for dev build")
+	}))
+	defer srv.Close()
+
+	appversion.SetVersion("dev")
+	uc := NewAppUpdateUseCase(nil, &gh.ReleaseClient{
+		HTTPClient:        srv.Client(),
+		ReleasesLatestURL: srv.URL,
+	}, nil)
+
+	st, err := uc.CheckForUpdate(context.Background(), false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.UpdateAvailable || st.ShouldPrompt {
+		t.Fatalf("status %+v", st)
+	}
+}
+
 func TestAppUpdateUseCase_CheckForUpdate_promptsWhenNewer(t *testing.T) {
 	const sha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

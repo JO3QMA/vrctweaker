@@ -5,7 +5,8 @@ package appupdate
 import "fmt"
 
 // ScheduleReplaceAndRestart is only supported on Windows.
-func ScheduleReplaceAndRestart(string, string, int) error {
+// Signature matches apply_windows.go; callers live in //go:build windows usecase files only.
+func ScheduleReplaceAndRestart(string, string, string, int) error {
 	return fmt.Errorf("appupdate: auto apply is Windows only")
 }
 
