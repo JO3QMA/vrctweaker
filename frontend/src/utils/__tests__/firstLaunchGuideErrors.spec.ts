@@ -12,6 +12,8 @@ describe("isSettingsNotInitializedError", () => {
   });
 
   it("rejects unrelated errors", () => {
-    expect(isSettingsNotInitializedError(new Error("network down"))).toBe(false);
+    expect(isSettingsNotInitializedError(new Error("network down"))).toBe(
+      false,
+    );
   });
 });
