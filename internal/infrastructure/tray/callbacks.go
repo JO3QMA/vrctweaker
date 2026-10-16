@@ -2,6 +2,7 @@ package tray
 
 import (
 	"log"
+	"runtime/debug"
 	"sync"
 )
 
@@ -20,7 +21,7 @@ func runAsync(wg *sync.WaitGroup, fn func()) {
 		}
 		defer func() {
 			if r := recover(); r != nil {
-				log.Printf("tray: handler panic: %v", r)
+				log.Printf("tray: handler panic: %v\n%s", r, debug.Stack())
 			}
 		}()
 		fn()

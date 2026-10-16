@@ -528,8 +528,6 @@ func (p *Systray) setIcon(hicon HICON, owned bool) error {
 		if hicon == p.iconHandle && p.iconOwned {
 			owned = true
 		}
-		p.iconHandle = hicon
-		p.iconOwned = owned
 	}
 	// hicon==0 clears the shell icon only; p.iconHandle is kept for TaskbarCreated re-register.
 	nid := NOTIFYICONDATA{
@@ -548,6 +546,10 @@ func (p *Systray) setIcon(hicon HICON, owned bool) error {
 	ret, _, _ := Shell_NotifyIcon.Call(NIM_MODIFY, uintptr(unsafe.Pointer(&nid)))
 	if ret == 0 {
 		return errors.New("shell notify icon failed")
+	}
+	if hicon != 0 {
+		p.iconHandle = hicon
+		p.iconOwned = owned
 	}
 	return nil
 }

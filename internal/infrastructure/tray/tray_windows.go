@@ -117,17 +117,6 @@ func (m *windowsManager) finishStop(err error) {
 	waiters.complete(err)
 }
 
-func (m *windowsManager) sessionFailed(err error) {
-	m.mu.Lock()
-	m.starting = false
-	m.running = false
-	hasWaiters := m.stopping || len(m.stopWaiters.waiters) > 0
-	m.mu.Unlock()
-	if hasWaiters {
-		m.finishStop(err)
-	}
-}
-
 // trayThread owns the Win32 HWND and message loop on a single OS thread.
 func (m *windowsManager) trayThread() {
 	runtime.LockOSThread()
@@ -146,13 +135,13 @@ func (m *windowsManager) trayThread() {
 func (m *windowsManager) runSession(req startRequest) {
 	tray, err := w32systray.New()
 	if err != nil {
-		m.sessionFailed(err)
+		m.finishStop(err)
 		req.resp <- err
 		return
 	}
 	if err := tray.ShowCustom(req.cfg.IconPath, req.cfg.Tooltip); err != nil {
 		_ = tray.Destroy()
-		m.sessionFailed(err)
+		m.finishStop(err)
 		req.resp <- err
 		return
 	}
