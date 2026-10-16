@@ -81,7 +81,9 @@ describe("VrcUserCacheDetail", () => {
     expect(wrapper.find(".profile-handle").text()).toBe("@detail_user");
     expect(wrapper.find(".profile-bio").text()).toBe("Hello\nWorld");
     expect(wrapper.find(".profile-status-desc").text()).toBe("Building worlds");
-    const links = wrapper.findAll(".profile-bio-links a.safe-external-url-link");
+    const links = wrapper.findAll(
+      ".profile-bio-links a.safe-external-url-link",
+    );
     expect(links).toHaveLength(2);
     expect(links[0]?.attributes("href")).toBe("#");
     expect(links[0]?.text()).toBe("https://example.com/a");
