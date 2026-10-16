@@ -7,6 +7,7 @@
     :title="title"
     :aria-label="ariaLabel"
     :data-testid="testId"
+    :data-external-url="safeHref"
     @click.prevent="onOpen"
   >
     <slot>{{ display }}</slot>
@@ -47,7 +48,11 @@ const props = withDefaults(
 );
 
 const display = computed(() => props.label ?? props.url);
-const safe = computed(() => parseSafeHttpUrl(props.url).ok);
+const parsed = computed(() => parseSafeHttpUrl(props.url));
+const safe = computed(() => parsed.value.ok);
+const safeHref = computed(() =>
+  parsed.value.ok ? parsed.value.href : undefined,
+);
 
 async function onOpen() {
   await openExternalHttpUrl(props.url);
