@@ -61,6 +61,36 @@ func (a *App) ApplyAppUpdate(latestVersion string) error {
 	return nil
 }
 
+// ClaimStartupAppUpdatePrompt returns a startup prompt saved before the UI subscribed, then clears it.
+func (a *App) ClaimStartupAppUpdatePrompt() (usecase.AppUpdateStatus, error) {
+	st := usecase.AppUpdateStatus{CurrentVersion: appversion.Version}
+	a.appUpdatePendingMu.Lock()
+	defer a.appUpdatePendingMu.Unlock()
+	if a.pendingStartupAppUpdate == nil {
+		return st, nil
+	}
+	st = *a.pendingStartupAppUpdate
+	a.pendingStartupAppUpdate = nil
+	return st, nil
+}
+
+// ClearStartupAppUpdatePrompt drops a saved startup prompt after the UI handled the live event.
+func (a *App) ClearStartupAppUpdatePrompt() {
+	a.appUpdatePendingMu.Lock()
+	a.pendingStartupAppUpdate = nil
+	a.appUpdatePendingMu.Unlock()
+}
+
+func (a *App) storePendingStartupAppUpdate(st usecase.AppUpdateStatus) {
+	if !st.ShouldPrompt {
+		return
+	}
+	a.appUpdatePendingMu.Lock()
+	copy := st
+	a.pendingStartupAppUpdate = &copy
+	a.appUpdatePendingMu.Unlock()
+}
+
 // OpenAppReleasePage opens the release page in the default browser.
 func (a *App) OpenAppReleasePage(url string) error {
 	if a.ctx == nil {
@@ -104,6 +134,7 @@ func (a *App) startAppUpdateCheckOnStartup() {
 		if a.ctx.Err() != nil {
 			return
 		}
+		a.storePendingStartupAppUpdate(st)
 		runtime.EventsEmit(a.ctx, appUpdateAvailableEvent, st)
 	}()
 }

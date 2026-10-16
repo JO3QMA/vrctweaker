@@ -557,9 +557,12 @@ onMounted(async () => {
   closeToTray.value = await App.getCloseToTray();
   try {
     appUpdateAutoCheck.value = await App.getAppUpdateAutoCheck();
-    appVersion.value = await App.getAppVersion();
   } catch {
     appUpdateAutoCheck.value = true;
+  }
+  try {
+    appVersion.value = await App.getAppVersion();
+  } catch {
     appVersion.value = "dev";
   }
   const ps = await App.getPathSettings();

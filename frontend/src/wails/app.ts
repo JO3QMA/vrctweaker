@@ -102,6 +102,8 @@ type AppUpdateAppBindings = {
   GetAppUpdateAutoCheck: () => Promise<boolean>;
   SetAppUpdateAutoCheck: (enabled: boolean) => Promise<void>;
   CheckForAppUpdate: () => Promise<AppUpdateStatusDTO>;
+  ClaimStartupAppUpdatePrompt: () => Promise<AppUpdateStatusDTO>;
+  ClearStartupAppUpdatePrompt: () => Promise<void>;
   DismissAppUpdate: (version: string) => Promise<void>;
   ApplyAppUpdate: (latestVersion: string) => Promise<void>;
   OpenAppReleasePage: (url: string) => Promise<void>;
@@ -581,6 +583,14 @@ export const App = {
   checkForAppUpdate: bindGo(
     (a) => asAppUpdateApp(a).CheckForAppUpdate(),
     emptyAppUpdateStatus(),
+  ),
+  claimStartupAppUpdatePrompt: bindGo(
+    (a) => asAppUpdateApp(a).ClaimStartupAppUpdatePrompt(),
+    emptyAppUpdateStatus(),
+  ),
+  clearStartupAppUpdatePrompt: bindGo(
+    (a) => asAppUpdateApp(a).ClearStartupAppUpdatePrompt(),
+    undefined,
   ),
   dismissAppUpdate: bindGo(
     (a, version: string) => asAppUpdateApp(a).DismissAppUpdate(version),

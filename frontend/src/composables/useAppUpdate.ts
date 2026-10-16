@@ -23,6 +23,7 @@ function createAppUpdateStore() {
     const off = rt?.EventsOn?.("app:update-available", (data?: unknown) => {
       const st = data as AppUpdateStatusDTO | undefined;
       if (st?.shouldPrompt) {
+        void App.clearStartupAppUpdatePrompt();
         openDialog(st);
       }
     });
@@ -32,6 +33,13 @@ function createAppUpdateStore() {
       off();
       eventsBound = false;
     };
+  }
+
+  async function claimStartupPrompt() {
+    const st = await App.claimStartupAppUpdatePrompt();
+    if (st.updateAvailable && st.shouldPrompt) {
+      openDialog(st);
+    }
   }
 
   async function checkManual(): Promise<AppUpdateStatusDTO> {
@@ -44,13 +52,10 @@ function createAppUpdateStore() {
 
   async function dismissLater() {
     const v = status.value?.latestVersion;
-    try {
-      if (v) {
-        await App.dismissAppUpdate(v);
-      }
-    } finally {
-      dialogVisible.value = false;
+    if (v) {
+      await App.dismissAppUpdate(v);
     }
+    dialogVisible.value = false;
   }
 
   async function applyUpdate() {
@@ -79,6 +84,7 @@ function createAppUpdateStore() {
     status,
     applying,
     bindEvents,
+    claimStartupPrompt,
     checkManual,
     dismissLater,
     applyUpdate,
@@ -97,6 +103,7 @@ export function useAppUpdateLifecycle() {
   let off: (() => void) | undefined;
   onMounted(() => {
     off = api.bindEvents();
+    void api.claimStartupPrompt();
   });
   onUnmounted(() => {
     off?.();

@@ -77,6 +77,9 @@ type App struct {
 
 	tray        tray.Manager
 	quitPending atomic.Bool
+
+	appUpdatePendingMu      sync.Mutex
+	pendingStartupAppUpdate *usecase.AppUpdateStatus
 }
 
 // NewApp creates a new App application struct.

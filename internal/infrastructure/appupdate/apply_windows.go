@@ -91,7 +91,9 @@ $scriptPath = %s
 $targetPid = %d
 try {
   $proc = Get-Process -Id $targetPid -ErrorAction SilentlyContinue
-  if ($proc) { $proc.WaitForExit(120000) }
+  if ($proc) {
+    if (-not $proc.WaitForExit(120000)) { throw 'target process did not exit in time' }
+  }
   Start-Sleep -Seconds 1
   if (Test-Path $backup) { Remove-Item -LiteralPath $backup -Force }
   if (Test-Path $target) { Move-Item -LiteralPath $target -Destination $backup -Force }
