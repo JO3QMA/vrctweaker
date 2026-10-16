@@ -213,7 +213,7 @@
         class="hint block-hint app-meta-note"
         data-testid="settings-app-disclaimer"
       >
-        {{ t("settings.unofficialDisclaimer") }}
+        {{ t("common.unofficialDisclaimer") }}
       </el-text>
       <el-text
         type="info"

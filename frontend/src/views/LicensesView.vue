@@ -10,7 +10,7 @@
       class="hint block-hint unofficial-note"
       data-testid="licenses-unofficial-disclaimer"
     >
-      {{ t("settings.unofficialDisclaimer") }}
+      {{ t("common.unofficialDisclaimer") }}
     </el-text>
     <LegalDocLinks :intro="t('legal.licensesIntro')" />
 
