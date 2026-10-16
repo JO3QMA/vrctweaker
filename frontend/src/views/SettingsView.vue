@@ -225,6 +225,44 @@
       </el-text>
       <div class="setting-row power-setting-row">
         <div class="power-toggle-label">
+          <span>{{ t("settings.updateAutoCheck") }}</span>
+          <el-text type="info" size="small" class="hint block-hint">{{
+            t("settings.updateAutoCheckHint")
+          }}</el-text>
+        </div>
+        <VtSwitch
+          v-model="appUpdateAutoCheck"
+          data-testid="settings-app-update-auto-check"
+          @change="saveAppUpdateAutoCheck"
+        />
+      </div>
+      <div class="update-check-row">
+        <VtButton
+          variant="secondary"
+          :loading="appUpdateCheckLoading"
+          data-testid="settings-check-app-update"
+          @click="checkAppUpdate"
+        >
+          {{ t("settings.checkAppUpdate") }}
+        </VtButton>
+        <el-text
+          v-if="appUpdateStatusLine"
+          type="info"
+          size="small"
+          class="hint update-status-line"
+          data-testid="settings-app-update-status"
+        >
+          {{ appUpdateStatusLine }}
+        </el-text>
+      </div>
+      <VtAlert
+        v-if="appUpdateCheckError"
+        variant="danger"
+        :title="appUpdateCheckError"
+        class="update-check-error"
+      />
+      <div class="setting-row power-setting-row">
+        <div class="power-toggle-label">
           <span>{{ t("settings.closeToTray") }}</span>
           <el-text type="info" size="small" class="hint block-hint">{{
             t("settings.closeToTrayHint")
@@ -379,6 +417,7 @@ import { friendThumbUrl } from "../utils/vrcUserCacheDisplay";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
 import { isAppLocale, setLanguage } from "../i18n";
 import { showToast } from "../utils/showToast";
+import { useAppUpdate } from "../composables/useAppUpdate";
 
 const {
   state: unlockState,
@@ -424,6 +463,11 @@ const galleryAutoEnrichMetadata = ref(true);
 const suppressSleepWhileVRChat = ref(false);
 const closeToTray = ref(true);
 const appVersion = ref("");
+const appUpdateAutoCheck = ref(true);
+const appUpdateCheckLoading = ref(false);
+const appUpdateCheckError = ref("");
+const appUpdateStatusLine = ref("");
+const { checkManual } = useAppUpdate();
 const maintenanceError = ref("");
 const maintenanceLoading = ref(false);
 const pathSettings = reactive<PathSettingsDTO>({
@@ -511,6 +555,11 @@ onMounted(async () => {
   galleryAutoEnrichMetadata.value = await App.getGalleryAutoEnrichMetadata();
   suppressSleepWhileVRChat.value = await App.getSuppressSleepWhileVRChat();
   closeToTray.value = await App.getCloseToTray();
+  try {
+    appUpdateAutoCheck.value = await App.getAppUpdateAutoCheck();
+  } catch {
+    appUpdateAutoCheck.value = true;
+  }
   try {
     appVersion.value = await App.getAppVersion();
   } catch {
@@ -604,6 +653,36 @@ async function saveGalleryAutoEnrich() {
 
 async function saveSuppressSleepWhileVRChat() {
   await App.setSuppressSleepWhileVRChat(suppressSleepWhileVRChat.value);
+}
+
+async function saveAppUpdateAutoCheck() {
+  const attempted = appUpdateAutoCheck.value;
+  try {
+    await App.setAppUpdateAutoCheck(attempted);
+  } catch (e) {
+    appUpdateAutoCheck.value = !attempted;
+    showToast.error(formatBackendError(e, t("settings.errUpdateAutoCheck")));
+  }
+}
+
+async function checkAppUpdate() {
+  appUpdateCheckError.value = "";
+  appUpdateStatusLine.value = "";
+  appUpdateCheckLoading.value = true;
+  try {
+    const st = await checkManual();
+    if (st.updateAvailable) {
+      appUpdateStatusLine.value = t("settings.appUpdateAvailable", {
+        version: st.latestVersion,
+      });
+    } else {
+      appUpdateStatusLine.value = t("settings.appUpdateUpToDate");
+    }
+  } catch {
+    appUpdateCheckError.value = t("settings.errAppUpdateCheck");
+  } finally {
+    appUpdateCheckLoading.value = false;
+  }
 }
 
 async function saveCloseToTray() {
@@ -853,6 +932,22 @@ function doClearFriendsCache() {
 }
 
 .oss-link-row {
+  margin-top: var(--space-form-field);
+}
+
+.update-check-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-action-group);
+  margin-top: var(--space-form-field);
+}
+
+.update-status-line {
+  margin: 0;
+}
+
+.update-check-error {
   margin-top: var(--space-form-field);
 }
 

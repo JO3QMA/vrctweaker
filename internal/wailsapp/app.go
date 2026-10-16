@@ -47,6 +47,7 @@ type App struct {
 	dbMaintenance    *usecase.DBMaintenanceUseCase
 	assetCache       *usecase.VRChatAssetCacheUseCase
 	ytdlp            *usecase.YTDLPMaintainUseCase
+	appUpdate        *usecase.AppUpdateUseCase
 	cookieLinkage    *usecase.CookieLinkageUseCase
 	serverStatus     *statuspage.Client
 	vrchatConfigRepo *filesystem.VRChatConfigFileRepository
@@ -76,6 +77,9 @@ type App struct {
 
 	tray        tray.Manager
 	quitPending atomic.Bool
+
+	appUpdatePendingMu      sync.Mutex
+	pendingStartupAppUpdate *usecase.AppUpdateStatus
 }
 
 // NewApp creates a new App application struct.
@@ -156,6 +160,7 @@ func (a *App) startup(ctx context.Context) {
 	a.settings = usecase.NewSettingsUseCase(settingsRepo)
 	a.dbMaintenance = usecase.NewDBMaintenanceUseCase(db, encounterRepo, friendAvatarRepo, mediaRepo, userCacheRepo, settingsRepo)
 	a.ytdlp = usecase.NewYTDLPMaintainUseCase(a.settings, usecase.NewYTDLPUpdater())
+	a.appUpdate = usecase.NewAppUpdateUseCase(a.settings, nil, nil)
 	a.cookieLinkage = usecase.NewCookieLinkageUseCase(a.settings)
 	a.serverStatus = statuspage.NewClient()
 
@@ -180,6 +185,7 @@ func (a *App) startup(ctx context.Context) {
 	a.startSleepSuppressLoop()
 	a.startYTDLPMaintainLoop()
 	a.syncTrayFromSettings(ctx)
+	a.startAppUpdateCheckOnStartup()
 }
 
 // shutdown persists state before the process exits (Wails lifecycle).

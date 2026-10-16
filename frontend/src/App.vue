@@ -18,6 +18,7 @@
         </main>
       </div>
     </div>
+    <AppUpdateDialog />
   </el-config-provider>
 </template>
 
@@ -27,6 +28,7 @@ import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import TitleBar from "./components/TitleBar.vue";
 import Sidebar from "./components/Sidebar.vue";
+import AppUpdateDialog from "./components/AppUpdateDialog.vue";
 import { useSessionUnlock } from "./composables/useSessionUnlock";
 import { elLocale, isAppLocale, setLanguage } from "./i18n";
 import { App as WailsApp } from "./wails/app";

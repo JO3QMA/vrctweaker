@@ -83,6 +83,32 @@ export type CookieLinkageStatusDTO = {
   riskAcknowledged: boolean;
 };
 
+/** App update check result (usecase.AppUpdateStatus); local until wails generate. */
+export type AppUpdateStatusDTO = {
+  currentVersion: string;
+  updateAvailable: boolean;
+  shouldPrompt: boolean;
+  latestVersion: string;
+  latestTag: string;
+  releaseNotes: string;
+  downloadUrl: string;
+  zipSha256: string;
+  releasePageUrl: string;
+  autoApplySupported: boolean;
+  checkError?: string;
+};
+
+type AppUpdateAppBindings = {
+  GetAppUpdateAutoCheck: () => Promise<boolean>;
+  SetAppUpdateAutoCheck: (enabled: boolean) => Promise<void>;
+  CheckForAppUpdate: () => Promise<AppUpdateStatusDTO>;
+  ClaimStartupAppUpdatePrompt: () => Promise<AppUpdateStatusDTO>;
+  ClearStartupAppUpdatePrompt: () => Promise<void>;
+  DismissAppUpdate: (version: string) => Promise<void>;
+  ApplyAppUpdate: (latestVersion: string) => Promise<void>;
+  OpenAppReleasePage: (url: string) => Promise<void>;
+};
+
 type CookieLinkageAppBindings = {
   GetYTDLPCookieLinkageStatus: () => Promise<CookieLinkageStatusDTO>;
   AcknowledgeYTDLPCookieLinkageRisk: () => Promise<void>;
@@ -170,6 +196,25 @@ export function logicalProcessorCountFallback(): number {
 
 function asCookieApp(a: AppBindings): AppBindings & CookieLinkageAppBindings {
   return a as AppBindings & CookieLinkageAppBindings;
+}
+
+function asAppUpdateApp(a: AppBindings): AppBindings & AppUpdateAppBindings {
+  return a as AppBindings & AppUpdateAppBindings;
+}
+
+function emptyAppUpdateStatus(): AppUpdateStatusDTO {
+  return {
+    currentVersion: "dev",
+    updateAvailable: false,
+    shouldPrompt: false,
+    latestVersion: "",
+    latestTag: "",
+    releaseNotes: "",
+    downloadUrl: "",
+    zipSha256: "",
+    releasePageUrl: "",
+    autoApplySupported: false,
+  };
 }
 
 /** -999 = omit for process/main thread priority */
@@ -527,6 +572,39 @@ export const App = {
     undefined,
   ),
   getAppVersion: bindGo((a) => a.GetAppVersion(), "dev"),
+  getAppUpdateAutoCheck: bindGo(
+    (a) => asAppUpdateApp(a).GetAppUpdateAutoCheck(),
+    true,
+  ),
+  setAppUpdateAutoCheck: bindGo(
+    (a, on: boolean) => asAppUpdateApp(a).SetAppUpdateAutoCheck(on),
+    undefined,
+  ),
+  checkForAppUpdate: bindGo(
+    (a) => asAppUpdateApp(a).CheckForAppUpdate(),
+    emptyAppUpdateStatus(),
+  ),
+  claimStartupAppUpdatePrompt: bindGo(
+    (a) => asAppUpdateApp(a).ClaimStartupAppUpdatePrompt(),
+    emptyAppUpdateStatus(),
+  ),
+  clearStartupAppUpdatePrompt: bindGo(
+    (a) => asAppUpdateApp(a).ClearStartupAppUpdatePrompt(),
+    undefined,
+  ),
+  dismissAppUpdate: bindGo(
+    (a, version: string) => asAppUpdateApp(a).DismissAppUpdate(version),
+    undefined,
+  ),
+  applyAppUpdate: bindGo(
+    (a, latestVersion: string) =>
+      asAppUpdateApp(a).ApplyAppUpdate(latestVersion),
+    undefined,
+  ),
+  openAppReleasePage: bindGo(
+    (a, url: string) => asAppUpdateApp(a).OpenAppReleasePage(url),
+    undefined,
+  ),
   getCloseToTray: bindGo((a) => a.GetCloseToTray(), true),
   setCloseToTray: bindGo((a, on: boolean) => a.SetCloseToTray(on), undefined),
   requestClose: bindGo((a) => a.RequestClose(), undefined),

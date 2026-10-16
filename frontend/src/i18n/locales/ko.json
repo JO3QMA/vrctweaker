@@ -483,7 +483,25 @@
     "clearScreenshotsDone": "스크린샷 인덱스 {n}건 삭제",
     "clearFriendsConfirm": "users_cache의 모든 행을 삭제할까요?",
     "clearFriendsDone": "친구 캐시 {n}건 삭제",
-    "errOutputLogMustBeDir": "output_log는 로그 폴더(디렉터리)여야 합니다"
+    "errOutputLogMustBeDir": "output_log는 로그 폴더(디렉터리)여야 합니다",
+    "updateAutoCheck": "시작 시 업데이트 확인",
+    "updateAutoCheckHint": "새 안정판 릴리스가 있으면 알립니다(프리릴리스 제외).",
+    "checkAppUpdate": "업데이트 확인",
+    "appUpdateAvailable": "새 버전 {version} 사용 가능",
+    "appUpdateUpToDate": "최신 버전입니다",
+    "errUpdateAutoCheck": "자동 확인 설정을 저장하지 못했습니다",
+    "errAppUpdateCheck": "업데이트 확인에 실패했습니다"
+  },
+  "appUpdate": {
+    "title": "앱 업데이트",
+    "versionLine": "현재 {current} → 최신 {latest}",
+    "releaseNotes": "릴리스 노트",
+    "later": "나중에",
+    "apply": "지금 업데이트",
+    "openRelease": "릴리스 페이지 열기",
+    "errApply": "업데이트 적용에 실패했습니다",
+    "errOpenRelease": "브라우저를 열 수 없습니다",
+    "errDismiss": "나중에 알림 설정을 저장할 수 없습니다"
   },
   "settingsLanguages": {
     "ja": "日本語",
