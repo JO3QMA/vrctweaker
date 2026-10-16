@@ -57,9 +57,7 @@ func (a *App) ApplyAppUpdate(latestVersion string) error {
 	if err := a.appUpdate.ApplyUpdate(a.ctx, latestVersion); err != nil {
 		return err
 	}
-	if a.ctx != nil {
-		runtime.Quit(a.ctx)
-	}
+	a.quitApplication()
 	return nil
 }
 

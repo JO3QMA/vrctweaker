@@ -500,7 +500,8 @@
     "apply": "今すぐ更新",
     "openRelease": "Release ページを開く",
     "errApply": "更新の適用に失敗しました",
-    "errOpenRelease": "ブラウザを開けませんでした"
+    "errOpenRelease": "ブラウザを開けませんでした",
+    "errDismiss": "「後で」の設定を保存できませんでした"
   },
   "settingsLanguages": {
     "ja": "日本語",

@@ -500,7 +500,8 @@
     "apply": "立即更新",
     "openRelease": "開啟發行頁面",
     "errApply": "套用更新失敗",
-    "errOpenRelease": "無法開啟瀏覽器"
+    "errOpenRelease": "無法開啟瀏覽器",
+    "errDismiss": "無法儲存稍後提醒設定"
   },
   "settingsLanguages": {
     "ja": "日本語",

@@ -8,6 +8,7 @@ import (
 type versionCore struct {
 	parts      [3]int
 	prerelease bool
+	invalid    bool
 }
 
 // IsDevelopmentVersion reports dev/empty builds that should not prompt for self-update.
@@ -34,6 +35,15 @@ func CompareProductVersion(a, b string) int {
 	}
 	ac := parseVersionCore(a)
 	bc := parseVersionCore(b)
+	if ac.invalid && bc.invalid {
+		return 0
+	}
+	if ac.invalid {
+		return -1
+	}
+	if bc.invalid {
+		return 1
+	}
 	for i := 0; i < 3; i++ {
 		if ac.parts[i] < bc.parts[i] {
 			return -1
@@ -53,19 +63,34 @@ func CompareProductVersion(a, b string) int {
 
 func parseVersionCore(v string) versionCore {
 	v = strings.TrimPrefix(strings.TrimSpace(v), "v")
+	if plus := strings.Index(v, "+"); plus >= 0 {
+		// Semver build metadata does not affect precedence.
+		v = v[:plus]
+	}
 	prerelease := false
-	if idx := strings.IndexAny(v, "-+"); idx >= 0 {
+	if idx := strings.Index(v, "-"); idx >= 0 {
 		prerelease = true
 		v = v[:idx]
 	}
 	parts := strings.Split(v, ".")
 	var out [3]int
-	for i := 0; i < 3 && i < len(parts); i++ {
-		n, err := strconv.Atoi(strings.TrimSpace(parts[i]))
+	invalid := false
+	for i := 0; i < len(parts); i++ {
+		if i >= 3 {
+			invalid = true
+			break
+		}
+		seg := strings.TrimSpace(parts[i])
+		if seg == "" {
+			invalid = true
+			continue
+		}
+		n, err := strconv.Atoi(seg)
 		if err != nil || n < 0 {
+			invalid = true
 			continue
 		}
 		out[i] = n
 	}
-	return versionCore{parts: out, prerelease: prerelease}
+	return versionCore{parts: out, prerelease: prerelease, invalid: invalid}
 }

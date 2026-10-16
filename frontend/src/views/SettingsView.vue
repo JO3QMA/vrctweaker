@@ -555,10 +555,11 @@ onMounted(async () => {
   galleryAutoEnrichMetadata.value = await App.getGalleryAutoEnrichMetadata();
   suppressSleepWhileVRChat.value = await App.getSuppressSleepWhileVRChat();
   closeToTray.value = await App.getCloseToTray();
-  appUpdateAutoCheck.value = await App.getAppUpdateAutoCheck();
   try {
+    appUpdateAutoCheck.value = await App.getAppUpdateAutoCheck();
     appVersion.value = await App.getAppVersion();
   } catch {
+    appUpdateAutoCheck.value = true;
     appVersion.value = "dev";
   }
   const ps = await App.getPathSettings();

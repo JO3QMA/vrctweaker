@@ -26,7 +26,7 @@
       >{{ status.releaseNotes }}</pre>
     <template #footer>
       <div class="dialog-actions">
-        <VtButton variant="tertiary" @click="onLater">
+        <VtButton variant="tertiary" :disabled="applying" @click="onLater">
           {{ t("appUpdate.later") }}
         </VtButton>
         <VtButton
@@ -67,8 +67,12 @@ const {
   openReleasePage,
 } = useAppUpdateLifecycle();
 
-function onLater() {
-  void dismissLater();
+async function onLater() {
+  try {
+    await dismissLater();
+  } catch {
+    showToast.error(t("appUpdate.errDismiss"));
+  }
 }
 
 async function onApply() {

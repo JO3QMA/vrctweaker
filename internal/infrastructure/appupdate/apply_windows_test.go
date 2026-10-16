@@ -2,21 +2,10 @@
 
 package appupdate
 
-import (
-	"os/exec"
-	"testing"
+import "testing"
 
-	"golang.org/x/sys/windows"
-)
-
-func TestSetUpdateHelperProcessAttrs_breakawayFromJob(t *testing.T) {
-	cmd := exec.Command("powershell.exe", "-NoProfile")
-	setUpdateHelperProcessAttrs(cmd)
-	if cmd.SysProcAttr == nil {
-		t.Fatal("SysProcAttr nil")
-	}
-	want := windows.CREATE_NEW_PROCESS_GROUP | windows.CREATE_BREAKAWAY_FROM_JOB
-	if cmd.SysProcAttr.CreationFlags != want {
-		t.Fatalf("CreationFlags=%#x want %#x", cmd.SysProcAttr.CreationFlags, want)
+func TestUtf8BOM_forPowerShell51(t *testing.T) {
+	if len(utf8BOM) != 3 || utf8BOM[0] != 0xEF || utf8BOM[1] != 0xBB || utf8BOM[2] != 0xBF {
+		t.Fatalf("utf8BOM=%v", utf8BOM)
 	}
 }

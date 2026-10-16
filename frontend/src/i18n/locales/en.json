@@ -500,7 +500,8 @@
     "apply": "Update now",
     "openRelease": "Open release page",
     "errApply": "Could not apply the update",
-    "errOpenRelease": "Could not open the browser"
+    "errOpenRelease": "Could not open the browser",
+    "errDismiss": "Could not save dismiss preference"
   },
   "settingsLanguages": {
     "ja": "日本語",

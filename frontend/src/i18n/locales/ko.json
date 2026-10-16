@@ -500,7 +500,8 @@
     "apply": "지금 업데이트",
     "openRelease": "릴리스 페이지 열기",
     "errApply": "업데이트 적용에 실패했습니다",
-    "errOpenRelease": "브라우저를 열 수 없습니다"
+    "errOpenRelease": "브라우저를 열 수 없습니다",
+    "errDismiss": "나중에 알림 설정을 저장할 수 없습니다"
   },
   "settingsLanguages": {
     "ja": "日本語",

@@ -37,21 +37,40 @@ func ScheduleReplaceAndRestart(workDir, targetExe, stagedExe string, pid int) er
 	if err := os.MkdirAll(workDir, 0o700); err != nil {
 		return fmt.Errorf("appupdate: work dir: %w", err)
 	}
-	if err := os.WriteFile(scriptPath, []byte(script), 0o600); err != nil {
+	scriptBytes := append(utf8BOM, []byte(script))
+	if err := os.WriteFile(scriptPath, scriptBytes, 0o600); err != nil {
 		return fmt.Errorf("appupdate: write helper script: %w", err)
 	}
-	cmd := exec.Command(
-		"powershell.exe",
-		"-NoProfile",
-		"-ExecutionPolicy", "Bypass",
-		"-File", scriptPath,
-	)
-	setUpdateHelperProcessAttrs(cmd)
-	cmd.Dir = filepath.Dir(targetExe)
-	if err := cmd.Start(); err != nil {
+	if err := startUpdateHelperProcess(scriptPath, filepath.Dir(targetExe)); err != nil {
 		return fmt.Errorf("appupdate: start helper: %w", err)
 	}
 	return nil
+}
+
+var utf8BOM = []byte{0xEF, 0xBB, 0xBF}
+
+func startUpdateHelperProcess(scriptPath, workDir string) error {
+	flags := []uint32{
+		windows.CREATE_NEW_PROCESS_GROUP | windows.CREATE_BREAKAWAY_FROM_JOB,
+		windows.CREATE_NEW_PROCESS_GROUP | windows.DETACHED_PROCESS,
+	}
+	var lastErr error
+	for _, creationFlags := range flags {
+		cmd := exec.Command(
+			"powershell.exe",
+			"-NoProfile",
+			"-ExecutionPolicy", "Bypass",
+			"-File", scriptPath,
+		)
+		cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: creationFlags}
+		cmd.Dir = workDir
+		if err := cmd.Start(); err != nil {
+			lastErr = err
+			continue
+		}
+		return nil
+	}
+	return lastErr
 }
 
 func buildReplaceScript(targetExe, stagedExe, backupExe, stagedCleanup, workDir, scriptPath string, pid int) string {
@@ -85,6 +104,10 @@ try {
   }
   exit 1
 } finally {
+  $zip = Join-Path $workDir 'package.zip'
+  if (Test-Path $zip) { Remove-Item -LiteralPath $zip -Force -ErrorAction SilentlyContinue }
+  $staging = Join-Path $workDir 'staging'
+  if (Test-Path $staging) { Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue }
   if (Test-Path $stagedCleanup) { Remove-Item -LiteralPath $stagedCleanup -Force -ErrorAction SilentlyContinue }
   if (Test-Path $scriptPath) { Remove-Item -LiteralPath $scriptPath -Force -ErrorAction SilentlyContinue }
 }
@@ -93,12 +116,6 @@ try {
 
 func psQuote(s string) string {
 	return "'" + strings.ReplaceAll(s, "'", "''") + "'"
-}
-
-func setUpdateHelperProcessAttrs(cmd *exec.Cmd) {
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		CreationFlags: windows.CREATE_NEW_PROCESS_GROUP | windows.CREATE_BREAKAWAY_FROM_JOB,
-	}
 }
 
 // WorkDir returns a directory under installDir for update staging artifacts.

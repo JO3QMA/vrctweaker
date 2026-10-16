@@ -43,8 +43,8 @@ function createAppUpdateStore() {
   }
 
   async function dismissLater() {
+    const v = status.value?.latestVersion;
     try {
-      const v = status.value?.latestVersion;
       if (v) {
         await App.dismissAppUpdate(v);
       }

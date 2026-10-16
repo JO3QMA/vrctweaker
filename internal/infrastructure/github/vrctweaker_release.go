@@ -96,9 +96,12 @@ func (c *ReleaseClient) FetchLatestStable(ctx context.Context) (VRCTweakerReleas
 		slurp, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
 		return VRCTweakerRelease{}, fmt.Errorf("github releases: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(slurp)))
 	}
-	data, err := io.ReadAll(io.LimitReader(resp.Body, maxReleaseAPIResponseBytes))
+	data, err := io.ReadAll(io.LimitReader(resp.Body, maxReleaseAPIResponseBytes+1))
 	if err != nil {
 		return VRCTweakerRelease{}, fmt.Errorf("github releases: read body: %w", err)
+	}
+	if len(data) > maxReleaseAPIResponseBytes {
+		return VRCTweakerRelease{}, fmt.Errorf("github releases: response exceeds size limit")
 	}
 	return parseLatestReleaseJSON(data, c != nil && c.SkipURLValidation)
 }

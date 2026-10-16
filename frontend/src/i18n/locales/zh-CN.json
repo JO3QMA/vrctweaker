@@ -500,7 +500,8 @@
     "apply": "立即更新",
     "openRelease": "打开发行页",
     "errApply": "应用更新失败",
-    "errOpenRelease": "无法打开浏览器"
+    "errOpenRelease": "无法打开浏览器",
+    "errDismiss": "无法保存稍后提醒设置"
   },
   "settingsLanguages": {
     "ja": "日本語",

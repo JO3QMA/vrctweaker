@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,6 +17,8 @@ import (
 	gh "vrchat-tweaker/internal/infrastructure/github"
 )
 
+const maxDownloadRedirects = 8
+
 const maxReleaseZipDownloadBytes = 600 << 20 // 600 MiB
 
 // Downloader fetches release zips over HTTPS.
@@ -26,9 +29,24 @@ type Downloader struct {
 
 func (d *Downloader) httpClient() *http.Client {
 	if d != nil && d.HTTPClient != nil {
+		if d.HTTPClient.CheckRedirect == nil {
+			c := *d.HTTPClient
+			c.CheckRedirect = validateReleaseDownloadRedirect
+			return &c
+		}
 		return d.HTTPClient
 	}
-	return &http.Client{Timeout: 5 * time.Minute}
+	return &http.Client{Timeout: 5 * time.Minute, CheckRedirect: validateReleaseDownloadRedirect}
+}
+
+func validateReleaseDownloadRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) >= maxDownloadRedirects {
+		return errors.New("appupdate: too many redirects")
+	}
+	if err := gh.ValidateReleaseDownloadURL(req.URL.String()); err != nil {
+		return fmt.Errorf("appupdate: redirect: %w", err)
+	}
+	return nil
 }
 
 func (d *Downloader) ua() string {
