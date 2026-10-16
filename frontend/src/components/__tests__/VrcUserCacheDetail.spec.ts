@@ -81,9 +81,10 @@ describe("VrcUserCacheDetail", () => {
     expect(wrapper.find(".profile-handle").text()).toBe("@detail_user");
     expect(wrapper.find(".profile-bio").text()).toBe("Hello\nWorld");
     expect(wrapper.find(".profile-status-desc").text()).toBe("Building worlds");
-    const links = wrapper.findAll(".profile-bio-links a");
+    const links = wrapper.findAll(".profile-bio-links a.safe-external-url-link");
     expect(links).toHaveLength(2);
-    expect(links[0]?.attributes("href")).toBe("https://example.com/a");
+    expect(links[0]?.attributes("href")).toBe("#");
+    expect(links[0]?.text()).toBe("https://example.com/a");
     expect(links[1]?.text()).toBe("https://example.com/b");
   });
 
@@ -281,16 +282,20 @@ describe("VrcUserCacheDetail", () => {
     expect(text).toContain("2025-01-02T00:00:00Z");
     expect(text).toContain("2025-01-03T00:00:00Z");
     expect(text).toContain("fk_abc");
-    expect(wrapper.find('a[href="https://cdn/avatar-big.png"]').exists()).toBe(
+    expect(
+      wrapper.find('[data-testid="profile-avatar-image-url"]').exists(),
+    ).toBe(true);
+    expect(wrapper.find('[data-testid="profile-user-icon-url"]').exists()).toBe(
       true,
     );
-    expect(wrapper.find('a[href="https://cdn/icon.png"]').exists()).toBe(true);
-    expect(wrapper.find('a[href="https://cdn/image.png"]').exists()).toBe(true);
-    expect(wrapper.find('a[href="https://cdn/override.png"]').exists()).toBe(
+    expect(wrapper.find('[data-testid="profile-image-url"]').exists()).toBe(
       true,
     );
     expect(
-      wrapper.find('a[href="https://cdn/override-thumb.png"]').exists(),
+      wrapper.find('[data-testid="profile-pic-override-url"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="profile-pic-override-thumb-url"]').exists(),
     ).toBe(true);
   });
 
@@ -300,6 +305,25 @@ describe("VrcUserCacheDetail", () => {
 
     expect(wrapper.find(".profile-avatar--placeholder").exists()).toBe(true);
     expect(wrapper.find(".profile-banner-fallback").exists()).toBe(true);
+  });
+
+  it("renders unsafe bio links as plain text", async () => {
+    const wrapper = mountDetail(
+      minimalUser({
+        bioLinksJson: JSON.stringify([
+          "https://safe.example/",
+          "javascript:alert(1)",
+        ]),
+      }),
+    );
+    await flushPromises();
+    expect(wrapper.find('[data-testid="profile-bio-link-0"]').exists()).toBe(
+      true,
+    );
+    expect(
+      wrapper.find('[data-testid="profile-bio-link-1-text"]').exists(),
+    ).toBe(true);
+    expect(wrapper.text()).toContain("javascript:alert(1)");
   });
 
   it("self variant hides favorite and encounters tab", async () => {
