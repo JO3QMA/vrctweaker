@@ -560,6 +560,7 @@
     "profilePicThumb": "大頭貼縮圖",
     "friendKey": "friendKey",
     "cacheUpdated": "快取更新",
+    "openExternalUrlError": "無法在瀏覽器中開啟連結。",
     "userTags": {
       "deprecated": "已廢止",
       "unknown": "未知標籤",

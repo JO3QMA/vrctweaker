@@ -28,6 +28,7 @@ describe("parseSafeHttpUrl", () => {
   it("rejects empty and relative URLs", () => {
     expect(parseSafeHttpUrl("").ok).toBe(false);
     expect(parseSafeHttpUrl("/only-path").ok).toBe(false);
+    expect(parseSafeHttpUrl("http://:80").ok).toBe(false);
   });
 });
 

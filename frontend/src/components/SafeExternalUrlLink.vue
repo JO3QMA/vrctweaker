@@ -23,8 +23,13 @@
 
 <script setup lang="ts">
 import { computed } from "vue";
+import { useI18n } from "vue-i18n";
 import { openExternalHttpUrl } from "@/utils/openExternalHttpUrl";
+import { formatError } from "@/utils/formatError";
+import { showToast } from "@/utils/showToast";
 import { parseSafeHttpUrl } from "@/utils/safeHttpUrl";
+
+const { t } = useI18n();
 
 const props = withDefaults(
   defineProps<{
@@ -55,7 +60,14 @@ const safeHref = computed(() =>
 );
 
 async function onOpen() {
-  await openExternalHttpUrl(props.url);
+  try {
+    const opened = await openExternalHttpUrl(props.url);
+    if (!opened) {
+      showToast.warning(t("userDetail.openExternalUrlError"));
+    }
+  } catch (e: unknown) {
+    showToast.error(formatError(e, t("userDetail.openExternalUrlError")));
+  }
 }
 </script>
 

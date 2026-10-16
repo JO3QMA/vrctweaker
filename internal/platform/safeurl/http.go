@@ -23,7 +23,7 @@ func ParseHTTPHTTPS(raw string) (string, error) {
 	if u.Scheme != "http" && u.Scheme != "https" {
 		return "", fmt.Errorf("%w: unsupported scheme", ErrUnsafeURL)
 	}
-	if u.Host == "" {
+	if u.Host == "" || u.Hostname() == "" {
 		return "", fmt.Errorf("%w: missing host", ErrUnsafeURL)
 	}
 	return u.String(), nil

@@ -18,6 +18,7 @@ func TestParseHTTPHTTPS(t *testing.T) {
 		{"data", "data:text/html,hi", false, ""},
 		{"empty", "", false, ""},
 		{"no host", "https://", false, ""},
+		{"port only", "http://:80", false, ""},
 		{"relative", "/path", false, ""},
 	}
 	for _, tc := range tests {
