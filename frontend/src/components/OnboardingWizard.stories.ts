@@ -22,6 +22,7 @@ const meta: Meta<typeof OnboardingWizard> = {
           steamPathLinux: "/usr/bin/steam",
           outputLogPath: "C:\\Users\\You\\AppData\\LocalLow\\VRChat\\VRChat",
           pictureOutputFolder: "C:\\Users\\You\\Pictures\\VRChat",
+          savedPictureOutputFolder: "",
         }),
       GetSelfProfile: () =>
         Promise.resolve({ displayName: "Story User", vrcUserId: "" }),

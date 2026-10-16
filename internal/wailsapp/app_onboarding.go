@@ -13,10 +13,11 @@ var errSettingsNotInitialized = errors.New("settings repository is not initializ
 
 // OnboardingFolderDefaultsDTO is shown on the first-launch folder step.
 type OnboardingFolderDefaultsDTO struct {
-	VrchatPathWindows   string `json:"vrchatPathWindows"`
-	SteamPathLinux      string `json:"steamPathLinux"`
-	OutputLogPath       string `json:"outputLogPath"`
-	PictureOutputFolder string `json:"pictureOutputFolder"`
+	VrchatPathWindows        string `json:"vrchatPathWindows"`
+	SteamPathLinux           string `json:"steamPathLinux"`
+	OutputLogPath            string `json:"outputLogPath"`
+	PictureOutputFolder      string `json:"pictureOutputFolder"`
+	SavedPictureOutputFolder string `json:"savedPictureOutputFolder"`
 }
 
 // OnboardingFolderSaveDTO persists only fields the user explicitly applied in the wizard.
@@ -59,11 +60,19 @@ func (a *App) GetOnboardingFolderDefaults() (OnboardingFolderDefaultsDTO, error)
 	if defs == nil {
 		return OnboardingFolderDefaultsDTO{}, nil
 	}
+	savedPicture := ""
+	if a.vrchatConfigRepo != nil {
+		cfg, readErr := a.vrchatConfigRepo.Read()
+		if readErr == nil && cfg != nil {
+			savedPicture = strings.TrimSpace(cfg.PictureOutputFolder)
+		}
+	}
 	return OnboardingFolderDefaultsDTO{
-		VrchatPathWindows:   defs.PathSettings.VRChatPathWindows,
-		SteamPathLinux:      defs.PathSettings.SteamPathLinux,
-		OutputLogPath:       defs.PathSettings.OutputLogPath,
-		PictureOutputFolder: defs.PictureOutputFolder,
+		VrchatPathWindows:        defs.PathSettings.VRChatPathWindows,
+		SteamPathLinux:           defs.PathSettings.SteamPathLinux,
+		OutputLogPath:            defs.PathSettings.OutputLogPath,
+		PictureOutputFolder:      defs.PictureOutputFolder,
+		SavedPictureOutputFolder: savedPicture,
 	}, nil
 }
 
@@ -140,7 +149,9 @@ func (a *App) SaveOnboardingFolderSettings(save OnboardingFolderSaveDTO) error {
 		}
 		if err := a.writeVRChatPictureOutputFolder(pic); err != nil {
 			if pathChanged {
-				_ = a.settings.SetPathSettings(a.ctx, &backup)
+				if rbErr := a.settings.SetPathSettings(a.ctx, &backup); rbErr != nil {
+					return errors.Join(err, errors.New("rollback path settings failed: "+rbErr.Error()))
+				}
 			}
 			return err
 		}

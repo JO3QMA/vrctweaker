@@ -37,6 +37,7 @@ describe("OnboardingWizard", () => {
       steamPathLinux: "/usr/bin/steam",
       outputLogPath: "C:\\logs",
       pictureOutputFolder: "C:\\Pictures\\VRChat",
+      savedPictureOutputFolder: "",
     });
     vi.mocked(App.setFirstLaunchGuideCompleted).mockResolvedValue(undefined);
     vi.mocked(App.saveOnboardingFolderSettings).mockResolvedValue(undefined);
@@ -73,18 +74,66 @@ describe("OnboardingWizard", () => {
     expect(wrapper.text()).toContain("C:\\logs");
   });
 
-  it("completes wizard and emits finished", async () => {
+  it("completes wizard and saves auto-detected folders", async () => {
     const wrapper = mount(OnboardingWizard);
     await flushPromises();
     await wrapper.find('[data-testid="onboarding-skip-step"]').trigger("click");
     await flushPromises();
     await wrapper.find('[data-testid="onboarding-next"]').trigger("click");
     await flushPromises();
-    expect(App.saveOnboardingFolderSettings).not.toHaveBeenCalled();
+    expect(App.saveOnboardingFolderSettings).toHaveBeenCalledWith({
+      vrchatPathWindows: "C:\\VRChat\\launch.exe",
+      steamPathLinux: "/usr/bin/steam",
+      outputLogPath: "C:\\logs",
+      pictureOutputFolder: "C:\\Pictures\\VRChat",
+      applyVrchatPathWindows: true,
+      applySteamPathLinux: true,
+      applyOutputLogPath: true,
+      applyPictureOutputFolder: true,
+    });
     await wrapper.find('[data-testid="onboarding-next"]').trigger("click");
     await flushPromises();
     expect(App.setFirstLaunchGuideCompleted).toHaveBeenCalledWith(true);
     expect(wrapper.emitted("finished")).toBeTruthy();
+  });
+
+  it("blocks folder step when defaults fail to load", async () => {
+    vi.useFakeTimers();
+    vi.mocked(App.getOnboardingFolderDefaults).mockRejectedValue(
+      new Error("backend down"),
+    );
+    const wrapper = mount(OnboardingWizard);
+    await flushPromises();
+    await vi.runAllTimersAsync();
+    await flushPromises();
+    await wrapper.find('[data-testid="onboarding-skip-step"]').trigger("click");
+    await flushPromises();
+    await wrapper.find('[data-testid="onboarding-next"]').trigger("click");
+    await vi.runAllTimersAsync();
+    await flushPromises();
+    expect(App.saveOnboardingFolderSettings).not.toHaveBeenCalled();
+    expect(
+      wrapper.find('[data-testid="onboarding-step-folders"]').exists(),
+    ).toBe(true);
+    vi.useRealTimers();
+  });
+
+  it("does not emit finished when completion flag save fails", async () => {
+    vi.mocked(App.setFirstLaunchGuideCompleted).mockRejectedValue(
+      new Error("disk full"),
+    );
+    const wrapper = mount(OnboardingWizard);
+    await flushPromises();
+    await wrapper.find('[data-testid="onboarding-skip-step"]').trigger("click");
+    await flushPromises();
+    await wrapper.find('[data-testid="onboarding-next"]').trigger("click");
+    await flushPromises();
+    await wrapper.find('[data-testid="onboarding-next"]').trigger("click");
+    await flushPromises();
+    expect(wrapper.emitted("finished")).toBeFalsy();
+    expect(
+      wrapper.find('[data-testid="onboarding-complete-error"]').text(),
+    ).toContain("disk full");
   });
 
   it("shows login error below fields and keeps username", async () => {

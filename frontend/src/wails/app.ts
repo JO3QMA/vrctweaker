@@ -62,6 +62,7 @@ export type OnboardingFolderDefaultsDTO = {
   steamPathLinux: string;
   outputLogPath: string;
   pictureOutputFolder: string;
+  savedPictureOutputFolder?: string;
 };
 
 export type OnboardingFolderSaveDTO = OnboardingFolderDefaultsDTO & {

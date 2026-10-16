@@ -167,6 +167,12 @@
         <p class="onboarding-later-hint text-caption">
           {{ t("onboarding.settingsLaterHint") }}
         </p>
+        <VtAlert
+          v-if="completeError"
+          variant="danger"
+          :title="completeError"
+          data-testid="onboarding-complete-error"
+        />
       </section>
     </main>
 
@@ -194,7 +200,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from "vue";
+import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import VtAlert from "./VtAlert.vue";
 import VtButton from "./VtButton.vue";
@@ -235,8 +241,11 @@ const loginLoading = ref(false);
 const twoFactorRequired = ref(false);
 
 const foldersLoading = ref(true);
+const folderDefaultsReady = ref(false);
 const folderSaveError = ref("");
 const foldersSaved = ref(false);
+const completeError = ref("");
+const savedPictureOutputFolder = ref("");
 const folderDefs = reactive<OnboardingFolderDefaultsDTO>({
   vrchatPathWindows: "",
   steamPathLinux: "",
@@ -280,7 +289,16 @@ const nextLabel = computed(() =>
   step.value === 2 ? t("onboarding.finish") : t("onboarding.next"),
 );
 
-type FolderKey = keyof OnboardingFolderDefaultsDTO;
+type FolderKey = Exclude<
+  keyof OnboardingFolderDefaultsDTO,
+  "savedPictureOutputFolder"
+>;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 const folderRows = computed(() => {
   const rows: {
@@ -408,23 +426,41 @@ async function refreshLoginState(): Promise<void> {
   }
 }
 
-async function loadFolderDefaults(): Promise<void> {
+async function loadFolderDefaults(): Promise<boolean> {
   foldersLoading.value = true;
-  folderSaveError.value = "";
+  const maxAttempts = 12;
   try {
-    const [saved, defs] = await Promise.all([
-      App.getPathSettings(),
-      App.getOnboardingFolderDefaults(),
-    ]);
-    savedPathSettings.vrchatPathWindows = saved.vrchatPathWindows ?? "";
-    savedPathSettings.steamPathLinux = saved.steamPathLinux ?? "";
-    savedPathSettings.outputLogPath = saved.outputLogPath ?? "";
-    folderDefs.vrchatPathWindows = defs.vrchatPathWindows ?? "";
-    folderDefs.steamPathLinux = defs.steamPathLinux ?? "";
-    folderDefs.outputLogPath = defs.outputLogPath ?? "";
-    folderDefs.pictureOutputFolder = defs.pictureOutputFolder ?? "";
-  } catch (e) {
-    folderSaveError.value = formatBackendError(e, t("settings.errOperation"));
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const [saved, defs] = await Promise.all([
+          App.getPathSettings(),
+          App.getOnboardingFolderDefaults(),
+        ]);
+        savedPathSettings.vrchatPathWindows = saved.vrchatPathWindows ?? "";
+        savedPathSettings.steamPathLinux = saved.steamPathLinux ?? "";
+        savedPathSettings.outputLogPath = saved.outputLogPath ?? "";
+        folderDefs.vrchatPathWindows = defs.vrchatPathWindows ?? "";
+        folderDefs.steamPathLinux = defs.steamPathLinux ?? "";
+        folderDefs.outputLogPath = defs.outputLogPath ?? "";
+        folderDefs.pictureOutputFolder = defs.pictureOutputFolder ?? "";
+        savedPictureOutputFolder.value = defs.savedPictureOutputFolder ?? "";
+        folderSaveError.value = "";
+        folderDefaultsReady.value = true;
+        return true;
+      } catch (e) {
+        if (attempt < maxAttempts - 1) {
+          await delay(50 * (attempt + 1));
+          continue;
+        }
+        folderSaveError.value = formatBackendError(
+          e,
+          t("settings.errOperation"),
+        );
+        folderDefaultsReady.value = false;
+        return false;
+      }
+    }
+    return false;
   } finally {
     foldersLoading.value = false;
   }
@@ -433,6 +469,12 @@ async function loadFolderDefaults(): Promise<void> {
 onMounted(async () => {
   await refreshLoginState();
   await loadFolderDefaults();
+});
+
+watch(step, (s) => {
+  if (s === 1 && !folderDefaultsReady.value && !foldersLoading.value) {
+    void loadFolderDefaults();
+  }
 });
 
 async function submitLogin(): Promise<void> {
@@ -467,33 +509,56 @@ async function submitLogin(): Promise<void> {
   }
 }
 
+function shouldApplyPathField(
+  key: Exclude<FolderKey, "pictureOutputFolder">,
+): boolean {
+  if (folderTouched[key]) return true;
+  const value = folderDefs[key].trim();
+  const saved = savedPathSettings[key].trim();
+  return value !== "" && saved === "";
+}
+
+function shouldApplyPictureFolder(): boolean {
+  if (folderTouched.pictureOutputFolder) return true;
+  const value = folderDefs.pictureOutputFolder.trim();
+  const saved = savedPictureOutputFolder.value.trim();
+  return value !== "" && saved === "";
+}
+
 function buildFolderSavePayload() {
+  const applyVrchatPathWindows = shouldApplyPathField("vrchatPathWindows");
+  const applySteamPathLinux = shouldApplyPathField("steamPathLinux");
+  const applyOutputLogPath = shouldApplyPathField("outputLogPath");
+  const applyPictureOutputFolder = shouldApplyPictureFolder();
   return {
     vrchatPathWindows: folderDefs.vrchatPathWindows,
     steamPathLinux: folderDefs.steamPathLinux,
     outputLogPath: folderDefs.outputLogPath,
     pictureOutputFolder: folderDefs.pictureOutputFolder,
-    applyVrchatPathWindows: folderTouched.vrchatPathWindows,
-    applySteamPathLinux: folderTouched.steamPathLinux,
-    applyOutputLogPath: folderTouched.outputLogPath,
-    applyPictureOutputFolder: folderTouched.pictureOutputFolder,
+    applyVrchatPathWindows,
+    applySteamPathLinux,
+    applyOutputLogPath,
+    applyPictureOutputFolder,
   };
 }
 
 async function saveFolders(): Promise<boolean> {
-  folderSaveError.value = "";
+  if (!folderDefaultsReady.value) {
+    const loaded = await loadFolderDefaults();
+    if (!loaded) return false;
+  }
   nextLoading.value = true;
   try {
     const payload = buildFolderSavePayload();
-    const anyTouched =
+    const anyApply =
       payload.applyVrchatPathWindows ||
       payload.applySteamPathLinux ||
       payload.applyOutputLogPath ||
       payload.applyPictureOutputFolder;
-    if (anyTouched) {
+    if (anyApply) {
       await App.saveOnboardingFolderSettings(payload);
     }
-    foldersSaved.value = anyTouched;
+    foldersSaved.value = anyApply;
     return true;
   } catch (e) {
     folderSaveError.value = formatBackendError(e, t("settings.errOperation"));
@@ -503,13 +568,16 @@ async function saveFolders(): Promise<boolean> {
   }
 }
 
-async function finishWizard(): Promise<void> {
+async function finishWizard(): Promise<boolean> {
+  completeError.value = "";
   try {
     await App.setFirstLaunchGuideCompleted(true);
-  } catch {
-    // Best-effort; still close the wizard.
+    emit("finished");
+    return true;
+  } catch (e) {
+    completeError.value = formatBackendError(e, t("settings.errOperation"));
+    return false;
   }
-  emit("finished");
 }
 
 async function goNext(): Promise<void> {
@@ -533,7 +601,7 @@ async function goNext(): Promise<void> {
   await finishWizard();
 }
 
-function skipStep(): void {
+async function skipStep(): Promise<void> {
   if (step.value === 0) {
     loginSkipped.value = true;
     step.value = 1;
@@ -541,7 +609,6 @@ function skipStep(): void {
   }
   if (step.value === 1) {
     step.value = 2;
-    return;
   }
 }
 
