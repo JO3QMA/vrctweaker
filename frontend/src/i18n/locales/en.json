@@ -66,7 +66,8 @@
     "dash": "—",
     "stillPresent": "Present",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "unofficialDisclaimer": "VRChat Tweaker is not an official VRChat product and is not affiliated with VRChat Inc."
   },
   "chart": {
     "hour": "h",
@@ -414,6 +415,12 @@
       "subsystemUnavailable": "Could not initialize the automation subsystem."
     }
   },
+  "legal": {
+    "privacyPolicy": "Privacy Policy",
+    "termsOfUse": "Terms of Use & Disclaimer",
+    "settingsIntro": "See the following documents for data handling and terms of use.",
+    "licensesIntro": "In addition to open-source licenses, see the documents below for data handling and terms."
+  },
   "licenses": {
     "title": "OSS licenses",
     "intro": "Licenses for open-source software used by this application.",
@@ -457,7 +464,6 @@
     "appVersion": "Version {version}",
     "openFirstLaunchGuide": "Open first-time setup",
     "openFirstLaunchGuideHint": "Show the login and folder setup wizard again.",
-    "unofficialDisclaimer": "VRChat Tweaker is not an official VRChat product and is not affiliated with VRChat Inc.",
     "dataStorageNote": "Sign-in credentials are stored in the Windows Credential Manager when available. The app database and settings are stored under %AppData%\\Roaming\\vrchat-tweaker\\.",
     "closeToTray": "Close to system tray",
     "closeToTrayHint": "The close button hides the window to the system tray instead of quitting. Automation and log watchers keep running (Windows only). Turn off to quit when closing.",
@@ -588,6 +594,7 @@
     "profilePicThumb": "Profile picture thumbnail",
     "friendKey": "friendKey",
     "cacheUpdated": "Cache updated",
+    "openExternalUrlError": "Could not open the link in your browser.",
     "userTags": {
       "deprecated": "Deprecated",
       "unknown": "Unknown tag",

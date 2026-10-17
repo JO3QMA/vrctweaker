@@ -225,7 +225,7 @@
         class="hint block-hint app-meta-note"
         data-testid="settings-app-disclaimer"
       >
-        {{ t("settings.unofficialDisclaimer") }}
+        {{ t("common.unofficialDisclaimer") }}
       </el-text>
       <el-text
         type="info"
@@ -235,6 +235,10 @@
       >
         {{ t("settings.dataStorageNote") }}
       </el-text>
+      <LegalDocLinks
+        class="app-legal-links"
+        :intro="t('legal.settingsIntro')"
+      />
       <div class="setting-row power-setting-row">
         <div class="power-toggle-label">
           <span>{{ t("settings.closeToTray") }}</span>
@@ -381,6 +385,7 @@ import VtInput from "../components/VtInput.vue";
 import VtSelect from "../components/VtSelect.vue";
 import VtSwitch from "../components/VtSwitch.vue";
 import VtTag from "../components/VtTag.vue";
+import LegalDocLinks from "../components/LegalDocLinks.vue";
 import {
   VT_BUTTON_DANGER_CONFIRM_CLASS,
   VT_BUTTON_SECONDARY_CANCEL_CLASS,
@@ -925,6 +930,11 @@ function doClearFriendsCache() {
 
 .app-meta-note {
   margin-top: 0;
+  margin-bottom: var(--space-block);
+  max-width: 42rem;
+}
+
+.app-legal-links {
   margin-bottom: var(--space-block);
   max-width: 42rem;
 }

@@ -87,8 +87,9 @@ test.describe("Navigation", () => {
     const instanceLink = page.getByTestId("encounter-instance-link").first();
     await expect(instanceLink).toBeVisible();
     await expect(instanceLink).toContainText("Public #88577 [JP]");
+    await expect(instanceLink).toHaveAttribute("href", "#");
     await expect(instanceLink).toHaveAttribute(
-      "href",
+      "data-external-url",
       `https://vrchat.com/home/launch?worldId=${E2E_WORLD_ID}&instanceId=88577%7Eregion%28jp%29`,
     );
     await expect(instanceLink).toHaveAttribute(

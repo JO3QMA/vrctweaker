@@ -1,16 +1,13 @@
 <template>
-  <a
+  <SafeExternalUrlLink
     v-if="cell"
-    class="encounter-instance-link"
-    :href="cell.href"
+    :url="cell.href"
+    :label="cell.text"
     :title="cell.title"
     :aria-label="t('encounterHistory.openInVrchat', { text: cell.text })"
-    target="_blank"
-    rel="noopener noreferrer"
-    data-testid="encounter-instance-link"
-  >
-    {{ cell.text }}
-  </a>
+    link-class="encounter-instance-link"
+    test-id="encounter-instance-link"
+  />
   <!-- Unparseable but non-empty id: raw mono text, no launch link (see formatVrcInstanceCell). -->
   <span v-else-if="trimmedId" class="mono">{{ trimmedId }}</span>
   <span v-else>{{ t("common.dash") }}</span>
@@ -19,6 +16,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
+import SafeExternalUrlLink from "./SafeExternalUrlLink.vue";
 import { formatVrcInstanceCell } from "../utils/vrcInstanceDisplay";
 
 const props = defineProps<{
@@ -37,13 +35,13 @@ const cell = computed(() => {
 </script>
 
 <style scoped>
-.encounter-instance-link {
+:deep(.encounter-instance-link) {
   color: var(--color-brand);
   text-decoration: none;
   font-size: var(--font-size-12);
 }
 
-.encounter-instance-link:hover {
+:deep(.encounter-instance-link:hover) {
   text-decoration: underline;
   color: var(--color-brand-hover);
 }

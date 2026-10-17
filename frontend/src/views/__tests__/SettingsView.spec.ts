@@ -114,6 +114,16 @@ describe("SettingsView", () => {
     expect(licensesLink.text()).toContain("OSS ライセンス一覧");
   });
 
+  it("shows legal document links in app section", async () => {
+    const wrapper = mountSettings();
+    await flushPromises();
+    const privacy = wrapper.find('[data-testid="legal-link-privacy"]');
+    expect(privacy.exists()).toBe(true);
+    expect(privacy.attributes("href")).toContain("privacy-policy-ja.md");
+    const terms = wrapper.find('[data-testid="legal-link-terms"]');
+    expect(terms.attributes("href")).toContain("terms-ja.md");
+  });
+
   it("loads path settings on mount", async () => {
     const wrapper = mountSettings();
     await flushPromises();
