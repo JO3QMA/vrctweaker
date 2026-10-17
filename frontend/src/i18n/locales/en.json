@@ -560,6 +560,7 @@
     "profilePicThumb": "Profile picture thumbnail",
     "friendKey": "friendKey",
     "cacheUpdated": "Cache updated",
+    "openExternalUrlError": "Could not open the link in your browser.",
     "userTags": {
       "deprecated": "Deprecated",
       "unknown": "Unknown tag",

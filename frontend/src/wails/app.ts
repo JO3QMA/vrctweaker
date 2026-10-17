@@ -754,4 +754,14 @@ export const App = {
   ),
   deleteVRChatConfig: bindGo((a) => a.DeleteVRChatConfig(), undefined),
   defaultVRChatPictureFolder: bindGo((a) => a.DefaultVRChatPictureFolder(), ""),
+  openExternalURL: (rawUrl: string) =>
+    callApp(
+      (a) =>
+        (
+          a as AppBindings & {
+            OpenExternalURL?: (url: string) => Promise<void>;
+          }
+        ).OpenExternalURL?.(rawUrl) ?? Promise.reject(new Error("unavailable")),
+      undefined,
+    ),
 };

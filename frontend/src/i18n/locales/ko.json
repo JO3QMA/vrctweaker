@@ -560,6 +560,7 @@
     "profilePicThumb": "프로필 썸네일",
     "friendKey": "friendKey",
     "cacheUpdated": "캐시 갱신",
+    "openExternalUrlError": "브라우저에서 링크를 열 수 없습니다.",
     "userTags": {
       "deprecated": "폐기됨",
       "unknown": "알 수 없는 태그",
