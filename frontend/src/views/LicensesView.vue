@@ -1,9 +1,18 @@
 <template>
   <div class="licenses-view">
     <h1 class="page-title">{{ t("licenses.title") }}</h1>
-    <p class="text-body-sm intro">
+    <p class="text-body-sm intro-with-siblings">
       {{ t("licenses.intro") }}
     </p>
+    <el-text
+      type="info"
+      size="small"
+      class="hint block-hint unofficial-note"
+      data-testid="licenses-unofficial-disclaimer"
+    >
+      {{ t("common.unofficialDisclaimer") }}
+    </el-text>
+    <LegalDocLinks :intro="t('legal.licensesIntro')" />
 
     <section class="licenses-section">
       <h2 class="text-h2 section-title">{{ t("licenses.frontend") }}</h2>
@@ -94,6 +103,7 @@
 import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import VtTag from "../components/VtTag.vue";
+import LegalDocLinks from "../components/LegalDocLinks.vue";
 
 const { t } = useI18n();
 import npmLicensesData from "../data/licenses.json";
@@ -139,11 +149,18 @@ function truncateUrl(url: string): string {
   max-width: 900px;
 }
 
-.intro {
+/* Tighter than other views' intro: unofficial note + legal links follow immediately. */
+.intro-with-siblings {
   display: block;
-  margin: 0 0 var(--space-page);
+  margin: 0 0 var(--space-block);
   line-height: var(--line-height-relaxed);
   color: var(--color-text-secondary);
+}
+
+.unofficial-note {
+  display: block;
+  margin-bottom: var(--space-block);
+  max-width: 42rem;
 }
 
 .licenses-section {

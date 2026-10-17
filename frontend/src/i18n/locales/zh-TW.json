@@ -44,7 +44,8 @@
     "dash": "—",
     "stillPresent": "停留中",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "unofficialDisclaimer": "VRChat Tweaker 並非 VRChat 官方產品，與 VRChat Inc. 無任何關聯，屬非官方工具。"
   },
   "chart": {
     "hour": "小時",
@@ -389,6 +390,12 @@
       "subsystemUnavailable": "無法初始化自動化子系統。"
     }
   },
+  "legal": {
+    "privacyPolicy": "隱私權政策",
+    "termsOfUse": "使用條款與免責聲明",
+    "settingsIntro": "有關資料處理與使用條件，請參閱下列文件。",
+    "licensesIntro": "除開源授權外，資料處理與使用條件請參閱下列文件。"
+  },
   "licenses": {
     "title": "OSS 授權",
     "intro": "本應用程式使用的開放原始碼軟體授權清單。",
@@ -429,7 +436,6 @@
     "powerSection": "電源",
     "appSection": "應用程式",
     "appVersion": "版本 {version}",
-    "unofficialDisclaimer": "VRChat Tweaker 並非 VRChat 官方產品，與 VRChat Inc. 無任何關聯，屬非官方工具。",
     "dataStorageNote": "登入資訊會保存在 Windows 憑證管理器等位置。應用程式資料庫與設定保存在 %AppData%\\Roaming\\vrchat-tweaker\\。",
     "closeToTray": "關閉時縮到系統匣",
     "closeToTrayHint": "按關閉按鈕時不結束程式，改為常駐系統匣。自動化與日誌監看會繼續（僅 Windows）。關閉此選項則關閉時結束程式。",
