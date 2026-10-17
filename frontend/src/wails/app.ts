@@ -57,6 +57,20 @@ export type UserCacheDTO = WailsDTO<wailsapp.UserCacheDTO>;
 export type UserProfileNavigationDTO =
   WailsDTO<wailsapp.UserProfileNavigationDTO>;
 export type PathSettingsDTO = WailsDTO<usecase.PathSettings>;
+export type OnboardingFolderDefaultsDTO = {
+  vrchatPathWindows: string;
+  steamPathLinux: string;
+  outputLogPath: string;
+  pictureOutputFolder: string;
+  savedPictureOutputFolder?: string;
+};
+
+export type OnboardingFolderSaveDTO = OnboardingFolderDefaultsDTO & {
+  applyVrchatPathWindows: boolean;
+  applySteamPathLinux: boolean;
+  applyOutputLogPath: boolean;
+  applyPictureOutputFolder: boolean;
+};
 export type YTDLPMaintainStatusDTO = WailsDTO<usecase.YTDLPMaintainStatus>;
 export type LoginResultDTO = WailsDTO<wailsapp.LoginResultDTO>;
 export type VRChatCurrentUserDTO = WailsDTO<wailsapp.VRChatCurrentUserDTO>;
@@ -516,6 +530,28 @@ export const App = {
   getPathSettings: bindGo((a) => a.GetPathSettings(), EMPTY_PATH_SETTINGS),
   setPathSettings: bindGo(
     (a, dto: PathSettingsDTO) => a.SetPathSettings(dto),
+    undefined,
+  ),
+  getFirstLaunchGuideCompleted: bindGo(
+    (a) => a.GetFirstLaunchGuideCompleted(),
+    false,
+  ),
+  setFirstLaunchGuideCompleted: bindGo(
+    (a, completed: boolean) => a.SetFirstLaunchGuideCompleted(completed),
+    undefined,
+  ),
+  getOnboardingFolderDefaults: bindGo(
+    (a) =>
+      a.GetOnboardingFolderDefaults() as Promise<OnboardingFolderDefaultsDTO>,
+    {
+      vrchatPathWindows: "",
+      steamPathLinux: "",
+      outputLogPath: "",
+      pictureOutputFolder: "",
+    },
+  ),
+  saveOnboardingFolderSettings: bindGo(
+    (a, dto: OnboardingFolderSaveDTO) => a.SaveOnboardingFolderSettings(dto),
     undefined,
   ),
   getSuppressSleepWhileVRChat: bindGo(

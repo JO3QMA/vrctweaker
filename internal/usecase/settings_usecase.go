@@ -176,6 +176,7 @@ const (
 	keyGalleryLastExitAt             = "gallery_last_exit_at"
 	keySuppressSleepWhileVRChat      = "suppress_sleep_while_vrchat"
 	keyCloseToTray                   = "close_to_tray"
+	keyFirstLaunchGuideCompleted     = "first_launch_guide_completed"
 	keyLanguage                      = "language"
 	keyLastLaunchProfileID           = "last_launch_profile_id"
 	keyYTDLPToolsReplaceMaintain     = "ytdlp_tools_replace_maintain"
@@ -252,6 +253,20 @@ func (uc *SettingsUseCase) GetSuppressSleepWhileVRChat(ctx context.Context) (boo
 // SetSuppressSleepWhileVRChat persists the sleep-suppression toggle.
 func (uc *SettingsUseCase) SetSuppressSleepWhileVRChat(ctx context.Context, on bool) error {
 	return uc.repo.Set(ctx, keySuppressSleepWhileVRChat, strconv.FormatBool(on))
+}
+
+// GetFirstLaunchGuideCompleted returns whether the first-launch setup wizard was finished or skipped.
+func (uc *SettingsUseCase) GetFirstLaunchGuideCompleted(ctx context.Context) (bool, error) {
+	v, err := uc.repo.Get(ctx, keyFirstLaunchGuideCompleted)
+	if err != nil {
+		return false, err
+	}
+	return parseBoolSetting(v), nil
+}
+
+// SetFirstLaunchGuideCompleted persists first-launch wizard completion.
+func (uc *SettingsUseCase) SetFirstLaunchGuideCompleted(ctx context.Context, completed bool) error {
+	return uc.repo.Set(ctx, keyFirstLaunchGuideCompleted, strconv.FormatBool(completed))
 }
 
 // GetCloseToTray returns whether closing the window hides to the system tray instead of quitting.

@@ -118,13 +118,20 @@
             />
           </el-form-item>
           <el-form-item :label="t('settings.twoFactor')">
-            <VtInput
-              id="login-2fa"
+            <LoginTwoFactorCodeField
               v-model="loginForm.twoFactorCode"
+              input-id="login-2fa"
               :placeholder="t('settings.twoFactorPh')"
-              autocomplete="one-time-code"
+              :disabled="loginLoading"
+              @complete="onTwoFactorCodeComplete"
             />
           </el-form-item>
+          <p
+            v-if="twoFactorRequired && !loginError"
+            class="login-2fa-hint text-body-sm"
+          >
+            {{ t("settings.twoFactorRequiredHint") }}
+          </p>
           <VtAlert
             v-if="loginError"
             variant="danger"
@@ -134,9 +141,7 @@
           <VtButton
             variant="primary"
             :loading="loginLoading"
-            :disabled="
-              loginLoading || !loginForm.username || !loginForm.password
-            "
+            :disabled="loginSubmitDisabled"
             @click="login"
           >
             {{ loginLoading ? t("settings.loggingIn") : t("settings.login") }}
@@ -207,6 +212,18 @@
       >
         {{ t("settings.appVersion", { version: appVersion }) }}
       </p>
+      <div class="onboarding-reopen-row">
+        <VtButton
+          variant="secondary"
+          data-testid="settings-open-onboarding"
+          @click="openFirstLaunchGuide"
+        >
+          {{ t("settings.openFirstLaunchGuide") }}
+        </VtButton>
+        <el-text type="info" size="small" class="hint onboarding-reopen-hint">
+          {{ t("settings.openFirstLaunchGuideHint") }}
+        </el-text>
+      </div>
       <el-text
         type="info"
         size="small"
@@ -370,6 +387,7 @@ import { ElMessageBox } from "element-plus";
 import VtAlert from "../components/VtAlert.vue";
 import VtButton from "../components/VtButton.vue";
 import VtInput from "../components/VtInput.vue";
+import LoginTwoFactorCodeField from "../components/LoginTwoFactorCodeField.vue";
 import VtSelect from "../components/VtSelect.vue";
 import VtSwitch from "../components/VtSwitch.vue";
 import VtTag from "../components/VtTag.vue";
@@ -381,9 +399,12 @@ import {
 import { App } from "../wails/app";
 import type { PathSettingsDTO, UserCacheDTO } from "../wails/app";
 import { friendThumbUrl } from "../utils/vrcUserCacheDisplay";
+import { useFirstLaunchGuide } from "../composables/useFirstLaunchGuide";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
 import { isAppLocale, setLanguage } from "../i18n";
 import { showToast } from "../utils/showToast";
+import { isLoginBlockedByTwoFactorCode } from "../utils/loginTwoFactorSubmit";
+import { isLoginTwoFactorRequired } from "../utils/vrchatLoginResult";
 
 const {
   state: unlockState,
@@ -394,6 +415,11 @@ const {
 } = useSessionUnlock();
 
 const { t, locale } = useI18n();
+const { requestFirstLaunchGuide } = useFirstLaunchGuide();
+
+function openFirstLaunchGuide(): void {
+  requestFirstLaunchGuide();
+}
 
 const isLoggedIn = ref(false);
 const selfProfile = ref<UserCacheDTO | null>(null);
@@ -423,6 +449,23 @@ const loginForm = reactive({
 });
 const loginError = ref("");
 const loginLoading = ref(false);
+const twoFactorRequired = ref(false);
+
+const loginSubmitDisabled = computed(
+  () =>
+    loginLoading.value ||
+    !loginForm.username ||
+    !loginForm.password ||
+    isLoginBlockedByTwoFactorCode(
+      loginForm.twoFactorCode,
+      twoFactorRequired.value,
+    ),
+);
+
+function onTwoFactorCodeComplete(): void {
+  if (loginSubmitDisabled.value) return;
+  void login();
+}
 
 const logRetentionDays = ref(30);
 const galleryAutoEnrichMetadata = ref(true);
@@ -551,6 +594,7 @@ async function login() {
     );
     if (result.ok) {
       isLoggedIn.value = true;
+      twoFactorRequired.value = false;
       loginForm.username = "";
       loginForm.password = "";
       loginForm.twoFactorCode = "";
@@ -560,6 +604,9 @@ async function login() {
         await persistAfterLogin(result.plaintextToken);
       }
       await loadSelfProfileSummary();
+    } else if (isLoginTwoFactorRequired(result.error)) {
+      twoFactorRequired.value = true;
+      loginError.value = "";
     } else {
       loginError.value = result.error || t("settings.errLogin");
     }
@@ -771,6 +818,11 @@ function doClearFriendsCache() {
   gap: var(--space-form-field);
 }
 
+.login-2fa-hint {
+  margin: 0 0 var(--space-form-field);
+  color: var(--color-text-secondary);
+}
+
 .profile-loading {
   font-size: var(--font-size-12);
   color: var(--color-text-secondary);
@@ -895,6 +947,23 @@ function doClearFriendsCache() {
   align-items: center;
   gap: var(--space-block);
   margin-bottom: var(--space-action-group);
+}
+
+.onboarding-reopen-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-block);
+  margin: var(--space-block) 0;
+}
+
+.onboarding-reopen-row .onboarding-reopen-hint {
+  margin-top: 0;
+  text-align: left;
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 42rem;
 }
 
 .app-version-line {

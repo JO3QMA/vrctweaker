@@ -564,10 +564,6 @@ describe("SettingsView login and profile", () => {
     await wrapper.find("#login-username").setValue("user");
     await wrapper.find("#login-password").setValue("pass");
     await wrapper.find("#login-2fa").setValue("123456");
-    await wrapper
-      .findAll("button")
-      .find((b) => b.text().includes("ログイン") && !b.text().includes("中"))!
-      .trigger("click");
     await flushPromises();
 
     expect(App.login).toHaveBeenCalledWith("user", "pass", "123456");
