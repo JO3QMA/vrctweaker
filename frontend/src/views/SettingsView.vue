@@ -220,7 +220,7 @@
         >
           {{ t("settings.openFirstLaunchGuide") }}
         </VtButton>
-        <el-text type="info" size="small" class="hint block-hint">
+        <el-text type="info" size="small" class="hint onboarding-reopen-hint">
           {{ t("settings.openFirstLaunchGuideHint") }}
         </el-text>
       </div>
@@ -951,10 +951,19 @@ function doClearFriendsCache() {
 
 .onboarding-reopen-row {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-action-group);
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-block);
   margin: var(--space-block) 0;
+}
+
+.onboarding-reopen-row .onboarding-reopen-hint {
+  margin-top: 0;
+  text-align: left;
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 42rem;
 }
 
 .app-version-line {
