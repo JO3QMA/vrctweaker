@@ -36,7 +36,7 @@
     "stepFolders": "檢查資料夾",
     "stepComplete": "設定完成",
     "loginLead": "登入後可使用好友清單、狀態變更等功能。也可稍後在設定中登入。",
-    "loginKeyringHint": "憑證僅儲存在作業系統的鑰匙圈中（不會以明文存入本應用程式資料庫）。",
+    "loginKeyringHint": "憑證儲存在作業系統的鑰匙圈中。",
     "foldersLead": "用於記錄與螢幕截圖的路徑。已顯示自動偵測的路徑，需要時請點「變更」。",
     "pictureFolder": "螢幕截圖 / 照片資料夾",
     "titlePickPictureFolder": "選擇螢幕截圖 / 照片資料夾",

@@ -36,7 +36,7 @@
     "stepFolders": "检查文件夹",
     "stepComplete": "设置完成",
     "loginLead": "登录后可使用好友列表、状态更改等功能。也可稍后在设置中登录。",
-    "loginKeyringHint": "凭据仅保存在系统密钥环中（不会以明文存入本应用数据库）。",
+    "loginKeyringHint": "凭据保存在系统密钥环中。",
     "foldersLead": "用于日志与截图的路径。已显示自动检测的路径，如需更改请点「更改」。",
     "pictureFolder": "截图 / 照片文件夹",
     "titlePickPictureFolder": "选择截图 / 照片文件夹",

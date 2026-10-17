@@ -77,11 +77,12 @@
             :label="t('settings.twoFactor')"
             data-testid="onboarding-login-2fa-field"
           >
-            <VtInput
+            <LoginTwoFactorCodeField
               v-model="loginForm.twoFactorCode"
               data-testid="onboarding-login-2fa"
               :placeholder="t('settings.twoFactorPh')"
-              autocomplete="one-time-code"
+              :disabled="loginLoading"
+              @complete="onTwoFactorCodeComplete"
             />
           </el-form-item>
           <p
@@ -205,10 +206,12 @@ import { useI18n } from "vue-i18n";
 import VtAlert from "./VtAlert.vue";
 import VtButton from "./VtButton.vue";
 import VtInput from "./VtInput.vue";
+import LoginTwoFactorCodeField from "./LoginTwoFactorCodeField.vue";
 import VtTag from "./VtTag.vue";
 import { App } from "@/wails/app";
 import type { OnboardingFolderDefaultsDTO, PathSettingsDTO } from "@/wails/app";
 import { useSessionUnlock } from "@/composables/useSessionUnlock";
+import { isLoginBlockedByTwoFactorCode } from "@/utils/loginTwoFactorSubmit";
 import { isLoginTwoFactorRequired } from "@/utils/vrchatLoginResult";
 
 const emit = defineEmits<{
@@ -267,9 +270,21 @@ const folderTouched = reactive({
 const loginSubmitDisabled = computed(() => {
   if (loginLoading.value) return true;
   if (!loginForm.username || !loginForm.password) return true;
-  if (twoFactorRequired.value && !loginForm.twoFactorCode.trim()) return true;
+  if (
+    isLoginBlockedByTwoFactorCode(
+      loginForm.twoFactorCode,
+      twoFactorRequired.value,
+    )
+  ) {
+    return true;
+  }
   return false;
 });
+
+function onTwoFactorCodeComplete(): void {
+  if (loginLoading.value || loginSubmitDisabled.value) return;
+  void submitLogin();
+}
 
 const nextDisabled = computed(
   () =>

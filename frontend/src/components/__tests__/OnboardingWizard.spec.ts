@@ -159,6 +159,42 @@ describe("OnboardingWizard", () => {
     expect(App.login).toHaveBeenCalledWith("user1", "secret", undefined);
   });
 
+  it("uses short keyring hint copy", async () => {
+    const wrapper = mount(OnboardingWizard);
+    await flushPromises();
+    expect(wrapper.text()).toContain(
+      "認証情報はOSのキーリングに保存されます。",
+    );
+    expect(wrapper.text()).not.toContain("平文");
+  });
+
+  it("auto-submits when six-digit 2FA code is entered", async () => {
+    vi.mocked(App.login)
+      .mockResolvedValueOnce({
+        ok: false,
+        error: LOGIN_TWO_FACTOR_REQUIRED_MARKER,
+      })
+      .mockResolvedValueOnce({ ok: true });
+    const wrapper = mount(OnboardingWizard);
+    await flushPromises();
+    await wrapper
+      .find('[data-testid="onboarding-login-username"]')
+      .setValue("user1");
+    await wrapper
+      .find('[data-testid="onboarding-login-password"]')
+      .setValue("secret");
+    await wrapper
+      .find('[data-testid="onboarding-login-submit"]')
+      .trigger("click");
+    await flushPromises();
+    await wrapper
+      .find('[data-testid="onboarding-login-2fa"]')
+      .setValue("123456");
+    await flushPromises();
+    expect(App.login).toHaveBeenCalledTimes(2);
+    expect(App.login).toHaveBeenLastCalledWith("user1", "secret", "123456");
+  });
+
   it("reveals 2FA field without error when required", async () => {
     vi.mocked(App.login).mockResolvedValue({
       ok: false,

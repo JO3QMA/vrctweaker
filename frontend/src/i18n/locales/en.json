@@ -36,7 +36,7 @@
     "stepFolders": "Check folders",
     "stepComplete": "Setup complete",
     "loginLead": "Signing in unlocks friends, status changes, and more. You can also sign in later from Settings.",
-    "loginKeyringHint": "Credentials are stored only in the OS keyring (not as plaintext in this app’s database).",
+    "loginKeyringHint": "Credentials are stored in the OS keyring.",
     "foldersLead": "These paths are used for logs and screenshots. Auto-detected paths are shown first—use Change to pick a different folder.",
     "pictureFolder": "Screenshots / photos folder",
     "titlePickPictureFolder": "Choose screenshots / photos folder",
