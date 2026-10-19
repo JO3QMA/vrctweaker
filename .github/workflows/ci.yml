@@ -117,7 +117,7 @@ jobs:
         run: cd frontend && pnpm run lint:ci
 
       - name: Type check
-        run: cd frontend && pnpm exec vue-tsc --noEmit
+        run: cd frontend && pnpm exec vue-tsc -b
 
       - name: Test
         run: cd frontend && pnpm run test

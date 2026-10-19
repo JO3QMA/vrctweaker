@@ -1,4 +1,5 @@
 import DOMPurify from "dompurify";
+import type { Config } from "dompurify";
 import { marked } from "marked";
 import { parseSafeHttpUrl } from "./safeHttpUrl";
 
@@ -31,7 +32,7 @@ marked.use({
   },
 });
 
-const PURIFY_CONFIG: DOMPurify.Config = {
+const PURIFY_CONFIG: Config = {
   ALLOWED_TAGS: [
     "h1",
     "h2",
@@ -68,7 +69,7 @@ const PURIFY_CONFIG: DOMPurify.Config = {
  */
 export function renderLegalMarkdown(markdown: string): string {
   const rawHtml = marked.parse(markdown, { async: false }) as string;
-  return DOMPurify.sanitize(rawHtml, PURIFY_CONFIG);
+  return String(DOMPurify.sanitize(rawHtml, PURIFY_CONFIG));
 }
 
 export { EXTERNAL_LINK_CLASS };

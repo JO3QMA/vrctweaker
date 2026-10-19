@@ -22,8 +22,3 @@ declare module "*.vue" {
   const component: DefineComponent<object, object, unknown>;
   export default component;
 }
-
-declare module "virtual:legal-md/*" {
-  const content: string;
-  export default content;
-}
