@@ -43,6 +43,14 @@ describe("OnboardingWizard", () => {
     vi.mocked(App.saveOnboardingFolderSettings).mockResolvedValue(undefined);
   });
 
+  it("shows legal document links on login step", async () => {
+    const wrapper = mount(OnboardingWizard);
+    await flushPromises();
+    expect(wrapper.find('[data-testid="legal-doc-links"]').exists()).toBe(true);
+    const privacy = wrapper.find('[data-testid="legal-link-privacy"]');
+    expect(privacy.element.tagName).toBe("BUTTON");
+  });
+
   it("shows login step with keyring hint", async () => {
     const wrapper = mount(OnboardingWizard);
     await flushPromises();

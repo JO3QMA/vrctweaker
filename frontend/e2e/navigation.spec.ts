@@ -75,6 +75,19 @@ test.describe("Navigation", () => {
     );
   });
 
+  test("settings privacy link navigates to in-app legal page", async ({
+    page,
+  }) => {
+    await page.goto("/#/settings");
+    await page.getByTestId("legal-link-privacy").click();
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      "プライバシーポリシー",
+    );
+    await expect(page.getByTestId("legal-markdown-body")).toContainText(
+      "VRChat Tweaker",
+    );
+  });
+
   test("direct goto encounter-history shows user encounter history", async ({
     page,
   }) => {

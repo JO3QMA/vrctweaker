@@ -16,6 +16,8 @@
     "configOther": "Other settings",
     "settings": "Settings",
     "licenses": "OSS licenses",
+    "legalPrivacy": "Privacy Policy",
+    "legalTerms": "Terms of Use & Disclaimer",
     "video": "Video"
   },
   "nav": {
@@ -50,7 +52,8 @@
     "skipStep": "Skip",
     "skipAll": "Skip setup",
     "next": "Next",
-    "finish": "Done"
+    "finish": "Done",
+    "legalIntro": "By signing in, you agree to the following documents."
   },
   "common": {
     "confirm": "Confirm",
@@ -419,7 +422,8 @@
     "privacyPolicy": "Privacy Policy",
     "termsOfUse": "Terms of Use & Disclaimer",
     "settingsIntro": "See the following documents for data handling and terms of use.",
-    "licensesIntro": "In addition to open-source licenses, see the documents below for data handling and terms."
+    "licensesIntro": "In addition to open-source licenses, see the documents below for data handling and terms.",
+    "viewOnGitHub": "View on GitHub"
   },
   "licenses": {
     "title": "OSS licenses",

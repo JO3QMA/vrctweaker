@@ -121,9 +121,9 @@ describe("SettingsView", () => {
     await flushPromises();
     const privacy = wrapper.find('[data-testid="legal-link-privacy"]');
     expect(privacy.exists()).toBe(true);
-    expect(privacy.attributes("href")).toContain("privacy-policy-ja.md");
+    expect(privacy.attributes("href")).toContain("/legal/privacy");
     const terms = wrapper.find('[data-testid="legal-link-terms"]');
-    expect(terms.attributes("href")).toContain("terms-ja.md");
+    expect(terms.attributes("href")).toContain("/legal/terms");
   });
 
   it("loads path settings on mount", async () => {

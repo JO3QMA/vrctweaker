@@ -2,8 +2,10 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vite";
+import { legalMarkdownPlugin } from "./vite-plugin-legal-md";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const repoRoot = path.resolve(__dirname, "..");
 
 /** Default Wails dev bridge (see wails.json `devServer`, default localhost:34115). */
 const defaultWailsDevTarget =
@@ -12,6 +14,7 @@ const defaultWailsDevTarget =
 export default defineConfig(({ command, mode }) => ({
   plugins: [
     vue(),
+    legalMarkdownPlugin(repoRoot),
     {
       name: "wails-dev-ipc-scripts",
       transformIndexHtml(html) {

@@ -39,6 +39,13 @@
         <p class="onboarding-keyring-hint text-caption">
           {{ t("onboarding.loginKeyringHint") }}
         </p>
+        <LegalDocLinks
+          class="onboarding-legal-links"
+          :intro="t('onboarding.legalIntro')"
+          presentation="dialog"
+          :show-github-supplement="false"
+          stacked
+        />
         <div v-if="loggedIn" class="login-done">
           <VtTag variant="success" size="small">{{
             t("settings.loggedInTag")
@@ -207,6 +214,7 @@ import VtAlert from "./VtAlert.vue";
 import VtButton from "./VtButton.vue";
 import VtInput from "./VtInput.vue";
 import LoginTwoFactorCodeField from "./LoginTwoFactorCodeField.vue";
+import LegalDocLinks from "./LegalDocLinks.vue";
 import VtTag from "./VtTag.vue";
 import { App } from "@/wails/app";
 import type { OnboardingFolderDefaultsDTO, PathSettingsDTO } from "@/wails/app";
@@ -770,6 +778,10 @@ async function changeSteamPath(): Promise<void> {
 
 .onboarding-keyring-hint {
   color: var(--color-text-muted);
+  margin: 0 0 var(--space-block);
+}
+
+.onboarding-legal-links {
   margin: 0 0 var(--space-section);
 }
 

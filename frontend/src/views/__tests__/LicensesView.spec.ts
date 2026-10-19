@@ -36,7 +36,7 @@ describe("LicensesView", () => {
     ).toContain("非公式");
     expect(
       wrapper.find('[data-testid="legal-link-privacy"]').attributes("href"),
-    ).toContain("privacy-policy-ja.md");
+    ).toContain("/legal/privacy");
   });
 
   it("renders npm licenses section with table", async () => {

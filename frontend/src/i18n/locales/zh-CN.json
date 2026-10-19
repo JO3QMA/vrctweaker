@@ -16,6 +16,8 @@
     "configOther": "其他设置",
     "settings": "设置",
     "licenses": "OSS 许可",
+    "legalPrivacy": "隐私政策",
+    "legalTerms": "使用条款与免责声明",
     "video": "视频"
   },
   "nav": {
@@ -50,7 +52,8 @@
     "skipStep": "跳过",
     "skipAll": "跳过设置",
     "next": "下一步",
-    "finish": "完成"
+    "finish": "完成",
+    "legalIntro": "登录即表示您同意以下文档。"
   },
   "common": {
     "confirm": "确认",
@@ -419,7 +422,8 @@
     "privacyPolicy": "隐私政策",
     "termsOfUse": "使用条款与免责声明",
     "settingsIntro": "有关数据处理与使用条件，请参阅以下文档。",
-    "licensesIntro": "除开源许可外，数据处理与使用条件请参阅以下文档。"
+    "licensesIntro": "除开源许可外，数据处理与使用条件请参阅以下文档。",
+    "viewOnGitHub": "在 GitHub 上查看原文"
   },
   "licenses": {
     "title": "OSS 许可",

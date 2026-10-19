@@ -16,6 +16,8 @@
     "configOther": "기타 설정",
     "settings": "설정",
     "licenses": "OSS 라이선스",
+    "legalPrivacy": "개인정보 처리방침",
+    "legalTerms": "이용약관 및 면책",
     "video": "비디오"
   },
   "nav": {
@@ -50,7 +52,8 @@
     "skipStep": "건너뛰기",
     "skipAll": "설정 건너뛰기",
     "next": "다음",
-    "finish": "완료"
+    "finish": "완료",
+    "legalIntro": "로그인하면 다음 문서에 동의한 것으로 간주됩니다."
   },
   "common": {
     "confirm": "확인",
@@ -419,7 +422,8 @@
     "privacyPolicy": "개인정보 처리방침",
     "termsOfUse": "이용약관 및 면책",
     "settingsIntro": "데이터 처리 및 이용 조건은 다음 문서를 확인하세요.",
-    "licensesIntro": "오픈소스 라이선스 외에 데이터 처리 및 이용 조건은 아래 문서를 참조하세요."
+    "licensesIntro": "오픈소스 라이선스 외에 데이터 처리 및 이용 조건은 아래 문서를 참조하세요.",
+    "viewOnGitHub": "GitHub에서 원문 보기"
   },
   "licenses": {
     "title": "OSS 라이선스",
