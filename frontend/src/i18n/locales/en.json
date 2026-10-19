@@ -423,7 +423,9 @@
     "termsOfUse": "Terms of Use & Disclaimer",
     "settingsIntro": "See the following documents for data handling and terms of use.",
     "licensesIntro": "In addition to open-source licenses, see the documents below for data handling and terms.",
-    "viewOnGitHub": "View on GitHub"
+    "viewOnGitHub": "View on GitHub",
+    "lastUpdated": "Last updated: {date}",
+    "latestOnGitHub": "See the latest version on GitHub"
   },
   "licenses": {
     "title": "OSS licenses",

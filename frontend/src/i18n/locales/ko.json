@@ -423,7 +423,9 @@
     "termsOfUse": "이용약관 및 면책",
     "settingsIntro": "데이터 처리 및 이용 조건은 다음 문서를 확인하세요.",
     "licensesIntro": "오픈소스 라이선스 외에 데이터 처리 및 이용 조건은 아래 문서를 참조하세요.",
-    "viewOnGitHub": "GitHub에서 원문 보기"
+    "viewOnGitHub": "GitHub에서 원문 보기",
+    "lastUpdated": "Last updated: {date}",
+    "latestOnGitHub": "See the latest version on GitHub"
   },
   "licenses": {
     "title": "OSS 라이선스",

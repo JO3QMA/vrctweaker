@@ -1,15 +1,22 @@
 <template>
   <div class="legal-document-panel" data-testid="legal-document-panel">
-    <p class="github-supplement text-caption">
+    <p
+      v-if="lastUpdatedLabel"
+      class="last-updated text-caption"
+      data-testid="legal-last-updated"
+    >
+      {{ lastUpdatedLabel }}
+    </p>
+    <LegalMarkdownBody :markdown="bodyMarkdown" />
+    <p class="latest-github text-caption">
       <SafeExternalUrlLink
         :url="githubUrl"
-        test-id="legal-view-on-github"
+        test-id="legal-latest-on-github"
         class="github-link"
       >
-        {{ t("legal.viewOnGitHub") }}
+        {{ t("legal.latestOnGitHub") }}
       </SafeExternalUrlLink>
     </p>
-    <LegalMarkdownBody :markdown="markdown" />
   </div>
 </template>
 
@@ -22,7 +29,15 @@ import {
   getLegalDocumentMarkdown,
   type LegalDocKind,
 } from "@/data/legalDocuments";
-import { privacyPolicyUrl, termsOfUseUrl } from "@/constants/legalUrls";
+import {
+  legalDocLocale,
+  privacyPolicyUrl,
+  termsOfUseUrl,
+} from "@/constants/legalUrls";
+import {
+  formatLegalLastUpdated,
+  parseLegalDocument,
+} from "@/utils/parseLegalDocument";
 
 const props = defineProps<{
   kind: LegalDocKind;
@@ -30,9 +45,23 @@ const props = defineProps<{
 
 const { locale, t } = useI18n();
 
-const markdown = computed(() =>
+const rawMarkdown = computed(() =>
   getLegalDocumentMarkdown(props.kind, locale.value),
 );
+
+const parsed = computed(() => parseLegalDocument(rawMarkdown.value));
+
+const bodyMarkdown = computed(() => parsed.value.bodyMarkdown);
+
+const lastUpdatedLabel = computed(() => {
+  const iso = parsed.value.lastUpdated;
+  if (!iso) {
+    return "";
+  }
+  const docLocale = legalDocLocale(locale.value);
+  const date = formatLegalLastUpdated(iso, docLocale);
+  return t("legal.lastUpdated", { date }, { locale: docLocale });
+});
 
 const githubUrl = computed(() =>
   props.kind === "privacy"
@@ -42,8 +71,13 @@ const githubUrl = computed(() =>
 </script>
 
 <style scoped>
-.github-supplement {
+.last-updated {
   margin: 0 0 var(--space-block);
+  color: var(--color-text-secondary);
+}
+
+.latest-github {
+  margin: var(--space-section) 0 0;
   color: var(--color-text-secondary);
 }
 

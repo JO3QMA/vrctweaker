@@ -423,7 +423,9 @@
     "termsOfUse": "使用条款与免责声明",
     "settingsIntro": "有关数据处理与使用条件，请参阅以下文档。",
     "licensesIntro": "除开源许可外，数据处理与使用条件请参阅以下文档。",
-    "viewOnGitHub": "在 GitHub 上查看原文"
+    "viewOnGitHub": "在 GitHub 上查看原文",
+    "lastUpdated": "Last updated: {date}",
+    "latestOnGitHub": "See the latest version on GitHub"
   },
   "licenses": {
     "title": "OSS 许可",

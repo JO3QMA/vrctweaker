@@ -27,5 +27,12 @@ describe("LegalDocumentView", () => {
     expect(body.exists()).toBe(true);
     expect(body.html()).toContain("VRChat Tweaker");
     expect(body.html()).not.toContain("<script");
+    expect(wrapper.find('[data-testid="legal-last-updated"]').text()).toContain(
+      "2026年10月14日",
+    );
+    expect(
+      wrapper.find('[data-testid="legal-latest-on-github"]').text(),
+    ).toContain("GitHub");
+    expect(body.html()).not.toContain("最終更新");
   });
 });
