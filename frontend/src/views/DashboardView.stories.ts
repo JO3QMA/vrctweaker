@@ -28,6 +28,32 @@ const meta = {
       ApplyPresenceChange: (status: string, description: string) =>
         Promise.resolve({ status, statusDescription: description }),
       LaunchVRChat: () => Promise.resolve(),
+      GetServerStatus: () => {
+        const start = new Date();
+        start.setDate(start.getDate() + 1);
+        start.setHours(12, 34, 0, 0);
+        const end = new Date(start);
+        end.setHours(23, 45, 0, 0);
+        return Promise.resolve({
+          fetchState: "ok",
+          summary: {
+            indicator: "none",
+            description: "All Systems Operational",
+          },
+          components: [],
+          incidents: [],
+          maintenances: [
+            {
+              id: "api-window",
+              name: "API",
+              status: "scheduled",
+              scheduledFor: start.toISOString(),
+              scheduledUntil: end.toISOString(),
+              updates: ["Scheduled API maintenance."],
+            },
+          ],
+        });
+      },
     }),
   ],
 } satisfies Meta<typeof DashboardView>;

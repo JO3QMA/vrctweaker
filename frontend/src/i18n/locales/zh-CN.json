@@ -107,7 +107,15 @@
       "statusPartialOutage": "部分故障",
       "statusMajorOutage": "重大故障",
       "statusUnderMaintenance": "维护中",
-      "statusUnknown": "未知"
+      "statusUnknown": "未知",
+      "maintenanceScheduled": "(维护预告)",
+      "maintenanceInProgress": "(维护中)",
+      "maintenanceDateTime": "{month}月{day}日 {hour}:{minute}",
+      "maintenanceClock": "{hour}:{minute}",
+      "maintenanceRangeSameDay": "{start}–{endClock}",
+      "maintenanceRangeSpan": "{start}–{end}",
+      "maintenanceUntilClock": "至{endClock}",
+      "maintenanceUntilStamp": "至{end}"
     }
   },
   "launcher": {

@@ -49,6 +49,27 @@
         data-testid="server-status-detail"
       >
         <li
+          v-for="row in maintenanceRows"
+          :key="row.key"
+          class="server-status-detail-row server-status-maintenance text-body-sm"
+          :class="
+            row.phase === 'in_progress'
+              ? 'server-status-maintenance--active'
+              : 'server-status-maintenance--scheduled'
+          "
+          data-testid="server-status-maintenance"
+          :data-maintenance-phase="row.phase"
+        >
+          <el-tooltip
+            placement="top"
+            :content="row.tooltip"
+            popper-class="server-status-maintenance-tooltip"
+          >
+            <!-- prettier-ignore -->
+            <span class="server-status-maintenance-line" data-testid="server-status-maintenance-line"><span class="server-status-maintenance-label">{{ row.label }}</span>{{ row.rest }}</span>
+          </el-tooltip>
+        </li>
+        <li
           v-for="(row, idx) in componentRows"
           :key="`component-${idx}`"
           class="server-status-detail-row text-body-sm"
@@ -87,10 +108,13 @@ import { App, type ServerStatusDTO } from "../wails/app";
 import {
   SERVER_STATUS_PAGE_URL,
   SERVER_STATUS_POLL_MS,
+  formatServerMaintenances,
   serverStatusComponentColorClass,
   serverStatusComponentI18nKey,
   serverStatusSummaryColorClass,
   serverStatusSummaryI18nKey,
+  type MaintenanceTranslator,
+  type ServerMaintenanceInput,
 } from "../utils/serverStatus";
 
 const { t } = useI18n();
@@ -101,7 +125,7 @@ const fetchState = ref<ServerStatusDTO["fetchState"]>("unavailable");
 const summaryIndicator = ref("");
 const components = ref<ServerStatusDTO["components"]>([]);
 const incidents = ref<ServerStatusDTO["incidents"]>([]);
-const maintenances = ref<ServerStatusDTO["maintenances"]>([]);
+const maintenances = ref<ServerMaintenanceInput[]>([]);
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
 let inFlight = false;
@@ -115,12 +139,16 @@ const summaryLabel = computed(() =>
   t(serverStatusSummaryI18nKey(summaryIndicator.value)),
 );
 
+const maintenanceRows = computed(() =>
+  formatServerMaintenances(maintenances.value, translateMaintenance),
+);
+
 const showDetail = computed(
   () =>
     fetchState.value === "ok" &&
     (components.value.length > 0 ||
       incidents.value.length > 0 ||
-      maintenances.value.length > 0),
+      maintenanceRows.value.length > 0),
 );
 
 const componentRows = computed(() =>
@@ -131,17 +159,39 @@ const componentRows = computed(() =>
   })),
 );
 
-const headlineRows = computed(() => [
-  ...incidents.value.map((h) => h.name).filter(Boolean),
-  ...maintenances.value.map((h) => h.name).filter(Boolean),
-]);
+const headlineRows = computed(() =>
+  incidents.value.map((h) => h.name).filter(Boolean),
+);
+
+function translateMaintenance(
+  key: string,
+  params?: Record<string, string>,
+): string {
+  const translate = t as unknown as MaintenanceTranslator;
+  return params ? translate(key, params) : translate(key);
+}
+
+function toMaintenanceInput(
+  raw: ServerMaintenanceInput,
+): ServerMaintenanceInput {
+  return {
+    id: raw.id,
+    name: raw.name,
+    status: raw.status,
+    scheduledFor: raw.scheduledFor,
+    scheduledUntil: raw.scheduledUntil,
+    updates: raw.updates ?? undefined,
+  };
+}
 
 function applySnapshot(dto: ServerStatusDTO): void {
   fetchState.value = dto.fetchState;
   summaryIndicator.value = dto.summary?.indicator ?? "";
   components.value = dto.components ?? [];
   incidents.value = dto.incidents ?? [];
-  maintenances.value = dto.maintenances ?? [];
+  maintenances.value = (dto.maintenances ?? []).map((item) =>
+    toMaintenanceInput(item as ServerMaintenanceInput),
+  );
 }
 
 async function refresh(): Promise<void> {
@@ -230,6 +280,19 @@ onUnmounted(() => {
   color: var(--color-text-secondary);
 }
 
+.server-status-maintenance--scheduled .server-status-maintenance-label {
+  color: var(--color-status-maintenance);
+}
+
+.server-status-maintenance--active {
+  color: var(--color-warning);
+  font-weight: var(--font-weight-600);
+}
+
+.server-status-maintenance-line {
+  cursor: help;
+}
+
 .server-status-dot {
   width: var(--space-action-group);
   height: var(--space-action-group);
@@ -264,5 +327,12 @@ onUnmounted(() => {
 
 .server-status--unknown {
   color: var(--color-status-unknown);
+}
+</style>
+
+<style>
+.server-status-maintenance-tooltip {
+  max-width: 28rem;
+  white-space: pre-line;
 }
 </style>

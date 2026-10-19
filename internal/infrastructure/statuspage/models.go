@@ -15,7 +15,7 @@ type Snapshot struct {
 	Summary      Summary
 	Components   []Component // non-operational leaf components only (see filterNonOperational)
 	Incidents    []Headline
-	Maintenances []Headline
+	Maintenances []Maintenance
 }
 
 // Summary is the overall status indicator from summary.json.
@@ -30,9 +30,20 @@ type Component struct {
 	Status string
 }
 
-// Headline is a one-line incident or maintenance title.
+// Headline is a one-line incident title.
 type Headline struct {
 	Name string
+}
+
+// Maintenance is a scheduled or active statuspage maintenance window.
+// Completed windows are omitted before this value is returned.
+type Maintenance struct {
+	ID             string
+	Name           string
+	Status         string
+	ScheduledFor   string
+	ScheduledUntil string
+	Updates        []string
 }
 
 type summaryResponse struct {
@@ -65,5 +76,14 @@ type maintenancesResponse struct {
 }
 
 type apiMaintenance struct {
-	Name string `json:"name"`
+	ID              string              `json:"id"`
+	Name            string              `json:"name"`
+	Status          string              `json:"status"`
+	ScheduledFor    string              `json:"scheduled_for"`
+	ScheduledUntil  string              `json:"scheduled_until"`
+	IncidentUpdates []apiIncidentUpdate `json:"incident_updates"`
+}
+
+type apiIncidentUpdate struct {
+	Body string `json:"body"`
 }

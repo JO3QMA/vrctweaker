@@ -107,7 +107,15 @@
       "statusPartialOutage": "Partial outage",
       "statusMajorOutage": "Major outage",
       "statusUnderMaintenance": "Under maintenance",
-      "statusUnknown": "Unknown"
+      "statusUnknown": "Unknown",
+      "maintenanceScheduled": "(Scheduled)",
+      "maintenanceInProgress": "(In progress)",
+      "maintenanceDateTime": "{month}/{day}, {hour12}:{minute} {ampm}",
+      "maintenanceClock": "{hour12}:{minute} {ampm}",
+      "maintenanceRangeSameDay": "{start}–{endClock}",
+      "maintenanceRangeSpan": "{start}–{end}",
+      "maintenanceUntilClock": "until {endClock}",
+      "maintenanceUntilStamp": "until {end}"
     }
   },
   "launcher": {
