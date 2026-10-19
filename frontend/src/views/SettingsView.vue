@@ -201,49 +201,15 @@
       }}</el-text>
     </el-card>
 
-    <!-- アプリ -->
-    <el-card class="section-card" shadow="never">
+    <!-- アプリ（動作設定） -->
+    <el-card
+      class="section-card"
+      shadow="never"
+      data-testid="settings-app-section"
+    >
       <template #header>
         <span>{{ t("settings.appSection") }}</span>
       </template>
-      <p
-        class="app-version-line text-body-sm"
-        data-testid="settings-app-version"
-      >
-        {{ t("settings.appVersion", { version: appVersion }) }}
-      </p>
-      <div class="onboarding-reopen-row">
-        <VtButton
-          variant="secondary"
-          data-testid="settings-open-onboarding"
-          @click="openFirstLaunchGuide"
-        >
-          {{ t("settings.openFirstLaunchGuide") }}
-        </VtButton>
-        <el-text type="info" size="small" class="hint onboarding-reopen-hint">
-          {{ t("settings.openFirstLaunchGuideHint") }}
-        </el-text>
-      </div>
-      <el-text
-        type="info"
-        size="small"
-        class="hint block-hint app-meta-note"
-        data-testid="settings-app-disclaimer"
-      >
-        {{ t("common.unofficialDisclaimer") }}
-      </el-text>
-      <el-text
-        type="info"
-        size="small"
-        class="hint block-hint app-meta-note"
-        data-testid="settings-app-data-storage"
-      >
-        {{ t("settings.dataStorageNote") }}
-      </el-text>
-      <LegalDocLinks
-        class="app-legal-links"
-        :intro="t('legal.settingsIntro')"
-      />
       <div class="setting-row power-setting-row">
         <div class="power-toggle-label">
           <span>{{ t("settings.closeToTray") }}</span>
@@ -312,69 +278,110 @@
       </div>
     </el-card>
 
-    <!-- OSS ライセンス -->
-    <el-card class="section-card" shadow="never">
+    <!-- このアプリについて -->
+    <el-card
+      class="section-card"
+      shadow="never"
+      data-testid="settings-about-app-section"
+    >
       <template #header>
-        <span>{{ t("settings.ossSection") }}</span>
+        <span>{{ t("settings.aboutAppSection") }}</span>
       </template>
-      <el-text type="info" size="small" class="hint">{{
-        t("settings.ossHint")
-      }}</el-text>
-      <div class="oss-link-row">
-        <router-link class="btn-licenses" to="/licenses">
-          <VtButton variant="primary">{{ t("settings.ossButton") }}</VtButton>
-        </router-link>
-      </div>
+      <p
+        class="app-version-line text-body-sm"
+        data-testid="settings-app-version"
+      >
+        {{ t("settings.appVersion", { version: appVersion }) }}
+      </p>
+      <el-text
+        type="info"
+        size="small"
+        class="hint block-hint app-meta-note"
+        data-testid="settings-app-disclaimer"
+      >
+        {{ t("common.unofficialDisclaimer") }}
+      </el-text>
+      <el-text
+        type="info"
+        size="small"
+        class="hint block-hint app-meta-note"
+        data-testid="settings-app-data-storage"
+      >
+        {{ t("settings.dataStorageNote") }}
+      </el-text>
+      <LegalDocLinks
+        class="about-app-legal-links"
+        stacked
+        show-oss-licenses-link
+      />
     </el-card>
 
-    <!-- DB メンテナンス -->
-    <el-card class="section-card" shadow="never">
+    <!-- リセットと再設定 -->
+    <el-card
+      class="section-card"
+      shadow="never"
+      data-testid="settings-reset-setup-section"
+    >
       <template #header>
-        <span>{{ t("settings.dbSection") }}</span>
+        <span>{{ t("settings.resetSetupSection") }}</span>
       </template>
-      <el-text type="info" size="small" class="hint db-hint">
-        {{ t("settings.dbHint") }}
-      </el-text>
-      <VtAlert
-        v-if="maintenanceError"
-        variant="danger"
-        :title="maintenanceError"
-        class="maintenance-error-alert"
-      />
-      <div class="maintenance-actions">
+      <div class="onboarding-reopen-row">
         <VtButton
           variant="secondary"
-          :loading="maintenanceLoading"
-          @click="doVacuumDb"
+          data-testid="settings-open-onboarding"
+          @click="openFirstLaunchGuide"
         >
-          {{
-            maintenanceLoading ? t("settings.running") : t("settings.vacuum")
-          }}
+          {{ t("settings.openFirstLaunchGuide") }}
         </VtButton>
-        <VtButton
+        <el-text type="info" size="small" class="hint onboarding-reopen-hint">
+          {{ t("settings.openFirstLaunchGuideHint") }}
+        </el-text>
+      </div>
+      <div class="reset-setup-destructive">
+        <el-text type="info" size="small" class="hint db-hint">
+          {{ t("settings.resetSetupDestructiveHint") }}
+        </el-text>
+        <VtAlert
+          v-if="maintenanceError"
           variant="danger"
-          plain
-          :loading="maintenanceLoading"
-          @click="doClearEncounters"
-        >
-          {{ t("settings.clearEncounters") }}
-        </VtButton>
-        <VtButton
-          variant="danger"
-          plain
-          :loading="maintenanceLoading"
-          @click="doClearScreenshots"
-        >
-          {{ t("settings.clearScreenshots") }}
-        </VtButton>
-        <VtButton
-          variant="danger"
-          plain
-          :loading="maintenanceLoading"
-          @click="doClearFriendsCache"
-        >
-          {{ t("settings.clearFriends") }}
-        </VtButton>
+          :title="maintenanceError"
+          class="maintenance-error-alert"
+        />
+        <div class="maintenance-actions">
+          <VtButton
+            variant="secondary"
+            :loading="maintenanceLoading"
+            @click="doVacuumDb"
+          >
+            {{
+              maintenanceLoading ? t("settings.running") : t("settings.vacuum")
+            }}
+          </VtButton>
+          <VtButton
+            variant="danger"
+            plain
+            :loading="maintenanceLoading"
+            @click="doClearEncounters"
+          >
+            {{ t("settings.clearEncounters") }}
+          </VtButton>
+          <VtButton
+            variant="danger"
+            plain
+            :loading="maintenanceLoading"
+            @click="doClearScreenshots"
+          >
+            {{ t("settings.clearScreenshots") }}
+          </VtButton>
+          <VtButton
+            variant="danger"
+            plain
+            :loading="maintenanceLoading"
+            @click="doClearFriendsCache"
+          >
+            {{ t("settings.clearFriends") }}
+          </VtButton>
+        </div>
       </div>
     </el-card>
   </div>
@@ -909,8 +916,15 @@ function doClearFriendsCache() {
   margin-bottom: var(--space-form-field);
 }
 
-.oss-link-row {
-  margin-top: var(--space-form-field);
+.about-app-legal-links {
+  margin-top: var(--space-block);
+  max-width: 42rem;
+}
+
+.reset-setup-destructive {
+  margin-top: var(--space-block);
+  padding-top: var(--space-block);
+  border-top: 1px solid var(--color-border);
 }
 
 .path-settings {
@@ -973,11 +987,6 @@ function doClearFriendsCache() {
 
 .app-meta-note {
   margin-top: 0;
-  margin-bottom: var(--space-block);
-  max-width: 42rem;
-}
-
-.app-legal-links {
   margin-bottom: var(--space-block);
   max-width: 42rem;
 }

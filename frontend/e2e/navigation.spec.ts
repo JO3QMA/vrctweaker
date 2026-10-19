@@ -67,9 +67,9 @@ test.describe("Navigation", () => {
     await expect(page.getByRole("heading", { level: 1 })).toContainText("設定");
   });
 
-  test("settings .btn-licenses navigates to OSS licenses", async ({ page }) => {
+  test("settings OSS link navigates to licenses page", async ({ page }) => {
     await page.goto("/#/settings");
-    await page.locator(".btn-licenses").click();
+    await page.getByTestId("settings-oss-licenses-link").click();
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
       "OSS ライセンス",
     );

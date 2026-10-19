@@ -1,7 +1,7 @@
 <template>
   <div class="legal-doc-links" data-testid="legal-doc-links">
     <p v-if="intro" class="text-body-sm intro">{{ intro }}</p>
-    <ul class="link-list">
+    <ul class="link-list" :class="{ 'link-list--stacked': stacked }">
       <li>
         <a
           :href="privacyUrl"
@@ -24,6 +24,15 @@
           {{ t("legal.termsOfUse") }}
         </a>
       </li>
+      <li v-if="showOssLicensesLink">
+        <router-link
+          to="/licenses"
+          class="legal-link"
+          data-testid="settings-oss-licenses-link"
+        >
+          {{ t("settings.ossButton") }}
+        </router-link>
+      </li>
     </ul>
   </div>
 </template>
@@ -35,6 +44,8 @@ import { privacyPolicyUrl, termsOfUseUrl } from "../constants/legalUrls";
 
 defineProps<{
   intro?: string;
+  stacked?: boolean;
+  showOssLicensesLink?: boolean;
 }>();
 
 const { locale, t } = useI18n();
@@ -65,5 +76,15 @@ const termsUrl = computed(() => termsOfUseUrl(locale.value));
 .legal-link:hover {
   color: var(--color-brand-hover);
   text-decoration: underline;
+}
+
+.link-list--stacked {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-inline-tight);
 }
 </style>

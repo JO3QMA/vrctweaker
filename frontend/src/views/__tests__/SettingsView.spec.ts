@@ -105,16 +105,18 @@ describe("SettingsView", () => {
     expect(wrapper.find(".page-title").text()).toBe("設定");
   });
 
-  it("has link to OSS licenses page", async () => {
+  it("has link to OSS licenses page in about section", async () => {
     const wrapper = mountSettings();
     await flushPromises();
-    const licensesLink = wrapper.find(".btn-licenses");
+    const licensesLink = wrapper.find(
+      '[data-testid="settings-oss-licenses-link"]',
+    );
     expect(licensesLink.exists()).toBe(true);
     expect(licensesLink.attributes("href")).toContain("/licenses");
     expect(licensesLink.text()).toContain("OSS ライセンス一覧");
   });
 
-  it("shows legal document links in app section", async () => {
+  it("shows legal document links in about section", async () => {
     const wrapper = mountSettings();
     await flushPromises();
     const privacy = wrapper.find('[data-testid="legal-link-privacy"]');
@@ -188,6 +190,21 @@ describe("SettingsView", () => {
     expect(
       wrapper.find('[data-testid="settings-close-to-tray"]').exists(),
     ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="settings-about-app-section"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="settings-reset-setup-section"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="settings-open-onboarding"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="settings-oss-licenses-link"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="settings-app-section"]').text(),
+    ).not.toContain("OSS");
   });
 
   it("lists all UI language options", async () => {
