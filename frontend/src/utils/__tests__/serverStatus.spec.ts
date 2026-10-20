@@ -48,6 +48,7 @@ const maintenanceKeys = [
   "maintenanceRangeSpan",
   "maintenanceUntilClock",
   "maintenanceUntilStamp",
+  "maintenanceOpenStart",
 ] as const;
 
 function makeT(messages: {
@@ -183,7 +184,7 @@ describe("formatServerMaintenances", () => {
       t,
       now,
     );
-    expect(row?.text).toBe("(メンテ予告) API 12/23 12:34");
+    expect(row?.text).toBe("(メンテ予告) API 12/23 12:34〜");
   });
 
   it("shows only the start when an in-progress window has no end", () => {
@@ -198,7 +199,7 @@ describe("formatServerMaintenances", () => {
       t,
       now,
     );
-    expect(row?.text).toBe("(メンテ中) API 12/23 09:05");
+    expect(row?.text).toBe("(メンテ中) API 12/23 09:05〜");
   });
 
   it("puts in-progress windows first and hides finished ones", () => {
@@ -255,5 +256,32 @@ describe("formatServerMaintenances", () => {
       now,
     );
     expect(row?.text).toBe("(Scheduled) API 12/23, 12:34 PM–11:45 PM");
+  });
+
+  it("marks an English window with no end as open-ended", () => {
+    const scheduled = formatServerMaintenances(
+      [
+        {
+          name: "API",
+          status: "scheduled",
+          scheduledFor: at(2026, 12, 23, 12, 34),
+        },
+      ],
+      makeT(en),
+      now,
+    );
+    const live = formatServerMaintenances(
+      [
+        {
+          name: "API",
+          status: "in_progress",
+          scheduledFor: at(2026, 12, 23, 9, 5),
+        },
+      ],
+      makeT(en),
+      now,
+    );
+    expect(scheduled[0]?.text).toBe("(Scheduled) API 12/23, 12:34 PM〜");
+    expect(live[0]?.text).toBe("(In progress) API 12/23, 9:05 AM〜");
   });
 });

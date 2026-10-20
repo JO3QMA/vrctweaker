@@ -115,7 +115,8 @@
       "maintenanceRangeSameDay": "{start}–{endClock}",
       "maintenanceRangeSpan": "{start}–{end}",
       "maintenanceUntilClock": "〜{endClock}",
-      "maintenanceUntilStamp": "〜{end}"
+      "maintenanceUntilStamp": "〜{end}",
+      "maintenanceOpenStart": "{start}〜"
     }
   },
   "launcher": {

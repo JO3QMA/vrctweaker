@@ -183,7 +183,7 @@ function formatWhen(
         end: formatStamp(end, t),
       });
     }
-    return start ? formatStamp(start, t) : "";
+    return start ? formatOpenStart(start, t) : "";
   }
   if (start && end) {
     if (isSameLocalDay(start, end)) {
@@ -197,9 +197,15 @@ function formatWhen(
       end: formatStamp(end, t),
     });
   }
-  if (start) return formatStamp(start, t);
+  if (start) return formatOpenStart(start, t);
   if (end) return formatStamp(end, t);
   return "";
+}
+
+function formatOpenStart(start: Date, t: MaintenanceTranslator): string {
+  return t(`${MAINTENANCE_I18N}.maintenanceOpenStart`, {
+    start: formatStamp(start, t),
+  });
 }
 
 function visibleName(name: string): string {

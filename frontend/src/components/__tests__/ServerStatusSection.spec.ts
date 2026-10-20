@@ -168,7 +168,7 @@ describe("ServerStatusSection", () => {
       "(In progress) API until 11:45 PM",
       "(Scheduled) Overnight 12/23, 11:00 PM–12/24, 2:00 AM",
       "(Scheduled) Later 12/25, 1:00 AM–3:00 AM",
-      "(Scheduled) Open 12/26, 9:05 AM",
+      "(Scheduled) Open 12/26, 9:05 AM〜",
     ]);
     expect(rows[0]?.classes()).toContain("server-status-maintenance--active");
     expect(rows[1]?.classes()).toContain(

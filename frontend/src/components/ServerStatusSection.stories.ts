@@ -98,8 +98,28 @@ export const InProgress: Story = {
   ],
 };
 
+const openEndedScheduled: MaintenanceFixture = {
+  id: "open-scheduled",
+  name: "API",
+  status: "scheduled",
+  scheduledFor: atLocal(2, 12, 34),
+  updates: ["No end time has been announced."],
+};
+
+const openEndedLive: MaintenanceFixture = {
+  id: "open-live",
+  name: "API",
+  status: "in_progress",
+  scheduledFor: atLocal(0, 9, 5),
+  updates: ["Started without a published end time."],
+};
+
 export const Overnight: Story = {
   decorators: [withStatus(statusDto([overnight]))],
+};
+
+export const OpenEnded: Story = {
+  decorators: [withStatus(statusDto([openEndedLive, openEndedScheduled]))],
 };
 
 export const Mixed: Story = {
