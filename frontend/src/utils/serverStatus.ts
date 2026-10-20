@@ -67,7 +67,9 @@ function serverStatusStyle(
   raw: string | undefined | null,
 ): ServerStatusStyle {
   const key = (raw ?? "").trim().toLowerCase();
-  return Object.hasOwn(table, key) ? table[key] : fallback;
+  return Object.prototype.hasOwnProperty.call(table, key)
+    ? table[key]
+    : fallback;
 }
 
 /** status.vrchat.com summary indicator → i18n key under dashboard.serverStatus */
