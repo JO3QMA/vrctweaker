@@ -50,6 +50,21 @@ describe("serverStatus utils", () => {
     );
     expect(serverStatusComponentColorClass("")).toBe("server-status--unknown");
   });
+
+  it("ignores inherited object keys such as constructor", () => {
+    expect(serverStatusSummaryI18nKey("constructor")).toBe(
+      "dashboard.serverStatus.summaryUnknown",
+    );
+    expect(serverStatusSummaryColorClass("constructor")).toBe(
+      "server-status--unknown",
+    );
+    expect(serverStatusComponentI18nKey("constructor")).toBe(
+      "dashboard.serverStatus.statusUnknown",
+    );
+    expect(serverStatusComponentColorClass("constructor")).toBe(
+      "server-status--unknown",
+    );
+  });
 });
 
 const maintenanceKeys = [
