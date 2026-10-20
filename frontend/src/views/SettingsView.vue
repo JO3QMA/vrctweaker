@@ -9,7 +9,7 @@
       <el-text type="info" size="small" class="hint block-hint">{{
         t("settings.languageHint")
       }}</el-text>
-      <VtSelect
+      <el-select
         class="language-select"
         :model-value="locale"
         data-testid="settings-ui-language"
@@ -20,7 +20,7 @@
         <el-option value="ko" :label="t('settingsLanguages.ko')" />
         <el-option value="zh-TW" :label="t('settingsLanguages.zhTW')" />
         <el-option value="zh-CN" :label="t('settingsLanguages.zhCN')" />
-      </VtSelect>
+      </el-select>
     </el-card>
 
     <!-- VRChat ログイン -->
@@ -100,7 +100,7 @@
         />
         <el-form label-position="top" size="default">
           <el-form-item :label="t('settings.username')">
-            <VtInput
+            <el-input
               id="login-username"
               v-model="loginForm.username"
               :placeholder="t('settings.usernamePh')"
@@ -108,7 +108,7 @@
             />
           </el-form-item>
           <el-form-item :label="t('settings.password')">
-            <VtInput
+            <el-input
               id="login-password"
               v-model="loginForm.password"
               type="password"
@@ -159,7 +159,7 @@
         <div v-for="field in pathFields" :key="field.key" class="path-row">
           <label class="path-label">{{ field.label }}</label>
           <div class="path-input-group">
-            <VtInput
+            <el-input
               v-model="pathSettings[field.key]"
               :placeholder="field.placeholder"
               @change="savePathSettings"
@@ -217,7 +217,7 @@
             t("settings.updateAutoCheckHint")
           }}</el-text>
         </div>
-        <VtSwitch
+        <el-switch
           v-model="appUpdateAutoCheck"
           data-testid="settings-app-update-auto-check"
           @change="saveAppUpdateAutoCheck"
@@ -230,7 +230,7 @@
             t("settings.closeToTrayHint")
           }}</el-text>
         </div>
-        <VtSwitch
+        <el-switch
           v-model="closeToTray"
           class="tray-switch"
           data-testid="settings-close-to-tray"
@@ -251,7 +251,7 @@
             t("settings.suppressSleepHint")
           }}</el-text>
         </div>
-        <VtSwitch
+        <el-switch
           v-model="suppressSleepWhileVRChat"
           class="power-switch"
           @change="saveSuppressSleepWhileVRChat"
@@ -283,7 +283,7 @@
             t("settings.galleryAutoEnrichHint")
           }}</el-text>
         </div>
-        <VtSwitch
+        <el-switch
           v-model="galleryAutoEnrichMetadata"
           data-testid="settings-gallery-auto-enrich"
           @change="saveGalleryAutoEnrich"
@@ -431,10 +431,7 @@ import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
 import VtAlert from "../components/VtAlert.vue";
 import VtButton from "../components/VtButton.vue";
-import VtInput from "../components/VtInput.vue";
 import LoginTwoFactorCodeField from "../components/LoginTwoFactorCodeField.vue";
-import VtSelect from "../components/VtSelect.vue";
-import VtSwitch from "../components/VtSwitch.vue";
 import VtTag from "../components/VtTag.vue";
 import LegalDocLinks from "../components/LegalDocLinks.vue";
 import {

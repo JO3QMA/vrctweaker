@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted（grill-with-docs で合意）
+Accepted（grill-with-docs で合意。2026-10-20 改訂: トークンの正本は `style.css` のみ。TypeScript カタログは置かない）
 
 ## Context
 
@@ -100,10 +100,10 @@ Neutral border の多段（`border-light` 等）は v1 では **App color token*
 
 ### 4. 実装正本
 
-- トークン定義・EP mapping・alias: `frontend/src/assets/style.css`
-- カタログ定数（Storybook・テスト用）: `frontend/src/design/colorTokens.ts`
-- 見た目と使い方: **Color Storybook catalog**（`frontend/src/design/Color.stories.ts`）
-- Agent 規約: `.cursor/rules/color-design-system.mdc`（実装 PR で追加）
+- **トークンの正本は `frontend/src/assets/style.css` だけ**（`:root` の App color token、`html.dark` の Element Plus mapping、レガシー alias）。色の TypeScript カタログは持たない
+- グループ・並び順・用途（本文、危険・破壊、など）は、同じファイルのブロックコメントと宣言末尾コメントに書く
+- 見た目と使い方: **Color Storybook catalog**（`frontend/src/design/Color.stories.ts`）。表は `style.css` を実行時に読む。`var(--…)` は宣言そのままに加え、定義セレクタ（`:root` または `html.dark`）に一致する要素の `getComputedStyle` で解決した値も出す
+- Agent 規約: `.cursor/rules/color-design-system.mdc`
 
 ### 5. Color adoption
 
@@ -134,8 +134,7 @@ Neutral border の多段（`border-light` 等）は v1 では **App color token*
 **含む:**
 
 - `style.css` への **App color token**、**Element Plus color mapping**、**Color alias**
-- `colorTokens.ts` + 単体テスト
-- **Color Storybook catalog**（Brand / Neutral / Semantic / Server status / Presence）
+- **Color Storybook catalog**（Brand / Neutral / Semantic / Server status / Presence）。中身は `style.css` を実行時に読む
 - `ServerStatusSection.vue` / `PresenceChangeSection.vue` のトークン参照化
 - 共有スタイルの Neutral 置換
 - `.cursor/rules/color-design-system.mdc`
@@ -153,7 +152,7 @@ Neutral border の多段（`border-light` 等）は v1 では **App color token*
 ## Consequences
 
 - 新規・改修 PR では `var(--color-*)` が期待される（レガシー alias は移行期のみ）
-- **Color Storybook catalog** が色の正本となり、Spacing / VtButton catalog と並べて参照できる
+- **Color Storybook catalog** は `style.css` を一覧する。色の値の正本は `style.css` である
 - Server status と Presence は **Domain color** として独立したトークン名を持ち、Semantic フィードバック色と混同しにくくなる
 - 見た目不変のため v1 マージ直後の視覚差は意図しない（alias 経由の参照先同一）
 - パレット調整はトークン名が安定した後に、Storybook 上で差分比較しやすくなる

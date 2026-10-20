@@ -46,7 +46,7 @@ border-color: var(--color-border);
 
 ## Storybook
 
-`frontend/src/design/Color.stories.ts` がスウォッチとマッピング表の正本。変更時は `colorTokens.ts` とストーリーも更新する。
+`frontend/src/design/Color.stories.ts` は `frontend/src/assets/style.css` を実行時に読んでスウォッチと表を出す。トークン値の正本は `style.css`（グループと用途はそこのコメント）。変更時は `style.css` とストーリーも更新する。
 
 ## 関連
 

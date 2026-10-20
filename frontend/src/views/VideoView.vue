@@ -162,7 +162,7 @@
             <!-- 2. 操作エリア -->
             <section class="video-ops" data-testid="ytdlp-ops">
               <div class="video-switch-row">
-                <VtSwitch
+                <el-switch
                   v-model="maintainOn"
                   data-testid="ytdlp-maintain-switch"
                   :disabled="busy"
@@ -289,7 +289,6 @@ import CookieLinkageSection from "../components/CookieLinkageSection.vue";
 import VtAlert from "../components/VtAlert.vue";
 import VtButton from "../components/VtButton.vue";
 import VtIcon from "../components/VtIcon.vue";
-import VtSwitch from "../components/VtSwitch.vue";
 import {
   VT_BUTTON_DANGER_CONFIRM_CLASS,
   VT_BUTTON_SECONDARY_CANCEL_CLASS,

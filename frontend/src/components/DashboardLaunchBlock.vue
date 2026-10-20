@@ -37,7 +37,7 @@
       </p>
 
       <div class="launch-block-controls">
-        <VtSelect
+        <el-select
           v-model="selectedProfileId"
           class="launch-block-profile"
           data-testid="launch-block-profile-select"
@@ -50,7 +50,7 @@
             :label="p.name"
             :value="p.id"
           />
-        </VtSelect>
+        </el-select>
         <div
           class="launch-block-actions"
           :class="{ 'launch-block-actions--solo': !rejoin }"
@@ -91,7 +91,6 @@
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import VtButton from "./VtButton.vue";
-import VtSelect from "./VtSelect.vue";
 import {
   App,
   type DashboardLaunchBlockDTO,

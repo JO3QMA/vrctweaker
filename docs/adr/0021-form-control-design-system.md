@@ -1,8 +1,8 @@
-# ADR 0021: Form & input control design system (VtInput / VtSelect / VtCheckbox / VtSwitch)
+# ADR 0021: Form & input control design system
 
 ## Status
 
-Accepted（grill-with-docs で合意）
+Accepted（grill-with-docs で合意。2026-10-20 改訂: 透過ラッパーは廃し、フォーム部品は `el-*` を直接使う）
 
 ## Context
 
@@ -15,24 +15,26 @@ Accepted（grill-with-docs で合意）
 
 ## Decision
 
-### 1. ラッパー（Vt*）
+### 1. フォーム部品は Element Plus を直接使う
 
-| ラッパー | 内部 | 用途 |
-|----------|------|------|
-| **VtInput** | `el-input` | テキスト系（`type` 透過）。`textarea` は v1 ではラッパーなし |
-| **VtSelect** | `el-select` + `el-option` | 単一選択。filterable / multiple / remote は v1 外 |
-| **VtCheckbox** | `el-checkbox` | **Form layout** 内・他フィールドと同じ保存タイミングの真偽 |
-| **VtSwitch** | `el-switch` | **Immediate setting toggle** / **List enable toggle** |
+| 用途 | コンポーネント |
+|------|----------------|
+| テキスト系（`type` 透過）。`textarea` は別ラッパーを作らない | `el-input` |
+| 単一選択。filterable / multiple / remote は v1 外 | `el-select` + `el-option` |
+| **Form layout** 内・他フィールドと同じ保存タイミングの真偽 | `el-checkbox` |
+| **Immediate setting toggle** / **List enable toggle** | `el-switch` |
 
-- `disabled`・`data-testid`・`size` 等は **透過**（`$attrs` / `inheritAttrs`、VtButton と同型）
-- v1 では暗黙の `variant` は不要（ボタンと異なり 4 様式ではない）
-- 新規・改修では Vt* を使う。**Form control adoption**（触ったところから順次）
+- 中身が `$attrs` だけのラッパー（旧 VtInput / VtSelect / VtCheckbox / VtSwitch）は置かない
+- **variant の対応が要るものだけラップする**: **VtButton** / **VtAlert** / **VtTag** / **VtIcon**
+- `disabled`・`data-testid`・`size` 等は Element Plus の props をそのまま渡す
+- v1 では入力部品に暗黙の `variant` は不要（ボタンと異なり 4 様式ではない）
+- 見た目は `style.css` の `html.dark` にある `--el-input-*` / `--el-switch-*` が `el-*` に効く。部品ごとの追加 class は要らない
 
 ### 2. Element Plus マッピング
 
 - 色: 既存 `--el-input-*` / `--el-switch-*`（**Color** ADR）を維持。v1 では見た目変更なし
-- サイズ: **`el-form size="default"`** で子へ継承。Vt* に毎回 `size` は付けない
-- **Form control size**: 省略時 `default`。`small` は **List enable toggle** の VtSwitch と密集レイアウト（Launcher Advanced 等）の明示指定のみ。`large` は v1 不使用
+- サイズ: **`el-form size="default"`** で子へ継承。入力部品に毎回 `size` は付けない
+- **Form control size**: 省略時 `default`。`small` は **List enable toggle** の `el-switch` と密集レイアウト（Launcher Advanced 等）の明示指定のみ。`large` は v1 不使用
 
 ### 3. レイアウト
 
@@ -40,25 +42,25 @@ Accepted（grill-with-docs で合意）
 |----------|------|------|
 | **Form layout** | `el-form` + `label-position="top"` | 複数項目の編集フォーム。項目間 `--space-form-field` |
 | **Setting row** | `.setting-row` | カード内 1 行（ラベル＋hint 左、コントロール右） |
-| **Path input row** | `.path-input-group` + VtInput + VtButton Secondary | パス + 参照（複数アクション可）。**VtPathInput** は v1 では作らない |
+| **Path input row** | `.path-input-group` + `el-input` + VtButton Secondary | パス + 参照（複数アクション可）。**VtPathInput** は v1 では作らない |
 
 ### 4. Checkbox vs switch（**Form control checkbox–switch rule**）
 
 | 文脈 | コントロール |
 |------|--------------|
-| 編集フォーム内の真偽（他項目と同じ保存・反映） | **VtCheckbox** |
-| 即時反映の単発設定 | **VtSwitch** + 多くは **Setting row** |
-| 一覧・カードの有効フラグ即切替 | **VtSwitch**（`small` 可） |
+| 編集フォーム内の真偽（他項目と同じ保存・反映） | `el-checkbox` |
+| 即時反映の単発設定 | `el-switch` + 多くは **Setting row** |
+| 一覧・カードの有効フラグ即切替 | `el-switch`（`small` 可） |
 | UI 表示モード切替（Friends Online/Offline 等） | **UI mode toggle**（Semantic 例外。toggle-group 等） |
-| 複数選択（曜日など） | **VtCheckbox** + `el-checkbox-group` |
+| 複数選択（曜日など） | `el-checkbox` + `el-checkbox-group` |
 
-- **VtSwitch** の `active-text` / `inline-prompt` 等の内蔵ラベルは v1 不使用
+- `el-switch` の `active-text` / `inline-prompt` 等の内蔵ラベルは v1 不使用
 
 ### 5. disabled / readonly
 
 - **Form control disabled state**: 標準 `disabled` 透過。理由は周辺 hint / 文言
 - `readonly` は v1 の Form control では使わない（`disabled` に統一）
-- VtInput / VtSelect に loading 様式は設けない
+- `el-input` / `el-select` に loading 様式は設けない
 
 ### 6. エラー表示（3 層）
 
@@ -71,21 +73,21 @@ Accepted（grill-with-docs で合意）
 
 ### 7. Storybook
 
-- `VtInput.stories.ts` / `VtSelect.stories.ts` / `VtCheckbox.stories.ts` / `VtSwitch.stories.ts` — 各コントロールの通常 / disabled / 代表 props
-- `FormLayoutPatterns.stories.ts` — Form layout / Setting row / Path input row
-- 正本は **Form control Storybook catalog**（VtButton catalog と同型）
+- 部品ごとの専用ストーリーは置かない。`el-input` / `el-select` / `el-checkbox` / `el-switch` の見た目はグローバル CSS が担う
+- `FormLayoutPatterns.stories.ts` — Form controls / Form layout / Setting row / Path input row
+- レイアウトの見本は **Form control Storybook catalog**（`FormLayoutPatterns.stories.ts`）
 
 ### 8. Agent / 実装ルール
 
 - `.cursor/rules/form-design-system.mdc` 新設
-- `path-input-pattern.mdc` を VtInput + VtButton に更新
+- `path-input-pattern.mdc` を `el-input` + VtButton にする
 - ESLint による `el-input` 等禁止は v1 では入れない
 
 ## Considered options
 
 | 案 | 却下理由 |
 |----|----------|
-| 規約のみ（ラッパーなし） | adoption の強制力が弱く、checkbox/switch 誤用が再発しやすい |
+| 透過ラッパー（`$attrs` のみ）を残す | variant 対応が無く、`el-*` 直書きと同じ DOM になる。2026-10-20 に廃止 |
 | **VtPathInput** を v1 で統合 | Settings path-row の複数アクションで props が膨らむ |
 | レイアウトを `el-form` に全面統一 | Setting row の横並び説明＋スイッチが縦に伸びる |
 | 即時トグル失敗を ElMessage のみ | 一覧トグルと Setting row で表現がずれる |
@@ -95,7 +97,8 @@ Accepted（grill-with-docs で合意）
 
 **含む:**
 
-- 4 ラッパー + 単体テスト + Storybook（4 + Form layout patterns）
+- `el-input` / `el-select` / `el-checkbox` / `el-switch` の直接利用
+- Form layout patterns の Storybook
 - `.cursor/rules/form-design-system.mdc`
 - `path-input-pattern.mdc` 更新
 - `CONTEXT.md` / 本 ADR
@@ -111,6 +114,6 @@ Accepted（grill-with-docs で合意）
 
 ## Consequences
 
-- 新規・改修 PR では Vt* と Form layout / Setting row / Path input row の使い分けが期待される
+- 新規・改修 PR では `el-input` / `el-select` / `el-checkbox` / `el-switch` と、Form layout / Setting row / Path input row の使い分けが期待される。透過ラッパーは足さない
 - 即時トグル失敗は触ったファイルからブロック内エラーへ寄せる（Automation 一覧の ElMessage は段階移行）
 - UI モード切替（Friends 等）は現行パターンを維持

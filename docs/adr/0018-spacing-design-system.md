@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted（grill-with-docs で合意）
+Accepted（grill-with-docs で合意。2026-10-20 改訂: トークンの正本は `style.css` のみ。TypeScript カタログは置かない）
 
 ## Context
 
@@ -47,9 +47,9 @@ Accepted（grill-with-docs で合意）
 
 ### 3. 実装正本
 
-- トークン定義: `frontend/src/assets/style.css` の `:root`
-- カタログ定数（Storybook・テスト用）: `frontend/src/design/spacingTokens.ts`
-- 見た目と使い方: **Spacing Storybook catalog**（`frontend/src/design/Spacing.stories.ts`）
+- **トークンの正本は `frontend/src/assets/style.css` の `:root` だけ**。余白の TypeScript カタログは持たない
+- グループ・並び順・用途は、同じファイルのブロックコメントと宣言末尾コメントに書く
+- 見た目と使い方: **Spacing Storybook catalog**（`frontend/src/design/Spacing.stories.ts`）。表は `style.css` を実行時に読み、`var(--…)` は宣言そのままに加え、そのセレクタに一致する要素の `getComputedStyle` で解決した値も出す
 - Agent 規約: `.cursor/rules/spacing-design-system.mdc`
 
 ### 4. Spacing adoption
@@ -83,8 +83,7 @@ Accepted（grill-with-docs で合意）
 **含む:**
 
 - `style.css` へのトークン + pattern 定義、共有クラスのトークン化
-- `spacingTokens.ts` + 単体テスト
-- Spacing Storybook catalog
+- Spacing Storybook catalog（`style.css` を実行時に読む）
 - `.cursor/rules/spacing-design-system.mdc`
 - `CONTEXT.md` / 本 ADR
 
@@ -99,4 +98,4 @@ Accepted（grill-with-docs で合意）
 
 - 新規・改修 PR では `var(--space-*)` または pattern 変数が期待される
 - 共有クラス経由の画面は v1 マージ後に数 px の視覚差が出うる（四捨五入による意図的な寄せ）
-- Storybook が Spacing の正本となり、VtButton catalog と並べて参照できる
+- Storybook は `style.css` を読んで余白を一覧する。トークン値の正本は `style.css` である

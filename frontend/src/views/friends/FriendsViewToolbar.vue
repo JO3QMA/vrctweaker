@@ -32,7 +32,7 @@
         {{ refreshLoading ? t("common.updating") : t("common.refresh") }}
       </VtButton>
     </div>
-    <VtInput
+    <el-input
       v-model.trim="displayNameQuery"
       type="search"
       :placeholder="t('friends.searchPlaceholder')"
@@ -44,7 +44,7 @@
       <template #prefix>
         <VtIcon size="default"><Search /></VtIcon>
       </template>
-    </VtInput>
+    </el-input>
   </div>
 </template>
 
@@ -53,7 +53,6 @@ import { Search } from "@element-plus/icons-vue";
 import { useI18n } from "vue-i18n";
 import VtButton from "../../components/VtButton.vue";
 import VtIcon from "../../components/VtIcon.vue";
-import VtInput from "../../components/VtInput.vue";
 
 const { t } = useI18n();
 

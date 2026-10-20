@@ -13,7 +13,7 @@
     >
       <!-- フィルタ -->
       <div class="filters">
-        <VtInput
+        <el-input
           v-model="displayNameFilter"
           :placeholder="t('activity.searchDisplayName')"
           clearable
@@ -22,7 +22,7 @@
           <template #prefix>
             <VtIcon size="default"><Search /></VtIcon>
           </template>
-        </VtInput>
+        </el-input>
         <VtButton variant="tertiary" @click="refreshActivity(false)">{{
           t("common.refresh")
         }}</VtButton>
@@ -146,7 +146,6 @@ import { useI18n } from "vue-i18n";
 import CollapsibleSectionCard from "../components/CollapsibleSectionCard.vue";
 import VtButton from "../components/VtButton.vue";
 import VtIcon from "../components/VtIcon.vue";
-import VtInput from "../components/VtInput.vue";
 import {
   App,
   type ActivityStatsDTO,

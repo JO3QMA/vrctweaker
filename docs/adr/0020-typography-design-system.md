@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted（grill-with-docs で合意）
+Accepted（grill-with-docs で合意。2026-10-20 改訂: トークンの正本は `style.css` のみ。TypeScript カタログは置かない）
 
 ## Context
 
@@ -102,9 +102,9 @@ tokenize 時は **既存の見た目を変えない**。Heading 1 は `--font-si
 
 ### 8. 実装正本
 
-- トークン定義・Text style・EP mapping: `frontend/src/assets/style.css`
-- カタログ定数（Storybook・テスト用）: `frontend/src/design/typographyTokens.ts`
-- 見た目と使い方: **Typography Storybook catalog**（`frontend/src/design/Typography.stories.ts`）
+- **トークンと Text style の正本は `frontend/src/assets/style.css` だけ**（`:root` の文字トークン、共有クラス、`html.dark` の Element Plus mapping）。タイポグラフィの TypeScript カタログは持たない
+- グループ・並び順・用途は、同じファイルのブロックコメントと宣言末尾コメントに書く
+- 見た目と使い方: **Typography Storybook catalog**（`frontend/src/design/Typography.stories.ts`）。表は `style.css` を実行時に読む。`var(--…)` は宣言そのままに加え、定義セレクタに一致する要素の `getComputedStyle` で解決した値も出す
 - Agent 規約: `.cursor/rules/typography-design-system.mdc`
 
 ### 9. Typography adoption
@@ -134,8 +134,7 @@ tokenize 時は **既存の見た目を変えない**。Heading 1 は `--font-si
 **含む:**
 
 - `style.css` へのトークン + Text style 定義、共有クラスのトークン化、EP typography mapping
-- `typographyTokens.ts` + 単体テスト
-- Typography Storybook catalog
+- Typography Storybook catalog（`style.css` を実行時に読む）
 - `.cursor/rules/typography-design-system.mdc`
 - `CONTEXT.md` / 本 ADR
 
@@ -152,6 +151,6 @@ tokenize 時は **既存の見た目を変えない**。Heading 1 は `--font-si
 ## Consequences
 
 - 新規・改修 PR では `var(--font-size-*)` / **Text style** クラスが期待される
-- **Typography Storybook catalog** がタイポの正本となり、Spacing / Color / VtButton catalog と並べて参照できる
+- **Typography Storybook catalog** は `style.css` を一覧する。文字の値の正本は `style.css` である
 - Heading 1 の `calc` は将来 `--font-size-20` へ寄せるリデザイン PR の入口を残す
 - v1 マージ直後の視覚差は意図しない（token 値は現行 computed と同等）

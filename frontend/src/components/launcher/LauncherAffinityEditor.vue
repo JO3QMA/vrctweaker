@@ -3,8 +3,6 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import VtAlert from "../VtAlert.vue";
 import VtButton from "../VtButton.vue";
-import VtCheckbox from "../VtCheckbox.vue";
-import VtInput from "../VtInput.vue";
 import {
   coreStatesFromMask,
   DEFAULT_LOGICAL_PROCESSOR_COUNT,
@@ -207,7 +205,7 @@ onMounted(async () => {
           role="separator"
           :aria-label="t('launcher.affinityCcdDivider')"
         />
-        <VtCheckbox
+        <el-checkbox
           class="affinity-core-checkbox"
           :model-value="coreStates[index - 1]"
           size="small"
@@ -216,7 +214,7 @@ onMounted(async () => {
           @update:model-value="setCoreAllowed(index - 1, $event)"
         >
           C{{ index - 1 }}
-        </VtCheckbox>
+        </el-checkbox>
       </template>
     </div>
 
@@ -238,7 +236,7 @@ onMounted(async () => {
     </button>
 
     <div v-if="hexExpertOpen" class="affinity-hex-panel">
-      <VtInput
+      <el-input
         v-model="hexDraft"
         :placeholder="t('launcher.affinityPh')"
         data-testid="affinity-hex-input"
