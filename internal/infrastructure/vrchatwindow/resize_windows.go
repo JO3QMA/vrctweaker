@@ -50,6 +50,9 @@ type windowCand struct {
 	area int64
 }
 
+// enumActiveData is set only for the duration of a single EnumWindows call on one goroutine.
+var enumActiveData *enumData
+
 type enumData struct {
 	want      map[uint32]struct{}
 	bestByPID map[uint32]windowCand
@@ -173,7 +176,9 @@ func findMainWindow(pids []uint32) (windows.HWND, error) {
 		want:      want,
 		bestByPID: make(map[uint32]windowCand),
 	}
-	_ = windows.EnumWindows(enumWindowsCB(), unsafe.Pointer(data))
+	enumActiveData = data
+	defer func() { enumActiveData = nil }()
+	_ = windows.EnumWindows(enumWindowsCB(), nil)
 	switch len(data.bestByPID) {
 	case 0:
 		return 0, ErrNoWindow
@@ -187,11 +192,11 @@ func findMainWindow(pids []uint32) (windows.HWND, error) {
 	}
 }
 
-func enumWindowsProc(hwnd windows.HWND, lparam uintptr) uintptr {
-	if lparam == 0 {
+func enumWindowsProc(hwnd windows.HWND, _ uintptr) uintptr {
+	data := enumActiveData
+	if data == nil {
 		return 1
 	}
-	data := (*enumData)(unsafe.Pointer(lparam))
 	if !windows.IsWindowVisible(hwnd) {
 		return 1
 	}

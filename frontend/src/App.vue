@@ -22,6 +22,7 @@
         </main>
       </div>
     </div>
+    <AppUpdateDialog />
   </el-config-provider>
 </template>
 
@@ -31,6 +32,7 @@ import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import TitleBar from "./components/TitleBar.vue";
 import Sidebar from "./components/Sidebar.vue";
+import AppUpdateDialog from "./components/AppUpdateDialog.vue";
 import OnboardingWizard from "./components/OnboardingWizard.vue";
 import { useFirstLaunchGuide } from "./composables/useFirstLaunchGuide";
 import { useSessionUnlock } from "./composables/useSessionUnlock";

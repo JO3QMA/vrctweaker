@@ -67,6 +67,20 @@ function setupAppMocks() {
   vi.spyOn(App, "getLogRetentionDays").mockResolvedValue(45);
   vi.spyOn(App, "getSuppressSleepWhileVRChat").mockResolvedValue(true);
   vi.spyOn(App, "getCloseToTray").mockResolvedValue(true);
+  vi.spyOn(App, "getAppUpdateAutoCheck").mockResolvedValue(true);
+  vi.spyOn(App, "setAppUpdateAutoCheck").mockResolvedValue(undefined);
+  vi.spyOn(App, "checkForAppUpdate").mockResolvedValue({
+    currentVersion: "0.1.0",
+    updateAvailable: false,
+    shouldPrompt: false,
+    latestVersion: "0.1.0",
+    latestTag: "v0.1.0",
+    releaseNotes: "",
+    downloadUrl: "",
+    zipSha256: "",
+    releasePageUrl: "",
+    autoApplySupported: true,
+  });
   vi.spyOn(App, "getAppVersion").mockResolvedValue("0.1.0");
   vi.spyOn(App, "getPathSettings").mockResolvedValue({
     ...defaultPathSettings,
@@ -190,6 +204,7 @@ describe("SettingsView", () => {
     expect(
       wrapper.find('[data-testid="settings-close-to-tray"]').exists(),
     ).toBe(true);
+    expect(App.getAppUpdateAutoCheck).toHaveBeenCalled();
     expect(
       wrapper.find('[data-testid="settings-about-app-section"]').exists(),
     ).toBe(true);
@@ -205,6 +220,22 @@ describe("SettingsView", () => {
     expect(
       wrapper.find('[data-testid="settings-app-section"]').text(),
     ).not.toContain("OSS");
+    expect(
+      wrapper.find('[data-testid="settings-check-app-update"]').exists(),
+    ).toBe(true);
+  });
+
+  it("shows up to date after manual update check", async () => {
+    const wrapper = mountSettings();
+    await flushPromises();
+    await wrapper
+      .get('[data-testid="settings-check-app-update"]')
+      .trigger("click");
+    await flushPromises();
+    expect(App.checkForAppUpdate).toHaveBeenCalled();
+    expect(
+      wrapper.get('[data-testid="settings-app-update-status"]').text(),
+    ).toContain("最新");
   });
 
   it("lists all UI language options", async () => {

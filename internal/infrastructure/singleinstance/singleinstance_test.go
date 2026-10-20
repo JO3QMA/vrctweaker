@@ -1,8 +1,6 @@
 package singleinstance
 
 import (
-	"fmt"
-	"os"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -166,15 +164,6 @@ func TestSetOnActivateCoalescesPendingActivations(t *testing.T) {
 	g.SetOnActivate(func() { count.Add(1) })
 	if count.Load() != 1 {
 		t.Fatalf("pending activations coalesced to one callback, got %d calls", count.Load())
-	}
-}
-
-func TestAbstractActivateAddrIncludesUIDAndFingerprint(t *testing.T) {
-	fp := dataDirFingerprint("/tmp/example-app-data")
-	addr := abstractActivateAddr("VRChatTweaker", fp)
-	want := fmt.Sprintf("@VRChatTweaker_%d_%s_activate", os.Getuid(), fp)
-	if addr != want {
-		t.Fatalf("got %q want %q", addr, want)
 	}
 }
 

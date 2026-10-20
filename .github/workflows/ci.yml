@@ -78,6 +78,11 @@ jobs:
       - name: Build cmd packages
         run: go build ./cmd/...
 
+      - name: Cross-compile Windows (Go)
+        run: |
+          GOOS=windows GOARCH=amd64 go build ./...
+          GOOS=windows GOARCH=amd64 go vet ./...
+
   vue:
     name: Vue Frontend
     runs-on: ubuntu-latest
