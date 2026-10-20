@@ -1,79 +1,105 @@
+type ServerStatusStyle = {
+  i18nKey: string;
+  colorClass: string;
+};
+
+/** status.vrchat.com summary indicator → i18n key and CSS class. */
+const SUMMARY_STATUS: Record<string, ServerStatusStyle> = {
+  none: {
+    i18nKey: "dashboard.serverStatus.summaryAllOperational",
+    colorClass: "server-status--operational",
+  },
+  minor: {
+    i18nKey: "dashboard.serverStatus.summaryDegraded",
+    colorClass: "server-status--degraded",
+  },
+  major: {
+    i18nKey: "dashboard.serverStatus.summaryPartialOutage",
+    colorClass: "server-status--partial",
+  },
+  critical: {
+    i18nKey: "dashboard.serverStatus.summaryMajorOutage",
+    colorClass: "server-status--major",
+  },
+  maintenance: {
+    i18nKey: "dashboard.serverStatus.summaryMaintenance",
+    colorClass: "server-status--maintenance",
+  },
+};
+
+/** statuspage component status → i18n key and CSS class. */
+const COMPONENT_STATUS: Record<string, ServerStatusStyle> = {
+  operational: {
+    i18nKey: "dashboard.serverStatus.statusOperational",
+    colorClass: "server-status--operational",
+  },
+  degraded_performance: {
+    i18nKey: "dashboard.serverStatus.statusDegradedPerformance",
+    colorClass: "server-status--degraded",
+  },
+  partial_outage: {
+    i18nKey: "dashboard.serverStatus.statusPartialOutage",
+    colorClass: "server-status--partial",
+  },
+  major_outage: {
+    i18nKey: "dashboard.serverStatus.statusMajorOutage",
+    colorClass: "server-status--major",
+  },
+  under_maintenance: {
+    i18nKey: "dashboard.serverStatus.statusUnderMaintenance",
+    colorClass: "server-status--maintenance",
+  },
+};
+
+const SUMMARY_STATUS_UNKNOWN: ServerStatusStyle = {
+  i18nKey: "dashboard.serverStatus.summaryUnknown",
+  colorClass: "server-status--unknown",
+};
+
+const COMPONENT_STATUS_UNKNOWN: ServerStatusStyle = {
+  i18nKey: "dashboard.serverStatus.statusUnknown",
+  colorClass: "server-status--unknown",
+};
+
+function serverStatusStyle(
+  table: Record<string, ServerStatusStyle>,
+  fallback: ServerStatusStyle,
+  raw: string | undefined | null,
+): ServerStatusStyle {
+  const key = (raw ?? "").trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(table, key)
+    ? table[key]
+    : fallback;
+}
+
 /** status.vrchat.com summary indicator → i18n key under dashboard.serverStatus */
 export function serverStatusSummaryI18nKey(
   indicator: string | undefined | null,
 ): string {
-  switch ((indicator ?? "").trim().toLowerCase()) {
-    case "none":
-      return "dashboard.serverStatus.summaryAllOperational";
-    case "minor":
-      return "dashboard.serverStatus.summaryDegraded";
-    case "major":
-      return "dashboard.serverStatus.summaryPartialOutage";
-    case "critical":
-      return "dashboard.serverStatus.summaryMajorOutage";
-    case "maintenance":
-      return "dashboard.serverStatus.summaryMaintenance";
-    default:
-      return "dashboard.serverStatus.summaryUnknown";
-  }
+  return serverStatusStyle(SUMMARY_STATUS, SUMMARY_STATUS_UNKNOWN, indicator)
+    .i18nKey;
 }
 
 /** statuspage component status → i18n key */
 export function serverStatusComponentI18nKey(
   status: string | undefined | null,
 ): string {
-  switch ((status ?? "").trim().toLowerCase()) {
-    case "operational":
-      return "dashboard.serverStatus.statusOperational";
-    case "degraded_performance":
-      return "dashboard.serverStatus.statusDegradedPerformance";
-    case "partial_outage":
-      return "dashboard.serverStatus.statusPartialOutage";
-    case "major_outage":
-      return "dashboard.serverStatus.statusMajorOutage";
-    case "under_maintenance":
-      return "dashboard.serverStatus.statusUnderMaintenance";
-    default:
-      return "dashboard.serverStatus.statusUnknown";
-  }
+  return serverStatusStyle(COMPONENT_STATUS, COMPONENT_STATUS_UNKNOWN, status)
+    .i18nKey;
 }
 
 export function serverStatusSummaryColorClass(
   indicator: string | undefined | null,
 ): string {
-  switch ((indicator ?? "").trim().toLowerCase()) {
-    case "none":
-      return "server-status--operational";
-    case "minor":
-      return "server-status--degraded";
-    case "major":
-      return "server-status--partial";
-    case "critical":
-      return "server-status--major";
-    case "maintenance":
-      return "server-status--maintenance";
-    default:
-      return "server-status--unknown";
-  }
+  return serverStatusStyle(SUMMARY_STATUS, SUMMARY_STATUS_UNKNOWN, indicator)
+    .colorClass;
 }
 
 export function serverStatusComponentColorClass(
   status: string | undefined | null,
 ): string {
-  switch ((status ?? "").trim().toLowerCase()) {
-    case "operational":
-      return "server-status--operational";
-    case "degraded_performance":
-      return "server-status--degraded";
-    case "partial_outage":
-      return "server-status--partial";
-    case "major_outage":
-      return "server-status--major";
-    case "under_maintenance":
-      return "server-status--maintenance";
-    default:
-      return "server-status--unknown";
-  }
+  return serverStatusStyle(COMPONENT_STATUS, COMPONENT_STATUS_UNKNOWN, status)
+    .colorClass;
 }
 
 export const SERVER_STATUS_POLL_MS = 5 * 60 * 1000;

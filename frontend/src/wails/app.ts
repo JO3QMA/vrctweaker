@@ -1,7 +1,14 @@
 // Wails app bindings - calls Go backend methods
 // When running in Wails, window.go.wailsapp.App is injected
 
-import { activity, launcher, usecase, wailsapp } from "../../wailsjs/go/models";
+import {
+  activity,
+  automation,
+  launcher,
+  statuspage,
+  usecase,
+  wailsapp,
+} from "../../wailsjs/go/models";
 import type * as WailsApp from "../../wailsjs/go/wailsapp/App";
 import { DEFAULT_LOGICAL_PROCESSOR_COUNT } from "../utils/affinityMask";
 
@@ -12,124 +19,40 @@ export type LaunchProfileDTO = WailsDTO<wailsapp.LaunchProfileDTO>;
 export type DashboardRejoinDTO = WailsDTO<wailsapp.DashboardRejoinDTO>;
 export type DashboardLaunchBlockDTO =
   WailsDTO<wailsapp.DashboardLaunchBlockDTO>;
-export type PresenceChangeSectionDTO = {
-  loggedIn: boolean;
-  status: string;
-  statusDescription: string;
-  history: string[];
-};
-export type PresenceChangeApplyResultDTO = {
-  status: string;
-  statusDescription: string;
-};
-export type ServerStatusDTO = WailsDTO<wailsapp.ServerStatusDTO>;
-export type ServerStatusSummaryDTO = WailsDTO<wailsapp.ServerStatusSummaryDTO>;
-export type ServerStatusComponentDTO =
-  WailsDTO<wailsapp.ServerStatusComponentDTO>;
-export type ServerStatusHeadlineDTO =
-  WailsDTO<wailsapp.ServerStatusHeadlineDTO>;
+export type PresenceChangeSectionDTO = WailsDTO<usecase.PresenceChangeSection>;
+export type PresenceChangeApplyResultDTO =
+  WailsDTO<usecase.PresenceChangeApplyResult>;
+export type ServerStatusDTO = WailsDTO<statuspage.Snapshot>;
+export type ServerStatusSummaryDTO = WailsDTO<statuspage.Summary>;
+export type ServerStatusComponentDTO = WailsDTO<statuspage.Component>;
+export type ServerStatusHeadlineDTO = WailsDTO<statuspage.Headline>;
 export type LaunchArgsParsedDTO = WailsDTO<launcher.LaunchArgsParsed>;
 export type ScreenshotDTO = WailsDTO<wailsapp.ScreenshotDTO>;
 export type ScreenshotSearchDTO = WailsDTO<wailsapp.ScreenshotSearchDTO>;
 export type UserEncounterDTO = WailsDTO<wailsapp.UserEncounterDTO>;
-/** Friend avatar usage summary row (bindings.FriendAvatarUsageDTO). */
-export type FriendAvatarUsageDTO = {
-  avatarName: string;
-  avatarId?: string;
-  localCachePath?: string;
-  useCount: number;
-  firstSeenAt: string;
-  lastSeenAt: string;
-};
-/** Video playback history row (bindings.VideoPlaybackDTO); local until wails generate. */
-export type VideoPlaybackDTO = {
-  id: string;
-  attemptedAt: string;
-  url: string;
-  outcome: string;
-  failureReason?: string;
-  resolvedUrl?: string;
-  worldId?: string;
-  worldDisplayName?: string;
-  completedAt?: string;
-};
+export type FriendAvatarUsageDTO = WailsDTO<wailsapp.FriendAvatarUsageDTO>;
+export type VideoPlaybackDTO = WailsDTO<wailsapp.VideoPlaybackDTO>;
 export type UserCacheDTO = WailsDTO<wailsapp.UserCacheDTO>;
 export type UserProfileNavigationDTO =
   WailsDTO<wailsapp.UserProfileNavigationDTO>;
 export type PathSettingsDTO = WailsDTO<usecase.PathSettings>;
-export type OnboardingFolderDefaultsDTO = {
-  vrchatPathWindows: string;
-  steamPathLinux: string;
-  outputLogPath: string;
-  pictureOutputFolder: string;
-  savedPictureOutputFolder?: string;
-};
-
-export type OnboardingFolderSaveDTO = OnboardingFolderDefaultsDTO & {
-  applyVrchatPathWindows: boolean;
-  applySteamPathLinux: boolean;
-  applyOutputLogPath: boolean;
-  applyPictureOutputFolder: boolean;
-};
+export type OnboardingFolderDefaultsDTO =
+  WailsDTO<wailsapp.OnboardingFolderDefaultsDTO>;
+export type OnboardingFolderSaveDTO =
+  WailsDTO<wailsapp.OnboardingFolderSaveDTO>;
 export type YTDLPMaintainStatusDTO = WailsDTO<usecase.YTDLPMaintainStatus>;
 export type LoginResultDTO = WailsDTO<wailsapp.LoginResultDTO>;
 export type VRChatCurrentUserDTO = WailsDTO<wailsapp.VRChatCurrentUserDTO>;
 export type DailyPlaySecondsDTO = WailsDTO<activity.DailyPlaySeconds>;
 export type TopWorldDTO = WailsDTO<activity.TopWorldSummary>;
 export type ActivityStatsDTO = WailsDTO<activity.ActivityStats>;
-export type AutomationItemDTO = WailsDTO<wailsapp.AutomationItemDTO>;
-export type AutomationRunLogEntryDTO =
-  WailsDTO<wailsapp.AutomationRunLogEntryDTO>;
-export type AutomationRuntimeStatusDTO =
-  WailsDTO<wailsapp.AutomationRuntimeStatusDTO>;
-export type DetectedPowerPlanDTO = WailsDTO<wailsapp.DetectedPowerPlanDTO>;
+export type AutomationItemDTO = WailsDTO<automation.AutomationItem>;
+export type AutomationRunLogEntryDTO = WailsDTO<automation.RunLogEntry>;
+export type AutomationRuntimeStatusDTO = WailsDTO<automation.RuntimeStatus>;
+export type DetectedPowerPlanDTO = WailsDTO<automation.DetectedPowerPlan>;
 export type VRChatConfigDTO = WailsDTO<wailsapp.VRChatConfigDTO>;
-
-/** Cookie linkage status (usecase.CookieLinkageStatus); defined locally until wails generate. */
-export type CookieLinkageStatusDTO = {
-  supported: boolean;
-  unsupportedReason?: string;
-  enabled: boolean;
-  sourceKind: string;
-  browser?: string;
-  cookiesFilePath?: string;
-  configPath?: string;
-  riskAcknowledged: boolean;
-};
-
-/** App update check result (usecase.AppUpdateStatus); local until wails generate. */
-export type AppUpdateStatusDTO = {
-  currentVersion: string;
-  updateAvailable: boolean;
-  shouldPrompt: boolean;
-  latestVersion: string;
-  latestTag: string;
-  releaseNotes: string;
-  downloadUrl: string;
-  zipSha256: string;
-  releasePageUrl: string;
-  autoApplySupported: boolean;
-  checkError?: string;
-};
-
-type AppUpdateAppBindings = {
-  GetAppUpdateAutoCheck: () => Promise<boolean>;
-  SetAppUpdateAutoCheck: (enabled: boolean) => Promise<void>;
-  CheckForAppUpdate: () => Promise<AppUpdateStatusDTO>;
-  ClaimStartupAppUpdatePrompt: () => Promise<AppUpdateStatusDTO>;
-  ClearStartupAppUpdatePrompt: () => Promise<void>;
-  DismissAppUpdate: (version: string) => Promise<void>;
-  ApplyAppUpdate: (latestVersion: string) => Promise<void>;
-  OpenAppReleasePage: (url: string) => Promise<void>;
-};
-
-type CookieLinkageAppBindings = {
-  GetYTDLPCookieLinkageStatus: () => Promise<CookieLinkageStatusDTO>;
-  AcknowledgeYTDLPCookieLinkageRisk: () => Promise<void>;
-  SetYTDLPCookieLinkageBrowser: (browser: string) => Promise<void>;
-  SetYTDLPCookieLinkageCookiesFile: (path: string) => Promise<void>;
-  DisableYTDLPCookieLinkage: () => Promise<void>;
-};
+export type CookieLinkageStatusDTO = WailsDTO<usecase.CookieLinkageStatus>;
+export type AppUpdateStatusDTO = WailsDTO<usecase.AppUpdateStatus>;
 
 function emptyServerStatus(): ServerStatusDTO {
   return {
@@ -206,14 +129,6 @@ export function logicalProcessorCountFallback(): number {
     return navigator.hardwareConcurrency;
   }
   return DEFAULT_LOGICAL_PROCESSOR_COUNT;
-}
-
-function asCookieApp(a: AppBindings): AppBindings & CookieLinkageAppBindings {
-  return a as AppBindings & CookieLinkageAppBindings;
-}
-
-function asAppUpdateApp(a: AppBindings): AppBindings & AppUpdateAppBindings {
-  return a as AppBindings & AppUpdateAppBindings;
 }
 
 function emptyAppUpdateStatus(): AppUpdateStatusDTO {
@@ -517,24 +432,12 @@ export const App = {
     emptyDashboardLaunchBlock(),
   ),
   getPresenceChangeSection: bindGo(
-    (a) =>
-      (
-        a as AppBindings & {
-          GetPresenceChangeSection: () => Promise<PresenceChangeSectionDTO>;
-        }
-      ).GetPresenceChangeSection(),
+    (a) => a.GetPresenceChangeSection(),
     emptyPresenceChangeSection(),
   ),
   applyPresenceChange: bindGo(
     (a, status: string, description: string) =>
-      (
-        a as AppBindings & {
-          ApplyPresenceChange: (
-            status: string,
-            description: string,
-          ) => Promise<PresenceChangeApplyResultDTO>;
-        }
-      ).ApplyPresenceChange(status, description),
+      a.ApplyPresenceChange(status, description),
     emptyPresenceChangeApplyResult(),
   ),
   getServerStatus: bindGo((a) => a.GetServerStatus(), emptyServerStatus()),
@@ -585,16 +488,13 @@ export const App = {
     (a, completed: boolean) => a.SetFirstLaunchGuideCompleted(completed),
     undefined,
   ),
-  getOnboardingFolderDefaults: bindGo(
-    (a) =>
-      a.GetOnboardingFolderDefaults() as Promise<OnboardingFolderDefaultsDTO>,
-    {
-      vrchatPathWindows: "",
-      steamPathLinux: "",
-      outputLogPath: "",
-      pictureOutputFolder: "",
-    },
-  ),
+  getOnboardingFolderDefaults: bindGo((a) => a.GetOnboardingFolderDefaults(), {
+    vrchatPathWindows: "",
+    steamPathLinux: "",
+    outputLogPath: "",
+    pictureOutputFolder: "",
+    savedPictureOutputFolder: "",
+  }),
   saveOnboardingFolderSettings: bindGo(
     (a, dto: OnboardingFolderSaveDTO) => a.SaveOnboardingFolderSettings(dto),
     undefined,
@@ -608,37 +508,33 @@ export const App = {
     undefined,
   ),
   getAppVersion: bindGo((a) => a.GetAppVersion(), "dev"),
-  getAppUpdateAutoCheck: bindGo(
-    (a) => asAppUpdateApp(a).GetAppUpdateAutoCheck(),
-    true,
-  ),
+  getAppUpdateAutoCheck: bindGo((a) => a.GetAppUpdateAutoCheck(), true),
   setAppUpdateAutoCheck: bindGo(
-    (a, on: boolean) => asAppUpdateApp(a).SetAppUpdateAutoCheck(on),
+    (a, on: boolean) => a.SetAppUpdateAutoCheck(on),
     undefined,
   ),
   checkForAppUpdate: bindGo(
-    (a) => asAppUpdateApp(a).CheckForAppUpdate(),
+    (a) => a.CheckForAppUpdate(),
     emptyAppUpdateStatus(),
   ),
   claimStartupAppUpdatePrompt: bindGo(
-    (a) => asAppUpdateApp(a).ClaimStartupAppUpdatePrompt(),
+    (a) => a.ClaimStartupAppUpdatePrompt(),
     emptyAppUpdateStatus(),
   ),
   clearStartupAppUpdatePrompt: bindGo(
-    (a) => asAppUpdateApp(a).ClearStartupAppUpdatePrompt(),
+    (a) => a.ClearStartupAppUpdatePrompt(),
     undefined,
   ),
   dismissAppUpdate: bindGo(
-    (a, version: string) => asAppUpdateApp(a).DismissAppUpdate(version),
+    (a, version: string) => a.DismissAppUpdate(version),
     undefined,
   ),
   applyAppUpdate: bindGo(
-    (a, latestVersion: string) =>
-      asAppUpdateApp(a).ApplyAppUpdate(latestVersion),
+    (a, latestVersion: string) => a.ApplyAppUpdate(latestVersion),
     undefined,
   ),
   openAppReleasePage: bindGo(
-    (a, url: string) => asAppUpdateApp(a).OpenAppReleasePage(url),
+    (a, url: string) => a.OpenAppReleasePage(url),
     undefined,
   ),
   getCloseToTray: bindGo((a) => a.GetCloseToTray(), true),
@@ -669,24 +565,23 @@ export const App = {
   openYTDLPCacheFolder: bindGo((a) => a.OpenYTDLPCacheFolder(), undefined),
   openYTDLPToolsFolder: bindGo((a) => a.OpenYTDLPToolsFolder(), undefined),
   getYTDLPCookieLinkageStatus: bindGo(
-    (a) => asCookieApp(a).GetYTDLPCookieLinkageStatus(),
+    (a) => a.GetYTDLPCookieLinkageStatus(),
     emptyCookieLinkageStatus(),
   ),
   acknowledgeYTDLPCookieLinkageRisk: bindGo(
-    (a) => asCookieApp(a).AcknowledgeYTDLPCookieLinkageRisk(),
+    (a) => a.AcknowledgeYTDLPCookieLinkageRisk(),
     undefined,
   ),
   setYTDLPCookieLinkageBrowser: bindGo(
-    (a, browser: string) =>
-      asCookieApp(a).SetYTDLPCookieLinkageBrowser(browser),
+    (a, browser: string) => a.SetYTDLPCookieLinkageBrowser(browser),
     undefined,
   ),
   setYTDLPCookieLinkageCookiesFile: bindGo(
-    (a, path: string) => asCookieApp(a).SetYTDLPCookieLinkageCookiesFile(path),
+    (a, path: string) => a.SetYTDLPCookieLinkageCookiesFile(path),
     undefined,
   ),
   disableYTDLPCookieLinkage: bindGo(
-    (a) => asCookieApp(a).DisableYTDLPCookieLinkage(),
+    (a) => a.DisableYTDLPCookieLinkage(),
     undefined,
   ),
   validatePath: bindGo((a, path: string) => a.ValidatePath(path), false),
@@ -738,11 +633,8 @@ export const App = {
   ),
   friends: bindGo((a) => a.Friends(), []),
   resolveUserProfileNavigation: (vrcUserID: string) =>
-    callApp<UserProfileNavigationDTO>(
-      (a) =>
-        a.ResolveUserProfileNavigation(
-          vrcUserID,
-        ) as Promise<UserProfileNavigationDTO>,
+    callApp(
+      (a) => a.ResolveUserProfileNavigation(vrcUserID),
       emptyUserProfileNavigation(vrcUserID),
     ),
   getSelfProfile: bindGo(
@@ -784,28 +676,13 @@ export const App = {
   ),
   vacuumDb: bindGo((a) => a.VacuumDb(), undefined),
   encounters: bindGo((a) => a.Encounters(), []),
-  videoPlaybackHistory: bindGo(
-    (a) =>
-      (
-        a as AppBindings & {
-          VideoPlaybackHistory?: () => Promise<VideoPlaybackDTO[]>;
-        }
-      ).VideoPlaybackHistory?.() ?? Promise.resolve([]),
-    [],
-  ),
+  videoPlaybackHistory: bindGo((a) => a.VideoPlaybackHistory(), []),
   encountersByVRCUserID: bindGo(
     (a, vrcUserID: string) => a.EncountersByVRCUserID(vrcUserID),
     [],
   ),
   friendAvatarUsageByVRCUserID: bindGo(
-    (a, vrcUserID: string) =>
-      (
-        a as AppBindings & {
-          FriendAvatarUsageByVRCUserID?: (
-            id: string,
-          ) => Promise<FriendAvatarUsageDTO[]>;
-        }
-      ).FriendAvatarUsageByVRCUserID?.(vrcUserID) ?? Promise.resolve([]),
+    (a, vrcUserID: string) => a.FriendAvatarUsageByVRCUserID(vrcUserID),
     [],
   ),
   encountersByWorldID: bindGo(
@@ -814,8 +691,7 @@ export const App = {
   ),
   clearEncounters: bindGo((a) => a.ClearEncounters(), 0),
   getActivityStats: bindGo(
-    (a, fromISO: string, toISO: string) =>
-      a.GetActivityStats(fromISO, toISO) as Promise<ActivityStatsDTO>,
+    (a, fromISO: string, toISO: string) => a.GetActivityStats(fromISO, toISO),
     EMPTY_ACTIVITY_STATS,
   ),
   clearScreenshots: bindGo((a) => a.ClearScreenshots(), 0),
@@ -842,17 +718,10 @@ export const App = {
   getAutomationRuntimeStatus: bindGo((a) => a.GetAutomationRuntimeStatus(), {
     available: true,
   }),
-  getLogicalProcessorCount: (): Promise<number> =>
-    callApp(
-      (a) =>
-        (
-          a as AppBindings & {
-            GetLogicalProcessorCount?: () => Promise<number>;
-          }
-        ).GetLogicalProcessorCount?.() ??
-        Promise.resolve(logicalProcessorCountFallback()),
-      logicalProcessorCountFallback(),
-    ),
+  getLogicalProcessorCount: bindGo(
+    (a) => a.GetLogicalProcessorCount(),
+    logicalProcessorCountFallback(),
+  ),
   listDetectedPowerPlans: bindGo((a) => a.ListDetectedPowerPlans(), []),
   vrchatConfigExists: bindGo((a) => a.VRChatConfigExists(), false),
   /**
@@ -869,13 +738,5 @@ export const App = {
   deleteVRChatConfig: bindGo((a) => a.DeleteVRChatConfig(), undefined),
   defaultVRChatPictureFolder: bindGo((a) => a.DefaultVRChatPictureFolder(), ""),
   openExternalURL: (rawUrl: string) =>
-    callApp(
-      (a) =>
-        (
-          a as AppBindings & {
-            OpenExternalURL?: (url: string) => Promise<void>;
-          }
-        ).OpenExternalURL?.(rawUrl) ?? Promise.reject(new Error("unavailable")),
-      undefined,
-    ),
+    callApp((a) => a.OpenExternalURL(rawUrl), undefined),
 };

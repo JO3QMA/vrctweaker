@@ -70,6 +70,7 @@ export function withSettingsWails(preset: SettingsViewWailsPreset): Decorator {
         Promise.resolve({
           ...emptyPaths,
           pictureOutputFolder: "C:/Pictures/VRChat",
+          savedPictureOutputFolder: "",
         }),
       SaveOnboardingFolderSettings: () => Promise.resolve(),
       GetSuppressSleepWhileVRChat: () => Promise.resolve(false),

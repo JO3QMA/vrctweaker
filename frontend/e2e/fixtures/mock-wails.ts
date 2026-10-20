@@ -295,6 +295,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
             steamPathLinux: '',
             outputLogPath: '',
             pictureOutputFolder: 'C:/Pictures/VRChat',
+            savedPictureOutputFolder: '',
           }),
         SaveOnboardingFolderSettings: () => Promise.resolve(),
         GetSuppressSleepWhileVRChat: () => Promise.resolve(false),
@@ -406,6 +407,8 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         IsGalleryScanning: () => Promise.resolve(false),
         ReindexScreenshotDir: () => Promise.resolve(0),
         Encounters: () => Promise.resolve(encounters),
+        VideoPlaybackHistory: () => Promise.resolve([]),
+        OpenExternalURL: () => Promise.resolve(),
         EncountersByVRCUserID: (vrcUserId) =>
           Promise.resolve(encountersByVrcUserId(encounters, vrcUserId)),
         FriendAvatarUsageByVRCUserID: (vrcUserId) =>

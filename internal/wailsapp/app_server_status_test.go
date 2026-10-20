@@ -1,56 +1,13 @@
 package wailsapp
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"vrchat-tweaker/internal/infrastructure/statuspage"
 )
-
-func TestToServerStatusDTO_mapsSnapshot(t *testing.T) {
-	got := toServerStatusDTO(statuspage.Snapshot{
-		FetchState: statuspage.FetchStateOK,
-		Summary: statuspage.Summary{
-			Indicator:   "maintenance",
-			Description: "Service Under Maintenance",
-		},
-		Components: []statuspage.Component{
-			{Name: "Authentication / Login", Status: "under_maintenance"},
-		},
-		Incidents: []statuspage.Headline{{Name: "API Degraded"}},
-		Maintenances: []statuspage.Maintenance{{
-			ID:             "mnt-1",
-			Name:           "Database Maintenance",
-			Status:         "scheduled",
-			ScheduledFor:   "2026-12-23T03:34:00Z",
-			ScheduledUntil: "2026-12-23T14:45:00Z",
-			Updates:        []string{"Database window"},
-		}},
-	})
-	if got.FetchState != statuspage.FetchStateOK {
-		t.Fatalf("FetchState: got %q", got.FetchState)
-	}
-	if got.Summary.Indicator != "maintenance" {
-		t.Fatalf("indicator: got %q", got.Summary.Indicator)
-	}
-	if len(got.Components) != 1 || got.Components[0].Name != "Authentication / Login" {
-		t.Fatalf("components: %+v", got.Components)
-	}
-	if len(got.Incidents) != 1 || got.Incidents[0].Name != "API Degraded" {
-		t.Fatalf("incidents: %+v", got.Incidents)
-	}
-	if len(got.Maintenances) != 1 {
-		t.Fatalf("maintenances: %+v", got.Maintenances)
-	}
-	gotM := got.Maintenances[0]
-	if gotM.Name != "Database Maintenance" || gotM.Status != "scheduled" ||
-		gotM.ScheduledFor != "2026-12-23T03:34:00Z" ||
-		gotM.ScheduledUntil != "2026-12-23T14:45:00Z" ||
-		len(gotM.Updates) != 1 || gotM.Updates[0] != "Database window" {
-		t.Fatalf("maintenance: %+v", gotM)
-	}
-}
 
 func TestGetServerStatus_returnsDTOWithoutErrorOnFetchFailure(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -68,6 +25,14 @@ func TestGetServerStatus_returnsDTOWithoutErrorOnFetchFailure(t *testing.T) {
 	}
 	if got.FetchState != statuspage.FetchStateUnavailable {
 		t.Fatalf("FetchState: got %q want %q", got.FetchState, statuspage.FetchStateUnavailable)
+	}
+	b, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	const want = `{"fetchState":"unavailable","summary":{"indicator":"","description":""},"components":[],"incidents":[],"maintenances":[]}`
+	if string(b) != want {
+		t.Fatalf("json=%s", b)
 	}
 }
 

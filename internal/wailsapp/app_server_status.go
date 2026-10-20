@@ -8,8 +8,8 @@ import (
 )
 
 // GetServerStatus returns VRChat service health from status.vrchat.com for the Dashboard.
-// Infrastructure failures are expressed via FetchState on the DTO, not via error.
-func (a *App) GetServerStatus() (ServerStatusDTO, error) {
+// Infrastructure failures are expressed via FetchState on the snapshot, not via error.
+func (a *App) GetServerStatus() (statuspage.Snapshot, error) {
 	ctx := a.ctx
 	if ctx == nil {
 		ctx = context.Background()
@@ -18,7 +18,7 @@ func (a *App) GetServerStatus() (ServerStatusDTO, error) {
 	if snap.FetchState != statuspage.FetchStateOK && a.ctx != nil {
 		runtime.LogWarning(a.ctx, "server status fetch: state="+snap.FetchState)
 	}
-	return toServerStatusDTO(snap), nil
+	return normalizeServerStatus(snap), nil
 }
 
 func (a *App) serverStatusClient() *statuspage.Client {
@@ -29,34 +29,16 @@ func (a *App) serverStatusClient() *statuspage.Client {
 	return a.serverStatus
 }
 
-func toServerStatusDTO(snap statuspage.Snapshot) ServerStatusDTO {
-	components := make([]ServerStatusComponentDTO, len(snap.Components))
-	for i, c := range snap.Components {
-		components[i] = ServerStatusComponentDTO{Name: c.Name, Status: c.Status}
+// normalizeServerStatus keeps empty collections as [] rather than null.
+func normalizeServerStatus(snap statuspage.Snapshot) statuspage.Snapshot {
+	if snap.Components == nil {
+		snap.Components = []statuspage.Component{}
 	}
-	incidents := make([]ServerStatusHeadlineDTO, len(snap.Incidents))
-	for i, h := range snap.Incidents {
-		incidents[i] = ServerStatusHeadlineDTO{Name: h.Name}
+	if snap.Incidents == nil {
+		snap.Incidents = []statuspage.Headline{}
 	}
-	maintenances := make([]ServerStatusMaintenanceDTO, len(snap.Maintenances))
-	for i, m := range snap.Maintenances {
-		maintenances[i] = ServerStatusMaintenanceDTO{
-			ID:             m.ID,
-			Name:           m.Name,
-			Status:         m.Status,
-			ScheduledFor:   m.ScheduledFor,
-			ScheduledUntil: m.ScheduledUntil,
-			Updates:        m.Updates,
-		}
+	if snap.Maintenances == nil {
+		snap.Maintenances = []statuspage.Maintenance{}
 	}
-	return ServerStatusDTO{
-		FetchState: snap.FetchState,
-		Summary: ServerStatusSummaryDTO{
-			Indicator:   snap.Summary.Indicator,
-			Description: snap.Summary.Description,
-		},
-		Components:   components,
-		Incidents:    incidents,
-		Maintenances: maintenances,
-	}
+	return snap
 }
