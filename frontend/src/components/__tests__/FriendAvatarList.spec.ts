@@ -198,10 +198,15 @@ describe("FriendAvatarList", () => {
   });
 
   it("shows generic error on fetch failure", async () => {
-    mockFetch.mockRejectedValue(new Error("friend avatar usage: db locked"));
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    const err = new Error("friend avatar usage: db locked");
+    mockFetch.mockRejectedValue(err);
     const wrapper = mountList();
     await flushPromises();
     expect(wrapper.text()).toContain("アバター一覧の取得に失敗しました");
+    expect(wrapper.text()).not.toContain("db locked");
+    expect(spy).toHaveBeenCalledWith("[FriendAvatarList] fetch failed:", err);
+    spy.mockRestore();
   });
 
   it("ignores stale fetch when userId changes quickly", async () => {

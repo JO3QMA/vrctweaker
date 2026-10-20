@@ -23,17 +23,19 @@ var validPresenceStatuses = map[string]struct{}{
 }
 
 // PresenceChangeSection is the Dashboard presence change block read model.
+// JSON names match the former Wails PresenceChangeSectionDTO.
 type PresenceChangeSection struct {
-	LoggedIn          bool
-	Status            string
-	StatusDescription string
-	History           []string
+	LoggedIn          bool     `json:"loggedIn"`
+	Status            string   `json:"status"`
+	StatusDescription string   `json:"statusDescription"`
+	History           []string `json:"history"`
 }
 
 // PresenceChangeApplyResult is returned after a successful presence change apply.
+// JSON names match the former Wails PresenceChangeApplyResultDTO.
 type PresenceChangeApplyResult struct {
-	Status            string
-	StatusDescription string
+	Status            string `json:"status"`
+	StatusDescription string `json:"statusDescription"`
 }
 
 // PresenceChangeUseCase handles Dashboard presence change section logic.

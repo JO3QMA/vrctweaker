@@ -2,6 +2,7 @@ package wailsapp
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"vrchat-tweaker/internal/domain/identity"
@@ -18,6 +19,17 @@ func TestGetPresenceChangeSection_notLoggedIn(t *testing.T) {
 	got, err := a.GetPresenceChangeSection()
 	if err != nil || got == nil || got.LoggedIn {
 		t.Fatalf("got=%+v err=%v", got, err)
+	}
+	if got.History == nil {
+		t.Fatal("history must be an empty slice so JSON stays []")
+	}
+	b, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	const want = `{"loggedIn":false,"status":"","statusDescription":"","history":[]}`
+	if string(b) != want {
+		t.Fatalf("json=%s", b)
 	}
 }
 

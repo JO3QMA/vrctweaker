@@ -37,6 +37,19 @@ describe("serverStatus utils", () => {
       "server-status--major",
     );
   });
+
+  it("normalizes case and whitespace before lookup", () => {
+    expect(serverStatusSummaryI18nKey(" None ")).toBe(
+      "dashboard.serverStatus.summaryAllOperational",
+    );
+    expect(serverStatusSummaryColorClass("MAJOR")).toBe(
+      "server-status--partial",
+    );
+    expect(serverStatusComponentI18nKey(" Under_Maintenance ")).toBe(
+      "dashboard.serverStatus.statusUnderMaintenance",
+    );
+    expect(serverStatusComponentColorClass("")).toBe("server-status--unknown");
+  });
 });
 
 const maintenanceKeys = [

@@ -100,7 +100,6 @@ import {
   ENCOUNTER_LOG_TIME_COL_WIDTH,
   formatEncounterLogTimestamp,
 } from "../utils/formatEncounteredAt";
-import { friendAvatarListFetchErrorMessage } from "../utils/friendAvatarListErrors";
 import { showToast } from "../utils/showToast";
 import { copyTextToClipboard } from "../utils/vrcUserCacheDisplay";
 
@@ -173,7 +172,10 @@ async function load(): Promise<void> {
   } catch (e) {
     if (token !== loadToken) return;
     rows.value = [];
-    error.value = friendAvatarListFetchErrorMessage(e, t);
+    if (import.meta.env.DEV && e) {
+      console.error("[FriendAvatarList] fetch failed:", e);
+    }
+    error.value = t("friendAvatars.fetchFailedGeneric");
   } finally {
     if (token === loadToken) {
       loading.value = false;

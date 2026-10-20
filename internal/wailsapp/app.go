@@ -636,16 +636,6 @@ func (a *App) SetLogRetentionDays(days int) error {
 	return a.settings.SetLogRetentionDays(a.ctx, days)
 }
 
-// GetOutputLogPath returns the output_log.txt path.
-func (a *App) GetOutputLogPath() (string, error) {
-	return a.settings.GetOutputLogPath(a.ctx)
-}
-
-// SaveOutputLogPath saves the output_log.txt path.
-func (a *App) SaveOutputLogPath(path string) error {
-	return a.settings.SaveOutputLogPath(a.ctx, path)
-}
-
 // GetPathSettings returns VRChat/Steam/output_log path settings.
 func (a *App) GetPathSettings() (usecase.PathSettings, error) {
 	ps, err := a.settings.GetPathSettings(a.ctx)
