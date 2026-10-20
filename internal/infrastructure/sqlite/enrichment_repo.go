@@ -75,30 +75,23 @@ func ParticipantsFromJSON(raw string) ([]media.EnrichmentParticipant, error) {
 }
 
 func scanEnrichmentRow(row *sql.Row) (*media.ScreenshotEnrichment, error) {
-	var id, status, instanceID, worldID, participantsJSON, skipReason string
-	var enrichedAt sql.NullString
-	err := row.Scan(&id, &status, &instanceID, &worldID, &participantsJSON, &skipReason, &enrichedAt)
+	e, err := scanEnrichmentScanner(row)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	if err != nil {
-		return nil, err
-	}
-	return &media.ScreenshotEnrichment{
-		ScreenshotID:     id,
-		Status:           status,
-		InstanceID:       instanceID,
-		WorldID:          worldID,
-		ParticipantsJSON: participantsJSON,
-		SkipReason:       skipReason,
-		EnrichedAt:       parseTime(enrichedAt),
-	}, nil
+	return e, err
 }
 
 func scanEnrichmentRows(rows *sql.Rows) (*media.ScreenshotEnrichment, error) {
+	return scanEnrichmentScanner(rows)
+}
+
+func scanEnrichmentScanner(sc interface {
+	Scan(dest ...interface{}) error
+}) (*media.ScreenshotEnrichment, error) {
 	var id, status, instanceID, worldID, participantsJSON, skipReason string
 	var enrichedAt sql.NullString
-	if err := rows.Scan(&id, &status, &instanceID, &worldID, &participantsJSON, &skipReason, &enrichedAt); err != nil {
+	if err := sc.Scan(&id, &status, &instanceID, &worldID, &participantsJSON, &skipReason, &enrichedAt); err != nil {
 		return nil, err
 	}
 	return &media.ScreenshotEnrichment{

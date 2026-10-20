@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,6 +14,7 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/appversion"
+	gh "vrchat-tweaker/internal/infrastructure/github"
 )
 
 // DefaultYTDLPReleasesLatestURL is the GitHub API URL for the latest yt-dlp release.
@@ -81,10 +81,6 @@ func ytdlpExeAssetFromReleaseJSON(data []byte) (tagName, downloadURL string, err
 	return "", "", fmt.Errorf("asset %q not found in release", ytdlpExeName)
 }
 
-func normalizeReleaseTag(tag string) string {
-	return strings.TrimPrefix(strings.TrimSpace(tag), "v")
-}
-
 // ytdlpReleaseTagFromDownloadURL extracts the release tag from a GitHub browser_download_url.
 func ytdlpReleaseTagFromDownloadURL(raw string) string {
 	const marker = "/releases/download/"
@@ -97,35 +93,23 @@ func ytdlpReleaseTagFromDownloadURL(raw string) string {
 	if end <= 0 {
 		return ""
 	}
-	return normalizeReleaseTag(rest[:end])
-}
-
-var allowedYTDlpDownloadHosts = map[string]struct{}{
-	"github.com":                           {},
-	"objects.githubusercontent.com":        {},
-	"release-assets.githubusercontent.com": {}, // github.com/releases/download → 302
+	return appversion.NormalizeProductVersion(rest[:end])
 }
 
 func validateYTDlpDownloadURL(u *YTDLPUpdater, raw string) error {
-	raw = strings.TrimSpace(raw)
-	if raw == "" {
-		return errors.New("download URL is empty")
-	}
 	if u != nil && u.SkipDownloadURLValidation {
+		if strings.TrimSpace(raw) == "" {
+			return errors.New("download URL is empty")
+		}
 		return nil
 	}
-	parsed, err := url.Parse(raw)
-	if err != nil {
-		return fmt.Errorf("invalid download URL: %w", err)
-	}
-	if parsed.Scheme != "https" {
-		return errors.New("download URL must use https")
-	}
-	host := strings.ToLower(parsed.Hostname())
-	if _, ok := allowedYTDlpDownloadHosts[host]; !ok {
-		return fmt.Errorf("download URL host not allowed: %s", host)
-	}
-	return nil
+	// Host allowlist only. An empty repo prefix and no port rejection keep the
+	// historical accepted set (any path on the three hosts, including an explicit port).
+	return gh.ValidateHostedDownloadURL(raw, gh.HostedDownloadOptions{
+		HostError: func(host string) error {
+			return fmt.Errorf("download URL host not allowed: %s", host)
+		},
+	})
 }
 
 // FetchLatestRelease resolves the latest release tag and yt-dlp.exe browser_download_url.
@@ -134,33 +118,18 @@ func (u *YTDLPUpdater) FetchLatestRelease(ctx context.Context) (YTDLPReleaseInfo
 	if strings.TrimSpace(apiURL) == "" {
 		apiURL = DefaultYTDLPReleasesLatestURL
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL, nil)
+	body, err := gh.GetJSON(ctx, u.httpClient(), apiURL, appversion.UserAgent(), gh.APIJSONYTDLP)
 	if err != nil {
 		return YTDLPReleaseInfo{}, err
 	}
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", appversion.UserAgent())
-
-	resp, err := u.httpClient().Do(req)
-	if err != nil {
-		return YTDLPReleaseInfo{}, fmt.Errorf("github api request: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	body, err := io.ReadAll(io.LimitReader(resp.Body, 8<<20))
-	if err != nil {
-		return YTDLPReleaseInfo{}, fmt.Errorf("read release response: %w", err)
-	}
-	if resp.StatusCode != http.StatusOK {
-		return YTDLPReleaseInfo{}, fmt.Errorf("github api: %s: %s", resp.Status, truncateForErr(string(body), 200))
-	}
-	tag, url, err := ytdlpExeAssetFromReleaseJSON(body)
+	tag, downloadURL, err := ytdlpExeAssetFromReleaseJSON(body)
 	if err != nil {
 		return YTDLPReleaseInfo{}, err
 	}
 	return YTDLPReleaseInfo{
 		Tag:         strings.TrimSpace(tag),
-		Version:     normalizeReleaseTag(tag),
-		DownloadURL: url,
+		Version:     appversion.NormalizeProductVersion(tag),
+		DownloadURL: downloadURL,
 	}, nil
 }
 
@@ -301,7 +270,7 @@ func downloadToFile(ctx context.Context, client *http.Client, url, dest string) 
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		slurp, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return fmt.Errorf("download failed (%s): %s", resp.Status, truncateForErr(string(slurp), 200))
+		return fmt.Errorf("download failed (%s): %s", resp.Status, gh.TruncateErrBody(string(slurp), 200))
 	}
 	f, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
@@ -320,13 +289,4 @@ func downloadToFile(ctx context.Context, client *http.Client, url, dest string) 
 		return fmt.Errorf("download exceeds %d bytes", maxYTDlpDownloadBytes)
 	}
 	return nil
-}
-
-func truncateForErr(s string, max int) string {
-	s = strings.TrimSpace(s)
-	runes := []rune(s)
-	if len(runes) <= max {
-		return s
-	}
-	return string(runes[:max]) + "…"
 }

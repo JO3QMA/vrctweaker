@@ -53,6 +53,60 @@ func ValidateReleasePageURL(raw string) error {
 	return nil
 }
 
+// HostedDownloadOptions configures the shared HTTPS and host allowlist check.
+type HostedDownloadOptions struct {
+	// RepoPathPrefix, when non-empty, requires github.com paths to match this
+	// prefix on a segment boundary. Empty leaves the check host-only.
+	RepoPathPrefix string
+	// RejectPort rejects an explicit port. The app updater sets this; yt-dlp does not.
+	RejectPort bool
+	// HostError, when set, formats a rejected host. Nil uses the app-updater text.
+	HostError func(host string) error
+}
+
+// ValidateHostedDownloadURL checks HTTPS and the release-asset host allowlist.
+// RepoPathPrefix selects the github.com path constraint so callers with different
+// repositories do not share one hardcoded path.
+func ValidateHostedDownloadURL(raw string, opt HostedDownloadOptions) error {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return errors.New("download URL is empty")
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil {
+		return fmt.Errorf("invalid download URL: %w", err)
+	}
+	if opt.RejectPort {
+		if portErr := rejectURLPort(parsed); portErr != nil {
+			return portErr
+		}
+	}
+	if parsed.Scheme != "https" {
+		return errors.New("download URL must use https")
+	}
+	host := strings.ToLower(parsed.Hostname())
+	if _, ok := allowedReleaseDownloadHosts[host]; !ok {
+		if opt.HostError != nil {
+			return opt.HostError(host)
+		}
+		return fmt.Errorf("download host %q is not allowed", host)
+	}
+	if opt.RepoPathPrefix == "" || host != "github.com" {
+		return nil
+	}
+	cleanPath, pathErr := cleanGitHubPath(parsed.Path)
+	if pathErr != nil {
+		return pathErr
+	}
+	if pathHasPrefixSegment(cleanPath, opt.RepoPathPrefix) {
+		return nil
+	}
+	if opt.RepoPathPrefix == releaseRepoDownloadPathPrefix {
+		return errors.New("download path is not a vrctweaker release asset")
+	}
+	return errors.New("download path is not an allowed release asset")
+}
+
 func validateDownloadURL(raw string, skip bool) error {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
@@ -61,30 +115,10 @@ func validateDownloadURL(raw string, skip bool) error {
 	if skip {
 		return nil
 	}
-	parsed, err := url.Parse(raw)
-	if err != nil {
-		return fmt.Errorf("invalid download URL: %w", err)
-	}
-	if err := rejectURLPort(parsed); err != nil {
-		return err
-	}
-	if parsed.Scheme != "https" {
-		return errors.New("download URL must use https")
-	}
-	host := strings.ToLower(parsed.Hostname())
-	if _, ok := allowedReleaseDownloadHosts[host]; !ok {
-		return fmt.Errorf("download host %q is not allowed", host)
-	}
-	if host == "github.com" {
-		cleanPath, err := cleanGitHubPath(parsed.Path)
-		if err != nil {
-			return err
-		}
-		if !pathHasPrefixSegment(cleanPath, releaseRepoDownloadPathPrefix) {
-			return errors.New("download path is not a vrctweaker release asset")
-		}
-	}
-	return nil
+	return ValidateHostedDownloadURL(raw, HostedDownloadOptions{
+		RepoPathPrefix: releaseRepoDownloadPathPrefix,
+		RejectPort:     true,
+	})
 }
 
 func rejectURLPort(u *url.URL) error {

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"regexp"
 	"strings"
@@ -66,8 +65,6 @@ func (c *ReleaseClient) ua() string {
 	return appversion.UserAgent()
 }
 
-const maxReleaseAPIResponseBytes = 1 << 20 // 1 MiB
-
 func (c *ReleaseClient) defaultHTTPClient() *http.Client {
 	if c != nil && c.HTTPClient != nil {
 		return c.HTTPClient
@@ -77,31 +74,9 @@ func (c *ReleaseClient) defaultHTTPClient() *http.Client {
 
 // FetchLatestStable returns the latest non-prerelease release with Windows zip asset and body SHA256.
 func (c *ReleaseClient) FetchLatestStable(ctx context.Context) (VRCTweakerRelease, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.latestURL(), nil)
+	data, err := GetJSON(ctx, c.defaultHTTPClient(), c.latestURL(), c.ua(), APIJSONAppRelease)
 	if err != nil {
 		return VRCTweakerRelease{}, err
-	}
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", c.ua())
-
-	resp, err := c.defaultHTTPClient().Do(req)
-	if err != nil {
-		if resp != nil && resp.Body != nil {
-			_ = resp.Body.Close()
-		}
-		return VRCTweakerRelease{}, fmt.Errorf("github releases: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode != http.StatusOK {
-		slurp, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
-		return VRCTweakerRelease{}, fmt.Errorf("github releases: HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(slurp)))
-	}
-	data, err := io.ReadAll(io.LimitReader(resp.Body, maxReleaseAPIResponseBytes+1))
-	if err != nil {
-		return VRCTweakerRelease{}, fmt.Errorf("github releases: read body: %w", err)
-	}
-	if len(data) > maxReleaseAPIResponseBytes {
-		return VRCTweakerRelease{}, fmt.Errorf("github releases: response exceeds size limit")
 	}
 	return parseLatestReleaseJSON(data, c != nil && c.SkipURLValidation)
 }

@@ -28,6 +28,32 @@ func TestValidateReleasePageURL(t *testing.T) {
 	}
 }
 
+func TestValidateHostedDownloadURL_repoPrefix(t *testing.T) {
+	const ytdlpURL = "https://github.com/yt-dlp/yt-dlp/releases/download/2026.07.04/yt-dlp.exe"
+	ytdlpOpt := HostedDownloadOptions{RepoPathPrefix: "/yt-dlp/yt-dlp/releases/download/"}
+	if err := ValidateHostedDownloadURL(ytdlpURL, ytdlpOpt); err != nil {
+		t.Fatal(err)
+	}
+	vrct := "https://github.com/JO3QMA/vrctweaker/releases/download/v1.0.0/a.zip"
+	if err := ValidateHostedDownloadURL(vrct, ytdlpOpt); err == nil {
+		t.Fatal("expected other repo to be rejected")
+	}
+	if err := ValidateHostedDownloadURL(vrct, HostedDownloadOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	withPort := "https://github.com:443/yt-dlp/yt-dlp/releases/download/2026.07.04/yt-dlp.exe"
+	if err := ValidateHostedDownloadURL(withPort, HostedDownloadOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if err := ValidateHostedDownloadURL(withPort, HostedDownloadOptions{RejectPort: true}); err == nil {
+		t.Fatal("expected port rejection")
+	}
+	cdn := "https://objects.githubusercontent.com/x/yt-dlp.exe"
+	if err := ValidateHostedDownloadURL(cdn, ytdlpOpt); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestValidateReleaseDownloadURL_segmentBoundary(t *testing.T) {
 	bad := "https://github.com/JO3QMA/vrctweaker/releases/downloadX/v1.0.0/evil.zip"
 	if err := ValidateReleaseDownloadURL(bad); err == nil {

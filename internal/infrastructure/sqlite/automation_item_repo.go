@@ -96,32 +96,23 @@ func (r *AutomationItemRepository) Delete(ctx context.Context, id string) error 
 }
 
 func scanAutomationItem(rows *sql.Rows) (*automation.AutomationItem, error) {
-	var id, name, kind, triggerType, scheduleJSON, conditionsJSON, actionsJSON, scriptSource sql.NullString
-	var isEnabled int
-	if err := rows.Scan(&id, &name, &kind, &isEnabled, &triggerType, &scheduleJSON, &conditionsJSON, &actionsJSON, &scriptSource); err != nil {
-		return nil, err
-	}
-	return &automation.AutomationItem{
-		ID:             id.String,
-		Name:           name.String,
-		Kind:           kind.String,
-		IsEnabled:      isEnabled == 1,
-		TriggerType:    triggerType.String,
-		ScheduleJSON:   scheduleJSON.String,
-		ConditionsJSON: conditionsJSON.String,
-		ActionsJSON:    actionsJSON.String,
-		ScriptSource:   scriptSource.String,
-	}, nil
+	return scanAutomationItemScanner(rows)
 }
 
 func scanAutomationItemRow(row *sql.Row) (*automation.AutomationItem, error) {
-	var id, name, kind, triggerType, scheduleJSON, conditionsJSON, actionsJSON, scriptSource sql.NullString
-	var isEnabled int
-	err := row.Scan(&id, &name, &kind, &isEnabled, &triggerType, &scheduleJSON, &conditionsJSON, &actionsJSON, &scriptSource)
+	item, err := scanAutomationItemScanner(row)
 	if err == sql.ErrNoRows {
 		return nil, automation.ErrItemNotFound
 	}
-	if err != nil {
+	return item, err
+}
+
+func scanAutomationItemScanner(sc interface {
+	Scan(dest ...interface{}) error
+}) (*automation.AutomationItem, error) {
+	var id, name, kind, triggerType, scheduleJSON, conditionsJSON, actionsJSON, scriptSource sql.NullString
+	var isEnabled int
+	if err := sc.Scan(&id, &name, &kind, &isEnabled, &triggerType, &scheduleJSON, &conditionsJSON, &actionsJSON, &scriptSource); err != nil {
 		return nil, err
 	}
 	return &automation.AutomationItem{

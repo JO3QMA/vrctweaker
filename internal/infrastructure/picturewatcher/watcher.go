@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+
+	"vrchat-tweaker/internal/infrastructure/logwatcher"
 )
 
 const defaultDebounce = 400 * time.Millisecond
@@ -20,7 +22,7 @@ type IngestFunc func(ctx context.Context, path string) error
 
 // Start watches root and its subdirectories for new or updated image files.
 // Events are debounced then passed to ingest. The caller should cancel ctx to stop the watcher.
-func Start(ctx context.Context, root string, ingest IngestFunc, log Logger) error {
+func Start(ctx context.Context, root string, ingest IngestFunc, log logwatcher.Logger) error {
 	if ingest == nil {
 		return nil
 	}
@@ -39,7 +41,7 @@ func Start(ctx context.Context, root string, ingest IngestFunc, log Logger) erro
 	}
 
 	if log == nil {
-		log = Nop
+		log = logwatcher.Nop
 	}
 
 	w := &run{
@@ -63,7 +65,7 @@ type run struct {
 	ctx      context.Context
 	fsw      *fsnotify.Watcher
 	ingest   IngestFunc
-	log      Logger
+	log      logwatcher.Logger
 	debounce time.Duration
 
 	mu      sync.Mutex
