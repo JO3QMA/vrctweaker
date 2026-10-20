@@ -89,6 +89,24 @@ describe("parseStyleSheet", () => {
     );
   });
 
+  it("collapses whitespace outside quotes and keeps it inside them", () => {
+    const sheet = parseStyleSheet(`
+      :root {
+        --font-family-ui:
+          "Segoe  UI",   sans-serif;
+        --quoted-single: 'a  b',   sans-serif;
+      }
+    `);
+    expect(
+      sheet.customProperties.find((prop) => prop.name === "--font-family-ui")
+        ?.value,
+    ).toBe('"Segoe  UI", sans-serif');
+    expect(
+      sheet.customProperties.find((prop) => prop.name === "--quoted-single")
+        ?.value,
+    ).toBe("'a  b', sans-serif");
+  });
+
   it("keeps var() source text and the declaring selector", () => {
     const unknown = parsed.customProperties.find(
       (prop) => prop.name === "--color-status-unknown",

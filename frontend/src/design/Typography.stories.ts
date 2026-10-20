@@ -34,16 +34,6 @@ function rootNamed(prefix: string): CssCustomProperty[] {
   return rootProps.filter((prop) => prop.name.startsWith(prefix));
 }
 
-function scaleLabel(row: {
-  name: string;
-  value: string;
-  description: string;
-}): string {
-  const parts = [row.name, row.value];
-  if (row.description) parts.push(row.description);
-  return parts.join(" · ");
-}
-
 const epFontSizeOrder = [
   "extra-large",
   "large",
@@ -119,17 +109,15 @@ export const FontSizeScale: Story = {
   name: "Font size scale",
   render: () => ({
     setup: () => ({
-      rows: resolveCustomProperties(document, fontSizeScale).map((row) => ({
-        ...row,
-        label: scaleLabel(row),
-      })),
+      rows: resolveCustomProperties(document, fontSizeScale),
     }),
     template: `
       <div class="typography-story">
         <h2>Font size scale</h2>
         <p>Numeric tokens (<code>--font-size-*</code>, px). Body default is 14.</p>
         <div v-for="row in rows" :key="row.name" class="typography-story-scale-row">
-          <span class="typography-story-scale-label">{{ row.label }}</span>
+          <span v-if="row.description" class="typography-story-scale-label">{{ row.name }} · {{ row.resolved || row.value }} · {{ row.description }}</span>
+          <span v-else class="typography-story-scale-label">{{ row.name }} · {{ row.resolved || row.value }}</span>
           <span :style="{ fontSize: 'var(' + row.name + ')' }">The quick brown fox</span>
         </div>
         ${tokenTable}
@@ -173,19 +161,15 @@ export const FontWeightScale: Story = {
   name: "Font weight scale",
   render: () => ({
     setup: () => ({
-      rows: resolveCustomProperties(document, rootNamed("--font-weight-")).map(
-        (row) => ({
-          ...row,
-          label: scaleLabel(row),
-        }),
-      ),
+      rows: resolveCustomProperties(document, rootNamed("--font-weight-")),
     }),
     template: `
       <div class="typography-story">
         <h2>Font weight scale</h2>
         <p>Body default is <code>--font-weight-400</code>.</p>
         <div v-for="row in rows" :key="row.name" class="typography-story-scale-row">
-          <span class="typography-story-scale-label">{{ row.label }}</span>
+          <span v-if="row.description" class="typography-story-scale-label">{{ row.name }} · {{ row.resolved || row.value }} · {{ row.description }}</span>
+          <span v-else class="typography-story-scale-label">{{ row.name }} · {{ row.resolved || row.value }}</span>
           <span :style="{ fontWeight: 'var(' + row.name + ')' }">Typography weight {{ row.value }}</span>
         </div>
         ${tokenTable}

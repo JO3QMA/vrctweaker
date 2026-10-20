@@ -50,6 +50,12 @@ function legacyAliasFor(target: string): string {
     .join(", ");
 }
 
+function swatchKind(name: string): SwatchRow["kind"] {
+  if (name.includes("--color-text-")) return "text";
+  if (name === "--color-border" || name.endsWith("-border")) return "border";
+  return "fill";
+}
+
 function swatchRows(
   props: CssCustomProperty[],
   options?: { alias?: boolean },
@@ -57,11 +63,7 @@ function swatchRows(
   return resolveCustomProperties(document, props).map((row) => ({
     ...row,
     alias: options?.alias ? legacyAliasFor(row.name) : "",
-    kind: row.name.includes("--color-text-")
-      ? "text"
-      : row.name === "--color-border" || row.name.endsWith("-border")
-        ? "border"
-        : "fill",
+    kind: swatchKind(row.name),
   }));
 }
 

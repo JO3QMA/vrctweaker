@@ -32,7 +32,37 @@ type ReadDeclaration = {
 };
 
 function collapseWs(value: string): string {
-  return value.replace(/\s+/g, " ").trim();
+  let out = "";
+  let quote: '"' | "'" | null = null;
+  let pendingSpace = false;
+  for (let i = 0; i < value.length; i++) {
+    const ch = value[i] ?? "";
+    if (quote) {
+      out += ch;
+      if (ch === "\\" && i + 1 < value.length) {
+        out += value[i + 1] ?? "";
+        i++;
+        continue;
+      }
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      if (pendingSpace && out.length > 0) out += " ";
+      pendingSpace = false;
+      quote = ch;
+      out += ch;
+      continue;
+    }
+    if (/\s/.test(ch)) {
+      if (out.length > 0) pendingSpace = true;
+      continue;
+    }
+    if (pendingSpace) out += " ";
+    pendingSpace = false;
+    out += ch;
+  }
+  return out.trim();
 }
 
 /** Drop box-drawing rules and the whitespace they leave in section comments. */
