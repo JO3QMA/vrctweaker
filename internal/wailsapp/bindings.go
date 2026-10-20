@@ -59,57 +59,6 @@ type DashboardLaunchBlockDTO struct {
 	Rejoin            *DashboardRejoinDTO `json:"rejoin"`
 }
 
-// PresenceChangeSectionDTO is the Dashboard presence change section.
-type PresenceChangeSectionDTO struct {
-	LoggedIn          bool     `json:"loggedIn"`
-	Status            string   `json:"status"`
-	StatusDescription string   `json:"statusDescription"`
-	History           []string `json:"history"`
-}
-
-// PresenceChangeApplyResultDTO is returned after ApplyPresenceChange succeeds.
-type PresenceChangeApplyResultDTO struct {
-	Status            string `json:"status"`
-	StatusDescription string `json:"statusDescription"`
-}
-
-// ServerStatusDTO is the Dashboard Server status section (status.vrchat.com).
-type ServerStatusDTO struct {
-	FetchState   string                       `json:"fetchState"`
-	Summary      ServerStatusSummaryDTO       `json:"summary"`
-	Components   []ServerStatusComponentDTO   `json:"components"`
-	Incidents    []ServerStatusHeadlineDTO    `json:"incidents"`
-	Maintenances []ServerStatusMaintenanceDTO `json:"maintenances"`
-}
-
-// ServerStatusSummaryDTO is the overall indicator from status.vrchat.com.
-type ServerStatusSummaryDTO struct {
-	Indicator   string `json:"indicator"`
-	Description string `json:"description"`
-}
-
-// ServerStatusComponentDTO is a non-operational statuspage leaf component.
-type ServerStatusComponentDTO struct {
-	Name   string `json:"name"`
-	Status string `json:"status"`
-}
-
-// ServerStatusHeadlineDTO is an incident headline.
-type ServerStatusHeadlineDTO struct {
-	Name string `json:"name"`
-}
-
-// ServerStatusMaintenanceDTO is a scheduled or in-progress maintenance window.
-// Times are statuspage timestamps (RFC3339). The frontend formats them locally.
-type ServerStatusMaintenanceDTO struct {
-	ID             string   `json:"id,omitempty"`
-	Name           string   `json:"name"`
-	Status         string   `json:"status,omitempty"`
-	ScheduledFor   string   `json:"scheduledFor,omitempty"`
-	ScheduledUntil string   `json:"scheduledUntil,omitempty"`
-	Updates        []string `json:"updates,omitempty"`
-}
-
 // EnrichmentParticipantDTO is one participant at screenshot time (display name for UI).
 type EnrichmentParticipantDTO struct {
 	VRCUserID   string `json:"vrcUserId,omitempty"`

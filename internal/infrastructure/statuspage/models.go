@@ -1,6 +1,6 @@
 package statuspage
 
-// FetchState values returned to the frontend via ServerStatusDTO.
+// FetchState values returned to the frontend on Snapshot.
 const (
 	FetchStateOK          = "ok"
 	FetchStateUnavailable = "unavailable"
@@ -10,40 +10,42 @@ const (
 const componentStatusOperational = "operational"
 
 // Snapshot is the aggregated server status for Dashboard display.
+// JSON names match the former Wails ServerStatusDTO.
 type Snapshot struct {
-	FetchState   string
-	Summary      Summary
-	Components   []Component // non-operational leaf components only (see filterNonOperational)
-	Incidents    []Headline
-	Maintenances []Maintenance
+	FetchState   string        `json:"fetchState"`
+	Summary      Summary       `json:"summary"`
+	Components   []Component   `json:"components"` // non-operational leaf components only (see filterNonOperational)
+	Incidents    []Headline    `json:"incidents"`
+	Maintenances []Maintenance `json:"maintenances"`
 }
 
 // Summary is the overall status indicator from summary.json.
 type Summary struct {
-	Indicator   string
-	Description string
+	Indicator   string `json:"indicator"`
+	Description string `json:"description"`
 }
 
 // Component is a non-group statuspage component (leaf).
 type Component struct {
-	Name   string
-	Status string
+	Name   string `json:"name"`
+	Status string `json:"status"`
 }
 
 // Headline is a one-line incident title.
 type Headline struct {
-	Name string
+	Name string `json:"name"`
 }
 
 // Maintenance is a scheduled or active statuspage maintenance window.
 // Completed windows are omitted before this value is returned.
+// Optional JSON names match the former ServerStatusMaintenanceDTO.
 type Maintenance struct {
-	ID             string
-	Name           string
-	Status         string
-	ScheduledFor   string
-	ScheduledUntil string
-	Updates        []string
+	ID             string   `json:"id,omitempty"`
+	Name           string   `json:"name"`
+	Status         string   `json:"status,omitempty"`
+	ScheduledFor   string   `json:"scheduledFor,omitempty"`
+	ScheduledUntil string   `json:"scheduledUntil,omitempty"`
+	Updates        []string `json:"updates,omitempty"`
 }
 
 type summaryResponse struct {

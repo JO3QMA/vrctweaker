@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"vrchat-tweaker/internal/appversion"
 )
 
 // ErrOutputLogPathMustBeDirectory is returned when saving a non-directory output_log path.
@@ -346,7 +348,7 @@ func (uc *SettingsUseCase) GetYTDLPOfficialCacheTag(ctx context.Context) (string
 
 // SetYTDLPOfficialCacheTag records the release tag installed into the official cache.
 func (uc *SettingsUseCase) SetYTDLPOfficialCacheTag(ctx context.Context, tag string) error {
-	return uc.repo.Set(ctx, keyYTDLPOfficialCacheTag, normalizeReleaseTag(tag))
+	return uc.repo.Set(ctx, keyYTDLPOfficialCacheTag, appversion.NormalizeProductVersion(tag))
 }
 
 // GetYTDLPKnownLatest returns the last GitHub latest release metadata shown in the Video tab.
@@ -360,10 +362,10 @@ func (uc *SettingsUseCase) GetYTDLPKnownLatest(ctx context.Context) (version, ta
 
 // SetYTDLPKnownLatest persists GitHub latest release metadata for the Video tab.
 func (uc *SettingsUseCase) SetYTDLPKnownLatest(ctx context.Context, version, tag, downloadURL string) error {
-	if err := uc.repo.Set(ctx, keyYTDLPKnownLatestVersion, normalizeReleaseTag(version)); err != nil {
+	if err := uc.repo.Set(ctx, keyYTDLPKnownLatestVersion, appversion.NormalizeProductVersion(version)); err != nil {
 		return err
 	}
-	if err := uc.repo.Set(ctx, keyYTDLPKnownLatestTag, normalizeReleaseTag(tag)); err != nil {
+	if err := uc.repo.Set(ctx, keyYTDLPKnownLatestTag, appversion.NormalizeProductVersion(tag)); err != nil {
 		return err
 	}
 	return uc.repo.Set(ctx, keyYTDLPKnownLatestDownloadURL, strings.TrimSpace(downloadURL))

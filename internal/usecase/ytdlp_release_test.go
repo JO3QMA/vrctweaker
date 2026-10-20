@@ -46,7 +46,7 @@ func TestYtdlpExeAssetFromReleaseJSON_missingAsset(t *testing.T) {
 
 func TestNormalizeReleaseTag(t *testing.T) {
 	t.Parallel()
-	if g := normalizeReleaseTag("v2024.12.01"); g != "2024.12.01" {
+	if g := appversion.NormalizeProductVersion("v2024.12.01"); g != "2024.12.01" {
 		t.Fatalf("got %q", g)
 	}
 }

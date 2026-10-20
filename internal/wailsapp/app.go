@@ -490,7 +490,7 @@ func (a *App) startPictureFolderWatcher(ctx context.Context) {
 		return nil
 	}
 	log := pictureWatchLogger{ctx: ctx}
-	if err := picturewatcher.Start(ctx, root, ingest, picturewatcher.Logger(log.Printf)); err != nil {
+	if err := picturewatcher.Start(ctx, root, ingest, logwatcher.Logger(log.Printf)); err != nil {
 		runtime.LogError(ctx, "failed to start picture folder watcher: "+err.Error())
 		return
 	}
@@ -634,16 +634,6 @@ func (a *App) GetLogRetentionDays() (int, error) {
 // SetLogRetentionDays saves the log retention setting.
 func (a *App) SetLogRetentionDays(days int) error {
 	return a.settings.SetLogRetentionDays(a.ctx, days)
-}
-
-// GetOutputLogPath returns the output_log.txt path.
-func (a *App) GetOutputLogPath() (string, error) {
-	return a.settings.GetOutputLogPath(a.ctx)
-}
-
-// SaveOutputLogPath saves the output_log.txt path.
-func (a *App) SaveOutputLogPath(path string) error {
-	return a.settings.SaveOutputLogPath(a.ctx, path)
 }
 
 // GetPathSettings returns VRChat/Steam/output_log path settings.

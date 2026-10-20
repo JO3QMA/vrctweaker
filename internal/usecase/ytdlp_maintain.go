@@ -11,6 +11,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"vrchat-tweaker/internal/appversion"
 )
 
 const defaultYTDLPUnlockTimeout = 60 * time.Second
@@ -484,9 +486,9 @@ func enrichYTDLPMaintainRelease(ctx context.Context, st YTDLPMaintainStatus, cac
 	if tag == "" && downloadURL != "" {
 		tag = ytdlpReleaseTagFromDownloadURL(downloadURL)
 	}
-	ver := normalizeReleaseTag(version)
+	ver := appversion.NormalizeProductVersion(version)
 	if ver == "" {
-		ver = normalizeReleaseTag(tag)
+		ver = appversion.NormalizeProductVersion(tag)
 	}
 	if tag != "" {
 		st.LatestTag = tag

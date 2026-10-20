@@ -261,6 +261,7 @@ const folderDefs = reactive<OnboardingFolderDefaultsDTO>({
   steamPathLinux: "",
   outputLogPath: "",
   pictureOutputFolder: "",
+  savedPictureOutputFolder: "",
 });
 const savedPathSettings = reactive<PathSettingsDTO>({
   vrchatPathWindows: "",

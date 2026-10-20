@@ -153,45 +153,26 @@ func (r *ScreenshotRepository) DeleteThumbnail(ctx context.Context, screenshotID
 }
 
 func scanScreenshot(rows *sql.Rows) (*media.Screenshot, error) {
-	var id, filePath, worldID, worldNameResolved, authorID, authorName string
-	var takenAt sql.NullString
-	var fileSize sql.NullInt64
-	var enrichStatus, enrichSkip, enrichInstance, participantsJSON string
-	if err := rows.Scan(&id, &filePath, &worldID, &worldNameResolved, &authorID, &authorName, &takenAt, &fileSize,
-		&enrichStatus, &enrichSkip, &enrichInstance, &participantsJSON); err != nil {
-		return nil, err
-	}
-	participants, err := ParticipantsFromJSON(participantsJSON)
-	if err != nil {
-		return nil, err
-	}
-	return &media.Screenshot{
-		ID:                     id,
-		FilePath:               filePath,
-		WorldID:                worldID,
-		WorldName:              worldNameResolved,
-		AuthorVRCUserID:        authorID,
-		AuthorDisplayName:      authorName,
-		TakenAt:                parseTime(takenAt),
-		FileSizeBytes:          parseInt64Ptr(fileSize),
-		EnrichmentStatus:       enrichStatus,
-		EnrichmentSkipReason:   enrichSkip,
-		EnrichmentInstanceID:   enrichInstance,
-		EnrichmentParticipants: participants,
-	}, nil
+	return scanScreenshotScanner(rows)
 }
 
 func scanScreenshotRow(row *sql.Row) (*media.Screenshot, error) {
+	s, err := scanScreenshotScanner(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return s, err
+}
+
+func scanScreenshotScanner(sc interface {
+	Scan(dest ...interface{}) error
+}) (*media.Screenshot, error) {
 	var id, filePath, worldID, worldNameResolved, authorID, authorName string
 	var takenAt sql.NullString
 	var fileSize sql.NullInt64
 	var enrichStatus, enrichSkip, enrichInstance, participantsJSON string
-	err := row.Scan(&id, &filePath, &worldID, &worldNameResolved, &authorID, &authorName, &takenAt, &fileSize,
-		&enrichStatus, &enrichSkip, &enrichInstance, &participantsJSON)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
+	if err := sc.Scan(&id, &filePath, &worldID, &worldNameResolved, &authorID, &authorName, &takenAt, &fileSize,
+		&enrichStatus, &enrichSkip, &enrichInstance, &participantsJSON); err != nil {
 		return nil, err
 	}
 	participants, err := ParticipantsFromJSON(participantsJSON)
