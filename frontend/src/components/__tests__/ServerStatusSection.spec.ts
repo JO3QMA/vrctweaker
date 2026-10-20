@@ -109,7 +109,75 @@ describe("ServerStatusSection", () => {
     expect(detail.text()).toContain("Authentication / Login");
     expect(detail.text()).toContain("Under maintenance");
     expect(detail.text()).toContain("API Degraded");
-    expect(detail.text()).toContain("Database Maintenance");
+    expect(detail.text()).toContain("(Scheduled) Database Maintenance");
+  });
+
+  it("renders maintenance phase, window, and tooltip", async () => {
+    vi.setSystemTime(new Date(2026, 11, 23, 15, 0, 0));
+    mockGetServerStatus.mockResolvedValue({
+      fetchState: "ok",
+      summary: { indicator: "none", description: "All Systems Operational" },
+      components: [],
+      incidents: [],
+      maintenances: [
+        {
+          name: "Later",
+          status: "scheduled",
+          scheduledFor: new Date(2026, 11, 25, 1, 0).toISOString(),
+          scheduledUntil: new Date(2026, 11, 25, 3, 0).toISOString(),
+        },
+        {
+          name: "Done",
+          status: "completed",
+          scheduledFor: new Date(2026, 11, 20, 1, 0).toISOString(),
+          scheduledUntil: new Date(2026, 11, 20, 2, 0).toISOString(),
+          updates: ["finished"],
+        },
+        {
+          id: "live",
+          name: "API",
+          status: "in_progress",
+          scheduledFor: new Date(2026, 11, 23, 12, 34).toISOString(),
+          scheduledUntil: new Date(2026, 11, 23, 23, 45).toISOString(),
+          updates: ["Edge cache restart"],
+        },
+        {
+          name: "Overnight",
+          status: "scheduled",
+          scheduledFor: new Date(2026, 11, 23, 23, 0).toISOString(),
+          scheduledUntil: new Date(2026, 11, 24, 2, 0).toISOString(),
+        },
+        {
+          name: "Open",
+          status: "scheduled",
+          scheduledFor: new Date(2026, 11, 26, 9, 5).toISOString(),
+        },
+      ],
+    });
+    const wrapper = mountSection();
+    await flushPromises();
+    const rows = wrapper.findAll('[data-testid="server-status-maintenance"]');
+    const lines = rows.map((row) =>
+      row
+        .get('[data-testid="server-status-maintenance-line"]')
+        .text()
+        .replace(/\s+/g, " ")
+        .trim(),
+    );
+    expect(lines).toEqual([
+      "(In progress) API until 11:45 PM",
+      "(Scheduled) Overnight 12/23, 11:00 PM–12/24, 2:00 AM",
+      "(Scheduled) Later 12/25, 1:00 AM–3:00 AM",
+      "(Scheduled) Open 12/26, 9:05 AM〜",
+    ]);
+    expect(rows[0]?.classes()).toContain("server-status-maintenance--active");
+    expect(rows[1]?.classes()).toContain(
+      "server-status-maintenance--scheduled",
+    );
+    expect(wrapper.text()).not.toContain("Done");
+    expect(wrapper.text()).not.toContain("finished");
+    const tip = rows[0]?.getComponent({ name: "ElTooltip" });
+    expect(tip?.props("content")).toBe("API\n\nEdge cache restart");
   });
 
   it("keeps prior state when Wails IPC fails after initial load", async () => {

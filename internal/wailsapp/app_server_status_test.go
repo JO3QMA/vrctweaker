@@ -18,8 +18,15 @@ func TestToServerStatusDTO_mapsSnapshot(t *testing.T) {
 		Components: []statuspage.Component{
 			{Name: "Authentication / Login", Status: "under_maintenance"},
 		},
-		Incidents:    []statuspage.Headline{{Name: "API Degraded"}},
-		Maintenances: []statuspage.Headline{{Name: "Database Maintenance"}},
+		Incidents: []statuspage.Headline{{Name: "API Degraded"}},
+		Maintenances: []statuspage.Maintenance{{
+			ID:             "mnt-1",
+			Name:           "Database Maintenance",
+			Status:         "scheduled",
+			ScheduledFor:   "2026-12-23T03:34:00Z",
+			ScheduledUntil: "2026-12-23T14:45:00Z",
+			Updates:        []string{"Database window"},
+		}},
 	})
 	if got.FetchState != statuspage.FetchStateOK {
 		t.Fatalf("FetchState: got %q", got.FetchState)
@@ -35,6 +42,13 @@ func TestToServerStatusDTO_mapsSnapshot(t *testing.T) {
 	}
 	if len(got.Maintenances) != 1 {
 		t.Fatalf("maintenances: %+v", got.Maintenances)
+	}
+	gotM := got.Maintenances[0]
+	if gotM.Name != "Database Maintenance" || gotM.Status != "scheduled" ||
+		gotM.ScheduledFor != "2026-12-23T03:34:00Z" ||
+		gotM.ScheduledUntil != "2026-12-23T14:45:00Z" ||
+		len(gotM.Updates) != 1 || gotM.Updates[0] != "Database window" {
+		t.Fatalf("maintenance: %+v", gotM)
 	}
 }
 

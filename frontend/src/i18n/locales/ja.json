@@ -132,7 +132,16 @@
       "statusPartialOutage": "一部障害",
       "statusMajorOutage": "重大な障害",
       "statusUnderMaintenance": "メンテナンス中",
-      "statusUnknown": "不明"
+      "statusUnknown": "不明",
+      "maintenanceScheduled": "(メンテ予告)",
+      "maintenanceInProgress": "(メンテ中)",
+      "maintenanceDateTime": "{month}/{day} {hour}:{minute}",
+      "maintenanceClock": "{hour}:{minute}",
+      "maintenanceRangeSameDay": "{start}–{endClock}",
+      "maintenanceRangeSpan": "{start}–{end}",
+      "maintenanceUntilClock": "〜{endClock}",
+      "maintenanceUntilStamp": "〜{end}",
+      "maintenanceOpenStart": "{start}〜"
     }
   },
   "launcher": {

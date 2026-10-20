@@ -75,11 +75,11 @@ type PresenceChangeApplyResultDTO struct {
 
 // ServerStatusDTO is the Dashboard Server status section (status.vrchat.com).
 type ServerStatusDTO struct {
-	FetchState   string                     `json:"fetchState"`
-	Summary      ServerStatusSummaryDTO     `json:"summary"`
-	Components   []ServerStatusComponentDTO `json:"components"`
-	Incidents    []ServerStatusHeadlineDTO  `json:"incidents"`
-	Maintenances []ServerStatusHeadlineDTO  `json:"maintenances"`
+	FetchState   string                       `json:"fetchState"`
+	Summary      ServerStatusSummaryDTO       `json:"summary"`
+	Components   []ServerStatusComponentDTO   `json:"components"`
+	Incidents    []ServerStatusHeadlineDTO    `json:"incidents"`
+	Maintenances []ServerStatusMaintenanceDTO `json:"maintenances"`
 }
 
 // ServerStatusSummaryDTO is the overall indicator from status.vrchat.com.
@@ -94,9 +94,20 @@ type ServerStatusComponentDTO struct {
 	Status string `json:"status"`
 }
 
-// ServerStatusHeadlineDTO is an incident or maintenance headline.
+// ServerStatusHeadlineDTO is an incident headline.
 type ServerStatusHeadlineDTO struct {
 	Name string `json:"name"`
+}
+
+// ServerStatusMaintenanceDTO is a scheduled or in-progress maintenance window.
+// Times are statuspage timestamps (RFC3339). The frontend formats them locally.
+type ServerStatusMaintenanceDTO struct {
+	ID             string   `json:"id,omitempty"`
+	Name           string   `json:"name"`
+	Status         string   `json:"status,omitempty"`
+	ScheduledFor   string   `json:"scheduledFor,omitempty"`
+	ScheduledUntil string   `json:"scheduledUntil,omitempty"`
+	Updates        []string `json:"updates,omitempty"`
 }
 
 // EnrichmentParticipantDTO is one participant at screenshot time (display name for UI).

@@ -18,12 +18,12 @@ func (c *Client) Fetch(ctx context.Context) Snapshot {
 	}
 
 	var (
-		componentsResp   componentsResponse
-		incidentsResp    incidentsResponse
-		maintenancesResp maintenancesResponse
-		componentsErr    error
-		incidentsErr     error
-		maintenancesErr  error
+		componentsResp  componentsResponse
+		incidentsResp   incidentsResponse
+		componentsErr   error
+		incidentsErr    error
+		maintenancesErr error
+		maintenances    []Maintenance
 	)
 
 	var wg sync.WaitGroup
@@ -38,19 +38,11 @@ func (c *Client) Fetch(ctx context.Context) Snapshot {
 	}()
 	go func() {
 		defer wg.Done()
-		maintenancesErr = c.fetchJSON(ctx, "scheduled-maintenances/active.json", &maintenancesResp)
-		if maintenancesErr != nil || len(maintenancesResp.ScheduledMaintenances) == 0 {
-			var upcoming maintenancesResponse
-			if err := c.fetchJSON(ctx, "scheduled-maintenances/upcoming.json", &upcoming); err == nil {
-				maintenancesResp = upcoming
-				maintenancesErr = nil
-			}
-		}
+		maintenances, maintenancesErr = c.loadMaintenances(ctx)
 	}()
 	wg.Wait()
 
 	incidents := headlinesFromIncidents(incidentsResp.Incidents)
-	maintenances := headlinesFromMaintenances(maintenancesResp.ScheduledMaintenances)
 
 	if componentsErr != nil {
 		return Snapshot{
@@ -111,17 +103,6 @@ func headlinesFromIncidents(list []apiIncident) []Headline {
 			continue
 		}
 		out = append(out, Headline(inc))
-	}
-	return out
-}
-
-func headlinesFromMaintenances(list []apiMaintenance) []Headline {
-	out := make([]Headline, 0, len(list))
-	for _, m := range list {
-		if m.Name == "" {
-			continue
-		}
-		out = append(out, Headline(m))
 	}
 	return out
 }
