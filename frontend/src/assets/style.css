@@ -2,11 +2,11 @@
 
 /* ─── App color tokens (ADR 0019) ──────────────────────────────── */
 :root {
-  /* Brand: リンク・フォーカス・Primary button の塗り */
+  /* Brand: Main accent. Primary button fill and links use --color-brand. */
   --color-brand: #5c9ce6; /* リンク・フォーカス・Primary button 塗り */
   --color-brand-hover: #7ab3f0; /* brand の hover */
 
-  /* Neutral: 表面・文字・枠線 */
+  /* Neutral: Surfaces, text, and border. Prefer these over legacy --bg-* / --text-* aliases. */
   --color-bg-base: #1b2636; /* 表面 base */
   --color-bg-elevated: #243447; /* 表面 elevated */
   --color-bg-muted: #2d3f54; /* 表面 muted */
@@ -74,7 +74,7 @@
   --space-section: var(--space-24); /* セクションカード間 */
   --space-page: var(--space-32); /* ページ外周 */
 
-  /* Typography scale (ADR 0020) */
+  /* Typography scale (ADR 0020). Numeric tokens (--font-size-*, px). Body default is 14. */
   --font-size-10: 10px; /* caption */
   --font-size-12: 12px; /* body small */
   --font-size-14: 14px; /* 本文既定 */
@@ -87,18 +87,18 @@
     var(--font-size-14) * 1.4
   ); /* レガシー page title（1.4rem @ 14px root = 19.6px） */
 
-  /* Line height scale */
+  /* Line height scale. Unitless ratios. Body default is --line-height-normal (1.5). */
   --line-height-tight: 1.25; /* 見出し */
   --line-height-normal: 1.5; /* 本文既定 */
   --line-height-relaxed: 1.75; /* 長文 */
 
-  /* Font weight scale */
+  /* Font weight scale. Body default is --font-weight-400. */
   --font-weight-400: 400; /* 本文既定 */
   --font-weight-500: 500;
   --font-weight-600: 600; /* 見出し */
   --font-weight-700: 700;
 
-  /* UI font family */
+  /* UI font family. Sans-serif stack for body, headings, and labels. */
   --font-family-ui:
     "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif; /* UI サンセリフ */
 
@@ -227,8 +227,8 @@ html.dark {
   --el-font-size-large: var(--font-size-18);
   --el-font-size-medium: var(--font-size-16);
   --el-font-size-base: var(--font-size-14);
-  --el-font-size-small: 13px; /* スケール外の derivative。画面からは参照しない */
   --el-font-size-extra-small: var(--font-size-12);
+  --el-font-size-small: 13px; /* スケール外の derivative。画面からは参照しない */
 }
 
 /* ─── Base resets ──────────────────────────────────────────────── */

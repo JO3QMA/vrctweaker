@@ -37,11 +37,26 @@ function colorGroup(prefix: string): CssCustomProperty[] {
 
 type SwatchRow = ResolvedCustomProperty & {
   kind: "text" | "border" | "fill";
+  alias: string;
 };
 
-function swatchRows(props: CssCustomProperty[]): SwatchRow[] {
+function legacyAliasFor(target: string): string {
+  return rootProps
+    .filter(
+      (prop) =>
+        prop.group.startsWith("Legacy") && prop.value === `var(${target})`,
+    )
+    .map((prop) => prop.name)
+    .join(", ");
+}
+
+function swatchRows(
+  props: CssCustomProperty[],
+  options?: { alias?: boolean },
+): SwatchRow[] {
   return resolveCustomProperties(document, props).map((row) => ({
     ...row,
+    alias: options?.alias ? legacyAliasFor(row.name) : "",
     kind: row.name.includes("--color-text-")
       ? "text"
       : row.name === "--color-border" || row.name.endsWith("-border")
@@ -75,14 +90,18 @@ const tokenTable = `
   </table>
 `;
 
-function swatchStory(title: string, props: CssCustomProperty[]): Story {
+function swatchStory(
+  title: string,
+  props: CssCustomProperty[],
+  options?: { alias?: boolean },
+): Story {
   return {
     name: title,
     render: () => ({
       setup: () => ({
         title,
         description: props[0]?.group ?? "",
-        rows: swatchRows(props),
+        rows: swatchRows(props, options),
       }),
       template: `
         <div class="color-story">
@@ -107,6 +126,7 @@ function swatchStory(title: string, props: CssCustomProperty[]): Story {
               />
               <span class="color-story-swatch-label">{{ row.name }}</span>
               <span v-if="row.description" class="color-story-swatch-label">{{ row.description }}</span>
+              <span v-if="row.alias" class="color-story-swatch-label">alias: {{ row.alias }}</span>
             </div>
           </div>
           ${tokenTable}
@@ -121,6 +141,7 @@ export const Brand: Story = swatchStory("Brand color", colorGroup("Brand"));
 export const Neutral: Story = swatchStory(
   "Neutral color",
   colorGroup("Neutral"),
+  { alias: true },
 );
 
 export const Semantic: Story = swatchStory(
@@ -147,7 +168,8 @@ export const Presence: Story = {
         <p>{{ description }}</p>
         <p>
           Chips use <code>--color-text-inverse</code> on every state, matching the production
-          Presence change section (ADR 0019 v1 visual policy).
+          Presence change section (ADR 0019 v1 visual policy). Ask-me contrast is below WCAG AA;
+          per-state text colors are a follow-up, not this tokenize PR.
         </p>
         <div class="color-story-presence-row">
           <div
@@ -185,28 +207,84 @@ export const LegacyAliases: Story = {
   }),
 };
 
+/** Same eight correspondences as the previous catalog. Values are read from style.css. */
+const ELEMENT_PLUS_COLOR_EXAMPLES = [
+  { app: "--color-brand", el: ["--el-color-primary"] },
+  { app: "--color-brand-hover", el: ["--el-color-primary-light-3"] },
+  { app: "--color-danger", el: ["--el-color-danger", "--el-color-error"] },
+  { app: "--color-success", el: ["--el-color-success"] },
+  { app: "--color-warning", el: ["--el-color-warning"] },
+  { app: "--color-info", el: ["--el-color-info"] },
+  { app: "--color-bg-base", el: ["--el-bg-color-page"] },
+  { app: "--color-text-muted", el: ["--el-text-color-placeholder"] },
+] as const;
+
 export const ElementPlusMapping: Story = {
   name: "Element Plus mapping",
   render: () => ({
     setup: () => ({
-      rows: resolveCustomProperties(
-        document,
-        darkProps.filter(
-          (prop) =>
-            !prop.name.includes("font-size") &&
-            (prop.name.includes("color") ||
-              prop.value.includes("var(--color-")),
-        ),
-      ),
+      rows: ELEMENT_PLUS_COLOR_EXAMPLES.map((spec) => {
+        const props = spec.el.map((name) =>
+          darkProps.find((prop) => prop.name === name),
+        );
+        const resolved = resolveCustomProperties(
+          document,
+          props.filter((prop): prop is CssCustomProperty => prop != null),
+        );
+        return {
+          app: spec.app,
+          examples: spec.el.join(", "),
+          declared: props.map((prop) => prop?.value ?? "").join(", "),
+          resolved: resolved.map((prop) => prop.resolved).join(", "),
+        };
+      }),
     }),
     template: `
       <div class="color-story">
         <h2>Element Plus color mapping</h2>
         <p>
           App tokens in <code>:root</code> are canonical.
-          Rows below are custom properties declared on <code>html.dark</code>.
-          Declared <code>var(--…)</code> is shown beside the value read with
-          <code>getComputedStyle</code> from the <code>html.dark</code> element.
+          <code>html.dark</code> maps <code>--el-color-*</code> and neutrals from them.
+          <code>light-*</code> / <code>dark-*</code> derivatives stay in the mapping block only.
+        </p>
+        <table class="color-story-table">
+          <thead>
+            <tr>
+              <th>App token</th>
+              <th>Element Plus (examples)</th>
+              <th>Declared</th>
+              <th>Resolved</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in rows" :key="row.app">
+              <td><code>{{ row.app }}</code></td>
+              <td><code>{{ row.examples }}</code></td>
+              <td><code>{{ row.declared }}</code></td>
+              <td><code>{{ row.resolved }}</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    `,
+  }),
+};
+
+export const ElementPlusVariables: Story = {
+  name: "Element Plus variables",
+  render: () => ({
+    setup: () => ({
+      rows: resolveCustomProperties(
+        document,
+        darkProps.filter((prop) => !prop.name.includes("font-size")),
+      ),
+    }),
+    template: `
+      <div class="color-story">
+        <h2>Element Plus variables</h2>
+        <p>
+          Every custom property declared on <code>html.dark</code> except font sizes.
+          The mapping story above is the eight-row correspondence.
         </p>
         ${tokenTable}
       </div>

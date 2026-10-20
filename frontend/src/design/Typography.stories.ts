@@ -34,6 +34,31 @@ function rootNamed(prefix: string): CssCustomProperty[] {
   return rootProps.filter((prop) => prop.name.startsWith(prefix));
 }
 
+function scaleLabel(row: {
+  name: string;
+  value: string;
+  description: string;
+}): string {
+  const parts = [row.name, row.value];
+  if (row.description) parts.push(row.description);
+  return parts.join(" · ");
+}
+
+const epFontSizeOrder = [
+  "extra-large",
+  "large",
+  "medium",
+  "base",
+  "extra-small",
+  "small",
+];
+
+function epFontSizeRank(name: string): number {
+  const key = name.slice("--el-font-size-".length);
+  const index = epFontSizeOrder.indexOf(key);
+  return index === -1 ? epFontSizeOrder.length : index;
+}
+
 const tokenTable = `
   <table class="typography-story-table">
     <thead>
@@ -93,13 +118,18 @@ const fontSizeDerivatives = rootNamed("--font-size-").filter(
 export const FontSizeScale: Story = {
   name: "Font size scale",
   render: () => ({
-    setup: () => ({ rows: resolveCustomProperties(document, fontSizeScale) }),
+    setup: () => ({
+      rows: resolveCustomProperties(document, fontSizeScale).map((row) => ({
+        ...row,
+        label: scaleLabel(row),
+      })),
+    }),
     template: `
       <div class="typography-story">
         <h2>Font size scale</h2>
-        <p>{{ rows[0] && rows[0].group }}</p>
+        <p>Numeric tokens (<code>--font-size-*</code>, px). Body default is 14.</p>
         <div v-for="row in rows" :key="row.name" class="typography-story-scale-row">
-          <span class="typography-story-scale-label">{{ row.name }} · {{ row.description }}</span>
+          <span class="typography-story-scale-label">{{ row.label }}</span>
           <span :style="{ fontSize: 'var(' + row.name + ')' }">The quick brown fox</span>
         </div>
         ${tokenTable}
@@ -116,29 +146,47 @@ export const FontSizeDerivatives: Story = tokenStory(
 
 export const LineHeightScale: Story = tokenStory(
   "Line height scale",
-  "Unitless ratios declared on :root.",
+  "Unitless ratios. Body default is --line-height-normal (1.5).",
   rootNamed("--line-height-"),
 );
 
-export const FontFamilyUi: Story = tokenStory(
-  "UI font family",
-  "Sans-serif stack for body, headings, and labels.",
-  rootNamed("--font-family-"),
-);
+export const FontFamilyUi: Story = {
+  name: "UI font family",
+  render: () => ({
+    setup: () => ({
+      rows: resolveCustomProperties(document, rootNamed("--font-family-")),
+    }),
+    template: `
+      <div class="typography-story">
+        <h2>UI font family</h2>
+        <p><code>--font-family-ui</code> — sans-serif stack for body, headings, and labels.</p>
+        <p :style="{ fontFamily: 'var(--font-family-ui)' }">
+          The quick brown fox jumps over the lazy dog.
+        </p>
+        ${tokenTable}
+      </div>
+    `,
+  }),
+};
 
 export const FontWeightScale: Story = {
   name: "Font weight scale",
   render: () => ({
     setup: () => ({
-      rows: resolveCustomProperties(document, rootNamed("--font-weight-")),
+      rows: resolveCustomProperties(document, rootNamed("--font-weight-")).map(
+        (row) => ({
+          ...row,
+          label: scaleLabel(row),
+        }),
+      ),
     }),
     template: `
       <div class="typography-story">
         <h2>Font weight scale</h2>
-        <p>{{ rows[0] && rows[0].group }}</p>
+        <p>Body default is <code>--font-weight-400</code>.</p>
         <div v-for="row in rows" :key="row.name" class="typography-story-scale-row">
-          <span class="typography-story-scale-label">{{ row.name }} · {{ row.description }}</span>
-          <span :style="{ fontWeight: 'var(' + row.name + ')' }">Typography weight</span>
+          <span class="typography-story-scale-label">{{ row.label }}</span>
+          <span :style="{ fontWeight: 'var(' + row.name + ')' }">Typography weight {{ row.value }}</span>
         </div>
         ${tokenTable}
       </div>
@@ -195,7 +243,13 @@ function textStyleRows(): TextStyleRow[] {
 export const TextStyleCatalog: Story = {
   name: "Text style catalog",
   render: () => ({
-    setup: () => ({ styles: textStyleRows() }),
+    setup: () => {
+      const styles = textStyleRows();
+      return {
+        pageTitle: styles.find((row) => row.className === "page-title"),
+        styles: styles.filter((row) => row.className !== "page-title"),
+      };
+    },
     template: `
       <div class="typography-story">
         <h2>Text style catalog</h2>
@@ -228,6 +282,10 @@ export const TextStyleCatalog: Story = {
           </tbody>
         </table>
         <div class="typography-story-sample">
+          <div v-if="pageTitle" class="typography-story-sample-row">
+            <span class="typography-story-sample-label">.page-title (H1 size alias; line-height inherits body)</span>
+            <h1 class="page-title">Page title sample</h1>
+          </div>
           <div v-for="row in styles" :key="'sample-' + row.selector" class="typography-story-sample-row">
             <span class="typography-story-sample-label">{{ row.selector }}</span>
             <p :class="row.className">The quick brown fox jumps over the lazy dog.</p>
@@ -245,7 +303,11 @@ export const ElementPlusMapping: Story = {
       rows: resolveCustomProperties(
         document,
         darkProps.filter((prop) => prop.name.startsWith("--el-font-size-")),
-      ) satisfies ResolvedCustomProperty[],
+      )
+        .slice()
+        .sort(
+          (a, b) => epFontSizeRank(a.name) - epFontSizeRank(b.name),
+        ) satisfies ResolvedCustomProperty[],
     }),
     template: `
       <div class="typography-story">

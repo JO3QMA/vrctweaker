@@ -6,6 +6,7 @@ import {
   parseStyleSheet,
   readComputedCustomProperty,
   resolveCustomProperties,
+  usedLengthIfComputed,
   valueReferencesVar,
 } from "./cssCustomProperties";
 
@@ -69,6 +70,23 @@ describe("parseStyleSheet", () => {
     expect(parsed.customProperties[8]?.description).toContain("derivative");
     expect(parsed.customProperties[9]?.group).not.toContain("derivative");
     expect(parsed.customProperties[9]?.description).toBe("");
+  });
+
+  it("strips box-drawing rules from section comments and tightens calc()", () => {
+    const sheet = parseStyleSheet(`
+      /* ─── Element Plus dark theme CSS variable overrides ───────────── */
+      html.dark {
+        --font-size-h1: calc(
+          var(--font-size-14) * 1.4
+        );
+      }
+    `);
+    expect(sheet.customProperties[0]?.group).toBe(
+      "Element Plus dark theme CSS variable overrides",
+    );
+    expect(sheet.customProperties[0]?.value).toBe(
+      "calc(var(--font-size-14) * 1.4)",
+    );
   });
 
   it("keeps var() source text and the declaring selector", () => {
@@ -140,6 +158,14 @@ describe("resolveCustomProperties", () => {
     expect(row?.referencesVar).toBe(true);
     expect(row?.resolved).toBe("#5c9ce6");
   });
+
+  it("replaces an unevaluated calc() with the used px length", () => {
+    expect(usedLengthIfComputed("calc(14px * 1.4)", "19.6px")).toBe("19.6px");
+    expect(usedLengthIfComputed("#9aa0a6", "19.6px")).toBe("#9aa0a6");
+    expect(
+      usedLengthIfComputed("calc(14px * 1.4)", "var(--font-size-h1)"),
+    ).toBe("calc(14px * 1.4)");
+  });
 });
 
 describe("style.css catalog", () => {
@@ -171,8 +197,8 @@ describe("style.css catalog", () => {
 
   it("keeps color groups, usage notes, and var() aliases in source order", () => {
     expect(groupsFor(root, "--color-")).toEqual([
-      "Brand: リンク・フォーカス・Primary button の塗り",
-      "Neutral: 表面・文字・枠線",
+      "Brand: Main accent. Primary button fill and links use --color-brand.",
+      "Neutral: Surfaces, text, and border. Prefer these over legacy --bg-* / --text-* aliases.",
       "Semantic: タグ・メッセージ・検証のフィードバック。Server status と Presence には使わない",
       "Server status (domain): Dashboard のサーバー状態。Semantic には流用しない",
       "Presence (domain): Presence change の色。背景と枠は別トークン",
@@ -212,8 +238,20 @@ describe("style.css catalog", () => {
       description: "フォーム項目間",
     });
     expect(root.find((prop) => prop.name === "--font-size-h1")?.value).toBe(
-      "calc( var(--font-size-14) * 1.4 )",
+      "calc(var(--font-size-14) * 1.4)",
     );
+    expect(
+      dark
+        .filter((prop) => prop.name.startsWith("--el-font-size-"))
+        .map((prop) => prop.name),
+    ).toEqual([
+      "--el-font-size-extra-large",
+      "--el-font-size-large",
+      "--el-font-size-medium",
+      "--el-font-size-base",
+      "--el-font-size-extra-small",
+      "--el-font-size-small",
+    ]);
     expect(
       root.find((prop) => prop.name === "--line-height-normal")?.description,
     ).toBe("本文既定");

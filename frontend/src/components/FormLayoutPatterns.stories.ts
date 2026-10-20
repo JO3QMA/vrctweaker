@@ -26,13 +26,17 @@ export const FormControls: Story = {
       const lang = ref("ja");
       const desktop = ref(true);
       const enabled = ref(true);
+      const off = ref(false);
       const compact = ref(false);
-      return { name, lang, desktop, enabled, compact };
+      return { name, lang, desktop, enabled, off, compact };
     },
     template: `
-      <div class="vt-form-layout-story">
+      <div class="vt-form-controls-story">
         <el-input v-model="name" placeholder="Profile name" clearable />
         <el-input placeholder="Profile name" disabled />
+        <el-input placeholder="Search display name" clearable>
+          <template #prefix><span class="vt-form-story-prefix">⌕</span></template>
+        </el-input>
         <el-select v-model="lang" placeholder="Language">
           <el-option value="ja" label="日本語" />
           <el-option value="en" label="English" />
@@ -43,6 +47,7 @@ export const FormControls: Story = {
         <el-checkbox v-model="desktop">Desktop mode</el-checkbox>
         <el-checkbox v-model="desktop" disabled>Desktop mode</el-checkbox>
         <el-switch v-model="enabled" aria-label="Enable feature" />
+        <el-switch v-model="off" aria-label="Enable feature" />
         <el-switch v-model="enabled" disabled aria-label="Enable feature" />
         <el-switch v-model="compact" size="small" aria-label="Enable list item" />
       </div>

@@ -35,6 +35,16 @@ function collapseWs(value: string): string {
   return value.replace(/\s+/g, " ").trim();
 }
 
+/** Drop box-drawing rules and the whitespace they leave in section comments. */
+function cleanComment(value: string): string {
+  return collapseWs(value.replace(/─+/g, " "));
+}
+
+/** Collapse line-break padding inside functions, e.g. `calc( var(--a) * 1.4 )`. */
+function tightenCssValue(value: string): string {
+  return collapseWs(value).replace(/\(\s+/g, "(").replace(/\s+\)/g, ")");
+}
+
 function isOwnLineComment(
   css: string,
   commentStart: number,
@@ -118,7 +128,7 @@ function readDeclaration(css: string, start: number): ReadDeclaration {
   return {
     end: j,
     property: property.trim(),
-    value: collapseWs(value),
+    value: tightenCssValue(value),
     description,
   };
 }
@@ -140,7 +150,7 @@ export function parseStyleSheet(css: string): ParsedStyleSheet {
     if (css.startsWith("/*", i)) {
       const end = css.indexOf("*/", i + 2);
       const stop = end === -1 ? len : end;
-      const text = collapseWs(css.slice(i + 2, stop));
+      const text = cleanComment(css.slice(i + 2, stop));
       const commentEnd = end === -1 ? len : end + 2;
       if (isOwnLineComment(css, i, commentEnd)) {
         group = text;
@@ -260,19 +270,46 @@ export function readComputedCustomProperty(
   return getComputedStyle(el).getPropertyValue(name).trim();
 }
 
+/**
+ * Used length of a custom property. getComputedStyle().getPropertyValue does not
+ * evaluate calc(); applying the variable as font-size does.
+ */
+export function readUsedLength(
+  doc: Document,
+  selector: string,
+  name: string,
+): string {
+  const host = elementForCssSelector(doc, selector);
+  if (!host) return "";
+  const probe = doc.createElement("span");
+  probe.style.fontSize = `var(${name})`;
+  host.appendChild(probe);
+  const used = getComputedStyle(probe).fontSize.trim();
+  probe.remove();
+  return used;
+}
+
+/** Prefer a used px length when the specified value is still a calc(). */
+export function usedLengthIfComputed(specified: string, used: string): string {
+  if (!specified.includes("calc(")) return specified;
+  return /^-?\d+(\.\d+)?px$/.test(used) ? used : specified;
+}
+
 export function resolveCustomProperties(
   doc: Document,
   props: readonly CssCustomProperty[],
 ): ResolvedCustomProperty[] {
   return props.map((prop) => {
     const referencesVar = valueReferencesVar(prop.value);
-    return {
-      ...prop,
-      referencesVar,
-      resolved: referencesVar
-        ? readComputedCustomProperty(doc, prop.selector, prop.name)
-        : "",
-    };
+    if (!referencesVar) {
+      return { ...prop, referencesVar, resolved: "" };
+    }
+    const specified = readComputedCustomProperty(doc, prop.selector, prop.name);
+    const resolved = usedLengthIfComputed(
+      specified,
+      readUsedLength(doc, prop.selector, prop.name),
+    );
+    return { ...prop, referencesVar, resolved };
   });
 }
 

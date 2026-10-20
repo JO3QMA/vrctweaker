@@ -2,6 +2,25 @@
   color: var(--color-text-secondary);
 }
 
+.vt-form-controls-story {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-block);
+  max-width: 28rem;
+}
+
+.vt-form-controls-story > .el-input,
+.vt-form-controls-story > .el-select {
+  align-self: stretch;
+  width: 100%;
+}
+
+.vt-form-controls-story > .el-checkbox,
+.vt-form-controls-story > .el-switch {
+  width: fit-content;
+}
+
 .vt-form-layout-story {
   display: flex;
   flex-direction: column;
