@@ -37,7 +37,7 @@ func ScheduleReplaceAndRestart(workDir, targetExe, stagedExe string, pid int) er
 	if err := os.MkdirAll(workDir, 0o700); err != nil {
 		return fmt.Errorf("appupdate: work dir: %w", err)
 	}
-	scriptBytes := append(utf8BOM, []byte(script))
+	scriptBytes := append(utf8BOM, []byte(script)...)
 	if err := os.WriteFile(scriptPath, scriptBytes, 0o600); err != nil {
 		return fmt.Errorf("appupdate: write helper script: %w", err)
 	}
