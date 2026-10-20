@@ -16,7 +16,9 @@
     "configOther": "その他の設定",
     "video": "動画",
     "settings": "設定",
-    "licenses": "OSSライセンス"
+    "licenses": "OSSライセンス",
+    "legalPrivacy": "プライバシーポリシー",
+    "legalTerms": "利用規約・免責事項"
   },
   "nav": {
     "dashboard": "ダッシュボード",
@@ -29,6 +31,29 @@
     "configOther": "その他の設定",
     "video": "動画",
     "settings": "設定"
+  },
+  "onboarding": {
+    "title": "初回セットアップ",
+    "stepLogin": "VRChat にログイン",
+    "stepFolders": "フォルダの確認",
+    "stepComplete": "セットアップ完了",
+    "loginLead": "ログインするとフレンド一覧やステータス変更などが使えます。あとから設定画面でもログインできます。",
+    "loginKeyringHint": "認証情報はOSのキーリングに保存されます。",
+    "foldersLead": "ログやスクリーンショットの参照先です。自動検出したパスを初期表示しています。必要なら「変更」で選び直してください。",
+    "pictureFolder": "スクリーンショット / 写真フォルダ",
+    "titlePickPictureFolder": "スクリーンショット / 写真フォルダを選択",
+    "pathUnset": "（未設定）",
+    "changePath": "変更",
+    "completeLead": "次の内容が有効になりました。",
+    "settingsLaterHint": "あとから設定画面でいつでも変更できます。",
+    "summaryLogin": "VRChat ログイン",
+    "summaryNone": "セットアップ",
+    "summarySkippedAll": "スキップしました（あとから設定で構成できます）",
+    "skipStep": "スキップ",
+    "skipAll": "セットアップをスキップ",
+    "next": "次へ",
+    "finish": "完了",
+    "legalIntro": "ログインすると、次のドキュメントに同意したものとみなされます。"
   },
   "common": {
     "confirm": "確認",
@@ -44,7 +69,8 @@
     "dash": "—",
     "stillPresent": "滞在中",
     "yes": "Yes",
-    "no": "No"
+    "no": "No",
+    "unofficialDisclaimer": "VRChat Tweaker は VRChat 公式の製品ではなく、VRChat 株式会社とは無関係の非公式ツールです。"
   },
   "chart": {
     "hour": "時間",
@@ -106,7 +132,16 @@
       "statusPartialOutage": "一部障害",
       "statusMajorOutage": "重大な障害",
       "statusUnderMaintenance": "メンテナンス中",
-      "statusUnknown": "不明"
+      "statusUnknown": "不明",
+      "maintenanceScheduled": "(メンテ予告)",
+      "maintenanceInProgress": "(メンテ中)",
+      "maintenanceDateTime": "{month}/{day} {hour}:{minute}",
+      "maintenanceClock": "{hour}:{minute}",
+      "maintenanceRangeSameDay": "{start}–{endClock}",
+      "maintenanceRangeSpan": "{start}–{end}",
+      "maintenanceUntilClock": "〜{endClock}",
+      "maintenanceUntilStamp": "〜{end}",
+      "maintenanceOpenStart": "{start}〜"
     }
   },
   "launcher": {
@@ -221,6 +256,7 @@
     "scanImporting": "取り込み中（{current} / {total}）",
     "emptyTitle": "スクリーンショットがありません",
     "emptyBody": "ピクチャフォルダを確認するか、「フォルダを同期」で VRChat のスクリーンショットを取り込んでください。",
+    "emptyHint": "設定のパスと VRChat の picture 出力先が一致しているか確認してください。",
     "emptyFilteredTitle": "条件に一致するスクリーンショットがありません",
     "emptyFilteredBody": "ワールド検索や期間を変えてお試しください。",
     "clearFilters": "フィルターを解除",
@@ -236,6 +272,8 @@
     "retentionHint": "保存期間 {days} 日を超えた記録は自動削除されます",
     "noData": "データがありません",
     "noEncounters": "遭遇ログがありません。",
+    "noEncountersHint": "VRChat の output_log を監視するには、設定でログフォルダを指定して VRChat をプレイしてください。",
+    "noDataHint": "プレイ時間は output_log から集計されます。ログフォルダを設定してから VRChat を起動してください。",
     "colJoin": "入室",
     "colLeave": "退室",
     "colDisplayName": "表示名",
@@ -389,6 +427,15 @@
       "subsystemUnavailable": "オートメーション サブシステムを初期化できませんでした。"
     }
   },
+  "legal": {
+    "privacyPolicy": "プライバシーポリシー",
+    "termsOfUse": "利用規約・免責事項",
+    "settingsIntro": "データの取り扱いと利用条件は次のドキュメントをご確認ください。",
+    "licensesIntro": "オープンソース利用に加え、データの取り扱いと利用条件は次を参照してください。",
+    "viewOnGitHub": "GitHub で原文を見る",
+    "lastUpdated": "最終更新: {date}",
+    "latestOnGitHub": "最新版は GitHub で確認できます"
+  },
   "licenses": {
     "title": "OSS ライセンス",
     "intro": "本アプリケーションで使用しているオープンソースソフトウェア（OSS）のライセンス一覧です。",
@@ -419,6 +466,7 @@
     "passwordPh": "パスワード",
     "twoFactor": "2FAコード（オプション）",
     "twoFactorPh": "6桁の認証コード",
+    "twoFactorRequiredHint": "認証アプリの6桁コードを入力して、もう一度ログインを押してください。",
     "loggingIn": "ログイン中...",
     "login": "ログイン",
     "pathSection": "パス設定",
@@ -428,8 +476,12 @@
     "pathHint": "VRChatの起動とログ監視で使用します。launch.exeを指定してください（VRChat.exe直接起動はオフラインモードになります）。空の場合はデフォルトパスを使用します。output_log は …\\VRChat\\VRChat などのログフォルダを指定してください（空欄なら既定フォルダ）。フォルダ内の増加中の output_log*.txt を並行監視します。",
     "powerSection": "電源",
     "appSection": "アプリ",
+    "aboutAppSection": "このアプリについて",
+    "resetSetupSection": "リセットと再設定",
+    "resetSetupDestructiveHint": "データベースの最適化と、元に戻せないクリア操作です。実行前に確認ダイアログが表示されます。",
     "appVersion": "バージョン {version}",
-    "unofficialDisclaimer": "VRChat Tweaker は VRChat 公式の製品ではなく、VRChat 株式会社とは無関係の非公式ツールです。",
+    "openFirstLaunchGuide": "初回セットアップを開く",
+    "openFirstLaunchGuideHint": "ログインやフォルダ設定のウィザードを再度表示します。",
     "dataStorageNote": "ログイン情報は Windows の資格情報ストア等に保存されます。アプリのデータベースと設定は %AppData%\\Roaming\\vrchat-tweaker\\ に保存されます。",
     "closeToTray": "閉じるときにタスクトレイに格納",
     "closeToTrayHint": "ウィンドウの×ボタンで終了せずタスクトレイに常駐します。オートメーションやログ監視は継続します（Windows のみ）。オフにすると閉じる操作で終了します。",
@@ -578,6 +630,7 @@
     "profilePicThumb": "プロフィール画像サムネ",
     "friendKey": "friendKey",
     "cacheUpdated": "キャッシュ更新",
+    "openExternalUrlError": "リンクを外部ブラウザで開けませんでした。",
     "userTags": {
       "deprecated": "廃止",
       "unknown": "不明なタグ",

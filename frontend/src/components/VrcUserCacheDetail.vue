@@ -91,7 +91,7 @@
           class="profile-bio-links"
         >
           <li v-for="(u, i) in jsonStringArray(selected.bioLinksJson)" :key="i">
-            <a :href="u" target="_blank" rel="noopener noreferrer">{{ u }}</a>
+            <SafeExternalUrlLink :url="u" :test-id="`profile-bio-link-${i}`" />
           </li>
         </ul>
       </div>
@@ -184,61 +184,51 @@
                 v-if="selected.currentAvatarImageUrl"
                 :label="t('userDetail.avatarImageUrl')"
               >
-                <a
-                  :href="selected.currentAvatarImageUrl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="wrap"
-                  >{{ selected.currentAvatarImageUrl }}</a
-                >
+                <SafeExternalUrlLink
+                  :url="selected.currentAvatarImageUrl"
+                  link-class="wrap"
+                  test-id="profile-avatar-image-url"
+                />
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.userIcon"
                 :label="t('userDetail.userIconUrl')"
               >
-                <a
-                  :href="selected.userIcon"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="wrap"
-                  >{{ selected.userIcon }}</a
-                >
+                <SafeExternalUrlLink
+                  :url="selected.userIcon"
+                  link-class="wrap"
+                  test-id="profile-user-icon-url"
+                />
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.imageUrl"
                 :label="t('userDetail.imageUrl')"
               >
-                <a
-                  :href="selected.imageUrl"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="wrap"
-                  >{{ selected.imageUrl }}</a
-                >
+                <SafeExternalUrlLink
+                  :url="selected.imageUrl"
+                  link-class="wrap"
+                  test-id="profile-image-url"
+                />
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.profilePicOverride"
                 :label="t('userDetail.profilePicOverride')"
               >
-                <a
-                  :href="selected.profilePicOverride"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="wrap"
-                  >{{ selected.profilePicOverride }}</a
-                >
+                <SafeExternalUrlLink
+                  :url="selected.profilePicOverride"
+                  link-class="wrap"
+                  test-id="profile-pic-override-url"
+                />
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.profilePicOverrideThumbnail"
                 :label="t('userDetail.profilePicThumb')"
               >
-                <a
-                  :href="selected.profilePicOverrideThumbnail"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="wrap"
-                  >{{ selected.profilePicOverrideThumbnail }}</a
-                >
+                <SafeExternalUrlLink
+                  :url="selected.profilePicOverrideThumbnail"
+                  link-class="wrap"
+                  test-id="profile-pic-override-thumb-url"
+                />
               </el-descriptions-item>
               <el-descriptions-item
                 v-if="selected.friendKey"
@@ -288,6 +278,7 @@ import VrcUserTagChip from "./VrcUserTagChip.vue";
 import VtButton from "./VtButton.vue";
 import VtCheckbox from "./VtCheckbox.vue";
 import VtIcon from "./VtIcon.vue";
+import SafeExternalUrlLink from "./SafeExternalUrlLink.vue";
 import type { UserCacheDTO } from "../wails/app";
 import {
   copyDisplayName,

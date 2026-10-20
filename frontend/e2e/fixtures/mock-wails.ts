@@ -287,6 +287,16 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         GetSystemLocale: () => Promise.resolve('ja'),
         GetPathSettings: () => Promise.resolve(pathSettings),
         SetPathSettings: () => Promise.resolve(),
+        GetFirstLaunchGuideCompleted: () => Promise.resolve(true),
+        SetFirstLaunchGuideCompleted: () => Promise.resolve(),
+        GetOnboardingFolderDefaults: () =>
+          Promise.resolve({
+            vrchatPathWindows: '',
+            steamPathLinux: '',
+            outputLogPath: '',
+            pictureOutputFolder: 'C:/Pictures/VRChat',
+          }),
+        SaveOnboardingFolderSettings: () => Promise.resolve(),
         GetSuppressSleepWhileVRChat: () => Promise.resolve(false),
         SetSuppressSleepWhileVRChat: () => Promise.resolve(),
         GetCloseToTray: () => Promise.resolve(true),

@@ -37,6 +37,8 @@ const ROUTES_WITH_DEDICATED_E2E_TESTS = new Set([
   "video",
   "settings",
   "licenses",
+  "legal-privacy",
+  "legal-terms",
   "encounter-history",
   "user-profile",
 ]);
@@ -67,12 +69,39 @@ test.describe("Navigation", () => {
     await expect(page.getByRole("heading", { level: 1 })).toContainText("設定");
   });
 
-  test("settings .btn-licenses navigates to OSS licenses", async ({ page }) => {
+  test("settings OSS link navigates to licenses page", async ({ page }) => {
     await page.goto("/#/settings");
-    await page.locator(".btn-licenses").click();
+    await page.getByTestId("settings-oss-licenses-link").click();
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
       "OSS ライセンス",
     );
+  });
+
+  test("settings privacy link navigates to in-app legal page", async ({
+    page,
+  }) => {
+    await page.goto("/#/settings");
+    await page.getByTestId("legal-link-privacy").click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      "プライバシーポリシー",
+    );
+    await expect(page.getByTestId("legal-markdown-body")).toContainText(
+      "VRChat Tweaker",
+    );
+    await expect(page.locator(".legal-markdown-body h1")).toHaveCount(0);
+  });
+
+  test("settings terms link navigates to in-app legal page", async ({
+    page,
+  }) => {
+    await page.goto("/#/settings");
+    await page.getByTestId("legal-link-terms").click();
+    await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
+    await expect(page.getByRole("heading", { level: 1 })).toContainText(
+      "利用規約・免責事項",
+    );
+    await expect(page.locator(".legal-markdown-body h1")).toHaveCount(0);
   });
 
   test("direct goto encounter-history shows user encounter history", async ({
@@ -87,8 +116,9 @@ test.describe("Navigation", () => {
     const instanceLink = page.getByTestId("encounter-instance-link").first();
     await expect(instanceLink).toBeVisible();
     await expect(instanceLink).toContainText("Public #88577 [JP]");
+    await expect(instanceLink).toHaveAttribute("href", "#");
     await expect(instanceLink).toHaveAttribute(
-      "href",
+      "data-external-url",
       `https://vrchat.com/home/launch?worldId=${E2E_WORLD_ID}&instanceId=88577%7Eregion%28jp%29`,
     );
     await expect(instanceLink).toHaveAttribute(

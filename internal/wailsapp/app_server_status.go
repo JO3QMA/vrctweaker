@@ -38,9 +38,16 @@ func toServerStatusDTO(snap statuspage.Snapshot) ServerStatusDTO {
 	for i, h := range snap.Incidents {
 		incidents[i] = ServerStatusHeadlineDTO{Name: h.Name}
 	}
-	maintenances := make([]ServerStatusHeadlineDTO, len(snap.Maintenances))
-	for i, h := range snap.Maintenances {
-		maintenances[i] = ServerStatusHeadlineDTO{Name: h.Name}
+	maintenances := make([]ServerStatusMaintenanceDTO, len(snap.Maintenances))
+	for i, m := range snap.Maintenances {
+		maintenances[i] = ServerStatusMaintenanceDTO{
+			ID:             m.ID,
+			Name:           m.Name,
+			Status:         m.Status,
+			ScheduledFor:   m.ScheduledFor,
+			ScheduledUntil: m.ScheduledUntil,
+			Updates:        m.Updates,
+		}
 	}
 	return ServerStatusDTO{
 		FetchState: snap.FetchState,

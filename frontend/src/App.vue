@@ -2,6 +2,10 @@
   <el-config-provider :locale="elLocale">
     <div class="app-layout">
       <TitleBar />
+      <OnboardingWizard
+        v-if="showOnboardingWizard"
+        @finished="onOnboardingFinished"
+      />
       <div class="app-body">
         <Sidebar v-if="!bareLayout" />
         <main
@@ -23,21 +27,59 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import TitleBar from "./components/TitleBar.vue";
 import Sidebar from "./components/Sidebar.vue";
 import AppUpdateDialog from "./components/AppUpdateDialog.vue";
+import OnboardingWizard from "./components/OnboardingWizard.vue";
+import { useFirstLaunchGuide } from "./composables/useFirstLaunchGuide";
 import { useSessionUnlock } from "./composables/useSessionUnlock";
 import { elLocale, isAppLocale, setLanguage } from "./i18n";
 import { App as WailsApp } from "./wails/app";
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
 
 const route = useRoute();
 const { t, locale } = useI18n();
 const bareLayout = computed(() => route.meta.bare === true);
 
 const { beginStartupUnlock } = useSessionUnlock();
+const { manualOpen, clearManualFirstLaunchRequest } = useFirstLaunchGuide();
+const firstLaunchGuideCompleted = ref(true);
+const showOnboardingWizard = computed(
+  () => !firstLaunchGuideCompleted.value || manualOpen.value,
+);
+
+async function loadFirstLaunchGuideState(): Promise<void> {
+  const maxAttempts = 12;
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      firstLaunchGuideCompleted.value =
+        await WailsApp.getFirstLaunchGuideCompleted();
+      return;
+    } catch {
+      if (attempt < maxAttempts - 1) {
+        await delay(50 * (attempt + 1));
+        continue;
+      }
+      // Backend still unavailable: show wizard so first launch is not skipped.
+      firstLaunchGuideCompleted.value = false;
+      return;
+    }
+  }
+}
+
+function onOnboardingFinished(): void {
+  firstLaunchGuideCompleted.value = true;
+  clearManualFirstLaunchRequest();
+  beginStartupUnlock().catch(() => undefined);
+}
 
 async function initLocaleFromBackend(): Promise<void> {
   try {
@@ -55,12 +97,12 @@ async function initLocaleFromBackend(): Promise<void> {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   void initLocaleFromBackend();
-  // Best-effort: attempt to restore the previous session via the credential blob.
-  // The result (unlocked / needs-relogin) is reflected in Go-side IsLoggedIn state
-  // which individual views query via App.isLoggedIn().
-  beginStartupUnlock().catch(() => undefined);
+  await loadFirstLaunchGuideState();
+  if (firstLaunchGuideCompleted.value && !manualOpen.value) {
+    beginStartupUnlock().catch(() => undefined);
+  }
 });
 
 watch(

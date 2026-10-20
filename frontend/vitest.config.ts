@@ -1,34 +1,46 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
 import path from "node:path";
+import { legalMarkdownPlugin } from "./vite-plugin-legal-md";
 
-export default defineConfig({
-  plugins: [vue()],
-  test: {
-    environment: "jsdom",
-    globals: true,
-    include: ["src/**/*.{test,spec}.{js,ts,vue}"],
-    setupFiles: ["src/test/setupVitest.ts"],
-    coverage: {
-      provider: "v8",
-      reporter: ["text", "html"],
-      all: false,
-      exclude: [
-        "node_modules/**",
-        "src/test/**",
-        // Vitest already omits test files from coverage; listed for clarity in reviews
-        "src/**/*.{spec,test}.{js,ts,vue}",
-        "**/*.stories.ts",
-        "**/*.config.*",
-        "e2e/**",
-        "wailsjs/**",
-        ".storybook/**",
-      ],
+const repoRoot = path.resolve(__dirname, "..");
+
+export default defineConfig(({ mode }) => {
+  const env = loadEnv(mode, __dirname, "");
+  return {
+    plugins: [vue(), legalMarkdownPlugin(repoRoot)],
+    test: {
+      environment: "jsdom",
+      globals: true,
+      include: ["src/**/*.{test,spec}.{js,ts,vue}"],
+      setupFiles: ["src/test/setupVitest.ts"],
+      coverage: {
+        provider: "v8",
+        reporter: ["text", "html"],
+        all: false,
+        exclude: [
+          "node_modules/**",
+          "src/test/**",
+          // Vitest already omits test files from coverage; listed for clarity in reviews
+          "src/**/*.{spec,test}.{js,ts,vue}",
+          "**/*.stories.ts",
+          "**/*.config.*",
+          "e2e/**",
+          "wailsjs/**",
+          ".storybook/**",
+        ],
+      },
     },
-  },
-  resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "src"),
+    resolve: {
+      alias: {
+        "@": path.resolve(__dirname, "src"),
+      },
     },
-  },
+    envDir: __dirname,
+    define: {
+      "import.meta.env.VITE_LEGAL_DOCS_BASE": JSON.stringify(
+        env.VITE_LEGAL_DOCS_BASE ?? "",
+      ),
+    },
+  };
 });

@@ -119,13 +119,25 @@ describe("SettingsView", () => {
     expect(wrapper.find(".page-title").text()).toBe("設定");
   });
 
-  it("has link to OSS licenses page", async () => {
+  it("has link to OSS licenses page in about section", async () => {
     const wrapper = mountSettings();
     await flushPromises();
-    const licensesLink = wrapper.find(".btn-licenses");
+    const licensesLink = wrapper.find(
+      '[data-testid="settings-oss-licenses-link"]',
+    );
     expect(licensesLink.exists()).toBe(true);
     expect(licensesLink.attributes("href")).toContain("/licenses");
     expect(licensesLink.text()).toContain("OSS ライセンス一覧");
+  });
+
+  it("shows legal document links in about section", async () => {
+    const wrapper = mountSettings();
+    await flushPromises();
+    const privacy = wrapper.find('[data-testid="legal-link-privacy"]');
+    expect(privacy.exists()).toBe(true);
+    expect(privacy.attributes("href")).toContain("/legal/privacy");
+    const terms = wrapper.find('[data-testid="legal-link-terms"]');
+    expect(terms.attributes("href")).toContain("/legal/terms");
   });
 
   it("loads path settings on mount", async () => {
@@ -193,6 +205,24 @@ describe("SettingsView", () => {
       wrapper.find('[data-testid="settings-close-to-tray"]').exists(),
     ).toBe(true);
     expect(App.getAppUpdateAutoCheck).toHaveBeenCalled();
+    expect(
+      wrapper.find('[data-testid="settings-about-app-section"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="settings-reset-setup-section"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="settings-open-onboarding"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="settings-oss-licenses-link"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="settings-app-section"]').text(),
+    ).not.toContain("OSS");
+    expect(
+      wrapper.find('[data-testid="settings-check-app-update"]').exists(),
+    ).toBe(true);
   });
 
   it("shows up to date after manual update check", async () => {
@@ -582,10 +612,6 @@ describe("SettingsView login and profile", () => {
     await wrapper.find("#login-username").setValue("user");
     await wrapper.find("#login-password").setValue("pass");
     await wrapper.find("#login-2fa").setValue("123456");
-    await wrapper
-      .findAll("button")
-      .find((b) => b.text().includes("ログイン") && !b.text().includes("中"))!
-      .trigger("click");
     await flushPromises();
 
     expect(App.login).toHaveBeenCalledWith("user", "pass", "123456");
