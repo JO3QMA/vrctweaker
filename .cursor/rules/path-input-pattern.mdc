@@ -28,7 +28,7 @@ alwaysApply: false
 ```vue
 <!-- フォルダ選択 -->
 <div class="path-input-group">
-  <VtInput v-model="config.cacheDirectory" ... />
+  <el-input v-model="config.cacheDirectory" ... />
   <VtButton variant="secondary" data-testid="cache-browse" @click="browseCacheDirectory">
     参照
   </VtButton>
@@ -36,14 +36,14 @@ alwaysApply: false
 
 <!-- ファイル選択 -->
 <div class="path-input-group">
-  <VtInput v-model="pathSettings.outputLogPath" ... />
+  <el-input v-model="pathSettings.outputLogPath" ... />
   <VtButton variant="secondary" data-testid="output-log-browse" @click="browseOutputLogPath">
     参照
   </VtButton>
 </div>
 ```
 
-正本: [ADR 0021](../docs/adr/0021-form-control-design-system.md)、`.cursor/rules/form-design-system.mdc`（**Path input row**）。
+正本: [ADR 0021](../docs/adr/0021-form-control-design-system.md)、`.cursor/rules/form-design-system.mdc`（**Path input row**。入力は `el-input`）。
 
 ```ts
 // フォルダ選択

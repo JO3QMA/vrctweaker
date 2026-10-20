@@ -2,43 +2,43 @@
 
 /* ─── App color tokens (ADR 0019) ──────────────────────────────── */
 :root {
-  /* Brand */
-  --color-brand: #5c9ce6;
-  --color-brand-hover: #7ab3f0;
+  /* Brand: リンク・フォーカス・Primary button の塗り */
+  --color-brand: #5c9ce6; /* リンク・フォーカス・Primary button 塗り */
+  --color-brand-hover: #7ab3f0; /* brand の hover */
 
-  /* Neutral */
-  --color-bg-base: #1b2636;
-  --color-bg-elevated: #243447;
-  --color-bg-muted: #2d3f54;
-  --color-text-primary: #e8eaed;
-  --color-text-secondary: #9aa0a6;
-  --color-text-muted: #6b7280;
-  --color-text-inverse: #ffffff;
-  --color-border: #3d4f66;
+  /* Neutral: 表面・文字・枠線 */
+  --color-bg-base: #1b2636; /* 表面 base */
+  --color-bg-elevated: #243447; /* 表面 elevated */
+  --color-bg-muted: #2d3f54; /* 表面 muted */
+  --color-text-primary: #e8eaed; /* 本文 */
+  --color-text-secondary: #9aa0a6; /* 補足 */
+  --color-text-muted: #6b7280; /* プレースホルダ・無効 */
+  --color-text-inverse: #ffffff; /* 反転文字（Presence チップ） */
+  --color-border: #3d4f66; /* 枠線 */
 
-  /* Semantic */
-  --color-danger: #e57373;
-  --color-success: #81c784;
-  --color-warning: #ffb74d;
-  --color-info: #9aa0a6;
+  /* Semantic: タグ・メッセージ・検証のフィードバック。Server status と Presence には使わない */
+  --color-danger: #e57373; /* 危険・破壊 */
+  --color-success: #81c784; /* 成功 */
+  --color-warning: #ffb74d; /* 警告 */
+  --color-info: #9aa0a6; /* 情報 */
 
-  /* Server status (domain) */
-  --color-status-operational: #2e9f4a;
-  --color-status-degraded: #d4a017;
-  --color-status-partial: #e8943c;
-  --color-status-major: #d94a4a;
-  --color-status-maintenance: #2b7fd9;
-  --color-status-unknown: var(--color-text-secondary);
+  /* Server status (domain): Dashboard のサーバー状態。Semantic には流用しない */
+  --color-status-operational: #2e9f4a; /* operational */
+  --color-status-degraded: #d4a017; /* degraded */
+  --color-status-partial: #e8943c; /* partial */
+  --color-status-major: #d94a4a; /* major */
+  --color-status-maintenance: #2b7fd9; /* maintenance */
+  --color-status-unknown: var(--color-text-secondary); /* unknown */
 
-  /* Presence (domain) */
-  --color-presence-join-me: #2b7fd9;
-  --color-presence-join-me-border: #256bb8;
-  --color-presence-active: #2e9f4a;
-  --color-presence-active-border: #267d3c;
-  --color-presence-ask-me: #e8943c;
-  --color-presence-ask-me-border: #c97d2e;
-  --color-presence-busy: #d94a4a;
-  --color-presence-busy-border: #b83c3c;
+  /* Presence (domain): Presence change の色。背景と枠は別トークン */
+  --color-presence-join-me: #2b7fd9; /* Join Me 背景 */
+  --color-presence-join-me-border: #256bb8; /* Join Me 枠 */
+  --color-presence-active: #2e9f4a; /* Active 背景 */
+  --color-presence-active-border: #267d3c; /* Active 枠 */
+  --color-presence-ask-me: #e8943c; /* Ask Me 背景 */
+  --color-presence-ask-me-border: #c97d2e; /* Ask Me 枠 */
+  --color-presence-busy: #d94a4a; /* Busy 背景 */
+  --color-presence-busy-border: #b83c3c; /* Busy 枠 */
 
   /* Legacy aliases (Color adoption; deprecated — for backward compatibility only) */
   --bg-primary: var(--color-bg-base);
@@ -52,6 +52,7 @@
   --success: var(--color-success);
   --border: var(--color-border);
 
+  /* Shell chrome */
   --radius: 8px;
   --sidebar-width: 220px;
 
@@ -66,34 +67,40 @@
   --space-64: 64px;
 
   /* Spacing pattern catalog */
-  --space-inline-tight: var(--space-4);
-  --space-action-group: var(--space-8);
-  --space-form-field: var(--space-12);
-  --space-block: var(--space-16);
-  --space-section: var(--space-24);
-  --space-page: var(--space-32);
+  --space-inline-tight: var(--space-4); /* チップ横・バッジ内・インライン詰め */
+  --space-action-group: var(--space-8); /* Action group・ツールバーの間隔 */
+  --space-form-field: var(--space-12); /* フォーム項目間 */
+  --space-block: var(--space-16); /* 見出し下・段落間 */
+  --space-section: var(--space-24); /* セクションカード間 */
+  --space-page: var(--space-32); /* ページ外周 */
 
   /* Typography scale (ADR 0020) */
-  --font-size-10: 10px;
-  --font-size-12: 12px;
-  --font-size-14: 14px;
-  --font-size-16: 16px;
-  --font-size-18: 18px;
+  --font-size-10: 10px; /* caption */
+  --font-size-12: 12px; /* body small */
+  --font-size-14: 14px; /* 本文既定 */
+  --font-size-16: 16px; /* heading 3 */
+  --font-size-18: 18px; /* heading 2 */
   --font-size-20: 20px;
   --font-size-24: 24px;
-  /* Outside scale: preserves legacy page title (1.4rem @ 14px root = 19.6px). */
-  --font-size-h1: calc(var(--font-size-14) * 1.4);
+  /* Font size derivative */
+  --font-size-h1: calc(
+    var(--font-size-14) * 1.4
+  ); /* レガシー page title（1.4rem @ 14px root = 19.6px） */
 
-  --line-height-tight: 1.25;
-  --line-height-normal: 1.5;
-  --line-height-relaxed: 1.75;
+  /* Line height scale */
+  --line-height-tight: 1.25; /* 見出し */
+  --line-height-normal: 1.5; /* 本文既定 */
+  --line-height-relaxed: 1.75; /* 長文 */
 
-  --font-weight-400: 400;
+  /* Font weight scale */
+  --font-weight-400: 400; /* 本文既定 */
   --font-weight-500: 500;
-  --font-weight-600: 600;
+  --font-weight-600: 600; /* 見出し */
   --font-weight-700: 700;
 
-  --font-family-ui: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  /* UI font family */
+  --font-family-ui:
+    "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif; /* UI サンセリフ */
 
   /* Icon size scale (ADR 0023) */
   --icon-size-12: 12px;
@@ -220,8 +227,7 @@ html.dark {
   --el-font-size-large: var(--font-size-18);
   --el-font-size-medium: var(--font-size-16);
   --el-font-size-base: var(--font-size-14);
-  /* ADR 0020: Element Plus small is intentionally outside the app scale */
-  --el-font-size-small: 13px;
+  --el-font-size-small: 13px; /* スケール外の derivative。画面からは参照しない */
   --el-font-size-extra-small: var(--font-size-12);
 }
 

@@ -1,12 +1,11 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
-import type { SimpleColorToken } from "./colorTokens";
+import styleCss from "../assets/style.css?raw";
 import {
-  BRAND_COLOR_TOKENS,
-  NEUTRAL_COLOR_TOKENS,
-  PRESENCE_COLOR_TOKENS,
-  SEMANTIC_COLOR_TOKENS,
-  SERVER_STATUS_COLOR_TOKENS,
-} from "./colorTokens";
+  parseStyleSheet,
+  resolveCustomProperties,
+  type CssCustomProperty,
+  type ResolvedCustomProperty,
+} from "./cssCustomProperties";
 import "./Color.stories.css";
 
 const catalogParameters = {
@@ -22,122 +21,165 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-function swatchStory(
-  title: string,
-  description: string,
-  rows: ReadonlyArray<Pick<SimpleColorToken, "varName">>,
-): Story {
+const parsed = parseStyleSheet(styleCss);
+const rootProps = parsed.customProperties.filter(
+  (prop) => prop.selector === ":root",
+);
+const darkProps = parsed.customProperties.filter(
+  (prop) => prop.selector === "html.dark",
+);
+
+function colorGroup(prefix: string): CssCustomProperty[] {
+  return rootProps.filter(
+    (prop) => prop.group.startsWith(prefix) && prop.name.startsWith("--color-"),
+  );
+}
+
+type SwatchRow = ResolvedCustomProperty & {
+  kind: "text" | "border" | "fill";
+};
+
+function swatchRows(props: CssCustomProperty[]): SwatchRow[] {
+  return resolveCustomProperties(document, props).map((row) => ({
+    ...row,
+    kind: row.name.includes("--color-text-")
+      ? "text"
+      : row.name === "--color-border" || row.name.endsWith("-border")
+        ? "border"
+        : "fill",
+  }));
+}
+
+const tokenTable = `
+  <table class="color-story-table">
+    <thead>
+      <tr>
+        <th>Group</th>
+        <th>Token</th>
+        <th>Usage</th>
+        <th>Declared</th>
+        <th>Resolved</th>
+        <th>Selector</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="row in rows" :key="row.selector + row.name">
+        <td>{{ row.group }}</td>
+        <td><code>{{ row.name }}</code></td>
+        <td>{{ row.description }}</td>
+        <td><code>{{ row.value }}</code></td>
+        <td><code v-if="row.referencesVar">{{ row.resolved }}</code><span v-else>—</span></td>
+        <td><code>{{ row.selector }}</code></td>
+      </tr>
+    </tbody>
+  </table>
+`;
+
+function swatchStory(title: string, props: CssCustomProperty[]): Story {
   return {
     name: title,
     render: () => ({
-      setup: () => ({ title, description, rows }),
+      setup: () => ({
+        title,
+        description: props[0]?.group ?? "",
+        rows: swatchRows(props),
+      }),
       template: `
         <div class="color-story">
           <h2>{{ title }}</h2>
           <p>{{ description }}</p>
           <div class="color-story-grid">
-            <div v-for="row in rows" :key="row.varName" class="color-story-swatch">
+            <div v-for="row in rows" :key="row.name" class="color-story-swatch">
               <div
+                v-if="row.kind === 'text'"
+                class="color-story-swatch-chip color-story-swatch-chip--text"
+                :style="{ color: 'var(' + row.name + ')' }"
+              >Aa</div>
+              <div
+                v-else-if="row.kind === 'border'"
                 class="color-story-swatch-chip"
-                :style="{ background: 'var(' + row.varName + ')' }"
+                :style="{ background: 'var(--color-bg-base)', border: '3px solid var(' + row.name + ')' }"
               />
-              <span class="color-story-swatch-label">{{ row.varName }}</span>
+              <div
+                v-else
+                class="color-story-swatch-chip"
+                :style="{ background: 'var(' + row.name + ')' }"
+              />
+              <span class="color-story-swatch-label">{{ row.name }}</span>
+              <span v-if="row.description" class="color-story-swatch-label">{{ row.description }}</span>
             </div>
           </div>
+          ${tokenTable}
         </div>
       `,
     }),
   };
 }
 
-export const Brand: Story = swatchStory(
-  "Brand color",
-  "Main accent. Primary button fill and links use --color-brand.",
-  BRAND_COLOR_TOKENS,
-);
+export const Brand: Story = swatchStory("Brand color", colorGroup("Brand"));
 
-export const Neutral: Story = {
-  name: "Neutral color",
-  render: () => ({
-    setup: () => ({ rows: NEUTRAL_COLOR_TOKENS }),
-    template: `
-      <div class="color-story">
-        <h2>Neutral color</h2>
-        <p>Surfaces, text, and border. Prefer these over legacy --bg-* / --text-* aliases.</p>
-        <div class="color-story-grid">
-          <div v-for="row in rows" :key="row.varName" class="color-story-swatch">
-            <div
-              v-if="row.name.startsWith('text-')"
-              class="color-story-swatch-chip color-story-swatch-chip--text"
-              :style="{ color: 'var(' + row.varName + ')' }"
-            >Aa</div>
-            <div
-              v-else-if="row.name === 'border'"
-              class="color-story-swatch-chip"
-              :style="{ background: 'var(--color-bg-base)', border: '3px solid var(' + row.varName + ')' }"
-            />
-            <div
-              v-else
-              class="color-story-swatch-chip"
-              :style="{ background: 'var(' + row.varName + ')' }"
-            />
-            <span class="color-story-swatch-label">{{ row.varName }}</span>
-            <span v-if="row.legacyAlias" class="color-story-swatch-label">alias: {{ row.legacyAlias }}</span>
-          </div>
-        </div>
-      </div>
-    `,
-  }),
-};
+export const Neutral: Story = swatchStory(
+  "Neutral color",
+  colorGroup("Neutral"),
+);
 
 export const Semantic: Story = swatchStory(
   "Semantic color catalog",
-  "Feedback for tags, messages, and validation. Not for Server status or Presence.",
-  SEMANTIC_COLOR_TOKENS,
+  colorGroup("Semantic"),
 );
 
 export const ServerStatus: Story = swatchStory(
   "Server status color",
-  "Domain colors for Dashboard Server status. Do not reuse as Semantic feedback.",
-  SERVER_STATUS_COLOR_TOKENS,
+  colorGroup("Server status"),
 );
 
 export const Presence: Story = {
   name: "Presence color",
   render: () => ({
-    setup: () => ({ rows: PRESENCE_COLOR_TOKENS }),
+    setup: () => {
+      const rows = swatchRows(colorGroup("Presence"));
+      const chips = rows.filter((row) => !row.name.endsWith("-border"));
+      return { rows, chips, description: rows[0]?.group ?? "" };
+    },
     template: `
       <div class="color-story">
         <h2>Presence color</h2>
-        <p>Domain colors for Presence change Semantic buttons.</p>
+        <p>{{ description }}</p>
         <p>
           Chips use <code>--color-text-inverse</code> on every state, matching the production
-          Presence change section (ADR 0019 v1 visual policy). Ask-me contrast is below WCAG AA;
-          per-state text colors are a follow-up, not this tokenize PR.
+          Presence change section (ADR 0019 v1 visual policy).
         </p>
         <div class="color-story-presence-row">
           <div
-            v-for="row in rows"
+            v-for="row in chips"
             :key="row.name"
             class="color-story-presence-chip"
             :style="{
-              background: 'var(' + row.bgVar + ')',
-              borderColor: 'var(' + row.borderVar + ')',
+              background: 'var(' + row.name + ')',
+              borderColor: 'var(' + row.name + '-border)',
             }"
-          >{{ row.name }}</div>
+          >{{ row.description }}</div>
         </div>
-        <table class="color-story-table">
-          <thead>
-            <tr><th>Name</th><th>Background</th><th>Border</th></tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in rows" :key="row.name">
-              <td>{{ row.name }}</td>
-              <td><code>{{ row.bgVar }}</code></td>
-              <td><code>{{ row.borderVar }}</code></td>
-            </tr>
-          </tbody>
-        </table>
+        ${tokenTable}
+      </div>
+    `,
+  }),
+};
+
+export const LegacyAliases: Story = {
+  name: "Legacy aliases",
+  render: () => ({
+    setup: () => ({
+      rows: resolveCustomProperties(
+        document,
+        rootProps.filter((prop) => prop.group.startsWith("Legacy")),
+      ),
+    }),
+    template: `
+      <div class="color-story">
+        <h2>Legacy aliases</h2>
+        <p>{{ rows[0] && rows[0].group }}</p>
+        ${tokenTable}
       </div>
     `,
   }),
@@ -146,29 +188,27 @@ export const Presence: Story = {
 export const ElementPlusMapping: Story = {
   name: "Element Plus mapping",
   render: () => ({
+    setup: () => ({
+      rows: resolveCustomProperties(
+        document,
+        darkProps.filter(
+          (prop) =>
+            !prop.name.includes("font-size") &&
+            (prop.name.includes("color") ||
+              prop.value.includes("var(--color-")),
+        ),
+      ),
+    }),
     template: `
       <div class="color-story">
         <h2>Element Plus color mapping</h2>
         <p>
           App tokens in <code>:root</code> are canonical.
-          <code>html.dark</code> maps <code>--el-color-*</code> and neutrals from them.
-          <code>light-*</code> / <code>dark-*</code> derivatives stay in the mapping block only.
+          Rows below are custom properties declared on <code>html.dark</code>.
+          Declared <code>var(--…)</code> is shown beside the value read with
+          <code>getComputedStyle</code> from the <code>html.dark</code> element.
         </p>
-        <table class="color-story-table">
-          <thead>
-            <tr><th>App token</th><th>Element Plus (examples)</th></tr>
-          </thead>
-          <tbody>
-            <tr><td><code>--color-brand</code></td><td><code>--el-color-primary</code></td></tr>
-            <tr><td><code>--color-brand-hover</code></td><td><code>--el-color-primary-light-3</code></td></tr>
-            <tr><td><code>--color-danger</code></td><td><code>--el-color-danger</code>, <code>--el-color-error</code></td></tr>
-            <tr><td><code>--color-success</code></td><td><code>--el-color-success</code></td></tr>
-            <tr><td><code>--color-warning</code></td><td><code>--el-color-warning</code></td></tr>
-            <tr><td><code>--color-info</code></td><td><code>--el-color-info</code></td></tr>
-            <tr><td><code>--color-bg-base</code></td><td><code>--el-bg-color-page</code></td></tr>
-            <tr><td><code>--color-text-muted</code></td><td><code>--el-text-color-placeholder</code></td></tr>
-          </tbody>
-        </table>
+        ${tokenTable}
       </div>
     `,
   }),

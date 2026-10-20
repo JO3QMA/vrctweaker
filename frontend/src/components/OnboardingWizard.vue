@@ -62,7 +62,7 @@
             class="login-error"
           />
           <el-form-item :label="t('settings.username')">
-            <VtInput
+            <el-input
               v-model="loginForm.username"
               data-testid="onboarding-login-username"
               :placeholder="t('settings.usernamePh')"
@@ -70,7 +70,7 @@
             />
           </el-form-item>
           <el-form-item :label="t('settings.password')">
-            <VtInput
+            <el-input
               v-model="loginForm.password"
               data-testid="onboarding-login-password"
               type="password"
@@ -212,7 +212,6 @@ import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import VtAlert from "./VtAlert.vue";
 import VtButton from "./VtButton.vue";
-import VtInput from "./VtInput.vue";
 import LoginTwoFactorCodeField from "./LoginTwoFactorCodeField.vue";
 import LegalDocLinks from "./LegalDocLinks.vue";
 import VtTag from "./VtTag.vue";

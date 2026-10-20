@@ -49,12 +49,12 @@
             <div v-else class="profile-avatar profile-avatar--placeholder" />
           </div>
           <div v-if="variant !== 'self'" class="profile-toolbar-actions">
-            <VtCheckbox
+            <el-checkbox
               :model-value="selected.isFavorite"
               @update:model-value="onFavoriteUpdate"
             >
               {{ t("userDetail.favorite") }}
-            </VtCheckbox>
+            </el-checkbox>
           </div>
         </div>
       </div>
@@ -276,7 +276,6 @@ import FriendAvatarList from "./FriendAvatarList.vue";
 import VrcStatusTag from "./VrcStatusTag.vue";
 import VrcUserTagChip from "./VrcUserTagChip.vue";
 import VtButton from "./VtButton.vue";
-import VtCheckbox from "./VtCheckbox.vue";
 import VtIcon from "./VtIcon.vue";
 import SafeExternalUrlLink from "./SafeExternalUrlLink.vue";
 import type { UserCacheDTO } from "../wails/app";

@@ -1,5 +1,5 @@
 ---
-description: Form control ラッパーとレイアウト規約（ADR 0021）。新規・改修で触った画面は VtInput / VtSelect / VtCheckbox / VtSwitch を使う
+description: Form control とレイアウト規約（ADR 0021）。新規・改修で触った画面は el-input / el-select / el-checkbox / el-switch を直接使う
 globs: "frontend/**/*.{vue,ts}"
 alwaysApply: false
 ---
@@ -12,10 +12,10 @@ alwaysApply: false
 
 | 用途 | コンポーネント |
 |------|----------------|
-| テキスト入力 | **`VtInput`** |
-| 単一選択 | **`VtSelect`** + `el-option` |
-| 編集フォーム内の真偽（一括保存） | **`VtCheckbox`** |
-| 即時反映設定・一覧の有効フラグ | **`VtSwitch`** |
+| テキスト入力 | **`el-input`** |
+| 単一選択 | **`el-select`** + `el-option` |
+| 編集フォーム内の真偽（一括保存） | **`el-checkbox`** |
+| 即時反映設定・一覧の有効フラグ | **`el-switch`** |
 
 `disabled` / `size` / `data-testid` / `placeholder` 等はそのまま渡す（透過）。
 
@@ -23,12 +23,12 @@ alwaysApply: false
 
 | 文脈 | 使うもの |
 |------|----------|
-| `el-form` 内・他項目と同じ保存タイミング | **VtCheckbox** |
-| 即時 API 保存の単発設定（多くは Setting row） | **VtSwitch** |
-| 一覧カードの有効/無効即切替 | **VtSwitch**（`size="small"` 可） |
-| UI 表示モード切替（Friends Online/Offline 等） | **UI mode toggle**（既存 toggle-group。VtSwitch にしない） |
+| `el-form` 内・他項目と同じ保存タイミング | **`el-checkbox`** |
+| 即時 API 保存の単発設定（多くは Setting row） | **`el-switch`** |
+| 一覧カードの有効/無効即切替 | **`el-switch`**（`size="small"` 可） |
+| UI 表示モード切替（Friends Online/Offline 等） | **UI mode toggle**（既存 toggle-group。`el-switch` にしない） |
 
-**VtSwitch** の `active-text` / `inline-prompt` は使わない。ラベルは外側で付ける。
+`el-switch` の `active-text` / `inline-prompt` は使わない。ラベルは外側で付ける。透過ラッパー（旧 VtInput 等）は作らない。
 
 ## レイアウト
 
@@ -36,14 +36,14 @@ alwaysApply: false
 |----------|------|
 | **Form layout** | 複数項目の編集 → `el-form` + `label-position="top"` + `size="default"`。項目間 `--space-form-field` |
 | **Setting row** | カード内 1 行設定 → `.setting-row`（ラベル左・コントロール右） |
-| **Path input row** | パス入力 → `.path-input-group` + **VtInput** + 参照 **VtButton** `variant="secondary"` |
+| **Path input row** | パス入力 → `.path-input-group` + **`el-input`** + 参照 **VtButton** `variant="secondary"` |
 
 編集フォーム内の入力は **`el-form-item` 内で幅 100%**（フル幅）を既定とする。
 
 ## サイズ
 
 - 省略時 **default**（`el-form size="default"` で継承）
-- `small` は **List enable toggle** の VtSwitch と密集レイアウトの明示指定のみ
+- `small` は **List enable toggle** の `el-switch` と密集レイアウトの明示指定のみ
 - `large` は使わない
 
 ## エラー
@@ -57,14 +57,13 @@ alwaysApply: false
 
 ## 移行
 
-- 新規・改修で触ったファイルは Vt* へ。未触りの `el-input` 等直書きは一括置換しない
+- 新規・改修で触ったファイルは `el-input` / `el-select` / `el-checkbox` / `el-switch` を直接使う。透過ラッパーは足さない
 - ESLint 禁止は v1 では入れない
 - パス入力: `.cursor/rules/path-input-pattern.mdc`
 
 ## Storybook
 
-- `VtInput.stories.ts` / `VtSelect.stories.ts` / `VtCheckbox.stories.ts` / `VtSwitch.stories.ts`
-- `FormLayoutPatterns.stories.ts` — レイアウト例の正本
+- `FormLayoutPatterns.stories.ts` — `el-*` の見本とレイアウト例。見た目は `style.css` のグローバル CSS
 
 ## 関連
 

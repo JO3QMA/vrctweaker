@@ -33,7 +33,7 @@ Accepted（Done）
 | 現行 | 寄せ先 |
 |------|--------|
 | `el-button` | **VtButton**（`variant` 必須） |
-| `el-input` / `el-select` / `el-checkbox` / `el-switch` | **VtInput** / **VtSelect** / **VtCheckbox** / **VtSwitch** |
+| `el-input` / `el-select` / `el-checkbox` / `el-switch` | いったん Vt* に寄せた。2026-10-20 の ADR 0021 改訂で透過ラッパーは廃し、再び `el-*` を直接使う |
 | `el-alert` | **VtAlert** |
 | 汎用 `el-tag` | **VtTag**（Domain badge 除く） |
 | `ElMessage.*` | **showToast** |
@@ -51,7 +51,8 @@ Spacing / Typography / Icon のスケール外値は四捨五入で最寄り段�
 
 対象外を除き、Views + 共有 UI で次が残っていないこと。
 
-- テンプレートの `el-button` / `el-input` / `el-select` / `el-checkbox` / `el-switch` / `el-alert` / 汎用 `el-tag`
+- テンプレートの `el-button` / `el-alert` / 汎用 `el-tag`
+- `el-input` / `el-select` / `el-checkbox` / `el-switch` は、2026-10-20 の ADR 0021 改訂後は残してよい（透過ラッパーを廃したため）
 - 本番の `ElMessage.success|error|warning|info` 直叩き（`showToast` 実装・テスト除く）
 - scoped のレガシー `--accent` / `--bg-primary` 等の参照（`:root` alias 定義は残してよい）
 - スケール外の余白・font-size・icon 辺長の直書き（TitleBar クローム等の明示除外を除く）
@@ -70,7 +71,7 @@ Spacing / Typography / Icon のスケール外値は四捨五入で最寄り段�
 
 - **Semantic button**: `PresenceChangeSection` の Presence 色 `el-button`
 - **UI mode toggle**: `FriendsViewToolbar` の Online/Offline `el-switch`
-- **`el-checkbox-group`**: Automation 曜日選択のグループラッパー（子は `VtCheckbox`）
+- **`el-checkbox-group`**: Automation 曜日選択のグループラッパー（子は `el-checkbox`。旧 VtCheckbox）
 - **未整備 EP**: `el-input-number` / `el-slider` / `el-date-picker` / `el-progress` / `el-autocomplete` / `el-radio-*` / `el-table` / `el-card` / `el-form*` 等
 - **Domain badge**: `VrcStatusTag` / `VrcUserTagChip`
 - **TitleBar** クローム固有寸法、**Sidebar** 絵文字（サイズトークンのみ）

@@ -165,7 +165,7 @@
         <el-form label-position="top" size="default">
           <el-form-item :label="t('config.outputFolder')">
             <div class="path-input-group">
-              <VtInput
+              <el-input
                 id="picture-output-folder"
                 v-model="config.pictureOutputFolder"
                 :placeholder="t('config.outputFolderPh')"
@@ -181,12 +181,12 @@
             </div>
           </el-form-item>
           <el-form-item>
-            <VtCheckbox
+            <el-checkbox
               v-model="pictureOutputSplitByDate"
               data-testid="picture-split-by-date-checkbox"
             >
               {{ t("config.splitByDate") }}
-            </VtCheckbox>
+            </el-checkbox>
           </el-form-item>
         </el-form>
       </el-card>
@@ -230,7 +230,7 @@
         <el-form label-position="top" size="default">
           <el-form-item :label="t('config.cacheDir')">
             <div class="path-input-group">
-              <VtInput
+              <el-input
                 id="cache-directory"
                 v-model="config.cacheDirectory"
                 :placeholder="t('config.cacheDirPh')"
@@ -293,12 +293,12 @@
       <!-- Rich Presence -->
       <el-card shadow="never" class="section-card">
         <template #header>{{ t("config.otherHeader") }}</template>
-        <VtCheckbox
+        <el-checkbox
           v-model="disableRichPresence"
           data-testid="disable-rich-presence-checkbox"
         >
           {{ t("config.richPresenceOff") }}
-        </VtCheckbox>
+        </el-checkbox>
       </el-card>
 
       <!-- Actions -->
@@ -329,8 +329,6 @@ import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
 import VtAlert from "../components/VtAlert.vue";
 import VtButton from "../components/VtButton.vue";
-import VtCheckbox from "../components/VtCheckbox.vue";
-import VtInput from "../components/VtInput.vue";
 import {
   VT_BUTTON_DANGER_CONFIRM_CLASS,
   VT_BUTTON_SECONDARY_CANCEL_CLASS,

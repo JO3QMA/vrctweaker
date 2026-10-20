@@ -4,7 +4,7 @@
 
     <div class="filters">
       <div class="filters-criteria">
-        <VtInput
+        <el-input
           v-model="filterWorldSearch"
           data-testid="gallery-world-filter"
           type="search"
@@ -16,7 +16,7 @@
           <template #prefix>
             <VtIcon size="default"><Search /></VtIcon>
           </template>
-        </VtInput>
+        </el-input>
         <el-date-picker
           v-model="filterDateRange"
           data-testid="gallery-date-range"
@@ -319,7 +319,6 @@ import { useVirtualizer, type VirtualItem } from "@tanstack/vue-virtual";
 import VtAlert from "../components/VtAlert.vue";
 import VtButton from "../components/VtButton.vue";
 import VtIcon from "../components/VtIcon.vue";
-import VtInput from "../components/VtInput.vue";
 import VrcInstanceKeyLabel from "../components/VrcInstanceKeyLabel.vue";
 import {
   ref,

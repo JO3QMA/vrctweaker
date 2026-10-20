@@ -83,24 +83,24 @@
 
         <el-form label-position="top" size="default">
           <el-form-item :label="t('launcher.profileName')">
-            <VtInput v-model="selected.name" />
+            <el-input v-model="selected.name" />
           </el-form-item>
 
           <el-form-item>
-            <VtCheckbox v-model="selected.isDefault">
+            <el-checkbox v-model="selected.isDefault">
               {{ t("launcher.setAsDefault") }}
-            </VtCheckbox>
+            </el-checkbox>
           </el-form-item>
 
           <el-form-item :label="t('launcher.launchArgs')">
             <div class="launch-args-gui">
               <div class="arg-row">
-                <VtCheckbox
+                <el-checkbox
                   v-model="launchArgs.noVr"
                   data-testid="no-vr-checkbox"
                 >
                   {{ t("launcher.desktopMode") }}
-                </VtCheckbox>
+                </el-checkbox>
               </div>
 
               <el-form-item
@@ -131,7 +131,7 @@
               </el-form-item>
 
               <el-form-item :label="t('launcher.customArgs')">
-                <VtInput
+                <el-input
                   v-model="launchArgs.custom"
                   placeholder="-batchmode"
                   data-testid="custom-args-input"
@@ -152,13 +152,13 @@
                     </h3>
                     <div class="launch-args-advanced">
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="valueOptionsEnabled.resolution"
                           data-testid="resolution-enabled-checkbox"
                           @change="onResolutionEnabledChange"
                         >
                           {{ t("launcher.resolutionHint") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div
                         v-if="valueOptionsEnabled.resolution"
@@ -227,13 +227,13 @@
                       </div>
 
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="valueOptionsEnabled.monitor"
                           data-testid="monitor-enabled-checkbox"
                           @change="onMonitorEnabledChange"
                         >
                           {{ t("launcher.monitorHint") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div
                         v-if="valueOptionsEnabled.monitor"
@@ -250,13 +250,13 @@
                       </div>
 
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="valueOptionsEnabled.fps"
                           data-testid="fps-enabled-checkbox"
                           @change="onFpsEnabledChange"
                         >
                           {{ t("launcher.fpsHint") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div v-if="valueOptionsEnabled.fps" class="sub-options">
                         <el-input-number
@@ -270,22 +270,22 @@
                       </div>
 
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="launchArgs.skipRegistry"
                           data-testid="skip-registry-checkbox"
                         >
                           {{ t("launcher.skipRegistry") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
 
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="valueOptionsEnabled.processPriority"
                           data-testid="process-priority-enabled-checkbox"
                           @change="onProcessPriorityEnabledChange"
                         >
                           {{ t("launcher.processPriority") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div
                         v-if="valueOptionsEnabled.processPriority"
@@ -303,13 +303,13 @@
                       </div>
 
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="valueOptionsEnabled.mainThreadPriority"
                           data-testid="main-thread-priority-enabled-checkbox"
                           @change="onMainThreadPriorityEnabledChange"
                         >
                           {{ t("launcher.mainThreadPriority") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div
                         v-if="valueOptionsEnabled.mainThreadPriority"
@@ -327,13 +327,13 @@
                       </div>
 
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="valueOptionsEnabled.profile"
                           data-testid="profile-enabled-checkbox"
                           @change="onProfileEnabledChange"
                         >
                           {{ t("launcher.profileHint") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div
                         v-if="valueOptionsEnabled.profile"
@@ -358,65 +358,65 @@
                     </h3>
                     <div class="launch-args-advanced">
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="launchArgs.enableDebugGui"
                           data-testid="enable-debug-gui-checkbox"
                         >
                           {{ t("launcher.debugGui") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="launchArgs.enableSDKLogLevels"
                           data-testid="enable-sdk-log-levels-checkbox"
                         >
                           {{ t("launcher.sdkLog") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="launchArgs.enableUdonDebugLogging"
                           data-testid="enable-udon-debug-logging-checkbox"
                         >
                           {{ t("launcher.udonDebug") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="launchArgs.watchWorlds"
                           data-testid="watch-worlds-checkbox"
                         >
                           {{ t("launcher.watchWorlds") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="launchArgs.watchAvatars"
                           data-testid="watch-avatars-checkbox"
                         >
                           {{ t("launcher.watchAvatars") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="launchArgs.enforceWorldServerChecks"
                           data-testid="enforce-world-server-checks-checkbox"
                         >
                           {{ t("launcher.enforceWorldServer") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
 
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="valueOptionsEnabled.midi"
                           data-testid="midi-enabled-checkbox"
                           @change="onMidiEnabledChange"
                         >
                           {{ t("launcher.midi") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div v-if="valueOptionsEnabled.midi" class="sub-options">
-                        <VtInput
+                        <el-input
                           v-model="launchArgs.midi"
                           :placeholder="t('launcher.midiPh')"
                           data-testid="midi-input"
@@ -426,19 +426,19 @@
                       </div>
 
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="valueOptionsEnabled.ignoreTrackers"
                           data-testid="ignore-trackers-enabled-checkbox"
                           @change="onIgnoreTrackersEnabledChange"
                         >
                           {{ t("launcher.ignoreTrackers") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div
                         v-if="valueOptionsEnabled.ignoreTrackers"
                         class="sub-options"
                       >
-                        <VtInput
+                        <el-input
                           v-model="launchArgs.ignoreTrackers"
                           placeholder="serial1,serial2"
                           data-testid="ignore-trackers-input"
@@ -481,25 +481,25 @@
                       </el-form-item>
 
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="launchArgs.disableAMDStutterWorkaround"
                           data-testid="disable-amd-stutter-workaround-checkbox"
                         >
                           {{ t("launcher.disableAmdStutter") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
 
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="valueOptionsEnabled.osc"
                           data-testid="osc-enabled-checkbox"
                           @change="onOscEnabledChange"
                         >
                           {{ t("launcher.osc") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div v-if="valueOptionsEnabled.osc" class="sub-options">
-                        <VtInput
+                        <el-input
                           v-model="launchArgs.osc"
                           :placeholder="t('launcher.oscPh')"
                           data-testid="osc-input"
@@ -509,13 +509,13 @@
                       </div>
 
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="valueOptionsEnabled.affinity"
                           data-testid="affinity-enabled-checkbox"
                           @change="onAffinityEnabledChange"
                         >
                           {{ t("launcher.affinity") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div
                         v-if="valueOptionsEnabled.affinity"
@@ -536,13 +536,13 @@
                     </h3>
                     <div class="launch-args-advanced">
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="valueOptionsEnabled.customArmRatio"
                           data-testid="custom-arm-ratio-enabled-checkbox"
                           @change="onCustomArmRatioEnabledChange"
                         >
                           {{ t("launcher.customArmRatio") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div
                         v-if="valueOptionsEnabled.customArmRatio"
@@ -560,31 +560,31 @@
                       </div>
 
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="launchArgs.disableShoulderTracking"
                           data-testid="disable-shoulder-tracking-checkbox"
                         >
                           {{ t("launcher.disableShoulderTracking") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
 
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="launchArgs.enableIkDebugLogging"
                           data-testid="enable-ik-debug-logging-checkbox"
                         >
                           {{ t("launcher.enableIkDebugLogging") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
 
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="valueOptionsEnabled.calibrationRange"
                           data-testid="calibration-range-enabled-checkbox"
                           @change="onCalibrationRangeEnabledChange"
                         >
                           {{ t("launcher.calibrationRange") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                       <div
                         v-if="valueOptionsEnabled.calibrationRange"
@@ -602,12 +602,12 @@
                       </div>
 
                       <div class="arg-row">
-                        <VtCheckbox
+                        <el-checkbox
                           v-model="launchArgs.freezeTrackingOnDisconnect"
                           data-testid="freeze-tracking-on-disconnect-checkbox"
                         >
                           {{ t("launcher.freezeTrackingOnDisconnect") }}
-                        </VtCheckbox>
+                        </el-checkbox>
                       </div>
                     </div>
                   </div>
@@ -629,9 +629,7 @@ import { ElMessageBox } from "element-plus";
 import { Expand, Fold } from "@element-plus/icons-vue";
 import VtAlert from "../components/VtAlert.vue";
 import VtButton from "../components/VtButton.vue";
-import VtCheckbox from "../components/VtCheckbox.vue";
 import VtIcon from "../components/VtIcon.vue";
-import VtInput from "../components/VtInput.vue";
 import VtTag from "../components/VtTag.vue";
 import LauncherAffinityEditor from "../components/launcher/LauncherAffinityEditor.vue";
 import {

@@ -52,7 +52,7 @@
           <div class="rule-header">
             <span class="rule-name">{{ item.name }}</span>
             <div class="toggle-wrap" @click.stop>
-              <VtSwitch
+              <el-switch
                 :model-value="item.isEnabled"
                 size="small"
                 @change="(v: boolean) => toggleItem(item, v)"
@@ -92,7 +92,7 @@
 
         <el-form label-position="top" @submit.prevent="save">
           <el-form-item :label="t('automation.itemName')">
-            <VtInput
+            <el-input
               v-model="editor.name"
               :placeholder="t('automation.ruleNamePh')"
               required
@@ -102,27 +102,27 @@
           <template v-if="editor.kind === 'rule'">
             <el-divider>{{ t("automation.sectionWhen") }}</el-divider>
             <el-form-item :label="t('automation.trigger')">
-              <VtSelect v-model="editor.triggerType" class="field-full-width">
+              <el-select v-model="editor.triggerType" class="field-full-width">
                 <el-option
                   v-for="opt in triggerOptions"
                   :key="opt.value"
                   :value="opt.value"
                   :label="opt.label"
                 />
-              </VtSelect>
+              </el-select>
             </el-form-item>
             <el-form-item
               v-if="editor.triggerType === 'schedule.tick'"
               :label="t('automation.schedule')"
             >
               <el-checkbox-group v-model="editor.scheduleWeekdays">
-                <VtCheckbox
+                <el-checkbox
                   v-for="d in weekdayOptions"
                   :key="d.value"
                   :value="d.value"
                 >
                   {{ d.label }}
-                </VtCheckbox>
+                </el-checkbox>
               </el-checkbox-group>
               <div class="time-row">
                 <el-input-number
@@ -141,9 +141,9 @@
 
             <el-divider>{{ t("automation.sectionIf") }}</el-divider>
             <el-form-item>
-              <VtCheckbox v-model="editor.vrchatRunning">
+              <el-checkbox v-model="editor.vrchatRunning">
                 {{ t("automation.conditionVrchatRunning") }}
-              </VtCheckbox>
+              </el-checkbox>
             </el-form-item>
             <el-form-item
               v-if="
@@ -152,7 +152,7 @@
               "
               :label="t('automation.conditionFriendIs')"
             >
-              <VtSelect
+              <el-select
                 v-model="editor.friendUserId"
                 clearable
                 filterable
@@ -164,7 +164,7 @@
                   :value="f.vrcUserId"
                   :label="f.displayName"
                 />
-              </VtSelect>
+              </el-select>
             </el-form-item>
 
             <el-divider>{{ t("automation.sectionThen") }}</el-divider>
@@ -174,7 +174,7 @@
               class="action-row"
             >
               <el-form-item :label="t('automation.action')">
-                <VtSelect v-model="action.type" class="field-full-width">
+                <el-select v-model="action.type" class="field-full-width">
                   <el-option
                     v-for="opt in actionOptions"
                     :key="opt.value"
@@ -182,20 +182,20 @@
                     :label="opt.label"
                     :disabled="opt.disabled"
                   />
-                </VtSelect>
+                </el-select>
               </el-form-item>
               <el-form-item
                 v-if="action.type === 'change_status'"
                 :label="t('automation.status')"
               >
-                <VtSelect v-model="action.status" class="field-full-width">
+                <el-select v-model="action.status" class="field-full-width">
                   <el-option
                     v-for="opt in statusOptions"
                     :key="opt.value"
                     :value="opt.value"
                     :label="opt.label"
                   />
-                </VtSelect>
+                </el-select>
               </el-form-item>
               <template v-if="action.type === 'set_power_plan'">
                 <el-form-item :label="t('automation.powerPlanMode')">
@@ -212,7 +212,7 @@
                   v-if="action.powerPlanMode === 'preset'"
                   :label="t('automation.powerPlanPreset')"
                 >
-                  <VtSelect
+                  <el-select
                     v-model="action.powerPlanPreset"
                     class="field-full-width"
                   >
@@ -222,10 +222,10 @@
                       :value="p.value"
                       :label="p.label"
                     />
-                  </VtSelect>
+                  </el-select>
                 </el-form-item>
                 <el-form-item v-else :label="t('automation.powerPlanDetected')">
-                  <VtSelect
+                  <el-select
                     v-model="action.powerPlanGuid"
                     class="field-full-width"
                   >
@@ -235,7 +235,7 @@
                       :value="p.guid"
                       :label="p.name"
                     />
-                  </VtSelect>
+                  </el-select>
                 </el-form-item>
               </template>
               <template v-if="action.type === 'set_vrchat_window_size'">
@@ -256,9 +256,9 @@
                   />
                 </el-form-item>
               </template>
-              <VtCheckbox v-model="action.continueOnError">
+              <el-checkbox v-model="action.continueOnError">
                 {{ t("automation.continueOnError") }}
-              </VtCheckbox>
+              </el-checkbox>
               <VtButton
                 v-if="editor.actions.length > 1"
                 variant="tertiary"
@@ -282,7 +282,7 @@
 
           <template v-else>
             <el-divider>{{ t("automation.scriptSource") }}</el-divider>
-            <VtInput
+            <el-input
               v-model="editor.scriptSource"
               type="textarea"
               :rows="14"
@@ -367,10 +367,6 @@ import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
 import VtAlert from "../components/VtAlert.vue";
 import VtButton from "../components/VtButton.vue";
-import VtCheckbox from "../components/VtCheckbox.vue";
-import VtInput from "../components/VtInput.vue";
-import VtSelect from "../components/VtSelect.vue";
-import VtSwitch from "../components/VtSwitch.vue";
 import VtTag from "../components/VtTag.vue";
 import {
   App,

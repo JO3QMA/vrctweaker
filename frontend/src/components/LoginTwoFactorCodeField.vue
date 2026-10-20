@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import VtInput from "./VtInput.vue";
 import {
   isTwoFactorCodeComplete,
   sanitizeTwoFactorCodeInput,
@@ -36,7 +35,7 @@ function onPaste(event: ClipboardEvent): void {
 </script>
 
 <template>
-  <VtInput
+  <el-input
     :id="inputId"
     :data-testid="dataTestid"
     :model-value="props.modelValue"

@@ -708,7 +708,7 @@ _Avoid_: 常時実行, バックグラウンドサービス（v1 で含意しな
 
 ## Design system
 
-ボタン様式・余白・色・タイポグラフィ・アイコン・フォーム入力部品などアプリ横断 UI 部品の用語。**VtButton** と 4 **Button variant**（[ADR 0017](docs/adr/0017-button-design-system-vtbutton.md)）は grill-with-docs で合意済み。**Spacing**（余白ルール）（[ADR 0018](docs/adr/0018-spacing-design-system.md)）は grill-with-docs で合意済み。**Color**（カラーパレット）（[ADR 0019](docs/adr/0019-color-design-system.md)）は grill-with-docs で合意済み。**Typography**（タイポグラフィ）（[ADR 0020](docs/adr/0020-typography-design-system.md)）は grill-with-docs で合意済み。**Form control** ラッパー（VtInput / VtSelect / VtCheckbox / VtSwitch）は grill-with-docs で合意済み（[ADR 0021](docs/adr/0021-form-control-design-system.md)）。**Feedback & Badges**（Alert / Toast / Badge / Loading の横断チャネル）は grill-with-docs で合意済み（[ADR 0022](docs/adr/0022-feedback-badges-design-system.md)）。**Iconography**（アイコン・グリフのサイズ・色・部品化）（[ADR 0023](docs/adr/0023-iconography-design-system.md)）は grill-with-docs で合意済み。既存画面への一括適用は **Bulk design-system adoption campaign**（[ADR 0024](docs/adr/0024-bulk-design-system-adoption-campaign.md)）で行う。実装契約は各 ADR を正本とする。色コード・hex 値・個別 props など実装詳細はここに書かない。
+ボタン様式・余白・色・タイポグラフィ・アイコン・フォーム入力部品などアプリ横断 UI 部品の用語。**VtButton** と 4 **Button variant**（[ADR 0017](docs/adr/0017-button-design-system-vtbutton.md)）は grill-with-docs で合意済み。**Spacing**（余白ルール）（[ADR 0018](docs/adr/0018-spacing-design-system.md)）は grill-with-docs で合意済み。**Color**（カラーパレット）（[ADR 0019](docs/adr/0019-color-design-system.md)）は grill-with-docs で合意済み。**Typography**（タイポグラフィ）（[ADR 0020](docs/adr/0020-typography-design-system.md)）は grill-with-docs で合意済み。**Form control**（`el-input` / `el-select` / `el-checkbox` / `el-switch` を直接使う。透過ラッパーは置かない）は grill-with-docs ののち 2026-10-20 に改訂済み（[ADR 0021](docs/adr/0021-form-control-design-system.md)）。**Feedback & Badges**（Alert / Toast / Badge / Loading の横断チャネル）は grill-with-docs で合意済み（[ADR 0022](docs/adr/0022-feedback-badges-design-system.md)）。**Iconography**（アイコン・グリフのサイズ・色・部品化）（[ADR 0023](docs/adr/0023-iconography-design-system.md)）は grill-with-docs で合意済み。既存画面への一括適用は **Bulk design-system adoption campaign**（[ADR 0024](docs/adr/0024-bulk-design-system-adoption-campaign.md)）で行う。実装契約は各 ADR を正本とする。色コード・hex 値・個別 props など実装詳細はここに書かない。
 
 ### Language
 
@@ -832,7 +832,7 @@ _Avoid_: EP 正本（出所を Element Plus に置く案）, 二重カタログ�
 Color の最初の届け範囲。**ダークテーマのみ**の **App color token** 定義、**Element Plus color mapping**、**Color adoption**、**Color Storybook catalog**、ADR、`.cursor/rules/` に限定する。含めないもの: ライトテーマ用トークン、`prefers-color-scheme` 切替、テーマ切替 UI、全 View の hex 一括置換、Element Plus 内部色の全面再設計、Neutral border の多段トークン化、ESLint 強制。
 
 **Color v1 deliverables**:
-Issue／PR で最初に届ける具体物。(1) `frontend/src/assets/style.css` の全カテゴリ **App color token** と **Element Plus color mapping**、レガシー **Color alias**、(2) `frontend/src/design/colorTokens.ts`（Spacing の `spacingTokens.ts` 同型）、(3) **Server status color**・**Presence color** の既知 2 コンポーネントをトークン参照へ、(4) 共有スタイル（`.page-title`、`.section-card` 等）の Neutral 置換、(5) **Color Storybook catalog**、ADR。各 View の scoped hex は **Color adoption** に従い触ったところだけ。
+Issue／PR で最初に届ける具体物。(1) `frontend/src/assets/style.css` の全カテゴリ **App color token** と **Element Plus color mapping**、レガシー **Color alias**（正本はこのファイル。TypeScript カタログは置かない）、(2) **Server status color**・**Presence color** の既知 2 コンポーネントをトークン参照へ、(3) 共有スタイル（`.page-title`、`.section-card` 等）の Neutral 置換、(4) **Color Storybook catalog**（`style.css` を実行時に読む）、ADR。各 View の scoped hex は **Color adoption** に従い触ったところだけ。
 _Avoid_: Color v1 scope（届け物リストを指すときは deliverables とセットで書く）, 全画面置換（adoption と矛盾するため）
 
 **Color adoption**:
@@ -916,7 +916,7 @@ Typography の最初の届け範囲。**ダークテーマのみ**の **Typograp
 _Avoid_: Typography（v1 範囲を指すときは scope とセットで書く）, 将来拡張（スコープ外リストの総称として曖昧なため）
 
 **Typography v1 deliverables**:
-Issue／PR で最初に届ける具体物。(1) `frontend/src/assets/style.css` の **Typography token** 全種、**Text style catalog** 共有クラス、`body` / `.page-title` のトークン化、**Element Plus typography mapping**、(2) `frontend/src/design/typographyTokens.ts`（Spacing の `spacingTokens.ts` 同型）+ 単体テスト、(3) **Typography Storybook catalog**、(4) `.cursor/rules/typography-design-system.mdc`、(5) `docs/adr/0020-typography-design-system.md` + `CONTEXT.md`。各 View の scoped `rem` / 任意 px は **Typography adoption** に従い触ったところだけ。
+Issue／PR で最初に届ける具体物。(1) `frontend/src/assets/style.css` の **Typography token** 全種、**Text style catalog** 共有クラス、`body` / `.page-title` のトークン化、**Element Plus typography mapping**（正本はこのファイル。TypeScript カタログは置かない）、(2) **Typography Storybook catalog**（`style.css` を実行時に読む）、(3) `.cursor/rules/typography-design-system.mdc`、(4) `docs/adr/0020-typography-design-system.md` + `CONTEXT.md`。各 View の scoped `rem` / 任意 px は **Typography adoption** に従い触ったところだけ。
 _Avoid_: Typography v1 scope（届け物リストを指すときは deliverables とセットで書く）, 全画面置換（adoption と矛盾するため）
 
 **Typography v1 visual policy**:
@@ -1008,51 +1008,51 @@ Typography の Storybook 一覧。**Typography scale**・**Line height scale**�
 _Avoid_: 全画面 Storybook, デザイントークン一覧（Color・Spacing の総称）
 
 **Form control**:
-テキスト入力・選択・チェック・トグルなど、ユーザーが値を編集する単体 UI 部品。**VtButton** と同型で **VtInput** / **VtSelect** / **VtCheckbox** / **VtSwitch** ラッパーを正とし、`el-input` / `el-select` / `el-checkbox` / `el-switch` の直接利用は **Form control adoption** の移行期のみ併存可。見た目の色は既存の **Element Plus color mapping**（`--el-input-*` / `--el-switch-*`）を維持する。
-_Avoid_: フォーム（**Form layout** 全体と混同しやすいため）, 入力欄（素の `<input>` や path 専用パターンまで含意しうるため）
+テキスト入力・選択・チェック・トグルなど、ユーザーが値を編集する単体 UI 部品。`el-input` / `el-select` / `el-checkbox` / `el-switch` を直接使う。中身が `$attrs` だけのラッパーは置かない。variant の対応が要る **VtButton** / **VtAlert** / **VtTag** / **VtIcon** だけラップする。見た目の色は既存の **Element Plus color mapping**（`--el-input-*` / `--el-switch-*`）が `el-*` に効く。
+_Avoid_: フォーム（**Form layout** 全体と混同しやすいため）, 入力欄（素の `<input>` や path 専用パターンまで含意しうるため）, VtInput（透過ラッパーを復活させない）
 
 **VtInput**:
-テキスト系入力の標準ラッパー。内部は `el-input`（`type` 透過で password 等も可）。`textarea` は v1 では別ラッパーにせず、必要時は `el-input type="textarea"` を規約で扱うか後続で **VtTextarea** を検討する。
-_Avoid_: el-input（移行完了後の直呼び）, path 入力行（**Path input row** は専用パターン）
+廃止。テキスト系入力は `el-input`（`type` 透過で password 等も可）。`textarea` は別ラッパーを作らず、必要時は `el-input type="textarea"` を使う。
+_Avoid_: VtInput の再導入, path 入力行（**Path input row** は専用パターン）
 
 **VtSelect**:
-単一選択ドロップダウンの標準ラッパー。内部は `el-select` + `el-option`。フィルタ可能・複数選択・リモート検索は v1 スコープ外（必要になったら拡張）。
-_Avoid_: el-select, セレクトボックス（HTML `<select>` と混同しやすいため）
+廃止。単一選択は `el-select` + `el-option`。フィルタ可能・複数選択・リモート検索は v1 スコープ外（必要になったら拡張）。
+_Avoid_: VtSelect の再導入, セレクトボックス（HTML `<select>` と混同しやすいため）
 
 **VtCheckbox**:
-真偽を選ぶチェックボックスの標準ラッパー。内部は `el-checkbox`。**Form layout** 内で他フィールドと**同じ保存・反映タイミング**の真偽に使う（起動オプション、ルール条件、continue on error、既定フラグなど）。複数選択は `el-checkbox-group`（v1 ではグループラッパーなし）。即時 API 保存の単発設定や一覧の有効フラグには使わない（**VtSwitch**）。
-_Avoid_: el-checkbox, トグル（**VtSwitch** と混同しやすいため）, 即時反映設定（**Immediate setting toggle** と混同しやすいため）
+廃止名。真偽のチェックは `el-checkbox`。**Form layout** 内で他フィールドと**同じ保存・反映タイミング**の真偽に使う（起動オプション、ルール条件、continue on error、既定フラグなど）。複数選択は `el-checkbox-group`（グループラッパーなし）。即時 API 保存の単発設定や一覧の有効フラグには使わない（`el-switch`）。
+_Avoid_: VtCheckbox の再導入, トグル（`el-switch` と混同しやすいため）, 即時反映設定（**Immediate setting toggle** と混同しやすいため）
 
 **VtSwitch**:
-オン／オフを切り替えるトグルスイッチの標準ラッパー。内部は `el-switch`。**Immediate setting toggle**（**Setting row**）、**List enable toggle** に使う。`el-switch` の内蔵ラベル（`active-text` / `inline-prompt` 等）は v1 では使わない（ラベルは外側の **Form layout** または **Setting row** で付ける）。**Form layout** 内で他項目とまとめて保存する真偽には使わない（**VtCheckbox**）。
-_Avoid_: el-switch, チェックボックス（**VtCheckbox** と混同しやすいため）, UI モード切替（**UI mode toggle** は別パターン）
+廃止名。オン／オフのトグルは `el-switch`。**Immediate setting toggle**（**Setting row**）、**List enable toggle** に使う。`el-switch` の内蔵ラベル（`active-text` / `inline-prompt` 等）は v1 では使わない（ラベルは外側の **Form layout** または **Setting row** で付ける）。**Form layout** 内で他項目とまとめて保存する真偽には使わない（`el-checkbox`）。
+_Avoid_: VtSwitch の再導入, チェックボックス（`el-checkbox` と混同しやすいため）, UI モード切替（**UI mode toggle** は別パターン）
 
 **Immediate setting toggle**:
-変更と同時に（またはほぼ同時に）永続化・API 反映する単発のオン／オフ設定。**VtSwitch** + 多くは **Setting row**。例: スリープ抑制、yt-dlp 実験機能の有効化。編集フォームの「保存ボタンまで送らない」真偽（ルール条件など）とは別。
+変更と同時に（またはほぼ同時に）永続化・API 反映する単発のオン／オフ設定。`el-switch` + 多くは **Setting row**。例: スリープ抑制、yt-dlp 実験機能の有効化。編集フォームの「保存ボタンまで送らない」真偽（ルール条件など）とは別。
 _Avoid_: 有効フラグ（**List enable toggle** と混同しやすいため）, チェックボックス設定
 
 **List enable toggle**:
-一覧・カード行上で、その item の有効／無効を**即切替**する **VtSwitch**。編集フォームの保存タイミングとは独立。例: Automation item の `isEnabled`。`size="small"` を使ってよい。
+一覧・カード行上で、その item の有効／無効を**即切替**する `el-switch`。編集フォームの保存タイミングとは独立。例: Automation item の `isEnabled`。`size="small"` を使ってよい。
 _Avoid_: チェックボックス, フォーム内トグル
 
 **UI mode toggle**:
-2 状態の**表示モード**を切り替える UI（設定の永続化が主目的ではない）。**VtSwitch** / **VtCheckbox** の使い分けルールの対象外。**toggle-group** + ラジオ、またはラベル付きモード表示（Friends の Online/Offline 型）を **Semantic 例外**として維持。Form control ラッパーへの統合は v1 では行わない。
-_Avoid_: VtSwitch, 設定スイッチ（**Immediate setting toggle** と混同しやすいため）, フィルタ（Gallery の絞り込みと混同しやすいため）
+2 状態の**表示モード**を切り替える UI（設定の永続化が主目的ではない）。`el-switch` / `el-checkbox` の使い分けルールの対象外。**toggle-group** + ラジオ、またはラベル付きモード表示（Friends の Online/Offline 型）を **Semantic 例外**として維持。
+_Avoid_: 設定スイッチ（**Immediate setting toggle** と混同しやすいため）, フィルタ（Gallery の絞り込みと混同しやすいため）
 
 **Form control checkbox–switch rule**:
-**VtCheckbox** と **VtSwitch** の使い分け正本。編集フォーム内の真偽（他フィールドと同じ保存・反映）→ **VtCheckbox**。即時反映の単発設定 → **VtSwitch** + **Setting row**。一覧・カードの有効フラグ即切替 → **VtSwitch**（small 可）。UI 表示モード切替 → **UI mode toggle**（Semantic 例外）。複数選択 → **VtCheckbox** + group。
+`el-checkbox` と `el-switch` の使い分け正本。編集フォーム内の真偽（他フィールドと同じ保存・反映）→ `el-checkbox`。即時反映の単発設定 → `el-switch` + **Setting row**。一覧・カードの有効フラグ即切替 → `el-switch`（small 可）。UI 表示モード切替 → **UI mode toggle**（Semantic 例外）。複数選択 → `el-checkbox` + group。
 _Avoid_: トグル全般, 真偽入力（4 コントロール以外の radio 等を含意しうるため）
 
 **Form control size**:
-Form control の寸法。**省略時は常に `default`**（暗黙の `small` / `large` は持たない）。`small` は **List enable toggle** の **VtSwitch**、Launcher Advanced など密集レイアウトで**明示指定したときのみ**。`large` は v1 不使用（ラッパーでも公開しない）。編集フォームは **`el-form size="default"`** で子へ継承し、個別 Vt* に毎回 `size` を付けない。
+Form control の寸法。**省略時は常に `default`**（暗黙の `small` / `large` は持たない）。`small` は **List enable toggle** の `el-switch`、Launcher Advanced など密集レイアウトで**明示指定したときのみ**。`large` は v1 不使用。編集フォームは **`el-form size="default"`** で子へ継承し、個別の入力に毎回 `size` を付けない。
 _Avoid_: small 既定, large ボタン（**VtButton** の size と混同しやすいため）
 
 **Form control disabled state**:
-操作できない Form control に付ける状態。ボタン様式ではなくいずれのコントロールにも重ねる。実装は標準 `disabled`（または同等）の**透過**。無効理由はラベル近くの hint・周辺文言で伝える（**Button disabled state** と同型）。`readonly` は v1 の Form control では使わず編集不可は `disabled` に統一。**VtInput** / **VtSelect** には **Button loading state** 相当の loading 様式は設けない（ロード中はフォーム全体 `disabled` または操作ボタン loading）。
+操作できない Form control に付ける状態。ボタン様式ではなくいずれのコントロールにも重ねる。実装は標準 `disabled`。無効理由はラベル近くの hint・周辺文言で伝える（**Button disabled state** と同型）。`readonly` は v1 の Form control では使わず編集不可は `disabled` に統一。`el-input` / `el-select` には **Button loading state** 相当の loading 様式は設けない（ロード中はフォーム全体 `disabled` または操作ボタン loading）。
 _Avoid_: Readonly 様式, Loading 入力（ボタン loading と混同しやすいため）, Disabled 様式（第 5 の見た目名）
 
 **Form field validation error**:
-保存前にクライアントで判定できる不正（空必須・数値範囲など）の示し方。**Form layout** 内では **`el-form-item` のフィールド直下**（`:error` または将来 `:rules`）に **i18n 固定文**のみ示す。Vt* ラッパー内にエラー UI は持たない。バックエンドの生エラー文字列をラベルやフィールドエラーに載せない。
+保存前にクライアントで判定できる不正（空必須・数値範囲など）の示し方。**Form layout** 内では **`el-form-item` のフィールド直下**（`:error` または将来 `:rules`）に **i18n 固定文**のみ示す。入力部品の中にエラー UI は持たない。バックエンドの生エラー文字列をラベルやフィールドエラーに載せない。
 _Avoid_: ElMessage（一括保存失敗と混同しやすいため）, バリデーション（サーバー応答のマッピングまで含意しうるため）
 
 **Form save failure feedback**:
@@ -1072,27 +1072,27 @@ Form control まわりのエラー表示 v1 範囲。上記 3 層（フィール
 _Avoid_: Form control error（v1 範囲を指すときは scope とセットで書く）
 
 **Path input row**:
-ファイルまたはフォルダのパスを入力する**複合レイアウトパターン**。**Form control**（単体）・**Form layout**・**Setting row** とは別の第三の型。`.path-input-group` で **VtInput** と参照 **VtButton**（**Secondary button**）を横並べ。Settings の path-row はラベル上・入力下で、参照に加え存在確認など**複数アクション**を並べてよい。v1 では **VtPathInput** ラッパーは作らない。`path-input-pattern.mdc` の素 `<input>` 例は **VtInput** へ更新する。**Cookies file source** のパス欄も同パターン。
-_Avoid_: VtInput 単体（browse 必須の文脈）, Path input（行全体のレイアウトを含意しないため）, 解像度プリセット（**resolution-selection-ui** は別パターン）
+ファイルまたはフォルダのパスを入力する**複合レイアウトパターン**。**Form control**（単体）・**Form layout**・**Setting row** とは別の第三の型。`.path-input-group` で `el-input` と参照 **VtButton**（**Secondary button**）を横並べ。Settings の path-row はラベル上・入力下で、参照に加え存在確認など**複数アクション**を並べてよい。v1 では **VtPathInput** ラッパーは作らない。**Cookies file source** のパス欄も同パターン。
+_Avoid_: `el-input` 単体（browse 必須の文脈）, Path input（行全体のレイアウトを含意しないため）, 解像度プリセット（**resolution-selection-ui** は別パターン）
 
 **Path input row adoption**:
-Path input row への揃え方針。新規・改修のパス欄は `.path-input-group` + **VtInput** + **VtButton**（参照は Secondary）。既存 `el-input` / `el-button` 直書きは触ったところから。**VtPathInput** 統合は v1 では行わない。
+Path input row への揃え方針。新規・改修のパス欄は `.path-input-group` + `el-input` + **VtButton**（参照は Secondary）。**VtPathInput** 統合は v1 では行わない。
 _Avoid_: 全面 Path ラッパー化, 素 input 新規追加（`element-plus-ui` と矛盾するため）
 
 **Form control Storybook catalog**:
-Form control の Storybook 正本。**VtInput** / **VtSelect** / **VtCheckbox** / **VtSwitch** それぞれ独立の `*.stories.ts`（通常・**Form control disabled state**・代表 props）。加えて **Form layout patterns story** 1 本（**Form layout**・**Setting row**・**Path input row** の並び例）。見た目と使い方は **VtButton Storybook catalog** と同型。
-_Avoid_: 統合 catalog 1 本のみ（コンポーネント別の正本が薄れるため）, 全画面 Storybook
+Form control の Storybook 見本。部品ごとの専用ストーリーは置かず、`FormLayoutPatterns.stories.ts` に `el-input` / `el-select` / `el-checkbox` / `el-switch` の通常・disabled・代表 props と、**Form layout**・**Setting row**・**Path input row** を載せる。見た目は `style.css` のグローバル CSS。
+_Avoid_: 透過ラッパーの専用ストーリー, 全画面 Storybook
 
 **Form control v1 deliverables**:
-Issue／PR で最初に届ける具体物。(1) 4 ラッパー + 各単体テスト、(2) **Form control Storybook catalog**、(3) **Form layout patterns story**、(4) `.cursor/rules/form-design-system.mdc`、(5) `docs/adr/0021-form-control-design-system.md`、(6) `path-input-pattern.mdc` の Vt* 更新、(7) `CONTEXT.md` 同期。色・タイポは既存 **Element Plus color mapping** / **Element Plus typography mapping** を維持（見た目変更なし）。各 View の `el-*` 直書きは **Form control adoption** に従い触ったところだけ。
+Issue／PR で最初に届ける具体物。(1) `el-input` / `el-select` / `el-checkbox` / `el-switch` の直接利用（透過ラッパーなし）、(2) **Form layout patterns story**、(3) `.cursor/rules/form-design-system.mdc`、(4) `docs/adr/0021-form-control-design-system.md`、(5) `path-input-pattern.mdc`、(6) `CONTEXT.md` 同期。色・タイポは既存 **Element Plus color mapping** / **Element Plus typography mapping** を維持（見た目変更なし）。
 _Avoid_: Form control v1 scope（届け物リストを指すときは deliverables とセットで書く）, 全画面置換
 
 **Form control adoption**:
-Form control ラッパーへの移行方針。新規画面・改修で触ったファイルでは **VtInput** / **VtSelect** / **VtCheckbox** / **VtSwitch** を使う。未着手の既存 `el-*` 直書きは一括置換しない（触ったところから順次）。遵守は `.cursor/rules/` で案内し、移行期は ESLint では強制しない。見た目の正本は各 **Form control Storybook catalog**。
+Form control の使い方。新規画面・改修で触ったファイルでは `el-input` / `el-select` / `el-checkbox` / `el-switch` を直接使う。透過ラッパーは足さない。遵守は `.cursor/rules/` で案内し、ESLint では強制しない。見た目は `style.css` のグローバル CSS と **Form layout patterns story**。
 _Avoid_: 全面置換, el-input 禁止の CI 強制（即時一括・CI 強制を含意するため）
 
 **Form control v1 scope**:
-Form & Input Controls 策定の最初の届け範囲。4 ラッパー + Storybook + `.cursor/rules/` + ADR + `CONTEXT.md` に限定する。含める: 上記 4 種、`disabled` / `loading`（該当時）・`data-testid` の透過、**Element Plus color mapping** の維持。含めない: `el-input-number` / `el-radio` / `el-autocomplete` のラッパー、**Path input row** の統合、全 View 一括置換、ESLint 強制、バリデーション UI の全面再設計。
+Form & Input Controls 策定の最初の届け範囲。`el-input` / `el-select` / `el-checkbox` / `el-switch` の直接利用 + Storybook + `.cursor/rules/` + ADR + `CONTEXT.md` に限定する。含める: 上記 4 種、`disabled`・`data-testid`、**Element Plus color mapping** の維持。含めない: 透過ラッパー、`el-input-number` / `el-radio` / `el-autocomplete` のラッパー、**Path input row** の統合、ESLint 強制、バリデーション UI の全面再設計。
 _Avoid_: Form control（v1 範囲を指すときは scope とセットで書く）, 将来拡張（スコープ外リストの総称として曖昧なため）
 
 **Form layout**:
@@ -1100,7 +1100,7 @@ Form control を並べるレイアウト規約。**複数項目の編集**は **
 _Avoid_: setting-row（**Setting row** は単発設定行の別パターン）, 横ラベルフォーム（編集フォーム全体を指すとき）
 
 **Setting row**:
-`el-card` 内などで **1 行に説明とコントロールを横並べ**するレイアウトパターン。左にラベル＋任意の hint、右に **VtSwitch** や **VtInput** 等。Settings の電源スイッチ・保存期間入力が代表例。共有クラス `.setting-row` を正とし、v1 では **VtSettingRow** ラッパーは必須にしない。複数項目の編集ブロックは **Form layout**（top ラベル `el-form`）を使い、Setting row に寄せない。
+`el-card` 内などで **1 行に説明とコントロールを横並べ**するレイアウトパターン。左にラベル＋任意の hint、右に `el-switch` や `el-input` 等。Settings の電源スイッチ・保存期間入力が代表例。共有クラス `.setting-row` を正とし、v1 では **VtSettingRow** ラッパーは必須にしない。複数項目の編集ブロックは **Form layout**（top ラベル `el-form`）を使い、Setting row に寄せない。
 _Avoid_: フォーム行（**Form layout** 全体と混同しやすいため）, 設定行（Launcher の profile 行など別 UI と混同しやすいため）
 
 **Form layout adoption**:

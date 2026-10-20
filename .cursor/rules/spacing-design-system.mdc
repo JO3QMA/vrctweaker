@@ -47,7 +47,7 @@ padding: var(--space-form-field);
 
 ## Storybook
 
-`frontend/src/design/Spacing.stories.ts` が見た目とマッピング表の正本。変更時はストーリーも更新する。
+`frontend/src/design/Spacing.stories.ts` は `frontend/src/assets/style.css` を実行時に読んでスケールと pattern を出す。トークン値の正本は `style.css`。変更時は `style.css` とストーリーも更新する。
 
 ## 関連
 

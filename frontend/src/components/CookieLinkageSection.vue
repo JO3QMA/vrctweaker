@@ -41,7 +41,7 @@
             t("video.cookieLinkage.lockHint")
           }}</el-text>
         </div>
-        <VtSwitch
+        <el-switch
           v-model="cookieEnabled"
           class="cookie-switch"
           data-testid="video-cookie-enable"
@@ -69,7 +69,7 @@
           v-if="cookieDraftSource === 'browser'"
           :label="t('video.cookieLinkage.browserLabel')"
         >
-          <VtSelect
+          <el-select
             v-model="cookieDraftBrowser"
             data-testid="video-cookie-browser"
             :disabled="cookieBusy"
@@ -78,11 +78,11 @@
             <el-option value="chrome" label="Chrome" />
             <el-option value="edge" label="Edge" />
             <el-option value="firefox" label="Firefox" />
-          </VtSelect>
+          </el-select>
         </el-form-item>
         <el-form-item v-else :label="t('video.cookieLinkage.cookiesFileLabel')">
           <div class="path-input-group">
-            <VtInput
+            <el-input
               v-model="cookieDraftCookiesPath"
               data-testid="video-cookie-file-path"
               :placeholder="t('video.cookieLinkage.cookiesFilePh')"
@@ -116,9 +116,6 @@ import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
 import VtAlert from "./VtAlert.vue";
 import VtButton from "./VtButton.vue";
-import VtInput from "./VtInput.vue";
-import VtSelect from "./VtSelect.vue";
-import VtSwitch from "./VtSwitch.vue";
 import {
   VT_BUTTON_DANGER_CONFIRM_CLASS,
   VT_BUTTON_SECONDARY_CANCEL_CLASS,

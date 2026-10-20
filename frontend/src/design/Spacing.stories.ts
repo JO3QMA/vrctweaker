@@ -1,5 +1,9 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
-import { SPACING_PATTERNS, SPACING_SCALE_PX } from "./spacingTokens";
+import styleCss from "../assets/style.css?raw";
+import {
+  parseStyleSheet,
+  resolveCustomProperties,
+} from "./cssCustomProperties";
 import "./Spacing.stories.css";
 
 const catalogParameters = {
@@ -15,18 +19,52 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const spaceProps = parseStyleSheet(styleCss).customProperties.filter(
+  (prop) => prop.selector === ":root" && prop.name.startsWith("--space-"),
+);
+const scaleProps = spaceProps.filter((prop) => /^--space-\d+$/.test(prop.name));
+const patternProps = spaceProps.filter(
+  (prop) => !/^--space-\d+$/.test(prop.name),
+);
+
+const tokenTable = `
+  <table class="spacing-story-table">
+    <thead>
+      <tr>
+        <th>Group</th>
+        <th>Token</th>
+        <th>Usage</th>
+        <th>Declared</th>
+        <th>Resolved</th>
+        <th>Selector</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr v-for="row in rows" :key="row.name">
+        <td>{{ row.group }}</td>
+        <td><code>{{ row.name }}</code></td>
+        <td>{{ row.description }}</td>
+        <td><code>{{ row.value }}</code></td>
+        <td><code v-if="row.referencesVar">{{ row.resolved }}</code><span v-else>—</span></td>
+        <td><code>{{ row.selector }}</code></td>
+      </tr>
+    </tbody>
+  </table>
+`;
+
 export const Scale: Story = {
   name: "Spacing scale",
   render: () => ({
-    setup: () => ({ scale: SPACING_SCALE_PX }),
+    setup: () => ({ rows: resolveCustomProperties(document, scaleProps) }),
     template: `
       <div class="spacing-story">
         <h2>Spacing scale</h2>
-        <p>Numeric tokens (<code>--space-*</code>, px). Use for layout when no pattern fits.</p>
-        <div v-for="px in scale" :key="px" class="spacing-story-scale-row">
-          <div class="spacing-story-scale-bar" :style="{ width: px + 'px' }" />
-          <span class="spacing-story-scale-label">--space-{{ px }} · {{ px }}px</span>
+        <p>{{ rows[0] && rows[0].group }}. Numeric tokens. Use when no pattern fits.</p>
+        <div v-for="row in rows" :key="row.name" class="spacing-story-scale-row">
+          <div class="spacing-story-scale-bar" :style="{ width: 'var(' + row.name + ')' }" />
+          <span class="spacing-story-scale-label">{{ row.name }} · {{ row.value }}</span>
         </div>
+        ${tokenTable}
       </div>
     `,
   }),
@@ -35,27 +73,12 @@ export const Scale: Story = {
 export const Patterns: Story = {
   name: "Spacing pattern catalog",
   render: () => ({
-    setup: () => ({ patterns: SPACING_PATTERNS }),
+    setup: () => ({ rows: resolveCustomProperties(document, patternProps) }),
     template: `
       <div class="spacing-story">
         <h2>Spacing pattern catalog</h2>
-        <p>Prefer semantic patterns over raw scale tokens when the use case matches.</p>
-        <table class="spacing-story-table">
-          <thead>
-            <tr>
-              <th>Pattern</th>
-              <th>Delegates to</th>
-              <th>px</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="row in patterns" :key="row.varName">
-              <td><code>{{ row.varName }}</code></td>
-              <td><code>{{ row.scaleVar }}</code></td>
-              <td>{{ row.px }}</td>
-            </tr>
-          </tbody>
-        </table>
+        <p>{{ rows[0] && rows[0].group }}. Prefer a pattern over a raw scale step when the use case matches.</p>
+        ${tokenTable}
       </div>
     `,
   }),
