@@ -191,6 +191,9 @@ describe("GalleryView", () => {
     expect(wrapper.find('[data-testid="gallery-empty-sync"]').exists()).toBe(
       true,
     );
+    expect(wrapper.find('[data-testid="gallery-empty-hint"]').exists()).toBe(
+      true,
+    );
     expect(
       wrapper.find('[data-testid="gallery-empty-clear-filters"]').exists(),
     ).toBe(false);

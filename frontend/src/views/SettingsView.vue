@@ -118,13 +118,20 @@
             />
           </el-form-item>
           <el-form-item :label="t('settings.twoFactor')">
-            <VtInput
-              id="login-2fa"
+            <LoginTwoFactorCodeField
               v-model="loginForm.twoFactorCode"
+              input-id="login-2fa"
               :placeholder="t('settings.twoFactorPh')"
-              autocomplete="one-time-code"
+              :disabled="loginLoading"
+              @complete="onTwoFactorCodeComplete"
             />
           </el-form-item>
+          <p
+            v-if="twoFactorRequired && !loginError"
+            class="login-2fa-hint text-body-sm"
+          >
+            {{ t("settings.twoFactorRequiredHint") }}
+          </p>
           <VtAlert
             v-if="loginError"
             variant="danger"
@@ -134,9 +141,7 @@
           <VtButton
             variant="primary"
             :loading="loginLoading"
-            :disabled="
-              loginLoading || !loginForm.username || !loginForm.password
-            "
+            :disabled="loginSubmitDisabled"
             @click="login"
           >
             {{ loginLoading ? t("settings.loggingIn") : t("settings.login") }}
@@ -196,37 +201,15 @@
       }}</el-text>
     </el-card>
 
-    <!-- アプリ -->
-    <el-card class="section-card" shadow="never">
+    <!-- アプリ（動作設定） -->
+    <el-card
+      class="section-card"
+      shadow="never"
+      data-testid="settings-app-section"
+    >
       <template #header>
         <span>{{ t("settings.appSection") }}</span>
       </template>
-      <p
-        class="app-version-line text-body-sm"
-        data-testid="settings-app-version"
-      >
-        {{ t("settings.appVersion", { version: appVersion }) }}
-      </p>
-      <el-text
-        type="info"
-        size="small"
-        class="hint block-hint app-meta-note"
-        data-testid="settings-app-disclaimer"
-      >
-        {{ t("common.unofficialDisclaimer") }}
-      </el-text>
-      <el-text
-        type="info"
-        size="small"
-        class="hint block-hint app-meta-note"
-        data-testid="settings-app-data-storage"
-      >
-        {{ t("settings.dataStorageNote") }}
-      </el-text>
-      <LegalDocLinks
-        class="app-legal-links"
-        :intro="t('legal.settingsIntro')"
-      />
       <div class="setting-row power-setting-row">
         <div class="power-toggle-label">
           <span>{{ t("settings.closeToTray") }}</span>
@@ -295,69 +278,110 @@
       </div>
     </el-card>
 
-    <!-- OSS ライセンス -->
-    <el-card class="section-card" shadow="never">
+    <!-- このアプリについて -->
+    <el-card
+      class="section-card"
+      shadow="never"
+      data-testid="settings-about-app-section"
+    >
       <template #header>
-        <span>{{ t("settings.ossSection") }}</span>
+        <span>{{ t("settings.aboutAppSection") }}</span>
       </template>
-      <el-text type="info" size="small" class="hint">{{
-        t("settings.ossHint")
-      }}</el-text>
-      <div class="oss-link-row">
-        <router-link class="btn-licenses" to="/licenses">
-          <VtButton variant="primary">{{ t("settings.ossButton") }}</VtButton>
-        </router-link>
-      </div>
+      <p
+        class="app-version-line text-body-sm"
+        data-testid="settings-app-version"
+      >
+        {{ t("settings.appVersion", { version: appVersion }) }}
+      </p>
+      <el-text
+        type="info"
+        size="small"
+        class="hint block-hint app-meta-note"
+        data-testid="settings-app-disclaimer"
+      >
+        {{ t("common.unofficialDisclaimer") }}
+      </el-text>
+      <el-text
+        type="info"
+        size="small"
+        class="hint block-hint app-meta-note"
+        data-testid="settings-app-data-storage"
+      >
+        {{ t("settings.dataStorageNote") }}
+      </el-text>
+      <LegalDocLinks
+        class="about-app-legal-links"
+        stacked
+        show-oss-licenses-link
+      />
     </el-card>
 
-    <!-- DB メンテナンス -->
-    <el-card class="section-card" shadow="never">
+    <!-- リセットと再設定 -->
+    <el-card
+      class="section-card"
+      shadow="never"
+      data-testid="settings-reset-setup-section"
+    >
       <template #header>
-        <span>{{ t("settings.dbSection") }}</span>
+        <span>{{ t("settings.resetSetupSection") }}</span>
       </template>
-      <el-text type="info" size="small" class="hint db-hint">
-        {{ t("settings.dbHint") }}
-      </el-text>
-      <VtAlert
-        v-if="maintenanceError"
-        variant="danger"
-        :title="maintenanceError"
-        class="maintenance-error-alert"
-      />
-      <div class="maintenance-actions">
+      <div class="onboarding-reopen-row">
         <VtButton
           variant="secondary"
-          :loading="maintenanceLoading"
-          @click="doVacuumDb"
+          data-testid="settings-open-onboarding"
+          @click="openFirstLaunchGuide"
         >
-          {{
-            maintenanceLoading ? t("settings.running") : t("settings.vacuum")
-          }}
+          {{ t("settings.openFirstLaunchGuide") }}
         </VtButton>
-        <VtButton
+        <el-text type="info" size="small" class="hint onboarding-reopen-hint">
+          {{ t("settings.openFirstLaunchGuideHint") }}
+        </el-text>
+      </div>
+      <div class="reset-setup-destructive">
+        <el-text type="info" size="small" class="hint db-hint">
+          {{ t("settings.resetSetupDestructiveHint") }}
+        </el-text>
+        <VtAlert
+          v-if="maintenanceError"
           variant="danger"
-          plain
-          :loading="maintenanceLoading"
-          @click="doClearEncounters"
-        >
-          {{ t("settings.clearEncounters") }}
-        </VtButton>
-        <VtButton
-          variant="danger"
-          plain
-          :loading="maintenanceLoading"
-          @click="doClearScreenshots"
-        >
-          {{ t("settings.clearScreenshots") }}
-        </VtButton>
-        <VtButton
-          variant="danger"
-          plain
-          :loading="maintenanceLoading"
-          @click="doClearFriendsCache"
-        >
-          {{ t("settings.clearFriends") }}
-        </VtButton>
+          :title="maintenanceError"
+          class="maintenance-error-alert"
+        />
+        <div class="maintenance-actions">
+          <VtButton
+            variant="secondary"
+            :loading="maintenanceLoading"
+            @click="doVacuumDb"
+          >
+            {{
+              maintenanceLoading ? t("settings.running") : t("settings.vacuum")
+            }}
+          </VtButton>
+          <VtButton
+            variant="danger"
+            plain
+            :loading="maintenanceLoading"
+            @click="doClearEncounters"
+          >
+            {{ t("settings.clearEncounters") }}
+          </VtButton>
+          <VtButton
+            variant="danger"
+            plain
+            :loading="maintenanceLoading"
+            @click="doClearScreenshots"
+          >
+            {{ t("settings.clearScreenshots") }}
+          </VtButton>
+          <VtButton
+            variant="danger"
+            plain
+            :loading="maintenanceLoading"
+            @click="doClearFriendsCache"
+          >
+            {{ t("settings.clearFriends") }}
+          </VtButton>
+        </div>
       </div>
     </el-card>
   </div>
@@ -370,6 +394,7 @@ import { ElMessageBox } from "element-plus";
 import VtAlert from "../components/VtAlert.vue";
 import VtButton from "../components/VtButton.vue";
 import VtInput from "../components/VtInput.vue";
+import LoginTwoFactorCodeField from "../components/LoginTwoFactorCodeField.vue";
 import VtSelect from "../components/VtSelect.vue";
 import VtSwitch from "../components/VtSwitch.vue";
 import VtTag from "../components/VtTag.vue";
@@ -381,9 +406,12 @@ import {
 import { App } from "../wails/app";
 import type { PathSettingsDTO, UserCacheDTO } from "../wails/app";
 import { friendThumbUrl } from "../utils/vrcUserCacheDisplay";
+import { useFirstLaunchGuide } from "../composables/useFirstLaunchGuide";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
 import { isAppLocale, setLanguage } from "../i18n";
 import { showToast } from "../utils/showToast";
+import { isLoginBlockedByTwoFactorCode } from "../utils/loginTwoFactorSubmit";
+import { isLoginTwoFactorRequired } from "../utils/vrchatLoginResult";
 
 const {
   state: unlockState,
@@ -394,6 +422,11 @@ const {
 } = useSessionUnlock();
 
 const { t, locale } = useI18n();
+const { requestFirstLaunchGuide } = useFirstLaunchGuide();
+
+function openFirstLaunchGuide(): void {
+  requestFirstLaunchGuide();
+}
 
 const isLoggedIn = ref(false);
 const selfProfile = ref<UserCacheDTO | null>(null);
@@ -423,6 +456,23 @@ const loginForm = reactive({
 });
 const loginError = ref("");
 const loginLoading = ref(false);
+const twoFactorRequired = ref(false);
+
+const loginSubmitDisabled = computed(
+  () =>
+    loginLoading.value ||
+    !loginForm.username ||
+    !loginForm.password ||
+    isLoginBlockedByTwoFactorCode(
+      loginForm.twoFactorCode,
+      twoFactorRequired.value,
+    ),
+);
+
+function onTwoFactorCodeComplete(): void {
+  if (loginSubmitDisabled.value) return;
+  void login();
+}
 
 const logRetentionDays = ref(30);
 const galleryAutoEnrichMetadata = ref(true);
@@ -551,6 +601,7 @@ async function login() {
     );
     if (result.ok) {
       isLoggedIn.value = true;
+      twoFactorRequired.value = false;
       loginForm.username = "";
       loginForm.password = "";
       loginForm.twoFactorCode = "";
@@ -560,6 +611,9 @@ async function login() {
         await persistAfterLogin(result.plaintextToken);
       }
       await loadSelfProfileSummary();
+    } else if (isLoginTwoFactorRequired(result.error)) {
+      twoFactorRequired.value = true;
+      loginError.value = "";
     } else {
       loginError.value = result.error || t("settings.errLogin");
     }
@@ -771,6 +825,11 @@ function doClearFriendsCache() {
   gap: var(--space-form-field);
 }
 
+.login-2fa-hint {
+  margin: 0 0 var(--space-form-field);
+  color: var(--color-text-secondary);
+}
+
 .profile-loading {
   font-size: var(--font-size-12);
   color: var(--color-text-secondary);
@@ -857,8 +916,15 @@ function doClearFriendsCache() {
   margin-bottom: var(--space-form-field);
 }
 
-.oss-link-row {
-  margin-top: var(--space-form-field);
+.about-app-legal-links {
+  margin-top: var(--space-block);
+  max-width: 42rem;
+}
+
+.reset-setup-destructive {
+  margin-top: var(--space-block);
+  padding-top: var(--space-block);
+  border-top: 1px solid var(--color-border);
 }
 
 .path-settings {
@@ -897,6 +963,23 @@ function doClearFriendsCache() {
   margin-bottom: var(--space-action-group);
 }
 
+.onboarding-reopen-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-block);
+  margin: var(--space-block) 0;
+}
+
+.onboarding-reopen-row .onboarding-reopen-hint {
+  margin-top: 0;
+  text-align: left;
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 42rem;
+}
+
 .app-version-line {
   margin: 0 0 var(--space-inline-tight);
   color: var(--color-text-secondary);
@@ -904,11 +987,6 @@ function doClearFriendsCache() {
 
 .app-meta-note {
   margin-top: 0;
-  margin-bottom: var(--space-block);
-  max-width: 42rem;
-}
-
-.app-legal-links {
   margin-bottom: var(--space-block);
   max-width: 42rem;
 }

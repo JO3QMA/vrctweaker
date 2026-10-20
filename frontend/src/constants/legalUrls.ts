@@ -5,7 +5,7 @@ import { legalDocsBaseUrl } from "../config/legalDocsBase";
  * Only `ja` selects Japanese docs; any other value (including `en`, `ko`, `zh-*`, empty, or
  * unexpected strings) falls back to English — we do not ship localized legal text beyond JA/EN.
  */
-function legalDocLocale(uiLocale: string): "ja" | "en" {
+export function legalDocLocale(uiLocale: string): "ja" | "en" {
   return uiLocale === "ja" ? "ja" : "en";
 }
 

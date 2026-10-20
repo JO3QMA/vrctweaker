@@ -13,6 +13,11 @@ frontend/coverage/
 frontend/.pnpm-store/
 frontend/wailsjs/
 frontend/tsconfig.tsbuildinfo
+frontend/tsconfig.node.tsbuildinfo
+frontend/vite.config.js
+frontend/vite.config.d.ts
+frontend/vite-plugin-legal-md.js
+frontend/vite-plugin-legal-md.d.ts
 frontend/src/data/licenses.json
 
 # Go

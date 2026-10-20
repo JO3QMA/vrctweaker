@@ -37,6 +37,16 @@ export const APP_ROUTES = [
   { path: "/video", name: "video", titleJa: "動画" },
   { path: "/settings", name: "settings", titleJa: "設定" },
   { path: "/licenses", name: "licenses", titleJa: "OSSライセンス" },
+  {
+    path: "/legal/privacy",
+    name: "legal-privacy",
+    titleJa: "プライバシーポリシー",
+  },
+  {
+    path: "/legal/terms",
+    name: "legal-terms",
+    titleJa: "利用規約・免責事項",
+  },
 ] as const;
 
 /** 遭遇履歴（ワールド別）の例。APP_ROUTES 外の補助定数 */

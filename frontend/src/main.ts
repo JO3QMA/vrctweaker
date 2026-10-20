@@ -95,6 +95,20 @@ const routes: RouteRecordRaw[] = [
     component: () => import("./views/LicensesView.vue"),
     meta: { titleKey: "routes.licenses" },
   },
+  {
+    path: "/legal/privacy",
+    name: "legal-privacy",
+    component: () => import("./views/LegalDocumentView.vue"),
+    props: { kind: "privacy" },
+    meta: { titleKey: "routes.legalPrivacy" },
+  },
+  {
+    path: "/legal/terms",
+    name: "legal-terms",
+    component: () => import("./views/LegalDocumentView.vue"),
+    props: { kind: "terms" },
+    meta: { titleKey: "routes.legalTerms" },
+  },
 ];
 
 const router = createRouter({

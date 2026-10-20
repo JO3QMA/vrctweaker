@@ -64,6 +64,14 @@ export function withSettingsWails(preset: SettingsViewWailsPreset): Decorator {
       SetLogRetentionDays: (_days: number) => Promise.resolve(),
       GetPathSettings: () => Promise.resolve({ ...emptyPaths }),
       SetPathSettings: (_dto: PathSettingsDTO) => Promise.resolve(),
+      GetFirstLaunchGuideCompleted: () => Promise.resolve(true),
+      SetFirstLaunchGuideCompleted: () => Promise.resolve(),
+      GetOnboardingFolderDefaults: () =>
+        Promise.resolve({
+          ...emptyPaths,
+          pictureOutputFolder: "C:/Pictures/VRChat",
+        }),
+      SaveOnboardingFolderSettings: () => Promise.resolve(),
       GetSuppressSleepWhileVRChat: () => Promise.resolve(false),
       SetSuppressSleepWhileVRChat: (_on: boolean) => Promise.resolve(),
       GetCloseToTray: () => Promise.resolve(true),
