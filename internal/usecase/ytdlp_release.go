@@ -81,10 +81,6 @@ func ytdlpExeAssetFromReleaseJSON(data []byte) (tagName, downloadURL string, err
 	return "", "", fmt.Errorf("asset %q not found in release", ytdlpExeName)
 }
 
-func normalizeReleaseTag(tag string) string {
-	return strings.TrimPrefix(strings.TrimSpace(tag), "v")
-}
-
 // ytdlpReleaseTagFromDownloadURL extracts the release tag from a GitHub browser_download_url.
 func ytdlpReleaseTagFromDownloadURL(raw string) string {
 	const marker = "/releases/download/"
@@ -97,7 +93,7 @@ func ytdlpReleaseTagFromDownloadURL(raw string) string {
 	if end <= 0 {
 		return ""
 	}
-	return normalizeReleaseTag(rest[:end])
+	return appversion.NormalizeProductVersion(rest[:end])
 }
 
 var allowedYTDlpDownloadHosts = map[string]struct{}{
@@ -159,7 +155,7 @@ func (u *YTDLPUpdater) FetchLatestRelease(ctx context.Context) (YTDLPReleaseInfo
 	}
 	return YTDLPReleaseInfo{
 		Tag:         strings.TrimSpace(tag),
-		Version:     normalizeReleaseTag(tag),
+		Version:     appversion.NormalizeProductVersion(tag),
 		DownloadURL: url,
 	}, nil
 }

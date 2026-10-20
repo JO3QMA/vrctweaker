@@ -143,24 +143,25 @@ func (r *PlaySessionRepository) Save(ctx context.Context, s *activity.PlaySessio
 }
 
 func scanPlaySession(rows *sql.Rows) (*activity.PlaySession, error) {
-	var id, instanceID, logSource string
-	var startTime string
-	var endTime sql.NullString
-	var durSec sql.NullInt64
-	if err := rows.Scan(&id, &startTime, &endTime, &durSec, &instanceID, &logSource); err != nil {
-		return nil, err
-	}
-	return buildPlaySession(id, startTime, endTime, durSec, instanceID, logSource)
+	return scanPlaySessionScanner(rows)
 }
 
 func scanPlaySessionRow(row *sql.Row) (*activity.PlaySession, error) {
+	s, err := scanPlaySessionScanner(row)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return s, err
+}
+
+func scanPlaySessionScanner(sc interface {
+	Scan(dest ...interface{}) error
+}) (*activity.PlaySession, error) {
 	var id, instanceID, logSource string
 	var startTime string
 	var endTime sql.NullString
 	var durSec sql.NullInt64
-	if err := row.Scan(&id, &startTime, &endTime, &durSec, &instanceID, &logSource); err == sql.ErrNoRows {
-		return nil, nil
-	} else if err != nil {
+	if err := sc.Scan(&id, &startTime, &endTime, &durSec, &instanceID, &logSource); err != nil {
 		return nil, err
 	}
 	return buildPlaySession(id, startTime, endTime, durSec, instanceID, logSource)
@@ -580,22 +581,23 @@ func encounterKeepScore(e *activity.UserEncounter) int {
 }
 
 func scanUserEncounterRow(row *sql.Row) (*activity.UserEncounter, error) {
-	var id, vrcUserID, displayName, joinedAtStr, logSource string
-	var instanceID, worldID, leftAt sql.NullString
-	err := row.Scan(&id, &vrcUserID, &displayName, &instanceID, &worldID, &joinedAtStr, &leftAt, &logSource)
+	e, err := scanUserEncounterScanner(row)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	if err != nil {
-		return nil, err
-	}
-	return buildUserEncounter(id, vrcUserID, displayName, instanceID, worldID, joinedAtStr, leftAt, logSource)
+	return e, err
 }
 
 func scanUserEncounter(rows *sql.Rows) (*activity.UserEncounter, error) {
+	return scanUserEncounterScanner(rows)
+}
+
+func scanUserEncounterScanner(sc interface {
+	Scan(dest ...interface{}) error
+}) (*activity.UserEncounter, error) {
 	var id, vrcUserID, displayName, joinedAtStr, logSource string
 	var instanceID, worldID, leftAt sql.NullString
-	if err := rows.Scan(&id, &vrcUserID, &displayName, &instanceID, &worldID, &joinedAtStr, &leftAt, &logSource); err != nil {
+	if err := sc.Scan(&id, &vrcUserID, &displayName, &instanceID, &worldID, &joinedAtStr, &leftAt, &logSource); err != nil {
 		return nil, err
 	}
 	return buildUserEncounter(id, vrcUserID, displayName, instanceID, worldID, joinedAtStr, leftAt, logSource)

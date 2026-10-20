@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/fsnotify/fsnotify"
+
+	"vrchat-tweaker/internal/infrastructure/logwatcher"
 )
 
 func TestIsImageFile(t *testing.T) {
@@ -73,8 +75,8 @@ func (l *testLogger) Printf(format string, v ...any) {
 	l.mu.Unlock()
 }
 
-func (l *testLogger) asLogger() Logger {
-	return Logger(l.Printf)
+func (l *testLogger) asLogger() logwatcher.Logger {
+	return logwatcher.Logger(l.Printf)
 }
 
 func TestStart_ingestsNewImage(t *testing.T) {
@@ -153,7 +155,7 @@ func TestHandleEvent_ignoresNonImageCreateOp(t *testing.T) {
 		ctx:      ctx,
 		fsw:      mustWatcher(t),
 		ingest:   func(context.Context, string) error { calls++; return nil },
-		log:      Nop,
+		log:      logwatcher.Nop,
 		debounce: time.Hour,
 	}
 	t.Cleanup(func() { _ = r.fsw.Close() })
@@ -176,7 +178,7 @@ func TestHandleEvent_ignoresChmodOnly(t *testing.T) {
 		ctx:      context.Background(),
 		fsw:      mustWatcher(t),
 		ingest:   func(context.Context, string) error { calls++; return nil },
-		log:      Nop,
+		log:      logwatcher.Nop,
 		debounce: time.Hour,
 	}
 	t.Cleanup(func() { _ = r.fsw.Close() })
@@ -198,7 +200,7 @@ func TestHandleEvent_ingestsOnRename(t *testing.T) {
 		ctx:      context.Background(),
 		fsw:      mustWatcher(t),
 		ingest:   func(_ context.Context, p string) error { done <- p; return nil },
-		log:      Nop,
+		log:      logwatcher.Nop,
 		debounce: 20 * time.Millisecond,
 	}
 	t.Cleanup(func() { _ = r.fsw.Close() })
@@ -220,7 +222,7 @@ func TestHandleEvent_ignoresNonImage(t *testing.T) {
 		ctx:      ctx,
 		fsw:      mustWatcher(t),
 		ingest:   func(context.Context, string) error { calls++; return nil },
-		log:      Nop,
+		log:      logwatcher.Nop,
 		debounce: time.Hour,
 	}
 	t.Cleanup(func() { _ = r.fsw.Close() })
@@ -244,7 +246,7 @@ func TestHandleEvent_watchesNewDirectory(t *testing.T) {
 		ctx:      ctx,
 		fsw:      mustWatcher(t),
 		ingest:   func(context.Context, string) error { return nil },
-		log:      Nop,
+		log:      logwatcher.Nop,
 		debounce: time.Hour,
 	}
 	t.Cleanup(func() { _ = r.fsw.Close() })
@@ -281,7 +283,7 @@ func TestFlush_respectsCancelledContext(t *testing.T) {
 	r := &run{
 		ctx:    ctx,
 		ingest: func(context.Context, string) error { calls++; return nil },
-		log:    Nop,
+		log:    logwatcher.Nop,
 	}
 	r.pending = map[string]struct{}{"/a.png": {}, "/b.png": {}}
 	r.flush()
@@ -312,7 +314,7 @@ func TestRun_scheduleIngest_coalescesSamePath(t *testing.T) {
 	r := &run{
 		ctx:      ctx,
 		ingest:   ing,
-		log:      Nop,
+		log:      logwatcher.Nop,
 		debounce: 50 * time.Millisecond,
 	}
 	r.scheduleIngest("/tmp/a.png")
@@ -339,7 +341,7 @@ func TestRun_scheduleIngest_flushesMultiplePaths(t *testing.T) {
 	r := &run{
 		ctx:      ctx,
 		ingest:   ing,
-		log:      Nop,
+		log:      logwatcher.Nop,
 		debounce: 50 * time.Millisecond,
 	}
 	r.scheduleIngest("/a.png")
@@ -359,7 +361,7 @@ func TestLoop_exitsWhenWatcherClosed(t *testing.T) {
 		ctx:      context.Background(),
 		fsw:      w,
 		ingest:   func(context.Context, string) error { return nil },
-		log:      Nop,
+		log:      logwatcher.Nop,
 		debounce: time.Second,
 	}
 	done := make(chan struct{})
@@ -423,7 +425,7 @@ func TestHandleEvent_ingestsOnWrite(t *testing.T) {
 		ctx:      ctx,
 		fsw:      mustWatcher(t),
 		ingest:   func(_ context.Context, p string) error { done <- p; return nil },
-		log:      Nop,
+		log:      logwatcher.Nop,
 		debounce: 20 * time.Millisecond,
 	}
 	t.Cleanup(func() { _ = r.fsw.Close() })
@@ -452,7 +454,7 @@ func TestRun_stopFlushTimer_clearsPending(t *testing.T) {
 	r := &run{
 		ctx:      ctx,
 		ingest:   ing,
-		log:      Nop,
+		log:      logwatcher.Nop,
 		debounce: 200 * time.Millisecond,
 	}
 	r.scheduleIngest("/x.png")

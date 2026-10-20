@@ -85,31 +85,24 @@ func (r *LauncherProfileRepository) Delete(ctx context.Context, id string) error
 }
 
 func scanLaunchProfile(rows *sql.Rows) (*launcher.LaunchProfile, error) {
-	var id, name, arguments string
-	var isDefault int
-	var createdAt, updatedAt sql.NullString
-	if err := rows.Scan(&id, &name, &arguments, &isDefault, &createdAt, &updatedAt); err != nil {
-		return nil, err
-	}
-	return &launcher.LaunchProfile{
-		ID:        id,
-		Name:      name,
-		Arguments: arguments,
-		IsDefault: isDefault == 1,
-		CreatedAt: parseTime(createdAt),
-		UpdatedAt: parseTime(updatedAt),
-	}, nil
+	return scanLaunchProfileScanner(rows)
 }
 
 func scanLaunchProfileRow(row *sql.Row) (*launcher.LaunchProfile, error) {
-	var id, name, arguments string
-	var isDefault int
-	var createdAt, updatedAt sql.NullString
-	err := row.Scan(&id, &name, &arguments, &isDefault, &createdAt, &updatedAt)
+	p, err := scanLaunchProfileScanner(row)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
-	if err != nil {
+	return p, err
+}
+
+func scanLaunchProfileScanner(sc interface {
+	Scan(dest ...interface{}) error
+}) (*launcher.LaunchProfile, error) {
+	var id, name, arguments string
+	var isDefault int
+	var createdAt, updatedAt sql.NullString
+	if err := sc.Scan(&id, &name, &arguments, &isDefault, &createdAt, &updatedAt); err != nil {
 		return nil, err
 	}
 	return &launcher.LaunchProfile{

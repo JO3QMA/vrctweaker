@@ -490,7 +490,7 @@ func (a *App) startPictureFolderWatcher(ctx context.Context) {
 		return nil
 	}
 	log := pictureWatchLogger{ctx: ctx}
-	if err := picturewatcher.Start(ctx, root, ingest, picturewatcher.Logger(log.Printf)); err != nil {
+	if err := picturewatcher.Start(ctx, root, ingest, logwatcher.Logger(log.Printf)); err != nil {
 		runtime.LogError(ctx, "failed to start picture folder watcher: "+err.Error())
 		return
 	}
