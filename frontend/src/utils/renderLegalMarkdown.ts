@@ -17,6 +17,10 @@ marked.use({
   gfm: true,
   breaks: false,
   renderer: {
+    heading({ depth, text }) {
+      const level = Math.min(depth + 1, 6);
+      return `<h${level}>${escapeHtml(text)}</h${level}>\n`;
+    },
     link({ href, text }) {
       const label = escapeHtml(text);
       if (!href) {

@@ -9,7 +9,8 @@ describe("renderLegalMarkdown", () => {
     const html = renderLegalMarkdown(
       "# Title\n\nHello **world**.\n\n<script>alert(1)</script>",
     );
-    expect(html).toContain("<h1>");
+    expect(html).toContain("<h2>");
+    expect(html).not.toContain("<h1>");
     expect(html).toContain("Title");
     expect(html).toContain("<strong>world</strong>");
     expect(html).not.toContain("<script");

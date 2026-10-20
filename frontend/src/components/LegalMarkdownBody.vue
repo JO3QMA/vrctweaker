@@ -101,15 +101,6 @@ watch(
   font-size: var(--font-size-14);
 }
 
-.legal-markdown-body :deep(h1) {
-  font-size: var(--font-size-20);
-  margin: var(--space-24) 0 var(--space-block);
-}
-
-.legal-markdown-body :deep(h1:first-child) {
-  margin-top: 0;
-}
-
 .legal-markdown-body :deep(h2) {
   font-size: var(--font-size-18);
   margin: var(--space-24) 0 var(--space-inline-tight);

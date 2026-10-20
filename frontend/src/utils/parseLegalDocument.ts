@@ -5,6 +5,9 @@ const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/;
 const LAST_UPDATED_LINE_RE =
   /^(?:最終更新|Last updated):\s*(\d{4}-\d{2}-\d{2})\s*\r?\n/im;
 
+/** Document title duplicated by the page `<h1>`; strip before render. */
+const LEADING_ATX_H1_RE = /^#\s+.+\r?\n(?:\r?\n)?/;
+
 function parseFrontmatterLastUpdated(yaml: string): string | null {
   const m = yaml.match(
     /^(?:lastUpdated|last-updated):\s*(\d{4}-\d{2}-\d{2})\s*$/m,
@@ -58,6 +61,8 @@ export function parseLegalDocument(markdown: string): ParsedLegalDocument {
     }
     text = text.replace(LAST_UPDATED_LINE_RE, "");
   }
+
+  text = text.replace(LEADING_ATX_H1_RE, "");
 
   return {
     lastUpdated,

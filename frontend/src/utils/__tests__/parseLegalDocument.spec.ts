@@ -17,12 +17,20 @@ describe("parseLegalDocument", () => {
     const md = `---\nlastUpdated: 2025-01-02\n---\n# Title\n\nBody.`;
     const parsed = parseLegalDocument(md);
     expect(parsed.lastUpdated).toBe("2025-01-02");
-    expect(parsed.bodyMarkdown.startsWith("# Title")).toBe(true);
+    expect(parsed.bodyMarkdown).toBe("Body.");
   });
 
   it("returns null when no date is present", () => {
     const parsed = parseLegalDocument("# Only\n\nContent.");
     expect(parsed.lastUpdated).toBeNull();
+    expect(parsed.bodyMarkdown).toBe("Content.");
+  });
+
+  it("strips leading document title heading for in-app page h1", () => {
+    const md = `# Privacy Policy\n\n最終更新: 2026-10-14\n\n## Section\n\nBody.`;
+    const parsed = parseLegalDocument(md);
+    expect(parsed.bodyMarkdown).not.toMatch(/^#\s/);
+    expect(parsed.bodyMarkdown).toContain("## Section");
   });
 });
 
