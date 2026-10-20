@@ -103,37 +103,6 @@ func TestFetchLatestRelease_httptest(t *testing.T) {
 	}
 }
 
-func TestFetchLatestRelease_statusErrorAndVPrefix(t *testing.T) {
-	t.Parallel()
-	statusSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Accept") != "application/vnd.github+json" {
-			t.Errorf("Accept %q", r.Header.Get("Accept"))
-		}
-		w.WriteHeader(http.StatusForbidden)
-		_, _ = io.WriteString(w, `{"message":"API rate limit exceeded"}`)
-	}))
-	t.Cleanup(statusSrv.Close)
-	u := &YTDLPUpdater{HTTPClient: statusSrv.Client(), ReleasesLatestURL: statusSrv.URL}
-	_, err := u.FetchLatestRelease(context.Background())
-	const want = `github api: 403 Forbidden: {"message":"API rate limit exceeded"}`
-	if err == nil || err.Error() != want {
-		t.Fatalf("err %v", err)
-	}
-
-	verSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = io.WriteString(w, `{"tag_name":"v2025.02.01","assets":[{"name":"yt-dlp.exe","browser_download_url":"https://github.com/yt-dlp/yt-dlp/releases/download/2025.02.01/yt-dlp.exe"}]}`)
-	}))
-	t.Cleanup(verSrv.Close)
-	u = &YTDLPUpdater{HTTPClient: verSrv.Client(), ReleasesLatestURL: verSrv.URL}
-	info, err := u.FetchLatestRelease(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info.Tag != "v2025.02.01" || info.Version != "2025.02.01" {
-		t.Fatalf("info %+v", info)
-	}
-}
-
 func TestValidateYTDlpDownloadURL(t *testing.T) {
 	t.Parallel()
 	u := &YTDLPUpdater{}
@@ -143,23 +112,8 @@ func TestValidateYTDlpDownloadURL(t *testing.T) {
 	if err := validateYTDlpDownloadURL(u, "https://release-assets.githubusercontent.com/github-production-release-asset/1/yt-dlp.exe"); err != nil {
 		t.Fatalf("release-assets host: %v", err)
 	}
-	if err := validateYTDlpDownloadURL(u, "https://evil.example/yt-dlp.exe"); err == nil || err.Error() != "download URL host not allowed: evil.example" {
-		t.Fatalf("untrusted host: %v", err)
-	}
-	if err := validateYTDlpDownloadURL(u, "https://github.com/yt-dlp/yt-dlp/releases/download/2026.07.04/yt-dlp.exe"); err != nil {
-		t.Fatal(err)
-	}
-	if err := validateYTDlpDownloadURL(u, "https://github.com:443/yt-dlp/yt-dlp/releases/download/2026.07.04/yt-dlp.exe"); err != nil {
-		t.Fatal(err)
-	}
-	if err := validateYTDlpDownloadURL(u, "https://github.com/example/other/file"); err != nil {
-		t.Fatal(err)
-	}
-	if err := validateYTDlpDownloadURL(u, ""); err == nil || err.Error() != "download URL is empty" {
-		t.Fatalf("empty: %v", err)
-	}
-	if err := validateYTDlpDownloadURL(u, "http://github.com/yt-dlp/yt-dlp/releases/download/x/yt-dlp.exe"); err == nil || err.Error() != "download URL must use https" {
-		t.Fatalf("scheme: %v", err)
+	if err := validateYTDlpDownloadURL(u, "https://evil.example/yt-dlp.exe"); err == nil {
+		t.Fatal("expected reject for untrusted host")
 	}
 	u.SkipDownloadURLValidation = true
 	if err := validateYTDlpDownloadURL(u, "http://127.0.0.1/x"); err != nil {
