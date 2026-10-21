@@ -742,7 +742,7 @@ const ja = deepMerge(en, {
     running: "実行中...",
     vacuum: "DB最適化 (VACUUM)",
     clearEncounters: "遭遇ログをクリア",
-    clearScreenshots: "スクショインデックスをクリア",
+    clearScreenshots: "スクリーンショットインデックスをクリア",
     clearFriends: "フレンドキャッシュをクリア",
     pathVrchatWin: "VRChat実行ファイル（Windows）",
     pathVrchatWinPh:
@@ -778,7 +778,7 @@ const ja = deepMerge(en, {
     clearEncountersDone: "{n}件の遭遇ログ・アバター利用履歴を削除しました",
     clearScreenshotsConfirm:
       "スクリーンショットインデックス（screenshots）をすべて削除します。よろしいですか？",
-    clearScreenshotsDone: "{n}件のスクショインデックスを削除しました",
+    clearScreenshotsDone: "{n}件のスクリーンショットインデックスを削除しました",
     clearFriendsConfirm:
       "ユーザーキャッシュ（users_cache）の全行（自分・フレンド・遭遇ログ由来のユーザー）を削除します。よろしいですか？",
     clearFriendsDone: "{n}件のフレンドキャッシュを削除しました",

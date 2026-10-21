@@ -214,6 +214,9 @@ describe("SettingsView", () => {
     expect((pathRowInput(wrapper, 2).element as HTMLInputElement).value).toBe(
       defaultPathSettings.outputLogPath,
     );
+    expect(
+      wrapper.findAll(".path-row")[1]?.find(".path-row__desc").text(),
+    ).toBe("空欄なら既定のコマンドを使います。");
     const browseLabels = [
       "vrchat-path-browse",
       "steam-path-browse",
@@ -330,6 +333,10 @@ describe("SettingsView", () => {
     expect(danger.text()).toContain("user_encounters");
     expect(danger.text()).not.toContain("よろしいですか");
     expect(danger.text()).toContain("スクリーンショットインデックス");
+    expect(danger.text()).not.toContain("スクショインデックス");
+    expect(
+      danger.get('[data-testid="settings-clear-screenshots"]').text(),
+    ).toContain("スクリーンショットインデックスをクリア");
     const screenshotLabel = danger
       .get('[data-testid="settings-clear-screenshots"]')
       .element.closest(".setting-row")
@@ -559,7 +566,15 @@ describe("SettingsView", () => {
       .trigger("click");
     await flushPromises();
 
+    expect(ElMessageBox.confirm).toHaveBeenCalledWith(
+      "スクリーンショットインデックス（screenshots）をすべて削除します。よろしいですか？",
+      "確認",
+      expect.any(Object),
+    );
     expect(App.clearScreenshots).toHaveBeenCalled();
+    expect(showToast.success).toHaveBeenCalledWith(
+      "3件のスクリーンショットインデックスを削除しました",
+    );
   });
 
   it("clears friends cache after confirmation", async () => {

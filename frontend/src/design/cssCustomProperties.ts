@@ -278,6 +278,18 @@ export function valueReferencesVar(value: string): boolean {
   return /var\(\s*--/.test(value);
 }
 
+/** Keep the first occurrence of each display value. */
+export function joinUniqueValues(values: readonly string[]): string {
+  const seen: Record<string, true> = {};
+  const unique: string[] = [];
+  for (const value of values) {
+    if (Object.prototype.hasOwnProperty.call(seen, value)) continue;
+    seen[value] = true;
+    unique.push(value);
+  }
+  return unique.join(", ");
+}
+
 /** Element whose cascade matches the declaration selector (`:root`, `html.dark`, …). */
 export function elementForCssSelector(
   doc: Document,
