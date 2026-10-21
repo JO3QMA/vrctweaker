@@ -59,13 +59,6 @@
       <p class="text-body-sm automation-intro">
         {{ t("automation.intro") }}
       </p>
-      <VtAlert
-        v-if="isDirty && tab === 'rules'"
-        class="unsaved-banner"
-        data-testid="unsaved-banner"
-        variant="warning"
-        :title="t('automation.unsavedBanner')"
-      />
 
       <div
         v-if="tab === 'rules'"
@@ -78,6 +71,7 @@
           :items="items"
           :active-id="activeId"
           :trigger-labels="triggerLabels"
+          :disabled="!runtime.available"
           @select="selectItem"
           @toggle="toggleItem"
           @add-rule="addRule"
@@ -88,6 +82,7 @@
           :editor="editor"
           :saving="saving"
           :is-dirty="isDirty"
+          :disabled="!runtime.available"
           :name-error="nameError"
           :trigger-options="triggerOptions"
           :status-options="statusOptions"
@@ -102,6 +97,7 @@
           @back="showList"
           @add-action="addAction"
           @remove-action="removeAction"
+          @move-action="moveAction"
         />
         <div v-else class="automation-editor automation-editor--empty">
           <p class="automation-empty text-body-sm">
@@ -176,6 +172,8 @@ let eventsOff: (() => void) | undefined;
 const isDirty = computed(
   () => !!editor.value && JSON.stringify(editor.value) !== savedSnapshot.value,
 );
+
+const controlsDisabled = computed(() => !runtime.value.available);
 
 const activeId = computed(() =>
   editor.value && editor.value.isNew !== true ? editor.value.id : "",
@@ -340,6 +338,7 @@ async function selectItem(item: AutomationItemDTO) {
 
 function addRule() {
   void (async () => {
+    if (controlsDisabled.value) return;
     if (!(await guardUnsaved())) return;
     nameError.value = "";
     editor.value = {
@@ -364,6 +363,7 @@ function addRule() {
 
 function addScript() {
   void (async () => {
+    if (controlsDisabled.value) return;
     if (!(await guardUnsaved())) return;
     nameError.value = "";
     editor.value = {
@@ -398,16 +398,28 @@ function cancelEdit() {
 }
 
 function addAction() {
-  if (!editor.value) return;
+  if (!editor.value || controlsDisabled.value) return;
   editor.value.actions.push(defaultAction());
 }
 
 function removeAction(idx: number) {
-  editor.value?.actions.splice(idx, 1);
+  if (!editor.value || controlsDisabled.value) return;
+  if (editor.value.actions.length <= 1) return;
+  editor.value.actions.splice(idx, 1);
+}
+
+function moveAction(idx: number, direction: -1 | 1) {
+  if (!editor.value || controlsDisabled.value) return;
+  const next = idx + direction;
+  const actions = editor.value.actions;
+  const moving = actions[idx];
+  if (!moving || next < 0 || next >= actions.length) return;
+  actions.splice(idx, 1);
+  actions.splice(next, 0, moving);
 }
 
 async function save(): Promise<boolean> {
-  if (!editor.value || saving.value) return false;
+  if (!editor.value || saving.value || controlsDisabled.value) return false;
   if (editor.value.name.trim() === "") {
     nameError.value = t("automation.nameRequired");
     return false;
@@ -452,6 +464,7 @@ async function save(): Promise<boolean> {
 }
 
 async function toggleItem(item: AutomationItemDTO, enabled: boolean) {
+  if (controlsDisabled.value) return;
   const previous = item.isEnabled;
   try {
     await App.toggleAutomationItem(item.id, enabled);
@@ -464,7 +477,7 @@ async function toggleItem(item: AutomationItemDTO, enabled: boolean) {
 }
 
 async function confirmDelete() {
-  if (!editor.value?.id) return;
+  if (!editor.value?.id || controlsDisabled.value) return;
   try {
     await ElMessageBox.confirm(
       t("automation.deleteConfirm", { name: editor.value.name }),
@@ -569,8 +582,7 @@ async function confirmDelete() {
 }
 
 .automation-intro,
-.runtime-alert,
-.unsaved-banner {
+.runtime-alert {
   margin: 0;
   flex-shrink: 0;
 }

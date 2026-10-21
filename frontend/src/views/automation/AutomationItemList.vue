@@ -8,6 +8,7 @@ const props = defineProps<{
   items: AutomationItemDTO[];
   activeId: string;
   triggerLabels: Record<string, string>;
+  disabled: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -21,13 +22,18 @@ const { t } = useI18n();
 
 function summary(item: AutomationItemDTO): string {
   if (item.kind === "script") return t("automation.summaryScript");
-  const trigger =
-    props.triggerLabels[item.triggerType ?? ""] ?? item.triggerType ?? "";
-  return `${t("automation.summaryIf")} ${trigger}`;
+  return props.triggerLabels[item.triggerType ?? ""] ?? item.triggerType ?? "";
 }
 
 function onToggle(item: AutomationItemDTO, value: string | number | boolean) {
+  if (props.disabled) return;
   emit("toggle", item, value === true);
+}
+
+function onCreate(command: string) {
+  if (props.disabled) return;
+  if (command === "script") emit("addScript");
+  else emit("addRule");
 }
 </script>
 
@@ -38,24 +44,36 @@ function onToggle(item: AutomationItemDTO, value: string | number | boolean) {
     data-testid="automation-list"
   >
     <div class="automation-list__actions">
-      <VtButton
-        variant="secondary"
-        class="btn-add"
-        data-testid="add-rule"
-        @click="emit('addRule')"
+      <el-dropdown
+        trigger="click"
+        :teleported="false"
+        :disabled="disabled"
+        @command="onCreate"
       >
-        {{ t("automation.addRule") }}
-      </VtButton>
-      <VtButton
-        variant="secondary"
-        class="btn-add"
-        data-testid="add-script"
-        @click="emit('addScript')"
-      >
-        {{ t("automation.addScript") }}
-      </VtButton>
+        <VtButton
+          variant="secondary"
+          class="btn-add"
+          data-testid="add-item"
+          :disabled="disabled"
+        >
+          {{ t("automation.addItem") }}
+        </VtButton>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="rule" data-testid="add-rule">
+              {{ t("automation.addRule") }}
+            </el-dropdown-item>
+            <el-dropdown-item command="script" data-testid="add-script">
+              {{ t("automation.addScript") }}
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </div>
     <div class="automation-list__rows" role="list">
+      <p v-if="items.length === 0" class="automation-list__empty text-body-sm">
+        {{ t("automation.emptyList") }}
+      </p>
       <div
         v-for="item in items"
         :key="item.id"
@@ -76,13 +94,14 @@ function onToggle(item: AutomationItemDTO, value: string | number | boolean) {
           <div class="toggle-wrap" @click.stop @keydown.stop>
             <el-switch
               :model-value="item.isEnabled"
+              :disabled="disabled"
               size="small"
               @change="(v: string | number | boolean) => onToggle(item, v)"
             />
           </div>
         </div>
         <div class="rule-summary">
-          <VtTag size="small" variant="info">{{
+          <VtTag size="small" variant="neutral">{{
             item.kind === "script"
               ? t("automation.kindScript")
               : t("automation.kindRule")
@@ -114,11 +133,13 @@ function onToggle(item: AutomationItemDTO, value: string | number | boolean) {
 }
 
 .automation-list__actions {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-action-group);
   padding: var(--space-form-field) var(--space-block);
   border-bottom: 1px solid var(--color-border);
+}
+
+.automation-list__actions :deep(.el-dropdown) {
+  display: block;
+  width: 100%;
 }
 
 .automation-list__actions :deep(.el-button) {
@@ -133,6 +154,13 @@ function onToggle(item: AutomationItemDTO, value: string | number | boolean) {
   min-height: 0;
   overflow: auto;
   scrollbar-gutter: stable;
+}
+
+.automation-list__empty {
+  margin: 0;
+  padding: var(--space-block);
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
 }
 
 .rule-card {
@@ -152,8 +180,9 @@ function onToggle(item: AutomationItemDTO, value: string | number | boolean) {
   background: var(--color-bg-muted);
 }
 
-.rule-card.disabled {
-  opacity: 0.65;
+.rule-card.disabled .rule-name,
+.rule-card.disabled .rule-summary {
+  color: var(--color-text-muted);
 }
 
 .rule-card:focus-visible {
@@ -184,8 +213,8 @@ function onToggle(item: AutomationItemDTO, value: string | number | boolean) {
 
 .rule-summary {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: var(--space-action-group);
   margin-top: var(--space-inline-tight);
   font-size: var(--font-size-12);
@@ -198,13 +227,13 @@ function onToggle(item: AutomationItemDTO, value: string | number | boolean) {
   flex: 0 0 auto;
   width: auto;
   max-width: 100%;
-  height: auto;
-  white-space: normal;
 }
 
 .rule-summary__text {
   flex: 1 1 auto;
   min-width: 0;
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

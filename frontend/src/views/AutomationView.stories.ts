@@ -29,7 +29,9 @@ export const EditingRule: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByText("フレンド参加で取り込み中"));
-    await expect(canvas.getByText("ルールを編集")).toBeVisible();
+    await expect(canvas.getByTestId("item-name-input")).toHaveValue(
+      "フレンド参加で取り込み中",
+    );
     await expect(canvas.getByText("いつ（トリガー）")).toBeVisible();
   },
 };
@@ -38,7 +40,7 @@ export const RunLog: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByRole("tab", { name: /実行ログ/ }));
-    await expect(canvas.getByText("schedule.tick")).toBeVisible();
+    await expect(canvas.getByText("スケジュール（毎分評価）")).toBeVisible();
   },
 };
 

@@ -13,6 +13,7 @@ const props = defineProps<{
   editor: EditorState;
   saving: boolean;
   isDirty: boolean;
+  disabled: boolean;
   nameError: string;
   triggerOptions: SelectOption[];
   statusOptions: SelectOption[];
@@ -30,6 +31,7 @@ const emit = defineEmits<{
   back: [];
   addAction: [];
   removeAction: [index: number];
+  moveAction: [index: number, direction: -1 | 1];
 }>();
 
 const { t } = useI18n();
@@ -38,16 +40,9 @@ const { t } = useI18n();
 // template does not assign the prop identifier directly.
 const state = computed(() => props.editor);
 
-const editorTitle = computed(() => {
-  if (props.editor.isNew) {
-    return props.editor.kind === "script"
-      ? t("automation.newScript")
-      : t("automation.newRule");
-  }
-  return props.editor.kind === "script"
-    ? t("automation.editScript")
-    : t("automation.editRule");
-});
+const canDeleteItem = computed(
+  () => !!props.editor.id && props.editor.isNew !== true,
+);
 </script>
 
 <template>
@@ -64,40 +59,72 @@ const editorTitle = computed(() => {
 
       <div class="automation-editor__cards">
         <el-card
-          class="section-card settings-card--rows automation-card"
+          class="section-card settings-card--rows automation-card automation-card--name"
           shadow="never"
         >
           <template #header>
-            <span class="automation-card__title">{{ editorTitle }}</span>
-            <span
-              v-if="isDirty"
-              class="unsaved-dot"
-              data-testid="unsaved-dot"
-              :title="t('automation.unsavedBanner')"
-            />
-          </template>
-          <SettingsRow :label="t('automation.itemName')" control="field">
-            <div class="automation-control">
+            <div class="automation-name-head">
               <el-input
                 v-model="state.name"
+                class="automation-name-head__input"
                 :placeholder="t('automation.ruleNamePh')"
+                :disabled="disabled"
                 data-testid="item-name-input"
                 :aria-invalid="nameError ? 'true' : undefined"
                 :aria-describedby="
                   nameError ? 'automation-name-error' : undefined
                 "
               />
-              <p
-                v-if="nameError"
-                id="automation-name-error"
-                class="automation-field-error"
-                data-testid="name-error"
-                role="alert"
+              <el-switch
+                v-model="state.isEnabled"
+                :disabled="disabled"
+                data-testid="editor-enabled"
+                :aria-label="t('automation.itemName')"
+              />
+              <el-dropdown
+                v-if="canDeleteItem"
+                class="automation-header-more"
+                trigger="click"
+                :teleported="false"
+                :disabled="disabled"
+                @command="emit('delete')"
               >
-                {{ nameError }}
-              </p>
+                <VtButton
+                  variant="tertiary"
+                  data-testid="editor-more"
+                  :disabled="disabled"
+                  :aria-label="t('automation.delete')"
+                >
+                  ⋯
+                </VtButton>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item
+                      command="delete"
+                      data-testid="delete-item-menu"
+                    >
+                      {{ t("automation.delete") }}
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
+              <span
+                v-if="isDirty"
+                class="unsaved-dot"
+                data-testid="unsaved-dot"
+                :title="t('automation.unsavedBanner')"
+              />
             </div>
-          </SettingsRow>
+            <p
+              v-if="nameError"
+              id="automation-name-error"
+              class="automation-field-error"
+              data-testid="name-error"
+              role="alert"
+            >
+              {{ nameError }}
+            </p>
+          </template>
         </el-card>
 
         <template v-if="editor.kind === 'rule'">
@@ -113,7 +140,7 @@ const editorTitle = computed(() => {
             </template>
             <SettingsRow :label="t('automation.trigger')" control="field">
               <div class="automation-control">
-                <el-select v-model="state.triggerType">
+                <el-select v-model="state.triggerType" :disabled="disabled">
                   <el-option
                     v-for="opt in triggerOptions"
                     :key="opt.value"
@@ -126,7 +153,10 @@ const editorTitle = computed(() => {
             <template v-if="editor.triggerType === 'schedule.tick'">
               <SettingsRow :label="t('automation.schedule')" control="field">
                 <div class="automation-control">
-                  <el-checkbox-group v-model="state.scheduleWeekdays">
+                  <el-checkbox-group
+                    v-model="state.scheduleWeekdays"
+                    :disabled="disabled"
+                  >
                     <el-checkbox
                       v-for="d in weekdayOptions"
                       :key="d.value"
@@ -138,24 +168,26 @@ const editorTitle = computed(() => {
                 </div>
               </SettingsRow>
               <SettingsRow
-                :label="t('automation.scheduleHour')"
+                :label="t('automation.scheduleTime')"
                 control="number"
               >
-                <el-input-number
-                  v-model="state.scheduleHour"
-                  :min="0"
-                  :max="23"
-                />
-              </SettingsRow>
-              <SettingsRow
-                :label="t('automation.scheduleMinute')"
-                control="number"
-              >
-                <el-input-number
-                  v-model="state.scheduleMinute"
-                  :min="0"
-                  :max="59"
-                />
+                <div class="automation-time">
+                  <el-input-number
+                    v-model="state.scheduleHour"
+                    :min="0"
+                    :max="23"
+                    :disabled="disabled"
+                    :aria-label="t('automation.scheduleHour')"
+                  />
+                  <span class="automation-time__sep" aria-hidden="true">:</span>
+                  <el-input-number
+                    v-model="state.scheduleMinute"
+                    :min="0"
+                    :max="59"
+                    :disabled="disabled"
+                    :aria-label="t('automation.scheduleMinute')"
+                  />
+                </div>
               </SettingsRow>
             </template>
           </el-card>
@@ -174,7 +206,7 @@ const editorTitle = computed(() => {
               :label="t('automation.conditionVrchatRunning')"
               control="switch"
             >
-              <el-checkbox v-model="state.vrchatRunning" />
+              <el-switch v-model="state.vrchatRunning" :disabled="disabled" />
             </SettingsRow>
             <SettingsRow
               v-if="
@@ -185,7 +217,13 @@ const editorTitle = computed(() => {
               control="field"
             >
               <div class="automation-control">
-                <el-select v-model="state.friendUserId" clearable filterable>
+                <el-select
+                  v-model="state.friendUserId"
+                  clearable
+                  filterable
+                  :disabled="disabled"
+                  :placeholder="t('automation.friendPlaceholder')"
+                >
                   <el-option
                     v-for="f in friends"
                     :key="f.vrcUserId"
@@ -216,18 +254,38 @@ const editorTitle = computed(() => {
                 <span class="automation-action-head__title">{{
                   t("automation.actionHeading", { n: idx + 1 })
                 }}</span>
-                <VtButton
-                  v-if="editor.actions.length > 1"
-                  variant="tertiary"
-                  size="small"
-                  @click="emit('removeAction', idx)"
-                >
-                  {{ t("automation.removeAction") }}
-                </VtButton>
+                <div class="automation-action-head__tools">
+                  <VtButton
+                    variant="tertiary"
+                    size="small"
+                    :disabled="disabled || idx === 0"
+                    :aria-label="t('automation.moveActionUp')"
+                    @click="emit('moveAction', idx, -1)"
+                  >
+                    ↑
+                  </VtButton>
+                  <VtButton
+                    variant="tertiary"
+                    size="small"
+                    :disabled="disabled || idx === editor.actions.length - 1"
+                    :aria-label="t('automation.moveActionDown')"
+                    @click="emit('moveAction', idx, 1)"
+                  >
+                    ↓
+                  </VtButton>
+                  <VtButton
+                    variant="tertiary"
+                    size="small"
+                    :disabled="disabled || editor.actions.length <= 1"
+                    @click="emit('removeAction', idx)"
+                  >
+                    {{ t("automation.removeAction") }}
+                  </VtButton>
+                </div>
               </div>
               <SettingsRow :label="t('automation.action')" control="field">
                 <div class="automation-control">
-                  <el-select v-model="action.type">
+                  <el-select v-model="action.type" :disabled="disabled">
                     <el-option
                       v-for="opt in actionOptions"
                       :key="opt.value"
@@ -244,7 +302,7 @@ const editorTitle = computed(() => {
                 control="field"
               >
                 <div class="automation-control">
-                  <el-select v-model="action.status">
+                  <el-select v-model="action.status" :disabled="disabled">
                     <el-option
                       v-for="opt in statusOptions"
                       :key="opt.value"
@@ -260,13 +318,18 @@ const editorTitle = computed(() => {
                   control="field"
                 >
                   <div class="automation-control">
-                    <el-radio-group v-model="action.powerPlanMode">
+                    <el-radio-group
+                      v-model="action.powerPlanMode"
+                      :disabled="disabled"
+                    >
                       <el-radio value="preset">{{
                         t("automation.powerPlanPreset")
                       }}</el-radio>
-                      <el-radio value="guid" :disabled="!powerPlans.length">{{
-                        t("automation.powerPlanDetected")
-                      }}</el-radio>
+                      <el-radio
+                        value="guid"
+                        :disabled="disabled || !powerPlans.length"
+                        >{{ t("automation.powerPlanDetected") }}</el-radio
+                      >
                     </el-radio-group>
                   </div>
                 </SettingsRow>
@@ -276,7 +339,10 @@ const editorTitle = computed(() => {
                   control="field"
                 >
                   <div class="automation-control">
-                    <el-select v-model="action.powerPlanPreset">
+                    <el-select
+                      v-model="action.powerPlanPreset"
+                      :disabled="disabled"
+                    >
                       <el-option
                         v-for="p in powerPlanPresets"
                         :key="p.value"
@@ -292,7 +358,10 @@ const editorTitle = computed(() => {
                   control="field"
                 >
                   <div class="automation-control">
-                    <el-select v-model="action.powerPlanGuid">
+                    <el-select
+                      v-model="action.powerPlanGuid"
+                      :disabled="disabled"
+                    >
                       <el-option
                         v-for="p in powerPlans"
                         :key="p.guid"
@@ -312,6 +381,7 @@ const editorTitle = computed(() => {
                     v-model="action.windowWidth"
                     :min="1"
                     :max="7680"
+                    :disabled="disabled"
                     data-testid="window-width-input"
                   />
                 </SettingsRow>
@@ -323,6 +393,7 @@ const editorTitle = computed(() => {
                     v-model="action.windowHeight"
                     :min="1"
                     :max="4320"
+                    :disabled="disabled"
                     data-testid="window-height-input"
                   />
                 </SettingsRow>
@@ -331,7 +402,10 @@ const editorTitle = computed(() => {
                 :label="t('automation.continueOnError')"
                 control="switch"
               >
-                <el-checkbox v-model="action.continueOnError" />
+                <el-switch
+                  v-model="action.continueOnError"
+                  :disabled="disabled"
+                />
               </SettingsRow>
             </div>
             <div
@@ -341,6 +415,7 @@ const editorTitle = computed(() => {
               <VtButton
                 variant="secondary"
                 class="btn-add-action"
+                :disabled="disabled"
                 @click="emit('addAction')"
               >
                 {{ t("automation.addAction") }}
@@ -369,6 +444,7 @@ const editorTitle = computed(() => {
                 type="textarea"
                 :rows="14"
                 class="script-editor"
+                :disabled="disabled"
                 :placeholder="t('automation.scriptPlaceholder')"
               />
             </SettingsRow>
@@ -377,20 +453,29 @@ const editorTitle = computed(() => {
       </div>
 
       <div class="automation-action-bar" data-testid="automation-action-bar">
-        <VtButton
-          v-if="editor.id && !editor.isNew"
-          class="automation-action-bar__delete"
-          variant="danger"
-          plain
-          data-testid="delete-item"
-          @click="emit('delete')"
-        >
-          {{ t("automation.delete") }}
-        </VtButton>
+        <div class="automation-action-bar__start">
+          <VtButton
+            v-if="canDeleteItem"
+            class="automation-action-bar__delete"
+            variant="danger"
+            plain
+            data-testid="delete-item"
+            :disabled="disabled"
+            @click="emit('delete')"
+          >
+            {{ t("automation.delete") }}
+          </VtButton>
+        </div>
+        <p class="automation-action-bar__unsaved">
+          <span v-if="isDirty" data-testid="unsaved-banner">{{
+            t("automation.unsavedBanner")
+          }}</span>
+        </p>
         <div class="automation-action-bar__primary">
           <VtButton
             variant="secondary"
             data-testid="cancel-item"
+            :disabled="disabled"
             @click="emit('cancel')"
           >
             {{ t("automation.cancel") }}
@@ -399,6 +484,7 @@ const editorTitle = computed(() => {
             variant="primary"
             data-testid="save-item"
             :loading="saving"
+            :disabled="disabled"
             @click="emit('save')"
           >
             {{ t("automation.save") }}
@@ -432,7 +518,7 @@ const editorTitle = computed(() => {
 
 .automation-back {
   display: none;
-  margin: var(--space-block) var(--space-block) 0;
+  margin: 0 0 var(--space-block);
   align-self: flex-start;
 }
 
@@ -440,7 +526,6 @@ const editorTitle = computed(() => {
   display: flex;
   flex-direction: column;
   gap: var(--space-block);
-  padding: var(--space-block) 0 0;
   flex: 1 0 auto;
 }
 
@@ -459,6 +544,16 @@ const editorTitle = computed(() => {
   overflow: hidden;
 }
 
+.automation-card--name :deep(.el-card__header) {
+  height: auto;
+  flex-wrap: wrap;
+  align-content: center;
+}
+
+.automation-card--name .automation-field-error {
+  flex: 1 0 100%;
+}
+
 .automation-card :deep(.el-card__body) {
   padding: 0;
 }
@@ -470,83 +565,31 @@ const editorTitle = computed(() => {
   white-space: nowrap;
 }
 
+.automation-name-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-action-group);
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+}
+
+.automation-name-head__input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.automation-header-more {
+  display: none;
+  flex-shrink: 0;
+}
+
 .unsaved-dot {
   width: var(--space-action-group);
   height: var(--space-action-group);
   border-radius: 50%;
   background: var(--color-warning);
   flex-shrink: 0;
-}
-
-.automation-editor :deep(.setting-row) {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--space-block);
-  padding: var(--space-block);
-  min-width: 0;
-}
-
-.automation-editor :deep(.setting-row + .setting-row) {
-  border-top: 1px solid var(--color-border);
-}
-
-.automation-editor :deep(.setting-row--center) {
-  align-items: center;
-}
-
-.automation-editor :deep(.setting-row__text) {
-  flex: 1 1 0;
-  min-width: 0;
-}
-
-.automation-editor :deep(.setting-row__label) {
-  font-size: var(--font-size-14);
-  line-height: var(--line-height-normal);
-  color: var(--color-text-primary);
-  overflow-wrap: anywhere;
-}
-
-.automation-editor :deep(.setting-row__desc) {
-  margin: var(--space-inline-tight) 0 0;
-  color: var(--color-text-secondary);
-  overflow-wrap: anywhere;
-}
-
-.automation-editor :deep(.setting-row__control) {
-  flex: 0 0 var(--control-width-md);
-  width: var(--control-width-md);
-  min-width: 0;
-  max-width: 100%;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.automation-editor :deep(.setting-row__control .el-select),
-.automation-editor :deep(.setting-row__control .el-input) {
-  width: 100%;
-  max-width: 100%;
-}
-
-.automation-editor :deep(.setting-row--fixed) {
-  flex-wrap: nowrap;
-}
-
-.automation-editor :deep(.setting-row--fixed .setting-row__control) {
-  flex: 0 0 auto;
-  width: auto;
-}
-
-.automation-editor :deep(.setting-row--number .setting-row__control) {
-  flex: 0 0 auto;
-  width: auto;
-}
-
-.automation-editor :deep(.setting-row--number .el-input-number) {
-  width: var(--control-width-sm);
-  max-width: 100%;
-  flex: 0 0 var(--control-width-sm);
 }
 
 .automation-control {
@@ -580,8 +623,9 @@ const editorTitle = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: var(--space-action-group);
-  height: 40px;
+  min-height: 40px;
   box-sizing: border-box;
   padding: 0 var(--space-block);
   background: var(--color-bg-muted);
@@ -597,6 +641,30 @@ const editorTitle = computed(() => {
   font-size: var(--font-size-14);
   font-weight: var(--font-weight-600);
   line-height: var(--line-height-tight);
+}
+
+.automation-action-head__tools {
+  display: flex;
+  align-items: center;
+  gap: var(--space-inline-tight);
+  flex-shrink: 0;
+}
+
+.automation-action-head__tools :deep(.el-button) {
+  min-width: 0;
+  margin-left: 0;
+  color: var(--color-text-primary);
+}
+
+.automation-time {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: var(--space-action-group);
+}
+
+.automation-time__sep {
+  color: var(--color-text-secondary);
 }
 
 .automation-add-action {
@@ -638,8 +706,8 @@ const editorTitle = computed(() => {
   position: sticky;
   bottom: 0;
   z-index: 2;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: var(--space-action-group);
   margin-top: auto;
@@ -648,35 +716,45 @@ const editorTitle = computed(() => {
   border-top: 1px solid var(--color-border);
 }
 
+.automation-action-bar__delete {
+  justify-self: start;
+}
+
+.automation-action-bar__unsaved {
+  margin: 0;
+  justify-self: center;
+  text-align: center;
+  color: var(--color-warning);
+  font-size: var(--font-size-12);
+  line-height: var(--line-height-normal);
+  overflow-wrap: anywhere;
+}
+
 .automation-action-bar__primary {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
+  justify-content: flex-end;
   gap: var(--space-action-group);
-  margin-left: auto;
+  justify-self: end;
 }
 
 .automation-action-bar :deep(.el-button) {
   min-width: var(--button-min-width);
+  margin-left: 0;
+}
+
+.automation-action-bar :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 
 @container automation-editor (max-width: 559px) {
-  .automation-editor :deep(.setting-row:not(.setting-row--fixed)) {
-    flex-direction: column;
-    align-items: stretch;
+  .automation-action-bar__delete {
+    display: none;
   }
 
-  .automation-editor
-    :deep(.setting-row:not(.setting-row--fixed) .setting-row__control) {
-    flex: 1 1 auto;
-    width: 100%;
-    min-width: 0;
-    justify-content: flex-start;
-  }
-
-  .automation-editor :deep(.el-checkbox-group),
-  .automation-editor :deep(.el-radio-group) {
-    justify-content: flex-start;
+  .automation-header-more {
+    display: inline-flex;
   }
 }
 </style>

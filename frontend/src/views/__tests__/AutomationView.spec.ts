@@ -253,7 +253,8 @@ describe("AutomationView layout", () => {
     expect(wrapper.find('[data-testid="automation-run-log"]').exists()).toBe(
       true,
     );
-    expect(wrapper.text()).toContain("参加");
+    expect(wrapper.text()).toContain("フレンド参加時");
+    expect(wrapper.text()).not.toContain("friend_joined");
 
     await wrapper.get('[data-testid="refresh-run-log"]').trigger("click");
     await flushPromises();
@@ -301,5 +302,37 @@ describe("AutomationView layout", () => {
     ).toBeTruthy();
     expect(mockSaveAutomationItem).not.toHaveBeenCalled();
     expect(showToast.error).not.toHaveBeenCalled();
+  });
+
+  it("disables list and editor controls when automation is unavailable", async () => {
+    mockGetAutomationRuntimeStatus.mockResolvedValue({
+      available: false,
+      reasonKey: "subsystemUnavailable",
+    });
+    const wrapper = mount(AutomationView);
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="add-item"]').attributes("disabled"),
+    ).toBeDefined();
+    expect(wrapper.get(".rule-card .el-switch").classes()).toContain(
+      "is-disabled",
+    );
+
+    await wrapper.find(".rule-card").trigger("click");
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="save-item"]').attributes("disabled"),
+    ).toBe("");
+    expect(
+      (
+        wrapper.get('[data-testid="item-name-input"]')
+          .element as HTMLInputElement
+      ).disabled,
+    ).toBe(true);
+    expect(wrapper.get('[data-testid="editor-enabled"]').classes()).toContain(
+      "is-disabled",
+    );
   });
 });

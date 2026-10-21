@@ -12,9 +12,10 @@ test.describe("Automation", () => {
 
     await expect(page.getByText("E2E AFK → Busy")).toBeVisible();
 
-    await page.getByRole("button", { name: "+ 新規ルール" }).click();
+    await page.getByTestId("add-item").click();
+    await page.getByTestId("add-rule").click();
     await expect(page.locator(".rule-editor")).toBeVisible();
-    await expect(page.locator(".rule-editor")).toContainText("新規ルール");
+    await expect(page.getByTestId("automation-section-when")).toBeVisible();
   });
 
   test("clicking seeded rule opens editor with rule name field", async ({
@@ -28,12 +29,20 @@ test.describe("Automation", () => {
       .filter({ hasText: "E2E AFK → Busy" })
       .click();
     await expect(page.locator(".rule-editor")).toBeVisible();
-    await expect(page.locator(".rule-editor")).toContainText("ルールを編集");
+    await expect(page.getByTestId("editor-enabled")).toBeVisible();
 
     const nameInput = page.getByTestId("item-name-input");
     await expect(nameInput).toHaveValue("E2E AFK → Busy");
     await expect(page.getByTestId("automation-action-bar")).toBeVisible();
     await expect(page.getByTestId("automation-section-when")).toBeVisible();
+  });
+
+  test("run log uses Japanese event labels in one line", async ({ page }) => {
+    await page.goto("/#/automation");
+    await page.getByRole("tab", { name: /実行ログ/ }).click();
+    await expect(page.getByText("スケジュール（毎分評価）")).toBeVisible();
+    await expect(page.getByText("失敗")).toBeVisible();
+    await expect(page.getByText("schedule.tick")).toHaveCount(0);
   });
 
   test("does not overflow horizontally from desktop down to a narrow frame", async ({
