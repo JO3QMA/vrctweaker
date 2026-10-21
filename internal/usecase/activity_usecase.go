@@ -17,6 +17,11 @@ import (
 
 const activityLogCheckpointKey = "activity_log_checkpoint"
 
+// activityPurgedBeforeKey stores the cutoff of the last successful retention purge (UTC RFC3339).
+// Log events strictly before this instant are not persisted again, so re-reading an old
+// output_log does not recreate rows RotateEncounters already removed.
+const activityPurgedBeforeKey = "activity_purged_before"
+
 // ActivityLogFileCheckpoint is per-output_log ingest progress.
 type ActivityLogFileCheckpoint struct {
 	ByteOffset     int64  `json:"byteOffset"`
@@ -166,6 +171,15 @@ func (uc *ActivityUseCase) ApplyCommand(ctx context.Context, logSource string, c
 	if cmd == nil {
 		return nil
 	}
+	if at, ok := activityCommandTime(cmd); ok {
+		purged, err := uc.activityEventPurged(ctx, at)
+		if err != nil {
+			return err
+		}
+		if purged {
+			return nil
+		}
+	}
 	switch c := cmd.(type) {
 	case activity.EndPlaySessionCmd:
 		return uc.EndPlaySession(ctx, logSource, c.At)
@@ -192,6 +206,52 @@ func (uc *ActivityUseCase) ApplyCommand(ctx context.Context, logSource string, c
 	default:
 		return nil
 	}
+}
+
+func activityCommandTime(cmd any) (time.Time, bool) {
+	switch c := cmd.(type) {
+	case activity.EndPlaySessionCmd:
+		return c.At, true
+	case activity.StartPlaySessionCmd:
+		return c.At, true
+	case activity.CloseOpenEncountersAtCmd:
+		return c.At, true
+	case activity.RecordEncounterJoinCmd:
+		return c.At, true
+	case activity.RecordEncounterLeaveCmd:
+		return c.At, true
+	case activity.UpsertWorldVisitCmd:
+		return c.At, true
+	case activity.UpsertWorldRoomNameCmd:
+		return c.At, true
+	case activity.RecordVideoPlaybackAttemptCmd:
+		return c.At, true
+	case activity.CompleteVideoPlaybackFailureCmd:
+		return c.At, true
+	case activity.CompleteVideoPlaybackSuccessCmd:
+		return c.At, true
+	case activity.RecordFriendAvatarSwitchCmd:
+		return c.At, true
+	default:
+		return time.Time{}, false
+	}
+}
+
+// activityEventPurged reports whether at is strictly before the last retention purge cutoff.
+// Before the first successful purge the watermark is empty and events are persisted.
+func (uc *ActivityUseCase) activityEventPurged(ctx context.Context, at time.Time) (bool, error) {
+	if at.IsZero() {
+		return false, nil
+	}
+	raw, err := uc.settingsRepo.Get(ctx, activityPurgedBeforeKey)
+	if err != nil || raw == "" {
+		return false, err
+	}
+	purgedBefore, err := time.Parse(time.RFC3339, raw)
+	if err != nil {
+		return false, fmt.Errorf("parse activity retention watermark: %w", err)
+	}
+	return at.Before(purgedBefore), nil
 }
 
 // RecordFriendAvatarSwitchAt persists one avatar switch observation from output_log.
@@ -666,7 +726,11 @@ func (uc *ActivityUseCase) DeduplicateEncounters(ctx context.Context) (int64, er
 	return uc.encounterRepo.DeduplicateEncounters(ctx)
 }
 
-// RotateEncounters deletes encounters, play sessions, and video playback attempts older than Activity retention days.
+// RotateEncounters deletes encounters, play sessions, video playback attempts, and
+// friend avatar observations older than Activity retention days. The event time is
+// the log-line timestamp (joined_at, start_time, attempted_at, observed_at), not
+// the time the row was imported. On success it records the cutoff so a later
+// re-read of the same output_log does not insert those rows again.
 func (uc *ActivityUseCase) RotateEncounters(ctx context.Context) (int64, error) {
 	before, err := uc.activityRetentionCutoff(ctx)
 	if err != nil {
@@ -694,7 +758,15 @@ func (uc *ActivityUseCase) RotateEncounters(ctx context.Context) (int64, error) 
 			return 0, err
 		}
 	}
-	return encDeleted + playDeleted + videoDeleted + avatarDeleted, nil
+	deleted := encDeleted + playDeleted + videoDeleted + avatarDeleted
+	if err = uc.rememberActivityPurgedBefore(ctx, before); err != nil {
+		return deleted, err
+	}
+	return deleted, nil
+}
+
+func (uc *ActivityUseCase) rememberActivityPurgedBefore(ctx context.Context, before time.Time) error {
+	return uc.settingsRepo.Set(ctx, activityPurgedBeforeKey, before.UTC().Format(time.RFC3339))
 }
 
 // ListVideoPlaybackHistory returns video playback attempts with world display names (newest first).

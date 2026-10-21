@@ -72,6 +72,10 @@ type App struct {
 	activityWatchCancel context.CancelFunc
 	activityWatchWG     sync.WaitGroup
 
+	activityRetentionMu     sync.Mutex
+	activityRetentionCancel context.CancelFunc
+	activityRetentionWG     sync.WaitGroup
+
 	activityIngestMu       sync.Mutex
 	activityIngestAdapters map[string]*logwatcher.ActivityIngestAdapter
 
@@ -177,6 +181,12 @@ func (a *App) startup(ctx context.Context) {
 		paths.VRChatDataDir,
 	)
 
+	// Drop rows past Activity retention before historical logs are read, and
+	// record the cutoff so that replay does not insert them again.
+	if err := a.purgeActivityRetention(ctx); err != nil && !errors.Is(err, context.Canceled) {
+		runtime.LogWarning(ctx, "activity retention: "+err.Error())
+	}
+
 	// Start output_log watcher if path is configured
 	a.startOutputLogWatcher(ctx)
 
@@ -184,6 +194,7 @@ func (a *App) startup(ctx context.Context) {
 	go a.startupGalleryIncremental()
 	a.startSleepSuppressLoop()
 	a.startYTDLPMaintainLoop()
+	a.startActivityRetentionLoop()
 	a.syncTrayFromSettings(ctx)
 	a.startAppUpdateCheckOnStartup()
 }
@@ -191,6 +202,7 @@ func (a *App) startup(ctx context.Context) {
 // shutdown persists state before the process exits (Wails lifecycle).
 func (a *App) shutdown(ctx context.Context) {
 	a.stopTray()
+	a.stopActivityRetentionLoop()
 	a.stopVRChatActivityMonitor()
 	if a.automation != nil {
 		a.automation.Stop()
@@ -631,9 +643,14 @@ func (a *App) GetLogRetentionDays() (int, error) {
 	return a.settings.GetLogRetentionDays(a.ctx)
 }
 
-// SetLogRetentionDays saves the log retention setting.
+// SetLogRetentionDays saves the log retention setting and deletes rows that are
+// now past the new cutoff (same key as Activity encounters, play sessions,
+// video playback history, and friend avatar observations).
 func (a *App) SetLogRetentionDays(days int) error {
-	return a.settings.SetLogRetentionDays(a.ctx, days)
+	if err := a.settings.SetLogRetentionDays(a.ctx, days); err != nil {
+		return err
+	}
+	return a.purgeActivityRetention(a.ctx)
 }
 
 // GetPathSettings returns VRChat/Steam/output_log path settings.
