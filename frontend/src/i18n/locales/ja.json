@@ -370,6 +370,8 @@
     "ruleNamePh": "例: フレンド参加時に取り込み中にする",
     "kindRule": "ルール",
     "kindScript": "スクリプト",
+    "sectionBasics": "基本",
+    "enabled": "有効",
     "sectionWhen": "いつ（トリガー）",
     "sectionIf": "もし（条件）",
     "sectionThen": "したら（アクション）",

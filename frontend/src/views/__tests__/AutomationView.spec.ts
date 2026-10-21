@@ -83,7 +83,7 @@ describe("AutomationView unsaved guard", () => {
     await wrapper.find('[data-testid="add-rule"]').trigger("click");
     await flushPromises();
 
-    const nameInput = wrapper.find(".rule-editor input");
+    const nameInput = wrapper.get('[data-testid="item-name-input"]');
     await nameInput.setValue("Draft rule");
     await flushPromises();
 
@@ -103,7 +103,10 @@ describe("AutomationView unsaved guard", () => {
     // Still editing the draft (did not switch to seeded card editor).
     expect(wrapper.find(".rule-editor").exists()).toBe(true);
     expect(
-      (wrapper.find(".rule-editor input").element as HTMLInputElement).value,
+      (
+        wrapper.get('[data-testid="item-name-input"]')
+          .element as HTMLInputElement
+      ).value,
     ).toBe("Draft rule");
 
     confirmSpy.mockRestore();
@@ -115,7 +118,7 @@ describe("AutomationView unsaved guard", () => {
 
     await wrapper.find('[data-testid="add-rule"]').trigger("click");
     await flushPromises();
-    await wrapper.find(".rule-editor input").setValue("Saved ok");
+    await wrapper.get('[data-testid="item-name-input"]').setValue("Saved ok");
     await flushPromises();
 
     mockListAutomationItems.mockRejectedValueOnce(new Error("list failed"));
@@ -160,7 +163,7 @@ describe("AutomationView unsaved guard", () => {
 
     await wrapper.find('[data-testid="add-rule"]').trigger("click");
     await flushPromises();
-    await wrapper.find(".rule-editor input").setValue("Will fail");
+    await wrapper.get('[data-testid="item-name-input"]').setValue("Will fail");
     await flushPromises();
 
     mockSaveAutomationItem.mockRejectedValueOnce(new Error("save failed"));

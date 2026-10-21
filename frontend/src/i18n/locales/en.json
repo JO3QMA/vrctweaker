@@ -370,6 +370,8 @@
     "ruleNamePh": "e.g. Set busy when a friend joins",
     "kindRule": "Rule",
     "kindScript": "Script",
+    "sectionBasics": "Basics",
+    "enabled": "Enabled",
     "sectionWhen": "When (trigger)",
     "sectionIf": "If (conditions)",
     "sectionThen": "Then (actions)",

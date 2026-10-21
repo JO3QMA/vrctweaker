@@ -370,6 +370,8 @@
     "ruleNamePh": "例：好友加入时设为忙碌",
     "kindRule": "规则",
     "kindScript": "脚本",
+    "sectionBasics": "基本",
+    "enabled": "启用",
     "sectionWhen": "何时（触发）",
     "sectionIf": "如果（条件）",
     "sectionThen": "则（动作）",

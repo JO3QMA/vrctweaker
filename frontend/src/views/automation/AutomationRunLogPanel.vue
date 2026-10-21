@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import VtButton from "../../components/VtButton.vue";
 import VtTag from "../../components/VtTag.vue";
@@ -13,6 +14,9 @@ const emit = defineEmits<{
 }>();
 
 const { t } = useI18n();
+const root = ref<HTMLElement | null>(null);
+const compact = ref(false);
+let observer: ResizeObserver | undefined;
 
 const eventLabelKeys: Record<string, string> = {
   friend_joined: "automation.triggerFriendJoined",
@@ -28,10 +32,30 @@ function eventLabel(eventType: string): string {
   }
   return eventType;
 }
+
+function resultTooltip(row: AutomationRunLogEntryDTO): string {
+  const progress = `${t("automation.runLogActions")} ${row.actionsCompleted}/${row.actionsTotal}`;
+  const context = row.contextLabel
+    ? `${t("automation.runLogContext")} ${row.contextLabel}`
+    : "";
+  return context ? `${progress} / ${context}` : progress;
+}
+
+onMounted(() => {
+  observer = new ResizeObserver(() => {
+    const width = root.value?.offsetWidth ?? 0;
+    compact.value = width > 0 && width < 720;
+  });
+  if (root.value) observer.observe(root.value);
+});
+
+onBeforeUnmount(() => {
+  observer?.disconnect();
+});
 </script>
 
 <template>
-  <div class="automation-log" data-testid="automation-run-log">
+  <div ref="root" class="automation-log" data-testid="automation-run-log">
     <div class="automation-log__toolbar">
       <VtButton
         variant="tertiary"
@@ -55,31 +79,42 @@ function eventLabel(eventType: string): string {
         <el-table-column
           prop="at"
           :label="t('automation.runLogAt')"
-          width="160"
+          :width="compact ? 120 : 160"
           show-overflow-tooltip
         />
         <el-table-column
           prop="itemName"
           :label="t('automation.itemName')"
-          min-width="96"
           show-overflow-tooltip
         />
         <el-table-column
           :label="t('automation.runLogEvent')"
-          min-width="96"
           show-overflow-tooltip
         >
           <template #default="{ row }">
             {{ eventLabel(row.eventType) }}
           </template>
         </el-table-column>
-        <el-table-column
-          :label="t('automation.runLogResult')"
-          width="72"
-          show-overflow-tooltip
-        >
+        <el-table-column :label="t('automation.runLogResult')" width="96">
           <template #default="{ row }">
-            <VtTag :variant="row.success ? 'success' : 'danger'" size="small">
+            <el-tooltip
+              v-if="compact"
+              :content="resultTooltip(row)"
+              placement="top"
+            >
+              <VtTag :variant="row.success ? 'success' : 'danger'" size="small">
+                {{
+                  row.success
+                    ? t("automation.runLogSuccess")
+                    : t("automation.runLogFailure")
+                }}
+              </VtTag>
+            </el-tooltip>
+            <VtTag
+              v-else
+              :variant="row.success ? 'success' : 'danger'"
+              size="small"
+            >
               {{
                 row.success
                   ? t("automation.runLogSuccess")
@@ -89,8 +124,9 @@ function eventLabel(eventType: string): string {
           </template>
         </el-table-column>
         <el-table-column
+          v-if="!compact"
           :label="t('automation.runLogActions')"
-          width="64"
+          width="72"
           show-overflow-tooltip
         >
           <template #default="{ row }">
@@ -98,9 +134,9 @@ function eventLabel(eventType: string): string {
           </template>
         </el-table-column>
         <el-table-column
+          v-if="!compact"
           prop="contextLabel"
           :label="t('automation.runLogContext')"
-          min-width="80"
           show-overflow-tooltip
         />
       </el-table>
@@ -145,20 +181,13 @@ function eventLabel(eventType: string): string {
 }
 
 .automation-log :deep(.el-table) {
-  width: 100% !important;
+  width: 100%;
   --el-table-header-bg-color: var(--color-bg-muted);
-}
-
-.automation-log :deep(.el-table__inner-wrapper),
-.automation-log :deep(.el-table__header-wrapper),
-.automation-log :deep(.el-table__body-wrapper),
-.automation-log :deep(.el-scrollbar__wrap) {
-  overflow-x: hidden !important;
 }
 
 .automation-log :deep(.el-table__header),
 .automation-log :deep(.el-table__body) {
-  width: 100% !important;
+  width: 100%;
   table-layout: fixed;
 }
 

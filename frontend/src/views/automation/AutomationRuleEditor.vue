@@ -57,16 +57,65 @@ const canDeleteItem = computed(
         {{ t("automation.backToList") }}
       </VtButton>
 
+      <div class="automation-editor-head">
+        <span
+          class="automation-editor-head__name"
+          :class="{ 'is-empty': !state.name }"
+        >
+          {{ state.name || t("automation.ruleNamePh") }}
+        </span>
+        <span
+          v-if="isDirty"
+          class="unsaved-dot"
+          data-testid="unsaved-dot"
+          :title="t('automation.unsavedBanner')"
+        />
+        <el-switch
+          v-model="state.isEnabled"
+          :disabled="disabled"
+          data-testid="editor-enabled"
+          :aria-label="t('automation.enabled')"
+        />
+        <el-dropdown
+          v-if="canDeleteItem"
+          class="automation-header-more"
+          trigger="click"
+          :disabled="disabled"
+          @command="emit('delete')"
+        >
+          <VtButton
+            variant="tertiary"
+            data-testid="editor-more"
+            :disabled="disabled"
+            :aria-label="t('automation.delete')"
+          >
+            ⋯
+          </VtButton>
+          <template #dropdown>
+            <el-dropdown-menu>
+              <el-dropdown-item command="delete" data-testid="delete-item-menu">
+                {{ t("automation.delete") }}
+              </el-dropdown-item>
+            </el-dropdown-menu>
+          </template>
+        </el-dropdown>
+      </div>
+
       <div class="automation-editor__cards">
         <el-card
-          class="section-card settings-card--rows automation-card automation-card--name"
+          class="section-card settings-card--rows automation-card"
           shadow="never"
+          data-testid="automation-section-basics"
         >
           <template #header>
-            <div class="automation-name-head">
+            <span class="automation-card__title">{{
+              t("automation.sectionBasics")
+            }}</span>
+          </template>
+          <SettingsRow :label="t('automation.itemName')" control="field">
+            <div class="automation-control">
               <el-input
                 v-model="state.name"
-                class="automation-name-head__input"
                 :placeholder="t('automation.ruleNamePh')"
                 :disabled="disabled"
                 data-testid="item-name-input"
@@ -75,56 +124,17 @@ const canDeleteItem = computed(
                   nameError ? 'automation-name-error' : undefined
                 "
               />
-              <el-switch
-                v-model="state.isEnabled"
-                :disabled="disabled"
-                data-testid="editor-enabled"
-                :aria-label="t('automation.itemName')"
-              />
-              <el-dropdown
-                v-if="canDeleteItem"
-                class="automation-header-more"
-                trigger="click"
-                :teleported="false"
-                :disabled="disabled"
-                @command="emit('delete')"
+              <p
+                v-if="nameError"
+                id="automation-name-error"
+                class="automation-field-error"
+                data-testid="name-error"
+                role="alert"
               >
-                <VtButton
-                  variant="tertiary"
-                  data-testid="editor-more"
-                  :disabled="disabled"
-                  :aria-label="t('automation.delete')"
-                >
-                  ⋯
-                </VtButton>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item
-                      command="delete"
-                      data-testid="delete-item-menu"
-                    >
-                      {{ t("automation.delete") }}
-                    </el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-              <span
-                v-if="isDirty"
-                class="unsaved-dot"
-                data-testid="unsaved-dot"
-                :title="t('automation.unsavedBanner')"
-              />
+                {{ nameError }}
+              </p>
             </div>
-            <p
-              v-if="nameError"
-              id="automation-name-error"
-              class="automation-field-error"
-              data-testid="name-error"
-              role="alert"
-            >
-              {{ nameError }}
-            </p>
-          </template>
+          </SettingsRow>
         </el-card>
 
         <template v-if="editor.kind === 'rule'">
@@ -169,7 +179,7 @@ const canDeleteItem = computed(
               </SettingsRow>
               <SettingsRow
                 :label="t('automation.scheduleTime')"
-                control="number"
+                control="field"
               >
                 <div class="automation-time">
                   <el-input-number
@@ -522,6 +532,33 @@ const canDeleteItem = computed(
   align-self: flex-start;
 }
 
+.automation-editor-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-action-group);
+  height: 48px;
+  min-height: 48px;
+  min-width: 0;
+  margin-bottom: var(--space-block);
+}
+
+.automation-editor-head__name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--font-size-14);
+  font-weight: var(--font-weight-600);
+  line-height: var(--line-height-tight);
+  color: var(--color-text-primary);
+}
+
+.automation-editor-head__name.is-empty {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-400);
+}
+
 .automation-editor__cards {
   display: flex;
   flex-direction: column;
@@ -544,16 +581,6 @@ const canDeleteItem = computed(
   overflow: hidden;
 }
 
-.automation-card--name :deep(.el-card__header) {
-  height: auto;
-  flex-wrap: wrap;
-  align-content: center;
-}
-
-.automation-card--name .automation-field-error {
-  flex: 1 0 100%;
-}
-
 .automation-card :deep(.el-card__body) {
   padding: 0;
 }
@@ -563,20 +590,6 @@ const canDeleteItem = computed(
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.automation-name-head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-action-group);
-  width: 100%;
-  min-width: 0;
-  min-height: 48px;
-}
-
-.automation-name-head__input {
-  flex: 1 1 auto;
-  min-width: 0;
 }
 
 .automation-header-more {
@@ -661,6 +674,13 @@ const canDeleteItem = computed(
   align-items: center;
   flex-wrap: nowrap;
   gap: var(--space-action-group);
+  max-width: 100%;
+}
+
+.automation-time :deep(.el-input-number) {
+  width: 120px;
+  flex: 0 0 120px;
+  max-width: 120px;
 }
 
 .automation-time__sep {
