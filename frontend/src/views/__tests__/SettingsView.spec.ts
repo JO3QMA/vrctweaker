@@ -291,6 +291,12 @@ describe("SettingsView", () => {
       "0.1.0",
     );
     expect(
+      about
+        .get('[data-testid="settings-app-version"]')
+        .element.closest(".setting-row")
+        ?.classList.contains("setting-row--fixed"),
+    ).toBe(true);
+    expect(
       about.get('[data-testid="settings-app-disclaimer"]').text(),
     ).toContain("非公式");
     expect(
@@ -322,6 +328,13 @@ describe("SettingsView", () => {
     );
     expect(danger.text()).toContain("遭遇ログ");
     expect(danger.text()).toContain("user_encounters");
+    expect(danger.text()).not.toContain("よろしいですか");
+    expect(danger.text()).toContain("スクリーンショットインデックス");
+    const screenshotLabel = danger
+      .get('[data-testid="settings-clear-screenshots"]')
+      .element.closest(".setting-row")
+      ?.querySelector(".setting-row__label");
+    expect(screenshotLabel?.textContent).toBe("スクリーンショットインデックス");
     expect(
       danger.get('[data-testid="settings-clear-encounters"]').text(),
     ).toContain("クリア");

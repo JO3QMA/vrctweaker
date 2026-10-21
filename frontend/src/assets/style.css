@@ -555,10 +555,7 @@ a:hover {
   }
 
   .settings-nav__divider {
-    width: 1px;
-    height: auto;
-    align-self: stretch;
-    margin: 0 var(--space-8);
+    display: none;
   }
 }
 
@@ -568,7 +565,7 @@ a:hover {
 
 .settings-view .setting-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-block);
@@ -585,7 +582,7 @@ a:hover {
 }
 
 .settings-view .setting-row__text {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-width: 0;
 }
 
@@ -598,6 +595,7 @@ a:hover {
 .settings-view .setting-row__desc {
   margin: var(--space-inline-tight) 0 0;
   color: var(--color-text-secondary);
+  overflow-wrap: break-word;
 }
 
 .settings-view .setting-row__control {

@@ -30,6 +30,15 @@ describe("SettingsRow", () => {
     expect(num.classes()).toContain("setting-row--number");
   });
 
+  it("keeps a short value on the right even when the panel is narrow", () => {
+    const wrapper = mount(SettingsRow, {
+      props: { label: "バージョン", control: "value" },
+      slots: { default: "<span>0.1.0</span>" },
+    });
+    expect(wrapper.classes()).toContain("setting-row--fixed");
+    expect(wrapper.classes()).toContain("setting-row--center");
+  });
+
   it("marks button rows so wrapped buttons can align left", () => {
     const wrapper = mount(SettingsRow, {
       props: { label: "更新", control: "button" },

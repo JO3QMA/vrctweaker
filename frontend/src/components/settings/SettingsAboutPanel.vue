@@ -5,7 +5,7 @@
       :description="t('settings.aboutLead')"
     />
     <el-card class="section-card settings-card--rows" shadow="never">
-      <SettingsRow :label="t('settings.versionLabel')">
+      <SettingsRow :label="t('settings.versionLabel')" control="value">
         <span class="settings-version" data-testid="settings-app-version">{{
           appVersion
         }}</span>

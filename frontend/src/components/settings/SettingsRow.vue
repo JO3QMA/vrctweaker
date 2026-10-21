@@ -5,7 +5,7 @@ const props = withDefaults(
   defineProps<{
     label: string;
     description?: string;
-    control?: "field" | "number" | "switch" | "button";
+    control?: "field" | "number" | "switch" | "button" | "value";
   }>(),
   {
     description: "",
@@ -21,7 +21,9 @@ const showDescription = computed(
 
 const rowClass = computed(() => ({
   "setting-row--fixed":
-    props.control === "number" || props.control === "switch",
+    props.control === "number" ||
+    props.control === "switch" ||
+    props.control === "value",
   "setting-row--number": props.control === "number",
   "setting-row--button": props.control === "button",
   "setting-row--center": !showDescription.value,

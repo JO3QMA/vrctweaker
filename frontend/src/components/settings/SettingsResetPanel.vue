@@ -55,7 +55,7 @@
       />
       <SettingsRow
         :label="t('settings.clearEncountersItem')"
-        :description="t('settings.clearEncountersConfirm')"
+        :description="t('settings.clearEncountersHint')"
         control="button"
       >
         <VtButton
@@ -70,7 +70,7 @@
       </SettingsRow>
       <SettingsRow
         :label="t('settings.clearScreenshotsItem')"
-        :description="t('settings.clearScreenshotsConfirm')"
+        :description="t('settings.clearScreenshotsHint')"
         control="button"
       >
         <VtButton
@@ -85,7 +85,7 @@
       </SettingsRow>
       <SettingsRow
         :label="t('settings.clearFriendsItem')"
-        :description="t('settings.clearFriendsConfirm')"
+        :description="t('settings.clearFriendsHint')"
         control="button"
       >
         <VtButton
