@@ -1,41 +1,43 @@
 <template>
-  <div class="settings-view">
-    <h1 class="page-title">{{ t("settings.title") }}</h1>
-    <div class="settings-shell">
-      <div class="settings-layout">
-        <nav
-          class="settings-nav"
-          :aria-label="t('settings.navLabel')"
-          data-testid="settings-nav"
-        >
-          <router-link
-            v-for="item in navItems"
-            :key="item.id"
-            class="settings-nav__link"
-            :to="`/settings/${item.id}`"
-            :data-testid="`settings-nav-${item.id}`"
+  <div class="settings-frame">
+    <div class="settings-view">
+      <h1 class="page-title">{{ t("settings.title") }}</h1>
+      <div class="settings-shell">
+        <div class="settings-layout">
+          <nav
+            class="settings-nav"
+            :aria-label="t('settings.navLabel')"
+            data-testid="settings-nav"
           >
-            {{ t(item.labelKey) }}
-          </router-link>
-          <div
-            class="settings-nav__divider"
-            role="separator"
-            data-testid="settings-nav-divider"
-          />
-          <router-link
-            class="settings-nav__link"
-            to="/settings/reset"
-            data-testid="settings-nav-reset"
-          >
-            {{ t("settings.resetSetupSection") }}
-          </router-link>
-        </nav>
-        <div class="settings-panel">
-          <SettingsAccountPanel v-if="section === 'account'" />
-          <SettingsGeneralPanel v-else-if="section === 'general'" />
-          <SettingsDataPanel v-else-if="section === 'data'" />
-          <SettingsAboutPanel v-else-if="section === 'about'" />
-          <SettingsResetPanel v-else-if="section === 'reset'" />
+            <router-link
+              v-for="item in navItems"
+              :key="item.id"
+              class="settings-nav__link"
+              :to="`/settings/${item.id}`"
+              :data-testid="`settings-nav-${item.id}`"
+            >
+              {{ t(item.labelKey) }}
+            </router-link>
+            <div
+              class="settings-nav__divider"
+              role="separator"
+              data-testid="settings-nav-divider"
+            />
+            <router-link
+              class="settings-nav__link"
+              to="/settings/reset"
+              data-testid="settings-nav-reset"
+            >
+              {{ t("settings.resetSetupSection") }}
+            </router-link>
+          </nav>
+          <div class="settings-panel">
+            <SettingsAccountPanel v-if="section === 'account'" />
+            <SettingsGeneralPanel v-else-if="section === 'general'" />
+            <SettingsDataPanel v-else-if="section === 'data'" />
+            <SettingsAboutPanel v-else-if="section === 'about'" />
+            <SettingsResetPanel v-else-if="section === 'reset'" />
+          </div>
         </div>
       </div>
     </div>

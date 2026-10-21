@@ -467,9 +467,26 @@ a:hover {
 }
 
 /* ─── Settings screen layout ───────────────────────────────────── */
-.settings-shell {
+/* Nav mode follows this frame, which does not scroll. A scrollbar on
+   .settings-view must not change the measured width (or the mode would
+   differ between short and long sub-pages, and could oscillate). */
+.settings-frame {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
   container-type: inline-size;
-  container-name: settings-shell;
+  container-name: settings-frame;
+}
+
+.settings-view {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .settings-layout {
@@ -529,7 +546,7 @@ a:hover {
   container-name: settings-panel;
 }
 
-@container settings-shell (max-width: 719px) {
+@container settings-frame (max-width: 719px) {
   .settings-layout {
     flex-direction: column;
   }
