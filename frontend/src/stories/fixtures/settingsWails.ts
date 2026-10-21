@@ -6,10 +6,11 @@ import { withWailsApp } from "../wailsDecorator";
 export type SettingsViewWailsPreset =
   "needsReloginClean" | "needsReloginUnlockError" | "loggedIn";
 
-const emptyPaths: PathSettingsDTO = {
-  vrchatPathWindows: "",
-  steamPathLinux: "",
-  outputLogPath: "",
+const samplePaths: PathSettingsDTO = {
+  vrchatPathWindows:
+    "C:\\Program Files (x86)\\Steam\\steamapps\\common\\VRChat\\launch.exe",
+  steamPathLinux: "/usr/bin/steam",
+  outputLogPath: "C:\\Users\\example\\AppData\\LocalLow\\VRChat\\VRChat",
 };
 
 const sampleSelfProfile: UserCacheDTO = {
@@ -62,13 +63,15 @@ export function withSettingsWails(preset: SettingsViewWailsPreset): Decorator {
         Promise.resolve(loggedIn ? sampleSelfProfile : emptySelfProfile),
       GetLogRetentionDays: () => Promise.resolve(30),
       SetLogRetentionDays: (_days: number) => Promise.resolve(),
-      GetPathSettings: () => Promise.resolve({ ...emptyPaths }),
+      GetGalleryAutoEnrichMetadata: () => Promise.resolve(true),
+      SetGalleryAutoEnrichMetadata: (_enabled: boolean) => Promise.resolve(),
+      GetPathSettings: () => Promise.resolve({ ...samplePaths }),
       SetPathSettings: (_dto: PathSettingsDTO) => Promise.resolve(),
       GetFirstLaunchGuideCompleted: () => Promise.resolve(true),
       SetFirstLaunchGuideCompleted: () => Promise.resolve(),
       GetOnboardingFolderDefaults: () =>
         Promise.resolve({
-          ...emptyPaths,
+          ...samplePaths,
           pictureOutputFolder: "C:/Pictures/VRChat",
           savedPictureOutputFolder: "",
         }),
@@ -78,6 +81,21 @@ export function withSettingsWails(preset: SettingsViewWailsPreset): Decorator {
       GetCloseToTray: () => Promise.resolve(true),
       SetCloseToTray: (_on: boolean) => Promise.resolve(),
       GetAppVersion: () => Promise.resolve("0.1.0"),
+      GetAppUpdateAutoCheck: () => Promise.resolve(true),
+      SetAppUpdateAutoCheck: (_on: boolean) => Promise.resolve(),
+      CheckForAppUpdate: () =>
+        Promise.resolve({
+          currentVersion: "0.1.0",
+          updateAvailable: false,
+          shouldPrompt: false,
+          latestVersion: "0.1.0",
+          latestTag: "v0.1.0",
+          releaseNotes: "",
+          downloadUrl: "",
+          zipSha256: "",
+          releasePageUrl: "",
+          autoApplySupported: true,
+        }),
       RequestClose: () => Promise.resolve(),
       ValidatePath: (_path: string) => Promise.resolve(true),
       ValidateOutputLogPath: (_path: string) => Promise.resolve(true),

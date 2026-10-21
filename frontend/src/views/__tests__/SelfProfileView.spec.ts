@@ -9,7 +9,11 @@ const router = createRouter({
   history: createWebHashHistory(),
   routes: [
     { path: "/me", component: SelfProfileView },
-    { path: "/settings", name: "settings", component: { template: "<div/>" } },
+    {
+      path: "/settings/account",
+      name: "settings-account",
+      component: { template: "<div/>" },
+    },
   ],
 });
 
@@ -38,7 +42,7 @@ describe("SelfProfileView", () => {
 
     expect(wrapper.text()).toContain("ログインが必要");
     expect(wrapper.find(".settings-link").attributes("href")).toBe(
-      "#/settings",
+      "#/settings/account",
     );
   });
 

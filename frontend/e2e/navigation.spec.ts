@@ -36,6 +36,11 @@ const ROUTES_WITH_DEDICATED_E2E_TESTS = new Set([
   "config",
   "video",
   "settings",
+  "settings-account",
+  "settings-general",
+  "settings-data",
+  "settings-about",
+  "settings-reset",
   "licenses",
   "legal-privacy",
   "legal-terms",
@@ -69,8 +74,25 @@ test.describe("Navigation", () => {
     await expect(page.getByRole("heading", { level: 1 })).toContainText("設定");
   });
 
+  test("settings subpages render their panels", async ({ page }) => {
+    const pages = [
+      ["/settings/account", "settings-account-panel"],
+      ["/settings/general", "settings-general-panel"],
+      ["/settings/data", "settings-data-panel"],
+      ["/settings/about", "settings-about-app-section"],
+      ["/settings/reset", "settings-reset-setup-section"],
+    ] as const;
+    for (const [path, testId] of pages) {
+      await page.goto(`/#${path}`);
+      await expect(page.getByRole("heading", { level: 1 })).toContainText(
+        "設定",
+      );
+      await expect(page.getByTestId(testId)).toBeVisible();
+    }
+  });
+
   test("settings OSS link navigates to licenses page", async ({ page }) => {
-    await page.goto("/#/settings");
+    await page.goto("/#/settings/about");
     await page.getByTestId("settings-oss-licenses-link").click();
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
       "OSS ライセンス",
@@ -80,7 +102,7 @@ test.describe("Navigation", () => {
   test("settings privacy link navigates to in-app legal page", async ({
     page,
   }) => {
-    await page.goto("/#/settings");
+    await page.goto("/#/settings/about");
     await page.getByTestId("legal-link-privacy").click();
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
@@ -95,7 +117,7 @@ test.describe("Navigation", () => {
   test("settings terms link navigates to in-app legal page", async ({
     page,
   }) => {
-    await page.goto("/#/settings");
+    await page.goto("/#/settings/about");
     await page.getByTestId("legal-link-terms").click();
     await expect(page.getByRole("heading", { level: 1 })).toHaveCount(1);
     await expect(page.getByRole("heading", { level: 1 })).toContainText(

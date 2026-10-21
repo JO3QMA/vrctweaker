@@ -11,6 +11,7 @@ import ja from "../src/i18n/locales/ja.json";
 import ko from "../src/i18n/locales/ko.json";
 import zhTW from "../src/i18n/locales/zh-TW.json";
 import zhCN from "../src/i18n/locales/zh-CN.json";
+import { settingsChildRoutes } from "../src/views/settings/settingsSections";
 
 const storybookI18n = createI18n({
   legacy: false,
@@ -44,8 +45,23 @@ const router = createRouter({
       component: { template: "<div />" },
     },
     { path: "/config", name: "config", component: { template: "<div />" } },
-    { path: "/settings", name: "settings", component: { template: "<div />" } },
+    { path: "/me", name: "me", component: { template: "<div />" } },
+    {
+      path: "/settings",
+      component: { template: "<div />" },
+      children: settingsChildRoutes(),
+    },
     { path: "/licenses", name: "licenses", component: { template: "<div />" } },
+    {
+      path: "/legal/privacy",
+      name: "legal-privacy",
+      component: { template: "<div />" },
+    },
+    {
+      path: "/legal/terms",
+      name: "legal-terms",
+      component: { template: "<div />" },
+    },
   ],
 });
 

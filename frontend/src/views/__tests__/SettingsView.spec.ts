@@ -3,6 +3,7 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { ElMessageBox } from "element-plus";
 import { createRouter, createWebHashHistory } from "vue-router";
 import SettingsView from "../SettingsView.vue";
+import { settingsChildRoutes } from "../settings/settingsSections";
 import { App } from "../../wails/app";
 import * as I18nModule from "../../i18n";
 import { resetSessionUnlockForStorybook } from "../../composables/useSessionUnlock";
@@ -20,7 +21,11 @@ vi.mock("../../utils/showToast", () => ({
 const router = createRouter({
   history: createWebHashHistory(),
   routes: [
-    { path: "/settings", component: SettingsView },
+    {
+      path: "/settings",
+      component: SettingsView,
+      children: settingsChildRoutes(),
+    },
     { path: "/me", name: "me", component: { template: "<div>Me</div>" } },
     {
       path: "/video",
@@ -28,6 +33,16 @@ const router = createRouter({
       component: { template: "<div>Video</div>" },
     },
     { path: "/licenses", component: { template: "<div>Licenses</div>" } },
+    {
+      path: "/legal/privacy",
+      name: "legal-privacy",
+      component: { template: "<div>Privacy</div>" },
+    },
+    {
+      path: "/legal/terms",
+      name: "legal-terms",
+      component: { template: "<div>Terms</div>" },
+    },
   ],
 });
 
@@ -38,8 +53,22 @@ const defaultPathSettings = {
     "C:\\Users\\x\\AppData\\LocalLow\\VRChat\\VRChat\\output_log.txt",
 };
 
+let activeWrapper: ReturnType<typeof mount> | undefined;
+
 function mountSettings() {
-  return mount(SettingsView, { global: { plugins: [router] } });
+  activeWrapper?.unmount();
+  activeWrapper = mount(SettingsView, { global: { plugins: [router] } });
+  return activeWrapper;
+}
+
+async function mountAt(path: string) {
+  activeWrapper?.unmount();
+  activeWrapper = undefined;
+  await router.push(path);
+  await router.isReady();
+  const wrapper = mountSettings();
+  await flushPromises();
+  return wrapper;
 }
 
 function pathRowInput(wrapper: ReturnType<typeof mount>, rowIndex: number) {
@@ -65,6 +94,8 @@ function setupAppMocks() {
   vi.spyOn(App, "hasStoredCredential").mockResolvedValue(false);
   vi.spyOn(App, "isLoggedIn").mockResolvedValue(false);
   vi.spyOn(App, "getLogRetentionDays").mockResolvedValue(45);
+  vi.spyOn(App, "getGalleryAutoEnrichMetadata").mockResolvedValue(true);
+  vi.spyOn(App, "setGalleryAutoEnrichMetadata").mockResolvedValue(undefined);
   vi.spyOn(App, "getSuppressSleepWhileVRChat").mockResolvedValue(true);
   vi.spyOn(App, "getCloseToTray").mockResolvedValue(true);
   vi.spyOn(App, "getAppUpdateAutoCheck").mockResolvedValue(true);
@@ -110,6 +141,8 @@ describe("SettingsView", () => {
   });
 
   afterEach(() => {
+    activeWrapper?.unmount();
+    activeWrapper = undefined;
     vi.restoreAllMocks();
   });
 
@@ -119,9 +152,38 @@ describe("SettingsView", () => {
     expect(wrapper.find(".page-title").text()).toBe("設定");
   });
 
-  it("has link to OSS licenses page in about section", async () => {
+  it("redirects /settings to the account page", async () => {
+    await router.push("/settings");
+    await router.isReady();
+    expect(router.currentRoute.value.path).toBe("/settings/account");
     const wrapper = mountSettings();
     await flushPromises();
+    expect(
+      wrapper.find('[data-testid="settings-account-panel"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.get('[data-testid="settings-credential-keyring"]').text(),
+    ).toContain("キーリング");
+  });
+
+  it("lists five nav entries with a divider before reset", async () => {
+    const wrapper = mountSettings();
+    await flushPromises();
+    const ids = [
+      ...wrapper.get('[data-testid="settings-nav"]').element.children,
+    ].map((el) => el.getAttribute("data-testid"));
+    expect(ids).toEqual([
+      "settings-nav-account",
+      "settings-nav-general",
+      "settings-nav-data",
+      "settings-nav-about",
+      "settings-nav-divider",
+      "settings-nav-reset",
+    ]);
+  });
+
+  it("has link to OSS licenses page in about section", async () => {
+    const wrapper = await mountAt("/settings/about");
     const licensesLink = wrapper.find(
       '[data-testid="settings-oss-licenses-link"]',
     );
@@ -131,8 +193,7 @@ describe("SettingsView", () => {
   });
 
   it("shows legal document links in about section", async () => {
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/about");
     const privacy = wrapper.find('[data-testid="legal-link-privacy"]');
     expect(privacy.exists()).toBe(true);
     expect(privacy.attributes("href")).toContain("/legal/privacy");
@@ -141,8 +202,7 @@ describe("SettingsView", () => {
   });
 
   it("loads path settings on mount", async () => {
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/data");
 
     expect(App.getPathSettings).toHaveBeenCalled();
     expect((pathRowInput(wrapper, 0).element as HTMLInputElement).value).toBe(
@@ -154,47 +214,31 @@ describe("SettingsView", () => {
     expect((pathRowInput(wrapper, 2).element as HTMLInputElement).value).toBe(
       defaultPathSettings.outputLogPath,
     );
+    const browseLabels = [
+      "vrchat-path-browse",
+      "steam-path-browse",
+      "output-log-dir-browse",
+    ].map((id) => wrapper.get(`[data-testid="${id}"]`).text());
+    expect(new Set(browseLabels).size).toBe(1);
+    expect(browseLabels[0]).toBe("参照");
   });
 
-  it("falls back to dev app version and still loads path settings when getAppVersion fails", async () => {
+  it("falls back to dev when getAppVersion fails", async () => {
     vi.mocked(App.getAppVersion).mockRejectedValueOnce(
       new Error("version unavailable"),
     );
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/about");
 
-    expect(App.getPathSettings).toHaveBeenCalled();
     expect(
       wrapper.get('[data-testid="settings-app-version"]').text(),
     ).toContain("dev");
-    expect((pathRowInput(wrapper, 0).element as HTMLInputElement).value).toBe(
-      defaultPathSettings.vrchatPathWindows,
-    );
   });
 
-  it("loads log retention and suppress sleep on mount", async () => {
-    const wrapper = mountSettings();
-    await flushPromises();
+  it("loads general controls without the OSS link", async () => {
+    const wrapper = await mountAt("/settings/general");
 
-    expect(App.getLogRetentionDays).toHaveBeenCalled();
     expect(App.getSuppressSleepWhileVRChat).toHaveBeenCalled();
     expect(App.getCloseToTray).toHaveBeenCalled();
-    expect(App.getAppVersion).toHaveBeenCalled();
-    expect(
-      wrapper.get('[data-testid="settings-app-version"]').text(),
-    ).toContain("0.1.0");
-    expect(
-      wrapper.get('[data-testid="settings-app-disclaimer"]').text(),
-    ).toContain("非公式");
-    expect(
-      wrapper.get('[data-testid="settings-app-data-storage"]').text(),
-    ).toContain("vrchat-tweaker");
-    expect(
-      (
-        wrapper.find(".setting-row .el-input-number input")
-          .element as HTMLInputElement
-      ).value,
-    ).toBe("45");
     expect(
       wrapper
         .find(".power-switch")
@@ -204,30 +248,80 @@ describe("SettingsView", () => {
     expect(
       wrapper.find('[data-testid="settings-close-to-tray"]').exists(),
     ).toBe(true);
-    expect(App.getAppUpdateAutoCheck).toHaveBeenCalled();
+    expect(wrapper.find(".setting-row--fixed").exists()).toBe(true);
     expect(
-      wrapper.find('[data-testid="settings-about-app-section"]').exists(),
-    ).toBe(true);
-    expect(
-      wrapper.find('[data-testid="settings-reset-setup-section"]').exists(),
-    ).toBe(true);
-    expect(
-      wrapper.find('[data-testid="settings-open-onboarding"]').exists(),
+      wrapper.find('[data-testid="settings-ui-language"]').exists(),
     ).toBe(true);
     expect(
       wrapper.find('[data-testid="settings-oss-licenses-link"]').exists(),
-    ).toBe(true);
+    ).toBe(false);
+  });
+
+  it("loads data retention, gallery enrich, and storage note", async () => {
+    const wrapper = await mountAt("/settings/data");
+
+    expect(App.getLogRetentionDays).toHaveBeenCalled();
+    expect(App.getGalleryAutoEnrichMetadata).toHaveBeenCalled();
     expect(
-      wrapper.find('[data-testid="settings-app-section"]').text(),
-    ).not.toContain("OSS");
+      wrapper.get('[data-testid="settings-app-data-storage"]').text(),
+    ).toContain("vrchat-tweaker");
     expect(
-      wrapper.find('[data-testid="settings-check-app-update"]').exists(),
+      (
+        wrapper.find(".setting-row .el-input-number input")
+          .element as HTMLInputElement
+      ).value,
+    ).toBe("45");
+    const retentionRow = wrapper
+      .find('[data-testid="settings-log-retention"]')
+      .element.closest(".setting-row");
+    expect(retentionRow?.classList.contains("setting-row--number")).toBe(true);
+    expect(retentionRow?.classList.contains("setting-row--fixed")).toBe(true);
+    expect(
+      wrapper.find('[data-testid="settings-gallery-auto-enrich"]').exists(),
     ).toBe(true);
   });
 
+  it("loads about and reset sections on their routes", async () => {
+    const about = await mountAt("/settings/about");
+    expect(App.getAppVersion).toHaveBeenCalled();
+    expect(App.getAppUpdateAutoCheck).toHaveBeenCalled();
+    expect(about.get('[data-testid="settings-app-version"]').text()).toContain(
+      "0.1.0",
+    );
+    expect(
+      about.get('[data-testid="settings-app-disclaimer"]').text(),
+    ).toContain("非公式");
+    expect(
+      about.find('[data-testid="settings-check-app-update"]').exists(),
+    ).toBe(true);
+    expect(
+      about.find('[data-testid="settings-oss-licenses-link"]').exists(),
+    ).toBe(true);
+
+    const reset = await mountAt("/settings/reset");
+    expect(
+      reset.find('[data-testid="settings-reset-setup-section"]').exists(),
+    ).toBe(true);
+    expect(
+      reset.find('[data-testid="settings-open-onboarding"]').exists(),
+    ).toBe(true);
+    expect(reset.find('[data-testid="settings-vacuum"]').exists()).toBe(true);
+    const danger = reset.get('[data-testid="settings-destructive-section"]');
+    expect(danger.classes()).toContain("settings-danger-card");
+    expect(danger.find('[data-testid="settings-vacuum"]').exists()).toBe(false);
+    expect(
+      danger.find('[data-testid="settings-clear-encounters"]').exists(),
+    ).toBe(true);
+    expect(
+      danger.find('[data-testid="settings-clear-screenshots"]').exists(),
+    ).toBe(true);
+    expect(danger.find('[data-testid="settings-clear-friends"]').exists()).toBe(
+      true,
+    );
+  });
+
   it("shows up to date after manual update check", async () => {
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/about");
     await wrapper
       .get('[data-testid="settings-check-app-update"]')
       .trigger("click");
@@ -239,8 +333,7 @@ describe("SettingsView", () => {
   });
 
   it("lists all UI language options", async () => {
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/general");
 
     const options = wrapper.findAllComponents({ name: "ElOption" });
     expect(options).toHaveLength(5);
@@ -254,8 +347,7 @@ describe("SettingsView", () => {
   });
 
   it("saves path settings when a path input changes", async () => {
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/data");
     vi.mocked(App.setPathSettings).mockClear();
 
     const input = pathRowInput(wrapper, 0);
@@ -272,8 +364,7 @@ describe("SettingsView", () => {
     vi.mocked(App.openFileDialog).mockResolvedValueOnce(
       "D:\\Picked\\VRChat.exe",
     );
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/data");
     vi.mocked(App.setPathSettings).mockClear();
 
     await wrapper.find('[data-testid="vrchat-path-browse"]').trigger("click");
@@ -287,8 +378,7 @@ describe("SettingsView", () => {
 
   it("browse Steam path saves selected file", async () => {
     vi.mocked(App.openFileDialog).mockResolvedValueOnce("/usr/bin/steam");
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/data");
     vi.mocked(App.setPathSettings).mockClear();
 
     await wrapper.find('[data-testid="steam-path-browse"]').trigger("click");
@@ -301,8 +391,7 @@ describe("SettingsView", () => {
 
   it("browse output log directory saves selected folder", async () => {
     vi.mocked(App.openDirectoryDialog).mockResolvedValueOnce("C:\\logs");
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/data");
     vi.mocked(App.setPathSettings).mockClear();
 
     await wrapper
@@ -316,25 +405,18 @@ describe("SettingsView", () => {
   });
 
   it("does not show output log file browse button", async () => {
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/data");
     expect(
       wrapper.find('[data-testid="output-log-path-browse"]').exists(),
     ).toBe(false);
   });
 
   it("opens VRChat log folder via App", async () => {
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/data");
 
-    const openBtn = wrapper
-      .findAll(".path-row")[2]!
-      .findAll("button")
-      .find((b: { text: () => string }) =>
-        b.text().includes("ログフォルダを開く"),
-      );
-    expect(openBtn).toBeDefined();
-    await openBtn!.trigger("click");
+    const openLink = wrapper.get('[data-testid="settings-open-log-folder"]');
+    expect(openLink.element.tagName).toBe("A");
+    await openLink.trigger("click");
     await flushPromises();
 
     expect(App.openVRChatLogFolder).toHaveBeenCalled();
@@ -342,8 +424,7 @@ describe("SettingsView", () => {
 
   it("validates executable paths with App.validatePath", async () => {
     vi.mocked(App.validatePath).mockResolvedValueOnce(false);
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/data");
 
     await validateExistsBtn(wrapper, 0).trigger("click");
     await flushPromises();
@@ -356,8 +437,7 @@ describe("SettingsView", () => {
 
   it("validates output log path with App.validateOutputLogPath", async () => {
     vi.mocked(App.validateOutputLogPath).mockResolvedValueOnce(true);
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/data");
 
     await validateExistsBtn(wrapper, 2).trigger("click");
     await flushPromises();
@@ -369,8 +449,7 @@ describe("SettingsView", () => {
   });
 
   it("saves log retention days on change", async () => {
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/data");
     vi.mocked(App.setLogRetentionDays).mockClear();
 
     const retentionInput = wrapper.find(".setting-row .el-input-number input");
@@ -382,8 +461,7 @@ describe("SettingsView", () => {
   });
 
   it("saves suppress sleep toggle on change", async () => {
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/general");
     vi.mocked(App.setSuppressSleepWhileVRChat).mockClear();
 
     await wrapper.find(".power-switch").trigger("click");
@@ -393,8 +471,7 @@ describe("SettingsView", () => {
   });
 
   it("saves close to tray toggle on change", async () => {
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/general");
     vi.mocked(App.setCloseToTray).mockClear();
 
     await wrapper
@@ -407,13 +484,9 @@ describe("SettingsView", () => {
 
   it("runs vacuum DB after confirmation", async () => {
     vi.spyOn(ElMessageBox, "confirm").mockResolvedValue(undefined as never);
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/reset");
 
-    const vacuumBtn = wrapper
-      .findAll(".maintenance-actions button")
-      .find((b) => b.text().includes("DB最適化"));
-    await vacuumBtn!.trigger("click");
+    await wrapper.get('[data-testid="settings-vacuum"]').trigger("click");
     await flushPromises();
 
     expect(App.vacuumDb).toHaveBeenCalled();
@@ -422,13 +495,11 @@ describe("SettingsView", () => {
 
   it("clears encounters after confirmation", async () => {
     vi.spyOn(ElMessageBox, "confirm").mockResolvedValue(undefined as never);
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/reset");
 
-    const btn = wrapper
-      .findAll(".maintenance-actions button")
-      .find((b) => b.text().includes("遭遇ログ"));
-    await btn!.trigger("click");
+    await wrapper
+      .get('[data-testid="settings-clear-encounters"]')
+      .trigger("click");
     await flushPromises();
 
     expect(App.clearEncounters).toHaveBeenCalled();
@@ -436,13 +507,11 @@ describe("SettingsView", () => {
 
   it("clears screenshots after confirmation", async () => {
     vi.spyOn(ElMessageBox, "confirm").mockResolvedValue(undefined as never);
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/reset");
 
-    const btn = wrapper
-      .findAll(".maintenance-actions button")
-      .find((b) => b.text().includes("スクショ"));
-    await btn!.trigger("click");
+    await wrapper
+      .get('[data-testid="settings-clear-screenshots"]')
+      .trigger("click");
     await flushPromises();
 
     expect(App.clearScreenshots).toHaveBeenCalled();
@@ -450,13 +519,11 @@ describe("SettingsView", () => {
 
   it("clears friends cache after confirmation", async () => {
     vi.spyOn(ElMessageBox, "confirm").mockResolvedValue(undefined as never);
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/reset");
 
-    const btn = wrapper
-      .findAll(".maintenance-actions button")
-      .find((b) => b.text().includes("フレンド"));
-    await btn!.trigger("click");
+    await wrapper
+      .get('[data-testid="settings-clear-friends"]')
+      .trigger("click");
     await flushPromises();
 
     expect(App.clearFriendsCache).toHaveBeenCalled();
@@ -464,13 +531,9 @@ describe("SettingsView", () => {
 
   it("skips maintenance when confirmation is cancelled", async () => {
     vi.spyOn(ElMessageBox, "confirm").mockRejectedValue(new Error("cancel"));
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/reset");
 
-    const vacuumBtn = wrapper
-      .findAll(".maintenance-actions button")
-      .find((b) => b.text().includes("DB最適化"));
-    await vacuumBtn!.trigger("click");
+    await wrapper.get('[data-testid="settings-vacuum"]').trigger("click");
     await flushPromises();
 
     expect(App.vacuumDb).not.toHaveBeenCalled();
@@ -479,13 +542,9 @@ describe("SettingsView", () => {
   it("shows maintenance error when operation fails", async () => {
     vi.spyOn(ElMessageBox, "confirm").mockResolvedValue(undefined as never);
     vi.mocked(App.vacuumDb).mockRejectedValueOnce(new Error("vacuum failed"));
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/reset");
 
-    const vacuumBtn = wrapper
-      .findAll(".maintenance-actions button")
-      .find((b) => b.text().includes("DB最適化"));
-    await vacuumBtn!.trigger("click");
+    await wrapper.get('[data-testid="settings-vacuum"]').trigger("click");
     await flushPromises();
 
     expect(wrapper.find(".el-alert--error").text()).toContain("vacuum failed");
@@ -506,16 +565,11 @@ describe("SettingsView", () => {
     const consoleSpy = vi
       .spyOn(console, "error")
       .mockImplementation(() => undefined);
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/data");
 
-    const openBtn = wrapper
-      .findAll(".path-row")[2]!
-      .findAll("button")
-      .find((b: { text: () => string }) =>
-        b.text().includes("ログフォルダを開く"),
-      );
-    await openBtn!.trigger("click");
+    await wrapper
+      .get('[data-testid="settings-open-log-folder"]')
+      .trigger("click");
     await flushPromises();
 
     expect(consoleSpy).toHaveBeenCalled();
@@ -549,6 +603,8 @@ describe("SettingsView login and profile", () => {
   });
 
   afterEach(() => {
+    activeWrapper?.unmount();
+    activeWrapper = undefined;
     vi.restoreAllMocks();
   });
 
@@ -710,12 +766,13 @@ describe("SettingsView onLanguageChange", () => {
   });
 
   afterEach(() => {
+    activeWrapper?.unmount();
+    activeWrapper = undefined;
     vi.restoreAllMocks();
   });
 
   it("calls i18n setLanguage after App.setLanguage succeeds", async () => {
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/general");
 
     const select = wrapper.findComponent({ name: "ElSelect" });
     await select.vm.$emit("update:modelValue", "en");
@@ -728,8 +785,7 @@ describe("SettingsView onLanguageChange", () => {
   it("does not call i18n setLanguage when App.setLanguage fails", async () => {
     vi.mocked(App.setLanguage).mockRejectedValueOnce(new Error("save failed"));
 
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/general");
 
     vi.mocked(I18nModule.setLanguage).mockClear();
 
@@ -742,8 +798,7 @@ describe("SettingsView onLanguageChange", () => {
   });
 
   it("ignores invalid locale values", async () => {
-    const wrapper = mountSettings();
-    await flushPromises();
+    const wrapper = await mountAt("/settings/general");
 
     const select = wrapper.findComponent({ name: "ElSelect" });
     await select.vm.$emit("update:modelValue", "invalid-locale");

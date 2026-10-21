@@ -18,7 +18,9 @@ test.describe("Self profile (not logged in)", () => {
   test("login hint links to settings", async ({ page }) => {
     await page.goto("/#/me");
     await page.locator(".settings-link").click();
+    await expect(page).toHaveURL(/#\/settings\/account$/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("設定");
+    await expect(page.getByTestId("settings-credential-keyring")).toBeVisible();
   });
 
   test("sidebar navigates to /me", async ({ page }) => {

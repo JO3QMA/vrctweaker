@@ -7,6 +7,7 @@ import App from "./App.vue";
 import "./assets/style.css";
 import type { RouteRecordRaw } from "vue-router";
 import { i18n } from "./i18n";
+import { settingsChildRoutes } from "./views/settings/settingsSections";
 
 declare module "vue-router" {
   interface RouteMeta {
@@ -85,9 +86,9 @@ const routes: RouteRecordRaw[] = [
   },
   {
     path: "/settings",
-    name: "settings",
     component: () => import("./views/SettingsView.vue"),
     meta: { titleKey: "routes.settings" },
+    children: settingsChildRoutes(),
   },
   {
     path: "/licenses",
