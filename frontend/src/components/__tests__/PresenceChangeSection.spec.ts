@@ -143,6 +143,11 @@ describe("PresenceChangeSection", () => {
     expect(
       wrapper.find('[data-testid="presence-change-login-required"]').exists(),
     ).toBe(true);
+    expect(
+      wrapper
+        .get('[data-testid="presence-change-settings-link"]')
+        .attributes("to"),
+    ).toBe("/settings/account");
     expectApplyDisabled(wrapper, true);
   });
 

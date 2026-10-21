@@ -116,16 +116,17 @@ test.describe("VRChat Tweaker", () => {
 
   test.describe("Settings", () => {
     test("displays path settings and log retention", async ({ page }) => {
-      await page.goto("/#/settings");
+      await page.goto("/#/settings/data");
       await expect(page.locator("h1")).toContainText("設定");
-      await expect(page.getByText("VRChat ログイン")).toBeVisible();
-      await expect(page.getByText("パス設定")).toBeVisible();
-      await expect(page.getByText("ログ・データ管理")).toBeVisible();
+      await expect(page.getByText("パス", { exact: true })).toBeVisible();
+      await expect(
+        page.getByText("ログ・データ", { exact: true }),
+      ).toBeVisible();
       await expect(page.getByText(/Activity データの保存期間/)).toBeVisible();
     });
 
     test("log retention input has default value", async ({ page }) => {
-      await page.goto("/#/settings");
+      await page.goto("/#/settings/data");
       await expect(page.locator("h1")).toContainText("設定");
       const retentionRow = page
         .locator(".setting-row")

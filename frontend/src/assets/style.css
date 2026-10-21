@@ -56,6 +56,14 @@
   --radius: 8px;
   --sidebar-width: 220px;
 
+  /* Settings layout sizing (8px grid). Spacing stays on --space-* tokens. */
+  --settings-nav-width: 200px; /* 設定サブナビ */
+  --settings-panel-max-width: 800px; /* 設定パネルの最大幅 */
+  --control-width-sm: 160px; /* 数値入力 */
+  --control-width-md: 320px; /* セレクト・短いテキスト入力 */
+  --button-min-width: 96px; /* 設定行のボタン最小幅 */
+  --path-input-min-width: 240px; /* これより狭いパス入力はボタンを下へ折る */
+
   /* Spacing scale (ADR 0018) */
   --space-4: 4px;
   --space-8: 8px;
@@ -456,4 +464,467 @@ a:hover {
 .vt-focus-ring--inset:focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: calc(-1 * var(--focus-ring-offset));
+}
+
+/* ─── Settings screen layout ───────────────────────────────────── */
+/* Nav mode follows this frame, which does not scroll. A scrollbar on
+   .settings-view must not change the measured width (or the mode would
+   differ between short and long sub-pages, and could oscillate). */
+.settings-frame {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  container-type: inline-size;
+  container-name: settings-frame;
+}
+
+.settings-view {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+}
+
+.settings-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-section);
+}
+
+.settings-nav {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 var(--settings-nav-width);
+  width: var(--settings-nav-width);
+  gap: var(--space-4);
+}
+
+.settings-nav__link {
+  display: block;
+  padding: var(--space-8) var(--space-12);
+  border-radius: var(--radius);
+  border-left: 2px solid transparent;
+  color: var(--color-text-secondary);
+  text-decoration: none;
+  font-size: var(--font-size-14);
+  line-height: var(--line-height-normal);
+}
+
+.settings-nav__link:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-muted);
+}
+
+.settings-nav__link.router-link-exact-active {
+  border-left-color: var(--color-brand);
+  color: var(--color-text-primary);
+  background: var(--color-bg-elevated);
+  font-weight: var(--font-weight-600);
+}
+
+.settings-nav__link:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.settings-nav__divider {
+  height: 1px;
+  margin: var(--space-8) 0;
+  background: var(--color-border);
+}
+
+.settings-panel {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  max-width: var(--settings-panel-max-width);
+  container-type: inline-size;
+  container-name: settings-panel;
+}
+
+@container settings-frame (max-width: 719px) {
+  .settings-layout {
+    flex-direction: column;
+  }
+
+  .settings-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    flex: none;
+    width: 100%;
+    gap: var(--space-4);
+  }
+
+  .settings-nav__link {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    border-left-color: transparent;
+    border-bottom: 2px solid transparent;
+  }
+
+  .settings-nav__link.router-link-exact-active {
+    border-left-color: transparent;
+    border-bottom-color: var(--color-brand);
+  }
+
+  .settings-nav__divider {
+    display: none;
+  }
+}
+
+.settings-view .settings-card--rows > .el-card__body {
+  padding: 0;
+}
+
+.settings-view .setting-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-block);
+  padding: var(--space-block);
+}
+
+.settings-view .setting-row + .setting-row,
+.settings-view .settings-danger-card .setting-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.settings-view .setting-row--center {
+  align-items: center;
+}
+
+.settings-view .setting-row__text {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.settings-view .setting-row__label {
+  font-size: var(--font-size-14);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+}
+
+.settings-view .setting-row__desc {
+  margin: var(--space-inline-tight) 0 0;
+  color: var(--color-text-secondary);
+  overflow-wrap: break-word;
+}
+
+.settings-view .setting-row__control {
+  flex: 0 0 var(--control-width-md);
+  width: var(--control-width-md);
+  min-width: 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.settings-view .setting-row__control .el-select,
+.settings-view .setting-row__control .el-input,
+.settings-view .setting-row__control .el-input-number {
+  width: 100%;
+}
+
+.settings-view .setting-row--fixed {
+  flex-wrap: nowrap;
+}
+
+.settings-view .setting-row--fixed .setting-row__control {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.settings-view .setting-row--number .setting-row__control {
+  flex: 0 0 auto;
+  width: auto;
+  gap: var(--space-action-group);
+}
+
+.settings-view .setting-row--number .el-input-number {
+  width: var(--control-width-sm);
+  flex: 0 0 var(--control-width-sm);
+}
+
+.settings-view .setting-row__suffix {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-14);
+  line-height: var(--line-height-normal);
+}
+
+.settings-view .el-button {
+  min-width: var(--button-min-width);
+}
+
+@container settings-panel (max-width: 559px) {
+  .settings-view .setting-row:not(.setting-row--fixed) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .settings-view .setting-row:not(.setting-row--fixed) .setting-row__control {
+    flex: 1 1 auto;
+    width: 100%;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+
+  .settings-view .settings-update-actions {
+    align-items: flex-start;
+  }
+
+  .settings-view .login-form {
+    max-width: none;
+  }
+}
+
+.settings-view .path-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-form-field);
+  padding: var(--space-block);
+}
+
+.settings-view .path-row + .path-row {
+  border-top: 1px solid var(--color-border);
+}
+
+.settings-view .path-row__label {
+  font-size: var(--font-size-14);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+}
+
+.settings-view .path-row__desc {
+  margin: var(--space-inline-tight) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.settings-view .path-input-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-action-group);
+}
+
+.settings-view .path-input-group .el-input {
+  flex: 1 1 var(--path-input-min-width);
+  min-width: min(100%, var(--path-input-min-width));
+}
+
+.settings-view .path-input-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-action-group);
+}
+
+.settings-view .path-row__below {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-inline-tight);
+}
+
+.settings-view .path-open-log-link {
+  color: var(--color-brand);
+  font-size: var(--font-size-12);
+  line-height: var(--line-height-normal);
+  text-decoration: none;
+}
+
+.settings-view .path-open-log-link:hover {
+  text-decoration: underline;
+}
+
+.settings-view .path-open-log-link:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.settings-view .settings-note {
+  margin: 0;
+  padding: 0 var(--space-block) var(--space-block);
+  color: var(--color-text-secondary);
+}
+
+.settings-view
+  .settings-card--rows
+  > .el-card__body
+  > .settings-note:first-child,
+.settings-view .settings-danger-intro {
+  padding-top: var(--space-block);
+}
+
+.settings-view .settings-version {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-14);
+  line-height: var(--line-height-normal);
+}
+
+.settings-view .settings-about-footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-block);
+  padding: var(--space-block);
+  border-top: 1px solid var(--color-border);
+}
+
+.settings-view .settings-about-footer .settings-note {
+  margin: 0;
+  padding: 0;
+}
+
+.settings-view .settings-update-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-form-field);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.settings-view .settings-alert-inset {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 var(--space-block) var(--space-block);
+}
+
+.settings-view .settings-inline-alert {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.settings-view .settings-update-actions .settings-inline-alert {
+  align-self: stretch;
+}
+
+.settings-view .settings-inline-alert .el-alert__content,
+.settings-view .settings-inline-alert .el-alert__title,
+.settings-view .settings-inline-alert .el-alert__description {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.settings-view .settings-inline-alert .el-alert__description {
+  font-size: var(--font-size-12);
+}
+
+.settings-view .settings-danger-card {
+  border-color: var(--color-danger);
+}
+
+.settings-view .login-form {
+  max-width: var(--control-width-md);
+}
+
+.settings-view .login-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-form-field);
+}
+
+.settings-view .login-status-tag {
+  align-self: flex-start;
+}
+
+.settings-page-head {
+  margin: 0 0 var(--space-block);
+}
+
+.settings-page-head__title {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.settings-page-head__lead {
+  margin: var(--space-inline-tight) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.settings-view .login-2fa-hint {
+  margin: 0 0 var(--space-form-field);
+  color: var(--color-text-secondary);
+}
+
+.settings-view .credential-keyring-note {
+  margin: var(--space-form-field) 0 0;
+  color: var(--color-text-secondary);
+}
+
+.settings-view .profile-loading {
+  font-size: var(--font-size-12);
+  color: var(--color-text-secondary);
+}
+
+.settings-view .current-user-card {
+  display: flex;
+  gap: var(--space-block);
+  align-items: flex-start;
+  width: 100%;
+  padding: var(--space-form-field);
+  background: var(--color-bg-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.settings-view .current-user-avatar {
+  flex-shrink: 0;
+  border-radius: var(--radius);
+  object-fit: cover;
+  background: var(--color-bg-base);
+}
+
+.settings-view .current-user-details {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-inline-tight);
+}
+
+.settings-view .current-user-display-name {
+  margin: 0;
+  font-size: var(--font-size-14);
+  font-weight: var(--font-weight-600);
+}
+
+.settings-view .current-user-line {
+  margin: 0;
+  font-size: var(--font-size-12);
+  word-break: break-all;
+}
+
+.settings-view .current-user-line.muted {
+  color: var(--color-text-secondary);
+}
+
+.settings-view .self-profile-link {
+  display: inline-block;
+  margin-top: var(--space-action-group);
+  color: var(--color-brand);
+  text-decoration: none;
+  font-size: var(--font-size-12);
+}
+
+.settings-view .self-profile-link:hover {
+  text-decoration: underline;
+}
+
+.settings-view .login-actions {
+  display: flex;
+  gap: var(--space-action-group);
+  flex-wrap: wrap;
+}
+
+.settings-view .login-error {
+  margin-bottom: var(--space-form-field);
 }

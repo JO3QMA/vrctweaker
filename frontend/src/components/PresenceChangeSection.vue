@@ -44,7 +44,7 @@
       >
         {{ t("dashboard.presenceChange.loginRequired") }}
         <router-link
-          to="/settings"
+          to="/settings/account"
           class="presence-change-settings-link"
           data-testid="presence-change-settings-link"
         >

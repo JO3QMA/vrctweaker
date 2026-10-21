@@ -36,6 +36,11 @@ export const APP_ROUTES = [
   { path: "/config", name: "config", titleJa: "その他の設定" },
   { path: "/video", name: "video", titleJa: "動画" },
   { path: "/settings", name: "settings", titleJa: "設定" },
+  { path: "/settings/account", name: "settings-account", titleJa: "設定" },
+  { path: "/settings/general", name: "settings-general", titleJa: "設定" },
+  { path: "/settings/data", name: "settings-data", titleJa: "設定" },
+  { path: "/settings/about", name: "settings-about", titleJa: "設定" },
+  { path: "/settings/reset", name: "settings-reset", titleJa: "設定" },
   { path: "/licenses", name: "licenses", titleJa: "OSSライセンス" },
   {
     path: "/legal/privacy",

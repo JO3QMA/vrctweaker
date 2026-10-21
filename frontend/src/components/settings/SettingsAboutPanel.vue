@@ -1,0 +1,133 @@
+<template>
+  <div data-testid="settings-about-app-section">
+    <SettingsPageHead
+      :title="t('settings.navAbout')"
+      :description="t('settings.aboutLead')"
+    />
+    <el-card class="section-card settings-card--rows" shadow="never">
+      <SettingsRow :label="t('settings.versionLabel')" control="value">
+        <span class="settings-version" data-testid="settings-app-version">{{
+          appVersion
+        }}</span>
+      </SettingsRow>
+      <SettingsRow :label="t('settings.updateCheckLabel')" control="button">
+        <div class="settings-update-actions">
+          <VtButton
+            variant="secondary"
+            :loading="appUpdateCheckLoading"
+            data-testid="settings-check-app-update"
+            @click="checkAppUpdate"
+          >
+            {{ t("settings.checkAppUpdate") }}
+          </VtButton>
+          <VtAlert
+            v-if="appUpdateCheckError"
+            variant="danger"
+            :title="appUpdateCheckError"
+            :description="appUpdateCheckDetail || undefined"
+            class="settings-inline-alert"
+            data-testid="settings-app-update-error"
+          />
+        </div>
+      </SettingsRow>
+      <p
+        v-if="appUpdateStatusLine"
+        class="settings-note text-body-sm"
+        data-testid="settings-app-update-status"
+      >
+        {{ appUpdateStatusLine }}
+      </p>
+      <SettingsRow
+        :label="t('settings.updateAutoCheck')"
+        :description="t('settings.updateAutoCheckHint')"
+        control="switch"
+      >
+        <el-switch
+          v-model="appUpdateAutoCheck"
+          data-testid="settings-app-update-auto-check"
+          @change="saveAppUpdateAutoCheck"
+        />
+      </SettingsRow>
+      <div class="settings-about-footer">
+        <p
+          class="settings-note text-body-sm"
+          data-testid="settings-app-disclaimer"
+        >
+          {{ t("common.unofficialDisclaimer") }}
+        </p>
+        <LegalDocLinks stacked show-oss-licenses-link />
+      </div>
+    </el-card>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { onMounted, ref } from "vue";
+import { useI18n } from "vue-i18n";
+import LegalDocLinks from "../LegalDocLinks.vue";
+import VtAlert from "../VtAlert.vue";
+import VtButton from "../VtButton.vue";
+import { useAppUpdate } from "../../composables/useAppUpdate";
+import { showToast } from "../../utils/showToast";
+import { App } from "../../wails/app";
+import { formatBackendError } from "../../views/settings/formatBackendError";
+import SettingsPageHead from "./SettingsPageHead.vue";
+import SettingsRow from "./SettingsRow.vue";
+
+const { t } = useI18n();
+const { checkManual } = useAppUpdate();
+
+const appVersion = ref("");
+const appUpdateAutoCheck = ref(true);
+const appUpdateCheckLoading = ref(false);
+const appUpdateCheckError = ref("");
+const appUpdateCheckDetail = ref("");
+const appUpdateStatusLine = ref("");
+
+onMounted(async () => {
+  try {
+    appUpdateAutoCheck.value = await App.getAppUpdateAutoCheck();
+  } catch {
+    appUpdateAutoCheck.value = true;
+  }
+  try {
+    appVersion.value = await App.getAppVersion();
+  } catch {
+    appVersion.value = "dev";
+  }
+});
+
+async function saveAppUpdateAutoCheck() {
+  const attempted = appUpdateAutoCheck.value;
+  try {
+    await App.setAppUpdateAutoCheck(attempted);
+  } catch (e) {
+    appUpdateAutoCheck.value = !attempted;
+    showToast.error(formatBackendError(e, t("settings.errUpdateAutoCheck")));
+  }
+}
+
+async function checkAppUpdate() {
+  appUpdateCheckError.value = "";
+  appUpdateCheckDetail.value = "";
+  appUpdateStatusLine.value = "";
+  appUpdateCheckLoading.value = true;
+  try {
+    const st = await checkManual();
+    if (st.updateAvailable) {
+      appUpdateStatusLine.value = t("settings.appUpdateAvailable", {
+        version: st.latestVersion,
+      });
+    } else {
+      appUpdateStatusLine.value = t("settings.appUpdateUpToDate");
+    }
+  } catch (e) {
+    const message = t("settings.errAppUpdateCheck");
+    appUpdateCheckError.value = message;
+    const detail = formatBackendError(e, "");
+    appUpdateCheckDetail.value = detail && detail !== message ? detail : "";
+  } finally {
+    appUpdateCheckLoading.value = false;
+  }
+}
+</script>

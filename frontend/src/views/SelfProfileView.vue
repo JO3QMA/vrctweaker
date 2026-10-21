@@ -7,7 +7,7 @@
       :title="t('selfProfile.loginRequired')"
       class="login-hint"
     >
-      <router-link class="settings-link" :to="{ name: 'settings' }">
+      <router-link class="settings-link" to="/settings/account">
         {{ t("selfProfile.openSettings") }}
       </router-link>
     </VtAlert>

@@ -164,9 +164,11 @@ watch(
 
 /* `> *` matches the routed SFC root: Vue 3 applies this parent’s scope attribute to child
    component roots, so the combinator resolves to one element. `<Transition>` adds no wrapper
-   DOM node. Gallery manages its own scroll, so its root `.gallery-view` is excluded here. */
+   DOM node. Gallery manages its own scroll, so its root `.gallery-view` is excluded here.
+   Settings scrolls an inner element so the nav breakpoint can sit on the outer frame. */
 /* アクティビティは遭遇ログカード内でスクロールするためルートははみ出し抑制 */
-.router-outlet-host > *:not(.gallery-view):not(.activity-view) {
+.router-outlet-host
+  > *:not(.gallery-view):not(.activity-view):not(.settings-frame) {
   overflow-y: auto;
 }
 
