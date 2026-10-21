@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import VtButton from "../../components/VtButton.vue";
 import VtTag from "../../components/VtTag.vue";
@@ -15,7 +15,9 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 const root = ref<HTMLElement | null>(null);
-const compact = ref(false);
+const logWidth = ref(0);
+const compact = computed(() => logWidth.value > 0 && logWidth.value < 720);
+const narrow = computed(() => logWidth.value > 0 && logWidth.value < 400);
 let observer: ResizeObserver | undefined;
 
 const eventLabelKeys: Record<string, string> = {
@@ -34,17 +36,23 @@ function eventLabel(eventType: string): string {
 }
 
 function resultTooltip(row: AutomationRunLogEntryDTO): string {
-  const progress = `${t("automation.runLogActions")} ${row.actionsCompleted}/${row.actionsTotal}`;
-  const context = row.contextLabel
-    ? `${t("automation.runLogContext")} ${row.contextLabel}`
-    : "";
-  return context ? `${progress} / ${context}` : progress;
+  const parts = [
+    `${t("automation.runLogActions")} ${row.actionsCompleted}/${row.actionsTotal}`,
+  ];
+  if (narrow.value) {
+    parts.unshift(
+      `${t("automation.runLogEvent")} ${eventLabel(row.eventType)}`,
+    );
+  }
+  if (row.contextLabel) {
+    parts.push(`${t("automation.runLogContext")} ${row.contextLabel}`);
+  }
+  return parts.join("\n");
 }
 
 onMounted(() => {
   observer = new ResizeObserver(() => {
-    const width = root.value?.offsetWidth ?? 0;
-    compact.value = width > 0 && width < 720;
+    logWidth.value = root.value?.offsetWidth ?? 0;
   });
   if (root.value) observer.observe(root.value);
 });
@@ -79,28 +87,37 @@ onBeforeUnmount(() => {
         <el-table-column
           prop="at"
           :label="t('automation.runLogAt')"
-          :width="compact ? 120 : 160"
+          :width="narrow ? 96 : compact ? 120 : 160"
+          :min-width="narrow ? 96 : compact ? 120 : 160"
           show-overflow-tooltip
         />
         <el-table-column
           prop="itemName"
           :label="t('automation.itemName')"
+          min-width="48"
           show-overflow-tooltip
         />
         <el-table-column
+          v-if="!narrow"
           :label="t('automation.runLogEvent')"
+          min-width="48"
           show-overflow-tooltip
         >
           <template #default="{ row }">
             {{ eventLabel(row.eventType) }}
           </template>
         </el-table-column>
-        <el-table-column :label="t('automation.runLogResult')" width="96">
+        <el-table-column
+          :label="t('automation.runLogResult')"
+          :width="narrow ? 72 : 96"
+          :min-width="narrow ? 72 : 96"
+        >
           <template #default="{ row }">
             <el-tooltip
               v-if="compact"
               :content="resultTooltip(row)"
               placement="top"
+              popper-class="automation-log-tooltip"
             >
               <VtTag :variant="row.success ? 'success' : 'danger'" size="small">
                 {{
@@ -196,5 +213,14 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: var(--line-height-normal);
+}
+</style>
+
+<style>
+.automation-log-tooltip.el-popper {
+  max-width: 320px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 </style>
