@@ -3,6 +3,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   elementForCssSelector,
+  joinUniqueValues,
   parseStyleSheet,
   readComputedCustomProperty,
   resolveCustomProperties,
@@ -136,6 +137,16 @@ describe("parseStyleSheet", () => {
   });
 });
 
+describe("joinUniqueValues", () => {
+  it("keeps the first occurrence when a danger row repeats the same value", () => {
+    expect(
+      joinUniqueValues(["var(--color-danger)", "var(--color-danger)"]),
+    ).toBe("var(--color-danger)");
+    expect(joinUniqueValues(["#e57373", "#e57373"])).toBe("#e57373");
+    expect(joinUniqueValues(["#5c9ce6", "#7ab3f0"])).toBe("#5c9ce6, #7ab3f0");
+  });
+});
+
 describe("resolveCustomProperties", () => {
   afterEach(() => {
     document.documentElement.className = "";
@@ -217,10 +228,41 @@ describe("style.css catalog", () => {
     expect(groupsFor(root, "--color-")).toEqual([
       "Brand: Main accent. Primary button fill and links use --color-brand.",
       "Neutral: Surfaces, text, and border. Prefer these over legacy --bg-* / --text-* aliases.",
-      "Semantic: タグ・メッセージ・検証のフィードバック。Server status と Presence には使わない",
-      "Server status (domain): Dashboard のサーバー状態。Semantic には流用しない",
-      "Presence (domain): Presence change の色。背景と枠は別トークン",
+      "Semantic: タグ・メッセージ・検証のフィードバック。サーバー状態とプレゼンスには使わない",
+      "Server status (domain): ダッシュボードのサーバー状態。セマンティックには流用しない",
+      "Presence (domain): プレゼンス変更の色。背景と枠は別トークン",
     ]);
+    expect(
+      root
+        .filter(
+          (prop) =>
+            prop.group.startsWith("Server status") ||
+            prop.group.startsWith("Presence"),
+        )
+        .map((prop) => [prop.name, prop.description]),
+    ).toEqual([
+      ["--color-status-operational", "正常"],
+      ["--color-status-degraded", "パフォーマンス低下"],
+      ["--color-status-partial", "一部障害"],
+      ["--color-status-major", "重大な障害"],
+      ["--color-status-maintenance", "メンテナンス中"],
+      ["--color-status-unknown", "不明"],
+      ["--color-presence-join-me", "だれでもおいでの背景"],
+      ["--color-presence-join-me-border", "だれでもおいでの枠"],
+      ["--color-presence-active", "オンラインの背景"],
+      ["--color-presence-active-border", "オンラインの枠"],
+      ["--color-presence-ask-me", "きいてみてねの背景"],
+      ["--color-presence-ask-me-border", "きいてみてねの枠"],
+      ["--color-presence-busy", "取り込み中の背景"],
+      ["--color-presence-busy-border", "取り込み中の枠"],
+    ]);
+    const danger = dark.filter(
+      (prop) =>
+        prop.name === "--el-color-danger" || prop.name === "--el-color-error",
+    );
+    expect(joinUniqueValues(danger.map((prop) => prop.value))).toBe(
+      "var(--color-danger)",
+    );
     expect(
       root.find((prop) => prop.name === "--color-text-primary")?.description,
     ).toBe("本文");

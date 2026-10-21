@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
 import styleCss from "../assets/style.css?raw";
 import {
+  joinUniqueValues,
   parseStyleSheet,
   resolveCustomProperties,
   type CssCustomProperty,
@@ -169,9 +170,7 @@ export const Presence: Story = {
         <h2>Presence color</h2>
         <p>{{ description }}</p>
         <p>
-          Chips use <code>--color-text-inverse</code> on every state, matching the production
-          Presence change section (ADR 0019 v1 visual policy). Ask-me contrast is below WCAG AA;
-          per-state text colors are a follow-up, not this tokenize PR.
+          チップはどの状態でも <code>--color-text-inverse</code> を使います。本番のプレゼンス変更セクション（ADR 0019 v1 の見た目方針）と同じです。きいてみてねのコントラストは WCAG AA を下回ります。状態ごとの文字色は、このトークン化とは別の後続対応です。
         </p>
         <div class="color-story-presence-row">
           <div
@@ -236,8 +235,8 @@ export const ElementPlusMapping: Story = {
         return {
           app: spec.app,
           examples: spec.el.join(", "),
-          declared: props.map((prop) => prop?.value ?? "").join(", "),
-          resolved: resolved.map((prop) => prop.resolved).join(", "),
+          declared: joinUniqueValues(props.map((prop) => prop?.value ?? "")),
+          resolved: joinUniqueValues(resolved.map((prop) => prop.resolved)),
         };
       }),
     }),

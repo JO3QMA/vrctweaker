@@ -16,29 +16,29 @@
   --color-text-inverse: #ffffff; /* 反転文字（Presence チップ） */
   --color-border: #3d4f66; /* 枠線 */
 
-  /* Semantic: タグ・メッセージ・検証のフィードバック。Server status と Presence には使わない */
+  /* Semantic: タグ・メッセージ・検証のフィードバック。サーバー状態とプレゼンスには使わない */
   --color-danger: #e57373; /* 危険・破壊 */
   --color-success: #81c784; /* 成功 */
   --color-warning: #ffb74d; /* 警告 */
   --color-info: #9aa0a6; /* 情報 */
 
-  /* Server status (domain): Dashboard のサーバー状態。Semantic には流用しない */
-  --color-status-operational: #2e9f4a; /* operational */
-  --color-status-degraded: #d4a017; /* degraded */
-  --color-status-partial: #e8943c; /* partial */
-  --color-status-major: #d94a4a; /* major */
-  --color-status-maintenance: #2b7fd9; /* maintenance */
-  --color-status-unknown: var(--color-text-secondary); /* unknown */
+  /* Server status (domain): ダッシュボードのサーバー状態。セマンティックには流用しない */
+  --color-status-operational: #2e9f4a; /* 正常 */
+  --color-status-degraded: #d4a017; /* パフォーマンス低下 */
+  --color-status-partial: #e8943c; /* 一部障害 */
+  --color-status-major: #d94a4a; /* 重大な障害 */
+  --color-status-maintenance: #2b7fd9; /* メンテナンス中 */
+  --color-status-unknown: var(--color-text-secondary); /* 不明 */
 
-  /* Presence (domain): Presence change の色。背景と枠は別トークン */
-  --color-presence-join-me: #2b7fd9; /* Join Me 背景 */
-  --color-presence-join-me-border: #256bb8; /* Join Me 枠 */
-  --color-presence-active: #2e9f4a; /* Active 背景 */
-  --color-presence-active-border: #267d3c; /* Active 枠 */
-  --color-presence-ask-me: #e8943c; /* Ask Me 背景 */
-  --color-presence-ask-me-border: #c97d2e; /* Ask Me 枠 */
-  --color-presence-busy: #d94a4a; /* Busy 背景 */
-  --color-presence-busy-border: #b83c3c; /* Busy 枠 */
+  /* Presence (domain): プレゼンス変更の色。背景と枠は別トークン */
+  --color-presence-join-me: #2b7fd9; /* だれでもおいでの背景 */
+  --color-presence-join-me-border: #256bb8; /* だれでもおいでの枠 */
+  --color-presence-active: #2e9f4a; /* オンラインの背景 */
+  --color-presence-active-border: #267d3c; /* オンラインの枠 */
+  --color-presence-ask-me: #e8943c; /* きいてみてねの背景 */
+  --color-presence-ask-me-border: #c97d2e; /* きいてみてねの枠 */
+  --color-presence-busy: #d94a4a; /* 取り込み中の背景 */
+  --color-presence-busy-border: #b83c3c; /* 取り込み中の枠 */
 
   /* Legacy aliases (Color adoption; deprecated — for backward compatibility only) */
   --bg-primary: var(--color-bg-base);
