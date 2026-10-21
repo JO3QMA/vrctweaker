@@ -565,7 +565,7 @@
     "appUpdateAvailable": "有新版本 {version} 可用",
     "appUpdateUpToDate": "目前已是最新版本",
     "errUpdateAutoCheck": "無法儲存自動檢查設定",
-    "errAppUpdateCheck": "檢查更新失敗"
+    "errAppUpdateCheck": "無法確認更新。請檢查網路連線後再試一次。"
   },
   "appUpdate": {
     "title": "應用程式更新",

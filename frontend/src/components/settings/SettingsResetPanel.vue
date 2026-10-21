@@ -47,12 +47,13 @@
       <p class="settings-note text-body-sm settings-danger-intro">
         {{ t("settings.resetSetupDestructiveHint") }}
       </p>
-      <VtAlert
-        v-if="maintenanceError"
-        variant="danger"
-        :title="maintenanceError"
-        class="settings-inline-alert"
-      />
+      <div v-if="maintenanceError" class="settings-alert-inset">
+        <VtAlert
+          variant="danger"
+          :title="maintenanceError"
+          class="settings-inline-alert"
+        />
+      </div>
       <SettingsRow
         :label="t('settings.clearEncountersItem')"
         :description="t('settings.clearEncountersHint')"

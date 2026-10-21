@@ -11,14 +11,24 @@
         }}</span>
       </SettingsRow>
       <SettingsRow :label="t('settings.updateCheckLabel')" control="button">
-        <VtButton
-          variant="secondary"
-          :loading="appUpdateCheckLoading"
-          data-testid="settings-check-app-update"
-          @click="checkAppUpdate"
-        >
-          {{ t("settings.checkAppUpdate") }}
-        </VtButton>
+        <div class="settings-update-actions">
+          <VtButton
+            variant="secondary"
+            :loading="appUpdateCheckLoading"
+            data-testid="settings-check-app-update"
+            @click="checkAppUpdate"
+          >
+            {{ t("settings.checkAppUpdate") }}
+          </VtButton>
+          <VtAlert
+            v-if="appUpdateCheckError"
+            variant="danger"
+            :title="appUpdateCheckError"
+            :description="appUpdateCheckDetail || undefined"
+            class="settings-inline-alert"
+            data-testid="settings-app-update-error"
+          />
+        </div>
       </SettingsRow>
       <p
         v-if="appUpdateStatusLine"
@@ -27,12 +37,6 @@
       >
         {{ appUpdateStatusLine }}
       </p>
-      <VtAlert
-        v-if="appUpdateCheckError"
-        variant="danger"
-        :title="appUpdateCheckError"
-        class="settings-inline-alert"
-      />
       <SettingsRow
         :label="t('settings.updateAutoCheck')"
         :description="t('settings.updateAutoCheckHint')"
@@ -77,6 +81,7 @@ const appVersion = ref("");
 const appUpdateAutoCheck = ref(true);
 const appUpdateCheckLoading = ref(false);
 const appUpdateCheckError = ref("");
+const appUpdateCheckDetail = ref("");
 const appUpdateStatusLine = ref("");
 
 onMounted(async () => {
@@ -104,6 +109,7 @@ async function saveAppUpdateAutoCheck() {
 
 async function checkAppUpdate() {
   appUpdateCheckError.value = "";
+  appUpdateCheckDetail.value = "";
   appUpdateStatusLine.value = "";
   appUpdateCheckLoading.value = true;
   try {
@@ -115,8 +121,11 @@ async function checkAppUpdate() {
     } else {
       appUpdateStatusLine.value = t("settings.appUpdateUpToDate");
     }
-  } catch {
-    appUpdateCheckError.value = t("settings.errAppUpdateCheck");
+  } catch (e) {
+    const message = t("settings.errAppUpdateCheck");
+    appUpdateCheckError.value = message;
+    const detail = formatBackendError(e, "");
+    appUpdateCheckDetail.value = detail && detail !== message ? detail : "";
   } finally {
     appUpdateCheckLoading.value = false;
   }

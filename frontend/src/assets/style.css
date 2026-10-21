@@ -618,6 +618,7 @@ a:hover {
 .settings-view .setting-row__control {
   flex: 0 0 var(--control-width-md);
   width: var(--control-width-md);
+  min-width: 0;
   display: flex;
   justify-content: flex-end;
 }
@@ -667,7 +668,12 @@ a:hover {
   .settings-view .setting-row:not(.setting-row--fixed) .setting-row__control {
     flex: 1 1 auto;
     width: 100%;
+    min-width: 0;
     justify-content: flex-start;
+  }
+
+  .settings-view .settings-update-actions {
+    align-items: flex-start;
   }
 
   .settings-view .login-form {
@@ -773,8 +779,44 @@ a:hover {
   padding: 0;
 }
 
+.settings-view .settings-update-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-form-field);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.settings-view .settings-alert-inset {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0 var(--space-block) var(--space-block);
+}
+
 .settings-view .settings-inline-alert {
-  margin: 0 var(--space-block) var(--space-block);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.settings-view .settings-update-actions .settings-inline-alert {
+  align-self: stretch;
+}
+
+.settings-view .settings-inline-alert .el-alert__content,
+.settings-view .settings-inline-alert .el-alert__title,
+.settings-view .settings-inline-alert .el-alert__description {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.settings-view .settings-inline-alert .el-alert__description {
+  font-size: var(--font-size-12);
 }
 
 .settings-view .settings-danger-card {

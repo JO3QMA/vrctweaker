@@ -344,6 +344,27 @@ describe("SettingsView", () => {
     expect(clearRow?.classList.contains("setting-row--center")).toBe(false);
   });
 
+  it("shows a failed update check under the button without asking the card to scroll sideways", async () => {
+    const detail = `https://updates.example.invalid/${"x".repeat(180)}`;
+    vi.mocked(App.checkForAppUpdate).mockRejectedValueOnce(new Error(detail));
+    const wrapper = await mountAt("/settings/about");
+
+    await wrapper
+      .get('[data-testid="settings-check-app-update"]')
+      .trigger("click");
+    await flushPromises();
+
+    const alert = wrapper.get('[data-testid="settings-app-update-error"]');
+    expect(alert.text()).toContain("更新を確認できませんでした");
+    expect(alert.text()).toContain("ネットワークを確認して");
+    expect(alert.text()).toContain(detail);
+    const row = wrapper
+      .get('[data-testid="settings-check-app-update"]')
+      .element.closest(".setting-row");
+    expect(row?.contains(alert.element)).toBe(true);
+    expect(row?.querySelector(".settings-update-actions")).not.toBeNull();
+  });
+
   it("shows up to date after manual update check", async () => {
     const wrapper = await mountAt("/settings/about");
     await wrapper

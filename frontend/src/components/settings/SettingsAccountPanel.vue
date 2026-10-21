@@ -51,7 +51,12 @@
             </router-link>
           </div>
         </div>
-        <VtAlert v-if="profileError" variant="danger" :title="profileError" />
+        <VtAlert
+          v-if="profileError"
+          variant="danger"
+          :title="profileError"
+          class="settings-inline-alert"
+        />
         <VtTag class="login-status-tag" variant="success" size="large">{{
           t("settings.loggedInTag")
         }}</VtTag>
@@ -76,7 +81,7 @@
           v-if="unlockState === 'needs-relogin' && unlockErrorMessage"
           variant="warning"
           :title="unlockErrorMessage"
-          class="login-error"
+          class="settings-inline-alert login-error"
         />
         <el-form label-position="top" size="default">
           <el-form-item :label="t('settings.username')">
@@ -116,7 +121,7 @@
             v-if="loginError"
             variant="danger"
             :title="loginError"
-            class="login-error"
+            class="settings-inline-alert login-error"
           />
           <VtButton
             variant="primary"

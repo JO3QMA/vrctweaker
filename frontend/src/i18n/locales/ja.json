@@ -565,7 +565,7 @@
     "appUpdateAvailable": "新しいバージョン {version} が利用可能です",
     "appUpdateUpToDate": "お使いのバージョンは最新です",
     "errUpdateAutoCheck": "自動確認の設定を保存できませんでした",
-    "errAppUpdateCheck": "更新の確認に失敗しました"
+    "errAppUpdateCheck": "更新を確認できませんでした。ネットワークを確認して、もう一度お試しください。"
   },
   "appUpdate": {
     "title": "アプリの更新",

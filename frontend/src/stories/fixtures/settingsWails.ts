@@ -4,7 +4,13 @@ import { resetSessionUnlockForStorybook } from "../../composables/useSessionUnlo
 import { withWailsApp } from "../wailsDecorator";
 
 export type SettingsViewWailsPreset =
-  "needsReloginClean" | "needsReloginUnlockError" | "loggedIn";
+  | "needsReloginClean"
+  | "needsReloginUnlockError"
+  | "loggedIn"
+  | "updateCheckFailed";
+
+export const STORY_UPDATE_CHECK_ERROR =
+  "https://updates.example.invalid/" + "x".repeat(180);
 
 const samplePaths: PathSettingsDTO = {
   vrchatPathWindows:
@@ -40,6 +46,7 @@ export function withSettingsWails(preset: SettingsViewWailsPreset): Decorator {
   const blob =
     preset === "needsReloginClean" ? "" : "storybook-legacy-plain-token";
   const loggedIn = preset === "loggedIn";
+  const updateCheckFailed = preset === "updateCheckFailed";
 
   const unlockVRChatSession =
     preset === "needsReloginUnlockError"
@@ -84,18 +91,20 @@ export function withSettingsWails(preset: SettingsViewWailsPreset): Decorator {
       GetAppUpdateAutoCheck: () => Promise.resolve(true),
       SetAppUpdateAutoCheck: (_on: boolean) => Promise.resolve(),
       CheckForAppUpdate: () =>
-        Promise.resolve({
-          currentVersion: "0.1.0",
-          updateAvailable: false,
-          shouldPrompt: false,
-          latestVersion: "0.1.0",
-          latestTag: "v0.1.0",
-          releaseNotes: "",
-          downloadUrl: "",
-          zipSha256: "",
-          releasePageUrl: "",
-          autoApplySupported: true,
-        }),
+        updateCheckFailed
+          ? Promise.reject(new Error(STORY_UPDATE_CHECK_ERROR))
+          : Promise.resolve({
+              currentVersion: "0.1.0",
+              updateAvailable: false,
+              shouldPrompt: false,
+              latestVersion: "0.1.0",
+              latestTag: "v0.1.0",
+              releaseNotes: "",
+              downloadUrl: "",
+              zipSha256: "",
+              releasePageUrl: "",
+              autoApplySupported: true,
+            }),
       RequestClose: () => Promise.resolve(),
       ValidatePath: (_path: string) => Promise.resolve(true),
       ValidateOutputLogPath: (_path: string) => Promise.resolve(true),

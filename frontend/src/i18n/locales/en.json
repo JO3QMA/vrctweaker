@@ -565,7 +565,7 @@
     "appUpdateAvailable": "Version {version} is available",
     "appUpdateUpToDate": "You are on the latest version",
     "errUpdateAutoCheck": "Could not save automatic update check setting",
-    "errAppUpdateCheck": "Could not check for updates"
+    "errAppUpdateCheck": "Could not check for updates. Check your network and try again."
   },
   "appUpdate": {
     "title": "Application update",

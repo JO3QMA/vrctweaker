@@ -1,4 +1,5 @@
 import type { Decorator, Meta, StoryObj } from "@storybook/vue3-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { ref } from "vue";
 import { useRouter } from "vue-router";
 import SettingsView from "./SettingsView.vue";
@@ -98,6 +99,37 @@ export const Data: Story = {
 
 export const About: Story = {
   decorators: [withSettingsRoute("settings-about"), ...withPreset("loggedIn")],
+};
+
+async function showFailedUpdate(canvasElement: HTMLElement): Promise<void> {
+  const canvas = within(canvasElement);
+  await userEvent.click(await canvas.findByTestId("settings-check-app-update"));
+  await expect(
+    await canvas.findByTestId("settings-app-update-error"),
+  ).toBeVisible();
+}
+
+/** 更新確認が失敗し、長い詳細つきの警告がボタン直下に出る */
+export const AboutUpdateCheckFailed: Story = {
+  decorators: [
+    withSettingsRoute("settings-about"),
+    ...withPreset("updateCheckFailed"),
+  ],
+  play: async ({ canvasElement }) => {
+    await showFailedUpdate(canvasElement);
+  },
+};
+
+/** パネル幅 400px。失敗した更新確認の警告が横にはみ出さない */
+export const NarrowAboutUpdateCheckFailed: Story = {
+  decorators: [
+    withNarrowFrame(),
+    withSettingsRoute("settings-about"),
+    ...withPreset("updateCheckFailed"),
+  ],
+  play: async ({ canvasElement }) => {
+    await showFailedUpdate(canvasElement);
+  },
 };
 
 export const Reset: Story = {

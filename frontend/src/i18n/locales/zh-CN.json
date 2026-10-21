@@ -565,7 +565,7 @@
     "appUpdateAvailable": "有新版本 {version} 可用",
     "appUpdateUpToDate": "当前已是最新版本",
     "errUpdateAutoCheck": "无法保存自动检查设置",
-    "errAppUpdateCheck": "检查更新失败"
+    "errAppUpdateCheck": "无法检查更新。请检查网络连接后再试一次。"
   },
   "appUpdate": {
     "title": "应用更新",
