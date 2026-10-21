@@ -345,6 +345,13 @@
   },
   "automation": {
     "title": "자동화",
+    "tabRules": "규칙",
+    "backToList": "목록으로",
+    "emptyEditor": "목록에서 규칙을 선택하거나 새로 만드세요.",
+    "nameRequired": "이름을 입력하세요. 비어 있으면 저장할 수 없습니다.",
+    "actionHeading": "동작 {n}",
+    "scheduleHour": "시",
+    "scheduleMinute": "분",
     "intro": "규칙 또는 Lua 스크립트로 이벤트 발생 시 동작을 실행합니다.",
     "addRule": "+ 새 규칙",
     "addScript": "+ 새 스크립트",

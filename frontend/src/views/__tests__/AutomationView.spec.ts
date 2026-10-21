@@ -194,3 +194,112 @@ describe("AutomationView unsaved guard", () => {
     expect(secondId).not.toBe(firstId);
   });
 });
+
+describe("AutomationView layout", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockListAutomationItems.mockResolvedValue([seeded]);
+    mockGetAutomationRunLog.mockResolvedValue([
+      {
+        at: "2026-10-21 21:00",
+        itemId: "rule_1",
+        itemName: "Seeded",
+        eventType: "friend_joined",
+        success: true,
+        actionsCompleted: 1,
+        actionsTotal: 1,
+        contextLabel: "参加",
+      },
+    ]);
+    mockGetAutomationRuntimeStatus.mockResolvedValue({ available: true });
+    mockListDetectedPowerPlans.mockResolvedValue([]);
+    mockFriends.mockResolvedValue([]);
+    mockSaveAutomationItem.mockResolvedValue(undefined);
+  });
+
+  it("shows rule and run-log tabs with counts", async () => {
+    const wrapper = mount(AutomationView);
+    await flushPromises();
+
+    const rules = wrapper.get('[data-testid="automation-tab-rules"]');
+    const log = wrapper.get('[data-testid="automation-tab-run-log"]');
+    expect(rules.text()).toContain("ルール");
+    expect(wrapper.get('[data-testid="automation-rules-count"]').text()).toBe(
+      "1",
+    );
+    expect(log.text()).toContain("実行ログ");
+    expect(wrapper.get('[data-testid="automation-log-count"]').text()).toBe(
+      "1",
+    );
+    expect(rules.attributes("aria-selected")).toBe("true");
+    expect(log.attributes("aria-selected")).toBe("false");
+  });
+
+  it("moves the run log into its own tab", async () => {
+    const wrapper = mount(AutomationView);
+    await flushPromises();
+
+    expect(wrapper.find('[data-testid="automation-list"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="automation-run-log"]').exists()).toBe(
+      false,
+    );
+
+    await wrapper
+      .get('[data-testid="automation-tab-run-log"]')
+      .trigger("click");
+    expect(wrapper.find('[data-testid="automation-list"]').exists()).toBe(
+      false,
+    );
+    expect(wrapper.find('[data-testid="automation-run-log"]').exists()).toBe(
+      true,
+    );
+    expect(wrapper.text()).toContain("参加");
+
+    await wrapper.get('[data-testid="refresh-run-log"]').trigger("click");
+    await flushPromises();
+    expect(mockGetAutomationRunLog).toHaveBeenCalledTimes(2);
+  });
+
+  it("groups the selected rule into sections and a bottom action bar", async () => {
+    const wrapper = mount(AutomationView);
+    await flushPromises();
+
+    await wrapper.find(".rule-card").trigger("click");
+    await flushPromises();
+
+    expect(
+      wrapper.get('[data-testid="automation-section-when"]').text(),
+    ).toContain("いつ");
+    expect(
+      wrapper.get('[data-testid="automation-section-if"]').text(),
+    ).toContain("もし");
+    expect(
+      wrapper.get('[data-testid="automation-section-then"]').text(),
+    ).toContain("したら");
+    const bar = wrapper.get('[data-testid="automation-action-bar"]');
+    expect(bar.find('[data-testid="save-item"]').exists()).toBe(true);
+    expect(bar.find('[data-testid="cancel-item"]').exists()).toBe(true);
+    expect(bar.find('[data-testid="delete-item"]').exists()).toBe(true);
+    expect(bar.classes()).toContain("automation-action-bar");
+  });
+
+  it("shows an empty-name error under the field and does not save", async () => {
+    const wrapper = mount(AutomationView);
+    await flushPromises();
+
+    await wrapper.find('[data-testid="add-rule"]').trigger("click");
+    await flushPromises();
+    await wrapper.find('[data-testid="save-item"]').trigger("click");
+    await flushPromises();
+
+    const error = wrapper.get('[data-testid="name-error"]');
+    expect(error.text()).toContain("名前を入力してください");
+    const nameField = wrapper.get('[data-testid="item-name-input"]');
+    expect(
+      nameField.element.compareDocumentPosition(error.element) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(mockSaveAutomationItem).not.toHaveBeenCalled();
+    expect(showToast.error).not.toHaveBeenCalled();
+  });
+});

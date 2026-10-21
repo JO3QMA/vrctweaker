@@ -345,6 +345,13 @@
   },
   "automation": {
     "title": "自動化",
+    "tabRules": "規則",
+    "backToList": "返回列表",
+    "emptyEditor": "從列表選擇規則，或新增一條。",
+    "nameRequired": "請輸入名稱。名稱為空時無法儲存。",
+    "actionHeading": "動作 {n}",
+    "scheduleHour": "時",
+    "scheduleMinute": "分",
     "intro": "規則或 Lua 腳本在事件觸發時執行動作。",
     "addRule": "+ 新增規則",
     "addScript": "+ 新增腳本",

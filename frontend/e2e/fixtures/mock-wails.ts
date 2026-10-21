@@ -15,6 +15,7 @@ import {
   E2E_TEST_USER_ID,
   SEED_ACTIVITY_STATS,
   SEED_AUTOMATION_ITEMS,
+  SEED_AUTOMATION_RUN_LOG,
   SEED_ENCOUNTERS,
   SEED_FRIEND_AVATAR_USAGE,
   SEED_FRIENDS,
@@ -42,6 +43,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
   const friendsJson = JSON.stringify(SEED_FRIENDS);
   const activityStatsJson = JSON.stringify(SEED_ACTIVITY_STATS);
   const automationItemsJson = JSON.stringify(SEED_AUTOMATION_ITEMS);
+  const automationRunLogJson = JSON.stringify(SEED_AUTOMATION_RUN_LOG);
   const vrchatConfigJson = JSON.stringify(SEED_VRCHAT_CONFIG);
   const e2eTestUserIdJson = JSON.stringify(E2E_TEST_USER_ID);
   const e2eSelfUserIdJson = JSON.stringify(E2E_SELF_USER_ID);
@@ -90,6 +92,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
       const friends = ${friendsJson};
       const activityStats = ${activityStatsJson};
       const automationItems = ${automationItemsJson};
+      const automationRunLog = ${automationRunLogJson};
       const vrchatConfig = ${vrchatConfigJson};
       const e2eTestUserId = ${e2eTestUserIdJson};
       const e2eSelfUserId = ${e2eSelfUserIdJson};
@@ -477,7 +480,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
           if (item) item.isEnabled = !!enabled;
           return Promise.resolve();
         },
-        GetAutomationRunLog: () => Promise.resolve([]),
+        GetAutomationRunLog: () => Promise.resolve(automationRunLog),
         GetAutomationRuntimeStatus: () =>
           Promise.resolve({ available: true, reasonKey: '' }),
         ListDetectedPowerPlans: () => Promise.resolve([]),

@@ -345,6 +345,13 @@
   },
   "automation": {
     "title": "オートメーション",
+    "tabRules": "ルール",
+    "backToList": "一覧へ戻る",
+    "emptyEditor": "一覧からルールを選ぶか、新しく作成してください。",
+    "nameRequired": "名前を入力してください。空のままでは保存できません。",
+    "actionHeading": "アクション {n}",
+    "scheduleHour": "時",
+    "scheduleMinute": "分",
     "intro": "ルールまたは Lua スクリプトで、イベント発生時にアクションを実行します。",
     "addRule": "+ 新規ルール",
     "addScript": "+ 新規スクリプト",

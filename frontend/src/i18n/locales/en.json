@@ -345,6 +345,13 @@
   },
   "automation": {
     "title": "Automation",
+    "tabRules": "Rules",
+    "backToList": "Back to list",
+    "emptyEditor": "Select a rule from the list, or create a new one.",
+    "nameRequired": "Enter a name. An empty name cannot be saved.",
+    "actionHeading": "Action {n}",
+    "scheduleHour": "Hour",
+    "scheduleMinute": "Minute",
     "intro": "Rules or Lua scripts run actions when events fire.",
     "addRule": "+ New rule",
     "addScript": "+ New script",
