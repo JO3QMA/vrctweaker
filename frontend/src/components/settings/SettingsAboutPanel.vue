@@ -1,15 +1,15 @@
 <template>
   <div data-testid="settings-about-app-section">
+    <SettingsPageHead
+      :title="t('settings.navAbout')"
+      :description="t('settings.aboutLead')"
+    />
     <el-card class="section-card settings-card--rows" shadow="never">
-      <template #header>
-        <span>{{ t("settings.aboutAppSection") }}</span>
-      </template>
-      <p
-        class="settings-version text-body-sm"
-        data-testid="settings-app-version"
-      >
-        {{ t("settings.appVersion", { version: appVersion }) }}
-      </p>
+      <SettingsRow :label="t('settings.versionLabel')">
+        <span class="settings-version" data-testid="settings-app-version">{{
+          appVersion
+        }}</span>
+      </SettingsRow>
       <SettingsRow :label="t('settings.updateCheckLabel')" control="button">
         <VtButton
           variant="secondary"
@@ -67,6 +67,7 @@ import { useAppUpdate } from "../../composables/useAppUpdate";
 import { showToast } from "../../utils/showToast";
 import { App } from "../../wails/app";
 import { formatBackendError } from "../../views/settings/formatBackendError";
+import SettingsPageHead from "./SettingsPageHead.vue";
 import SettingsRow from "./SettingsRow.vue";
 
 const { t } = useI18n();

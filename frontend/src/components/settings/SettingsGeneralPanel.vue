@@ -1,5 +1,9 @@
 <template>
   <div data-testid="settings-general-panel">
+    <SettingsPageHead
+      :title="t('settings.navGeneral')"
+      :description="t('settings.generalLead')"
+    />
     <el-card
       class="section-card settings-card--rows"
       shadow="never"
@@ -78,6 +82,7 @@ import { isAppLocale, setLanguage } from "../../i18n";
 import { showToast } from "../../utils/showToast";
 import { App } from "../../wails/app";
 import { formatBackendError } from "../../views/settings/formatBackendError";
+import SettingsPageHead from "./SettingsPageHead.vue";
 import SettingsRow from "./SettingsRow.vue";
 
 const { t, locale } = useI18n();

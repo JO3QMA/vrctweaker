@@ -1,5 +1,9 @@
 <template>
   <div data-testid="settings-data-panel">
+    <SettingsPageHead
+      :title="t('settings.navData')"
+      :description="t('settings.dataLead')"
+    />
     <el-card class="section-card settings-card--rows" shadow="never">
       <template #header>
         <span>{{ t("settings.pathSection") }}</span>
@@ -8,6 +12,7 @@
         v-for="field in pathFields"
         :key="field.id"
         :label="field.label"
+        :description="field.description"
       >
         <el-input
           v-model="pathSettings[field.id]"
@@ -61,7 +66,6 @@
           </a>
         </template>
       </SettingsPathRow>
-      <p class="settings-note text-body-sm">{{ t("settings.pathHint") }}</p>
     </el-card>
 
     <el-card class="section-card settings-card--rows" shadow="never">
@@ -80,6 +84,9 @@
           data-testid="settings-log-retention"
           @change="saveRetention"
         />
+        <span class="setting-row__suffix">{{
+          t("settings.retentionUnit")
+        }}</span>
       </SettingsRow>
       <SettingsRow
         :label="t('settings.galleryAutoEnrich')"
@@ -110,6 +117,7 @@ import { showToast } from "../../utils/showToast";
 import { App } from "../../wails/app";
 import type { PathSettingsDTO } from "../../wails/app";
 import { formatBackendError } from "../../views/settings/formatBackendError";
+import SettingsPageHead from "./SettingsPageHead.vue";
 import SettingsPathRow from "./SettingsPathRow.vue";
 import SettingsRow from "./SettingsRow.vue";
 
@@ -133,6 +141,7 @@ const pathFields = computed(() => [
   {
     id: "vrchatPathWindows" as keyof PathSettingsDTO,
     label: t("settings.pathVrchatWin"),
+    description: t("settings.pathVrchatWinHint"),
     placeholder: t("settings.pathVrchatWinPh"),
     browseTestId: "vrchat-path-browse",
     browseTitle: t("settings.titlePickVrchatExe"),
@@ -141,6 +150,7 @@ const pathFields = computed(() => [
   {
     id: "steamPathLinux" as keyof PathSettingsDTO,
     label: t("settings.pathSteamLinux"),
+    description: t("settings.pathSteamLinuxHint"),
     placeholder: t("settings.pathSteamLinuxPh"),
     browseTestId: "steam-path-browse",
     browseTitle: t("settings.titlePickSteam"),
@@ -149,6 +159,7 @@ const pathFields = computed(() => [
   {
     id: "outputLogPath" as keyof PathSettingsDTO,
     label: t("settings.pathOutputLog"),
+    description: t("settings.pathOutputLogHint"),
     placeholder: t("settings.pathOutputLogPh"),
     browseTestId: "output-log-dir-browse",
     browseTitle: t("settings.titlePickLogDir"),

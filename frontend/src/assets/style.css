@@ -490,6 +490,7 @@ a:hover {
   display: block;
   padding: var(--space-8) var(--space-12);
   border-radius: var(--radius);
+  border-left: 2px solid transparent;
   color: var(--color-text-secondary);
   text-decoration: none;
   font-size: var(--font-size-14);
@@ -502,6 +503,7 @@ a:hover {
 }
 
 .settings-nav__link.router-link-exact-active {
+  border-left-color: var(--color-brand);
   color: var(--color-text-primary);
   background: var(--color-bg-elevated);
   font-weight: var(--font-weight-600);
@@ -534,15 +536,22 @@ a:hover {
 
   .settings-nav {
     flex-direction: row;
+    flex-wrap: wrap;
     flex: none;
     width: 100%;
-    overflow-x: auto;
     gap: var(--space-4);
   }
 
   .settings-nav__link {
     flex: 0 0 auto;
     white-space: nowrap;
+    border-left-color: transparent;
+    border-bottom: 2px solid transparent;
+  }
+
+  .settings-nav__link.router-link-exact-active {
+    border-left-color: transparent;
+    border-bottom-color: var(--color-brand);
   }
 
   .settings-nav__divider {
@@ -566,8 +575,13 @@ a:hover {
   padding: var(--space-block);
 }
 
-.settings-view .setting-row + .setting-row {
+.settings-view .setting-row + .setting-row,
+.settings-view .settings-danger-card .setting-row {
   border-top: 1px solid var(--color-border);
+}
+
+.settings-view .setting-row--center {
+  align-items: center;
 }
 
 .settings-view .setting-row__text {
@@ -609,11 +623,23 @@ a:hover {
 }
 
 .settings-view .setting-row--number .setting-row__control {
-  flex: 0 0 var(--control-width-sm);
-  width: var(--control-width-sm);
+  flex: 0 0 auto;
+  width: auto;
+  gap: var(--space-action-group);
 }
 
-.settings-view .setting-row--button .setting-row__control .el-button {
+.settings-view .setting-row--number .el-input-number {
+  width: var(--control-width-sm);
+  flex: 0 0 var(--control-width-sm);
+}
+
+.settings-view .setting-row__suffix {
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-14);
+  line-height: var(--line-height-normal);
+}
+
+.settings-view .el-button {
   min-width: var(--button-min-width);
 }
 
@@ -714,16 +740,22 @@ a:hover {
 
 .settings-view .settings-version {
   margin: 0;
-  padding: var(--space-block) var(--space-block) 0;
   color: var(--color-text-secondary);
+  font-size: var(--font-size-14);
+  line-height: var(--line-height-normal);
 }
 
 .settings-view .settings-about-footer {
-  padding: 0 var(--space-block) var(--space-block);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-block);
+  padding: var(--space-block);
+  border-top: 1px solid var(--color-border);
 }
 
 .settings-view .settings-about-footer .settings-note {
-  padding: var(--space-block) 0;
+  margin: 0;
+  padding: 0;
 }
 
 .settings-view .settings-inline-alert {
@@ -742,6 +774,24 @@ a:hover {
   display: flex;
   flex-direction: column;
   gap: var(--space-form-field);
+}
+
+.settings-view .login-status-tag {
+  align-self: flex-start;
+}
+
+.settings-page-head {
+  margin: 0 0 var(--space-block);
+}
+
+.settings-page-head__title {
+  margin: 0;
+  color: var(--color-text-primary);
+}
+
+.settings-page-head__lead {
+  margin: var(--space-inline-tight) 0 0;
+  color: var(--color-text-secondary);
 }
 
 .settings-view .login-2fa-hint {

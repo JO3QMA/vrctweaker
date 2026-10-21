@@ -1,9 +1,10 @@
 <template>
   <div data-testid="settings-reset-setup-section">
+    <SettingsPageHead
+      :title="t('settings.resetSetupSection')"
+      :description="t('settings.resetLead')"
+    />
     <el-card class="section-card settings-card--rows" shadow="never">
-      <template #header>
-        <span>{{ t("settings.resetSetupSection") }}</span>
-      </template>
       <SettingsRow
         :label="t('settings.openFirstLaunchGuide')"
         :description="t('settings.openFirstLaunchGuideHint')"
@@ -52,7 +53,11 @@
         :title="maintenanceError"
         class="settings-inline-alert"
       />
-      <SettingsRow :label="t('settings.clearEncounters')" control="button">
+      <SettingsRow
+        :label="t('settings.clearEncountersItem')"
+        :description="t('settings.clearEncountersConfirm')"
+        control="button"
+      >
         <VtButton
           variant="danger"
           plain
@@ -63,7 +68,11 @@
           {{ t("settings.clearEncounters") }}
         </VtButton>
       </SettingsRow>
-      <SettingsRow :label="t('settings.clearScreenshots')" control="button">
+      <SettingsRow
+        :label="t('settings.clearScreenshotsItem')"
+        :description="t('settings.clearScreenshotsConfirm')"
+        control="button"
+      >
         <VtButton
           variant="danger"
           plain
@@ -74,7 +83,11 @@
           {{ t("settings.clearScreenshots") }}
         </VtButton>
       </SettingsRow>
-      <SettingsRow :label="t('settings.clearFriends')" control="button">
+      <SettingsRow
+        :label="t('settings.clearFriendsItem')"
+        :description="t('settings.clearFriendsConfirm')"
+        control="button"
+      >
         <VtButton
           variant="danger"
           plain
@@ -102,6 +115,7 @@ import {
 import { useFirstLaunchGuide } from "../../composables/useFirstLaunchGuide";
 import { showToast } from "../../utils/showToast";
 import { App } from "../../wails/app";
+import SettingsPageHead from "./SettingsPageHead.vue";
 import SettingsRow from "./SettingsRow.vue";
 
 const { t } = useI18n();

@@ -249,9 +249,9 @@ describe("SettingsView", () => {
       wrapper.find('[data-testid="settings-close-to-tray"]').exists(),
     ).toBe(true);
     expect(wrapper.find(".setting-row--fixed").exists()).toBe(true);
-    expect(
-      wrapper.find('[data-testid="settings-ui-language"]').exists(),
-    ).toBe(true);
+    expect(wrapper.find('[data-testid="settings-ui-language"]').exists()).toBe(
+      true,
+    );
     expect(
       wrapper.find('[data-testid="settings-oss-licenses-link"]').exists(),
     ).toBe(false);
@@ -276,6 +276,8 @@ describe("SettingsView", () => {
       .element.closest(".setting-row");
     expect(retentionRow?.classList.contains("setting-row--number")).toBe(true);
     expect(retentionRow?.classList.contains("setting-row--fixed")).toBe(true);
+    expect(retentionRow?.textContent).toContain("日");
+    expect(retentionRow?.textContent).not.toContain("（日）");
     expect(
       wrapper.find('[data-testid="settings-gallery-auto-enrich"]').exists(),
     ).toBe(true);
@@ -318,6 +320,15 @@ describe("SettingsView", () => {
     expect(danger.find('[data-testid="settings-clear-friends"]').exists()).toBe(
       true,
     );
+    expect(danger.text()).toContain("遭遇ログ");
+    expect(danger.text()).toContain("user_encounters");
+    expect(
+      danger.get('[data-testid="settings-clear-encounters"]').text(),
+    ).toContain("クリア");
+    const clearRow = danger
+      .get('[data-testid="settings-clear-encounters"]')
+      .element.closest(".setting-row");
+    expect(clearRow?.classList.contains("setting-row--center")).toBe(false);
   });
 
   it("shows up to date after manual update check", async () => {

@@ -13,6 +13,7 @@ describe("SettingsRow", () => {
     expect(wrapper.get(".setting-row__desc").text()).toBe("すぐ反映されます");
     expect(wrapper.find("[data-testid='control']").exists()).toBe(true);
     expect(wrapper.classes()).not.toContain("setting-row--fixed");
+    expect(wrapper.classes()).not.toContain("setting-row--center");
   });
 
   it("keeps switches and number inputs on a non-wrapping row", () => {
@@ -35,5 +36,6 @@ describe("SettingsRow", () => {
     });
     expect(wrapper.classes()).toContain("setting-row--button");
     expect(wrapper.classes()).not.toContain("setting-row--fixed");
+    expect(wrapper.classes()).toContain("setting-row--center");
   });
 });

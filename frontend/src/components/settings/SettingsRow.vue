@@ -15,16 +15,17 @@ const props = withDefaults(
 
 const slots = useSlots();
 
+const showDescription = computed(
+  () => Boolean(props.description) || Boolean(slots.description),
+);
+
 const rowClass = computed(() => ({
   "setting-row--fixed":
     props.control === "number" || props.control === "switch",
   "setting-row--number": props.control === "number",
   "setting-row--button": props.control === "button",
+  "setting-row--center": !showDescription.value,
 }));
-
-const showDescription = computed(
-  () => Boolean(props.description) || Boolean(slots.description),
-);
 </script>
 
 <template>

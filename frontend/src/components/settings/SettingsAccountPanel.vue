@@ -1,5 +1,9 @@
 <template>
   <div data-testid="settings-account-panel">
+    <SettingsPageHead
+      :title="t('settings.navAccount')"
+      :description="t('settings.accountLead')"
+    />
     <el-card class="section-card" shadow="never">
       <template #header>
         <span>{{ t("settings.loginSection") }}</span>
@@ -48,7 +52,7 @@
           </div>
         </div>
         <VtAlert v-if="profileError" variant="danger" :title="profileError" />
-        <VtTag variant="success" size="large">{{
+        <VtTag class="login-status-tag" variant="success" size="large">{{
           t("settings.loggedInTag")
         }}</VtTag>
         <div class="login-actions">
@@ -141,6 +145,7 @@ import LoginTwoFactorCodeField from "../LoginTwoFactorCodeField.vue";
 import VtAlert from "../VtAlert.vue";
 import VtButton from "../VtButton.vue";
 import VtTag from "../VtTag.vue";
+import SettingsPageHead from "./SettingsPageHead.vue";
 import { useSessionUnlock } from "../../composables/useSessionUnlock";
 import { friendThumbUrl } from "../../utils/vrcUserCacheDisplay";
 import { isLoginBlockedByTwoFactorCode } from "../../utils/loginTwoFactorSubmit";
