@@ -58,6 +58,15 @@ jobs:
       - name: Build frontend (for //go:embed)
         run: cd frontend && pnpm install --frozen-lockfile && pnpm run build
 
+      # _windows.go は Linux の go test ではコンパイルされないため、PR でも main でも必ず検証する。
+      - name: Cross-compile Windows (Go)
+        env:
+          GOOS: windows
+          GOARCH: amd64
+        run: |
+          go build ./...
+          go vet ./...
+
       - name: Verify gofmt
         run: |
           mapfile -t files < <(find . \
@@ -77,11 +86,6 @@ jobs:
 
       - name: Build cmd packages
         run: go build ./cmd/...
-
-      - name: Cross-compile Windows (Go)
-        run: |
-          GOOS=windows GOARCH=amd64 go build ./...
-          GOOS=windows GOARCH=amd64 go vet ./...
 
   vue:
     name: Vue Frontend
