@@ -7,7 +7,6 @@ package w32systray
 
 import (
 	"errors"
-	"fmt"
 	"log"
 	"path/filepath"
 	"syscall"
@@ -371,17 +370,29 @@ func (p *Systray) destroyWindowClass() {
 	)
 }
 
-// PostThreadMessage posts a message to another thread's queue (typically WMTrayShutdown).
-func PostThreadMessage(threadID uint32, msg uint32, wParam, lParam uintptr) error {
-	ret, _, lastErr := procPostThreadMessage.Call(uintptr(threadID), uintptr(msg), wParam, lParam)
+// PostThreadShutdown asks the tray thread to exit its message loop from another goroutine.
+func PostThreadShutdown(threadID uint32) error {
+	ret, _, err := procPostThreadMessage.Call(
+		uintptr(threadID),
+		uintptr(WMTrayShutdown),
+		0,
+		0,
+	)
 	if ret == 0 {
-		return fmt.Errorf("PostThreadMessage failed: %w", lastErr)
+		if err != nil {
+			return err
+		}
+		e, _, _ := GetLastError.Call()
+		if e != 0 {
+			return syscall.Errno(e)
+		}
+		return errors.New("PostThreadMessage failed")
 	}
 	return nil
 }
 
 // Quit ends the Run message loop. Must be called on the tray thread; other goroutines
-// should use PostThreadMessage with WMTrayShutdown instead.
+// should use PostThreadShutdown instead.
 func (p *Systray) Quit() {
 	procPostQuitMessage.Call(0)
 }
