@@ -158,11 +158,7 @@ func (r *VideoPlaybackRepository) ListWithContext(ctx context.Context) ([]*activ
 	return list, nil
 }
 
-// DeleteOlderThan removes attempts with attempted_at before the cutoff.
+// DeleteOlderThan removes attempts whose attempted_at is before the cutoff.
 func (r *VideoPlaybackRepository) DeleteOlderThan(ctx context.Context, before time.Time) (int64, error) {
-	res, err := r.db.ExecContext(ctx, `DELETE FROM video_playback_history WHERE attempted_at < ?`, before.Format(time.RFC3339))
-	if err != nil {
-		return 0, err
-	}
-	return res.RowsAffected()
+	return deleteOlderThanColumn(ctx, r.db, "video_playback_history", "attempted_at", before)
 }

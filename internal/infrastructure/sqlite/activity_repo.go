@@ -110,13 +110,9 @@ func (r *PlaySessionRepository) Count(ctx context.Context) (int64, error) {
 	return n, err
 }
 
-// DeleteOlderThan removes play sessions older than before (by start_time).
+// DeleteOlderThan removes play sessions whose start_time is before the cutoff.
 func (r *PlaySessionRepository) DeleteOlderThan(ctx context.Context, before time.Time) (int64, error) {
-	res, err := r.db.ExecContext(ctx, `DELETE FROM play_sessions WHERE start_time < ?`, before.Format(time.RFC3339))
-	if err != nil {
-		return 0, err
-	}
-	return res.RowsAffected()
+	return deleteOlderThanColumn(ctx, r.db, "play_sessions", "start_time", before)
 }
 
 // GetByID returns a play session by ID.
@@ -407,13 +403,9 @@ func (r *UserEncounterRepository) CloseOpenEncountersAt(ctx context.Context, at 
 	return res.RowsAffected()
 }
 
-// DeleteOlderThan removes encounters older than before.
+// DeleteOlderThan removes encounters whose joined_at is before the cutoff.
 func (r *UserEncounterRepository) DeleteOlderThan(ctx context.Context, before time.Time) (int64, error) {
-	res, err := r.db.ExecContext(ctx, `DELETE FROM user_encounters WHERE joined_at < ?`, before.Format(time.RFC3339))
-	if err != nil {
-		return 0, err
-	}
-	return res.RowsAffected()
+	return deleteOlderThanColumn(ctx, r.db, "user_encounters", "joined_at", before)
 }
 
 // DeleteAll removes all encounters.

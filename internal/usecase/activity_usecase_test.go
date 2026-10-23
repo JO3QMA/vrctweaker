@@ -1335,3 +1335,104 @@ func TestActivityUseCase_ListVideoPlaybackHistory_nilRepo(t *testing.T) {
 		t.Fatalf("rows=%v err=%v", rows, err)
 	}
 }
+
+func TestActivityCommandTime_everyCommandHasTimestamp(t *testing.T) {
+	at := time.Date(2026, 10, 23, 12, 0, 0, 0, time.UTC)
+	cmds := []any{
+		activity.EndPlaySessionCmd{At: at},
+		activity.StartPlaySessionCmd{InstanceID: "inst", At: at},
+		activity.CloseOpenEncountersAtCmd{At: at},
+		activity.RecordEncounterJoinCmd{VRCUserID: "vrc-a", DisplayName: "A", At: at},
+		activity.RecordEncounterLeaveCmd{VRCUserID: "vrc-a", DisplayName: "A", At: at},
+		activity.UpsertWorldVisitCmd{WorldID: "wrld_a", At: at},
+		activity.UpsertWorldRoomNameCmd{WorldID: "wrld_a", RoomName: "Room", At: at},
+		activity.RecordVideoPlaybackAttemptCmd{URL: "https://example.com/a", At: at},
+		activity.CompleteVideoPlaybackFailureCmd{URL: "https://example.com/a", FailureReason: "x", At: at},
+		activity.CompleteVideoPlaybackSuccessCmd{URL: "https://example.com/a", ResolvedURL: "https://cdn", At: at},
+		activity.RecordFriendAvatarSwitchCmd{VRCUserID: "vrc-a", DisplayName: "A", AvatarName: "Av", At: at},
+	}
+	if len(cmds) != 11 {
+		t.Fatalf("command samples = %d, want 11", len(cmds))
+	}
+	for _, cmd := range cmds {
+		got, ok := activityCommandTime(cmd)
+		if !ok || !got.Equal(at) {
+			t.Fatalf("%T time=%s ok=%v", cmd, got, ok)
+		}
+	}
+	if _, ok := activityCommandTime(nil); ok {
+		t.Fatal("nil command should not pass the purge gate")
+	}
+	if _, ok := activityCommandTime(struct{ At time.Time }{At: at}); ok {
+		t.Fatal("unknown command should not pass the purge gate")
+	}
+}
+
+type countingSettingsRepo struct {
+	fakeAppSettingsRepo
+	gets   int
+	getErr error
+}
+
+func (c *countingSettingsRepo) Get(ctx context.Context, key string) (string, error) {
+	c.gets++
+	if c.getErr != nil {
+		return "", c.getErr
+	}
+	return c.fakeAppSettingsRepo.Get(ctx, key)
+}
+
+func TestActivityEventPurged_cachesWatermark(t *testing.T) {
+	ctx := context.Background()
+	cutoff := time.Date(2026, 10, 1, 0, 0, 0, 0, time.UTC)
+	repo := &countingSettingsRepo{fakeAppSettingsRepo: fakeAppSettingsRepo{m: map[string]string{
+		activityPurgedBeforeKey: cutoff.Format(time.RFC3339),
+	}}}
+	uc := NewActivityUseCase(&fakePlaySessionRepo{}, &memEncounterRepo{}, repo, nil, nil)
+	old := cutoff.Add(-time.Hour)
+	purged, err := uc.activityEventPurged(ctx, old)
+	if err != nil || !purged {
+		t.Fatalf("first purged=%v err=%v", purged, err)
+	}
+	purged, err = uc.activityEventPurged(ctx, cutoff.Add(time.Hour))
+	if err != nil || purged {
+		t.Fatalf("inside window purged=%v err=%v", purged, err)
+	}
+	if repo.gets != 1 {
+		t.Fatalf("settings reads = %d, want 1", repo.gets)
+	}
+
+	next := cutoff.Add(48 * time.Hour)
+	if remErr := uc.rememberActivityPurgedBefore(ctx, next.Add(500*time.Millisecond)); remErr != nil {
+		t.Fatal(remErr)
+	}
+	purged, err = uc.activityEventPurged(ctx, next.Add(-time.Second))
+	if err != nil || !purged {
+		t.Fatalf("after remember purged=%v err=%v", purged, err)
+	}
+	if repo.gets != 1 {
+		t.Fatalf("settings reads after remember = %d, want 1", repo.gets)
+	}
+}
+
+func TestActivityEventPurged_doesNotCacheReadError(t *testing.T) {
+	ctx := context.Background()
+	repo := &countingSettingsRepo{
+		fakeAppSettingsRepo: fakeAppSettingsRepo{m: map[string]string{}},
+		getErr:              errors.New("settings down"),
+	}
+	uc := NewActivityUseCase(&fakePlaySessionRepo{}, &memEncounterRepo{}, repo, nil, nil)
+	at := time.Date(2026, 10, 23, 0, 0, 0, 0, time.UTC)
+	if _, err := uc.activityEventPurged(ctx, at); err == nil {
+		t.Fatal("expected settings error")
+	}
+	repo.getErr = nil
+	repo.m[activityPurgedBeforeKey] = at.Add(time.Hour).Format(time.RFC3339)
+	purged, err := uc.activityEventPurged(ctx, at)
+	if err != nil || !purged {
+		t.Fatalf("retry purged=%v err=%v", purged, err)
+	}
+	if repo.gets != 2 {
+		t.Fatalf("settings reads = %d, want 2", repo.gets)
+	}
+}
