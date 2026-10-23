@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import AutomationView from "./AutomationView.vue";
 import { withAutomationWails } from "../stories/fixtures/automationWails";
 
@@ -40,8 +40,9 @@ export const RunLog: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByRole("tab", { name: /実行ログ/ }));
+    const log = within(await canvas.findByTestId("automation-run-log"));
     await expect(
-      await canvas.findByText("スケジュール（毎分評価）"),
+      await log.findByText("スケジュール（毎分評価）"),
     ).toBeVisible();
   },
 };
@@ -72,11 +73,14 @@ export const NarrowRunLog: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(await canvas.findByRole("tab", { name: /実行ログ/ }));
+    const log = within(await canvas.findByTestId("automation-run-log"));
     await expect(
-      await canvas.findByRole("columnheader", { name: "イベント" }),
+      await log.findByRole("columnheader", { name: "イベント" }),
     ).toBeVisible();
-    expect(canvas.queryByRole("columnheader", { name: "進捗" })).toBeNull();
-    await userEvent.hover(await canvas.findByText("失敗"));
+    await waitFor(() => {
+      expect(log.queryByRole("columnheader", { name: "進捗" })).toBeNull();
+    });
+    await userEvent.hover(await log.findByText("失敗"));
     await expect(
       await within(document.body).findByText(/進捗 1\/2/),
     ).toBeVisible();
