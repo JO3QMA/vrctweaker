@@ -30,20 +30,20 @@ func (a *App) startActivityRetentionLoopEvery(interval time.Duration) {
 	if a == nil || interval <= 0 {
 		return
 	}
+	// cancel, Wait, and the new runner stay under the lock. The runner does not
+	// take activityRetentionMu, so Wait cannot deadlock. Releasing the lock before
+	// Wait lets stop observe a nil cancel and return while this function then
+	// starts another loop.
 	a.activityRetentionMu.Lock()
+	defer a.activityRetentionMu.Unlock()
 	if a.activityRetentionCancel != nil {
-		cancel := a.activityRetentionCancel
+		a.activityRetentionCancel()
 		a.activityRetentionCancel = nil
-		a.activityRetentionMu.Unlock()
-		cancel()
 		a.activityRetentionWG.Wait()
-		a.activityRetentionMu.Lock()
 	}
 	runCtx, cancel := context.WithCancel(context.Background())
 	a.activityRetentionCancel = cancel
 	a.activityRetentionWG.Add(1)
-	a.activityRetentionMu.Unlock()
-
 	go func() {
 		defer a.activityRetentionWG.Done()
 		ticker := time.NewTicker(interval)
@@ -66,11 +66,11 @@ func (a *App) stopActivityRetentionLoop() {
 		return
 	}
 	a.activityRetentionMu.Lock()
-	cancel := a.activityRetentionCancel
-	a.activityRetentionCancel = nil
-	a.activityRetentionMu.Unlock()
-	if cancel != nil {
-		cancel()
-		a.activityRetentionWG.Wait()
+	defer a.activityRetentionMu.Unlock()
+	if a.activityRetentionCancel == nil {
+		return
 	}
+	a.activityRetentionCancel()
+	a.activityRetentionCancel = nil
+	a.activityRetentionWG.Wait()
 }

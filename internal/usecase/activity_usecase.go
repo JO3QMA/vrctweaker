@@ -100,6 +100,12 @@ type ActivityUseCase struct {
 	videoRepo        videoPlaybackRepo
 	friendAvatarRepo friendAvatarObservationRepo
 	checkpointMu     sync.Mutex
+
+	// purgedMu guards the in-memory copy of activity_purged_before.
+	// Settings I/O happens outside this lock.
+	purgedMu     sync.Mutex
+	purgedLoaded bool
+	purgedBefore time.Time
 }
 
 // NewActivityUseCase creates a new ActivityUseCase.
@@ -171,87 +177,125 @@ func (uc *ActivityUseCase) ApplyCommand(ctx context.Context, logSource string, c
 	if cmd == nil {
 		return nil
 	}
-	if at, ok := activityCommandTime(cmd); ok {
-		purged, err := uc.activityEventPurged(ctx, at)
-		if err != nil {
-			return err
-		}
-		if purged {
-			return nil
-		}
-	}
-	switch c := cmd.(type) {
-	case activity.EndPlaySessionCmd:
-		return uc.EndPlaySession(ctx, logSource, c.At)
-	case activity.StartPlaySessionCmd:
-		return uc.StartPlaySession(ctx, logSource, c.InstanceID, c.At)
-	case activity.CloseOpenEncountersAtCmd:
-		return uc.CloseOpenEncountersAt(ctx, logSource, c.At)
-	case activity.RecordEncounterJoinCmd:
-		return uc.RecordEncounterAt(ctx, logSource, c.VRCUserID, c.DisplayName, activity.EncounterActionJoin, c.InstanceID, c.WorldID, c.At)
-	case activity.RecordEncounterLeaveCmd:
-		return uc.RecordEncounterAt(ctx, logSource, c.VRCUserID, c.DisplayName, activity.EncounterActionLeave, c.InstanceID, c.WorldID, c.At)
-	case activity.UpsertWorldVisitCmd:
-		return uc.UpsertWorldVisit(ctx, c.WorldID, c.At)
-	case activity.UpsertWorldRoomNameCmd:
-		return uc.UpsertWorldRoomName(ctx, c.WorldID, c.RoomName, c.At)
-	case activity.RecordVideoPlaybackAttemptCmd:
-		return uc.RecordVideoPlaybackAttempt(ctx, logSource, c.URL, c.WorldID, c.At)
-	case activity.CompleteVideoPlaybackFailureCmd:
-		return uc.CompleteVideoPlaybackFailure(ctx, logSource, c.URL, c.FailureReason, c.At)
-	case activity.CompleteVideoPlaybackSuccessCmd:
-		return uc.CompleteVideoPlaybackSuccess(ctx, logSource, c.URL, c.ResolvedURL, c.At)
-	case activity.RecordFriendAvatarSwitchCmd:
-		return uc.RecordFriendAvatarSwitchAt(ctx, logSource, c.VRCUserID, c.DisplayName, c.AvatarName, c.InstanceID, c.WorldID, c.At)
-	default:
+	at, apply, ok := activityCommandApply(uc, cmd)
+	if !ok {
 		return nil
 	}
+	purged, err := uc.activityEventPurged(ctx, at)
+	if err != nil {
+		return err
+	}
+	if purged {
+		return nil
+	}
+	return apply(ctx, logSource)
 }
 
+// activityCommandTime reports the log-line time of cmd.
+// ok is false for nil and for values that are not activity ingest commands.
 func activityCommandTime(cmd any) (time.Time, bool) {
+	at, _, ok := activityCommandApply(nil, cmd)
+	return at, ok
+}
+
+// activityCommandApply is the only type switch for ingest commands. Timestamp
+// extraction and persistence share it, so a new command cannot skip the purge gate.
+func activityCommandApply(uc *ActivityUseCase, cmd any) (time.Time, func(context.Context, string) error, bool) {
 	switch c := cmd.(type) {
 	case activity.EndPlaySessionCmd:
-		return c.At, true
+		return c.At, func(ctx context.Context, logSource string) error {
+			return uc.EndPlaySession(ctx, logSource, c.At)
+		}, true
 	case activity.StartPlaySessionCmd:
-		return c.At, true
+		return c.At, func(ctx context.Context, logSource string) error {
+			return uc.StartPlaySession(ctx, logSource, c.InstanceID, c.At)
+		}, true
 	case activity.CloseOpenEncountersAtCmd:
-		return c.At, true
+		return c.At, func(ctx context.Context, logSource string) error {
+			return uc.CloseOpenEncountersAt(ctx, logSource, c.At)
+		}, true
 	case activity.RecordEncounterJoinCmd:
-		return c.At, true
+		return c.At, func(ctx context.Context, logSource string) error {
+			return uc.RecordEncounterAt(ctx, logSource, c.VRCUserID, c.DisplayName, activity.EncounterActionJoin, c.InstanceID, c.WorldID, c.At)
+		}, true
 	case activity.RecordEncounterLeaveCmd:
-		return c.At, true
+		return c.At, func(ctx context.Context, logSource string) error {
+			return uc.RecordEncounterAt(ctx, logSource, c.VRCUserID, c.DisplayName, activity.EncounterActionLeave, c.InstanceID, c.WorldID, c.At)
+		}, true
 	case activity.UpsertWorldVisitCmd:
-		return c.At, true
+		return c.At, func(ctx context.Context, _ string) error {
+			return uc.UpsertWorldVisit(ctx, c.WorldID, c.At)
+		}, true
 	case activity.UpsertWorldRoomNameCmd:
-		return c.At, true
+		return c.At, func(ctx context.Context, _ string) error {
+			return uc.UpsertWorldRoomName(ctx, c.WorldID, c.RoomName, c.At)
+		}, true
 	case activity.RecordVideoPlaybackAttemptCmd:
-		return c.At, true
+		return c.At, func(ctx context.Context, logSource string) error {
+			return uc.RecordVideoPlaybackAttempt(ctx, logSource, c.URL, c.WorldID, c.At)
+		}, true
 	case activity.CompleteVideoPlaybackFailureCmd:
-		return c.At, true
+		return c.At, func(ctx context.Context, logSource string) error {
+			return uc.CompleteVideoPlaybackFailure(ctx, logSource, c.URL, c.FailureReason, c.At)
+		}, true
 	case activity.CompleteVideoPlaybackSuccessCmd:
-		return c.At, true
+		return c.At, func(ctx context.Context, logSource string) error {
+			return uc.CompleteVideoPlaybackSuccess(ctx, logSource, c.URL, c.ResolvedURL, c.At)
+		}, true
 	case activity.RecordFriendAvatarSwitchCmd:
-		return c.At, true
+		return c.At, func(ctx context.Context, logSource string) error {
+			return uc.RecordFriendAvatarSwitchAt(ctx, logSource, c.VRCUserID, c.DisplayName, c.AvatarName, c.InstanceID, c.WorldID, c.At)
+		}, true
 	default:
-		return time.Time{}, false
+		return time.Time{}, nil, false
 	}
 }
 
 // activityEventPurged reports whether at is strictly before the last retention purge cutoff.
 // Before the first successful purge the watermark is empty and events are persisted.
+// The cutoff is cached after the first successful read. A failed read is not cached.
 func (uc *ActivityUseCase) activityEventPurged(ctx context.Context, at time.Time) (bool, error) {
 	if at.IsZero() {
 		return false, nil
 	}
+	if cutoff, ok := uc.cachedPurgedBefore(); ok {
+		return !cutoff.IsZero() && at.Before(cutoff), nil
+	}
 	raw, err := uc.settingsRepo.Get(ctx, activityPurgedBeforeKey)
-	if err != nil || raw == "" {
+	if err != nil {
 		return false, err
 	}
-	purgedBefore, err := time.Parse(time.RFC3339, raw)
-	if err != nil {
-		return false, fmt.Errorf("parse activity retention watermark: %w", err)
+	var cutoff time.Time
+	if raw != "" {
+		cutoff, err = time.Parse(time.RFC3339, raw)
+		if err != nil {
+			return false, fmt.Errorf("parse activity retention watermark: %w", err)
+		}
 	}
-	return at.Before(purgedBefore), nil
+	cutoff = uc.storePurgedBeforeIfUnset(cutoff)
+	return !cutoff.IsZero() && at.Before(cutoff), nil
+}
+
+func (uc *ActivityUseCase) cachedPurgedBefore() (time.Time, bool) {
+	uc.purgedMu.Lock()
+	defer uc.purgedMu.Unlock()
+	if !uc.purgedLoaded {
+		return time.Time{}, false
+	}
+	return uc.purgedBefore, true
+}
+
+// storePurgedBeforeIfUnset keeps a cutoff written by rememberActivityPurgedBefore
+// while this read was in flight.
+func (uc *ActivityUseCase) storePurgedBeforeIfUnset(cutoff time.Time) time.Time {
+	uc.purgedMu.Lock()
+	defer uc.purgedMu.Unlock()
+	if uc.purgedLoaded {
+		return uc.purgedBefore
+	}
+	uc.purgedBefore = cutoff
+	uc.purgedLoaded = true
+	return cutoff
 }
 
 // RecordFriendAvatarSwitchAt persists one avatar switch observation from output_log.
@@ -766,7 +810,16 @@ func (uc *ActivityUseCase) RotateEncounters(ctx context.Context) (int64, error) 
 }
 
 func (uc *ActivityUseCase) rememberActivityPurgedBefore(ctx context.Context, before time.Time) error {
-	return uc.settingsRepo.Set(ctx, activityPurgedBeforeKey, before.UTC().Format(time.RFC3339))
+	// Match the second precision of the RFC3339 value SQLite stores and later parses.
+	stored := before.UTC().Truncate(time.Second)
+	if err := uc.settingsRepo.Set(ctx, activityPurgedBeforeKey, stored.Format(time.RFC3339)); err != nil {
+		return err
+	}
+	uc.purgedMu.Lock()
+	uc.purgedBefore = stored
+	uc.purgedLoaded = true
+	uc.purgedMu.Unlock()
+	return nil
 }
 
 // ListVideoPlaybackHistory returns video playback attempts with world display names (newest first).

@@ -3,6 +3,7 @@ package wailsapp
 import (
 	"context"
 	"database/sql"
+	"sync"
 	"testing"
 	"time"
 
@@ -110,6 +111,30 @@ func newRetentionApp(t *testing.T, ctx context.Context) (*App, *sql.DB) {
 			WithFriendAvatarObservationRepo(sqlite.NewFriendAvatarObservationRepository(db)),
 	}
 	return app, db
+}
+
+func TestActivityRetentionLoop_stopDuringRestartLeavesNoRunner(t *testing.T) {
+	app := &App{}
+	var wg sync.WaitGroup
+	for i := 0; i < 100; i++ {
+		wg.Add(2)
+		go func() {
+			defer wg.Done()
+			app.startActivityRetentionLoopEvery(time.Hour)
+		}()
+		go func() {
+			defer wg.Done()
+			app.stopActivityRetentionLoop()
+		}()
+		wg.Wait()
+		app.stopActivityRetentionLoop()
+		app.activityRetentionMu.Lock()
+		running := app.activityRetentionCancel != nil
+		app.activityRetentionMu.Unlock()
+		if running {
+			t.Fatal("retention loop still running after stop")
+		}
+	}
 }
 
 func retentionCount(t *testing.T, db *sql.DB, query string) int {
