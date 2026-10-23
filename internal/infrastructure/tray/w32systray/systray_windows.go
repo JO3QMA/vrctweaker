@@ -7,6 +7,7 @@ package w32systray
 
 import (
 	"errors"
+	"fmt"
 	"log"
 	"path/filepath"
 	"syscall"
@@ -372,9 +373,9 @@ func (p *Systray) destroyWindowClass() {
 
 // PostThreadMessage posts a message to another thread's queue (typically WMTrayShutdown).
 func PostThreadMessage(threadID uint32, msg uint32, wParam, lParam uintptr) error {
-	ret, _, _ := procPostThreadMessage.Call(uintptr(threadID), uintptr(msg), wParam, lParam)
+	ret, _, lastErr := procPostThreadMessage.Call(uintptr(threadID), uintptr(msg), wParam, lParam)
 	if ret == 0 {
-		return errors.New("PostThreadMessage failed")
+		return fmt.Errorf("PostThreadMessage failed: %w", lastErr)
 	}
 	return nil
 }
