@@ -86,7 +86,7 @@ func (m *windowsManager) Stop() error {
 		m.abortStop(fmt.Errorf("tray: thread id not ready"))
 		return <-waiter
 	}
-	if err := windows.PostThreadMessage(tid, w32systray.WMTrayShutdown, 0, 0); err != nil {
+	if err := w32systray.PostThreadMessage(tid, w32systray.WMTrayShutdown, 0, 0); err != nil {
 		m.abortStop(fmt.Errorf("tray: PostThreadMessage: %w", err))
 		return <-waiter
 	}

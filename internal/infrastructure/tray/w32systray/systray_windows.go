@@ -116,6 +116,7 @@ var (
 	procSetForegroundWindow   = user32.MustFindProc("SetForegroundWindow")
 	procTrackPopupMenu        = user32.MustFindProc("TrackPopupMenu")
 	procPostMessage           = user32.MustFindProc("PostMessageW")
+	procPostThreadMessage     = user32.MustFindProc("PostThreadMessageW")
 	procPostQuitMessage       = user32.MustFindProc("PostQuitMessage")
 	procRegisterWindowMessage = user32.MustFindProc("RegisterWindowMessageW")
 	procDestroyWindow         = user32.MustFindProc("DestroyWindow")
@@ -367,6 +368,15 @@ func (p *Systray) destroyWindowClass() {
 		uintptr(unsafe.Pointer(p.notifyClassName)),
 		uintptr(p.hinst),
 	)
+}
+
+// PostThreadMessage posts a message to another thread's queue (typically WMTrayShutdown).
+func PostThreadMessage(threadID uint32, msg uint32, wParam, lParam uintptr) error {
+	ret, _, _ := procPostThreadMessage.Call(uintptr(threadID), uintptr(msg), wParam, lParam)
+	if ret == 0 {
+		return errors.New("PostThreadMessage failed")
+	}
+	return nil
 }
 
 // Quit ends the Run message loop. Must be called on the tray thread; other goroutines
