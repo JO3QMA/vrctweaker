@@ -229,10 +229,11 @@ func New() (*Systray, error) {
 
 	const notifyIconClassName = "VRChatTweaker.NotifyIcon"
 	ni.notifyClassName = syscall.StringToUTF16Ptr(notifyIconClassName)
-	ni.hinst, err := RegisterWindow(notifyIconClassName, ni.WinProc)
+	hinst, err := RegisterWindow(notifyIconClassName, ni.WinProc)
 	if err != nil {
 		return nil, err
 	}
+	ni.hinst = hinst
 
 	taskbarCreated, _, _ := procRegisterWindowMessage.Call(
 		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr("TaskbarCreated"))),
@@ -281,7 +282,7 @@ func New() (*Systray, error) {
 
 	ret, _, _ = Shell_NotifyIcon.Call(NIM_SETVERSION, uintptr(unsafe.Pointer(&nid)))
 	if ret == 0 {
-		_ = Shell_NotifyIcon.Call(NIM_DELETE, uintptr(unsafe.Pointer(&nid)))
+		_, _, _ = Shell_NotifyIcon.Call(NIM_DELETE, uintptr(unsafe.Pointer(&nid)))
 		_ = ni.Destroy()
 		return nil, errors.New("shell notify version failed")
 	}
