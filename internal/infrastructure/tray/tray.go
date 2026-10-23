@@ -11,6 +11,8 @@ type Config struct {
 }
 
 // Manager controls the system tray icon lifecycle.
+// On Windows, NewManager starts a process-lifetime tray thread that idles between
+// Start/Stop sessions; the desktop app does not tear the manager down on quit.
 type Manager interface {
 	Supported() bool
 	Running() bool
