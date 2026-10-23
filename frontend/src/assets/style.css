@@ -543,7 +543,7 @@ a:hover {
   width: 100%;
   max-width: var(--settings-panel-max-width);
   container-type: inline-size;
-  container-name: settings-panel;
+  container-name: setting-rows;
 }
 
 @container settings-frame (max-width: 719px) {
@@ -580,76 +580,81 @@ a:hover {
   padding: 0;
 }
 
-.settings-view .setting-row {
+.setting-row {
   display: flex;
   flex-wrap: nowrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: var(--space-block);
+  min-width: 0;
   padding: var(--space-block);
 }
 
-.settings-view .setting-row + .setting-row,
-.settings-view .settings-danger-card .setting-row {
+.setting-row + .setting-row,
+.settings-danger-card .setting-row {
   border-top: 1px solid var(--color-border);
 }
 
-.settings-view .setting-row--center {
+.setting-row--center {
   align-items: center;
 }
 
-.settings-view .setting-row__text {
+.setting-row__text {
   flex: 1 1 0;
   min-width: 0;
 }
 
-.settings-view .setting-row__label {
+.setting-row__label {
   font-size: var(--font-size-14);
   line-height: var(--line-height-normal);
   color: var(--color-text-primary);
+  overflow-wrap: anywhere;
 }
 
-.settings-view .setting-row__desc {
+.setting-row__desc {
   margin: var(--space-inline-tight) 0 0;
   color: var(--color-text-secondary);
-  overflow-wrap: break-word;
+  overflow-wrap: anywhere;
 }
 
-.settings-view .setting-row__control {
+.setting-row__control {
   flex: 0 0 var(--control-width-md);
   width: var(--control-width-md);
   min-width: 0;
+  max-width: 100%;
   display: flex;
   justify-content: flex-end;
 }
 
-.settings-view .setting-row__control .el-select,
-.settings-view .setting-row__control .el-input,
-.settings-view .setting-row__control .el-input-number {
+.setting-row__control .el-select,
+.setting-row__control .el-input,
+.setting-row__control .el-input-number {
   width: 100%;
+  max-width: 100%;
 }
 
-.settings-view .setting-row--fixed {
+.setting-row--fixed {
   flex-wrap: nowrap;
 }
 
-.settings-view .setting-row--fixed .setting-row__control {
+.setting-row--fixed .setting-row__control {
   flex: 0 0 auto;
   width: auto;
 }
 
-.settings-view .setting-row--number .setting-row__control {
+.setting-row--number .setting-row__control {
   flex: 0 0 auto;
   width: auto;
   gap: var(--space-action-group);
 }
 
-.settings-view .setting-row--number .el-input-number {
+.setting-row--number .el-input-number {
   width: var(--control-width-sm);
+  max-width: 100%;
   flex: 0 0 var(--control-width-sm);
 }
 
-.settings-view .setting-row__suffix {
+.setting-row__suffix {
   color: var(--color-text-secondary);
   font-size: var(--font-size-14);
   line-height: var(--line-height-normal);
@@ -659,13 +664,13 @@ a:hover {
   min-width: var(--button-min-width);
 }
 
-@container settings-panel (max-width: 559px) {
-  .settings-view .setting-row:not(.setting-row--fixed) {
+@container setting-rows (max-width: 559px) {
+  .setting-row:not(.setting-row--fixed) {
     flex-direction: column;
     align-items: stretch;
   }
 
-  .settings-view .setting-row:not(.setting-row--fixed) .setting-row__control {
+  .setting-row:not(.setting-row--fixed) .setting-row__control {
     flex: 1 1 auto;
     width: 100%;
     min-width: 0;

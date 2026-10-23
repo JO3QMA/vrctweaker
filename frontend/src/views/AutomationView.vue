@@ -1,373 +1,145 @@
 <template>
   <div class="automation-view">
     <h1 class="page-title">{{ t("automation.title") }}</h1>
-    <VtAlert
-      v-if="!runtime.available"
-      class="runtime-alert"
-      variant="warning"
-      :title="t('automation.unavailableTitle')"
-      :description="
-        t(`automation.reason.${runtime.reasonKey || 'subsystemUnavailable'}`)
-      "
-    />
-    <p class="text-body-sm automation-intro">
-      {{ t("automation.intro") }}
-    </p>
-    <VtAlert
-      v-if="isDirty"
-      class="unsaved-banner"
-      data-testid="unsaved-banner"
-      variant="warning"
-      :title="t('automation.unsavedBanner')"
-    />
+    <div
+      class="automation-tabs"
+      role="tablist"
+      :aria-label="t('automation.title')"
+    >
+      <button
+        ref="rulesTabEl"
+        type="button"
+        role="tab"
+        class="automation-tab"
+        :class="{ 'is-active': tab === 'rules' }"
+        :aria-selected="tab === 'rules'"
+        :tabindex="tab === 'rules' ? 0 : -1"
+        aria-controls="automation-panel-rules"
+        data-testid="automation-tab-rules"
+        @click="tab = 'rules'"
+        @keydown="onTabKeydown"
+      >
+        <span class="automation-tab__label">{{
+          t("automation.tabRules")
+        }}</span>
+        <span
+          class="automation-tab__count"
+          data-testid="automation-rules-count"
+          >{{ items.length }}</span
+        >
+      </button>
+      <button
+        ref="logTabEl"
+        type="button"
+        role="tab"
+        class="automation-tab"
+        :class="{ 'is-active': tab === 'log' }"
+        :aria-selected="tab === 'log'"
+        :tabindex="tab === 'log' ? 0 : -1"
+        aria-controls="automation-panel-log"
+        data-testid="automation-tab-run-log"
+        @click="tab = 'log'"
+        @keydown="onTabKeydown"
+      >
+        <span class="automation-tab__label">{{
+          t("automation.runLogTitle")
+        }}</span>
+        <span
+          class="automation-tab__count"
+          data-testid="automation-log-count"
+          >{{ runLog.length }}</span
+        >
+      </button>
+    </div>
 
-    <div class="automation-layout">
-      <div class="items-list">
-        <VtButton
-          variant="secondary"
-          class="btn-add"
-          data-testid="add-rule"
-          @click="addRule"
-        >
-          {{ t("automation.addRule") }}
-        </VtButton>
-        <VtButton
-          variant="secondary"
-          class="btn-add"
-          data-testid="add-script"
-          @click="addScript"
-        >
-          {{ t("automation.addScript") }}
-        </VtButton>
-        <div
-          v-for="item in items"
-          :key="item.id"
-          class="rule-card"
-          :class="{
-            active: editor?.id === item.id && editor?.isNew !== true,
-            disabled: !item.isEnabled,
-          }"
-          @click="selectItem(item)"
-        >
-          <div class="rule-header">
-            <span class="rule-name">{{ item.name }}</span>
-            <div class="toggle-wrap" @click.stop>
-              <el-switch
-                :model-value="item.isEnabled"
-                size="small"
-                @change="(v: boolean) => toggleItem(item, v)"
-              />
-            </div>
-          </div>
-          <div class="rule-summary">
-            <VtTag size="small" variant="info">{{
-              item.kind === "script"
-                ? t("automation.kindScript")
-                : t("automation.kindRule")
-            }}</VtTag>
-            <span>{{ itemSummary(item) }}</span>
-          </div>
+    <div class="automation-body">
+      <VtAlert
+        v-if="!runtime.available"
+        class="runtime-alert"
+        variant="warning"
+        :title="t('automation.unavailableTitle')"
+        :description="
+          t(`automation.reason.${runtime.reasonKey || 'subsystemUnavailable'}`)
+        "
+      />
+      <p class="text-body-sm automation-intro">
+        {{ t("automation.intro") }}
+      </p>
+
+      <div
+        v-show="tab === 'rules'"
+        id="automation-panel-rules"
+        role="tabpanel"
+        class="automation-panes"
+        :class="{ 'is-editing': editor !== null && !preferList }"
+      >
+        <AutomationItemList
+          :items="items"
+          :active-id="activeId"
+          :trigger-labels="triggerLabels"
+          :disabled="!runtime.available"
+          @select="selectItem"
+          @toggle="toggleItem"
+          @add-rule="addRule"
+          @add-script="addScript"
+        />
+        <AutomationRuleEditor
+          v-if="editor"
+          :editor="editor"
+          :saving="saving"
+          :is-dirty="isDirty"
+          :disabled="!runtime.available"
+          :name-error="nameError"
+          :trigger-options="triggerOptions"
+          :status-options="statusOptions"
+          :power-plan-presets="powerPlanPresets"
+          :weekday-options="weekdayOptions"
+          :action-options="actionOptions"
+          :power-plans="powerPlans"
+          :friends="friends"
+          @save="save"
+          @cancel="cancelEdit"
+          @delete="confirmDelete"
+          @back="showList"
+          @add-action="addAction"
+          @remove-action="removeAction"
+          @move-action="moveAction"
+        />
+        <div v-else class="automation-editor automation-editor--empty">
+          <p class="automation-empty text-body-sm">
+            {{ t("automation.emptyEditor") }}
+          </p>
         </div>
       </div>
 
-      <el-card v-if="editor" class="section-card rule-editor" shadow="never">
-        <template #header>
-          <span v-if="editor.isNew">{{
-            editor.kind === "script"
-              ? t("automation.newScript")
-              : t("automation.newRule")
-          }}</span>
-          <span v-else>{{
-            editor.kind === "script"
-              ? t("automation.editScript")
-              : t("automation.editRule")
-          }}</span>
-          <span
-            v-if="isDirty"
-            class="unsaved-dot"
-            data-testid="unsaved-dot"
-            :title="t('automation.unsavedBanner')"
-          />
-        </template>
-
-        <el-form label-position="top" @submit.prevent="save">
-          <el-form-item :label="t('automation.itemName')">
-            <el-input
-              v-model="editor.name"
-              :placeholder="t('automation.ruleNamePh')"
-              required
-            />
-          </el-form-item>
-
-          <template v-if="editor.kind === 'rule'">
-            <el-divider>{{ t("automation.sectionWhen") }}</el-divider>
-            <el-form-item :label="t('automation.trigger')">
-              <el-select v-model="editor.triggerType" class="field-full-width">
-                <el-option
-                  v-for="opt in triggerOptions"
-                  :key="opt.value"
-                  :value="opt.value"
-                  :label="opt.label"
-                />
-              </el-select>
-            </el-form-item>
-            <el-form-item
-              v-if="editor.triggerType === 'schedule.tick'"
-              :label="t('automation.schedule')"
-            >
-              <el-checkbox-group v-model="editor.scheduleWeekdays">
-                <el-checkbox
-                  v-for="d in weekdayOptions"
-                  :key="d.value"
-                  :value="d.value"
-                >
-                  {{ d.label }}
-                </el-checkbox>
-              </el-checkbox-group>
-              <div class="time-row">
-                <el-input-number
-                  v-model="editor.scheduleHour"
-                  :min="0"
-                  :max="23"
-                />
-                <span>:</span>
-                <el-input-number
-                  v-model="editor.scheduleMinute"
-                  :min="0"
-                  :max="59"
-                />
-              </div>
-            </el-form-item>
-
-            <el-divider>{{ t("automation.sectionIf") }}</el-divider>
-            <el-form-item>
-              <el-checkbox v-model="editor.vrchatRunning">
-                {{ t("automation.conditionVrchatRunning") }}
-              </el-checkbox>
-            </el-form-item>
-            <el-form-item
-              v-if="
-                editor.triggerType === 'friend_joined' ||
-                editor.triggerType === 'friend_left'
-              "
-              :label="t('automation.conditionFriendIs')"
-            >
-              <el-select
-                v-model="editor.friendUserId"
-                clearable
-                filterable
-                class="field-full-width"
-              >
-                <el-option
-                  v-for="f in friends"
-                  :key="f.vrcUserId"
-                  :value="f.vrcUserId"
-                  :label="f.displayName"
-                />
-              </el-select>
-            </el-form-item>
-
-            <el-divider>{{ t("automation.sectionThen") }}</el-divider>
-            <div
-              v-for="(action, idx) in editor.actions"
-              :key="idx"
-              class="action-row"
-            >
-              <el-form-item :label="t('automation.action')">
-                <el-select v-model="action.type" class="field-full-width">
-                  <el-option
-                    v-for="opt in actionOptions"
-                    :key="opt.value"
-                    :value="opt.value"
-                    :label="opt.label"
-                    :disabled="opt.disabled"
-                  />
-                </el-select>
-              </el-form-item>
-              <el-form-item
-                v-if="action.type === 'change_status'"
-                :label="t('automation.status')"
-              >
-                <el-select v-model="action.status" class="field-full-width">
-                  <el-option
-                    v-for="opt in statusOptions"
-                    :key="opt.value"
-                    :value="opt.value"
-                    :label="opt.label"
-                  />
-                </el-select>
-              </el-form-item>
-              <template v-if="action.type === 'set_power_plan'">
-                <el-form-item :label="t('automation.powerPlanMode')">
-                  <el-radio-group v-model="action.powerPlanMode">
-                    <el-radio value="preset">{{
-                      t("automation.powerPlanPreset")
-                    }}</el-radio>
-                    <el-radio value="guid" :disabled="!powerPlans.length">{{
-                      t("automation.powerPlanDetected")
-                    }}</el-radio>
-                  </el-radio-group>
-                </el-form-item>
-                <el-form-item
-                  v-if="action.powerPlanMode === 'preset'"
-                  :label="t('automation.powerPlanPreset')"
-                >
-                  <el-select
-                    v-model="action.powerPlanPreset"
-                    class="field-full-width"
-                  >
-                    <el-option
-                      v-for="p in powerPlanPresets"
-                      :key="p.value"
-                      :value="p.value"
-                      :label="p.label"
-                    />
-                  </el-select>
-                </el-form-item>
-                <el-form-item v-else :label="t('automation.powerPlanDetected')">
-                  <el-select
-                    v-model="action.powerPlanGuid"
-                    class="field-full-width"
-                  >
-                    <el-option
-                      v-for="p in powerPlans"
-                      :key="p.guid"
-                      :value="p.guid"
-                      :label="p.name"
-                    />
-                  </el-select>
-                </el-form-item>
-              </template>
-              <template v-if="action.type === 'set_vrchat_window_size'">
-                <el-form-item :label="t('automation.windowWidth')">
-                  <el-input-number
-                    v-model="action.windowWidth"
-                    :min="1"
-                    :max="7680"
-                    data-testid="window-width-input"
-                  />
-                </el-form-item>
-                <el-form-item :label="t('automation.windowHeight')">
-                  <el-input-number
-                    v-model="action.windowHeight"
-                    :min="1"
-                    :max="4320"
-                    data-testid="window-height-input"
-                  />
-                </el-form-item>
-              </template>
-              <el-checkbox v-model="action.continueOnError">
-                {{ t("automation.continueOnError") }}
-              </el-checkbox>
-              <VtButton
-                v-if="editor.actions.length > 1"
-                variant="tertiary"
-                @click="removeAction(idx)"
-              >
-                {{ t("automation.removeAction") }}
-              </VtButton>
-            </div>
-            <VtButton
-              v-if="editor.actions.length < 10"
-              variant="secondary"
-              class="btn-add-action"
-              @click="addAction"
-            >
-              {{ t("automation.addAction") }}
-            </VtButton>
-            <p class="text-body-sm partial-hint">
-              {{ t("automation.partialApplyHint") }}
-            </p>
-          </template>
-
-          <template v-else>
-            <el-divider>{{ t("automation.scriptSource") }}</el-divider>
-            <el-input
-              v-model="editor.scriptSource"
-              type="textarea"
-              :rows="14"
-              class="script-editor"
-              :placeholder="t('automation.scriptPlaceholder')"
-            />
-          </template>
-
-          <div class="editor-actions">
-            <VtButton
-              variant="primary"
-              data-testid="save-item"
-              :loading="saving"
-              @click="save"
-            >
-              {{ t("automation.save") }}
-            </VtButton>
-            <VtButton
-              v-if="editor.id && !editor.isNew"
-              variant="danger"
-              plain
-              @click="confirmDelete"
-            >
-              {{ t("automation.delete") }}
-            </VtButton>
-            <VtButton variant="secondary" @click="cancelEdit">{{
-              t("automation.cancel")
-            }}</VtButton>
-          </div>
-        </el-form>
-      </el-card>
-
-      <el-card class="section-card run-log-panel" shadow="never">
-        <template #header>
-          <span>{{ t("automation.runLogTitle") }}</span>
-          <VtButton variant="tertiary" size="small" @click="loadRunLog">
-            {{ t("common.refresh") }}
-          </VtButton>
-        </template>
-        <el-table :data="runLog" size="small" stripe empty-text="—">
-          <el-table-column
-            prop="at"
-            :label="t('automation.runLogAt')"
-            width="150"
-          />
-          <el-table-column prop="itemName" :label="t('automation.itemName')" />
-          <el-table-column
-            prop="eventType"
-            :label="t('automation.runLogEvent')"
-            width="120"
-          />
-          <el-table-column :label="t('automation.runLogResult')" width="100">
-            <template #default="{ row }">
-              <VtTag :variant="row.success ? 'success' : 'danger'" size="small">
-                {{
-                  row.success
-                    ? t("automation.runLogSuccess")
-                    : t("automation.runLogFailure")
-                }}
-              </VtTag>
-            </template>
-          </el-table-column>
-          <el-table-column :label="t('automation.runLogActions')" width="80">
-            <template #default="{ row }">
-              {{ row.actionsCompleted }}/{{ row.actionsTotal }}
-            </template>
-          </el-table-column>
-          <el-table-column
-            prop="contextLabel"
-            :label="t('automation.runLogContext')"
-          />
-        </el-table>
-      </el-card>
+      <div
+        v-show="tab === 'log'"
+        id="automation-panel-log"
+        role="tabpanel"
+        class="automation-log-host"
+      >
+        <AutomationRunLogPanel :entries="runLog" @refresh="refreshRunLog" />
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import {
+  ref,
+  computed,
+  watch,
+  nextTick,
+  onMounted,
+  onBeforeUnmount,
+} from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
 import VtAlert from "../components/VtAlert.vue";
-import VtButton from "../components/VtButton.vue";
-import VtTag from "../components/VtTag.vue";
+import AutomationItemList from "./automation/AutomationItemList.vue";
+import AutomationRuleEditor from "./automation/AutomationRuleEditor.vue";
+import AutomationRunLogPanel from "./automation/AutomationRunLogPanel.vue";
 import {
   App,
   type AutomationItemDTO,
@@ -403,6 +175,11 @@ const runtime = ref<AutomationRuntimeStatusDTO>({
 const powerPlans = ref<DetectedPowerPlanDTO[]>([]);
 const friends = ref<UserCacheDTO[]>([]);
 const saving = ref(false);
+const nameError = ref("");
+const tab = ref<"rules" | "log">("rules");
+const preferList = ref(false);
+const rulesTabEl = ref<HTMLButtonElement | null>(null);
+const logTabEl = ref<HTMLButtonElement | null>(null);
 let loadGen = 0;
 let runLogGen = 0;
 let eventsOff: (() => void) | undefined;
@@ -411,12 +188,26 @@ const isDirty = computed(
   () => !!editor.value && JSON.stringify(editor.value) !== savedSnapshot.value,
 );
 
+const controlsDisabled = computed(() => !runtime.value.available);
+
+const activeId = computed(() =>
+  editor.value && editor.value.isNew !== true ? editor.value.id : "",
+);
+
 const triggerOptions = computed(() => [
   { value: "friend_joined", label: t("automation.triggerFriendJoined") },
   { value: "friend_left", label: t("automation.triggerFriendLeft") },
   { value: "schedule.tick", label: t("automation.triggerSchedule") },
   { value: "vrchat.process", label: t("automation.triggerVrchatProcess") },
 ]);
+
+const triggerLabels = computed(() => {
+  const labels: Record<string, string> = {};
+  for (const opt of triggerOptions.value) {
+    labels[opt.value] = opt.label;
+  }
+  return labels;
+});
 
 const statusOptions = computed(() => [
   { value: "busy", label: t("automation.statusBusy") },
@@ -450,16 +241,15 @@ const actionOptions = computed(() => [
   },
 ]);
 
+watch(
+  () => editor.value?.name,
+  () => {
+    if (nameError.value) nameError.value = "";
+  },
+);
+
 function captureSnapshot() {
   savedSnapshot.value = editor.value ? JSON.stringify(editor.value) : "";
-}
-
-function itemSummary(item: AutomationItemDTO): string {
-  if (item.kind === "script") return t("automation.summaryScript");
-  const trigger =
-    triggerOptions.value.find((o) => o.value === item.triggerType)?.label ??
-    item.triggerType;
-  return `${t("automation.summaryIf")} ${trigger}`;
 }
 
 async function loadItems() {
@@ -474,6 +264,25 @@ async function loadRunLog() {
   const log = await App.getAutomationRunLog();
   if (gen !== runLogGen) return;
   runLog.value = log;
+}
+
+async function refreshRunLog() {
+  try {
+    await loadRunLog();
+  } catch {
+    showToast.error(t("automation.runLogLoadError"));
+  }
+}
+
+function onTabKeydown(event: KeyboardEvent) {
+  if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+  event.preventDefault();
+  const next = tab.value === "rules" ? "log" : "rules";
+  tab.value = next;
+  void nextTick(() => {
+    const el = next === "rules" ? rulesTabEl.value : logTabEl.value;
+    el?.focus();
+  });
 }
 
 async function loadRuntime() {
@@ -543,10 +352,32 @@ onBeforeRouteLeave(async () => {
   return guardUnsaved();
 });
 
+function showList() {
+  void (async () => {
+    if (isDirty.value) {
+      const choice = await promptUnsavedChoice();
+      if (choice === "cancel") return;
+      if (choice === "save") {
+        if (!(await save())) return;
+      } else if (savedSnapshot.value) {
+        try {
+          editor.value = JSON.parse(savedSnapshot.value) as EditorState;
+        } catch {
+          editor.value = null;
+        }
+        nameError.value = "";
+      }
+    }
+    preferList.value = true;
+  })();
+}
+
 async function selectItem(item: AutomationItemDTO) {
   if (!(await guardUnsaved())) return;
+  nameError.value = "";
   try {
     editor.value = dtoToEditor(item);
+    preferList.value = false;
     captureSnapshot();
   } catch {
     editor.value = null;
@@ -557,7 +388,9 @@ async function selectItem(item: AutomationItemDTO) {
 
 function addRule() {
   void (async () => {
+    if (controlsDisabled.value) return;
     if (!(await guardUnsaved())) return;
+    nameError.value = "";
     editor.value = {
       id: "",
       name: "",
@@ -573,13 +406,16 @@ function addRule() {
       actions: [defaultAction()],
       scriptSource: "",
     };
+    preferList.value = false;
     captureSnapshot();
   })();
 }
 
 function addScript() {
   void (async () => {
+    if (controlsDisabled.value) return;
     if (!(await guardUnsaved())) return;
+    nameError.value = "";
     editor.value = {
       id: "",
       name: "",
@@ -596,6 +432,7 @@ function addScript() {
       scriptSource:
         'tweaker.subscribe("friend_joined", function(ev, payload)\n  -- your logic\nend)\n',
     };
+    preferList.value = false;
     captureSnapshot();
   })();
 }
@@ -605,20 +442,39 @@ function cancelEdit() {
     if (!(await guardUnsaved())) return;
     editor.value = null;
     savedSnapshot.value = "";
+    nameError.value = "";
+    preferList.value = true;
   })();
 }
 
 function addAction() {
-  if (!editor.value) return;
+  if (!editor.value || controlsDisabled.value) return;
   editor.value.actions.push(defaultAction());
 }
 
 function removeAction(idx: number) {
-  editor.value?.actions.splice(idx, 1);
+  if (!editor.value || controlsDisabled.value) return;
+  if (editor.value.actions.length <= 1) return;
+  editor.value.actions.splice(idx, 1);
+}
+
+function moveAction(idx: number, direction: -1 | 1) {
+  if (!editor.value || controlsDisabled.value) return;
+  const next = idx + direction;
+  const actions = editor.value.actions;
+  const moving = actions[idx];
+  if (!moving || next < 0 || next >= actions.length) return;
+  actions.splice(idx, 1);
+  actions.splice(next, 0, moving);
 }
 
 async function save(): Promise<boolean> {
-  if (!editor.value || saving.value) return false;
+  if (!editor.value || saving.value || controlsDisabled.value) return false;
+  if (editor.value.name.trim() === "") {
+    nameError.value = t("automation.nameRequired");
+    return false;
+  }
+  nameError.value = "";
   saving.value = true;
   try {
     const dto = editorToDto(editor.value);
@@ -647,6 +503,7 @@ async function save(): Promise<boolean> {
       editor.value.isNew = false;
     }
     captureSnapshot();
+    preferList.value = false;
     return true;
   } catch {
     showToast.error(t("automation.saveError"));
@@ -657,6 +514,7 @@ async function save(): Promise<boolean> {
 }
 
 async function toggleItem(item: AutomationItemDTO, enabled: boolean) {
+  if (controlsDisabled.value) return;
   const previous = item.isEnabled;
   try {
     await App.toggleAutomationItem(item.id, enabled);
@@ -669,7 +527,7 @@ async function toggleItem(item: AutomationItemDTO, enabled: boolean) {
 }
 
 async function confirmDelete() {
-  if (!editor.value?.id) return;
+  if (!editor.value?.id || controlsDisabled.value) return;
   try {
     await ElMessageBox.confirm(
       t("automation.deleteConfirm", { name: editor.value.name }),
@@ -688,154 +546,168 @@ async function confirmDelete() {
   await App.deleteAutomationItem(editor.value.id);
   editor.value = null;
   savedSnapshot.value = "";
+  nameError.value = "";
+  preferList.value = true;
   await loadItems();
 }
 </script>
 
 <style scoped>
-.automation-intro {
-  display: block;
-  margin: 0 0 var(--space-block);
-  color: var(--color-text-secondary);
+.automation-view {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  container-type: inline-size;
+  container-name: automation-frame;
 }
 
-.runtime-alert {
+.automation-view .page-title {
   margin-bottom: var(--space-block);
 }
 
-.automation-layout {
-  display: grid;
-  grid-template-columns: 280px 1fr 320px;
-  gap: var(--space-block);
-  align-items: start;
+.automation-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  min-width: 0;
 }
 
-@media (max-width: 1100px) {
-  .automation-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-.items-list {
-  width: 100%;
-}
-
-.btn-add {
-  width: 100%;
-  margin-bottom: var(--space-action-group);
-  border-style: dashed !important;
-  color: var(--color-text-secondary) !important;
-}
-
-.rule-card {
-  padding: var(--space-form-field);
-  margin-bottom: var(--space-action-group);
-  background: var(--color-bg-elevated);
+.automation-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-action-group);
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  padding: var(--space-8) var(--space-12);
+  border: none;
+  border-bottom: 2px solid transparent;
   border-radius: var(--radius);
-  cursor: pointer;
+  background: transparent;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-14);
+  line-height: var(--line-height-normal);
+  font-weight: var(--font-weight-400);
+  font-family: inherit;
 }
 
-.rule-card.active {
+.automation-tab:hover {
+  color: var(--color-text-primary);
   background: var(--color-bg-muted);
 }
 
-.rule-card.disabled {
-  opacity: 0.65;
+.automation-tab.is-active {
+  border-bottom-color: var(--color-brand);
+  color: var(--color-text-primary);
+  background: var(--color-bg-elevated);
+  font-weight: var(--font-weight-600);
 }
 
-.rule-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-action-group);
-  margin-bottom: var(--space-inline-tight);
+.automation-tab__label {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
-.rule-name {
-  font-weight: var(--font-weight-500);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  flex: 1;
+.automation-tab__count {
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-400);
 }
 
-.rule-summary {
+.automation-tab:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.automation-body {
+  margin-top: var(--space-block);
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-inline-tight);
-  font-size: var(--font-size-12);
-  color: var(--color-text-secondary);
+  gap: var(--space-block);
+  overflow: hidden;
 }
 
-.rule-editor :deep(.el-card__header) {
-  display: flex;
-  align-items: center;
-  gap: var(--space-action-group);
-}
-
-.field-full-width {
-  width: 100%;
-}
-
-.editor-actions {
-  margin-top: var(--space-block);
-  display: flex;
-  gap: var(--space-action-group);
-  flex-wrap: wrap;
-}
-
-.weekday-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-action-group);
-  margin-bottom: var(--space-action-group);
-}
-
-.time-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-action-group);
-}
-
-.action-row {
-  padding: var(--space-form-field);
-  margin-bottom: var(--space-form-field);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-}
-
-.btn-add-action {
-  width: 100%;
-  margin-bottom: var(--space-action-group);
-  border-style: dashed !important;
-}
-
-.partial-hint {
-  display: block;
-  margin: 0 0 var(--space-block);
-  color: var(--color-text-secondary);
-}
-
-.script-editor :deep(textarea) {
-  font-family: ui-monospace, monospace;
-  font-size: var(--font-size-12);
-}
-
-.unsaved-banner {
-  margin-bottom: var(--space-form-field);
-}
-
-.unsaved-dot {
-  width: var(--space-action-group);
-  height: var(--space-action-group);
-  border-radius: 50%;
-  background: var(--color-warning);
+.automation-intro,
+.runtime-alert {
+  margin: 0;
   flex-shrink: 0;
 }
 
-.run-log-panel :deep(.el-card__header) {
+.automation-intro {
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.automation-panes,
+.automation-log-host {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-block);
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.automation-list {
+  flex: 0 0 280px;
+  width: 280px;
+  max-width: 280px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.automation-editor {
+  flex: 1 1 auto;
+  max-width: 800px;
+  min-width: 0;
+  min-height: 0;
+}
+
+.automation-editor--empty {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  padding: var(--space-block);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg-elevated);
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+
+.automation-empty {
+  margin: 0;
+  color: var(--color-text-secondary);
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.automation-log-host :deep(.automation-log) {
+  width: 100%;
+}
+
+@container automation-frame (max-width: 719px) {
+  .automation-list,
+  .automation-editor {
+    flex: 1 1 auto;
+    width: 100%;
+    max-width: none;
+  }
+
+  .automation-panes.is-editing .automation-list {
+    display: none;
+  }
+
+  .automation-panes:not(.is-editing) .automation-editor {
+    display: none;
+  }
+
+  .automation-editor :deep(.automation-back) {
+    display: inline-flex;
+  }
 }
 </style>

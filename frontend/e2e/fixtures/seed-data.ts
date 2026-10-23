@@ -284,6 +284,41 @@ export const SEED_AUTOMATION_ITEMS: SeedAutomationItem[] = [
       { type: "change_status", payload: { status: "busy" } },
     ]),
   },
+  {
+    id: "rule_e2e_002",
+    name: "平日の朝にフレンド参加でステータスを変えるとても長いルール名",
+    kind: "rule",
+    isEnabled: false,
+    triggerType: "schedule.tick",
+    scheduleJson: JSON.stringify({
+      weekdays: [1, 2, 3, 4, 5],
+      hour: 8,
+      minute: 30,
+    }),
+    conditionsJson: JSON.stringify([{ type: "vrchat_running" }]),
+    actionsJson: JSON.stringify([
+      { type: "change_status", payload: { status: "ask me" } },
+      {
+        type: "set_vrchat_window_size",
+        payload: { width: 1920, height: 1080 },
+        continueOnError: true,
+      },
+    ]),
+  },
+];
+
+export const SEED_AUTOMATION_RUN_LOG = [
+  {
+    at: "2026-10-21 21:04",
+    itemId: "rule_e2e_002",
+    itemName: "平日の朝にフレンド参加でステータスを変えるとても長いルール名",
+    eventType: "schedule.tick",
+    success: false,
+    actionsCompleted: 1,
+    actionsTotal: 2,
+    contextLabel:
+      "とても長いコンテキストラベルで、狭い幅でもセル内で折り返すことを確認する文章です",
+  },
 ];
 
 export const SEED_VRCHAT_CONFIG = {
