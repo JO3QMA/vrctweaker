@@ -385,13 +385,9 @@ func (p *Systray) Quit() {
 	procPostQuitMessage.Call(0)
 }
 
-func MakeIntResource(id uint16) *uint16 {
-	return (*uint16)(unsafe.Pointer(uintptr(id)))
-}
-
 // Show shows custom tray icon.
 func (p *Systray) Show(iconResID uint16, hint string) error {
-	icon, _, _ := LoadIcon.Call(uintptr(p.hinst), uintptr(unsafe.Pointer(MakeIntResource(iconResID))))
+	icon, _, _ := LoadIcon.Call(uintptr(p.hinst), uintptr(iconResID))
 	if icon == 0 {
 		icon, _, _ = LoadIcon.Call(0, uintptr(IDI_APPLICATION))
 	}
@@ -666,7 +662,6 @@ func (p *Systray) Run() error {
 			DispatchMessage.Call(uintptr(unsafe.Pointer(&msg)))
 		}
 	}
-	return nil
 }
 
 func (p *Systray) displayMenu(menuItems []*MenuItem) error {
