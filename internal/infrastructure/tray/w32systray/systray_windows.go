@@ -116,6 +116,7 @@ var (
 	procSetForegroundWindow   = user32.MustFindProc("SetForegroundWindow")
 	procTrackPopupMenu        = user32.MustFindProc("TrackPopupMenu")
 	procPostMessage           = user32.MustFindProc("PostMessageW")
+	procPostThreadMessage     = user32.MustFindProc("PostThreadMessageW")
 	procPostQuitMessage       = user32.MustFindProc("PostQuitMessage")
 	procRegisterWindowMessage = user32.MustFindProc("RegisterWindowMessageW")
 	procDestroyWindow         = user32.MustFindProc("DestroyWindow")
@@ -229,10 +230,11 @@ func New() (*Systray, error) {
 
 	const notifyIconClassName = "VRChatTweaker.NotifyIcon"
 	ni.notifyClassName = syscall.StringToUTF16Ptr(notifyIconClassName)
-	ni.hinst, err := RegisterWindow(notifyIconClassName, ni.WinProc)
+	hinst, err := RegisterWindow(notifyIconClassName, ni.WinProc)
 	if err != nil {
 		return nil, err
 	}
+	ni.hinst = hinst
 
 	taskbarCreated, _, _ := procRegisterWindowMessage.Call(
 		uintptr(unsafe.Pointer(syscall.StringToUTF16Ptr("TaskbarCreated"))),
@@ -281,7 +283,7 @@ func New() (*Systray, error) {
 
 	ret, _, _ = Shell_NotifyIcon.Call(NIM_SETVERSION, uintptr(unsafe.Pointer(&nid)))
 	if ret == 0 {
-		_ = Shell_NotifyIcon.Call(NIM_DELETE, uintptr(unsafe.Pointer(&nid)))
+		_, _, _ = Shell_NotifyIcon.Call(NIM_DELETE, uintptr(unsafe.Pointer(&nid)))
 		_ = ni.Destroy()
 		return nil, errors.New("shell notify version failed")
 	}
@@ -368,19 +370,36 @@ func (p *Systray) destroyWindowClass() {
 	)
 }
 
+// PostThreadShutdown asks the tray thread to exit its message loop from another goroutine.
+func PostThreadShutdown(threadID uint32) error {
+	ret, _, err := procPostThreadMessage.Call(
+		uintptr(threadID),
+		uintptr(WMTrayShutdown),
+		0,
+		0,
+	)
+	if ret == 0 {
+		if err != nil {
+			return err
+		}
+		e, _, _ := GetLastError.Call()
+		if e != 0 {
+			return syscall.Errno(e)
+		}
+		return errors.New("PostThreadMessage failed")
+	}
+	return nil
+}
+
 // Quit ends the Run message loop. Must be called on the tray thread; other goroutines
-// should use PostThreadMessage with WMTrayShutdown instead.
+// should use PostThreadShutdown instead.
 func (p *Systray) Quit() {
 	procPostQuitMessage.Call(0)
 }
 
-func MakeIntResource(id uint16) *uint16 {
-	return (*uint16)(unsafe.Pointer(uintptr(id)))
-}
-
 // Show shows custom tray icon.
 func (p *Systray) Show(iconResID uint16, hint string) error {
-	icon, _, _ := LoadIcon.Call(uintptr(p.hinst), uintptr(unsafe.Pointer(MakeIntResource(iconResID))))
+	icon, _, _ := LoadIcon.Call(uintptr(p.hinst), uintptr(iconResID))
 	if icon == 0 {
 		icon, _, _ = LoadIcon.Call(0, uintptr(IDI_APPLICATION))
 	}
@@ -655,7 +674,6 @@ func (p *Systray) Run() error {
 			DispatchMessage.Call(uintptr(unsafe.Pointer(&msg)))
 		}
 	}
-	return nil
 }
 
 func (p *Systray) displayMenu(menuItems []*MenuItem) error {
