@@ -543,7 +543,7 @@ a:hover {
   width: 100%;
   max-width: var(--settings-panel-max-width);
   container-type: inline-size;
-  container-name: settings-panel;
+  container-name: setting-rows;
 }
 
 @container settings-frame (max-width: 719px) {
@@ -664,7 +664,7 @@ a:hover {
   min-width: var(--button-min-width);
 }
 
-@container settings-panel (max-width: 559px) {
+@container setting-rows (max-width: 559px) {
   .setting-row:not(.setting-row--fixed) {
     flex-direction: column;
     align-items: stretch;
@@ -683,20 +683,6 @@ a:hover {
 
   .settings-view .login-form {
     max-width: none;
-  }
-}
-
-@container automation-editor (max-width: 559px) {
-  .setting-row:not(.setting-row--fixed) {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .setting-row:not(.setting-row--fixed) .setting-row__control {
-    flex: 1 1 auto;
-    width: 100%;
-    min-width: 0;
-    justify-content: flex-start;
   }
 }
 

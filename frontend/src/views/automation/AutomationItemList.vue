@@ -70,43 +70,50 @@ function onCreate(command: string) {
         </template>
       </el-dropdown>
     </div>
-    <div class="automation-list__rows" role="list">
+    <div class="automation-list__rows">
       <p v-if="items.length === 0" class="automation-list__empty text-body-sm">
         {{ t("automation.emptyList") }}
       </p>
-      <div
-        v-for="item in items"
-        :key="item.id"
-        class="rule-card"
-        role="button"
-        tabindex="0"
-        :class="{
-          active: activeId === item.id,
-          disabled: !item.isEnabled,
-        }"
-        :aria-current="activeId === item.id ? 'true' : undefined"
-        @click="emit('select', item)"
-        @keydown.enter.prevent="emit('select', item)"
-        @keydown.space.prevent="emit('select', item)"
-      >
-        <div class="rule-header">
-          <span class="rule-name">{{ item.name }}</span>
-          <div class="toggle-wrap" @click.stop @keydown.stop>
-            <el-switch
-              :model-value="item.isEnabled"
-              :disabled="disabled"
-              size="small"
-              @change="(v: string | number | boolean) => onToggle(item, v)"
-            />
+      <div v-else role="list">
+        <div
+          v-for="item in items"
+          :key="item.id"
+          class="automation-list__item"
+          role="listitem"
+        >
+          <div
+            class="rule-card"
+            role="button"
+            tabindex="0"
+            :class="{
+              active: activeId === item.id,
+              disabled: !item.isEnabled,
+            }"
+            :aria-current="activeId === item.id ? 'true' : undefined"
+            @click="emit('select', item)"
+            @keydown.enter.prevent="emit('select', item)"
+            @keydown.space.prevent="emit('select', item)"
+          >
+            <div class="rule-header">
+              <span class="rule-name">{{ item.name }}</span>
+              <div class="toggle-wrap" @click.stop @keydown.stop>
+                <el-switch
+                  :model-value="item.isEnabled"
+                  :disabled="disabled"
+                  size="small"
+                  @change="(v: string | number | boolean) => onToggle(item, v)"
+                />
+              </div>
+            </div>
+            <div class="rule-summary">
+              <VtTag size="small" variant="neutral">{{
+                item.kind === "script"
+                  ? t("automation.kindScript")
+                  : t("automation.kindRule")
+              }}</VtTag>
+              <span class="rule-summary__text">{{ summary(item) }}</span>
+            </div>
           </div>
-        </div>
-        <div class="rule-summary">
-          <VtTag size="small" variant="neutral">{{
-            item.kind === "script"
-              ? t("automation.kindScript")
-              : t("automation.kindRule")
-          }}</VtTag>
-          <span class="rule-summary__text">{{ summary(item) }}</span>
         </div>
       </div>
     </div>
@@ -171,7 +178,7 @@ function onCreate(command: string) {
   min-width: 0;
 }
 
-.rule-card + .rule-card {
+.automation-list__item + .automation-list__item {
   border-top: 1px solid var(--color-border);
 }
 

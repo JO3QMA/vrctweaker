@@ -414,6 +414,7 @@
     "scriptSource": "腳本",
     "scriptPlaceholder": "使用 tweaker.subscribe(...) 訂閱事件",
     "runLogTitle": "執行記錄",
+    "runLogLoadError": "無法取得執行記錄",
     "runLogAt": "時間",
     "runLogEvent": "事件",
     "runLogResult": "結果",

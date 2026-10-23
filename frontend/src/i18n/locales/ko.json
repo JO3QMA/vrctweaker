@@ -414,6 +414,7 @@
     "scriptSource": "스크립트",
     "scriptPlaceholder": "tweaker.subscribe(...)로 이벤트 구독",
     "runLogTitle": "실행 로그",
+    "runLogLoadError": "실행 로그를 가져오지 못했습니다",
     "runLogAt": "시각",
     "runLogEvent": "이벤트",
     "runLogResult": "결과",

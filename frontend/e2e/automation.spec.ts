@@ -40,7 +40,11 @@ test.describe("Automation", () => {
   test("run log uses Japanese event labels in one line", async ({ page }) => {
     await page.goto("/#/automation");
     await page.getByRole("tab", { name: /実行ログ/ }).click();
-    await expect(page.getByText("スケジュール（毎分評価）")).toBeVisible();
+    await expect(
+      page
+        .getByTestId("automation-run-log-table")
+        .getByText("スケジュール（毎分評価）"),
+    ).toBeVisible();
     await expect(page.getByText("失敗")).toBeVisible();
     await expect(page.getByText("schedule.tick")).toHaveCount(0);
   });

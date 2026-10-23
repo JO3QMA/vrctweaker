@@ -257,7 +257,7 @@ const canDeleteItem = computed(
             </template>
             <div
               v-for="(action, idx) in editor.actions"
-              :key="idx"
+              :key="action.clientId"
               class="automation-action"
             >
               <div class="automation-action-head">
@@ -513,7 +513,7 @@ const canDeleteItem = computed(
   height: 100%;
   overflow: hidden;
   container-type: inline-size;
-  container-name: automation-editor;
+  container-name: setting-rows;
 }
 
 .automation-editor__scroll {
@@ -768,7 +768,7 @@ const canDeleteItem = computed(
   margin-left: 0;
 }
 
-@container automation-editor (max-width: 559px) {
+@container setting-rows (max-width: 559px) {
   .automation-action-bar__delete {
     display: none;
   }

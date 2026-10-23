@@ -242,20 +242,21 @@ describe("AutomationView layout", () => {
     const wrapper = mount(AutomationView);
     await flushPromises();
 
-    expect(wrapper.find('[data-testid="automation-list"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="automation-run-log"]').exists()).toBe(
-      false,
-    );
+    expect(wrapper.find("#automation-panel-rules").exists()).toBe(true);
+    expect(wrapper.find("#automation-panel-log").exists()).toBe(true);
+    expect(
+      wrapper.get("#automation-panel-log").attributes("style") ?? "",
+    ).toContain("display: none");
 
     await wrapper
       .get('[data-testid="automation-tab-run-log"]')
       .trigger("click");
-    expect(wrapper.find('[data-testid="automation-list"]').exists()).toBe(
-      false,
-    );
-    expect(wrapper.find('[data-testid="automation-run-log"]').exists()).toBe(
-      true,
-    );
+    expect(
+      wrapper.get("#automation-panel-rules").attributes("style") ?? "",
+    ).toContain("display: none");
+    expect(
+      wrapper.get("#automation-panel-log").attributes("style") ?? "",
+    ).not.toContain("display: none");
     expect(wrapper.text()).toContain("フレンド参加時");
     expect(wrapper.text()).not.toContain("friend_joined");
 
@@ -337,5 +338,75 @@ describe("AutomationView layout", () => {
     expect(wrapper.get('[data-testid="editor-enabled"]').classes()).toContain(
       "is-disabled",
     );
+  });
+
+  it("toasts when refreshing the run log fails", async () => {
+    const wrapper = mount(AutomationView);
+    await flushPromises();
+    await wrapper
+      .get('[data-testid="automation-tab-run-log"]')
+      .trigger("click");
+    mockGetAutomationRunLog.mockRejectedValueOnce(new Error("log failed"));
+
+    await wrapper.get('[data-testid="refresh-run-log"]').trigger("click");
+    await flushPromises();
+
+    expect(showToast.error).toHaveBeenCalledWith(
+      "実行ログを取得できませんでした",
+    );
+  });
+
+  it("moves between tabs with the arrow keys", async () => {
+    const wrapper = mount(AutomationView);
+    await flushPromises();
+    const rules = wrapper.get('[data-testid="automation-tab-rules"]');
+    expect(rules.attributes("tabindex")).toBe("0");
+    expect(
+      wrapper
+        .get('[data-testid="automation-tab-run-log"]')
+        .attributes("tabindex"),
+    ).toBe("-1");
+
+    await rules.trigger("keydown", { key: "ArrowRight" });
+    await flushPromises();
+
+    expect(
+      wrapper
+        .get('[data-testid="automation-tab-run-log"]')
+        .attributes("aria-selected"),
+    ).toBe("true");
+    expect(
+      wrapper
+        .get('[data-testid="automation-tab-run-log"]')
+        .attributes("tabindex"),
+    ).toBe("0");
+    expect(
+      wrapper.get("#automation-panel-log").attributes("style") ?? "",
+    ).not.toContain("display: none");
+  });
+
+  it("asks before leaving the editor for the list when there are unsaved changes", async () => {
+    const wrapper = mount(AutomationView);
+    await flushPromises();
+    await wrapper.find('[data-testid="add-rule"]').trigger("click");
+    await flushPromises();
+    await wrapper.get('[data-testid="item-name-input"]').setValue("Draft rule");
+    await flushPromises();
+
+    const confirmSpy = vi
+      .spyOn(ElMessageBox, "confirm")
+      .mockRejectedValueOnce("close");
+    await wrapper.get('[data-testid="automation-back"]').trigger("click");
+    await flushPromises();
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(wrapper.find(".rule-editor").isVisible()).toBe(true);
+    expect(
+      (
+        wrapper.get('[data-testid="item-name-input"]')
+          .element as HTMLInputElement
+      ).value,
+    ).toBe("Draft rule");
+    confirmSpy.mockRestore();
   });
 });

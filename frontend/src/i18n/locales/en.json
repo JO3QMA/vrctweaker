@@ -414,6 +414,7 @@
     "scriptSource": "Script",
     "scriptPlaceholder": "Use tweaker.subscribe(...) to listen for events",
     "runLogTitle": "Run log",
+    "runLogLoadError": "Could not load the run log",
     "runLogAt": "Time",
     "runLogEvent": "Event",
     "runLogResult": "Result",

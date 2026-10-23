@@ -18,6 +18,10 @@ const root = ref<HTMLElement | null>(null);
 const logWidth = ref(0);
 const compact = computed(() => logWidth.value > 0 && logWidth.value < 720);
 const narrow = computed(() => logWidth.value > 0 && logWidth.value < 400);
+const atColumnWidth = computed(() =>
+  narrow.value ? 96 : compact.value ? 120 : 160,
+);
+const resultColumnWidth = computed(() => (narrow.value ? 72 : 96));
 let observer: ResizeObserver | undefined;
 
 const eventLabelKeys: Record<string, string> = {
@@ -87,8 +91,7 @@ onBeforeUnmount(() => {
         <el-table-column
           prop="at"
           :label="t('automation.runLogAt')"
-          :width="narrow ? 96 : compact ? 120 : 160"
-          :min-width="narrow ? 96 : compact ? 120 : 160"
+          :width="atColumnWidth"
           show-overflow-tooltip
         />
         <el-table-column
@@ -109,8 +112,7 @@ onBeforeUnmount(() => {
         </el-table-column>
         <el-table-column
           :label="t('automation.runLogResult')"
-          :width="narrow ? 72 : 96"
-          :min-width="narrow ? 72 : 96"
+          :width="resultColumnWidth"
         >
           <template #default="{ row }">
             <el-tooltip
@@ -219,7 +221,7 @@ onBeforeUnmount(() => {
 <style>
 .automation-log-tooltip.el-popper {
   max-width: 320px;
-  white-space: normal;
+  white-space: pre-line;
   overflow-wrap: anywhere;
   word-break: break-word;
 }

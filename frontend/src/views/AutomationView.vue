@@ -7,14 +7,17 @@
       :aria-label="t('automation.title')"
     >
       <button
+        ref="rulesTabEl"
         type="button"
         role="tab"
         class="automation-tab"
         :class="{ 'is-active': tab === 'rules' }"
         :aria-selected="tab === 'rules'"
+        :tabindex="tab === 'rules' ? 0 : -1"
         aria-controls="automation-panel-rules"
         data-testid="automation-tab-rules"
         @click="tab = 'rules'"
+        @keydown="onTabKeydown"
       >
         <span class="automation-tab__label">{{
           t("automation.tabRules")
@@ -26,14 +29,17 @@
         >
       </button>
       <button
+        ref="logTabEl"
         type="button"
         role="tab"
         class="automation-tab"
         :class="{ 'is-active': tab === 'log' }"
         :aria-selected="tab === 'log'"
+        :tabindex="tab === 'log' ? 0 : -1"
         aria-controls="automation-panel-log"
         data-testid="automation-tab-run-log"
         @click="tab = 'log'"
+        @keydown="onTabKeydown"
       >
         <span class="automation-tab__label">{{
           t("automation.runLogTitle")
@@ -61,7 +67,7 @@
       </p>
 
       <div
-        v-if="tab === 'rules'"
+        v-show="tab === 'rules'"
         id="automation-panel-rules"
         role="tabpanel"
         class="automation-panes"
@@ -107,19 +113,26 @@
       </div>
 
       <div
-        v-else
+        v-show="tab === 'log'"
         id="automation-panel-log"
         role="tabpanel"
         class="automation-log-host"
       >
-        <AutomationRunLogPanel :entries="runLog" @refresh="loadRunLog" />
+        <AutomationRunLogPanel :entries="runLog" @refresh="refreshRunLog" />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
+import {
+  ref,
+  computed,
+  watch,
+  nextTick,
+  onMounted,
+  onBeforeUnmount,
+} from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 import { useI18n } from "vue-i18n";
 import { ElMessageBox } from "element-plus";
@@ -165,6 +178,8 @@ const saving = ref(false);
 const nameError = ref("");
 const tab = ref<"rules" | "log">("rules");
 const preferList = ref(false);
+const rulesTabEl = ref<HTMLButtonElement | null>(null);
+const logTabEl = ref<HTMLButtonElement | null>(null);
 let loadGen = 0;
 let runLogGen = 0;
 let eventsOff: (() => void) | undefined;
@@ -251,6 +266,25 @@ async function loadRunLog() {
   runLog.value = log;
 }
 
+async function refreshRunLog() {
+  try {
+    await loadRunLog();
+  } catch {
+    showToast.error(t("automation.runLogLoadError"));
+  }
+}
+
+function onTabKeydown(event: KeyboardEvent) {
+  if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+  event.preventDefault();
+  const next = tab.value === "rules" ? "log" : "rules";
+  tab.value = next;
+  void nextTick(() => {
+    const el = next === "rules" ? rulesTabEl.value : logTabEl.value;
+    el?.focus();
+  });
+}
+
 async function loadRuntime() {
   runtime.value = await App.getAutomationRuntimeStatus();
 }
@@ -319,7 +353,23 @@ onBeforeRouteLeave(async () => {
 });
 
 function showList() {
-  preferList.value = true;
+  void (async () => {
+    if (isDirty.value) {
+      const choice = await promptUnsavedChoice();
+      if (choice === "cancel") return;
+      if (choice === "save") {
+        if (!(await save())) return;
+      } else if (savedSnapshot.value) {
+        try {
+          editor.value = JSON.parse(savedSnapshot.value) as EditorState;
+        } catch {
+          editor.value = null;
+        }
+        nameError.value = "";
+      }
+    }
+    preferList.value = true;
+  })();
 }
 
 async function selectItem(item: AutomationItemDTO) {
