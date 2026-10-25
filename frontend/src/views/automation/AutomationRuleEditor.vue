@@ -9,7 +9,7 @@ import type { EditorState } from "../automationEditorMapping";
 type SelectOption = { value: string; label: string; disabled?: boolean };
 type WeekdayOption = { value: number; label: string };
 
-defineProps<{
+const props = defineProps<{
   saving: boolean;
   isDirty: boolean;
   disabled: boolean;
@@ -40,6 +40,12 @@ const { t } = useI18n();
 const canDeleteItem = computed(
   () => !!editor.value.id && editor.value.isNew !== true,
 );
+
+const unknownTrigger = computed(() => {
+  const current = editor.value.triggerType;
+  if (!current) return false;
+  return !props.triggerOptions.some((opt) => opt.value === current);
+});
 
 function onHeaderCommand(command: string | number | object) {
   if (command === "delete") emit("delete");
@@ -152,12 +158,23 @@ function onHeaderCommand(command: string | number | object) {
             </template>
             <SettingsRow :label="t('automation.trigger')" control="field">
               <div class="automation-control">
-                <el-select v-model="editor.triggerType" :disabled="disabled">
+                <el-select
+                  v-model="editor.triggerType"
+                  :disabled="disabled"
+                  data-testid="trigger-type"
+                >
                   <el-option
                     v-for="opt in triggerOptions"
                     :key="opt.value"
                     :value="opt.value"
                     :label="opt.label"
+                    :disabled="opt.disabled"
+                  />
+                  <el-option
+                    v-if="unknownTrigger"
+                    :value="editor.triggerType"
+                    :label="t('automation.triggerUnknown')"
+                    disabled
                   />
                 </el-select>
               </div>

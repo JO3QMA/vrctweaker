@@ -84,18 +84,23 @@ const powerPlans: DetectedPowerPlanDTO[] = [
 ];
 
 export function withAutomationWails(): Decorator {
-  return withWailsApp({
-    ListAutomationItems: () =>
-      Promise.resolve(items.map((item) => ({ ...item }))),
-    SaveAutomationItem: () => Promise.resolve(),
-    DeleteAutomationItem: () => Promise.resolve(),
-    ToggleAutomationItem: () => Promise.resolve(),
-    GetAutomationRunLog: () =>
-      Promise.resolve(runLog.map((entry) => ({ ...entry }))),
-    GetAutomationRuntimeStatus: () =>
-      Promise.resolve({ available: true, reasonKey: "" }),
-    ListDetectedPowerPlans: () =>
-      Promise.resolve(powerPlans.map((plan) => ({ ...plan }))),
-    Friends: () => Promise.resolve(friends.map((friend) => ({ ...friend }))),
-  });
+  return (story, context) => {
+    const source =
+      (context.parameters.automationItems as AutomationItemDTO[] | undefined) ??
+      items;
+    return withWailsApp({
+      ListAutomationItems: () =>
+        Promise.resolve(source.map((item) => ({ ...item }))),
+      SaveAutomationItem: () => Promise.resolve(),
+      DeleteAutomationItem: () => Promise.resolve(),
+      ToggleAutomationItem: () => Promise.resolve(),
+      GetAutomationRunLog: () =>
+        Promise.resolve(runLog.map((entry) => ({ ...entry }))),
+      GetAutomationRuntimeStatus: () =>
+        Promise.resolve({ available: true, reasonKey: "" }),
+      ListDetectedPowerPlans: () =>
+        Promise.resolve(powerPlans.map((plan) => ({ ...plan }))),
+      Friends: () => Promise.resolve(friends.map((friend) => ({ ...friend }))),
+    })(story, context);
+  };
 }

@@ -75,6 +75,40 @@ export const NarrowList: Story = {
   },
 };
 
+const AUTOMATION_STORY_UNKNOWN_RULE_NAME = "未対応トリガーのルール";
+const AUTOMATION_STORY_UNKNOWN_TRIGGER = "future.unknown_trigger";
+
+export const UnknownTrigger: Story = {
+  parameters: {
+    automationItems: [
+      {
+        id: "rule-unknown",
+        name: AUTOMATION_STORY_UNKNOWN_RULE_NAME,
+        kind: "rule" as const,
+        isEnabled: true,
+        triggerType: AUTOMATION_STORY_UNKNOWN_TRIGGER,
+        conditionsJson: "[]",
+        actionsJson: "[]",
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      await canvas.findByText(ja.automation.triggerUnknown),
+    ).toBeVisible();
+    expect(canvas.queryByText(AUTOMATION_STORY_UNKNOWN_TRIGGER)).toBeNull();
+    await userEvent.click(
+      await canvas.findByText(AUTOMATION_STORY_UNKNOWN_RULE_NAME),
+    );
+    const editor = within(await canvas.findByTestId("rule-editor"));
+    await expect(
+      await editor.findByText(ja.automation.triggerUnknown),
+    ).toBeVisible();
+    expect(editor.queryByText(AUTOMATION_STORY_UNKNOWN_TRIGGER)).toBeNull();
+  },
+};
+
 /** 600px frame is under 720px, so the log shows four columns and the result tooltip. */
 export const NarrowRunLog: Story = {
   decorators: [

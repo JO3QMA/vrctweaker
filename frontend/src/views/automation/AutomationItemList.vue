@@ -24,9 +24,9 @@ function summary(item: AutomationItemDTO): string {
   if (item.kind === "script") return t("automation.summaryScript");
   const triggerType = item.triggerType ?? "";
   if (!Object.prototype.hasOwnProperty.call(props.triggerLabels, triggerType)) {
-    return "";
+    return t("automation.triggerUnknown");
   }
-  return props.triggerLabels[triggerType] ?? "";
+  return props.triggerLabels[triggerType] || t("automation.triggerUnknown");
 }
 
 function onToggle(item: AutomationItemDTO, value: string | number | boolean) {
@@ -162,6 +162,18 @@ function onCreate(command: string) {
   margin: 0;
   border-style: dashed !important;
   color: var(--color-text-secondary);
+  background-color: var(--color-bg-muted);
+  border-color: var(--color-border);
+  --el-button-text-color: var(--color-text-secondary);
+  --el-button-bg-color: var(--color-bg-muted);
+  --el-button-border-color: var(--color-border);
+  --el-button-hover-text-color: var(--color-text-secondary);
+  --el-button-hover-bg-color: #374d66;
+  --el-button-hover-border-color: var(--color-border);
+  --el-button-active-text-color: var(--color-text-secondary);
+  --el-button-active-bg-color: #374d66;
+  --el-button-active-border-color: var(--color-border);
+  --el-button-outline-color: var(--color-brand);
 }
 
 .automation-list__rows {
@@ -189,6 +201,10 @@ function onCreate(command: string) {
 .rule-card__select {
   min-width: 0;
   cursor: pointer;
+}
+
+.rule-card__select:focus-visible {
+  outline: none;
 }
 
 .rule-card:has(.rule-card__select:focus-visible) {
@@ -265,8 +281,9 @@ function onCreate(command: string) {
 </style>
 
 <style>
-.automation-dropdown.el-popper,
+.automation-dropdown.el-dropdown__popper.el-popper,
 .automation-dropdown .el-dropdown-menu {
   background-color: var(--color-bg-muted);
+  border-color: var(--color-border);
 }
 </style>

@@ -394,6 +394,7 @@
     "triggerSchedule": "排程（每分鐘評估）",
     "triggerVrchatProcess": "VRChat 程序狀態變化",
     "triggerAfk": "偵測到 AFK 時",
+    "triggerUnknown": "未知觸發",
     "actionChangeStatus": "變更狀態",
     "actionSetPowerPlan": "設定電源計畫（Windows）",
     "actionSetVRChatWindowSize": "調整 VRChat 視窗大小（Windows）",

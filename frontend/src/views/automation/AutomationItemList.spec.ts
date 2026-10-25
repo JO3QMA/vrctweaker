@@ -46,6 +46,7 @@ describe("AutomationItemList", () => {
       { ...rule, id: "unknown", name: "Unknown", triggerType: "not_a_trigger" },
     ]);
     expect(wrapper.text()).toContain("AFK検出時");
+    expect(wrapper.text()).toContain("不明なトリガー");
     expect(wrapper.text()).not.toContain("afk_detected");
     expect(wrapper.text()).not.toContain("not_a_trigger");
   });

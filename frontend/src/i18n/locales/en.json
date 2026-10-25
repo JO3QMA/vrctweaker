@@ -394,6 +394,7 @@
     "triggerSchedule": "Schedule (evaluated every minute)",
     "triggerVrchatProcess": "VRChat process state change",
     "triggerAfk": "When AFK detected",
+    "triggerUnknown": "Unknown trigger",
     "actionChangeStatus": "Change status",
     "actionSetPowerPlan": "Set power plan (Windows)",
     "actionSetVRChatWindowSize": "Resize VRChat window (Windows)",

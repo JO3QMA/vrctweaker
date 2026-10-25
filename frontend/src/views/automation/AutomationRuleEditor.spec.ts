@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { defineComponent, ref } from "vue";
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import AutomationRuleEditor from "./AutomationRuleEditor.vue";
 import { dtoToEditor } from "../automationEditorMapping";
 import type { AutomationItemDTO } from "../../wails/app";
@@ -30,7 +30,7 @@ const Harness = defineComponent({
       :is-dirty="false"
       :disabled="false"
       name-error=""
-      :trigger-options="[]"
+      :trigger-options="[{ value: 'friend_joined', label: 'フレンド参加時' }]"
       :status-options="[]"
       :power-plan-presets="[]"
       :weekday-options="[]"
@@ -64,5 +64,37 @@ describe("AutomationRuleEditor", () => {
     expect(
       wrapper.findComponent(AutomationRuleEditor).emitted("delete"),
     ).toHaveLength(1);
+  });
+
+  it("labels an unknown trigger and keeps that option disabled", async () => {
+    const unknown = dtoToEditor({
+      ...item,
+      triggerType: "future.unknown_trigger",
+    });
+    const wrapper = mount(AutomationRuleEditor, {
+      props: {
+        editor: unknown,
+        saving: false,
+        isDirty: false,
+        disabled: false,
+        nameError: "",
+        triggerOptions: [{ value: "friend_joined", label: "フレンド参加時" }],
+        statusOptions: [],
+        powerPlanPresets: [],
+        weekdayOptions: [],
+        actionOptions: [],
+        powerPlans: [],
+        friends: [],
+      },
+    });
+
+    await flushPromises();
+    const option = document.body.querySelector(
+      ".el-select-dropdown__item.is-disabled",
+    );
+    expect(option?.textContent).toContain("不明なトリガー");
+    expect(document.body.textContent).not.toContain("future.unknown_trigger");
+    const selected = wrapper.get(".el-select__placeholder");
+    expect(selected.text()).toContain("不明なトリガー");
   });
 });
