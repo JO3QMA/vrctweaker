@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { ElMessageBox } from "element-plus";
 import AutomationView from "../AutomationView.vue";
+import AutomationItemList from "../automation/AutomationItemList.vue";
 import type { AutomationItemDTO } from "../../wails/app";
 import { showToast } from "../../utils/showToast";
 
@@ -18,6 +19,7 @@ const {
   mockListAutomationItems,
   mockSaveAutomationItem,
   mockToggleAutomationItem,
+  mockDeleteAutomationItem,
   mockGetAutomationRunLog,
   mockGetAutomationRuntimeStatus,
   mockListDetectedPowerPlans,
@@ -26,6 +28,7 @@ const {
   mockListAutomationItems: vi.fn(),
   mockSaveAutomationItem: vi.fn(),
   mockToggleAutomationItem: vi.fn(),
+  mockDeleteAutomationItem: vi.fn(),
   mockGetAutomationRunLog: vi.fn(),
   mockGetAutomationRuntimeStatus: vi.fn(),
   mockListDetectedPowerPlans: vi.fn(),
@@ -40,7 +43,7 @@ vi.mock("../../wails/app", async (importOriginal) => {
       listAutomationItems: mockListAutomationItems,
       saveAutomationItem: mockSaveAutomationItem,
       toggleAutomationItem: mockToggleAutomationItem,
-      deleteAutomationItem: vi.fn(),
+      deleteAutomationItem: mockDeleteAutomationItem,
       getAutomationRunLog: mockGetAutomationRunLog,
       getAutomationRuntimeStatus: mockGetAutomationRuntimeStatus,
       listDetectedPowerPlans: mockListDetectedPowerPlans,
@@ -52,6 +55,17 @@ vi.mock("../../wails/app", async (importOriginal) => {
 vi.mock("../../wails/runtime", () => ({
   getRuntime: () => undefined,
 }));
+
+async function chooseCreate(
+  wrapper: ReturnType<typeof mount>,
+  command: "rule" | "script",
+) {
+  const dropdown = wrapper
+    .getComponent(AutomationItemList)
+    .findComponent({ name: "ElDropdown" });
+  await dropdown.vm.$emit("command", command);
+  await flushPromises();
+}
 
 const seeded: AutomationItemDTO = {
   id: "rule_1",
@@ -80,7 +94,7 @@ describe("AutomationView unsaved guard", () => {
     const wrapper = mount(AutomationView);
     await flushPromises();
 
-    await wrapper.find('[data-testid="add-rule"]').trigger("click");
+    await chooseCreate(wrapper, "rule");
     await flushPromises();
 
     const nameInput = wrapper.get('[data-testid="item-name-input"]');
@@ -94,7 +108,7 @@ describe("AutomationView unsaved guard", () => {
       .spyOn(ElMessageBox, "confirm")
       .mockResolvedValue("confirm" as never);
 
-    await wrapper.find(".rule-card").trigger("click");
+    await wrapper.find(".rule-card__select").trigger("click");
     await flushPromises();
 
     expect(confirmSpy).toHaveBeenCalled();
@@ -116,7 +130,7 @@ describe("AutomationView unsaved guard", () => {
     const wrapper = mount(AutomationView);
     await flushPromises();
 
-    await wrapper.find('[data-testid="add-rule"]').trigger("click");
+    await chooseCreate(wrapper, "rule");
     await flushPromises();
     await wrapper.get('[data-testid="item-name-input"]').setValue("Saved ok");
     await flushPromises();
@@ -146,11 +160,11 @@ describe("AutomationView unsaved guard", () => {
     const wrapper = mount(AutomationView);
     await flushPromises();
 
-    await wrapper.findAll(".rule-card")[0]?.trigger("click");
+    await wrapper.findAll(".rule-card__select")[0]?.trigger("click");
     await flushPromises();
     expect(wrapper.find(".rule-editor").exists()).toBe(true);
 
-    await wrapper.findAll(".rule-card")[1]?.trigger("click");
+    await wrapper.findAll(".rule-card__select")[1]?.trigger("click");
     await flushPromises();
 
     expect(showToast.error).toHaveBeenCalled();
@@ -161,7 +175,7 @@ describe("AutomationView unsaved guard", () => {
     const wrapper = mount(AutomationView);
     await flushPromises();
 
-    await wrapper.find('[data-testid="add-rule"]').trigger("click");
+    await chooseCreate(wrapper, "rule");
     await flushPromises();
     await wrapper.get('[data-testid="item-name-input"]').setValue("Will fail");
     await flushPromises();
@@ -269,7 +283,7 @@ describe("AutomationView layout", () => {
     const wrapper = mount(AutomationView);
     await flushPromises();
 
-    await wrapper.find(".rule-card").trigger("click");
+    await wrapper.find(".rule-card__select").trigger("click");
     await flushPromises();
 
     expect(
@@ -292,7 +306,7 @@ describe("AutomationView layout", () => {
     const wrapper = mount(AutomationView);
     await flushPromises();
 
-    await wrapper.find('[data-testid="add-rule"]').trigger("click");
+    await chooseCreate(wrapper, "rule");
     await flushPromises();
     await wrapper.find('[data-testid="save-item"]').trigger("click");
     await flushPromises();
@@ -323,7 +337,7 @@ describe("AutomationView layout", () => {
       "is-disabled",
     );
 
-    await wrapper.find(".rule-card").trigger("click");
+    await wrapper.find(".rule-card__select").trigger("click");
     await flushPromises();
 
     expect(
@@ -388,7 +402,7 @@ describe("AutomationView layout", () => {
   it("asks before leaving the editor for the list when there are unsaved changes", async () => {
     const wrapper = mount(AutomationView);
     await flushPromises();
-    await wrapper.find('[data-testid="add-rule"]').trigger("click");
+    await chooseCreate(wrapper, "rule");
     await flushPromises();
     await wrapper.get('[data-testid="item-name-input"]').setValue("Draft rule");
     await flushPromises();
@@ -407,6 +421,61 @@ describe("AutomationView layout", () => {
           .element as HTMLInputElement
       ).value,
     ).toBe("Draft rule");
+    confirmSpy.mockRestore();
+  });
+
+  it("moves to the first and last tab with Home and End", async () => {
+    const wrapper = mount(AutomationView);
+    await flushPromises();
+    const log = wrapper.get('[data-testid="automation-tab-run-log"]');
+    await log.trigger("keydown", { key: "End" });
+    await flushPromises();
+    expect(log.attributes("aria-selected")).toBe("true");
+
+    await log.trigger("keydown", { key: "Home" });
+    await flushPromises();
+    expect(
+      wrapper
+        .get('[data-testid="automation-tab-rules"]')
+        .attributes("aria-selected"),
+    ).toBe("true");
+  });
+
+  it("labels an afk_detected rule with the AFK trigger name", async () => {
+    mockListAutomationItems.mockResolvedValue([
+      { ...seeded, triggerType: "afk_detected" },
+    ]);
+    const wrapper = mount(AutomationView);
+    await flushPromises();
+
+    expect(wrapper.text()).toContain("AFK検出時");
+    expect(wrapper.text()).not.toContain("afk_detected");
+
+    await wrapper.find(".rule-card__select").trigger("click");
+    await flushPromises();
+    expect(wrapper.get('[data-testid="rule-editor"]').text()).toContain(
+      "AFK検出時",
+    );
+  });
+
+  it("toasts and keeps the editor open when delete fails", async () => {
+    mockDeleteAutomationItem.mockRejectedValueOnce(new Error("delete failed"));
+    const wrapper = mount(AutomationView);
+    await flushPromises();
+    await wrapper.find(".rule-card__select").trigger("click");
+    await flushPromises();
+
+    const confirmSpy = vi
+      .spyOn(ElMessageBox, "confirm")
+      .mockResolvedValue("confirm" as never);
+    await wrapper.get('[data-testid="delete-item"]').trigger("click");
+    await flushPromises();
+
+    expect(showToast.error).toHaveBeenCalledWith(
+      "ルールを削除できませんでした",
+    );
+    expect(wrapper.find('[data-testid="rule-editor"]').exists()).toBe(true);
+    expect(mockDeleteAutomationItem).toHaveBeenCalledWith("rule_1");
     confirmSpy.mockRestore();
   });
 });

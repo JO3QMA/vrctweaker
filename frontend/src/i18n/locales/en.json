@@ -431,6 +431,7 @@
     "saveError": "Could not save",
     "itemParseError": "This item has invalid data and cannot be edited safely",
     "toggleError": "Could not toggle item",
+    "deleteError": "Could not delete the rule",
     "deleteConfirm": "Delete “{name}”?",
     "weekday0": "Sun",
     "weekday1": "Mon",

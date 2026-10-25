@@ -9,8 +9,7 @@ import type { EditorState } from "../automationEditorMapping";
 type SelectOption = { value: string; label: string; disabled?: boolean };
 type WeekdayOption = { value: number; label: string };
 
-const props = defineProps<{
-  editor: EditorState;
+defineProps<{
   saving: boolean;
   isDirty: boolean;
   disabled: boolean;
@@ -24,6 +23,8 @@ const props = defineProps<{
   friends: UserCacheDTO[];
 }>();
 
+const editor = defineModel<EditorState>("editor", { required: true });
+
 const emit = defineEmits<{
   save: [];
   cancel: [];
@@ -36,13 +37,13 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 
-// The parent owns this reactive editor. Bind fields through an alias so the
-// template does not assign the prop identifier directly.
-const state = computed(() => props.editor);
-
 const canDeleteItem = computed(
-  () => !!props.editor.id && props.editor.isNew !== true,
+  () => !!editor.value.id && editor.value.isNew !== true,
 );
+
+function onHeaderCommand(command: string | number | object) {
+  if (command === "delete") emit("delete");
+}
 </script>
 
 <template>
@@ -60,9 +61,9 @@ const canDeleteItem = computed(
       <div class="automation-editor-head">
         <span
           class="automation-editor-head__name"
-          :class="{ 'is-empty': !state.name }"
+          :class="{ 'is-empty': !editor.name }"
         >
-          {{ state.name || t("automation.ruleNamePh") }}
+          {{ editor.name || t("automation.ruleNamePh") }}
         </span>
         <span
           v-if="isDirty"
@@ -71,7 +72,7 @@ const canDeleteItem = computed(
           :title="t('automation.unsavedBanner')"
         />
         <el-switch
-          v-model="state.isEnabled"
+          v-model="editor.isEnabled"
           :disabled="disabled"
           data-testid="editor-enabled"
           :aria-label="t('automation.enabled')"
@@ -81,7 +82,8 @@ const canDeleteItem = computed(
           class="automation-header-more"
           trigger="click"
           :disabled="disabled"
-          @command="emit('delete')"
+          popper-class="automation-dropdown"
+          @command="onHeaderCommand"
         >
           <VtButton
             variant="tertiary"
@@ -115,7 +117,7 @@ const canDeleteItem = computed(
           <SettingsRow :label="t('automation.itemName')" control="field">
             <div class="automation-control">
               <el-input
-                v-model="state.name"
+                v-model="editor.name"
                 :placeholder="t('automation.ruleNamePh')"
                 :disabled="disabled"
                 data-testid="item-name-input"
@@ -150,7 +152,7 @@ const canDeleteItem = computed(
             </template>
             <SettingsRow :label="t('automation.trigger')" control="field">
               <div class="automation-control">
-                <el-select v-model="state.triggerType" :disabled="disabled">
+                <el-select v-model="editor.triggerType" :disabled="disabled">
                   <el-option
                     v-for="opt in triggerOptions"
                     :key="opt.value"
@@ -164,7 +166,7 @@ const canDeleteItem = computed(
               <SettingsRow :label="t('automation.schedule')" control="field">
                 <div class="automation-control">
                   <el-checkbox-group
-                    v-model="state.scheduleWeekdays"
+                    v-model="editor.scheduleWeekdays"
                     :disabled="disabled"
                   >
                     <el-checkbox
@@ -183,7 +185,7 @@ const canDeleteItem = computed(
               >
                 <div class="automation-time">
                   <el-input-number
-                    v-model="state.scheduleHour"
+                    v-model="editor.scheduleHour"
                     :min="0"
                     :max="23"
                     :disabled="disabled"
@@ -191,7 +193,7 @@ const canDeleteItem = computed(
                   />
                   <span class="automation-time__sep" aria-hidden="true">:</span>
                   <el-input-number
-                    v-model="state.scheduleMinute"
+                    v-model="editor.scheduleMinute"
                     :min="0"
                     :max="59"
                     :disabled="disabled"
@@ -216,7 +218,7 @@ const canDeleteItem = computed(
               :label="t('automation.conditionVrchatRunning')"
               control="switch"
             >
-              <el-switch v-model="state.vrchatRunning" :disabled="disabled" />
+              <el-switch v-model="editor.vrchatRunning" :disabled="disabled" />
             </SettingsRow>
             <SettingsRow
               v-if="
@@ -228,7 +230,7 @@ const canDeleteItem = computed(
             >
               <div class="automation-control">
                 <el-select
-                  v-model="state.friendUserId"
+                  v-model="editor.friendUserId"
                   clearable
                   filterable
                   :disabled="disabled"
@@ -450,7 +452,7 @@ const canDeleteItem = computed(
           <div class="automation-script">
             <SettingsRow :label="t('automation.scriptSource')" control="field">
               <el-input
-                v-model="state.scriptSource"
+                v-model="editor.scriptSource"
                 type="textarea"
                 :rows="14"
                 class="script-editor"

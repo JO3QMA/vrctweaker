@@ -4,6 +4,7 @@ import { useI18n } from "vue-i18n";
 import VtButton from "../../components/VtButton.vue";
 import VtTag from "../../components/VtTag.vue";
 import type { AutomationRunLogEntryDTO } from "../../wails/app";
+import { startLogWidthObserver } from "./logWidthObserver";
 
 defineProps<{
   entries: AutomationRunLogEntryDTO[];
@@ -22,7 +23,7 @@ const atColumnWidth = computed(() =>
   narrow.value ? 96 : compact.value ? 120 : 160,
 );
 const resultColumnWidth = computed(() => (narrow.value ? 72 : 96));
-let observer: ResizeObserver | undefined;
+let stopObserving = () => {};
 
 const eventLabelKeys: Record<string, string> = {
   friend_joined: "automation.triggerFriendJoined",
@@ -55,14 +56,13 @@ function resultTooltip(row: AutomationRunLogEntryDTO): string {
 }
 
 onMounted(() => {
-  observer = new ResizeObserver(() => {
-    logWidth.value = root.value?.offsetWidth ?? 0;
+  stopObserving = startLogWidthObserver(root.value, (width) => {
+    logWidth.value = width;
   });
-  if (root.value) observer.observe(root.value);
 });
 
 onBeforeUnmount(() => {
-  observer?.disconnect();
+  stopObserving();
 });
 </script>
 
@@ -100,14 +100,16 @@ onBeforeUnmount(() => {
           min-width="48"
           show-overflow-tooltip
         />
-        <el-table-column
-          v-if="!narrow"
-          :label="t('automation.runLogEvent')"
-          min-width="48"
-          show-overflow-tooltip
-        >
+        <el-table-column v-if="!narrow" min-width="48" show-overflow-tooltip>
+          <template #header>
+            <span data-testid="automation-log-col-event">{{
+              t("automation.runLogEvent")
+            }}</span>
+          </template>
           <template #default="{ row }">
-            {{ eventLabel(row.eventType) }}
+            <span data-testid="automation-log-event">{{
+              eventLabel(row.eventType)
+            }}</span>
           </template>
         </el-table-column>
         <el-table-column
@@ -117,11 +119,19 @@ onBeforeUnmount(() => {
           <template #default="{ row }">
             <el-tooltip
               v-if="compact"
-              :content="resultTooltip(row)"
               placement="top"
               popper-class="automation-log-tooltip"
             >
-              <VtTag :variant="row.success ? 'success' : 'danger'" size="small">
+              <template #content>
+                <span data-testid="automation-log-result-tooltip">{{
+                  resultTooltip(row)
+                }}</span>
+              </template>
+              <VtTag
+                data-testid="automation-log-result"
+                :variant="row.success ? 'success' : 'danger'"
+                size="small"
+              >
                 {{
                   row.success
                     ? t("automation.runLogSuccess")
@@ -131,6 +141,7 @@ onBeforeUnmount(() => {
             </el-tooltip>
             <VtTag
               v-else
+              data-testid="automation-log-result"
               :variant="row.success ? 'success' : 'danger'"
               size="small"
             >
@@ -142,12 +153,12 @@ onBeforeUnmount(() => {
             </VtTag>
           </template>
         </el-table-column>
-        <el-table-column
-          v-if="!compact"
-          :label="t('automation.runLogActions')"
-          width="72"
-          show-overflow-tooltip
-        >
+        <el-table-column v-if="!compact" width="72" show-overflow-tooltip>
+          <template #header>
+            <span data-testid="automation-log-col-progress">{{
+              t("automation.runLogActions")
+            }}</span>
+          </template>
           <template #default="{ row }">
             {{ row.actionsCompleted }}/{{ row.actionsTotal }}
           </template>

@@ -1,7 +1,12 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import ja from "../i18n/locales/ja.json";
 import AutomationView from "./AutomationView.vue";
-import { withAutomationWails } from "../stories/fixtures/automationWails";
+import {
+  AUTOMATION_STORY_FRIEND_RULE_NAME,
+  AUTOMATION_STORY_RUN_LOG,
+  withAutomationWails,
+} from "../stories/fixtures/automationWails";
 
 const meta = {
   title: "Views/AutomationView",
@@ -20,7 +25,7 @@ export const Rules: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      await canvas.findByText("フレンド参加で取り込み中"),
+      await canvas.findByText(AUTOMATION_STORY_FRIEND_RULE_NAME),
     ).toBeVisible();
   },
 };
@@ -28,22 +33,30 @@ export const Rules: Story = {
 export const EditingRule: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByText("フレンド参加で取り込み中"));
-    await expect(await canvas.findByTestId("item-name-input")).toHaveValue(
-      "フレンド参加で取り込み中",
+    await userEvent.click(
+      await canvas.findByText(AUTOMATION_STORY_FRIEND_RULE_NAME),
     );
-    await expect(await canvas.findByText("いつ（トリガー）")).toBeVisible();
+    await expect(await canvas.findByTestId("item-name-input")).toHaveValue(
+      AUTOMATION_STORY_FRIEND_RULE_NAME,
+    );
+    await expect(
+      await canvas.findByText(ja.automation.sectionWhen),
+    ).toBeVisible();
   },
 };
 
 export const RunLog: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("tab", { name: /実行ログ/ }));
+    await userEvent.click(
+      await canvas.findByRole("tab", {
+        name: new RegExp(ja.automation.runLogTitle),
+      }),
+    );
     const log = within(await canvas.findByTestId("automation-run-log"));
     await expect(
-      await log.findByText("スケジュール（毎分評価）"),
-    ).toBeVisible();
+      await log.findByTestId("automation-log-event"),
+    ).toHaveTextContent(ja.automation.triggerSchedule);
   },
 };
 
@@ -57,7 +70,7 @@ export const NarrowList: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      await canvas.findByText("フレンド参加で取り込み中"),
+      await canvas.findByText(AUTOMATION_STORY_FRIEND_RULE_NAME),
     ).toBeVisible();
   },
 };
@@ -72,17 +85,25 @@ export const NarrowRunLog: Story = {
   ],
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(await canvas.findByRole("tab", { name: /実行ログ/ }));
+    await userEvent.click(
+      await canvas.findByRole("tab", {
+        name: new RegExp(ja.automation.runLogTitle),
+      }),
+    );
     const log = within(await canvas.findByTestId("automation-run-log"));
+    const entry = AUTOMATION_STORY_RUN_LOG[0];
+    if (!entry) throw new Error("missing run log fixture");
     await expect(
-      await log.findByRole("columnheader", { name: "イベント" }),
+      await log.findByTestId("automation-log-col-event"),
     ).toBeVisible();
     await waitFor(() => {
-      expect(log.queryByRole("columnheader", { name: "進捗" })).toBeNull();
+      expect(log.queryByTestId("automation-log-col-progress")).toBeNull();
     });
-    await userEvent.hover(await log.findByText("失敗"));
+    await userEvent.hover(await log.findByTestId("automation-log-result"));
     await expect(
-      await within(document.body).findByText(/進捗 1\/2/),
-    ).toBeVisible();
+      await within(document.body).findByTestId("automation-log-result-tooltip"),
+    ).toHaveTextContent(
+      `${ja.automation.runLogActions} ${entry.actionsCompleted}/${entry.actionsTotal}`,
+    );
   },
 };

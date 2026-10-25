@@ -7,10 +7,26 @@ import type {
 } from "../../wails/app";
 import { withWailsApp } from "../wailsDecorator";
 
+export const AUTOMATION_STORY_FRIEND_RULE_NAME = "フレンド参加で取り込み中";
+
+export const AUTOMATION_STORY_RUN_LOG: AutomationRunLogEntryDTO[] = [
+  {
+    at: "2026-10-21 21:04",
+    itemId: "rule-story-2",
+    itemName: "平日の朝にフレンド参加でステータスを変えるとても長いルール名",
+    eventType: "schedule.tick",
+    success: false,
+    actionsCompleted: 1,
+    actionsTotal: 2,
+    contextLabel:
+      "とても長いコンテキストラベルで、狭い幅でもセル内で折り返すことを確認する文章です",
+  },
+];
+
 const items: AutomationItemDTO[] = [
   {
     id: "rule-story-1",
-    name: "フレンド参加で取り込み中",
+    name: AUTOMATION_STORY_FRIEND_RULE_NAME,
     kind: "rule",
     isEnabled: true,
     triggerType: "friend_joined",
@@ -50,19 +66,7 @@ const items: AutomationItemDTO[] = [
   },
 ];
 
-const runLog: AutomationRunLogEntryDTO[] = [
-  {
-    at: "2026-10-21 21:04",
-    itemId: "rule-story-2",
-    itemName: "平日の朝にフレンド参加でステータスを変えるとても長いルール名",
-    eventType: "schedule.tick",
-    success: false,
-    actionsCompleted: 1,
-    actionsTotal: 2,
-    contextLabel:
-      "とても長いコンテキストラベルで、狭い幅でもセル内で折り返すことを確認する文章です",
-  },
-];
+const runLog = AUTOMATION_STORY_RUN_LOG;
 
 const friends: UserCacheDTO[] = [
   {

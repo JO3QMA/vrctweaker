@@ -22,7 +22,11 @@ const { t } = useI18n();
 
 function summary(item: AutomationItemDTO): string {
   if (item.kind === "script") return t("automation.summaryScript");
-  return props.triggerLabels[item.triggerType ?? ""] ?? item.triggerType ?? "";
+  const triggerType = item.triggerType ?? "";
+  if (!Object.prototype.hasOwnProperty.call(props.triggerLabels, triggerType)) {
+    return "";
+  }
+  return props.triggerLabels[triggerType] ?? "";
 }
 
 function onToggle(item: AutomationItemDTO, value: string | number | boolean) {
@@ -33,7 +37,7 @@ function onToggle(item: AutomationItemDTO, value: string | number | boolean) {
 function onCreate(command: string) {
   if (props.disabled) return;
   if (command === "script") emit("addScript");
-  else emit("addRule");
+  else if (command === "rule") emit("addRule");
 }
 </script>
 
@@ -46,7 +50,7 @@ function onCreate(command: string) {
     <div class="automation-list__actions">
       <el-dropdown
         trigger="click"
-        :teleported="false"
+        popper-class="automation-dropdown"
         :disabled="disabled"
         @command="onCreate"
       >
@@ -83,35 +87,39 @@ function onCreate(command: string) {
         >
           <div
             class="rule-card"
-            role="button"
-            tabindex="0"
             :class="{
               active: activeId === item.id,
               disabled: !item.isEnabled,
             }"
-            :aria-current="activeId === item.id ? 'true' : undefined"
-            @click="emit('select', item)"
-            @keydown.enter.prevent="emit('select', item)"
-            @keydown.space.prevent="emit('select', item)"
           >
-            <div class="rule-header">
-              <span class="rule-name">{{ item.name }}</span>
-              <div class="toggle-wrap" @click.stop @keydown.stop>
-                <el-switch
-                  :model-value="item.isEnabled"
-                  :disabled="disabled"
-                  size="small"
-                  @change="(v: string | number | boolean) => onToggle(item, v)"
-                />
+            <div
+              class="rule-card__select"
+              role="button"
+              tabindex="0"
+              :aria-current="activeId === item.id ? 'true' : undefined"
+              @click="emit('select', item)"
+              @keydown.enter.prevent="emit('select', item)"
+              @keydown.space.prevent="emit('select', item)"
+            >
+              <div class="rule-header">
+                <span class="rule-name">{{ item.name }}</span>
+              </div>
+              <div class="rule-summary">
+                <VtTag size="small" variant="neutral">{{
+                  item.kind === "script"
+                    ? t("automation.kindScript")
+                    : t("automation.kindRule")
+                }}</VtTag>
+                <span class="rule-summary__text">{{ summary(item) }}</span>
               </div>
             </div>
-            <div class="rule-summary">
-              <VtTag size="small" variant="neutral">{{
-                item.kind === "script"
-                  ? t("automation.kindScript")
-                  : t("automation.kindRule")
-              }}</VtTag>
-              <span class="rule-summary__text">{{ summary(item) }}</span>
+            <div class="toggle-wrap" @click.stop @keydown.stop>
+              <el-switch
+                :model-value="item.isEnabled"
+                :disabled="disabled"
+                size="small"
+                @change="(v: string | number | boolean) => onToggle(item, v)"
+              />
             </div>
           </div>
         </div>
@@ -171,11 +179,21 @@ function onCreate(command: string) {
 }
 
 .rule-card {
+  position: relative;
   padding: var(--space-form-field) var(--space-block);
   border-left: 2px solid transparent;
   background: transparent;
-  cursor: pointer;
   min-width: 0;
+}
+
+.rule-card__select {
+  min-width: 0;
+  cursor: pointer;
+}
+
+.rule-card:has(.rule-card__select:focus-visible) {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: calc(-1 * var(--focus-ring-offset));
 }
 
 .automation-list__item + .automation-list__item {
@@ -192,17 +210,12 @@ function onCreate(command: string) {
   color: var(--color-text-muted);
 }
 
-.rule-card:focus-visible {
-  outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: calc(-1 * var(--focus-ring-offset));
-}
-
 .rule-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: var(--space-action-group);
   min-width: 0;
+  min-height: 24px;
+  padding-right: calc(30px + var(--space-action-group));
 }
 
 .rule-name {
@@ -215,7 +228,13 @@ function onCreate(command: string) {
 }
 
 .toggle-wrap {
-  flex-shrink: 0;
+  position: absolute;
+  z-index: 1;
+  top: var(--space-form-field);
+  right: var(--space-block);
+  display: flex;
+  align-items: center;
+  height: 24px;
 }
 
 .rule-summary {
@@ -242,5 +261,12 @@ function onCreate(command: string) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+</style>
+
+<style>
+.automation-dropdown.el-popper,
+.automation-dropdown .el-dropdown-menu {
+  background-color: var(--color-bg-muted);
 }
 </style>

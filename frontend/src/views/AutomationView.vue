@@ -85,7 +85,7 @@
         />
         <AutomationRuleEditor
           v-if="editor"
-          :editor="editor"
+          v-model:editor="editor"
           :saving="saving"
           :is-dirty="isDirty"
           :disabled="!runtime.available"
@@ -199,6 +199,7 @@ const triggerOptions = computed(() => [
   { value: "friend_left", label: t("automation.triggerFriendLeft") },
   { value: "schedule.tick", label: t("automation.triggerSchedule") },
   { value: "vrchat.process", label: t("automation.triggerVrchatProcess") },
+  { value: "afk_detected", label: t("automation.triggerAfk") },
 ]);
 
 const triggerLabels = computed(() => {
@@ -274,15 +275,28 @@ async function refreshRunLog() {
   }
 }
 
-function onTabKeydown(event: KeyboardEvent) {
-  if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-  event.preventDefault();
-  const next = tab.value === "rules" ? "log" : "rules";
+function focusTab(next: "rules" | "log") {
   tab.value = next;
   void nextTick(() => {
     const el = next === "rules" ? rulesTabEl.value : logTabEl.value;
     el?.focus();
   });
+}
+
+function onTabKeydown(event: KeyboardEvent) {
+  if (event.key === "Home") {
+    event.preventDefault();
+    focusTab("rules");
+    return;
+  }
+  if (event.key === "End") {
+    event.preventDefault();
+    focusTab("log");
+    return;
+  }
+  if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+  event.preventDefault();
+  focusTab(tab.value === "rules" ? "log" : "rules");
 }
 
 async function loadRuntime() {
@@ -543,7 +557,12 @@ async function confirmDelete() {
   } catch {
     return;
   }
-  await App.deleteAutomationItem(editor.value.id);
+  try {
+    await App.deleteAutomationItem(editor.value.id);
+  } catch {
+    showToast.error(t("automation.deleteError"));
+    return;
+  }
   editor.value = null;
   savedSnapshot.value = "";
   nameError.value = "";
