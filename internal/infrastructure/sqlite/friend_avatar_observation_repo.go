@@ -84,17 +84,9 @@ func (r *FriendAvatarObservationRepository) ListUsageSummariesByVRCUserID(ctx co
 	return list, nil
 }
 
-// DeleteOlderThan removes observations before cutoff (by observed_at).
+// DeleteOlderThan removes observations whose observed_at is before the cutoff.
 func (r *FriendAvatarObservationRepository) DeleteOlderThan(ctx context.Context, before time.Time) (int64, error) {
-	res, err := r.db.ExecContext(ctx, `DELETE FROM friend_avatar_observations WHERE observed_at < ?`, before.Format(time.RFC3339))
-	if err != nil {
-		return 0, err
-	}
-	n, err := res.RowsAffected()
-	if err != nil {
-		return 0, err
-	}
-	return n, nil
+	return deleteOlderThanColumn(ctx, r.db, "friend_avatar_observations", "observed_at", before)
 }
 
 // DeleteAll removes all friend avatar observations.
