@@ -161,17 +161,15 @@ function onCreate(command: string) {
   width: 100%;
   margin: 0;
   border-style: dashed !important;
-  color: var(--color-text-secondary);
+  color: var(--color-text-primary);
   background-color: var(--color-bg-muted);
   border-color: var(--color-border);
-  --el-button-text-color: var(--color-text-secondary);
+  --el-button-text-color: var(--color-text-primary);
   --el-button-bg-color: var(--color-bg-muted);
   --el-button-border-color: var(--color-border);
-  --el-button-hover-text-color: var(--color-text-secondary);
-  --el-button-hover-bg-color: #374d66;
+  --el-button-hover-text-color: var(--color-text-primary);
   --el-button-hover-border-color: var(--color-border);
-  --el-button-active-text-color: var(--color-text-secondary);
-  --el-button-active-bg-color: #374d66;
+  --el-button-active-text-color: var(--color-text-primary);
   --el-button-active-border-color: var(--color-border);
   --el-button-outline-color: var(--color-brand);
 }
@@ -284,6 +282,11 @@ function onCreate(command: string) {
 .automation-dropdown.el-dropdown__popper.el-popper,
 .automation-dropdown .el-dropdown-menu {
   background-color: var(--color-bg-muted);
+  border-color: var(--color-border);
+}
+
+.automation-dropdown .el-popper__arrow::before,
+.automation-dropdown.el-popper .el-popper__arrow::before {
   border-color: var(--color-border);
 }
 </style>
