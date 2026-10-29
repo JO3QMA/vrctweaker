@@ -43,7 +43,7 @@ jobs:
           cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Regenerate lockfile (pnpm overrides snapshot)
-        run: cd frontend && pnpm install --no-frozen-lockfile
+        run: cd frontend && pnpm install --no-frozen-lockfile --ignore-scripts
 
       - name: Commit lockfile if changed
         env:
