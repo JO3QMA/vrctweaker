@@ -53,7 +53,33 @@ export const FourteenDaysPeakTenHours: Story = {
   decorators: [
     () => ({
       template:
-        '<div style="width: 100%; max-width: 640px; padding: 16px; background: var(--color-bg-elevated);"><story /></div>',
+        '<div style="width: 780px; padding: 16px; background: var(--color-bg-elevated);"><story /></div>',
+    }),
+  ],
+};
+
+/** PR / visual check: narrow card (~600px). */
+export const FourteenDaysPeakTenHoursWidth600: Story = {
+  args: {
+    series: fourteenDayPeakTenHours,
+  },
+  decorators: [
+    () => ({
+      template:
+        '<div style="width: 600px; padding: 16px; background: var(--color-bg-elevated);"><story /></div>',
+    }),
+  ],
+};
+
+/** PR / visual check: wide card (~1280px). */
+export const FourteenDaysPeakTenHoursWidth1280: Story = {
+  args: {
+    series: fourteenDayPeakTenHours,
+  },
+  decorators: [
+    () => ({
+      template:
+        '<div style="width: 1280px; padding: 16px; background: var(--color-bg-elevated);"><story /></div>',
     }),
   ],
 };

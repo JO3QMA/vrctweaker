@@ -31,9 +31,9 @@ describe("playTimeChartYAxisTicks", () => {
     expect(playTimeChartYAxisTicks(30 * 60)).toEqual([0, 600, 1200, 1800]);
   });
 
-  it("steps by 30 minutes between one and four hours", () => {
+  it("steps by whole hours between one and four hours", () => {
     const ticks = playTimeChartYAxisTicks(2 * 3600);
-    expect(ticks).toEqual([0, 1800, 3600, 5400, 7200]);
+    expect(ticks).toEqual([0, 3600, 7200]);
   });
 
   it("steps by whole hours when max is four hours or more", () => {
@@ -79,6 +79,5 @@ describe("formatPlayTimeAxisTickLabel", () => {
     expect(formatPlayTimeAxisTickLabel(0, units, "hour")).toBe("0時間");
     expect(formatPlayTimeAxisTickLabel(7200, units, "hour")).toBe("2時間");
     expect(formatPlayTimeAxisTickLabel(3600, units, "hour")).toBe("1時間");
-    expect(formatPlayTimeAxisTickLabel(1800, units, "hour")).toBe("0.5時間");
   });
 });

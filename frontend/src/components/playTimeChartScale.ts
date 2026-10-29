@@ -1,5 +1,4 @@
 export const PLAY_TIME_TEN_MINUTES_SEC = 10 * 60;
-export const PLAY_TIME_THIRTY_MINUTES_SEC = 30 * 60;
 export const PLAY_TIME_ONE_HOUR_SEC = 60 * 60;
 export const PLAY_TIME_AXIS_MAX_SEC = 24 * PLAY_TIME_ONE_HOUR_SEC;
 
@@ -42,7 +41,7 @@ export function playTimeChartYAxisTicks(maxY: number): number[] {
   }
   if (maxY < 4 * PLAY_TIME_ONE_HOUR_SEC) {
     const ticks: number[] = [];
-    for (let s = 0; s <= maxY; s += PLAY_TIME_THIRTY_MINUTES_SEC) {
+    for (let s = 0; s <= maxY; s += PLAY_TIME_ONE_HOUR_SEC) {
       ticks.push(s);
     }
     return ticks;
@@ -79,5 +78,6 @@ export function formatPlayTimeAxisTickLabel(
   if (axisUnit === "hour") {
     return `${sec / PLAY_TIME_ONE_HOUR_SEC}${units.hour}`;
   }
+  // axisUnit minute only below one-hour max; ticks are on the minute grid
   return `${Math.floor(sec / 60)}${units.minute}`;
 }
