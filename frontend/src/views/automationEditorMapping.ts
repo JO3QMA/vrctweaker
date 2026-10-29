@@ -1,6 +1,8 @@
 import type { AutomationItemDTO } from "../wails/app";
 
 export type ActionEditor = {
+  /** Stable row key. Not persisted. */
+  clientId: string;
   type: string;
   status: string;
   powerPlanMode: "preset" | "guid";
@@ -36,6 +38,7 @@ export class AutomationItemParseError extends Error {
 
 export function defaultAction(): ActionEditor {
   return {
+    clientId: newAutomationId(),
     type: "change_status",
     status: "busy",
     powerPlanMode: "preset",
@@ -185,6 +188,7 @@ export function dtoToEditor(dto: AutomationItemDTO): EditorState {
     }>(dto.actionsJson, "actionsJson");
     if (steps.length) {
       state.actions = steps.map((step) => ({
+        clientId: newAutomationId(),
         type: step.type || "change_status",
         status: String(step.payload?.status ?? "busy"),
         powerPlanMode: step.payload?.guid ? "guid" : "preset",

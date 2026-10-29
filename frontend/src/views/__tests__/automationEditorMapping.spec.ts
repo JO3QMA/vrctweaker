@@ -70,6 +70,14 @@ describe("dtoToEditor", () => {
     expect(state.actions[0]?.windowHeight).toBe(540);
   });
 
+  it("keeps a client id on actions and does not persist it", () => {
+    const state = dtoToEditor(base);
+    const clientId = state.actions[0]?.clientId;
+    expect(clientId).toBeTruthy();
+    const dto = editorToDto(state);
+    expect(dto.actionsJson).not.toContain(clientId);
+  });
+
   it("throws on invalid actionsJson instead of silently defaulting", () => {
     expect(() => dtoToEditor({ ...base, actionsJson: "{not-json" })).toThrow(
       AutomationItemParseError,
