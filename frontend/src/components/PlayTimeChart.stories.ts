@@ -58,6 +58,32 @@ export const FourteenDaysPeakTenHours: Story = {
   ],
 };
 
+/** PR / visual check: card ~720px. */
+export const FourteenDaysPeakTenHoursWidth720: Story = {
+  args: {
+    series: fourteenDayPeakTenHours,
+  },
+  decorators: [
+    () => ({
+      template:
+        '<div style="width: 720px; padding: 16px; background: var(--color-bg-elevated);"><story /></div>',
+    }),
+  ],
+};
+
+/** PR / visual check: card ~960px. */
+export const FourteenDaysPeakTenHoursWidth960: Story = {
+  args: {
+    series: fourteenDayPeakTenHours,
+  },
+  decorators: [
+    () => ({
+      template:
+        '<div style="width: 960px; padding: 16px; background: var(--color-bg-elevated);"><story /></div>',
+    }),
+  ],
+};
+
 /** PR / visual check: narrow card (~600px). */
 export const FourteenDaysPeakTenHoursWidth600: Story = {
   args: {
@@ -80,6 +106,25 @@ export const FourteenDaysPeakTenHoursWidth1280: Story = {
     () => ({
       template:
         '<div style="width: 1280px; padding: 16px; background: var(--color-bg-elevated);"><story /></div>',
+    }),
+  ],
+};
+
+/** 最大55分: Y軸は 0分〜60分（小数時間ラベルなし）。 */
+export const FiftyFiveMinuteDailyMax: Story = {
+  args: {
+    series: [
+      { date: "2025-03-01", label: "3/1", seconds: 1800 },
+      { date: "2025-03-02", label: "3/2", seconds: 3300 },
+      { date: "2025-03-03", label: "3/3", seconds: 900 },
+      { date: "2025-03-04", label: "3/4", seconds: 2700 },
+      { date: "2025-03-05", label: "3/5", seconds: 0 },
+    ],
+  },
+  decorators: [
+    () => ({
+      template:
+        '<div style="width: 720px; padding: 16px; background: var(--color-bg-elevated);"><story /></div>',
     }),
   ],
 };

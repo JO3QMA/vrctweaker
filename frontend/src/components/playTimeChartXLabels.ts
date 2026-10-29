@@ -1,5 +1,5 @@
 /** Minimum gap between adjacent visible X-axis date labels (px). */
-export const PLAY_TIME_X_LABEL_MIN_GAP = 4;
+export const PLAY_TIME_X_LABEL_MIN_GAP = 8;
 
 /** Extra inset from canvas edge so a centered label is not clipped (px). */
 export const PLAY_TIME_X_LABEL_EDGE_MARGIN = 4;
@@ -16,7 +16,7 @@ export type XLabelLayoutInput = {
 /**
  * Choose which day indices get an X-axis label. Prefers showing every day; increases
  * stride until visible labels do not overlap. Always keeps first and last; if the last
- * label would collide with an interior neighbor, drops that neighbor instead.
+ * label would collide with an interior neighbor, drops that neighbor only.
  */
 export function playTimeChartVisibleXLabelIndices(
   input: XLabelLayoutInput,
@@ -46,39 +46,14 @@ export function playTimeChartVisibleXLabelIndices(
     return [...set].sort((a, b) => a - b);
   };
 
-  const pruneForEndCollision = (indices: number[]): number[] => {
+  /** Drop the label immediately before the last day when it collides with the last. */
+  const resolveLastNeighborCollision = (indices: number[]): number[] => {
     const kept = [...indices].sort((a, b) => a - b);
-    let changed = true;
-    while (changed) {
-      changed = false;
-      for (let k = 0; k < kept.length - 1; k++) {
-        const i = kept[k]!;
-        const j = kept[k + 1]!;
-        if (!overlaps(i, j)) continue;
-        if (j === n - 1 && i !== 0) {
-          kept.splice(k, 1);
-          changed = true;
-          break;
-        }
-        if (i === 0 && j !== n - 1) {
-          kept.splice(k + 1, 1);
-          changed = true;
-          break;
-        }
-        if (j === n - 1) {
-          kept.splice(k, 1);
-          changed = true;
-          break;
-        }
-        if (i === 0) {
-          kept.splice(k + 1, 1);
-          changed = true;
-          break;
-        }
-        kept.splice(k, 1);
-        changed = true;
-        break;
-      }
+    const lastPos = kept.indexOf(n - 1);
+    if (lastPos <= 0) return kept;
+    const prev = kept[lastPos - 1]!;
+    if (overlaps(prev, n - 1)) {
+      kept.splice(lastPos - 1, 1);
     }
     return kept;
   };
@@ -93,12 +68,12 @@ export function playTimeChartVisibleXLabelIndices(
   };
 
   for (let step = 1; step <= n - 1; step++) {
-    const pruned = pruneForEndCollision(candidateForStep(step));
-    if (layoutOk(pruned)) {
-      return pruned;
+    const indices = resolveLastNeighborCollision(candidateForStep(step));
+    if (layoutOk(indices)) {
+      return indices;
     }
   }
-  return pruneForEndCollision([0, n - 1]);
+  return resolveLastNeighborCollision([0, n - 1]);
 }
 
 /** Half-width padding so the widest label stays inside the canvas when centered on an edge point. */

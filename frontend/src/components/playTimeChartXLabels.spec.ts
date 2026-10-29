@@ -16,8 +16,8 @@ describe("playTimeChartVisibleXLabelIndices", () => {
   const widths = Array.from({ length: n }, () => 36);
   const plotLeft = 48;
 
-  it("shows every day when spacing is wide enough", () => {
-    const plotWidth = 700;
+  it("shows every day when spacing is wide enough (8px min gap)", () => {
+    const plotWidth = 720;
     const indices = playTimeChartVisibleXLabelIndices({
       pointCount: n,
       plotLeft,
@@ -27,21 +27,8 @@ describe("playTimeChartVisibleXLabelIndices", () => {
     expect(indices).toEqual(Array.from({ length: n }, (_, i) => i));
   });
 
-  it("thins labels when cramped but keeps first and last", () => {
-    const plotWidth = 200;
-    const indices = playTimeChartVisibleXLabelIndices({
-      pointCount: n,
-      plotLeft,
-      plotWidth,
-      labelWidths: widths,
-    });
-    expect(indices[0]).toBe(0);
-    expect(indices[indices.length - 1]).toBe(n - 1);
-    expect(indices.length).toBeLessThan(n);
-  });
-
-  it("drops the neighbor before the last label when they would overlap", () => {
-    const plotWidth = 120;
+  it("uses stride 2 (every other day) before falling back to first and last only", () => {
+    const plotWidth = 480;
     const indices = playTimeChartVisibleXLabelIndices({
       pointCount: n,
       plotLeft,
@@ -49,12 +36,27 @@ describe("playTimeChartVisibleXLabelIndices", () => {
       labelWidths: widths,
       minGap: PLAY_TIME_X_LABEL_MIN_GAP,
     });
+    expect(indices[0]).toBe(0);
+    expect(indices[indices.length - 1]).toBe(n - 1);
+    expect(indices.length).toBeGreaterThan(2);
+    for (const i of indices) {
+      if (i !== 0 && i !== n - 1) {
+        expect(i % 2).toBe(0);
+      }
+    }
+    expect(indices).toEqual([0, 2, 4, 6, 8, 10, 13]);
+  });
+
+  it("drops only the neighbor before the last when stride 2 still collides at the end", () => {
+    const plotWidth = 200;
+    const indices = playTimeChartVisibleXLabelIndices({
+      pointCount: n,
+      plotLeft,
+      plotWidth,
+      labelWidths: widths,
+    });
     expect(indices).toContain(0);
     expect(indices).toContain(n - 1);
-    if (indices.includes(n - 2) && indices.includes(n - 1)) {
-      const pos = (i: number) => plotLeft + (i / (n - 1)) * plotWidth;
-      const need = widths[0]! + PLAY_TIME_X_LABEL_MIN_GAP;
-      expect(Math.abs(pos(n - 2) - pos(n - 1))).toBeGreaterThanOrEqual(need);
-    }
+    expect(indices).not.toContain(n - 2);
   });
 });
