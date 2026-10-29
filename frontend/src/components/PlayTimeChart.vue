@@ -30,6 +30,7 @@ import {
 } from "./playTimeChartGeometry";
 import {
   formatPlayTimeAxisTickLabel,
+  playTimeChartAxisTickUnit,
   playTimeChartMaxY,
   playTimeChartYAxisTicks,
 } from "./playTimeChartScale";
@@ -50,7 +51,7 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const hoverIndex = ref<number | null>(null);
 let resizeObserver: ResizeObserver | null = null;
 
-const PAD = { top: 36, left: 48, right: 14, bottom: 44 };
+const PAD = { top: 36, left: 48, right: 30, bottom: 44 };
 /** Approximate tip width for translateX(-50%) edge clamping. */
 const TIP_WIDTH = 120;
 
@@ -71,11 +72,18 @@ function readCssVar(name: string, fallback: string): string {
   return v || fallback;
 }
 
-function formatYAxisTickSeconds(sec: number): string {
-  return formatPlayTimeAxisTickLabel(sec, {
-    hour: t("chart.hour"),
-    minute: t("chart.minute"),
-  });
+function formatYAxisTickSeconds(
+  sec: number,
+  axisUnit: ReturnType<typeof playTimeChartAxisTickUnit>,
+): string {
+  return formatPlayTimeAxisTickLabel(
+    sec,
+    {
+      hour: t("chart.hour"),
+      minute: t("chart.minute"),
+    },
+    axisUnit,
+  );
 }
 
 /** Measure plot geometry without touching the canvas buffer. */
@@ -128,6 +136,7 @@ function draw(): void {
   if (props.series.length === 0) return;
 
   const yAxisTicks = playTimeChartYAxisTicks(maxY);
+  const yAxisUnit = playTimeChartAxisTickUnit(maxY);
   ctx.strokeStyle = border;
   ctx.fillStyle = textMuted;
   ctx.lineWidth = 1;
@@ -140,7 +149,7 @@ function draw(): void {
     ctx.moveTo(PAD.left, y);
     ctx.lineTo(PAD.left + plotW, y);
     ctx.stroke();
-    ctx.fillText(formatYAxisTickSeconds(v), PAD.left - 6, y);
+    ctx.fillText(formatYAxisTickSeconds(v, yAxisUnit), PAD.left - 6, y);
   }
 
   const n = props.series.length;
@@ -163,11 +172,20 @@ function draw(): void {
   });
 
   ctx.fillStyle = textMuted;
-  ctx.textAlign = "center";
   ctx.textBaseline = "top";
+  const xLabelY = PAD.top + plotH + 8;
   props.series.forEach((s, i) => {
     const { x } = pointAt(i, n, plotW, plotH, maxY, s.seconds);
-    ctx.fillText(s.label, x, PAD.top + plotH + 8);
+    if (i === n - 1 && n > 1) {
+      ctx.textAlign = "right";
+      ctx.fillText(s.label, PAD.left + plotW, xLabelY);
+    } else if (i === 0 && n > 1) {
+      ctx.textAlign = "left";
+      ctx.fillText(s.label, PAD.left, xLabelY);
+    } else {
+      ctx.textAlign = "center";
+      ctx.fillText(s.label, x, xLabelY);
+    }
   });
 }
 

@@ -3,6 +3,7 @@ import {
   PLAY_TIME_ONE_HOUR_SEC,
   PLAY_TIME_TEN_MINUTES_SEC,
   formatPlayTimeAxisTickLabel,
+  playTimeChartAxisTickUnit,
   playTimeChartMaxY,
   playTimeChartYAxisTicks,
 } from "./playTimeChartScale";
@@ -53,13 +54,31 @@ describe("playTimeChartYAxisTicks", () => {
   });
 });
 
+describe("playTimeChartAxisTickUnit", () => {
+  it("uses minutes when axis max is under one hour", () => {
+    expect(playTimeChartAxisTickUnit(30 * 60)).toBe("minute");
+    expect(playTimeChartAxisTickUnit(PLAY_TIME_ONE_HOUR_SEC)).toBe("hour");
+  });
+
+  it("uses hours when axis max is one hour or more", () => {
+    expect(playTimeChartAxisTickUnit(2 * PLAY_TIME_ONE_HOUR_SEC)).toBe("hour");
+    expect(playTimeChartAxisTickUnit(10 * PLAY_TIME_ONE_HOUR_SEC)).toBe("hour");
+  });
+});
+
 describe("formatPlayTimeAxisTickLabel", () => {
   const units = { hour: "時間", minute: "分" };
 
-  it("labels exact minute grid values without rounding", () => {
-    expect(formatPlayTimeAxisTickLabel(0, units)).toBe("0分");
-    expect(formatPlayTimeAxisTickLabel(600, units)).toBe("10分");
-    expect(formatPlayTimeAxisTickLabel(3600, units)).toBe("1時間");
-    expect(formatPlayTimeAxisTickLabel(7200, units)).toBe("2時間");
+  it("uses minute unit for all ticks when axis is in minutes", () => {
+    expect(formatPlayTimeAxisTickLabel(0, units, "minute")).toBe("0分");
+    expect(formatPlayTimeAxisTickLabel(600, units, "minute")).toBe("10分");
+    expect(formatPlayTimeAxisTickLabel(1800, units, "minute")).toBe("30分");
+  });
+
+  it("uses hour unit for all ticks when axis is in hours", () => {
+    expect(formatPlayTimeAxisTickLabel(0, units, "hour")).toBe("0時間");
+    expect(formatPlayTimeAxisTickLabel(7200, units, "hour")).toBe("2時間");
+    expect(formatPlayTimeAxisTickLabel(3600, units, "hour")).toBe("1時間");
+    expect(formatPlayTimeAxisTickLabel(1800, units, "hour")).toBe("0.5時間");
   });
 });

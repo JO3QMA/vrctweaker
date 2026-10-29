@@ -64,11 +64,19 @@ export type PlayTimeAxisLabelUnits = {
   minute: string;
 };
 
+/** Fixed unit for every Y-axis tick; derived from axis max, not individual tick values. */
+export type PlayTimeAxisTickUnit = "hour" | "minute";
+
+export function playTimeChartAxisTickUnit(maxY: number): PlayTimeAxisTickUnit {
+  return maxY >= PLAY_TIME_ONE_HOUR_SEC ? "hour" : "minute";
+}
+
 export function formatPlayTimeAxisTickLabel(
   sec: number,
   units: PlayTimeAxisLabelUnits,
+  axisUnit: PlayTimeAxisTickUnit,
 ): string {
-  if (sec >= PLAY_TIME_ONE_HOUR_SEC && sec % PLAY_TIME_ONE_HOUR_SEC === 0) {
+  if (axisUnit === "hour") {
     return `${sec / PLAY_TIME_ONE_HOUR_SEC}${units.hour}`;
   }
   return `${Math.floor(sec / 60)}${units.minute}`;
