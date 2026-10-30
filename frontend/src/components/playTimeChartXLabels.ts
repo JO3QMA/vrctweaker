@@ -15,8 +15,10 @@ export type XLabelLayoutInput = {
 
 /**
  * Choose which day indices get an X-axis label. Prefers showing every day; increases
- * stride until visible labels do not overlap. Always keeps first and last; if the last
- * label would collide with an interior neighbor, drops that neighbor only.
+ * stride until visible labels do not overlap. The newest day (last index) is always
+ * preferred on the X axis; when it collides with an interior neighbor, that neighbor
+ * is dropped. If the first and last days would overlap (extremely narrow plot), only
+ * the last day's label is kept.
  */
 export function playTimeChartVisibleXLabelIndices(
   input: XLabelLayoutInput,
@@ -27,7 +29,7 @@ export function playTimeChartVisibleXLabelIndices(
 
   const minGap = input.minGap ?? PLAY_TIME_X_LABEL_MIN_GAP;
   const plotW = input.plotWidth;
-  if (plotW <= 0) return [0, n - 1];
+  if (plotW <= 0) return [n - 1];
 
   const pos = (i: number) => input.plotLeft + (i / (n - 1)) * input.plotWidth;
 
@@ -46,7 +48,7 @@ export function playTimeChartVisibleXLabelIndices(
     return [...set].sort((a, b) => a - b);
   };
 
-  /** Drop the label immediately before the last day when it collides with the last. */
+  /** When the last label collides with its left neighbor, drop that neighbor (including index 0). */
   const resolveLastNeighborCollision = (indices: number[]): number[] => {
     const kept = [...indices].sort((a, b) => a - b);
     const lastPos = kept.indexOf(n - 1);

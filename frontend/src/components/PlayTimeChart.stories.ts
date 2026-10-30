@@ -10,6 +10,12 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
+const withCardWidth = (width: number) => [
+  () => ({
+    template: `<div style="width: ${width}px; padding: 16px; background: var(--color-bg-elevated);"><story /></div>`,
+  }),
+];
+
 const sampleSeries = [
   { date: "2025-03-01", label: "3/1", seconds: 3600 },
   { date: "2025-03-02", label: "3/2", seconds: 7200 },
@@ -50,12 +56,7 @@ export const FourteenDaysPeakTenHours: Story = {
   args: {
     series: fourteenDayPeakTenHours,
   },
-  decorators: [
-    () => ({
-      template:
-        '<div style="width: 780px; padding: 16px; background: var(--color-bg-elevated);"><story /></div>',
-    }),
-  ],
+  decorators: withCardWidth(780),
 };
 
 /** PR / visual check: card ~720px. */
@@ -63,12 +64,7 @@ export const FourteenDaysPeakTenHoursWidth720: Story = {
   args: {
     series: fourteenDayPeakTenHours,
   },
-  decorators: [
-    () => ({
-      template:
-        '<div style="width: 720px; padding: 16px; background: var(--color-bg-elevated);"><story /></div>',
-    }),
-  ],
+  decorators: withCardWidth(720),
 };
 
 /** PR / visual check: card ~960px. */
@@ -76,12 +72,7 @@ export const FourteenDaysPeakTenHoursWidth960: Story = {
   args: {
     series: fourteenDayPeakTenHours,
   },
-  decorators: [
-    () => ({
-      template:
-        '<div style="width: 960px; padding: 16px; background: var(--color-bg-elevated);"><story /></div>',
-    }),
-  ],
+  decorators: withCardWidth(960),
 };
 
 /** PR / visual check: narrow card (~600px). */
@@ -89,12 +80,7 @@ export const FourteenDaysPeakTenHoursWidth600: Story = {
   args: {
     series: fourteenDayPeakTenHours,
   },
-  decorators: [
-    () => ({
-      template:
-        '<div style="width: 600px; padding: 16px; background: var(--color-bg-elevated);"><story /></div>',
-    }),
-  ],
+  decorators: withCardWidth(600),
 };
 
 /** PR / visual check: wide card (~1280px). */
@@ -102,12 +88,7 @@ export const FourteenDaysPeakTenHoursWidth1280: Story = {
   args: {
     series: fourteenDayPeakTenHours,
   },
-  decorators: [
-    () => ({
-      template:
-        '<div style="width: 1280px; padding: 16px; background: var(--color-bg-elevated);"><story /></div>',
-    }),
-  ],
+  decorators: withCardWidth(1280),
 };
 
 /** 最大55分: Y軸は 0分〜60分（小数時間ラベルなし）。 */
@@ -121,12 +102,7 @@ export const FiftyFiveMinuteDailyMax: Story = {
       { date: "2025-03-05", label: "3/5", seconds: 0 },
     ],
   },
-  decorators: [
-    () => ({
-      template:
-        '<div style="width: 720px; padding: 16px; background: var(--color-bg-elevated);"><story /></div>',
-    }),
-  ],
+  decorators: withCardWidth(720),
 };
 
 /** 最大が1時間未満のとき Y軸はすべて「分」。 */

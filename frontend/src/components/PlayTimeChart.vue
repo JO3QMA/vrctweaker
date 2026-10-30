@@ -60,6 +60,8 @@ const Y_AXIS_LABEL_GAP = 6;
 /** Fallback left inset when Y labels are narrow. */
 const MIN_PLOT_LEFT = 48;
 const X_LABEL_FONT = "12px sans-serif";
+/** Used when canvas 2D context is unavailable before first paint (typical "10/17" at 12px sans-serif). */
+const FALLBACK_LABEL_WIDTH = 36;
 /** Approximate tip width for translateX(-50%) edge clamping. */
 const TIP_WIDTH = 120;
 
@@ -167,7 +169,7 @@ function measurePlot(canvas: HTMLCanvasElement): PlotMetrics {
     const cssH = canvas.clientHeight || 280;
     const maxY = playTimeChartMaxY(0);
     const padLeft = MIN_PLOT_LEFT;
-    const padRight = playTimeChartXLabelHorizontalPad(36);
+    const padRight = playTimeChartXLabelHorizontalPad(FALLBACK_LABEL_WIDTH);
     const { plotW, plotH } = clampedPlotSize(cssW, cssH, {
       top: PAD_BASE.top,
       left: padLeft,
@@ -182,6 +184,7 @@ function measurePlot(canvas: HTMLCanvasElement): PlotMetrics {
       maxY,
       padLeft,
       padRight,
+      // draw() will recompute with measureText; avoid guessing visible label indices here.
       xLabelIndices: [],
     };
   }

@@ -93,6 +93,10 @@ export function formatPlayTimeAxisTickLabel(
   axisUnit: PlayTimeAxisTickUnit,
 ): string {
   if (axisUnit === "hour") {
+    // Caller passes Y-axis tick seconds from playTimeChartYAxisTicks (whole-hour multiples only).
+    if (sec % PLAY_TIME_ONE_HOUR_SEC !== 0) {
+      return `${Math.floor(sec / 60)}${units.minute}`;
+    }
     return `${sec / PLAY_TIME_ONE_HOUR_SEC}${units.hour}`;
   }
   return `${Math.floor(sec / 60)}${units.minute}`;

@@ -59,4 +59,26 @@ describe("playTimeChartVisibleXLabelIndices", () => {
     expect(indices).toContain(n - 1);
     expect(indices).not.toContain(n - 2);
   });
+
+  it("keeps only the last label when first and last would overlap", () => {
+    const indices = playTimeChartVisibleXLabelIndices({
+      pointCount: n,
+      plotLeft,
+      plotWidth: 0,
+      labelWidths: widths,
+    });
+    expect(indices).toEqual([n - 1]);
+  });
+
+  it("drops the first label when only first and last remain and they overlap", () => {
+    const plotWidth = 20;
+    const indices = playTimeChartVisibleXLabelIndices({
+      pointCount: n,
+      plotLeft,
+      plotWidth,
+      labelWidths: widths,
+      minGap: PLAY_TIME_X_LABEL_MIN_GAP,
+    });
+    expect(indices).toEqual([n - 1]);
+  });
 });
