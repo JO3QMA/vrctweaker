@@ -30,9 +30,14 @@ import {
 } from "./playTimeChartGeometry";
 import {
   formatPlayTimeAxisTickLabel,
+  playTimeChartAxisTickUnit,
   playTimeChartMaxY,
   playTimeChartYAxisTicks,
 } from "./playTimeChartScale";
+import {
+  playTimeChartVisibleXLabelIndices,
+  playTimeChartXLabelHorizontalPad,
+} from "./playTimeChartXLabels";
 
 export interface PlayTimeDayPoint {
   date: string;
@@ -50,7 +55,13 @@ const canvasRef = ref<HTMLCanvasElement | null>(null);
 const hoverIndex = ref<number | null>(null);
 let resizeObserver: ResizeObserver | null = null;
 
-const PAD = { top: 36, left: 48, right: 14, bottom: 44 };
+const PAD_BASE = { top: 36, bottom: 44 };
+const Y_AXIS_LABEL_GAP = 6;
+/** Fallback left inset when Y labels are narrow. */
+const MIN_PLOT_LEFT = 48;
+const X_LABEL_FONT = "12px sans-serif";
+/** Used when canvas 2D context is unavailable before first paint (typical "10/17" at 12px sans-serif). */
+const FALLBACK_LABEL_WIDTH = 36;
 /** Approximate tip width for translateX(-50%) edge clamping. */
 const TIP_WIDTH = 120;
 
@@ -60,6 +71,9 @@ type PlotMetrics = {
   plotW: number;
   plotH: number;
   maxY: number;
+  padLeft: number;
+  padRight: number;
+  xLabelIndices: number[];
 };
 
 let plotCache: PlotMetrics | null = null;
@@ -71,55 +85,144 @@ function readCssVar(name: string, fallback: string): string {
   return v || fallback;
 }
 
-function formatYAxisTickSeconds(sec: number): string {
-  return formatPlayTimeAxisTickLabel(sec, {
-    hour: t("chart.hour"),
-    minute: t("chart.minute"),
-  });
+function formatYAxisTickSeconds(
+  sec: number,
+  axisUnit: ReturnType<typeof playTimeChartAxisTickUnit>,
+): string {
+  return formatPlayTimeAxisTickLabel(
+    sec,
+    {
+      hour: t("chart.hour"),
+      minute: t("chart.minute"),
+    },
+    axisUnit,
+  );
 }
 
-/** Measure plot geometry without touching the canvas buffer. */
-function measurePlot(canvas: HTMLCanvasElement): PlotMetrics {
+function computePlotMetrics(
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+): PlotMetrics {
   const cssW = canvas.clientWidth || 300;
   const cssH = canvas.clientHeight || 280;
-  const { plotW, plotH } = clampedPlotSize(cssW, cssH, PAD);
   const maxSeconds = props.series.reduce(
     (max, s) => Math.max(max, s.seconds),
     0,
   );
   const maxY = playTimeChartMaxY(Math.max(0, maxSeconds));
-  return { cssW, cssH, plotW, plotH, maxY };
+  const yAxisTicks = playTimeChartYAxisTicks(maxY);
+  const yAxisUnit = playTimeChartAxisTickUnit(maxY);
+
+  ctx.font = X_LABEL_FONT;
+  const labelWidths = props.series.map((s) => ctx.measureText(s.label).width);
+  const maxXLabelW = labelWidths.reduce((m, w) => Math.max(m, w), 0);
+  const xHorizPad = playTimeChartXLabelHorizontalPad(maxXLabelW);
+
+  let maxYLabelW = 0;
+  for (const v of yAxisTicks) {
+    maxYLabelW = Math.max(
+      maxYLabelW,
+      ctx.measureText(formatYAxisTickSeconds(v, yAxisUnit)).width,
+    );
+  }
+
+  const padLeft = Math.max(
+    MIN_PLOT_LEFT,
+    maxYLabelW + Y_AXIS_LABEL_GAP,
+    xHorizPad,
+  );
+  const padRight = xHorizPad;
+  const { plotW, plotH } = clampedPlotSize(cssW, cssH, {
+    top: PAD_BASE.top,
+    left: padLeft,
+    right: padRight,
+    bottom: PAD_BASE.bottom,
+  });
+
+  const xLabelIndices =
+    props.series.length === 0
+      ? []
+      : playTimeChartVisibleXLabelIndices({
+          pointCount: props.series.length,
+          plotLeft: padLeft,
+          plotWidth: plotW,
+          labelWidths,
+        });
+
+  return {
+    cssW,
+    cssH,
+    plotW,
+    plotH,
+    maxY,
+    padLeft,
+    padRight,
+    xLabelIndices,
+  };
 }
 
-function refreshPlot(canvas: HTMLCanvasElement): PlotMetrics {
-  plotCache = measurePlot(canvas);
+/** Measure plot geometry without touching the canvas buffer. */
+function measurePlot(canvas: HTMLCanvasElement): PlotMetrics {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) {
+    const cssW = canvas.clientWidth || 300;
+    const cssH = canvas.clientHeight || 280;
+    const maxY = playTimeChartMaxY(0);
+    const padLeft = MIN_PLOT_LEFT;
+    const padRight = playTimeChartXLabelHorizontalPad(FALLBACK_LABEL_WIDTH);
+    const { plotW, plotH } = clampedPlotSize(cssW, cssH, {
+      top: PAD_BASE.top,
+      left: padLeft,
+      right: padRight,
+      bottom: PAD_BASE.bottom,
+    });
+    return {
+      cssW,
+      cssH,
+      plotW,
+      plotH,
+      maxY,
+      padLeft,
+      padRight,
+      // draw() will recompute with measureText; avoid guessing visible label indices here.
+      xLabelIndices: [],
+    };
+  }
+  return computePlotMetrics(canvas, ctx);
+}
+
+function refreshPlot(
+  canvas: HTMLCanvasElement,
+  ctx: CanvasRenderingContext2D,
+): PlotMetrics {
+  plotCache = computePlotMetrics(canvas, ctx);
   return plotCache;
 }
 
 function pointAt(
   i: number,
   n: number,
+  padLeft: number,
   plotW: number,
   plotH: number,
   maxY: number,
   seconds: number,
 ) {
-  const x = PAD.left + (n <= 1 ? plotW / 2 : (i / (n - 1)) * plotW);
-  const y = PAD.top + plotH - (seconds / maxY) * plotH;
+  const x = padLeft + (n <= 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  const y = PAD_BASE.top + plotH - (seconds / maxY) * plotH;
   return { x, y };
 }
 
 function draw(): void {
   const canvas = canvasRef.value;
   if (!canvas) return;
-  const L = refreshPlot(canvas);
-  const dpr = window.devicePixelRatio || 1;
-  syncCanvasBuffer(canvas, L.cssW, L.cssH, dpr);
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
+  const L = refreshPlot(canvas, ctx);
+  const dpr = window.devicePixelRatio || 1;
+  syncCanvasBuffer(canvas, L.cssW, L.cssH, dpr);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-  const { cssW, cssH, plotW, plotH, maxY } = L;
+  const { cssW, cssH, plotW, plotH, maxY, padLeft, xLabelIndices } = L;
   const textMuted = readCssVar("--color-text-secondary", "#a0a0a0");
   const border = readCssVar("--color-border", "#333333");
   const accent = readCssVar("--color-brand", "#5b9bd5");
@@ -128,25 +231,26 @@ function draw(): void {
   if (props.series.length === 0) return;
 
   const yAxisTicks = playTimeChartYAxisTicks(maxY);
+  const yAxisUnit = playTimeChartAxisTickUnit(maxY);
   ctx.strokeStyle = border;
   ctx.fillStyle = textMuted;
   ctx.lineWidth = 1;
-  ctx.font = "12px sans-serif";
+  ctx.font = X_LABEL_FONT;
   ctx.textAlign = "right";
   ctx.textBaseline = "middle";
   for (const v of yAxisTicks) {
-    const y = PAD.top + plotH - (v / maxY) * plotH;
+    const y = PAD_BASE.top + plotH - (v / maxY) * plotH;
     ctx.beginPath();
-    ctx.moveTo(PAD.left, y);
-    ctx.lineTo(PAD.left + plotW, y);
+    ctx.moveTo(padLeft, y);
+    ctx.lineTo(padLeft + plotW, y);
     ctx.stroke();
-    ctx.fillText(formatYAxisTickSeconds(v), PAD.left - 6, y);
+    ctx.fillText(formatYAxisTickSeconds(v, yAxisUnit), padLeft - 6, y);
   }
 
   const n = props.series.length;
   ctx.beginPath();
   props.series.forEach((s, i) => {
-    const { x, y } = pointAt(i, n, plotW, plotH, maxY, s.seconds);
+    const { x, y } = pointAt(i, n, padLeft, plotW, plotH, maxY, s.seconds);
     if (i === 0) ctx.moveTo(x, y);
     else ctx.lineTo(x, y);
   });
@@ -156,7 +260,7 @@ function draw(): void {
 
   ctx.fillStyle = accent;
   props.series.forEach((s, i) => {
-    const { x, y } = pointAt(i, n, plotW, plotH, maxY, s.seconds);
+    const { x, y } = pointAt(i, n, padLeft, plotW, plotH, maxY, s.seconds);
     ctx.beginPath();
     ctx.arc(x, y, hoverIndex.value === i ? 5 : 3.5, 0, Math.PI * 2);
     ctx.fill();
@@ -165,10 +269,13 @@ function draw(): void {
   ctx.fillStyle = textMuted;
   ctx.textAlign = "center";
   ctx.textBaseline = "top";
-  props.series.forEach((s, i) => {
-    const { x } = pointAt(i, n, plotW, plotH, maxY, s.seconds);
-    ctx.fillText(s.label, x, PAD.top + plotH + 8);
-  });
+  const xLabelY = PAD_BASE.top + plotH + 8;
+  for (const i of xLabelIndices) {
+    const s = props.series[i];
+    if (!s) continue;
+    const { x } = pointAt(i, n, padLeft, plotW, plotH, maxY, s.seconds);
+    ctx.fillText(s.label, x, xLabelY);
+  }
 }
 
 const tip = computed(() => {
@@ -180,13 +287,14 @@ const tip = computed(() => {
   const { x, y } = pointAt(
     i,
     props.series.length,
+    L.padLeft,
     L.plotW,
     L.plotH,
     L.maxY,
     p.seconds,
   );
   return {
-    x: clampCenteredTipX(x, L.cssW, TIP_WIDTH, PAD.left, PAD.right),
+    x: clampCenteredTipX(x, L.cssW, TIP_WIDTH, L.padLeft, L.padRight),
     y: Math.max(8, y - 48),
     date: p.date,
     duration: formatPlayDurationHMS(p.seconds, {
@@ -203,8 +311,8 @@ function onMove(ev: MouseEvent): void {
     hoverIndex.value = null;
     return;
   }
-  // Use cached metrics; never resize the buffer on mousemove.
-  const L = plotCache ?? refreshPlot(canvas);
+  const ctx = canvas.getContext("2d");
+  const L = plotCache ?? (ctx ? refreshPlot(canvas, ctx) : measurePlot(canvas));
   const rect = canvas.getBoundingClientRect();
   const mx = ev.clientX - rect.left;
   let best = 0;
@@ -213,6 +321,7 @@ function onMove(ev: MouseEvent): void {
     const { x } = pointAt(
       i,
       props.series.length,
+      L.padLeft,
       L.plotW,
       L.plotH,
       L.maxY,
