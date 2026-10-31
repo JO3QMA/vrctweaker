@@ -41,6 +41,8 @@ export type OnboardingFolderDefaultsDTO =
 export type OnboardingFolderSaveDTO =
   WailsDTO<wailsapp.OnboardingFolderSaveDTO>;
 export type YTDLPMaintainStatusDTO = WailsDTO<usecase.YTDLPMaintainStatus>;
+export type YTDLPMaintainActionResultDTO =
+  WailsDTO<usecase.YTDLPMaintainActionResult>;
 export type LoginResultDTO = WailsDTO<wailsapp.LoginResultDTO>;
 export type VRChatCurrentUserDTO = WailsDTO<wailsapp.VRChatCurrentUserDTO>;
 export type DailyPlaySecondsDTO = WailsDTO<activity.DailyPlaySeconds>;
@@ -104,6 +106,17 @@ function emptyYTDLPMaintainStatus(): YTDLPMaintainStatusDTO {
     latestTag: "",
     latestDownloadUrl: "",
     latestError: "",
+    latestCheckedAt: "",
+  };
+}
+
+function emptyYTDLPMaintainActionResult(): YTDLPMaintainActionResultDTO {
+  return {
+    status: emptyYTDLPMaintainStatus(),
+    outcome: "",
+    previousVersion: "",
+    newVersion: "",
+    detailError: "",
   };
 }
 
@@ -556,6 +569,14 @@ export const App = {
   checkYTDLPLatestRelease: bindGo(
     (a) => a.CheckYTDLPLatestRelease(),
     emptyYTDLPMaintainStatus(),
+  ),
+  refreshYTDLPLatestRelease: bindGo(
+    (a, force: boolean) => a.RefreshYTDLPLatestRelease(force),
+    emptyYTDLPMaintainStatus(),
+  ),
+  checkAndUpdateOfficialYTDLPCache: bindGo(
+    (a) => a.CheckAndUpdateOfficialYTDLPCache(),
+    emptyYTDLPMaintainActionResult(),
   ),
   updateOfficialYTDLPCache: bindGo(
     (a, downloadURL: string, latestTag: string) =>

@@ -353,6 +353,26 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
             latestError: '',
           }));
         },
+        RefreshYTDLPLatestRelease: function(_force) {
+          return Promise.resolve(Object.assign({}, ytdlpMaintainStatus, {
+            latestVersion: '2025.01.01',
+            latestTag: '2025.01.01',
+            latestDownloadUrl: 'https://example.com/yt-dlp.exe',
+            latestError: '',
+          }));
+        },
+        CheckAndUpdateOfficialYTDLPCache: function() {
+          return Promise.resolve({
+            status: Object.assign({}, ytdlpMaintainStatus, {
+              cachePresent: true,
+              cacheVersion: '2025.01.01',
+            }),
+            outcome: 'updated',
+            previousVersion: ytdlpMaintainStatus.cacheVersion || '',
+            newVersion: '2025.01.01',
+            detailError: '',
+          });
+        },
         UpdateOfficialYTDLPCache: function(_url, _tag) {
           return Promise.resolve(Object.assign({}, ytdlpMaintainStatus, {
             cachePresent: true,

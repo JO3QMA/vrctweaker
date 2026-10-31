@@ -42,6 +42,7 @@ type YTDLPMaintainStatus struct {
 	LatestTag         string `json:"latestTag"`
 	LatestDownloadURL string `json:"latestDownloadUrl"`
 	LatestError       string `json:"latestError"`
+	LatestCheckedAt   string `json:"latestCheckedAt,omitempty"`
 }
 
 // YTDLPMaintainUseCase orchestrates Official cache, Tools symlink, and maintain settings.
@@ -200,6 +201,11 @@ func (uc *YTDLPMaintainUseCase) CheckLatest(ctx context.Context) (YTDLPMaintainS
 	uc.mu.Lock()
 	if err := uc.persistKnownLatest(ctx, st); err != nil {
 		log.Printf("ytdlp maintain: persist known latest (version=%s tag=%s): %v", st.LatestVersion, st.LatestTag, err)
+	}
+	if uc.settings != nil {
+		if err := uc.settings.SetYTDLPKnownLatestCheckedAt(ctx, time.Now()); err != nil {
+			log.Printf("ytdlp maintain: persist latest checked at: %v", err)
+		}
 	}
 	uc.mu.Unlock()
 	return st, nil
@@ -406,6 +412,9 @@ func (uc *YTDLPMaintainUseCase) getStatusLocked(ctx context.Context) (YTDLPMaint
 		}
 		if st.LatestDownloadURL == "" {
 			st.LatestDownloadURL = dl
+		}
+		if checked, ok := uc.settings.GetYTDLPKnownLatestCheckedAt(ctx); ok {
+			st.LatestCheckedAt = checked.UTC().Format(time.RFC3339)
 		}
 	}
 	eff, err := EffectiveOfficialLink(tools, cache)

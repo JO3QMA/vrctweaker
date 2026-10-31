@@ -136,6 +136,34 @@ func (a *App) CheckYTDLPLatestRelease() (usecase.YTDLPMaintainStatus, error) {
 	return a.ytdlp.CheckLatest(a.ctx)
 }
 
+// RefreshYTDLPLatestRelease returns GitHub latest metadata, using a persisted cache unless force is true.
+func (a *App) RefreshYTDLPLatestRelease(force bool) (usecase.YTDLPMaintainStatus, error) {
+	if a.ytdlp == nil {
+		return usecase.YTDLPMaintainStatus{
+			Supported:         false,
+			UnsupportedReason: "notInitialized",
+		}, nil
+	}
+	return a.ytdlp.RefreshLatestRelease(a.ctx, force)
+}
+
+// CheckAndUpdateOfficialYTDLPCache checks GitHub and downloads when the cache is missing or older.
+func (a *App) CheckAndUpdateOfficialYTDLPCache() (usecase.YTDLPMaintainActionResult, error) {
+	if a.ytdlp == nil {
+		return usecase.YTDLPMaintainActionResult{
+			Status: usecase.YTDLPMaintainStatus{
+				Supported:         false,
+				UnsupportedReason: "notInitialized",
+			},
+		}, nil
+	}
+	res, err := a.ytdlp.CheckAndUpdateOfficialCache(a.ctx)
+	if err != nil {
+		return res, usecase.WrapMaintainAPIError(err)
+	}
+	return res, nil
+}
+
 // UpdateOfficialYTDLPCache downloads latest (or given URL) into Official cache; re-links when maintain is on.
 func (a *App) UpdateOfficialYTDLPCache(downloadURL, latestTag string) (usecase.YTDLPMaintainStatus, error) {
 	if a.ytdlp == nil {

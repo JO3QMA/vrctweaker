@@ -57,6 +57,15 @@ function withVideoWails(
     AcknowledgeYTDLPToolsReplaceRisk: () => Promise.resolve(),
     SetYTDLPToolsReplaceMaintain: () => Promise.resolve(),
     CheckYTDLPLatestRelease: () => Promise.resolve(st),
+    RefreshYTDLPLatestRelease: () => Promise.resolve(st),
+    CheckAndUpdateOfficialYTDLPCache: () =>
+      Promise.resolve({
+        status: st,
+        outcome: "unchanged",
+        previousVersion: st.cacheVersion,
+        newVersion: st.latestVersion,
+        detailError: "",
+      }),
     UpdateOfficialYTDLPCache: () => Promise.resolve(st),
     OpenYTDLPCacheFolder: () => Promise.resolve(),
     OpenYTDLPToolsFolder: () => Promise.resolve(),
