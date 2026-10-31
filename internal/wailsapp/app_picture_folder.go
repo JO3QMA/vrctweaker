@@ -3,7 +3,6 @@ package wailsapp
 import (
 	"context"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -30,15 +29,6 @@ func (a *App) startPictureFolderWatcher(ctx context.Context) {
 	root := a.resolveVRChatPictureWatchRoot()
 	if root == "" {
 		runtime.LogWarning(ctx, "picture folder watcher: could not resolve VRChat picture directory")
-		return
-	}
-	info, err := os.Stat(root)
-	if err != nil {
-		runtime.LogWarning(ctx, fmt.Sprintf("picture folder watcher: stat %s: %v", root, err))
-		return
-	}
-	if !info.IsDir() {
-		runtime.LogWarning(ctx, "picture folder watcher: not a directory: "+root)
 		return
 	}
 	ingest := func(c context.Context, path string) error {

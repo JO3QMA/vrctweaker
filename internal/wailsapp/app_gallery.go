@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"time"
@@ -255,9 +254,6 @@ func (a *App) startupGalleryIncremental() {
 
 	root := a.resolveVRChatPictureWatchRoot()
 	if root == "" {
-		return
-	}
-	if _, err := os.Stat(root); err != nil {
 		return
 	}
 
