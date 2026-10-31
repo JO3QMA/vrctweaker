@@ -32,7 +32,7 @@ test.describe("Detail views", () => {
   test("user-profile shows error when user id is missing", async ({ page }) => {
     await page.goto("/#/user-profile");
     await expect(page.locator(".el-alert--warning")).toContainText(
-      "ユーザー ID が指定されていません",
+      "ユーザーIDが指定されていません",
     );
   });
 
@@ -68,7 +68,7 @@ test.describe("Detail views", () => {
     page,
   }) => {
     await page.goto("/#/licenses");
-    await expect(page.locator("h1")).toContainText("OSS ライセンス");
+    await expect(page.locator("h1")).toContainText("OSSライセンス");
     const rowCount = await page.locator(".licenses-table tbody tr").count();
     expect(rowCount).toBeGreaterThan(0);
   });

@@ -1285,7 +1285,7 @@ _Avoid_: 全 icon に aria-label（装飾まで読み上げる）, 装飾 icon �
 
 ## Agent contribution
 
-Issue・PR・コミットなど Git に残るテキストを書くときの用語。
+Issue・PR・コミットなど Git に残るテキストを書くときの用語。日本語 UI 文言（`ja.json`）の表記はリポジトリルート [`AGENTS.md`](AGENTS.md) の **日本語 UI 文言の表記ルール** と Vitest（`frontend/src/i18n/locales/ja.spacing.spec.ts`）に従う。
 
 ### Language
 

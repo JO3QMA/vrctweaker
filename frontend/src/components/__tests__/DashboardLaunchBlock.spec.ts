@@ -107,7 +107,7 @@ describe("DashboardLaunchBlock", () => {
       wrapper.find('[data-testid="dashboard-launch-block"]').exists(),
     ).toBe(true);
     expect(wrapper.find('[data-testid="launch-block-rejoin-btn"]').text()).toBe(
-      "Test World に参加",
+      "Test Worldに参加",
     );
   });
 
@@ -123,7 +123,7 @@ describe("DashboardLaunchBlock", () => {
     const wrapper = mountBlock();
     await flushPromises();
     expect(wrapper.find('[data-testid="launch-block-rejoin-btn"]').text()).toBe(
-      "とても長いワールド... に参加",
+      "とても長いワールド...に参加",
     );
   });
 
@@ -139,7 +139,7 @@ describe("DashboardLaunchBlock", () => {
       wrapper.find('[data-testid="launch-block-rejoin-btn"]').exists(),
     ).toBe(false);
     expect(wrapper.find('[data-testid="launch-block-quick-btn"]').text()).toBe(
-      "VRChat を起動",
+      "VRChatを起動",
     );
   });
 
@@ -193,10 +193,10 @@ describe("DashboardLaunchBlock", () => {
       wrapper.find('[data-testid="launch-block-load-error"]').exists(),
     ).toBe(false);
     expect(wrapper.find('[data-testid="launch-block-quick-btn"]').text()).toBe(
-      "VRChat を起動",
+      "VRChatを起動",
     );
     expect(wrapper.find('[data-testid="launch-block-rejoin-btn"]').text()).toBe(
-      "Test World に参加",
+      "Test Worldに参加",
     );
     expect(errorSpy).not.toHaveBeenCalled();
     expect(warningSpy).toHaveBeenCalledWith(

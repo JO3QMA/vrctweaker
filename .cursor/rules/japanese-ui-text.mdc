@@ -1,0 +1,14 @@
+---
+description: 日本語 UI 文言（ja.json）の表記ルールと Vitest 検査
+alwaysApply: false
+globs:
+  - frontend/src/i18n/**
+  - frontend/src/**/*.vue
+  - frontend/src/**/*.ts
+---
+
+# 日本語 UI 文言
+
+正本: リポジトリルート [`AGENTS.md`](../AGENTS.md) の **日本語 UI 文言の表記ルール**。
+
+`frontend/src/i18n/locales/ja.json` を編集したら `frontend/src/i18n/locales/ja.spacing.spec.ts` が通ることを確認する（英数字↔日本語の半角スペース禁止。`VRChat Tools` のような英単語間は維持）。
