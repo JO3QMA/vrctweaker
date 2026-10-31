@@ -747,9 +747,6 @@ defineExpose({
 .video-folder-row :deep(.video-folder-btn.el-button:focus:not(:focus-visible)) {
   outline: none;
   box-shadow: none;
-  color: #e8eaed !important;
-  background-color: var(--el-button-bg-color) !important;
-  border-color: var(--color-border) !important;
 }
 .video-folder-row :deep(.video-folder-btn.el-button:focus-visible) {
   color: #e8eaed !important;
