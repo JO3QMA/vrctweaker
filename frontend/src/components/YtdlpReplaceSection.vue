@@ -682,7 +682,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-form-field);
+  gap: var(--space-action-group);
   margin-bottom: var(--space-form-field);
 }
 .video-update-row {
@@ -695,7 +695,10 @@ defineExpose({
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-form-field) var(--space-block);
+  gap: var(--space-action-group);
+}
+.video-folder-row :deep(.el-button + .el-button) {
+  margin-left: 0;
 }
 .video-folder-row :deep(.video-folder-btn.el-button) {
   border-color: var(--color-border);
