@@ -2,14 +2,14 @@ import { isSanitizedTwoFactorCodeComplete } from "./twoFactorCodeInput";
 
 /**
  * True when login must stay disabled because 2FA is incomplete.
- * `code` comes from LoginTwoFactorCodeField, so it is already sanitized.
+ * `sanitizedCode` must be the sanitized `LoginTwoFactorCodeField` model value.
  */
 export function isLoginBlockedByTwoFactorCode(
-  code: string,
+  sanitizedCode: string,
   twoFactorRequired: boolean,
 ): boolean {
-  if (twoFactorRequired) {
-    return !isSanitizedTwoFactorCodeComplete(code);
+  if (sanitizedCode.length === 0) {
+    return twoFactorRequired;
   }
-  return code.length > 0 && !isSanitizedTwoFactorCodeComplete(code);
+  return !isSanitizedTwoFactorCodeComplete(sanitizedCode);
 }
