@@ -37,25 +37,35 @@ func (uc *SettingsUseCase) Set(ctx context.Context, key, value string) error {
 	return uc.repo.Set(ctx, key, value)
 }
 
+const (
+	defaultLogRetentionDays = 30
+	keyLogRetentionDays     = "log_retention_days"
+)
+
 // GetLogRetentionDays returns the log retention days (default 30).
 func (uc *SettingsUseCase) GetLogRetentionDays(ctx context.Context) (int, error) {
-	v, err := uc.repo.Get(ctx, "log_retention_days")
+	v, err := uc.repo.Get(ctx, keyLogRetentionDays)
 	if err != nil {
-		return 30, err
+		return defaultLogRetentionDays, err
 	}
+	return parseLogRetentionDays(v), nil
+}
+
+// parseLogRetentionDays returns a positive retention period, or the default when unset or invalid.
+func parseLogRetentionDays(v string) int {
 	if v == "" {
-		return 30, nil
+		return defaultLogRetentionDays
 	}
 	d, err := strconv.Atoi(v)
 	if err != nil || d <= 0 {
-		return 30, nil
+		return defaultLogRetentionDays
 	}
-	return d, nil
+	return d
 }
 
 // SetLogRetentionDays saves the log retention days.
 func (uc *SettingsUseCase) SetLogRetentionDays(ctx context.Context, days int) error {
-	return uc.repo.Set(ctx, "log_retention_days", strconv.Itoa(days))
+	return uc.repo.Set(ctx, keyLogRetentionDays, strconv.Itoa(days))
 }
 
 // GetGalleryAutoEnrichMetadata returns whether ingest should auto-enrich screenshots (default true).
@@ -64,10 +74,15 @@ func (uc *SettingsUseCase) GetGalleryAutoEnrichMetadata(ctx context.Context) (bo
 	if err != nil {
 		return true, nil
 	}
+	return parseGalleryAutoEnrichMetadata(v), nil
+}
+
+// parseGalleryAutoEnrichMetadata returns false only for stored values other than "1"/"true".
+func parseGalleryAutoEnrichMetadata(v string) bool {
 	if v == "" {
-		return true, nil
+		return true
 	}
-	return v == "1" || v == "true", nil
+	return v == "1" || v == "true"
 }
 
 // SetGalleryAutoEnrichMetadata saves the auto-enrich toggle.
@@ -82,15 +97,6 @@ func (uc *SettingsUseCase) SetGalleryAutoEnrichMetadata(ctx context.Context, ena
 // GetOutputLogPath returns the configured VRChat log folder (empty if not set).
 func (uc *SettingsUseCase) GetOutputLogPath(ctx context.Context) (string, error) {
 	return uc.repo.Get(ctx, keyOutputLogPath)
-}
-
-// SaveOutputLogPath saves the VRChat log folder path (empty clears to default).
-// Regular files are rejected with ErrOutputLogPathMustBeDirectory.
-func (uc *SettingsUseCase) SaveOutputLogPath(ctx context.Context, path string) error {
-	if err := validateOutputLogPathSetting(path); err != nil {
-		return err
-	}
-	return uc.repo.Set(ctx, keyOutputLogPath, strings.TrimSpace(path))
 }
 
 func validateOutputLogPathSetting(path string) error {

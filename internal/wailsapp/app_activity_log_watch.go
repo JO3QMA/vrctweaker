@@ -112,7 +112,6 @@ func (a *App) finalizeAllLogSourcesOnVRChatExit(ctx context.Context, watchPath s
 
 	cp, err := a.activity.GetActivityLogCheckpoint(ctx)
 	if err == nil && cp != nil {
-		cp.NormalizeFiles()
 		for path, fc := range cp.Files {
 			fcCopy := fc
 			paths[logwatcher.AbsLogPath(path)] = pathClose{fc: &fcCopy}

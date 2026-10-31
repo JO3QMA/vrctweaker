@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -692,7 +691,6 @@ func (uc *ActivityUseCase) LastObservedLogTime(ctx context.Context) time.Time {
 	if err != nil || cp == nil {
 		return time.Time{}
 	}
-	cp.NormalizeFiles()
 	var max time.Time
 	for _, fc := range cp.Files {
 		if fc.VRChatLineTime == "" {
@@ -717,17 +715,11 @@ func (uc *ActivityUseCase) lastObservedLogTime(ctx context.Context) *time.Time {
 }
 
 func (uc *ActivityUseCase) activityRetentionCutoff(ctx context.Context) (time.Time, error) {
-	daysStr, err := uc.settingsRepo.Get(ctx, "log_retention_days")
+	daysStr, err := uc.settingsRepo.Get(ctx, keyLogRetentionDays)
 	if err != nil {
 		return time.Time{}, err
 	}
-	days := 30
-	if daysStr != "" {
-		if d, err := strconv.Atoi(daysStr); err == nil && d > 0 {
-			days = d
-		}
-	}
-	return time.Now().UTC().AddDate(0, 0, -days), nil
+	return time.Now().UTC().AddDate(0, 0, -parseLogRetentionDays(daysStr)), nil
 }
 
 // IsActivityDatastoreEmpty reports whether both play sessions and encounters are absent.

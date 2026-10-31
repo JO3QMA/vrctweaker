@@ -29,9 +29,6 @@ func main() {
 	if version == "" {
 		fail("wails.json info.productVersion is empty")
 	}
-	if err = appversion.ValidateProductVersion(version); err != nil {
-		fail("%v", err)
-	}
 
 	exePath := *exe
 	if !filepath.IsAbs(exePath) {

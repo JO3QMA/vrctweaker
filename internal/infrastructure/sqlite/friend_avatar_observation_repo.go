@@ -36,11 +36,8 @@ func (r *FriendAvatarObservationRepository) Save(ctx context.Context, o *activit
 }
 
 // ListUsageSummariesByVRCUserID returns aggregated avatar usage for a friend (newest last_seen first).
+// The caller (ActivityUseCase.ListFriendAvatarUsageByVRCUserID) trims and rejects empty IDs.
 func (r *FriendAvatarObservationRepository) ListUsageSummariesByVRCUserID(ctx context.Context, vrcUserID string) ([]*activity.FriendAvatarUsageSummary, error) {
-	vrcUserID = strings.TrimSpace(vrcUserID)
-	if vrcUserID == "" {
-		return []*activity.FriendAvatarUsageSummary{}, nil
-	}
 	query := `SELECT avatar_name, COUNT(*), MIN(observed_at), MAX(observed_at)
 		FROM friend_avatar_observations
 		WHERE vrc_user_id = ?

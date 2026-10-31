@@ -3,7 +3,6 @@ package wailsapp
 import (
 	"context"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"time"
@@ -24,13 +23,7 @@ func (a *App) resolveEffectiveOutputLogWatchPath(ctx context.Context) (string, e
 		runtime.LogWarning(ctx, "cleared stale output_log_path setting; using default log folder")
 	}
 	if dir != "" {
-		info, statErr := os.Stat(dir)
-		if statErr != nil {
-			return "", statErr
-		}
-		if !info.IsDir() {
-			return "", fmt.Errorf("output_log watch path is not a directory: %s", dir)
-		}
+		// EnsureOutputLogWatchDir already returns an existing absolute directory.
 		return dir, nil
 	}
 	defaultDir := paths.DefaultVRChatOutputLogDir()
@@ -47,16 +40,10 @@ func (a *App) resolveEffectiveOutputLogWatchPath(ctx context.Context) (string, e
 	return absDir, nil
 }
 
+// ingestActivityLogsBootstrap replays existing output_log files under absWatch.
+// Callers must pass a directory that has already been resolved and validated
+// (resolveEffectiveOutputLogWatchPath).
 func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, parser *activity.LogParser, logger logwatcher.Logger, emitEncounters, emitVideoPlayback func()) {
-	info, err := os.Stat(absWatch)
-	if err != nil {
-		runtime.LogWarning(ctx, "activity log bootstrap skipped: "+err.Error())
-		return
-	}
-	if !info.IsDir() {
-		runtime.LogWarning(ctx, "activity log bootstrap skipped: not a directory: "+absWatch)
-		return
-	}
 	cp, _ := a.activity.GetActivityLogCheckpoint(ctx)
 
 	files, listErr := logwatcher.ListOutputLogFiles(absWatch)
@@ -155,11 +142,6 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			runtime.LogWarning(ctx, "output_log watch path: "+err.Error())
 		}
-		return
-	}
-	info, err := os.Stat(watchPath)
-	if err != nil || info == nil || !info.IsDir() {
-		runtime.LogWarning(ctx, "output_log path not accessible as directory, skipping log watcher")
 		return
 	}
 
