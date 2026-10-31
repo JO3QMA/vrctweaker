@@ -148,7 +148,7 @@ describe("CookieLinkageSection source kind switch", () => {
     await selectCookieSource(wrapper, "browser");
 
     expect(wrapper.text()).toContain(
-      "yt-dlp の設定ファイルを読めませんでした。",
+      "yt-dlpの設定ファイルを読めませんでした。",
     );
     expect(isSwitchOn(wrapper)).toBe(true);
     const fileRadio = wrapper
@@ -176,7 +176,7 @@ describe("CookieLinkageSection source kind switch", () => {
     await selectCookieSource(wrapper, "file");
 
     expect(wrapper.text()).toContain(
-      "yt-dlp の設定ファイルを読めませんでした。",
+      "yt-dlpの設定ファイルを読めませんでした。",
     );
     expect(isSwitchOn(wrapper)).toBe(true);
     const browserRadio = wrapper
@@ -202,7 +202,7 @@ describe("CookieLinkageSection unsupported platform", () => {
 
     expect(wrapper.find(".cookie-unsupported-error").exists()).toBe(true);
     expect(wrapper.text()).toContain(
-      "yt-dlp の設定ファイルを読めませんでした。",
+      "yt-dlpの設定ファイルを読めませんでした。",
     );
     expect(wrapper.find('[data-testid="video-cookie-enable"]').exists()).toBe(
       false,

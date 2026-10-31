@@ -1095,7 +1095,7 @@ async function scanFolder(): Promise<void> {
       }
       if (!path) {
         scanError.value =
-          "デフォルトの保存先（ユーザーフォルダー内の「ピクチャ」／「マイ ピクチャ」にある VRChat フォルダ）を解決できませんでした。";
+          "デフォルトの保存先（ユーザーフォルダー内の「ピクチャ」／「マイ ピクチャ」にある VRChatフォルダ）を解決できませんでした。";
         return;
       }
     }

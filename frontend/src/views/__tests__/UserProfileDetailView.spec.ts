@@ -118,7 +118,7 @@ describe("UserProfileDetailView", () => {
   it("shows warning when vrcUserId query is missing", async () => {
     const wrapper = await mountWithQuery({});
     expect(wrapper.find(".el-alert").exists()).toBe(true);
-    expect(wrapper.text()).toContain("ユーザー ID");
+    expect(wrapper.text()).toContain("ユーザーID");
     expect(wrapper.findComponent(VrcUserCacheDetail).exists()).toBe(false);
   });
 

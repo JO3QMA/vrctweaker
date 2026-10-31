@@ -95,7 +95,7 @@ test.describe("Navigation", () => {
     await page.goto("/#/settings/about");
     await page.getByTestId("settings-oss-licenses-link").click();
     await expect(page.getByRole("heading", { level: 1 })).toContainText(
-      "OSS ライセンス",
+      "OSSライセンス",
     );
   });
 
