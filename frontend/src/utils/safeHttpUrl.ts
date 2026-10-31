@@ -3,8 +3,13 @@
  * Only http: and https: with a host are allowed.
  */
 
+declare const safeHttpHrefBrand: unique symbol;
+
+/** An href produced by {@link parseSafeHttpUrl}. */
+export type SafeHttpHref = string & { readonly [safeHttpHrefBrand]: true };
+
 export type SafeHttpUrl =
-  { ok: true; href: string } | { ok: false; raw: string };
+  { ok: true; href: SafeHttpHref } | { ok: false; raw: string };
 
 export function parseSafeHttpUrl(raw: string): SafeHttpUrl {
   const trimmed = raw.trim();
@@ -19,7 +24,7 @@ export function parseSafeHttpUrl(raw: string): SafeHttpUrl {
     if (!u.hostname) {
       return { ok: false, raw: trimmed };
     }
-    return { ok: true, href: u.href };
+    return { ok: true, href: u.href as SafeHttpHref };
   } catch {
     return { ok: false, raw: trimmed };
   }

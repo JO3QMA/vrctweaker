@@ -3,6 +3,7 @@ import {
   openExternalHttpUrl,
   openValidatedExternalHttpUrl,
 } from "../openExternalHttpUrl";
+import { parseSafeHttpUrl } from "../safeHttpUrl";
 
 vi.mock("@/wails/app", () => ({
   isWailsRuntime: vi.fn(() => false),
@@ -39,12 +40,16 @@ describe("openValidatedExternalHttpUrl", () => {
     vi.clearAllMocks();
   });
 
-  it("opens an already validated href without parsing it again", async () => {
+  it("opens a pre-validated href in a new tab", async () => {
+    const parsed = parseSafeHttpUrl("https://example.com");
+    if (!parsed.ok) {
+      throw new Error("expected a safe URL");
+    }
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
-    const ok = await openValidatedExternalHttpUrl("https://example.com");
+    const ok = await openValidatedExternalHttpUrl(parsed.href);
     expect(ok).toBe(true);
     expect(open).toHaveBeenCalledWith(
-      "https://example.com",
+      "https://example.com/",
       "_blank",
       "noopener,noreferrer",
     );

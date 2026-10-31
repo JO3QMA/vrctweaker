@@ -14,7 +14,7 @@ import {
   EXTERNAL_LINK_CLASS,
   renderLegalMarkdown,
 } from "@/utils/renderLegalMarkdown";
-import { openValidatedExternalHttpUrl } from "@/utils/openExternalHttpUrl";
+import { openExternalHttpUrl } from "@/utils/openExternalHttpUrl";
 
 const props = defineProps<{
   markdown: string;
@@ -41,7 +41,7 @@ async function openFromSpan(span: HTMLElement): Promise<void> {
   if (!href) {
     return;
   }
-  await openValidatedExternalHttpUrl(href);
+  await openExternalHttpUrl(href);
 }
 
 function onRootClick(event: MouseEvent): void {

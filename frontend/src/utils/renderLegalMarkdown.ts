@@ -69,7 +69,7 @@ const PURIFY_CONFIG: Config = {
 
 /**
  * Parses legal markdown to sanitized HTML. Raw HTML in the source is disabled; links are
- * emitted as inert spans opened via {@link openValidatedExternalHttpUrl} on click.
+ * emitted as inert spans opened via {@link openExternalHttpUrl} on click.
  */
 export function renderLegalMarkdown(markdown: string): string {
   const rawHtml = marked.parse(markdown, { async: false }) as string;

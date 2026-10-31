@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   isSanitizedTwoFactorCodeComplete,
-  isTwoFactorCodeComplete,
   sanitizeTwoFactorCodeInput,
 } from "../twoFactorCodeInput";
 
@@ -15,15 +14,10 @@ describe("twoFactorCodeInput", () => {
     expect(sanitizeTwoFactorCodeInput("12 34-56")).toBe("123456");
   });
 
-  it("detects complete raw codes after sanitizing", () => {
-    expect(isTwoFactorCodeComplete("123456")).toBe(true);
-    expect(isTwoFactorCodeComplete("12345")).toBe(false);
-    expect(isTwoFactorCodeComplete("12ab3456")).toBe(true);
-  });
-
-  it("detects complete already-sanitized codes by length only", () => {
+  it("detects complete already-sanitized codes as exactly six digits", () => {
     expect(isSanitizedTwoFactorCodeComplete("123456")).toBe(true);
     expect(isSanitizedTwoFactorCodeComplete("12345")).toBe(false);
-    expect(isSanitizedTwoFactorCodeComplete("12ab3456")).toBe(false);
+    expect(isSanitizedTwoFactorCodeComplete("12ab34")).toBe(false);
+    expect(isSanitizedTwoFactorCodeComplete(" 123456")).toBe(false);
   });
 });

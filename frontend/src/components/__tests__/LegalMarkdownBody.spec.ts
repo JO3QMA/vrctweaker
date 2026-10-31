@@ -4,14 +4,12 @@ import LegalMarkdownBody from "../LegalMarkdownBody.vue";
 import * as openExternal from "@/utils/openExternalHttpUrl";
 
 vi.mock("@/utils/openExternalHttpUrl", () => ({
-  openValidatedExternalHttpUrl: vi.fn(),
+  openExternalHttpUrl: vi.fn(),
 }));
 
 describe("LegalMarkdownBody", () => {
-  it("opens the decoded href through the validated opener", async () => {
-    vi.mocked(openExternal.openValidatedExternalHttpUrl).mockResolvedValue(
-      true,
-    );
+  it("revalidates the decoded href before opening it", async () => {
+    vi.mocked(openExternal.openExternalHttpUrl).mockResolvedValue(true);
     const wrapper = mount(LegalMarkdownBody, {
       props: {
         markdown: "See [Example](https://example.com/path?q=1).",
@@ -20,7 +18,7 @@ describe("LegalMarkdownBody", () => {
 
     await wrapper.get(".legal-md-external-link").trigger("click");
 
-    expect(openExternal.openValidatedExternalHttpUrl).toHaveBeenCalledWith(
+    expect(openExternal.openExternalHttpUrl).toHaveBeenCalledWith(
       "https://example.com/path?q=1",
     );
   });
