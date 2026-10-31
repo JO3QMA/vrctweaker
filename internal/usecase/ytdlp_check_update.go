@@ -12,7 +12,7 @@ const ytdlpLatestReleaseCacheTTL = 6 * time.Hour
 // YTDLPMaintainActionResult is returned by CheckAndUpdateOfficialCache (Video tab primary action).
 type YTDLPMaintainActionResult struct {
 	Status          YTDLPMaintainStatus `json:"status"`
-	Outcome         string              `json:"outcome"` // firstDownload, updated, unchanged, error
+	Outcome         string              `json:"outcome"` // YTDLPMaintainOutcome* constants
 	PreviousVersion string              `json:"previousVersion"`
 	NewVersion      string              `json:"newVersion"`
 	DetailError     string              `json:"detailError,omitempty"`
