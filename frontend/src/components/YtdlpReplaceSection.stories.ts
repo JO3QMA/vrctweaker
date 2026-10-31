@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from "@storybook/vue3-vite";
+import type { Decorator, Meta, StoryObj } from "@storybook/vue3-vite";
 import YtdlpReplaceSection from "./YtdlpReplaceSection.vue";
 import { withWailsApp } from "../stories/wailsDecorator";
 import type { YTDLPMaintainStatusDTO } from "../wails/app";
@@ -23,15 +23,7 @@ const baseStatus: YTDLPMaintainStatusDTO = {
   latestCheckedAt: "2026-10-31T00:14:00.000Z",
 };
 
-function wailsForStatus(
-  status: YTDLPMaintainStatusDTO,
-  checkOutcome?: {
-    outcome: string;
-    previousVersion?: string;
-    newVersion?: string;
-    detailError?: string;
-  },
-) {
+function wailsForStatus(status: YTDLPMaintainStatusDTO): Decorator {
   return withWailsApp({
     GetYTDLPMaintainStatus: () => Promise.resolve(status),
     RefreshYTDLPLatestRelease: () => Promise.resolve(status),
@@ -40,16 +32,48 @@ function wailsForStatus(
     CheckAndUpdateOfficialYTDLPCache: () =>
       Promise.resolve({
         status,
-        outcome: checkOutcome?.outcome ?? "unchanged",
-        previousVersion: checkOutcome?.previousVersion ?? status.cacheVersion,
-        newVersion: checkOutcome?.newVersion ?? status.latestVersion,
-        detailError: checkOutcome?.detailError ?? "",
+        outcome: "unchanged",
+        previousVersion: status.cacheVersion,
+        newVersion: status.latestVersion,
+        detailError: "",
       }),
     OpenYTDLPCacheFolder: () => Promise.resolve(),
     OpenYTDLPToolsFolder: () => Promise.resolve(),
     RuntimeIsWindows: () => Promise.resolve(true),
   });
 }
+
+function storyWithInjectedState(
+  status: YTDLPMaintainStatusDTO,
+  setup: (section: InstanceType<typeof YtdlpReplaceSection>) => void,
+): Story {
+  return {
+    render: () => ({
+      components: { YtdlpReplaceSection },
+      template: '<YtdlpReplaceSection ref="section" />',
+      mounted() {
+        const section = this.$refs.section as InstanceType<
+          typeof YtdlpReplaceSection
+        >;
+        section.applyStatusForTest(status);
+        section.setLoadingForTest(false);
+        setup(section);
+      },
+    }),
+    decorators: [wailsForStatus(status)],
+  };
+}
+
+const paddedDecorator: Decorator = (story) => ({
+  components: { story },
+  template:
+    '<div style="max-width: var(--story-max-width, 1280px); padding: 16px;"><story /></div>',
+});
+
+const narrowDecorator: Decorator = (story) => ({
+  components: { story },
+  template: '<div style="max-width: 600px; padding: 16px;"><story /></div>',
+});
 
 const meta = {
   title: "Components/YtdlpReplaceSection",
@@ -58,13 +82,7 @@ const meta = {
   parameters: {
     layout: "padded",
   },
-  decorators: [
-    (story) => ({
-      components: { story },
-      template:
-        '<div style="max-width: var(--story-max-width, 1280px); padding: 16px;"><story /></div>',
-    }),
-  ],
+  decorators: [paddedDecorator],
 } satisfies Meta<typeof YtdlpReplaceSection>;
 
 export default meta;
@@ -82,7 +100,6 @@ export const NotDownloaded: Story = {
       latestCheckedAt: "2026-10-31T09:14:00.000Z",
     }),
   ],
-  parameters: { "--story-max-width": "1280px" },
 };
 
 export const UpToDate: Story = {
@@ -99,83 +116,71 @@ export const UpdateAvailable: Story = {
   ],
 };
 
-export const InProgressChecking: Story = {
-  render: () => ({
-    components: { YtdlpReplaceSection },
-    template: '<YtdlpReplaceSection ref="section" />',
-    mounted() {
-      const section = this.$refs.section as InstanceType<
-        typeof YtdlpReplaceSection
-      >;
-      section.applyStatusForTest({ ...baseStatus });
-      section.setLoadingForTest(false);
-      section.setActionPhaseForTest("checking");
-    },
-  }),
-  decorators: [wailsForStatus({ ...baseStatus })],
-};
+export const ResultUpToDate: Story = storyWithInjectedState(
+  { ...baseStatus },
+  (section) => {
+    section.setResultForTest("unchanged", { next: "2026.07.04" });
+  },
+);
 
-export const ResultUpdated: Story = {
-  render: () => ({
-    components: { YtdlpReplaceSection },
-    template: '<YtdlpReplaceSection ref="section" />',
-    mounted() {
-      const section = this.$refs.section as InstanceType<
-        typeof YtdlpReplaceSection
-      >;
-      section.applyStatusForTest({
-        ...baseStatus,
-        cacheVersion: "2026.10.26",
-      });
-      section.setLoadingForTest(false);
-      section.setResultForTest("updated", {
-        previous: "2026.07.04",
-        next: "2026.10.26",
-      });
-    },
-  }),
-  decorators: [wailsForStatus({ ...baseStatus })],
-};
+export const ResultError: Story = storyWithInjectedState(
+  { ...baseStatus },
+  (section) => {
+    section.setResultForTest("error", {
+      error: 'github api: 403 Forbidden: {"message":"API rate limit exceeded"}',
+    });
+  },
+);
 
-export const ResultError: Story = {
-  render: () => ({
-    components: { YtdlpReplaceSection },
-    template: '<YtdlpReplaceSection ref="section" />',
-    mounted() {
-      const section = this.$refs.section as InstanceType<
-        typeof YtdlpReplaceSection
-      >;
-      section.applyStatusForTest({ ...baseStatus });
-      section.setLoadingForTest(false);
-      section.setResultForTest("error", {
-        error:
-          'github api: 403 Forbidden: {"message":"API rate limit exceeded"}',
-      });
-    },
-  }),
-  decorators: [wailsForStatus({ ...baseStatus })],
-};
+export const InProgressChecking: Story = storyWithInjectedState(
+  { ...baseStatus },
+  (section) => {
+    section.setActionPhaseForTest("checking");
+  },
+);
+
+export const ResultUpdated: Story = storyWithInjectedState(
+  { ...baseStatus, cacheVersion: "2026.10.26" },
+  (section) => {
+    section.setResultForTest("updated", {
+      previous: "2026.07.04",
+      next: "2026.10.26",
+    });
+  },
+);
 
 export const Narrow600UpToDate: Story = {
-  decorators: [
-    (story) => ({
-      components: { story },
-      template: '<div style="max-width: 600px; padding: 16px;"><story /></div>',
-    }),
-    wailsForStatus({ ...baseStatus }),
-  ],
+  decorators: [narrowDecorator, wailsForStatus({ ...baseStatus })],
 };
 
 export const Narrow600UpdateAvailable: Story = {
   decorators: [
-    (story) => ({
-      components: { story },
-      template: '<div style="max-width: 600px; padding: 16px;"><story /></div>',
-    }),
+    narrowDecorator,
     wailsForStatus({
       ...baseStatus,
       cacheVersion: "2026.07.04",
       latestVersion: "2026.10.26",
     }),
   ],
+};
+
+export const Narrow600NotDownloaded: Story = {
+  decorators: [
+    narrowDecorator,
+    wailsForStatus({
+      ...baseStatus,
+      cachePresent: false,
+      cacheVersion: "",
+      latestVersion: "2026.10.26",
+    }),
+  ],
+};
+
+export const Narrow600Error: Story = {
+  ...storyWithInjectedState({ ...baseStatus }, (section) => {
+    section.setResultForTest("error", {
+      error: 'github api: 403 Forbidden: {"message":"API rate limit exceeded"}',
+    });
+  }),
+  decorators: [narrowDecorator, wailsForStatus({ ...baseStatus })],
 };

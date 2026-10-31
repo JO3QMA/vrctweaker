@@ -69,24 +69,9 @@ describe("YtdlpReplaceSection", () => {
     });
   }
 
-  it("shows single primary update button and tertiary folder buttons", async () => {
-    const wrapper = mountSection();
-    await flushPromises();
-    expect(wrapper.find('[data-testid="ytdlp-check-latest"]').exists()).toBe(
-      false,
-    );
-    expect(wrapper.get('[data-testid="ytdlp-check-update"]').text()).toContain(
-      "yt-dlp を更新",
-    );
-    expect(wrapper.find('[data-testid="ytdlp-folder-row"]').exists()).toBe(
-      true,
-    );
-  });
-
-  it("shows update-available hint when GitHub version is newer", async () => {
+  it("shows single primary update button without duplicate update hint", async () => {
     vi.mocked(App.getYTDLPMaintainStatus).mockResolvedValue({
       ...baseStatus,
-      cacheVersion: "2025.04.01",
       latestVersion: "2025.05.01",
     });
     vi.mocked(App.refreshYTDLPLatestRelease).mockResolvedValue({
@@ -96,8 +81,59 @@ describe("YtdlpReplaceSection", () => {
     const wrapper = mountSection();
     await flushPromises();
     expect(
-      wrapper.get('[data-testid="ytdlp-update-available-hint"]').text(),
-    ).toContain("2025.05.01");
+      wrapper.find('[data-testid="ytdlp-update-available-hint"]').exists(),
+    ).toBe(false);
+    expect(wrapper.get('[data-testid="ytdlp-check-update"]').text()).toContain(
+      "yt-dlpを更新",
+    );
+  });
+
+  it("shows version summary line under the toggle", async () => {
+    const wrapper = mountSection();
+    await flushPromises();
+    const summary = wrapper.get('[data-testid="ytdlp-version-summary"]');
+    expect(summary.text()).toContain("現在 2025.04.01");
+    expect(summary.text()).toContain("GitHub");
+    expect(summary.text()).toContain("最終確認");
+    expect(wrapper.find('[data-testid="ytdlp-details-toggle"]').exists()).toBe(
+      false,
+    );
+  });
+
+  it("highlights GitHub version when update is available", async () => {
+    vi.mocked(App.getYTDLPMaintainStatus).mockResolvedValue({
+      ...baseStatus,
+      latestVersion: "2025.05.01",
+    });
+    vi.mocked(App.refreshYTDLPLatestRelease).mockResolvedValue({
+      ...baseStatus,
+      latestVersion: "2025.05.01",
+    });
+    const wrapper = mountSection();
+    await flushPromises();
+    expect(
+      wrapper.get('[data-testid="ytdlp-version-github"]').classes(),
+    ).toContain("version-github-new");
+  });
+
+  it("shows not downloaded in summary when cache is missing", async () => {
+    vi.mocked(App.getYTDLPMaintainStatus).mockResolvedValue({
+      ...baseStatus,
+      cachePresent: false,
+      cacheVersion: "",
+      latestVersion: "2025.05.01",
+    });
+    vi.mocked(App.refreshYTDLPLatestRelease).mockResolvedValue({
+      ...baseStatus,
+      cachePresent: false,
+      cacheVersion: "",
+      latestVersion: "2025.05.01",
+    });
+    const wrapper = mountSection();
+    await flushPromises();
+    expect(
+      wrapper.get('[data-testid="ytdlp-version-current"]').text(),
+    ).toContain("未取得");
   });
 
   it("calls check-and-update on primary button", async () => {
@@ -128,10 +164,11 @@ describe("YtdlpReplaceSection", () => {
     await flushPromises();
     const line = wrapper.get('[data-testid="ytdlp-result-line"]');
     expect(line.text()).toContain("最新版です");
+    expect(line.text()).toContain("2025.04.01");
     expect(line.classes()).toContain("flash-secondary");
   });
 
-  it("shows friendly error on result line and raw error in details", async () => {
+  it("shows friendly error on result line and collapsible raw error", async () => {
     vi.mocked(App.checkAndUpdateOfficialYTDLPCache).mockResolvedValue({
       status: { ...baseStatus },
       outcome: "error",
@@ -145,9 +182,14 @@ describe("YtdlpReplaceSection", () => {
     await wrapper.get('[data-testid="ytdlp-check-update"]').trigger("click");
     await flushPromises();
     expect(wrapper.get('[data-testid="ytdlp-result-line"]').text()).toContain(
-      "GitHub の通信制限",
+      "GitHubの通信制限",
     );
-    await wrapper.get('[data-testid="ytdlp-details-toggle"]').trigger("click");
+    expect(wrapper.find('[data-testid="ytdlp-detail-error"]').isVisible()).toBe(
+      false,
+    );
+    await wrapper
+      .get('[data-testid="ytdlp-error-details-toggle"]')
+      .trigger("click");
     await flushPromises();
     expect(wrapper.get('[data-testid="ytdlp-detail-error"]').text()).toContain(
       "API rate limit exceeded",
@@ -158,15 +200,5 @@ describe("YtdlpReplaceSection", () => {
     mountSection();
     await flushPromises();
     expect(App.refreshYTDLPLatestRelease).toHaveBeenCalledWith(false);
-  });
-
-  it("expands details with last check time", async () => {
-    const wrapper = mountSection();
-    await flushPromises();
-    await wrapper.get('[data-testid="ytdlp-details-toggle"]').trigger("click");
-    await flushPromises();
-    expect(wrapper.get('[data-testid="ytdlp-last-check"]').text()).not.toBe(
-      "未確認",
-    );
   });
 });

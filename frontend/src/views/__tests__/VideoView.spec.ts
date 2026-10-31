@@ -116,8 +116,8 @@ describe("VideoView", () => {
     const wrapper = mountView();
     await flushPromises();
     const card = wrapper.get('[data-testid="ytdlp-experimental-features"]');
-    expect(card.text()).toContain("yt-dlp (実験的機能)");
-    expect(card.text()).toContain("yt-dlp の置換");
+    expect(card.text()).toContain("yt-dlp(実験的機能)");
+    expect(card.text()).toContain("yt-dlpの置き換え");
     expect(card.find('[data-testid="ytdlp-replace-section"]').exists()).toBe(
       true,
     );
@@ -126,7 +126,7 @@ describe("VideoView", () => {
   it("loads without paths in the replace section", async () => {
     const wrapper = mountView();
     await flushPromises();
-    expect(wrapper.text()).toContain("VRChat 同梱版");
+    expect(wrapper.text()).toContain("VRChat同梱版");
     expect(wrapper.text()).not.toContain("C:\\Tools\\yt-dlp.exe");
     expect(wrapper.find('[data-testid="ytdlp-maintain-switch"]').exists()).toBe(
       true,

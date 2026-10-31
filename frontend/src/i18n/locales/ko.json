@@ -1084,8 +1084,8 @@
     "historyCopyOk": "URL을 복사했습니다",
     "experimentalFeatures": "yt-dlp (실험적 기능)",
     "unsupported": "Not available in this environment.",
-    "alwaysWarn": "Replacing VRChat’s bundled yt-dlp with the official yt-dlp build may be unsupported by VRChat. Enable at your own risk. This feature may require Windows Developer Mode or running as administrator.",
-    "replaceLabel": "yt-dlp 치환",
+    "alwaysWarn": "yt-dlp 교체는 VRChat에서 권장하지 않습니다. 본인 책임으로 활성화하세요.",
+    "replaceLabel": "yt-dlp 교체",
     "statusPrefix": "Status: ",
     "effectiveOfficial": "Using official yt-dlp latest",
     "effectiveBundled": "VRChat bundled build",
@@ -1100,7 +1100,11 @@
     "actionUpdate": "yt-dlp 업데이트",
     "actionChecking": "확인 중…",
     "actionUpdating": "업데이트 중…",
-    "updateAvailableHint": "새 버전이 있습니다 ({version})",
+    "versionLineCurrent": "현재 {version}",
+    "versionLineGithubLabel": "GitHub ",
+    "versionLineLastCheck": "마지막 확인 {when}",
+    "currentNotDownloaded": "미다운로드",
+    "errorDetailsToggle": "상세",
     "openCacheFolder": "저장 폴더 열기",
     "openToolsFolder": "VRChat Tools 폴더 열기",
     "riskAckTitle": "Risk acknowledgment",
@@ -1132,7 +1136,7 @@
     "cookieLinkage": {
       "section": "Cookie 사용",
       "alwaysWarn": "Automated access may risk account restrictions under YouTube and similar ToS. Always use a throwaway (sub) account in the browser you select.",
-      "officialHint": "Cookie options may not help age-restricted playback unless Tools points at official yt-dlp. Enable yt-dlp replacement above.",
+      "officialHint": "Tools의 yt-dlp가 공식 빌드를 가리키지 않으면 연령 제한 동영상 재생에 Cookie 옵션이 효과가 없을 수 있습니다. 위의 「yt-dlp 교체」를 활성화하세요.",
       "unsupportedForm": "yt-dlp config has an unsupported Cookie form. Choosing a option below and saving replaces it with a simple setting.",
       "enableLabel": "Link browser login cookies to yt-dlp",
       "lockHint": "With browser source, an open browser may lock the cookie store. Close the browser or use a cookies file instead.",
@@ -1155,7 +1159,6 @@
         "configRead": "Could not read the yt-dlp user config file.",
         "generic": "The operation failed. Try again later."
       }
-    },
-    "detailsToggle": "상세 정보 표시"
+    }
   }
 }

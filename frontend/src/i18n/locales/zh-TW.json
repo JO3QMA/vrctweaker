@@ -1084,7 +1084,7 @@
     "historyCopyOk": "已複製 URL",
     "experimentalFeatures": "yt-dlp（實驗性功能）",
     "unsupported": "Not available in this environment.",
-    "alwaysWarn": "Replacing VRChat’s bundled yt-dlp with the official yt-dlp build may be unsupported by VRChat. Enable at your own risk. This feature may require Windows Developer Mode or running as administrator.",
+    "alwaysWarn": "VRChat 不建議替換 yt-dlp。請自行承擔風險後啟用。",
     "replaceLabel": "yt-dlp 取代",
     "statusPrefix": "Status: ",
     "effectiveOfficial": "Using official yt-dlp latest",
@@ -1100,7 +1100,11 @@
     "actionUpdate": "更新 yt-dlp",
     "actionChecking": "確認中…",
     "actionUpdating": "更新中…",
-    "updateAvailableHint": "有新版本（{version}）",
+    "versionLineCurrent": "目前 {version}",
+    "versionLineGithubLabel": "GitHub ",
+    "versionLineLastCheck": "上次檢查 {when}",
+    "currentNotDownloaded": "未下載",
+    "errorDetailsToggle": "詳情",
     "openCacheFolder": "開啟儲存資料夾",
     "openToolsFolder": "開啟 VRChat Tools 資料夾",
     "riskAckTitle": "Risk acknowledgment",
@@ -1132,7 +1136,7 @@
     "cookieLinkage": {
       "section": "使用 Cookie",
       "alwaysWarn": "Automated access may risk account restrictions under YouTube and similar ToS. Always use a throwaway (sub) account in the browser you select.",
-      "officialHint": "Cookie options may not help age-restricted playback unless Tools points at official yt-dlp. Enable yt-dlp replacement above.",
+      "officialHint": "若 Tools 中的 yt-dlp 未指向官方版，Cookie 選項可能無法播放受限影片。請啟用上方的「yt-dlp 取代」。",
       "unsupportedForm": "yt-dlp config has an unsupported Cookie form. Choosing a option below and saving replaces it with a simple setting.",
       "enableLabel": "Link browser login cookies to yt-dlp",
       "lockHint": "With browser source, an open browser may lock the cookie store. Close the browser or use a cookies file instead.",
@@ -1155,7 +1159,6 @@
         "configRead": "Could not read the yt-dlp user config file.",
         "generic": "The operation failed. Try again later."
       }
-    },
-    "detailsToggle": "顯示詳細資訊"
+    }
   }
 }

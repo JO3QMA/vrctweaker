@@ -52,48 +52,67 @@
             </span>
           </div>
 
-          <div class="video-update-row" data-testid="ytdlp-update-row">
-            <VtButton
-              variant="primary"
-              data-testid="ytdlp-check-update"
-              :loading="actionLoading"
-              :disabled="busy"
-              @click="checkAndUpdate"
-            >
-              {{ actionButtonLabel }}
-            </VtButton>
-            <span
-              v-if="updateAvailableHint"
-              class="update-hint text-body-sm"
-              data-testid="ytdlp-update-available-hint"
-            >
-              {{
-                t("video.updateAvailableHint", {
-                  version: status.latestVersion,
-                })
-              }}
+          <p
+            class="version-summary text-body-sm"
+            data-testid="ytdlp-version-summary"
+          >
+            <span data-testid="ytdlp-version-current">{{
+              t("video.versionLineCurrent", {
+                version: currentVersionDisplay,
+              })
+            }}</span>
+            <span class="version-sep" aria-hidden="true">・</span>
+            <span>
+              {{ t("video.versionLineGithubLabel") }}
+              <span
+                data-testid="ytdlp-version-github"
+                :class="{ 'version-github-new': updateAvailable }"
+                >{{ githubVersionDisplay }}</span
+              >
             </span>
-          </div>
+            <span class="version-sep" aria-hidden="true">・</span>
+            <span data-testid="ytdlp-version-last-check">{{
+              t("video.versionLineLastCheck", { when: lastCheckDisplay })
+            }}</span>
+          </p>
 
-          <div class="video-folder-row" data-testid="ytdlp-folder-row">
-            <VtButton
-              variant="tertiary"
-              data-testid="ytdlp-open-cache-folder"
-              :disabled="busy"
-              @click="openCacheFolder"
-            >
-              <VtIcon size="default" class="btn-icon"><FolderOpened /></VtIcon>
-              {{ t("video.openCacheFolder") }}
-            </VtButton>
-            <VtButton
-              variant="tertiary"
-              data-testid="ytdlp-open-tools-folder"
-              :disabled="busy"
-              @click="openToolsFolder"
-            >
-              <VtIcon size="default" class="btn-icon"><FolderOpened /></VtIcon>
-              {{ t("video.openToolsFolder") }}
-            </VtButton>
+          <div class="video-action-stack">
+            <div class="video-update-row" data-testid="ytdlp-update-row">
+              <VtButton
+                variant="primary"
+                data-testid="ytdlp-check-update"
+                :loading="actionLoading"
+                :disabled="busy"
+                @click="checkAndUpdate"
+              >
+                {{ actionButtonLabel }}
+              </VtButton>
+            </div>
+
+            <div class="video-folder-row" data-testid="ytdlp-folder-row">
+              <VtButton
+                variant="tertiary"
+                data-testid="ytdlp-open-cache-folder"
+                :disabled="busy"
+                @click="openCacheFolder"
+              >
+                <VtIcon size="default" class="btn-icon"
+                  ><FolderOpened
+                /></VtIcon>
+                {{ t("video.openCacheFolder") }}
+              </VtButton>
+              <VtButton
+                variant="tertiary"
+                data-testid="ytdlp-open-tools-folder"
+                :disabled="busy"
+                @click="openToolsFolder"
+              >
+                <VtIcon size="default" class="btn-icon"
+                  ><FolderOpened
+                /></VtIcon>
+                {{ t("video.openToolsFolder") }}
+              </VtButton>
+            </div>
           </div>
 
           <p
@@ -104,53 +123,40 @@
           >
             {{ resultLine.text }}
           </p>
-        </section>
 
-        <section class="video-status" data-testid="ytdlp-status">
-          <button
-            type="button"
-            class="details-toggle"
-            data-testid="ytdlp-details-toggle"
-            :aria-expanded="detailsExpanded"
-            :aria-controls="detailsPanelId"
-            @click="detailsExpanded = !detailsExpanded"
-          >
-            <VtIcon size="default" class="details-toggle-icon" decorative>
-              <CaretBottom v-if="detailsExpanded" />
-              <CaretRight v-else />
-            </VtIcon>
-            <span>{{ t("video.detailsToggle") }}</span>
-          </button>
           <div
-            v-show="detailsExpanded"
-            :id="detailsPanelId"
-            class="details-panel"
-            role="region"
+            v-if="showErrorDetailsToggle"
+            class="error-details"
+            data-testid="ytdlp-error-details"
           >
-            <dl class="video-dl">
-              <dt>{{ t("video.cacheVersion") }}</dt>
-              <dd data-testid="ytdlp-cache-version">
-                {{ status.cacheVersion || t("video.cacheMissing") }}
-              </dd>
-              <dt>{{ t("video.latest") }}</dt>
-              <dd data-testid="ytdlp-latest-version">
-                {{
-                  status.latestVersion
-                    ? status.latestVersion
-                    : t("video.latestUnknown")
-                }}
-              </dd>
-              <dt>{{ t("video.lastCheck") }}</dt>
-              <dd data-testid="ytdlp-last-check">
-                {{ lastCheckDisplay }}
-              </dd>
-              <template v-if="detailErrorRaw || status.latestError">
-                <dt>{{ t("video.detailErrorLabel") }}</dt>
-                <dd class="detail-error-raw" data-testid="ytdlp-detail-error">
-                  {{ detailErrorRaw || status.latestError }}
-                </dd>
-              </template>
-            </dl>
+            <button
+              type="button"
+              class="error-details-toggle"
+              data-testid="ytdlp-error-details-toggle"
+              :aria-expanded="errorDetailsExpanded"
+              :aria-controls="errorDetailsPanelId"
+              @click="errorDetailsExpanded = !errorDetailsExpanded"
+            >
+              <VtIcon
+                size="default"
+                class="error-details-toggle-icon"
+                decorative
+              >
+                <CaretBottom v-if="errorDetailsExpanded" />
+                <CaretRight v-else />
+              </VtIcon>
+              <span>{{ t("video.errorDetailsToggle") }}</span>
+            </button>
+            <div
+              v-show="errorDetailsExpanded"
+              :id="errorDetailsPanelId"
+              class="error-details-panel"
+              role="region"
+            >
+              <p class="detail-error-raw" data-testid="ytdlp-detail-error">
+                {{ detailErrorRaw }}
+              </p>
+            </div>
           </div>
         </section>
       </template>
@@ -212,8 +218,8 @@ const resultOutcome = ref<
 >("");
 const resultPreviousVersion = ref("");
 const resultNewVersion = ref("");
-const detailsExpanded = ref(false);
-const detailsPanelId = "ytdlp-details-panel";
+const errorDetailsExpanded = ref(false);
+const errorDetailsPanelId = "ytdlp-error-details-panel";
 
 let sectionGeneration = 0;
 function isSectionStale(gen: number): boolean {
@@ -248,12 +254,29 @@ const actionButtonLabel = computed(() => {
     : t("video.actionFetch");
 });
 
-const updateAvailableHint = computed(() => {
+const updateAvailable = computed(() => {
   const latest = status.value.latestVersion;
   if (!latest) return false;
   if (!status.value.cachePresent) return true;
   return isYtdlpVersionOlder(status.value.cacheVersion, latest);
 });
+
+const currentVersionDisplay = computed(() => {
+  if (status.value.cachePresent && status.value.cacheVersion) {
+    return status.value.cacheVersion;
+  }
+  return t("video.currentNotDownloaded");
+});
+
+const githubVersionDisplay = computed(() =>
+  status.value.latestVersion
+    ? status.value.latestVersion
+    : t("video.latestUnknown"),
+);
+
+const showErrorDetailsToggle = computed(
+  () => resultOutcome.value === "error" && detailErrorRaw.value !== "",
+);
 
 const resultLine = computed(() => {
   switch (resultOutcome.value) {
@@ -336,6 +359,7 @@ function clearFeedback() {
   resultPreviousVersion.value = "";
   resultNewVersion.value = "";
   detailErrorRaw.value = "";
+  errorDetailsExpanded.value = false;
 }
 
 function isMessageBoxDismiss(e: unknown): boolean {
@@ -587,32 +611,47 @@ defineExpose({
 .switch-status {
   color: var(--color-text-secondary);
 }
+.version-summary {
+  margin: 0 0 var(--space-form-field);
+  color: var(--color-text-secondary);
+}
+.version-sep {
+  color: var(--color-text-secondary);
+}
+.version-github-new {
+  color: var(--color-brand);
+  font-weight: var(--font-weight-500);
+}
+.video-action-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-form-field);
+  margin-bottom: var(--space-form-field);
+}
 .video-update-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-form-field) var(--space-block);
-  margin-bottom: var(--space-form-field);
-}
-.update-hint {
-  color: var(--color-text-secondary);
 }
 .video-folder-row {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-action-group) var(--space-block);
-  margin-bottom: var(--space-form-field);
+}
+.video-folder-row :deep(.el-button) {
+  padding-inline: 0;
+  margin-inline: 0;
 }
 .btn-icon {
   margin-right: var(--space-inline-tight);
   vertical-align: middle;
 }
-.video-status {
+.error-details {
   margin-top: var(--space-inline-tight);
-  padding-top: var(--space-block);
-  border-top: 1px solid var(--color-border);
 }
-.details-toggle {
+.error-details-toggle {
   display: inline-flex;
   align-items: center;
   gap: var(--space-inline-tight);
@@ -621,30 +660,20 @@ defineExpose({
   background: transparent;
   color: var(--color-text-secondary);
   font: inherit;
+  font-size: var(--font-size-12);
   cursor: pointer;
 }
-.details-toggle:hover {
+.error-details-toggle:hover {
   color: var(--color-text-primary);
 }
-.details-toggle-icon {
-  font-size: var(--font-size-14);
+.error-details-toggle-icon {
+  font-size: var(--font-size-12);
 }
-.details-panel {
-  margin-top: var(--space-form-field);
-}
-.video-dl {
-  display: grid;
-  grid-template-columns: minmax(10rem, 14rem) 1fr;
-  gap: var(--space-inline-tight) var(--space-block);
-  margin: 0;
-}
-.video-dl dt {
-  color: var(--color-text-secondary);
-}
-.video-dl dd {
-  margin: 0;
+.error-details-panel {
+  margin-top: var(--space-inline-tight);
 }
 .detail-error-raw {
+  margin: 0;
   word-break: break-word;
   color: var(--color-text-muted);
   font-size: var(--font-size-12);
