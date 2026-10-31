@@ -127,12 +127,12 @@ export const Mixed: Story = {
     withStatus(
       statusDto([
         {
-          id: "done",
-          name: "Finished",
-          status: "completed",
+          id: "ended",
+          name: "Ended",
+          status: "scheduled",
           scheduledFor: atLocal(-2, 1, 0),
           scheduledUntil: atLocal(-2, 2, 0),
-          updates: ["This completed window stays hidden."],
+          updates: ["This scheduled window has already ended."],
         },
         overnight,
         inProgress,

@@ -230,7 +230,7 @@ describe("formatServerMaintenances", () => {
     expect(row?.text).toBe("(メンテ中) API 12/23 09:05〜");
   });
 
-  it("puts in-progress windows first and hides finished ones", () => {
+  it("puts in-progress windows first and omits scheduled windows that already ended", () => {
     const rows = formatServerMaintenances(
       [
         {
@@ -238,12 +238,6 @@ describe("formatServerMaintenances", () => {
           status: "scheduled",
           scheduledFor: at(2026, 12, 25, 1, 0),
           scheduledUntil: at(2026, 12, 25, 2, 0),
-        },
-        {
-          name: "Done",
-          status: "completed",
-          scheduledFor: at(2026, 12, 20, 1, 0),
-          scheduledUntil: at(2026, 12, 20, 2, 0),
         },
         {
           name: "Ended",
@@ -268,6 +262,21 @@ describe("formatServerMaintenances", () => {
       now,
     );
     expect(rows.map((row) => row.name)).toEqual(["Live", "Soon", "Later"]);
+  });
+
+  it("compresses newlines and repeated whitespace in maintenance names", () => {
+    const [row] = formatServerMaintenances(
+      [
+        {
+          name: "API\n  edge   cache",
+          status: "in_progress",
+        },
+      ],
+      t,
+      now,
+    );
+    expect(row?.name).toBe("API edge cache");
+    expect(row?.text).toBe("(メンテ中) API edge cache");
   });
 
   it("formats English scheduled windows with a 12-hour clock", () => {
