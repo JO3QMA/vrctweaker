@@ -76,45 +76,29 @@ export function hasAdvancedLaunchOptionsEnabled(
   args: LaunchArgsParsedDTO,
   enabled: ValueOptionsEnabled,
 ): boolean {
-  if (enabled.resolution && (args.screenWidth > 0 || args.screenHeight > 0)) {
-    return true;
-  }
-  if (enabled.monitor && args.monitor >= 1) return true;
-  if (enabled.fps && args.fps > 0) return true;
+  if (enabled.resolution) return true;
+  if (enabled.monitor) return true;
+  if (enabled.fps) return true;
   if (args.skipRegistry) return true;
-  if (
-    enabled.processPriority &&
-    args.processPriority !== PRIORITY_OMIT &&
-    args.processPriority >= -2 &&
-    args.processPriority <= 2
-  ) {
-    return true;
-  }
-  if (
-    enabled.mainThreadPriority &&
-    args.mainThreadPriority !== PRIORITY_OMIT &&
-    args.mainThreadPriority >= -2 &&
-    args.mainThreadPriority <= 2
-  ) {
-    return true;
-  }
-  if (enabled.profile && args.profile >= 0) return true;
+  if (enabled.processPriority) return true;
+  if (enabled.mainThreadPriority) return true;
+  if (enabled.profile) return true;
   if (args.enableDebugGui) return true;
   if (args.enableSDKLogLevels) return true;
   if (args.enableUdonDebugLogging) return true;
   if (args.watchWorlds) return true;
   if (args.watchAvatars) return true;
   if (args.enforceWorldServerChecks) return true;
-  if (enabled.midi && args.midi !== "") return true;
-  if (enabled.ignoreTrackers && args.ignoreTrackers !== "") return true;
+  if (enabled.midi) return true;
+  if (enabled.ignoreTrackers) return true;
   if (args.videoDecoding !== "") return true;
   if (args.disableAMDStutterWorkaround) return true;
-  if (enabled.osc && args.osc !== "") return true;
-  if (enabled.affinity && args.affinity !== "") return true;
-  if (enabled.customArmRatio && args.customArmRatio > 0) return true;
+  if (enabled.osc) return true;
+  if (enabled.affinity) return true;
+  if (enabled.customArmRatio) return true;
   if (args.disableShoulderTracking) return true;
   if (args.enableIkDebugLogging) return true;
-  if (enabled.calibrationRange && args.calibrationRange > 0) return true;
+  if (enabled.calibrationRange) return true;
   if (args.freezeTrackingOnDisconnect) return true;
   return false;
 }
