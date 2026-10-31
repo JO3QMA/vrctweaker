@@ -11,8 +11,8 @@
     <EncounterHistoryList
       v-else
       :mode="listMode"
-      :user-id="vrcUserId"
-      :world-id="worldId"
+      :user-id="trimmedVrcUserId"
+      :world-id="trimmedWorldId"
       :hide-display-name-column="listMode === 'user'"
     />
   </div>
@@ -42,11 +42,13 @@ function firstQueryString(v: unknown): string {
 const kind = computed(() => firstQueryString(route.query.kind));
 const vrcUserId = computed(() => firstQueryString(route.query.vrcUserId));
 const worldId = computed(() => firstQueryString(route.query.worldId));
+const trimmedVrcUserId = computed(() => vrcUserId.value.trim());
+const trimmedWorldId = computed(() => worldId.value.trim());
 
 const invalidQuery = computed(() => {
   if (kind.value !== "user" && kind.value !== "world") return true;
-  if (kind.value === "user" && !vrcUserId.value.trim()) return true;
-  if (kind.value === "world" && !worldId.value.trim()) return true;
+  if (kind.value === "user" && !trimmedVrcUserId.value) return true;
+  if (kind.value === "world" && !trimmedWorldId.value) return true;
   return false;
 });
 

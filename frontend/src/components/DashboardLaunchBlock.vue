@@ -70,12 +70,7 @@
             variant="secondary"
             class="launch-block-rejoin-btn"
             data-testid="launch-block-rejoin-btn"
-            :disabled="
-              isEmpty ||
-              !selectedProfileId ||
-              !rejoin.playSessionId?.trim() ||
-              launching
-            "
+            :disabled="isEmpty || !canRejoin"
             :loading="launching"
             @click="launchRejoin"
           >
@@ -119,6 +114,17 @@ let encountersChangedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let unsubscribeEncountersChanged: (() => void) | undefined;
 
 const isEmpty = computed(() => profiles.value.length === 0);
+
+const rejoinPlaySessionId = computed(
+  () => rejoin.value?.playSessionId?.trim() ?? "",
+);
+
+const canRejoin = computed(
+  () =>
+    Boolean(selectedProfileId.value) &&
+    rejoinPlaySessionId.value !== "" &&
+    !launching.value,
+);
 
 const rejoinButtonLabel = computed(() => {
   const name = rejoin.value?.worldDisplayName?.trim();
@@ -196,11 +202,13 @@ async function launchQuick(): Promise<void> {
 }
 
 async function launchRejoin(): Promise<void> {
-  const playSessionId = rejoin.value?.playSessionId?.trim();
-  if (!selectedProfileId.value || !playSessionId || launching.value) return;
+  if (!canRejoin.value) return;
   launching.value = true;
   try {
-    await App.instanceRejoin(selectedProfileId.value, playSessionId);
+    await App.instanceRejoin(
+      selectedProfileId.value,
+      rejoinPlaySessionId.value,
+    );
   } catch (e) {
     showToast.error(formatError(e, t("dashboard.launchBlock.rejoinError")));
     void load();

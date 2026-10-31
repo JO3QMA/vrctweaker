@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createRouter, createWebHashHistory } from "vue-router";
 import EncounterHistoryDetailView from "../EncounterHistoryDetailView.vue";
+import EncounterHistoryList from "../../components/EncounterHistoryList.vue";
 import * as wailsApp from "../../wails/app";
 import type { UserEncounterDTO } from "../../wails/app";
 
@@ -58,6 +59,39 @@ describe("EncounterHistoryDetailView", () => {
 
     expect(wailsApp.App.encountersByVRCUserID).toHaveBeenCalledWith("usr_a");
     expect(wailsApp.App.encountersByWorldID).not.toHaveBeenCalled();
+  });
+
+  it("passes trimmed ids to EncounterHistoryList", async () => {
+    vi.mocked(wailsApp.App.encountersByVRCUserID).mockResolvedValue([]);
+
+    const router = createRouter({
+      history: createWebHashHistory(),
+      routes: [
+        {
+          path: "/activity/encounter-history",
+          component: EncounterHistoryDetailView,
+        },
+      ],
+    });
+    await router.push({
+      path: "/activity/encounter-history",
+      query: {
+        kind: "user",
+        vrcUserId: "  usr_a  ",
+        worldId: "  wrld_w  ",
+      },
+    });
+    await router.isReady();
+
+    const wrapper = mount(EncounterHistoryDetailView, {
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+
+    const list = wrapper.findComponent(EncounterHistoryList);
+    expect(list.props("userId")).toBe("usr_a");
+    expect(list.props("worldId")).toBe("wrld_w");
+    expect(wailsApp.App.encountersByVRCUserID).toHaveBeenCalledWith("usr_a");
   });
 
   it("calls encountersByWorldID for kind=world", async () => {
