@@ -16,16 +16,16 @@
       <VtAlert
         v-if="historyFetchError"
         variant="danger"
-        class="block-hint"
+        class="video-history-alert"
         data-testid="video-history-fetch-error"
         :title="t('video.historyFetchError')"
       />
-      <div v-else-if="historyLoading" class="muted">
+      <div v-else-if="historyLoading" class="vt-text-muted">
         {{ t("common.loading") }}
       </div>
       <div
         v-else-if="historyRows.length === 0"
-        class="muted"
+        class="vt-text-muted"
         data-testid="video-history-empty"
       >
         {{ t("video.historyEmpty") }}
@@ -256,6 +256,9 @@ onUnmounted(() => {
   margin: 0 0 var(--space-form-field);
   color: var(--color-text-secondary);
   font-size: var(--font-size-14);
+}
+.video-history-alert {
+  margin-bottom: var(--space-form-field);
 }
 .history-table {
   width: 100%;

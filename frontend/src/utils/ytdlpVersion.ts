@@ -1,4 +1,11 @@
-/** Compare yt-dlp product versions (YYYY.MM.DD). Returns true when latest is newer than current. */
+/**
+ * Compare yt-dlp release tags (typically `YYYY.MM.DD`, optional `v` prefix).
+ *
+ * Comparison uses the first three dot-separated numeric segments only.
+ * Extra suffix segments (e.g. `2026.02.02.1`) and non-numeric tail parts are
+ * ignored for ordering — `2026.02.02.1` compares equal to `2026.02.02`.
+ * Non-numeric segments parse as 0 (`2026.a.01` → year 2026, month 0, day 1).
+ */
 export function isYtdlpVersionOlder(current: string, latest: string): boolean {
   const norm = (v: string) => v.trim().replace(/^v/i, "");
   const a = norm(current);

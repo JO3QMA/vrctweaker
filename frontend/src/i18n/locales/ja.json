@@ -1103,6 +1103,7 @@
     "versionLineCurrent": "現在 {version}",
     "versionLineGithubLabel": "GitHub ",
     "versionLineLastCheck": "最終確認 {when}",
+    "githubCheckUnavailable": "GitHub確認できませんでした",
     "currentNotDownloaded": "未取得",
     "errorDetailsToggle": "詳細",
     "openCacheFolder": "保存先フォルダを開く",
@@ -1121,6 +1122,7 @@
     "notInitialized": "動画設定がまだ初期化されていません。",
     "errors": {
       "githubRateLimit": "GitHubの通信制限に達したため、最新バージョンの取得に失敗しました。時間を置いて再度お試しください。",
+      "tryAgainLater": "しばらくしてからもう一度お試しください。",
       "githubUnauthorized": "GitHubが認証不足のためリクエストを拒否しました。",
       "githubForbidden": "GitHubへのアクセスが拒否されたため、最新バージョンの取得に失敗しました。時間を置いて再度お試しください。",
       "network": "ネットワークエラーのため、通信に失敗しました。接続を確認して再度お試しください。",

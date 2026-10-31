@@ -1103,6 +1103,7 @@
     "versionLineCurrent": "Saved {version}",
     "versionLineGithubLabel": "GitHub ",
     "versionLineLastCheck": "Last check {when}",
+    "githubCheckUnavailable": "Could not verify GitHub",
     "currentNotDownloaded": "Not downloaded",
     "errorDetailsToggle": "Details",
     "openCacheFolder": "Open save folder",
@@ -1121,6 +1122,7 @@
     "notInitialized": "Video settings are not initialized yet.",
     "errors": {
       "githubRateLimit": "Could not fetch the latest version because GitHub’s rate limit was reached. Try again later.",
+      "tryAgainLater": "Please try again in a little while.",
       "githubUnauthorized": "GitHub rejected the request because authentication is missing or invalid.",
       "githubForbidden": "GitHub refused the request. Try again later.",
       "network": "A network error occurred. Check your connection and try again.",

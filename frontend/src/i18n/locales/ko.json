@@ -1103,6 +1103,7 @@
     "versionLineCurrent": "현재 {version}",
     "versionLineGithubLabel": "GitHub ",
     "versionLineLastCheck": "마지막 확인 {when}",
+    "githubCheckUnavailable": "GitHub을 확인할 수 없습니다",
     "currentNotDownloaded": "미다운로드",
     "errorDetailsToggle": "상세",
     "openCacheFolder": "저장 폴더 열기",
@@ -1121,6 +1122,7 @@
     "notInitialized": "Video settings are not initialized yet.",
     "errors": {
       "githubRateLimit": "Could not fetch the latest version because GitHub’s rate limit was reached. Try again later.",
+      "tryAgainLater": "잠시 후 다시 시도해 주세요.",
       "githubUnauthorized": "GitHub rejected the request because authentication is missing or invalid.",
       "githubForbidden": "GitHub refused the request. Try again later.",
       "network": "A network error occurred. Check your connection and try again.",

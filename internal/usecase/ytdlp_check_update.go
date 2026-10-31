@@ -76,7 +76,7 @@ func (uc *YTDLPMaintainUseCase) CheckAndUpdateOfficialCache(ctx context.Context)
 	if ferr != nil {
 		st.LatestError = ferr.Error()
 		res.Status = st
-		res.Outcome = "error"
+		res.Outcome = YTDLPMaintainOutcomeError
 		res.DetailError = ferr.Error()
 		return res, nil
 	}
@@ -107,7 +107,7 @@ func (uc *YTDLPMaintainUseCase) CheckAndUpdateOfficialCache(ctx context.Context)
 		fresh.LatestDownloadURL = st.LatestDownloadURL
 		fresh.LatestError = ""
 		res.Status = fresh
-		res.Outcome = "unchanged"
+		res.Outcome = YTDLPMaintainOutcomeUnchanged
 		res.NewVersion = st.LatestVersion
 		return res, nil
 	}
@@ -115,7 +115,7 @@ func (uc *YTDLPMaintainUseCase) CheckAndUpdateOfficialCache(ctx context.Context)
 	updated, uerr := uc.UpdateOfficialCache(ctx, info.DownloadURL, info.Tag)
 	res.Status = updated
 	if uerr != nil {
-		res.Outcome = "error"
+		res.Outcome = YTDLPMaintainOutcomeError
 		res.DetailError = uerr.Error()
 		if updated.LatestError != "" {
 			res.DetailError = updated.LatestError
@@ -124,9 +124,9 @@ func (uc *YTDLPMaintainUseCase) CheckAndUpdateOfficialCache(ctx context.Context)
 	}
 	res.NewVersion = appversion.NormalizeProductVersion(updated.CacheVersion)
 	if prev == "" {
-		res.Outcome = "firstDownload"
+		res.Outcome = YTDLPMaintainOutcomeFirstDownload
 	} else {
-		res.Outcome = "updated"
+		res.Outcome = YTDLPMaintainOutcomeUpdated
 	}
 	return res, nil
 }

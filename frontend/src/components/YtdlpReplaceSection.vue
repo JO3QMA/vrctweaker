@@ -7,7 +7,7 @@
       {{ t("video.replaceLabel") }}
     </h2>
 
-    <div v-if="loading" class="muted">{{ t("common.loading") }}</div>
+    <div v-if="loading" class="vt-text-muted">{{ t("common.loading") }}</div>
     <template v-else>
       <div class="video-alerts" data-testid="ytdlp-alert-area">
         <VtAlert
@@ -66,7 +66,7 @@
               {{ t("video.versionLineGithubLabel") }}
               <span
                 data-testid="ytdlp-version-github"
-                :class="{ 'version-github-new': updateAvailable }"
+                :class="githubVersionClass"
                 >{{ githubVersionDisplay }}</span
               >
             </span>
@@ -182,8 +182,12 @@ import {
   type YTDLPMaintainStatusDTO,
 } from "../wails/app";
 import { appLocaleToBcp47 } from "../i18n";
-import { videoErrorI18nKey } from "../views/videoErrors";
+import { videoErrorI18nKey, classifyVideoError } from "../views/videoErrors";
 import { isYtdlpVersionOlder } from "../utils/ytdlpVersion";
+import {
+  isYtdlpMaintainOutcome,
+  YTDLP_MAINTAIN_OUTCOME,
+} from "../utils/ytdlpMaintainOutcome";
 import { showToast } from "../utils/showToast";
 
 const { t, te, locale } = useI18n();
@@ -255,24 +259,40 @@ const actionButtonLabel = computed(() => {
 });
 
 const updateAvailable = computed(() => {
+  if (status.value.latestError) return false;
   const latest = status.value.latestVersion;
   if (!latest) return false;
   if (!status.value.cachePresent) return true;
   return isYtdlpVersionOlder(status.value.cacheVersion, latest);
 });
 
+const githubBackgroundCheckFailed = computed(
+  () => !!status.value.latestError?.trim(),
+);
+
+const githubVersionDisplay = computed(() => {
+  if (githubBackgroundCheckFailed.value) {
+    return t("video.githubCheckUnavailable");
+  }
+  return status.value.latestVersion
+    ? status.value.latestVersion
+    : t("video.latestUnknown");
+});
+
+const githubVersionClass = computed(() => ({
+  "version-github-new": updateAvailable.value,
+  "version-github-unavailable": githubBackgroundCheckFailed.value,
+}));
+
 const currentVersionDisplay = computed(() => {
-  if (status.value.cachePresent && status.value.cacheVersion) {
+  if (!status.value.cachePresent) {
+    return t("video.currentNotDownloaded");
+  }
+  if (status.value.cacheVersion) {
     return status.value.cacheVersion;
   }
   return t("video.currentNotDownloaded");
 });
-
-const githubVersionDisplay = computed(() =>
-  status.value.latestVersion
-    ? status.value.latestVersion
-    : t("video.latestUnknown"),
-);
 
 const showErrorDetailsToggle = computed(
   () => resultOutcome.value === "error" && detailErrorRaw.value !== "",
@@ -335,6 +355,14 @@ function userFacingError(raw: string): string {
   return t(videoErrorI18nKey(raw));
 }
 
+function userFacingActionError(raw: string): string {
+  const kind = classifyVideoError(raw);
+  if (kind === "githubRateLimit" || kind === "githubForbidden") {
+    return t("video.errors.tryAgainLater");
+  }
+  return userFacingError(raw);
+}
+
 function applyStatus(
   s: YTDLPMaintainStatusDTO,
   opts?: { syncSwitch?: boolean },
@@ -342,10 +370,11 @@ function applyStatus(
   const prev = status.value;
   status.value = {
     ...s,
+    cachePresent: s.cachePresent,
+    cacheVersion: s.cachePresent ? s.cacheVersion || prev.cacheVersion : "",
     latestVersion: s.latestVersion || prev.latestVersion,
     latestTag: s.latestTag || prev.latestTag,
     latestDownloadUrl: s.latestDownloadUrl || prev.latestDownloadUrl,
-    cacheVersion: s.cacheVersion || prev.cacheVersion,
     latestCheckedAt: s.latestCheckedAt || prev.latestCheckedAt,
   };
   if (opts?.syncSwitch !== false) {
@@ -393,7 +422,7 @@ async function refreshBackgroundLatest(gen: number): Promise<void> {
       syncSwitch: false,
     });
   } catch {
-    // Background check: ignore; details may show last error via status.latestError
+    // Background refresh failure: show GitHub確認できませんでした in the summary; keep last successful 最終確認 time.
   }
 }
 
@@ -476,13 +505,23 @@ function applyActionResult(res: YTDLPMaintainActionResultDTO) {
   resultPreviousVersion.value = res.previousVersion ?? "";
   resultNewVersion.value = res.newVersion ?? "";
   detailErrorRaw.value = res.detailError ?? "";
-  if (res.outcome === "error") {
-    resultOutcome.value = "error";
-    const raw = res.detailError || status.value.latestError;
-    actionError.value = userFacingError(raw);
+  const outcome = res.outcome ?? "";
+  if (!isYtdlpMaintainOutcome(outcome)) {
+    resultOutcome.value = YTDLP_MAINTAIN_OUTCOME.error;
+    const detail = outcome
+      ? `unexpected outcome: ${outcome}`
+      : res.detailError || "unexpected outcome";
+    detailErrorRaw.value = detail;
+    actionError.value = userFacingActionError(res.detailError || detail);
     return;
   }
-  resultOutcome.value = res.outcome as typeof resultOutcome.value;
+  if (outcome === YTDLP_MAINTAIN_OUTCOME.error) {
+    resultOutcome.value = YTDLP_MAINTAIN_OUTCOME.error;
+    const raw = res.detailError || status.value.latestError;
+    actionError.value = userFacingActionError(raw);
+    return;
+  }
+  resultOutcome.value = outcome;
   actionError.value = "";
 }
 
@@ -503,8 +542,8 @@ async function checkAndUpdate() {
     applyActionResult(res);
   } catch (e) {
     if (isSectionStale(gen)) return;
-    resultOutcome.value = "error";
-    actionError.value = userFacingError(
+    resultOutcome.value = YTDLP_MAINTAIN_OUTCOME.error;
+    actionError.value = userFacingActionError(
       e instanceof Error ? e.message : String(e),
     );
   } finally {
@@ -579,8 +618,8 @@ defineExpose({
     resultPreviousVersion.value = extra?.previous ?? "";
     resultNewVersion.value = extra?.next ?? "";
     detailErrorRaw.value = extra?.error ?? "";
-    if (outcome === "error") {
-      actionError.value = userFacingError(extra?.error ?? "generic");
+    if (outcome === YTDLP_MAINTAIN_OUTCOME.error) {
+      actionError.value = userFacingActionError(extra?.error ?? "generic");
     }
   },
 });
@@ -621,6 +660,9 @@ defineExpose({
 .version-github-new {
   color: var(--color-brand);
   font-weight: var(--font-weight-500);
+}
+.version-github-unavailable {
+  color: var(--color-text-secondary);
 }
 .video-action-stack {
   display: flex;
@@ -677,9 +719,6 @@ defineExpose({
   word-break: break-word;
   color: var(--color-text-muted);
   font-size: var(--font-size-12);
-}
-.muted {
-  color: var(--color-text-secondary);
 }
 .flash {
   margin-top: var(--space-form-field);

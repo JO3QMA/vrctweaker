@@ -1103,6 +1103,7 @@
     "versionLineCurrent": "目前 {version}",
     "versionLineGithubLabel": "GitHub ",
     "versionLineLastCheck": "上次檢查 {when}",
+    "githubCheckUnavailable": "無法確認GitHub",
     "currentNotDownloaded": "未下載",
     "errorDetailsToggle": "詳情",
     "openCacheFolder": "開啟儲存資料夾",
@@ -1121,6 +1122,7 @@
     "notInitialized": "Video settings are not initialized yet.",
     "errors": {
       "githubRateLimit": "Could not fetch the latest version because GitHub’s rate limit was reached. Try again later.",
+      "tryAgainLater": "請稍後再試。",
       "githubUnauthorized": "GitHub rejected the request because authentication is missing or invalid.",
       "githubForbidden": "GitHub refused the request. Try again later.",
       "network": "A network error occurred. Check your connection and try again.",

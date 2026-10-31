@@ -168,6 +168,46 @@ describe("YtdlpReplaceSection", () => {
     expect(line.classes()).toContain("flash-secondary");
   });
 
+  it("shows fetch label when cache is absent even if cacheVersion is stale", async () => {
+    vi.mocked(App.getYTDLPMaintainStatus).mockResolvedValue({
+      ...baseStatus,
+      cachePresent: false,
+      cacheVersion: "2025.04.01",
+    });
+    vi.mocked(App.refreshYTDLPLatestRelease).mockResolvedValue({
+      ...baseStatus,
+      cachePresent: false,
+      cacheVersion: "2025.04.01",
+    });
+    const wrapper = mountSection();
+    await flushPromises();
+    expect(
+      wrapper.get('[data-testid="ytdlp-version-current"]').text(),
+    ).toContain("未取得");
+    expect(wrapper.get('[data-testid="ytdlp-check-update"]').text()).toContain(
+      "yt-dlp公式最新版を取得",
+    );
+  });
+
+  it("shows GitHub unavailable in summary after background check failure", async () => {
+    vi.mocked(App.refreshYTDLPLatestRelease).mockResolvedValue({
+      ...baseStatus,
+      latestError: "github api: 403 Forbidden",
+      latestCheckedAt: "2026-10-31T00:14:00.000Z",
+    });
+    const wrapper = mountSection();
+    await flushPromises();
+    expect(
+      wrapper.get('[data-testid="ytdlp-version-github"]').text(),
+    ).toContain("GitHub確認できませんでした");
+    expect(wrapper.find('[data-testid="ytdlp-error-banner"]').exists()).toBe(
+      false,
+    );
+    expect(
+      wrapper.get('[data-testid="ytdlp-version-last-check"]').text(),
+    ).toContain("最終確認");
+  });
+
   it("shows friendly error on result line and collapsible raw error", async () => {
     vi.mocked(App.checkAndUpdateOfficialYTDLPCache).mockResolvedValue({
       status: { ...baseStatus },
@@ -182,7 +222,7 @@ describe("YtdlpReplaceSection", () => {
     await wrapper.get('[data-testid="ytdlp-check-update"]').trigger("click");
     await flushPromises();
     expect(wrapper.get('[data-testid="ytdlp-result-line"]').text()).toContain(
-      "GitHubの通信制限",
+      "しばらくしてからもう一度",
     );
     expect(wrapper.find('[data-testid="ytdlp-detail-error"]').isVisible()).toBe(
       false,
