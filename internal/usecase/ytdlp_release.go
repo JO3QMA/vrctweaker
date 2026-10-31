@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/appversion"
+	"vrchat-tweaker/internal/platform/errtext"
 )
 
 // DefaultYTDLPReleasesLatestURL is the GitHub API URL for the latest yt-dlp release.
@@ -147,7 +148,7 @@ func (u *YTDLPUpdater) FetchLatestRelease(ctx context.Context) (YTDLPReleaseInfo
 		return YTDLPReleaseInfo{}, fmt.Errorf("read release response: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return YTDLPReleaseInfo{}, fmt.Errorf("github api: %s: %s", resp.Status, truncateForErr(string(body), 200))
+		return YTDLPReleaseInfo{}, fmt.Errorf("github api: %s: %s", resp.Status, errtext.TruncateForErr(string(body), 200))
 	}
 	tag, url, err := ytdlpExeAssetFromReleaseJSON(body)
 	if err != nil {
@@ -297,7 +298,7 @@ func downloadToFile(ctx context.Context, client *http.Client, url, dest string) 
 	defer func() { _ = resp.Body.Close() }()
 	if resp.StatusCode != http.StatusOK {
 		slurp, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
-		return fmt.Errorf("download failed (%s): %s", resp.Status, truncateForErr(string(slurp), 200))
+		return fmt.Errorf("download failed (%s): %s", resp.Status, errtext.TruncateForErr(string(slurp), 200))
 	}
 	f, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o644)
 	if err != nil {
@@ -316,13 +317,4 @@ func downloadToFile(ctx context.Context, client *http.Client, url, dest string) 
 		return fmt.Errorf("download exceeds %d bytes", maxYTDlpDownloadBytes)
 	}
 	return nil
-}
-
-func truncateForErr(s string, max int) string {
-	s = strings.TrimSpace(s)
-	runes := []rune(s)
-	if len(runes) <= max {
-		return s
-	}
-	return string(runes[:max]) + "…"
 }

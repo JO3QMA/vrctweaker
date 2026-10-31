@@ -209,13 +209,6 @@ func TestFetch_maintenancesFallbackWhenActiveFails(t *testing.T) {
 	}
 }
 
-func TestTruncateForErr_respectsRuneBoundary(t *testing.T) {
-	got := truncateForErr("日本語テスト", 3)
-	if got != "日本語…" {
-		t.Fatalf("got %q", got)
-	}
-}
-
 func TestFetchJSON_rejectsAbsolutePath(t *testing.T) {
 	c := NewClient()
 	err := c.fetchJSON(context.Background(), "/summary.json", &summaryResponse{})

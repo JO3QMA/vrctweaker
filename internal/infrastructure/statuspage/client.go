@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/infrastructure/vrchatapi"
+	"vrchat-tweaker/internal/platform/errtext"
 )
 
 const (
@@ -144,22 +145,10 @@ func (c *Client) fetchJSON(ctx context.Context, path string, dest any) error {
 		return fmt.Errorf("response body exceeds %d bytes", serverStatusMaxBodyBytes)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("statuspage api: %s: %s", resp.Status, truncateForErr(string(body), 200))
+		return fmt.Errorf("statuspage api: %s: %s", resp.Status, errtext.TruncateForErr(string(body), 200))
 	}
 	if err := json.Unmarshal(body, dest); err != nil {
 		return fmt.Errorf("parse json: %w", err)
 	}
 	return nil
-}
-
-func truncateForErr(s string, max int) string {
-	s = strings.TrimSpace(s)
-	if max <= 0 {
-		return s
-	}
-	runes := []rune(s)
-	if len(runes) <= max {
-		return s
-	}
-	return string(runes[:max]) + "…"
 }
