@@ -103,7 +103,11 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
-import { App, type PresenceChangeSectionDTO } from "../wails/app";
+import {
+  App,
+  type PresenceChangeSectionDTO,
+  type PresenceStatus,
+} from "../wails/app";
 import { getRuntime } from "../wails/runtime";
 import { formatError } from "../utils/formatError";
 import { showToast } from "../utils/showToast";
@@ -112,8 +116,6 @@ import { useAsyncSectionLoad } from "../composables/useAsyncSectionLoad";
 import VtButton from "./VtButton.vue";
 
 const SELF_CACHE_CHANGED_DEBOUNCE_MS = 300;
-
-type PresenceStatus = "join me" | "active" | "ask me" | "busy";
 
 const { t } = useI18n();
 const { state: unlockState } = useSessionUnlock();
@@ -196,7 +198,18 @@ function applySection(
   if (!dto.loggedIn || options.skipSnapshotUpdate) {
     return;
   }
-  const status = normalizeStatus(dto.status);
+  // Go normalizes the self status to one of the four values. Keep this single
+  // guard only for unexpected external data; apply results are trusted below.
+  let status: PresenceStatus;
+  if (isPresenceStatus(dto.status)) {
+    status = dto.status;
+  } else {
+    console.warn(
+      "PresenceChangeSection: unexpected status, falling back to active:",
+      dto.status,
+    );
+    status = "active";
+  }
   const description = dto.statusDescription ?? "";
   if (options.isInitial || !isDirty.value) {
     draftStatus.value = status;
@@ -206,19 +219,15 @@ function applySection(
   }
 }
 
-function normalizeStatus(status: string): PresenceStatus {
+function isPresenceStatus(status: string): status is PresenceStatus {
   switch (status) {
     case "join me":
     case "active":
     case "ask me":
     case "busy":
-      return status;
+      return true;
     default:
-      console.warn(
-        "PresenceChangeSection: unexpected status, falling back to active:",
-        status,
-      );
-      return "active";
+      return false;
   }
 }
 
@@ -295,11 +304,13 @@ function onDescriptionSelect(item: { value: string }): void {
   draftDescription.value = item.value;
 }
 
-function syncSnapshotFromApply(status: string, description: string): void {
-  const normalized = normalizeStatus(status);
-  draftStatus.value = normalized;
+function syncSnapshotFromApply(
+  status: PresenceStatus,
+  description: string,
+): void {
+  draftStatus.value = status;
   draftDescription.value = description;
-  snapshotStatus.value = normalized;
+  snapshotStatus.value = status;
   snapshotDescription.value = description;
 }
 

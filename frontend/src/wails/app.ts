@@ -19,9 +19,12 @@ export type LaunchProfileDTO = WailsDTO<wailsapp.LaunchProfileDTO>;
 export type DashboardRejoinDTO = WailsDTO<wailsapp.DashboardRejoinDTO>;
 export type DashboardLaunchBlockDTO =
   WailsDTO<wailsapp.DashboardLaunchBlockDTO>;
+export type PresenceStatus = "join me" | "active" | "ask me" | "busy";
 export type PresenceChangeSectionDTO = WailsDTO<usecase.PresenceChangeSection>;
-export type PresenceChangeApplyResultDTO =
-  WailsDTO<usecase.PresenceChangeApplyResult>;
+export type PresenceChangeApplyResultDTO = Omit<
+  WailsDTO<usecase.PresenceChangeApplyResult>,
+  "status"
+> & { status: PresenceStatus };
 export type ServerStatusDTO = WailsDTO<statuspage.Snapshot>;
 export type ServerStatusSummaryDTO = WailsDTO<statuspage.Summary>;
 export type ServerStatusComponentDTO = WailsDTO<statuspage.Component>;
@@ -85,8 +88,21 @@ function emptyPresenceChangeSection(): PresenceChangeSectionDTO {
 
 function emptyPresenceChangeApplyResult(): PresenceChangeApplyResultDTO {
   return {
-    status: "",
+    status: "active",
     statusDescription: "",
+  };
+}
+
+/**
+ * Go normalizes apply results to the four presence statuses. Trust that at the
+ * binding boundary instead of re-checking it in the component.
+ */
+function toPresenceChangeApplyResultDTO(
+  result: WailsDTO<usecase.PresenceChangeApplyResult>,
+): PresenceChangeApplyResultDTO {
+  return {
+    status: result.status as PresenceStatus,
+    statusDescription: result.statusDescription,
   };
 }
 
@@ -449,8 +465,10 @@ export const App = {
     emptyPresenceChangeSection(),
   ),
   applyPresenceChange: bindGo(
-    (a, status: string, description: string) =>
-      a.ApplyPresenceChange(status, description),
+    async (a, status: PresenceStatus, description: string) =>
+      toPresenceChangeApplyResultDTO(
+        await a.ApplyPresenceChange(status, description),
+      ),
     emptyPresenceChangeApplyResult(),
   ),
   getServerStatus: bindGo((a) => a.GetServerStatus(), emptyServerStatus()),

@@ -217,6 +217,21 @@ describe("PresenceChangeSection", () => {
     expectApplyDisabled(wrapper, true);
   });
 
+  it("falls back to active for an unexpected external status", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockGetPresenceChangeSection.mockResolvedValue(
+      loggedInSection({ status: "offline" }),
+    );
+    const wrapper = mountSection();
+    await flushPromises();
+    expect(
+      wrapper.find('[data-testid="presence-change-color-active"]').classes(),
+    ).toContain("presence-color-btn--selected");
+    expectApplyDisabled(wrapper, true);
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
   it("applies presence change and shows success message", async () => {
     const successSpy = vi
       .spyOn(showToast, "success")

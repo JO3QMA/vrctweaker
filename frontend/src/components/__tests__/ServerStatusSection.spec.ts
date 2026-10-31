@@ -127,13 +127,6 @@ describe("ServerStatusSection", () => {
           scheduledUntil: new Date(2026, 11, 25, 3, 0).toISOString(),
         },
         {
-          name: "Done",
-          status: "completed",
-          scheduledFor: new Date(2026, 11, 20, 1, 0).toISOString(),
-          scheduledUntil: new Date(2026, 11, 20, 2, 0).toISOString(),
-          updates: ["finished"],
-        },
-        {
           id: "live",
           name: "API",
           status: "in_progress",
@@ -174,8 +167,6 @@ describe("ServerStatusSection", () => {
     expect(rows[1]?.classes()).toContain(
       "server-status-maintenance--scheduled",
     );
-    expect(wrapper.text()).not.toContain("Done");
-    expect(wrapper.text()).not.toContain("finished");
     const tip = rows[0]?.getComponent({ name: "ElTooltip" });
     expect(tip?.props("content")).toBe("API\n\nEdge cache restart");
   });

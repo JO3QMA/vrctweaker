@@ -137,21 +137,10 @@ export type MaintenanceTranslator = (
 
 const MAINTENANCE_I18N = "dashboard.serverStatus";
 
-function maintenanceStatus(status: string | undefined | null): string {
-  return (status ?? "").trim().toLowerCase();
-}
-
-function maintenancePhase(status: string): MaintenanceDisplayPhase | "hidden" {
-  switch (status) {
-    case "in_progress":
-    case "verifying":
-      return "in_progress";
-    case "completed":
-    case "resolved":
-      return "hidden";
-    default:
-      return "scheduled";
-  }
+function maintenancePhase(status: string): MaintenanceDisplayPhase {
+  return status === "in_progress" || status === "verifying"
+    ? "in_progress"
+    : "scheduled";
 }
 
 function parseMaintenanceInstant(raw: string | undefined | null): Date | null {
@@ -263,7 +252,7 @@ function maintenanceSortKey(item: {
 
 /**
  * Visible maintenance lines: in-progress first, then soonest start.
- * Completed windows and scheduled windows that already ended are omitted.
+ * Scheduled windows that already ended are omitted.
  * In-progress lines show only the end time (with the date when it is not today).
  */
 export function formatServerMaintenances(
@@ -282,11 +271,9 @@ export function formatServerMaintenances(
   }> = [];
 
   (items ?? []).forEach((item, index) => {
-    const status = maintenanceStatus(item.status);
+    const status = item.status ?? "";
     const phase = maintenancePhase(status);
-    if (phase === "hidden") return;
     const name = visibleName(item.name ?? "");
-    if (!name) return;
     const start = parseMaintenanceInstant(item.scheduledFor);
     const end = parseMaintenanceInstant(item.scheduledUntil);
     if (phase === "scheduled" && end && end.getTime() <= now.getTime()) {
