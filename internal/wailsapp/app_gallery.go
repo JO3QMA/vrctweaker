@@ -151,23 +151,32 @@ func (a *App) RevealScreenshotInFileManager(id string) error {
 // ScanScreenshotDir synchronizes a picture folder (ingest new files + selective reindex).
 func (a *App) ScanScreenshotDir(path string) (int, error) {
 	a.galleryScanMu.Lock()
-	for a.galleryScanCancel != nil {
-		cancelFn := a.galleryScanCancel
+	for a.galleryScanCancel != nil || a.galleryScanDone != nil {
+		cancel := a.galleryScanCancel
+		done := a.galleryScanDone
 		a.galleryScanMu.Unlock()
-		cancelFn()
-		a.galleryScanWG.Wait()
+		if cancel != nil {
+			cancel()
+		}
+		if done != nil {
+			<-done
+		}
 		a.galleryScanMu.Lock()
 	}
-	a.galleryScanWG.Add(1)
+	done := make(chan struct{})
 	scanCtx, cancel := context.WithCancel(a.ctx)
 	a.galleryScanCancel = cancel
+	a.galleryScanDone = done
 	a.galleryScanMu.Unlock()
 
-	defer a.galleryScanWG.Done()
 	defer func() {
 		cancel()
+		close(done)
 		a.galleryScanMu.Lock()
-		a.galleryScanCancel = nil
+		if a.galleryScanDone == done {
+			a.galleryScanDone = nil
+			a.galleryScanCancel = nil
+		}
 		a.galleryScanMu.Unlock()
 	}()
 
@@ -202,12 +211,24 @@ func (a *App) IsGalleryScanning() bool {
 
 func (a *App) stopGalleryScanAndWait() {
 	a.galleryScanMu.Lock()
-	cancelFn := a.galleryScanCancel
-	a.galleryScanMu.Unlock()
-	if cancelFn != nil {
-		cancelFn()
+	cancel := a.galleryScanCancel
+	done := a.galleryScanDone
+	if cancel != nil || done != nil {
+		// Keep fields until done is closed to let concurrent Scan wait.
+		a.galleryScanMu.Unlock()
+		if cancel != nil {
+			cancel()
+		}
+		if done != nil {
+			<-done
+		}
+		a.galleryScanMu.Lock()
+		if a.galleryScanDone == done {
+			a.galleryScanDone = nil
+			a.galleryScanCancel = nil
+		}
 	}
-	a.galleryScanWG.Wait()
+	a.galleryScanMu.Unlock()
 }
 
 // ReindexScreenshotDir re-extracts metadata for existing screenshots under path.

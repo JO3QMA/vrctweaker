@@ -25,31 +25,50 @@ func pipelineEventUpdatesFriends(typ string) bool {
 // stopVRChatPipelineCancel stops the pipeline without waiting. Do not call stopVRChatPipeline
 // (which waits) from callbacks invoked synchronously inside vrchatpipeline.Run — that deadlocks.
 func (a *App) stopVRChatPipelineCancel() {
-	var cancelFn context.CancelFunc
 	a.pipelineMu.Lock()
-	if a.pipelineCancel != nil {
-		cancelFn = a.pipelineCancel
-		a.pipelineCancel = nil
-	}
+	cancel := a.pipelineCancel
+	a.pipelineCancel = nil
+	// Keep pipelineDone until the goroutine closes it; startVRChatPipeline will wait on it.
 	a.pipelineMu.Unlock()
-	if cancelFn != nil {
-		cancelFn()
+	if cancel != nil {
+		cancel()
 	}
 }
 
 func (a *App) stopVRChatPipeline() {
-	a.stopVRChatPipelineCancel()
-	a.pipelineWG.Wait()
+	a.pipelineMu.Lock()
+	cancel := a.pipelineCancel
+	done := a.pipelineDone
+	if cancel != nil {
+		a.pipelineCancel = nil
+	}
+	a.pipelineMu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	if done != nil {
+		<-done
+	}
+	// Goroutine's deferred cleanup also clears done/cancel if still same instance;
+	// ensure cleared if the goroutine already exited and left them.
+	a.pipelineMu.Lock()
+	if a.pipelineDone == done {
+		a.pipelineDone = nil
+		a.pipelineCancel = nil
+	}
+	a.pipelineMu.Unlock()
 }
 
 func (a *App) startVRChatPipeline() {
 	a.pipelineMu.Lock()
-	for a.pipelineCancel != nil {
-		cancelFn := a.pipelineCancel
-		a.pipelineCancel = nil
+	for a.pipelineDone != nil {
+		done := a.pipelineDone
+		cancel := a.pipelineCancel
 		a.pipelineMu.Unlock()
-		cancelFn()
-		a.pipelineWG.Wait()
+		if cancel != nil {
+			cancel()
+		}
+		<-done
 		a.pipelineMu.Lock()
 	}
 	if a.identity == nil {
@@ -61,8 +80,10 @@ func (a *App) startVRChatPipeline() {
 		a.pipelineMu.Unlock()
 		return
 	}
+	done := make(chan struct{})
 	runCtx, cancel := context.WithCancel(a.ctx)
 	a.pipelineCancel = cancel
+	a.pipelineDone = done
 	cfg := vrchatpipeline.Config{
 		AuthToken: token,
 		UserAgent: vrchatapi.UserAgent(),
@@ -85,10 +106,17 @@ func (a *App) startVRChatPipeline() {
 			return err
 		},
 	}
-	a.pipelineWG.Add(1)
 	a.pipelineMu.Unlock()
 	go func() {
-		defer a.pipelineWG.Done()
+		defer close(done)
+		defer func() {
+			a.pipelineMu.Lock()
+			if a.pipelineDone == done {
+				a.pipelineDone = nil
+				a.pipelineCancel = nil
+			}
+			a.pipelineMu.Unlock()
+		}()
 		err := vrchatpipeline.Run(runCtx, cfg)
 		if err != nil && !errors.Is(err, context.Canceled) {
 			runtime.LogWarning(a.ctx, "vrchat pipeline: "+err.Error())

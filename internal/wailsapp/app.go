@@ -43,11 +43,11 @@ type App struct {
 
 	galleryScanMu     sync.Mutex
 	galleryScanCancel context.CancelFunc
-	galleryScanWG     sync.WaitGroup
+	galleryScanDone   chan struct{}
 
 	pipelineMu     sync.Mutex
 	pipelineCancel context.CancelFunc
-	pipelineWG     sync.WaitGroup
+	pipelineDone   chan struct{}
 
 	sleepSuppressMu     sync.Mutex
 	sleepSuppressCancel context.CancelFunc

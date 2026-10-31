@@ -38,9 +38,30 @@ func (a *App) GetVRChatConfig() (VRChatConfigDTO, error) {
 	return toVRChatConfigDTO(cfg), nil
 }
 
-// SaveVRChatConfig writes config.json.
+// SaveVRChatConfig writes config.json, preserving fields not covered by the DTO
+// (betas / ps_* / dynamic_bone_* etc.) by merging onto the existing file.
 func (a *App) SaveVRChatConfig(dto VRChatConfigDTO) error {
-	return a.vrchatConfigRepo.Write(fromVRChatConfigDTO(dto))
+	cfg, err := a.vrchatConfigRepo.Read()
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	d := fromVRChatConfigDTO(dto)
+	if cfg == nil {
+		cfg = d
+	} else {
+		cfg.CameraResWidth = d.CameraResWidth
+		cfg.CameraResHeight = d.CameraResHeight
+		cfg.ScreenshotResWidth = d.ScreenshotResWidth
+		cfg.ScreenshotResHeight = d.ScreenshotResHeight
+		cfg.PictureOutputFolder = d.PictureOutputFolder
+		cfg.PictureOutputSplitByDate = d.PictureOutputSplitByDate
+		cfg.FPVSteadycamFOV = d.FPVSteadycamFOV
+		cfg.CacheDirectory = d.CacheDirectory
+		cfg.CacheSize = d.CacheSize
+		cfg.CacheExpiryDelay = d.CacheExpiryDelay
+		cfg.DisableRichPresence = d.DisableRichPresence
+	}
+	return a.vrchatConfigRepo.Write(cfg)
 }
 
 // DeleteVRChatConfig removes config.json.
