@@ -11,11 +11,11 @@
     <template v-else>
       <div class="video-alerts" data-testid="ytdlp-alert-area">
         <VtAlert
-          v-if="actionError"
+          v-if="topBannerError"
           variant="danger"
           class="block-hint"
           data-testid="ytdlp-error-banner"
-          :title="actionError"
+          :title="topBannerError"
         />
         <VtAlert
           v-else-if="!status.supported"
@@ -63,7 +63,9 @@
             }}</span>
             <span class="version-sep" aria-hidden="true">・</span>
             <span>
-              {{ t("video.versionLineGithubLabel") }}
+              <template v-if="!githubBackgroundCheckFailed">
+                {{ t("video.versionLineGithubLabel") }}
+              </template>
               <span
                 data-testid="ytdlp-version-github"
                 :class="githubVersionClass"
@@ -236,8 +238,18 @@ const effectiveStatusText = computed(() =>
     : t("video.effectiveBundled"),
 );
 
+const showInlineResultError = computed(
+  () =>
+    resultOutcome.value === YTDLP_MAINTAIN_OUTCOME.error && !!actionError.value,
+);
+
+const topBannerError = computed(() => {
+  if (showInlineResultError.value) return "";
+  return actionError.value;
+});
+
 const bannerError = computed(() => {
-  if (actionError.value) return actionError.value;
+  if (topBannerError.value) return topBannerError.value;
   if (status.value.pendingError) {
     return userFacingError(status.value.pendingError);
   }

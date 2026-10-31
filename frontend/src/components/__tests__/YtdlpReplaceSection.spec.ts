@@ -197,9 +197,11 @@ describe("YtdlpReplaceSection", () => {
     });
     const wrapper = mountSection();
     await flushPromises();
-    expect(
-      wrapper.get('[data-testid="ytdlp-version-github"]').text(),
-    ).toContain("GitHub確認できませんでした");
+    const summary = wrapper.get('[data-testid="ytdlp-version-summary"]');
+    expect(summary.text()).toContain("現在 2025.04.01");
+    expect(summary.text()).toContain("GitHub確認できませんでした");
+    expect(summary.text()).not.toMatch(/GitHub\s+GitHub/);
+    expect(summary.text().match(/GitHub確認できませんでした/g)?.length).toBe(1);
     expect(wrapper.find('[data-testid="ytdlp-error-banner"]').exists()).toBe(
       false,
     );
@@ -224,6 +226,11 @@ describe("YtdlpReplaceSection", () => {
     expect(wrapper.get('[data-testid="ytdlp-result-line"]').text()).toContain(
       "しばらくしてからもう一度",
     );
+    expect(wrapper.find('[data-testid="ytdlp-error-banner"]').exists()).toBe(
+      false,
+    );
+    const retryMsg = "しばらくしてからもう一度お試しください。";
+    expect(wrapper.text().split(retryMsg).length - 1).toBe(1);
     expect(wrapper.find('[data-testid="ytdlp-detail-error"]').isVisible()).toBe(
       false,
     );
