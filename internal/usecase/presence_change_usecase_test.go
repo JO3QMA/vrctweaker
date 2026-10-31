@@ -123,6 +123,21 @@ func TestPresenceChangeUseCase_Apply_recordsHistoryAndEmits(t *testing.T) {
 	}
 }
 
+func TestPresenceChangeUseCase_Apply_normalizesStatus(t *testing.T) {
+	ctx := context.Background()
+	idUC := newPresenceTestIdentity(t, true)
+	uc := NewPresenceChangeUseCase(idUC.uc, newMockSettingsRepo())
+	if _, err := uc.Apply(ctx, "  JOIN ME  ", "  focus  "); err != nil {
+		t.Fatal(err)
+	}
+	if idUC.api.lastBothStatus != vrchatapi.UserStatus("join me") {
+		t.Fatalf("status sent = %q, want %q", idUC.api.lastBothStatus, "join me")
+	}
+	if idUC.api.lastBothDescription != "focus" {
+		t.Fatalf("description sent = %q, want %q", idUC.api.lastBothDescription, "focus")
+	}
+}
+
 func TestPresenceChangeUseCase_Apply_emptyDescriptionNoHistory(t *testing.T) {
 	ctx := context.Background()
 	settings := newMockSettingsRepo()

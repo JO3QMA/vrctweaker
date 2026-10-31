@@ -31,21 +31,15 @@ func TestParseWindowSizePayload(t *testing.T) {
 	if err != nil || w != 1920 || h != 1080 {
 		t.Fatalf("json.Number got %d×%d err=%v", w, h, err)
 	}
-	_, _, err = parseWindowSizePayload(map[string]interface{}{"width": 0, "height": 720})
-	if !errors.Is(err, vrchatwindow.ErrInvalidSize) {
-		t.Fatalf("want ErrInvalidSize, got %v", err)
+	// Size positivity and the upper bound are enforced by vrchatwindow.Resize
+	// (see resize_test.go), so parse passes them through unchanged.
+	w, h, err = parseWindowSizePayload(map[string]interface{}{"width": 0, "height": 720})
+	if err != nil || w != 0 || h != 720 {
+		t.Fatalf("zero width should pass through: %d×%d err=%v", w, h, err)
 	}
 	_, _, err = parseWindowSizePayload(map[string]interface{}{"width": float64(1.5), "height": float64(720)})
 	if err == nil {
 		t.Fatal("want reject non-integer float")
-	}
-	_, _, err = parseWindowSizePayload(map[string]interface{}{"width": float64(vrchatwindow.MaxDimension) + 1, "height": float64(720)})
-	if err == nil {
-		t.Fatal("want reject float above MaxDimension")
-	}
-	_, _, err = parseWindowSizePayload(map[string]interface{}{"width": int64(vrchatwindow.MaxDimension) + 1, "height": int64(720)})
-	if err == nil {
-		t.Fatal("want reject MaxDimension+1")
 	}
 	_, _, err = parseWindowSizePayload(nil)
 	if err == nil {
@@ -125,6 +119,16 @@ func TestAutomation_setVRChatWindowSize_resizeFailed(t *testing.T) {
 	logs := uc.GetRunLog()
 	if len(logs) != 1 || logs[0].Success {
 		t.Fatalf("want failure, got %#v", logs)
+	}
+}
+
+func TestAutomation_setVRChatWindowSize_invalidSizeComesFromResize(t *testing.T) {
+	ctx := context.Background()
+	uc := newTestAutomationUseCase(&mockAutomationItemRepo{}, nil)
+	uc.windowResizer = realVRChatWindowResizer{}
+	err := uc.runSetVRChatWindowSize(ctx, map[string]interface{}{"width": 0, "height": 720})
+	if !errors.Is(err, vrchatwindow.ErrInvalidSize) {
+		t.Fatalf("got %v, want ErrInvalidSize from Resize", err)
 	}
 }
 

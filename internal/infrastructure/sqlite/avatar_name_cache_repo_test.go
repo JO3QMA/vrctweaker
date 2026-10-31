@@ -37,7 +37,7 @@ func TestAvatarNameCacheRepository_upsertAndGet(t *testing.T) {
 	if err = repo.Upsert(ctx, row); err != nil {
 		t.Fatal(err)
 	}
-	got, err = repo.Get(ctx, " "+row.AvatarID+" ")
+	got, err = repo.Get(ctx, row.AvatarID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -59,7 +59,7 @@ func TestAvatarNameCacheRepository_getMiss(t *testing.T) {
 	}
 }
 
-func TestAvatarNameCacheRepository_rejectsNewlines(t *testing.T) {
+func TestAvatarNameCacheRepository_rejectsNewlineName(t *testing.T) {
 	db := openTestDB(t)
 	t.Cleanup(func() { _ = db.Close() })
 	repo := NewAvatarNameCacheRepository(db)
@@ -69,14 +69,12 @@ func TestAvatarNameCacheRepository_rejectsNewlines(t *testing.T) {
 		Name:      "Fox",
 		FetchedAt: time.Now().UTC(),
 	}
-	for _, row := range []*identity.AvatarNameCache{
-		{AvatarID: "avtr_bad\nid", Name: "Fox", FetchedAt: base.FetchedAt},
-		{AvatarID: base.AvatarID, Name: "Fox\rname", FetchedAt: base.FetchedAt},
-	} {
-		err := repo.Upsert(ctx, row)
-		if err == nil || !strings.Contains(err.Error(), "invalid") {
-			t.Fatalf("Upsert(%q, %q) err = %v", row.AvatarID, row.Name, err)
-		}
+	// The avatar id is trimmed and newline-checked by IdentityUseCase.AvatarDisplayName,
+	// so only the name (external API input) is guarded here.
+	row := &identity.AvatarNameCache{AvatarID: base.AvatarID, Name: "Fox\rname", FetchedAt: base.FetchedAt}
+	err := repo.Upsert(ctx, row)
+	if err == nil || !strings.Contains(err.Error(), "invalid") {
+		t.Fatalf("Upsert(%q, %q) err = %v", row.AvatarID, row.Name, err)
 	}
 	got, err := repo.Get(ctx, base.AvatarID)
 	if err != nil {

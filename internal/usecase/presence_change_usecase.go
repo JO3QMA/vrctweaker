@@ -50,22 +50,32 @@ func NewPresenceChangeUseCase(identity *IdentityUseCase, settings appSettingsRep
 	return &PresenceChangeUseCase{identity: identity, settings: settings}
 }
 
+// normalizePresenceStatus trims and lowercases status and reports whether it is
+// one of the four presence colors. Display normalization and Apply validation
+// share this allowlist.
+func normalizePresenceStatus(status string) (string, bool) {
+	s := strings.ToLower(strings.TrimSpace(status))
+	_, ok := validPresenceStatuses[s]
+	return s, ok
+}
+
 // NormalizePresenceStatus maps VRChat status to one of the four presence colors for display.
 func NormalizePresenceStatus(status string) string {
-	s := strings.ToLower(strings.TrimSpace(status))
-	if _, ok := validPresenceStatuses[s]; ok {
+	s, ok := normalizePresenceStatus(status)
+	if ok {
 		return s
 	}
 	log.Printf("presence: unknown status %q, falling back to 'active'", status)
 	return "active"
 }
 
-func validatePresenceStatus(status string) error {
-	s := strings.ToLower(strings.TrimSpace(status))
-	if _, ok := validPresenceStatuses[s]; ok {
-		return nil
+// validatePresenceStatus returns the canonical status, or an error for unknown values.
+func validatePresenceStatus(status string) (string, error) {
+	s, ok := normalizePresenceStatus(status)
+	if !ok {
+		return "", fmt.Errorf("invalid presence status: %q", s)
 	}
-	return fmt.Errorf("invalid presence status: %q", status)
+	return s, nil
 }
 
 // GetSection returns presence change section state for the Dashboard.
@@ -95,14 +105,13 @@ func (uc *PresenceChangeUseCase) GetSection(ctx context.Context) (*PresenceChang
 
 // Apply updates VRChat presence and records description history on success.
 func (uc *PresenceChangeUseCase) Apply(ctx context.Context, status, description string) (*PresenceChangeApplyResult, error) {
-	status = strings.ToLower(strings.TrimSpace(status))
+	normalizedStatus, statusErr := validatePresenceStatus(status)
+	if statusErr != nil {
+		return nil, statusErr
+	}
+	status = normalizedStatus
 	description = strings.TrimSpace(description)
-	if err := validatePresenceStatus(status); err != nil {
-		return nil, err
-	}
-	if err := validateVRChatStatusDescription(description); err != nil {
-		return nil, err
-	}
+	// Description length is validated by IdentityUseCase.SetStatusAndDescription (final defense).
 	if err := uc.identity.SetStatusAndDescription(ctx, status, description); err != nil {
 		return nil, err
 	}
