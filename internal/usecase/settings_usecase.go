@@ -189,6 +189,7 @@ const (
 	keyYTDLPKnownLatestVersion       = "ytdlp_known_latest_version"
 	keyYTDLPKnownLatestTag           = "ytdlp_known_latest_tag"
 	keyYTDLPKnownLatestDownloadURL   = "ytdlp_known_latest_download_url"
+	keyYTDLPKnownLatestCheckedAt     = "ytdlp_known_latest_checked_at"
 )
 
 // SupportedAppLanguages are UI locale codes persisted in app_settings.
@@ -369,6 +370,31 @@ func (uc *SettingsUseCase) SetYTDLPKnownLatest(ctx context.Context, version, tag
 		return err
 	}
 	return uc.repo.Set(ctx, keyYTDLPKnownLatestDownloadURL, strings.TrimSpace(downloadURL))
+}
+
+// GetYTDLPKnownLatestCheckedAt returns when GitHub latest was last queried for the Video tab cache.
+func (uc *SettingsUseCase) GetYTDLPKnownLatestCheckedAt(ctx context.Context) (time.Time, bool) {
+	v, err := uc.repo.Get(ctx, keyYTDLPKnownLatestCheckedAt)
+	if err != nil {
+		return time.Time{}, false
+	}
+	v = strings.TrimSpace(v)
+	if v == "" {
+		return time.Time{}, false
+	}
+	t, err := time.Parse(time.RFC3339, v)
+	if err != nil {
+		return time.Time{}, false
+	}
+	return t, true
+}
+
+// SetYTDLPKnownLatestCheckedAt persists the GitHub latest query timestamp (UTC RFC3339).
+func (uc *SettingsUseCase) SetYTDLPKnownLatestCheckedAt(ctx context.Context, checkedAt time.Time) error {
+	if checkedAt.IsZero() {
+		return uc.repo.Set(ctx, keyYTDLPKnownLatestCheckedAt, "")
+	}
+	return uc.repo.Set(ctx, keyYTDLPKnownLatestCheckedAt, checkedAt.UTC().Format(time.RFC3339))
 }
 
 func parseBoolSetting(v string) bool {
