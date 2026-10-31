@@ -420,6 +420,18 @@ func TestMediaUseCase_IngestUnderPictureRootSince_notADir(t *testing.T) {
 	}
 }
 
+func TestMediaUseCase_IngestUnderPictureRootSince_missingPath(t *testing.T) {
+	missing := filepath.Join(t.TempDir(), "missing")
+	uc := NewMediaUseCase(newMockScreenshotRepo(), nil, nil)
+	count, err := uc.IngestUnderPictureRootSince(context.Background(), missing, time.Time{})
+	if err == nil {
+		t.Fatal("expected error for missing root")
+	}
+	if count != 0 {
+		t.Errorf("count = %d, want 0", count)
+	}
+}
+
 func TestMediaUseCase_IngestUnderPictureRootSince_contextCancelDuringWalk(t *testing.T) {
 	dir := t.TempDir()
 	p := filepath.Join(dir, "n.png")
