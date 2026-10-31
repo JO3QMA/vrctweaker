@@ -14,10 +14,11 @@ const JP_THEN_LATIN =
   /[\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF][ \u3000]+[A-Za-z0-9{]/;
 
 /**
- * yt-dlp replace UI copy is being rewritten in draft PR #369.
- * TODO(#369): remove this allowlist after #369 merges and spacing is fixed there.
+ * yt-dlp video tab copy uses intentional label–value spaces (e.g. 現在 {version}).
+ * Allowlisted until a dedicated policy covers placeholder spacing app-wide.
  */
 const YTDLP_REPLACE_ALLOWLIST_PREFIXES = [
+  "video.experimentalFeatures",
   "video.alwaysWarn",
   "video.replaceLabel",
   "video.statusPrefix",
@@ -29,6 +30,16 @@ const YTDLP_REPLACE_ALLOWLIST_PREFIXES = [
   "video.latestUnchecked",
   "video.checkLatest",
   "video.updateCache",
+  "video.versionLineCurrent",
+  "video.versionLineGithubLabel",
+  "video.versionLineLastCheck",
+  "video.githubCheckUnavailable",
+  "video.actionFetch",
+  "video.actionUpdate",
+  "video.actionChecking",
+  "video.actionUpdating",
+  "video.currentNotDownloaded",
+  "video.errorDetailsToggle",
   "video.openCacheFolder",
   "video.openToolsFolder",
   "video.riskAckTitle",
@@ -38,11 +49,15 @@ const YTDLP_REPLACE_ALLOWLIST_PREFIXES = [
   "video.flashDisabled",
   "video.flashLatest",
   "video.flashUpdated",
+  "video.resultFirstDownload",
+  "video.resultUpdated",
+  "video.resultUpToDate",
   "video.errorRiskAckRequired",
   "video.errorUnsupportedPlatform",
   "video.errorMaintenanceFailed",
   "video.notInitialized",
   "video.errors",
+  "video.cookieLinkage",
 ] as const;
 
 function isAllowlisted(path: string): boolean {

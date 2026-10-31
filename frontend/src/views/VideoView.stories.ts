@@ -2,25 +2,10 @@ import type { Decorator, Meta, StoryObj } from "@storybook/vue3-vite";
 import VideoView from "./VideoView.vue";
 import { withWailsApp } from "../stories/wailsDecorator";
 import type { VideoPlaybackDTO, YTDLPMaintainStatusDTO } from "../wails/app";
-
-const status: YTDLPMaintainStatusDTO = {
-  supported: true,
-  unsupportedReason: "",
-  maintainDesired: true,
-  riskAcknowledged: true,
-  effectiveOfficial: true,
-  cachePresent: true,
-  cacheVersion: "2026.07.04",
-  toolsPath:
-    "C:\\Users\\example\\AppData\\LocalLow\\VRChat\\VRChat\\Tools\\yt-dlp.exe",
-  cachePath:
-    "C:\\Users\\example\\AppData\\Local\\vrchat-tweaker\\ytdlp\\yt-dlp.exe",
-  pendingError: "",
-  latestVersion: "2026.07.04",
-  latestTag: "2026.07.04",
-  latestDownloadUrl: "https://example.com/yt-dlp.exe",
-  latestError: "",
-};
+import {
+  upToDateStatus,
+  ytdlpWailsMocks,
+} from "../stories/fixtures/ytdlpMaintainWails";
 
 const samplePlaybackHistory: VideoPlaybackDTO[] = [
   {
@@ -48,21 +33,15 @@ const samplePlaybackHistory: VideoPlaybackDTO[] = [
 ];
 
 function withVideoWails(
-  overrides: Partial<YTDLPMaintainStatusDTO> = {},
+  ytdlpStatus: YTDLPMaintainStatusDTO = upToDateStatus(),
   historyRows: VideoPlaybackDTO[] = [],
+  historyLoader?: () => Promise<VideoPlaybackDTO[]>,
 ): Decorator {
-  const st = { ...status, ...overrides };
   return withWailsApp({
-    GetYTDLPMaintainStatus: () => Promise.resolve(st),
-    AcknowledgeYTDLPToolsReplaceRisk: () => Promise.resolve(),
-    SetYTDLPToolsReplaceMaintain: () => Promise.resolve(),
-    CheckYTDLPLatestRelease: () => Promise.resolve(st),
-    UpdateOfficialYTDLPCache: () => Promise.resolve(st),
-    OpenYTDLPCacheFolder: () => Promise.resolve(),
-    OpenYTDLPToolsFolder: () => Promise.resolve(),
-    RuntimeIsWindows: () => Promise.resolve(true),
+    ...ytdlpWailsMocks(ytdlpStatus),
     GetLogRetentionDays: () => Promise.resolve(30),
-    VideoPlaybackHistory: () => Promise.resolve(historyRows),
+    VideoPlaybackHistory: () =>
+      historyLoader ? historyLoader() : Promise.resolve(historyRows),
     GetYTDLPCookieLinkageStatus: () =>
       Promise.resolve({
         supported: true,
@@ -96,26 +75,28 @@ export const Default: Story = {
 };
 
 export const HistoryWithRows: Story = {
-  decorators: [withVideoWails({}, samplePlaybackHistory)],
+  decorators: [withVideoWails(upToDateStatus(), samplePlaybackHistory)],
+};
+
+export const HistoryEmpty: Story = {
+  decorators: [withVideoWails(upToDateStatus(), [])],
+};
+
+export const HistoryLoading: Story = {
+  decorators: [
+    withVideoWails(upToDateStatus(), [], () => new Promise(() => {})),
+  ],
 };
 
 export const BundledEffective: Story = {
   decorators: [
     withVideoWails({
+      ...upToDateStatus(),
       maintainDesired: false,
       effectiveOfficial: false,
       latestVersion: "",
       latestTag: "",
       latestDownloadUrl: "",
-    }),
-  ],
-};
-
-export const GitHubRateLimit: Story = {
-  decorators: [
-    withVideoWails({
-      latestError:
-        'github api: 403 Forbidden: {"message":"API rate limit exceeded"}',
     }),
   ],
 };

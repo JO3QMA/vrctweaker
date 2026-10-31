@@ -351,6 +351,10 @@ a:hover {
   font-weight: var(--font-weight-400);
 }
 
+.vt-text-muted {
+  color: var(--color-text-secondary);
+}
+
 /* Page title shared style (Heading 1 alias) */
 .page-title {
   margin: 0 0 var(--space-block);
