@@ -260,9 +260,7 @@ func parseWindowSizePayload(payload map[string]interface{}) (width, height int, 
 	if !okW || !okH {
 		return 0, 0, fmt.Errorf("set_vrchat_window_size: width and height required")
 	}
-	if w <= 0 || h <= 0 || w > vrchatwindow.MaxDimension || h > vrchatwindow.MaxDimension {
-		return 0, 0, vrchatwindow.ErrInvalidSize
-	}
+	// Positivity and MaxDimension are enforced by vrchatwindow.Resize (ErrInvalidSize).
 	return w, h, nil
 }
 
@@ -280,10 +278,9 @@ func payloadInt(payload map[string]interface{}, key string) (int, bool) {
 	case int64:
 		n = x
 	case float64:
-		// Cap to MaxDimension in float space to avoid MaxInt64 rounding holes.
-		maxF := float64(vrchatwindow.MaxDimension)
-		minF := float64(math.MinInt32)
-		if x != math.Trunc(x) || x < minF || x > maxF {
+		// Reject non-integers and float values outside int64. Window size limits
+		// are left to vrchatwindow.Resize.
+		if x != math.Trunc(x) || x < math.MinInt64 || x >= float64(math.MaxInt64) {
 			return 0, false
 		}
 		n = int64(x)
@@ -296,7 +293,7 @@ func payloadInt(payload map[string]interface{}, key string) (int, bool) {
 	default:
 		return 0, false
 	}
-	if n < math.MinInt32 || n > int64(vrchatwindow.MaxDimension) {
+	if int64(int(n)) != n {
 		return 0, false
 	}
 	return int(n), true
