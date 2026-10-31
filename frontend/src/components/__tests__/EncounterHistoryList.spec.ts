@@ -43,6 +43,32 @@ describe("EncounterHistoryList", () => {
     expect(wailsApp.App.encountersByWorldID).not.toHaveBeenCalled();
   });
 
+  it("trims userId once before calling encountersByVRCUserID", async () => {
+    vi.mocked(wailsApp.App.encountersByVRCUserID).mockResolvedValue([
+      sampleEncounter,
+    ]);
+
+    mount(EncounterHistoryList, {
+      props: { mode: "user", userId: "  usr_x  " },
+    });
+    await flushPromises();
+
+    expect(wailsApp.App.encountersByVRCUserID).toHaveBeenCalledWith("usr_x");
+  });
+
+  it("trims worldId once before calling encountersByWorldID", async () => {
+    vi.mocked(wailsApp.App.encountersByWorldID).mockResolvedValue([
+      sampleEncounter,
+    ]);
+
+    mount(EncounterHistoryList, {
+      props: { mode: "world", worldId: "  wrld_abc  " },
+    });
+    await flushPromises();
+
+    expect(wailsApp.App.encountersByWorldID).toHaveBeenCalledWith("wrld_abc");
+  });
+
   it("calls encountersByWorldID in world mode", async () => {
     vi.mocked(wailsApp.App.encountersByWorldID).mockResolvedValue([
       sampleEncounter,

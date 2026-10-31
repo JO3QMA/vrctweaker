@@ -225,6 +225,37 @@ describe("DashboardLaunchBlock", () => {
     ).toBe(true);
   });
 
+  it("disables rejoin button when playSessionId is whitespace only", async () => {
+    mockGetDashboardLaunchBlock.mockResolvedValue({
+      profiles: [defaultLaunchProfile],
+      selectedProfileId: "p-default",
+      rejoin: { playSessionId: "   ", worldDisplayName: "Test World" },
+    });
+    const wrapper = mountBlock();
+    await flushPromises();
+    expect(
+      (
+        wrapper.find('[data-testid="launch-block-rejoin-btn"]')
+          .element as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+  });
+
+  it("rejoins with the trimmed play session id", async () => {
+    mockGetDashboardLaunchBlock.mockResolvedValue({
+      profiles: [defaultLaunchProfile],
+      selectedProfileId: "p-default",
+      rejoin: { playSessionId: "  ps-1  ", worldDisplayName: "Test World" },
+    });
+    const wrapper = mountBlock();
+    await flushPromises();
+    await wrapper
+      .find('[data-testid="launch-block-rejoin-btn"]')
+      .trigger("click");
+    await flushPromises();
+    expect(mockInstanceRejoin).toHaveBeenCalledWith("p-default", "ps-1");
+  });
+
   it("shows inline error on load failure without toast", async () => {
     mockGetDashboardLaunchBlock.mockRejectedValueOnce(new Error("db down"));
     const errorSpy = vi.spyOn(showToast, "error").mockImplementation(() => ({

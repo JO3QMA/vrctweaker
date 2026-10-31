@@ -96,13 +96,17 @@ const loading = ref(false);
 const error = ref<string | null>(null);
 const rows = ref<UserEncounterDTO[]>([]);
 
-const canLoad = computed(() => {
-  if (props.mode === "user") return Boolean(props.userId?.trim());
-  return Boolean(props.worldId?.trim());
+const targetId = computed(() => {
+  // 親画面は trim 済みの ID を渡す。他の呼び出し元もいるため、ここで 1 回だけ正規化する。
+  const raw = props.mode === "user" ? props.userId : props.worldId;
+  return raw?.trim() ?? "";
 });
 
+const canLoad = computed(() => targetId.value !== "");
+
 async function load(): Promise<void> {
-  if (!canLoad.value) {
+  const id = targetId.value;
+  if (!id) {
     rows.value = [];
     error.value = null;
     loading.value = false;
@@ -112,9 +116,9 @@ async function load(): Promise<void> {
   error.value = null;
   try {
     if (props.mode === "user") {
-      rows.value = await App.encountersByVRCUserID(props.userId!.trim());
+      rows.value = await App.encountersByVRCUserID(id);
     } else {
-      rows.value = await App.encountersByWorldID(props.worldId!.trim());
+      rows.value = await App.encountersByWorldID(id);
     }
   } catch (e) {
     rows.value = [];

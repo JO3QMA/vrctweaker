@@ -302,7 +302,7 @@
         <VtButton
           variant="primary"
           class="detail-panel-action-btn detail-panel-action-btn--last"
-          :disabled="!selected.worldId || selected.worldId.trim() === ''"
+          :disabled="!canJoin"
           :title="joinButtonTitle"
           @click="onJoin"
         >
@@ -797,12 +797,11 @@ watch(
   },
 );
 
-const joinButtonTitle = computed(() => {
-  if (!selected.value?.worldId || selected.value.worldId.trim() === "") {
-    return t("gallery.joinNoWorldId");
-  }
-  return t("gallery.joinWorld");
-});
+const canJoin = computed(() => Boolean(selected.value?.worldId?.trim()));
+
+const joinButtonTitle = computed(() =>
+  canJoin.value ? t("gallery.joinWorld") : t("gallery.joinNoWorldId"),
+);
 
 const openFolderButtonTitle = computed(() => t("gallery.openFolderHint"));
 
@@ -1158,7 +1157,7 @@ async function openParticipantProfile(
 const joinError = ref<string | null>(null);
 
 async function onJoin(): Promise<void> {
-  if (!selected.value?.worldId || selected.value.worldId.trim() === "") return;
+  if (!canJoin.value || !selected.value) return;
   joinError.value = null;
   try {
     await App.joinWorldFromScreenshot(selected.value.id);

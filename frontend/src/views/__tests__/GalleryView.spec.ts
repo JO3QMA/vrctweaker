@@ -731,6 +731,39 @@ describe("GalleryView", () => {
     expect(wrapper.text()).toMatch(/12(\.0)? KB/);
   });
 
+  it("disables world join when the selected screenshot has a blank world id", async () => {
+    mockScreenshots.mockResolvedValue([{ ...sampleShot, worldId: "   " }]);
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+
+    await wrapper.find(".grid-item").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const joinButton = wrapper.find(".detail-panel-action-btn--last");
+    expect((joinButton.element as HTMLButtonElement).disabled).toBe(true);
+    expect(joinButton.attributes("title")).toBe("World IDがありません");
+
+    await joinButton.trigger("click");
+    await flushPromises();
+    expect(mockJoinWorldFromScreenshot).not.toHaveBeenCalled();
+  });
+
+  it("joins the selected world when the world id is present", async () => {
+    const wrapper = mount(GalleryView, { attachTo: host });
+    await flushPromises();
+
+    await wrapper.find(".grid-item").trigger("click");
+    await wrapper.vm.$nextTick();
+
+    const joinButton = wrapper.find(".detail-panel-action-btn--last");
+    expect((joinButton.element as HTMLButtonElement).disabled).toBe(false);
+    expect(joinButton.attributes("title")).toBe("このワールドへJoin");
+
+    await joinButton.trigger("click");
+    await flushPromises();
+    expect(mockJoinWorldFromScreenshot).toHaveBeenCalledWith(sampleShot.id);
+  });
+
   it("shows enrichment participants as a linked list in detail", async () => {
     mockScreenshots.mockResolvedValue([
       {
