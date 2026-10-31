@@ -108,6 +108,7 @@ import { getRuntime } from "../wails/runtime";
 import { formatError } from "../utils/formatError";
 import { showToast } from "../utils/showToast";
 import { useSessionUnlock } from "../composables/useSessionUnlock";
+import { useAsyncSectionLoad } from "../composables/useAsyncSectionLoad";
 import VtButton from "./VtButton.vue";
 
 const SELF_CACHE_CHANGED_DEBOUNCE_MS = 300;
@@ -117,7 +118,6 @@ type PresenceStatus = "join me" | "active" | "ask me" | "busy";
 const { t } = useI18n();
 const { state: unlockState } = useSessionUnlock();
 
-const loading = ref(true);
 const loadError = ref(false);
 const applying = ref(false);
 const loggedIn = ref(false);
@@ -134,15 +134,8 @@ type LoadOptions = {
 
 let selfCacheDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let unsubscribeSelfCacheChanged: (() => void) | undefined;
-// Load mutex + pending queue: inFlight blocks overlap; pendingRefresh replays one
-// deferred load in finally. pendingLoadOptions OR-merges onlyIfNotDirty and
-// skipSnapshotUpdate across queued calls. generation drops stale responses.
-let generation = 0;
-let inFlight = false;
-let pendingRefresh = false;
-let pendingLoadOptions: LoadOptions | undefined;
-let hasLoadedOnce = false;
-
+// Load mutex + pending queue + generation は useAsyncSectionLoad に集約。
+// pendingLoadOptions は onlyIfNotDirty / skipSnapshotUpdate を OR マージする。
 function mergePendingLoadOptions(
   queued: LoadOptions | undefined,
   incoming: LoadOptions | undefined,
@@ -155,6 +148,11 @@ function mergePendingLoadOptions(
       Boolean(incoming?.skipSnapshotUpdate),
   };
 }
+
+const { loading, hasLoadedOnce, begin, end, isStale, markLoaded } =
+  useAsyncSectionLoad<LoadOptions>({
+    mergeOptions: mergePendingLoadOptions,
+  });
 
 const colorOptions = computed(() => [
   {
@@ -228,30 +226,26 @@ async function load(options?: LoadOptions): Promise<void> {
   if (options?.onlyIfNotDirty && isDirty.value) {
     return;
   }
-  if (inFlight) {
-    pendingRefresh = true;
-    pendingLoadOptions = mergePendingLoadOptions(pendingLoadOptions, options);
+  const gen = begin(options);
+  if (gen === null) {
     return;
   }
-  inFlight = true;
-  pendingRefresh = false;
   const onlyIfNotDirty = Boolean(options?.onlyIfNotDirty);
   const skipSnapshotUpdate = Boolean(options?.skipSnapshotUpdate);
-  const gen = generation;
   try {
     const dto = await App.getPresenceChangeSection();
-    if (gen !== generation) return;
+    if (isStale(gen)) return;
     if (onlyIfNotDirty && isDirty.value) return;
     loadError.value = false;
     applySection(dto, {
-      isInitial: !hasLoadedOnce,
+      isInitial: !hasLoadedOnce.value,
       skipSnapshotUpdate,
     });
-    hasLoadedOnce = true;
+    markLoaded();
   } catch (e) {
-    if (gen !== generation) return;
+    if (isStale(gen)) return;
     console.error("PresenceChangeSection load failed:", e);
-    if (!hasLoadedOnce) {
+    if (!hasLoadedOnce.value) {
       loadError.value = true;
       loggedIn.value = false;
       history.value = [];
@@ -259,15 +253,9 @@ async function load(options?: LoadOptions): Promise<void> {
       showToast.warning(t("dashboard.presenceChange.refreshError"));
     }
   } finally {
-    inFlight = false;
-    if (gen === generation) {
-      loading.value = false;
-    }
-    if (pendingRefresh && gen === generation) {
-      const nextOptions = pendingLoadOptions;
-      pendingRefresh = false;
-      pendingLoadOptions = undefined;
-      void load(nextOptions);
+    const next = end(gen);
+    if (next.replay) {
+      void load(next.options);
     }
   }
 }
@@ -351,7 +339,6 @@ watch(unlockState, (state) => {
 });
 
 onUnmounted(() => {
-  generation += 1;
   if (selfCacheDebounceTimer !== null) {
     clearTimeout(selfCacheDebounceTimer);
     selfCacheDebounceTimer = null;

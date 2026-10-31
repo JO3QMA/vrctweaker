@@ -101,12 +101,14 @@ import { getRuntime } from "../wails/runtime";
 import { formatError } from "../utils/formatError";
 import { showToast } from "../utils/showToast";
 import { truncateRejoinWorldName } from "../utils/truncateText";
+import { useAsyncSectionLoad } from "../composables/useAsyncSectionLoad";
 
 const ACTIVITY_ENCOUNTERS_CHANGED_DEBOUNCE_MS = 400;
 
 const { t } = useI18n();
 
-const loading = ref(true);
+const { loading, hasLoadedOnce, begin, end, isStale, markLoaded } =
+  useAsyncSectionLoad();
 const loadError = ref(false);
 const launching = ref(false);
 const profiles = ref<LaunchProfileDTO[]>([]);
@@ -115,10 +117,6 @@ const rejoin = ref<DashboardRejoinDTO | null>(null);
 
 let encountersChangedDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let unsubscribeEncountersChanged: (() => void) | undefined;
-let generation = 0;
-let inFlight = false;
-let pendingRefresh = false;
-let hasLoadedOnce = false;
 
 const isEmpty = computed(() => profiles.value.length === 0);
 
@@ -146,23 +144,20 @@ function applyBlock(dto: DashboardLaunchBlockDTO, isInitial: boolean): void {
 }
 
 async function load(): Promise<void> {
-  if (inFlight) {
-    pendingRefresh = true;
+  const gen = begin();
+  if (gen === null) {
     return;
   }
-  inFlight = true;
-  pendingRefresh = false;
-  const gen = generation;
   try {
     const dto = await App.getDashboardLaunchBlock();
-    if (gen !== generation) return;
+    if (isStale(gen)) return;
     loadError.value = false;
-    applyBlock(dto, !hasLoadedOnce);
-    hasLoadedOnce = true;
+    applyBlock(dto, !hasLoadedOnce.value);
+    markLoaded();
   } catch (e) {
-    if (gen !== generation) return;
+    if (isStale(gen)) return;
     console.error("DashboardLaunchBlock load failed:", e);
-    if (!hasLoadedOnce) {
+    if (!hasLoadedOnce.value) {
       loadError.value = true;
       profiles.value = [];
       selectedProfileId.value = "";
@@ -171,12 +166,8 @@ async function load(): Promise<void> {
       showToast.warning(t("dashboard.launchBlock.refreshError"));
     }
   } finally {
-    inFlight = false;
-    if (gen === generation) {
-      loading.value = false;
-    }
-    if (pendingRefresh && gen === generation) {
-      pendingRefresh = false;
+    const next = end(gen);
+    if (next.replay) {
       void load();
     }
   }
@@ -230,7 +221,6 @@ onMounted(async () => {
 });
 
 onUnmounted(() => {
-  generation += 1;
   if (encountersChangedDebounceTimer !== null) {
     clearTimeout(encountersChangedDebounceTimer);
     encountersChangedDebounceTimer = null;

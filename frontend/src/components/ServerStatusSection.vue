@@ -116,11 +116,14 @@ import {
   type MaintenanceTranslator,
   type ServerMaintenanceInput,
 } from "../utils/serverStatus";
+import { useAsyncSectionLoad } from "../composables/useAsyncSectionLoad";
 
 const { t } = useI18n();
 
 const statusPageUrl = SERVER_STATUS_PAGE_URL;
-const loading = ref(true);
+const { loading, begin, end, isStale } = useAsyncSectionLoad({
+  mode: "drop-overlap",
+});
 const fetchState = ref<ServerStatusDTO["fetchState"]>("unavailable");
 const summaryIndicator = ref("");
 const components = ref<ServerStatusDTO["components"]>([]);
@@ -128,8 +131,6 @@ const incidents = ref<ServerStatusDTO["incidents"]>([]);
 const maintenances = ref<ServerMaintenanceInput[]>([]);
 
 let pollTimer: ReturnType<typeof setInterval> | null = null;
-let inFlight = false;
-let generation = 0;
 
 const summaryColorClass = computed(() =>
   serverStatusSummaryColorClass(summaryIndicator.value),
@@ -195,23 +196,19 @@ function applySnapshot(dto: ServerStatusDTO): void {
 }
 
 async function refresh(): Promise<void> {
-  if (inFlight) return;
-  inFlight = true;
-  const gen = generation;
+  const gen = begin();
+  if (gen === null) return;
   try {
     const dto = await App.getServerStatus();
-    if (gen !== generation) return;
+    if (isStale(gen)) return;
     applySnapshot(dto);
   } catch {
-    if (gen !== generation) return;
+    if (isStale(gen)) return;
     if (loading.value) {
       fetchState.value = "unavailable";
     }
   } finally {
-    inFlight = false;
-    if (gen === generation) {
-      loading.value = false;
-    }
+    end(gen);
   }
 }
 
@@ -223,7 +220,6 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  generation += 1;
   if (pollTimer !== null) {
     clearInterval(pollTimer);
     pollTimer = null;
