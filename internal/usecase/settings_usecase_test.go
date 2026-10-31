@@ -307,56 +307,90 @@ func TestSettingsUseCase_GetSet_andLogRetention(t *testing.T) {
 	}
 }
 
-func TestSettingsUseCase_OutputLogPath_roundtrip(t *testing.T) {
+func TestParseLogRetentionDays(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want int
+	}{
+		{name: "unset", in: "", want: 30},
+		{name: "valid", in: "14", want: 14},
+		{name: "zero", in: "0", want: 30},
+		{name: "negative", in: "-7", want: 30},
+		{name: "invalid", in: "bad", want: 30},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := parseLogRetentionDays(tc.in); got != tc.want {
+				t.Fatalf("parseLogRetentionDays(%q) = %d, want %d", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestParseGalleryAutoEnrichMetadata(t *testing.T) {
+	tests := []struct {
+		name string
+		in   string
+		want bool
+	}{
+		{name: "unset", in: "", want: true},
+		{name: "one", in: "1", want: true},
+		{name: "true", in: "true", want: true},
+		{name: "zero", in: "0", want: false},
+		{name: "false", in: "false", want: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := parseGalleryAutoEnrichMetadata(tc.in); got != tc.want {
+				t.Fatalf("parseGalleryAutoEnrichMetadata(%q) = %v, want %v", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestSettingsUseCase_GetGalleryAutoEnrichMetadata(t *testing.T) {
+	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
+	uc := NewSettingsUseCase(repo)
+	ctx := context.Background()
+
+	got, err := uc.GetGalleryAutoEnrichMetadata(ctx)
+	if err != nil || !got {
+		t.Fatalf("default = %v err=%v, want true", got, err)
+	}
+	repo.m[keyGalleryAutoEnrichMetadata] = "0"
+	got, err = uc.GetGalleryAutoEnrichMetadata(ctx)
+	if err != nil || got {
+		t.Fatalf("disabled = %v err=%v, want false", got, err)
+	}
+}
+
+func TestSettingsUseCase_SetPathSettings_outputLogRoundtrip(t *testing.T) {
 	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
 	uc := NewSettingsUseCase(repo)
 	ctx := context.Background()
 
 	path := t.TempDir()
-	if err := uc.SaveOutputLogPath(ctx, path); err != nil {
+	if err := uc.SetPathSettings(ctx, &PathSettings{OutputLogPath: path}); err != nil {
 		t.Fatal(err)
 	}
-	got, err := uc.GetOutputLogPath(ctx)
-	if err != nil || got != path {
-		t.Fatalf("GetOutputLogPath = %q err=%v", got, err)
+	got, err := uc.GetPathSettings(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.OutputLogPath != path {
+		t.Fatalf("OutputLogPath = %q, want %q", got.OutputLogPath, path)
 	}
 }
 
-func TestSaveOutputLogPath_rejectsFile(t *testing.T) {
-	repo := &fakeAppSettingsRepo{m: make(map[string]string)}
-	uc := NewSettingsUseCase(repo)
-	ctx := context.Background()
-	dir := t.TempDir()
-	filePath := filepath.Join(dir, "output_log.txt")
-	if err := os.WriteFile(filePath, []byte("x"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	err := uc.SaveOutputLogPath(ctx, filePath)
-	if !errors.Is(err, ErrOutputLogPathMustBeDirectory) {
-		t.Fatalf("err = %v, want ErrOutputLogPathMustBeDirectory", err)
-	}
-	if got, _ := uc.GetOutputLogPath(ctx); got != "" {
-		t.Fatalf("DB changed to %q", got)
-	}
-}
-
-func TestSaveOutputLogPath_emptyAllowed(t *testing.T) {
+func TestSettingsUseCase_SetPathSettings_emptyClearsOutputLog(t *testing.T) {
 	repo := &fakeAppSettingsRepo{m: map[string]string{keyOutputLogPath: "prev"}}
 	uc := NewSettingsUseCase(repo)
-	if err := uc.SaveOutputLogPath(context.Background(), ""); err != nil {
+	if err := uc.SetPathSettings(context.Background(), &PathSettings{}); err != nil {
 		t.Fatal(err)
 	}
-	got, err := uc.GetOutputLogPath(context.Background())
-	if err != nil || got != "" {
-		t.Fatalf("got %q err=%v", got, err)
-	}
-}
-
-func TestSaveOutputLogPath_emptyDirAllowed(t *testing.T) {
-	uc := NewSettingsUseCase(&fakeAppSettingsRepo{m: make(map[string]string)})
-	dir := t.TempDir()
-	if err := uc.SaveOutputLogPath(context.Background(), dir); err != nil {
-		t.Fatal(err)
+	if repo.m[keyOutputLogPath] != "" {
+		t.Fatalf("stored %q, want cleared", repo.m[keyOutputLogPath])
 	}
 }
 

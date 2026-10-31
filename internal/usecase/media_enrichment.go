@@ -43,10 +43,10 @@ func (uc *MediaUseCase) galleryAutoEnrichEnabled(ctx context.Context) bool {
 		return true
 	}
 	v, err := uc.enrichSettings.Get(ctx, keyGalleryAutoEnrichMetadata)
-	if err != nil || v == "" {
+	if err != nil {
 		return true
 	}
-	return v == "1" || v == "true"
+	return parseGalleryAutoEnrichMetadata(v)
 }
 
 // TryEnrichAfterIngest attempts enrichment for a newly ingested screenshot when auto mode is on.

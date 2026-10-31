@@ -437,6 +437,7 @@ func newTestAppWithActivity(t *testing.T) (*App, *sqlite.UserEncounterRepository
 
 func runActivityBootstrap(t *testing.T, app *App, ctx context.Context, watchPath string) {
 	t.Helper()
+	// ingestActivityLogsBootstrap assumes the caller already validated watchPath as a directory.
 	parser := activity.NewLogParser()
 	app.ingestActivityLogsBootstrap(ctx, watchPath, parser, appDiagLogger(), nil, nil)
 }
