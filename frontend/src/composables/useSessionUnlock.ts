@@ -13,7 +13,9 @@
  *   `persistAfterLogin(plaintextToken)` wraps the token and calls PersistWrappedCredential.
  *
  * Logout flow:
- *   `handleLogout()` clears both the stored credential and the IDB wrapping key.
+ *   `handleLogout()` resets local state and the IDB wrapping key. Go's Logout deletes the
+ *   stored credential; pass `{ clearStoredCredential: true }` to retry that deletion after a
+ *   backend logout failure.
  */
 
 import { ref } from "vue";
@@ -150,12 +152,16 @@ export function useSessionUnlock() {
   }
 
   /**
-   * Called when the user logs out. Clears the credential store and the IDB wrapping key.
-   * After App.logout(), Go already deletes the credential; clearStoredCredential here is
-   * redundant but idempotent and keeps this path correct when handleLogout is used alone.
+   * Called when the user logs out. Deletes the IDB wrapping key and resets local state.
+   * Go's Logout already deletes the stored credential on success; set `clearStoredCredential`
+   * only when retrying deletion after a backend logout failure.
    */
-  async function handleLogout(): Promise<void> {
-    await App.clearStoredCredential().catch(() => undefined);
+  async function handleLogout(
+    options: { clearStoredCredential?: boolean } = {},
+  ): Promise<void> {
+    if (options.clearStoredCredential) {
+      await App.clearStoredCredential().catch(() => undefined);
+    }
     await deleteWrappingKey().catch(() => undefined);
     errorMessage.value = "";
     state.value = "needs-relogin";

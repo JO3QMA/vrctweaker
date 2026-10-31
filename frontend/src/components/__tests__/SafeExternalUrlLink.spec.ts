@@ -7,7 +7,7 @@ import * as openExternal from "@/utils/openExternalHttpUrl";
 import { showToast } from "@/utils/showToast";
 
 vi.mock("@/utils/openExternalHttpUrl", () => ({
-  openExternalHttpUrl: vi.fn(),
+  openValidatedExternalHttpUrl: vi.fn(),
 }));
 
 vi.mock("@/utils/showToast", () => ({
@@ -34,8 +34,21 @@ describe("SafeExternalUrlLink", () => {
     vi.clearAllMocks();
   });
 
-  it("shows toast when openExternalHttpUrl rejects", async () => {
-    vi.mocked(openExternal.openExternalHttpUrl).mockRejectedValue(
+  it("opens the validated href instead of re-parsing the raw URL", async () => {
+    vi.mocked(openExternal.openValidatedExternalHttpUrl).mockResolvedValue(
+      true,
+    );
+    const wrapper = mountLink(" https://example.com/path ");
+
+    await wrapper.get("a").trigger("click");
+
+    expect(openExternal.openValidatedExternalHttpUrl).toHaveBeenCalledWith(
+      "https://example.com/path",
+    );
+  });
+
+  it("shows toast when openValidatedExternalHttpUrl rejects", async () => {
+    vi.mocked(openExternal.openValidatedExternalHttpUrl).mockRejectedValue(
       new Error("unavailable"),
     );
     const wrapper = mountLink("https://example.com/");
@@ -46,7 +59,9 @@ describe("SafeExternalUrlLink", () => {
   });
 
   it("shows warning when open returns false", async () => {
-    vi.mocked(openExternal.openExternalHttpUrl).mockResolvedValue(false);
+    vi.mocked(openExternal.openValidatedExternalHttpUrl).mockResolvedValue(
+      false,
+    );
     const wrapper = mountLink("https://example.com/");
     await wrapper.get("a").trigger("click");
     await vi.waitFor(() => {

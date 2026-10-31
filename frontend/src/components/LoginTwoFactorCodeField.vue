@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import {
-  isTwoFactorCodeComplete,
+  isSanitizedTwoFactorCodeComplete,
   sanitizeTwoFactorCodeInput,
-  sanitizeTwoFactorCodePaste,
   TWO_FACTOR_CODE_LENGTH,
 } from "@/utils/twoFactorCodeInput";
 
@@ -22,15 +21,14 @@ const emit = defineEmits<{
 function commitValue(raw: string): void {
   const next = sanitizeTwoFactorCodeInput(raw);
   emit("update:modelValue", next);
-  if (isTwoFactorCodeComplete(next)) {
+  if (isSanitizedTwoFactorCodeComplete(next)) {
     emit("complete");
   }
 }
 
 function onPaste(event: ClipboardEvent): void {
   event.preventDefault();
-  const text = event.clipboardData?.getData("text") ?? "";
-  commitValue(sanitizeTwoFactorCodePaste(text));
+  commitValue(event.clipboardData?.getData("text") ?? "");
 }
 </script>
 

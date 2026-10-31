@@ -13,4 +13,9 @@ describe("isLoginBlockedByTwoFactorCode", () => {
     expect(isLoginBlockedByTwoFactorCode("12", false)).toBe(true);
     expect(isLoginBlockedByTwoFactorCode("123456", false)).toBe(false);
   });
+
+  it("requires an already-sanitized six-digit value", () => {
+    expect(isLoginBlockedByTwoFactorCode("12ab34", true)).toBe(true);
+    expect(isLoginBlockedByTwoFactorCode(" 123456", true)).toBe(true);
+  });
 });

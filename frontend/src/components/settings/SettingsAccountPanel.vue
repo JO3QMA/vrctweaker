@@ -264,12 +264,14 @@ async function logout() {
   loginError.value = "";
   profileError.value = "";
   selfProfile.value = null;
+  let clearStoredCredential = false;
   try {
     await App.logout();
   } catch (e) {
+    clearStoredCredential = true;
     loginError.value = e instanceof Error ? e.message : t("settings.errLogout");
   }
-  await handleLogout();
+  await handleLogout({ clearStoredCredential });
   isLoggedIn.value = false;
 }
 

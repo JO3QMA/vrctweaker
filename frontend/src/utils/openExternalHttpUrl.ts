@@ -1,22 +1,32 @@
 import { App } from "@/wails/app";
 import { isWailsRuntime } from "@/wails/app";
-import { parseSafeHttpUrl } from "./safeHttpUrl";
+import { parseSafeHttpUrl, type SafeHttpHref } from "./safeHttpUrl";
 
 /**
- * Opens a validated http(s) URL in the OS browser (Wails) or a new tab (Storybook/tests).
+ * Opens an href produced by `parseSafeHttpUrl` in the OS browser (Wails) or a new tab
+ * (Storybook/tests).
+ */
+export async function openValidatedExternalHttpUrl(
+  href: SafeHttpHref,
+): Promise<boolean> {
+  if (isWailsRuntime()) {
+    await App.openExternalURL(href);
+    return true;
+  }
+  if (typeof window !== "undefined") {
+    window.open(href, "_blank", "noopener,noreferrer");
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Parses and validates a raw URL, then opens it in the OS browser (Wails) or a new tab.
  */
 export async function openExternalHttpUrl(raw: string): Promise<boolean> {
   const parsed = parseSafeHttpUrl(raw);
   if (!parsed.ok) {
     return false;
   }
-  if (isWailsRuntime()) {
-    await App.openExternalURL(parsed.href);
-    return true;
-  }
-  if (typeof window !== "undefined") {
-    window.open(parsed.href, "_blank", "noopener,noreferrer");
-    return true;
-  }
-  return false;
+  return openValidatedExternalHttpUrl(parsed.href);
 }
