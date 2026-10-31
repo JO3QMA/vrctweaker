@@ -56,13 +56,17 @@
             class="version-summary text-body-sm"
             data-testid="ytdlp-version-summary"
           >
-            <span data-testid="ytdlp-version-current">{{
-              t("video.versionLineCurrent", {
-                version: currentVersionDisplay,
-              })
-            }}</span>
+            <span
+              class="version-summary-segment"
+              data-testid="ytdlp-version-current"
+              >{{
+                t("video.versionLineCurrent", {
+                  version: currentVersionDisplay,
+                })
+              }}</span
+            >
             <span class="version-sep" aria-hidden="true">・</span>
-            <span>
+            <span class="version-summary-segment">
               <template v-if="!githubBackgroundCheckFailed">
                 {{ t("video.versionLineGithubLabel") }}
               </template>
@@ -73,15 +77,20 @@
               >
             </span>
             <span class="version-sep" aria-hidden="true">・</span>
-            <span data-testid="ytdlp-version-last-check">{{
-              t("video.versionLineLastCheck", { when: lastCheckDisplay })
-            }}</span>
+            <span
+              class="version-summary-segment"
+              data-testid="ytdlp-version-last-check"
+              >{{
+                t("video.versionLineLastCheck", { when: lastCheckDisplay })
+              }}</span
+            >
           </p>
 
           <div class="video-action-stack">
             <div class="video-update-row" data-testid="ytdlp-update-row">
               <VtButton
                 variant="primary"
+                class="video-update-btn"
                 data-testid="ytdlp-check-update"
                 :loading="actionLoading"
                 :disabled="busy"
@@ -641,7 +650,7 @@ defineExpose({
 
 <style scoped>
 .video-block-title {
-  margin: 0 0 var(--space-form-field);
+  margin: 0 0 var(--space-block);
   font-size: var(--font-size-16);
   font-weight: var(--font-weight-600);
 }
@@ -649,7 +658,7 @@ defineExpose({
   margin-bottom: var(--space-block);
 }
 .block-hint {
-  margin-bottom: var(--space-form-field);
+  margin-bottom: var(--space-action-group);
 }
 .video-ops {
   margin-bottom: var(--space-section);
@@ -658,15 +667,18 @@ defineExpose({
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-form-field) var(--space-block);
-  margin-bottom: var(--space-block);
+  gap: var(--space-action-group) var(--space-block);
+  margin-bottom: var(--space-action-group);
 }
 .switch-status {
   color: var(--color-text-secondary);
 }
 .version-summary {
-  margin: 0 0 var(--space-form-field);
+  margin: 0 0 var(--space-action-group);
   color: var(--color-text-secondary);
+}
+.version-summary-segment {
+  white-space: nowrap;
 }
 .version-sep {
   color: var(--color-text-secondary);
@@ -683,13 +695,24 @@ defineExpose({
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-action-group);
-  margin-bottom: var(--space-form-field);
+  margin-bottom: 0;
 }
 .video-update-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-form-field) var(--space-block);
+  gap: var(--space-action-group) var(--space-block);
+}
+.video-update-row :deep(.video-update-btn.el-button--primary:focus) {
+  outline: none;
+}
+.video-update-row
+  :deep(.video-update-btn.el-button--primary:focus:not(:focus-visible)) {
+  box-shadow: none;
+}
+.video-update-row :deep(.video-update-btn.el-button--primary:focus-visible) {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
 }
 .video-folder-row {
   display: flex;
@@ -702,13 +725,34 @@ defineExpose({
 }
 .video-folder-row :deep(.video-folder-btn.el-button) {
   border-color: var(--color-border);
+  color: var(--color-text-primary);
+  background-color: var(--el-button-bg-color);
+}
+.video-folder-row :deep(.video-folder-btn.el-button:hover),
+.video-folder-row :deep(.video-folder-btn.el-button:focus-visible) {
+  color: var(--color-text-primary);
+  background-color: var(--el-button-hover-bg-color);
+  border-color: var(--color-border);
+}
+.video-folder-row :deep(.video-folder-btn.el-button:active) {
+  color: var(--color-text-primary);
+  background-color: var(--el-button-hover-bg-color);
+  border-color: var(--color-border);
+}
+.video-folder-row :deep(.video-folder-btn.el-button:focus:not(:focus-visible)) {
+  outline: none;
+  box-shadow: none;
+}
+.video-folder-row :deep(.video-folder-btn.el-button:focus-visible) {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 2px;
 }
 .btn-icon {
   margin-right: var(--space-inline-tight);
   vertical-align: middle;
 }
 .error-details {
-  margin-top: var(--space-inline-tight);
+  margin-top: var(--space-action-group);
 }
 .error-details-toggle {
   display: inline-flex;
@@ -729,7 +773,7 @@ defineExpose({
   font-size: var(--font-size-12);
 }
 .error-details-panel {
-  margin-top: var(--space-inline-tight);
+  margin-top: var(--space-action-group);
 }
 .detail-error-raw {
   margin: 0;
@@ -738,7 +782,7 @@ defineExpose({
   font-size: var(--font-size-12);
 }
 .flash {
-  margin-top: var(--space-form-field);
+  margin-top: var(--space-action-group);
 }
 .flash-ok {
   color: var(--color-success);
