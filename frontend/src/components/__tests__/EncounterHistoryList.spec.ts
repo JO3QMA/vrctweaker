@@ -133,7 +133,7 @@ describe("EncounterHistoryList", () => {
     expect(link.text()).toContain("Public #88577");
     expect(link.text()).toContain("[JP]");
     expect(link.attributes("href")).toBe("#");
-    expect(link.attributes("aria-label")).toContain("VRChat で開く");
+    expect(link.attributes("aria-label")).toContain("VRChatで開く");
   });
 
   it("shows translated fallback when fetch rejects with non-Error", async () => {

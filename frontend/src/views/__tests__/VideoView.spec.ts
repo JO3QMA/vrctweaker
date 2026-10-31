@@ -125,7 +125,7 @@ describe("VideoView", () => {
     const card = wrapper.get('[data-testid="ytdlp-experimental-features"]');
     expect(card.text()).toContain("yt-dlp (実験的機能)");
     expect(card.text()).toContain("yt-dlp の置換");
-    expect(card.text()).toContain("Cookie を利用する");
+    expect(card.text()).toContain("Cookieを利用する");
     expect(card.find('[data-testid="ytdlp-replace-section"]').exists()).toBe(
       true,
     );
@@ -136,7 +136,7 @@ describe("VideoView", () => {
     expect(wrapper.findAll(".el-card").length).toBe(2);
     expect(wrapper.get("#ytdlp-replace-heading").text()).toBe("yt-dlp の置換");
     expect(wrapper.get("#ytdlp-cookie-heading").text()).toBe(
-      "Cookie を利用する",
+      "Cookieを利用する",
     );
     // No switch-side feature name label (hint may still mention 置換)
     expect(wrapper.find(".switch-label").exists()).toBe(false);
@@ -365,7 +365,7 @@ describe("VideoView", () => {
     );
     expect(
       wrapper.get('[data-testid="video-history-copy-ok"]').text(),
-    ).toContain("URL をコピーしました");
+    ).toContain("URLをコピーしました");
   });
 
   it("clears copy flash after a short delay", async () => {

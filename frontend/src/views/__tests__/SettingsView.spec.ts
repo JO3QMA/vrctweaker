@@ -189,7 +189,7 @@ describe("SettingsView", () => {
     );
     expect(licensesLink.exists()).toBe(true);
     expect(licensesLink.attributes("href")).toContain("/licenses");
-    expect(licensesLink.text()).toContain("OSS ライセンス一覧");
+    expect(licensesLink.text()).toContain("OSSライセンス一覧");
   });
 
   it("shows legal document links in about section", async () => {
