@@ -62,6 +62,13 @@ describe("launcherProfileEdits", () => {
     expect(hasAdvancedLaunchOptionsEnabled(args, enabled)).toBe(true);
   });
 
+  it("treats enabled flags as the source of truth for advanced options", () => {
+    const args = emptyArgs();
+    const enabled = defaultValueOptionsEnabled();
+    enabled.resolution = true;
+    expect(hasAdvancedLaunchOptionsEnabled(args, enabled)).toBe(true);
+  });
+
   it("does not treat primary-only custom args as advanced", () => {
     const args = { ...emptyArgs(), custom: "-batchmode" };
     const enabled = defaultValueOptionsEnabled();

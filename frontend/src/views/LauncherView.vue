@@ -916,20 +916,14 @@ async function onAffinityEnabledChange() {
 
 function onCustomArmRatioEnabledChange() {
   if (!valueOptionsEnabled.customArmRatio) launchArgs.value.customArmRatio = 0;
-  else if (
-    !Number.isFinite(launchArgs.value.customArmRatio) ||
-    !(launchArgs.value.customArmRatio > 0)
-  )
+  else if (!(launchArgs.value.customArmRatio > 0))
     launchArgs.value.customArmRatio = IK_CUSTOM_ARM_RATIO_DEFAULT;
 }
 
 function onCalibrationRangeEnabledChange() {
   if (!valueOptionsEnabled.calibrationRange)
     launchArgs.value.calibrationRange = 0;
-  else if (
-    !Number.isFinite(launchArgs.value.calibrationRange) ||
-    !(launchArgs.value.calibrationRange > 0)
-  )
+  else if (!(launchArgs.value.calibrationRange > 0))
     launchArgs.value.calibrationRange = IK_CALIBRATION_RANGE_DEFAULT;
 }
 

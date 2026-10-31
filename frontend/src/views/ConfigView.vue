@@ -216,7 +216,6 @@
             size="small"
             class="fov-number-input"
             @change="onSteadycamFovChange"
-            @blur="clampSteadycamFov"
           />
         </div>
       </el-card>
@@ -253,7 +252,6 @@
               :step="1"
               placeholder="30"
               data-testid="cache-size-input"
-              @blur="clampCacheSize"
             />
           </el-form-item>
           <el-form-item :label="t('config.cacheExpiryDays')">
@@ -264,7 +262,6 @@
               :step="1"
               placeholder="30"
               data-testid="cache-expiry-input"
-              @blur="clampCacheExpiry"
             />
           </el-form-item>
         </el-form>
@@ -456,17 +453,6 @@ function clampCacheNumeric(n: number | undefined, min: number): number {
   return Math.max(min, n);
 }
 
-function clampCacheSize() {
-  config.value.cacheSize = clampCacheNumeric(config.value.cacheSize, CACHE_MIN);
-}
-
-function clampCacheExpiry() {
-  config.value.cacheExpiryDelay = clampCacheNumeric(
-    config.value.cacheExpiryDelay,
-    CACHE_MIN,
-  );
-}
-
 const steadycamFovSliderValue = computed(() => {
   const v = config.value.fpvSteadycamFov;
   if (v === 0) return STEADYCAM_FOV_PLACEHOLDER;
@@ -474,11 +460,7 @@ const steadycamFovSliderValue = computed(() => {
 });
 
 function onSteadycamFovSliderInput(val: number) {
-  const n = Math.round(val);
-  config.value.fpvSteadycamFov = Math.max(
-    STEADYCAM_FOV_MIN,
-    Math.min(STEADYCAM_FOV_MAX, n),
-  );
+  config.value.fpvSteadycamFov = Math.round(val);
 }
 
 function onSteadycamFovChange(val: number | undefined) {
@@ -487,15 +469,6 @@ function onSteadycamFovChange(val: number | undefined) {
     return;
   }
   config.value.fpvSteadycamFov = Math.round(val);
-}
-
-function clampSteadycamFov() {
-  const v = config.value.fpvSteadycamFov;
-  if (v > 0 && v < STEADYCAM_FOV_MIN) {
-    config.value.fpvSteadycamFov = STEADYCAM_FOV_MIN;
-  } else if (v > STEADYCAM_FOV_MAX) {
-    config.value.fpvSteadycamFov = STEADYCAM_FOV_MAX;
-  }
 }
 
 onMounted(async () => {
