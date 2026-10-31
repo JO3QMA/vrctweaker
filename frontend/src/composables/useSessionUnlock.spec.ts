@@ -234,7 +234,7 @@ describe("useSessionUnlock handleLogout", () => {
     cryptoMocks.deleteWrappingKey.mockReset();
   });
 
-  it("clears stored credential and wrapping key", async () => {
+  it("resets local state and the wrapping key without clearing the credential", async () => {
     const { useSessionUnlock } = await loadUnlock();
     const app = await appMocks();
     cryptoMocks.deleteWrappingKey.mockResolvedValue(undefined);
@@ -242,10 +242,21 @@ describe("useSessionUnlock handleLogout", () => {
     u.state.value = "unlocked";
     u.errorMessage.value = "old";
     await u.handleLogout();
-    expect(app.clearStoredCredential).toHaveBeenCalled();
+    expect(app.clearStoredCredential).not.toHaveBeenCalled();
     expect(cryptoMocks.deleteWrappingKey).toHaveBeenCalled();
     expect(u.state.value).toBe("needs-relogin");
     expect(u.errorMessage.value).toBe("");
+  });
+
+  it("clears the stored credential when asked to retry deletion", async () => {
+    const { useSessionUnlock } = await loadUnlock();
+    const app = await appMocks();
+    cryptoMocks.deleteWrappingKey.mockResolvedValue(undefined);
+    const u = useSessionUnlock();
+    await u.handleLogout({ clearStoredCredential: true });
+    expect(app.clearStoredCredential).toHaveBeenCalledTimes(1);
+    expect(cryptoMocks.deleteWrappingKey).toHaveBeenCalled();
+    expect(u.state.value).toBe("needs-relogin");
   });
 });
 

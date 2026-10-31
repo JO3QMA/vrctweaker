@@ -766,6 +766,7 @@ describe("SettingsView login and profile", () => {
     await flushPromises();
 
     expect(App.logout).toHaveBeenCalled();
+    expect(App.clearStoredCredential).not.toHaveBeenCalled();
     expect(wrapper.find("#login-username").exists()).toBe(true);
   });
 
@@ -784,6 +785,7 @@ describe("SettingsView login and profile", () => {
     expect(wrapper.find(".login-form .el-alert--error").text()).toContain(
       "logout failed",
     );
+    expect(App.clearStoredCredential).toHaveBeenCalledTimes(1);
   });
 
   it("calls refreshFriends from logged-in actions", async () => {

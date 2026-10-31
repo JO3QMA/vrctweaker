@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { openExternalHttpUrl } from "../openExternalHttpUrl";
+import {
+  openExternalHttpUrl,
+  openValidatedExternalHttpUrl,
+} from "../openExternalHttpUrl";
 
 vi.mock("@/wails/app", () => ({
   isWailsRuntime: vi.fn(() => false),
@@ -28,5 +31,22 @@ describe("openExternalHttpUrl", () => {
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
     expect(await openExternalHttpUrl("javascript:1")).toBe(false);
     expect(open).not.toHaveBeenCalled();
+  });
+});
+
+describe("openValidatedExternalHttpUrl", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("opens an already validated href without parsing it again", async () => {
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    const ok = await openValidatedExternalHttpUrl("https://example.com");
+    expect(ok).toBe(true);
+    expect(open).toHaveBeenCalledWith(
+      "https://example.com",
+      "_blank",
+      "noopener,noreferrer",
+    );
   });
 });
