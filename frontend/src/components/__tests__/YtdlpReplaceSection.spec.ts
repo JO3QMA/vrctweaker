@@ -248,4 +248,17 @@ describe("YtdlpReplaceSection", () => {
     await flushPromises();
     expect(App.refreshYTDLPLatestRelease).toHaveBeenCalledWith(false);
   });
+
+  it("uses bordered secondary buttons for folder actions", async () => {
+    const wrapper = mountSection();
+    await flushPromises();
+    for (const testId of [
+      "ytdlp-open-cache-folder",
+      "ytdlp-open-tools-folder",
+    ]) {
+      const btn = wrapper.get(`[data-testid="${testId}"]`);
+      expect(btn.classes()).not.toContain("is-text");
+      expect(btn.classes()).not.toContain("el-button--primary");
+    }
+  });
 });

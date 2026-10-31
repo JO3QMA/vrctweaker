@@ -93,7 +93,8 @@
 
             <div class="video-folder-row" data-testid="ytdlp-folder-row">
               <VtButton
-                variant="tertiary"
+                variant="secondary"
+                class="video-folder-btn"
                 data-testid="ytdlp-open-cache-folder"
                 :disabled="busy"
                 @click="openCacheFolder"
@@ -104,7 +105,8 @@
                 {{ t("video.openCacheFolder") }}
               </VtButton>
               <VtButton
-                variant="tertiary"
+                variant="secondary"
+                class="video-folder-btn"
                 data-testid="ytdlp-open-tools-folder"
                 :disabled="busy"
                 @click="openToolsFolder"
@@ -692,11 +694,11 @@ defineExpose({
 .video-folder-row {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-action-group) var(--space-block);
+  align-items: center;
+  gap: var(--space-form-field) var(--space-block);
 }
-.video-folder-row :deep(.el-button) {
-  padding-inline: 0;
-  margin-inline: 0;
+.video-folder-row :deep(.video-folder-btn.el-button) {
+  border-color: var(--color-border);
 }
 .btn-icon {
   margin-right: var(--space-inline-tight);

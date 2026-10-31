@@ -53,6 +53,12 @@ const meta = {
   tags: ["autodocs"],
   parameters: {
     layout: "padded",
+    docs: {
+      description: {
+        component:
+          "Row 1: maintain toggle. Row 2: version summary. Row 3: primary update/fetch, then bordered folder buttons (secondary, #3d4f66 border).",
+      },
+    },
   },
   decorators: [paddedDecorator],
 } satisfies Meta<typeof YtdlpReplaceSection>;
