@@ -724,26 +724,37 @@ defineExpose({
   margin-left: 0;
 }
 .video-folder-row :deep(.video-folder-btn.el-button) {
+  --el-button-hover-bg-color: #36495f;
+  --el-button-hover-border-color: #4a5f7a;
+  --el-button-hover-text-color: #e8eaed;
+  --el-button-active-bg-color: #26374a;
+  --el-button-active-border-color: #4a5f7a;
+  --el-button-active-text-color: #e8eaed;
   border-color: var(--color-border);
-  color: var(--color-text-primary);
+  color: #e8eaed;
   background-color: var(--el-button-bg-color);
 }
-.video-folder-row :deep(.video-folder-btn.el-button:hover),
-.video-folder-row :deep(.video-folder-btn.el-button:focus-visible) {
-  color: var(--color-text-primary);
-  background-color: var(--el-button-hover-bg-color);
-  border-color: var(--color-border);
+.video-folder-row :deep(.video-folder-btn.el-button:hover:not(.is-disabled)) {
+  color: #e8eaed !important;
+  background-color: #36495f !important;
+  border-color: #4a5f7a !important;
 }
-.video-folder-row :deep(.video-folder-btn.el-button:active) {
-  color: var(--color-text-primary);
-  background-color: var(--el-button-hover-bg-color);
-  border-color: var(--color-border);
+.video-folder-row :deep(.video-folder-btn.el-button:active:not(.is-disabled)) {
+  color: #e8eaed !important;
+  background-color: #26374a !important;
+  border-color: #4a5f7a !important;
 }
 .video-folder-row :deep(.video-folder-btn.el-button:focus:not(:focus-visible)) {
   outline: none;
   box-shadow: none;
+  color: #e8eaed !important;
+  background-color: var(--el-button-bg-color) !important;
+  border-color: var(--color-border) !important;
 }
 .video-folder-row :deep(.video-folder-btn.el-button:focus-visible) {
+  color: #e8eaed !important;
+  background-color: var(--el-button-bg-color) !important;
+  border-color: var(--color-border) !important;
   outline: 2px solid var(--color-brand);
   outline-offset: 2px;
 }
@@ -782,7 +793,7 @@ defineExpose({
   font-size: var(--font-size-12);
 }
 .flash {
-  margin-top: var(--space-action-group);
+  margin: var(--space-action-group) 0 0;
 }
 .flash-ok {
   color: var(--color-success);
