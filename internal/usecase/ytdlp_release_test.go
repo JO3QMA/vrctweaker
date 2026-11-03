@@ -14,7 +14,7 @@ import (
 	"vrchat-tweaker/internal/appversion"
 )
 
-func TestYtdlpExeAssetFromReleaseJSON(t *testing.T) {
+func TestYtdlpReleaseAssetsFromReleaseJSON(t *testing.T) {
 	t.Parallel()
 	const payload = `{
   "tag_name": "2025.01.15",
@@ -24,7 +24,7 @@ func TestYtdlpExeAssetFromReleaseJSON(t *testing.T) {
     {"name": "yt-dlp.exe", "browser_download_url": "https://github.com/y/y/releases/download/2025.01.15/yt-dlp.exe"}
   ]
 }`
-	tag, url, err := ytdlpExeAssetFromReleaseJSON([]byte(payload))
+	tag, url, _, err := ytdlpReleaseAssetsFromReleaseJSON([]byte(payload))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,10 +36,10 @@ func TestYtdlpExeAssetFromReleaseJSON(t *testing.T) {
 	}
 }
 
-func TestYtdlpExeAssetFromReleaseJSON_missingAsset(t *testing.T) {
+func TestYtdlpReleaseAssetsFromReleaseJSON_missingAsset(t *testing.T) {
 	t.Parallel()
 	const payload = `{"tag_name": "1.0.0", "assets": [{"name": "foo", "browser_download_url": "https://x"}]}`
-	_, _, err := ytdlpExeAssetFromReleaseJSON([]byte(payload))
+	_, _, _, err := ytdlpReleaseAssetsFromReleaseJSON([]byte(payload))
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -90,9 +90,8 @@ func TestFetchLatestRelease_httptest(t *testing.T) {
 	defer srv.Close()
 
 	u := &YTDLPUpdater{
-		HTTPClient:                srv.Client(),
-		ReleasesLatestURL:         srv.URL + "/api/latest",
-		SkipDownloadURLValidation: true,
+		HTTPClient:        srv.Client(),
+		ReleasesLatestURL: srv.URL + "/api/latest",
 	}
 	info, err := u.FetchLatestRelease(context.Background())
 	if err != nil {
@@ -112,22 +111,25 @@ func TestFetchLatestRelease_httptest(t *testing.T) {
 
 func TestValidateYTDlpDownloadURL(t *testing.T) {
 	t.Parallel()
-	u := &YTDLPUpdater{}
-	if err := validateYTDlpDownloadURL(u, "https://objects.githubusercontent.com/x/yt-dlp.exe"); err != nil {
-		t.Fatalf("allowed host: %v", err)
+	cdnAsset := "https://release-assets.githubusercontent.com/github-production-release-asset/307260205/f116afaa-741f-4c8c-9767-a3ae137fbae6"
+	if err := validateYTDlpDownloadURL(cdnAsset); err != nil {
+		t.Fatalf("release-assets CDN: %v", err)
 	}
-	if err := validateYTDlpDownloadURL(u, "https://release-assets.githubusercontent.com/github-production-release-asset/1/yt-dlp.exe"); err != nil {
-		t.Fatalf("release-assets host: %v", err)
+	objectsAsset := "https://objects.githubusercontent.com/github-production-release-asset/307260205/f116afaa-741f-4c8c-9767-a3ae137fbae6"
+	if err := validateYTDlpDownloadURL(objectsAsset); err != nil {
+		t.Fatalf("objects CDN: %v", err)
 	}
-	if err := validateYTDlpDownloadURL(u, "https://evil.example/yt-dlp.exe"); err == nil {
+	if err := validateYTDlpDownloadURL("https://release-assets.githubusercontent.com/evil/yt-dlp.exe"); err == nil {
+		t.Fatal("expected reject for non-release-asset CDN path")
+	}
+	if err := validateYTDlpDownloadURL("https://evil.example/yt-dlp.exe"); err == nil {
 		t.Fatal("expected reject for untrusted host")
 	}
-	if err := validateYTDlpDownloadURL(u, "https://github.com/evil/evil/releases/download/1.0/yt-dlp.exe"); err == nil {
+	if err := validateYTDlpDownloadURL("https://github.com/evil/evil/releases/download/1.0/yt-dlp.exe"); err == nil {
 		t.Fatal("expected reject for non-official github release path")
 	}
-	u.SkipDownloadURLValidation = true
-	if err := validateYTDlpDownloadURL(u, "http://127.0.0.1/x"); err != nil {
-		t.Fatalf("skip validation: %v", err)
+	if err := validateYTDlpDownloadURL("https://github.com/yt-dlp/yt-dlp/releases/download/2026.01.01/yt-dlp.exe"); err != nil {
+		t.Fatalf("official URL should pass: %v", err)
 	}
 }
 
@@ -152,7 +154,7 @@ func TestDownloadToCache_followsGitHubReleaseRedirect(t *testing.T) {
 				}
 				return &http.Response{
 					StatusCode: http.StatusFound,
-					Header:     http.Header{"Location": []string{"https://release-assets.githubusercontent.com/github-production-release-asset/1/yt-dlp.exe"}},
+					Header:     http.Header{"Location": []string{"https://release-assets.githubusercontent.com/github-production-release-asset/307260205/f116afaa-741f-4c8c-9767-a3ae137fbae6"}},
 					Body:       http.NoBody,
 					Request:    req,
 				}, nil
@@ -191,7 +193,7 @@ func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 func TestDownloadToCache_andEnsure(t *testing.T) {
 	t.Parallel()
 	const exeBody = "MZfake-official"
-	ts := startYTDlpReleaseTestServer(exeBody, "", false)
+	ts := startYTDlpReleaseTestServer("2025.03.01", exeBody, "", true, nil)
 	defer ts.Server.Close()
 
 	cache := filepath.Join(t.TempDir(), "ytdlp", "yt-dlp.exe")
@@ -220,7 +222,7 @@ func TestDownloadToCache_andEnsure(t *testing.T) {
 func TestDownloadToCache_hashMatch(t *testing.T) {
 	t.Parallel()
 	const exeBody = "MZhash-match"
-	ts := startYTDlpReleaseTestServer(exeBody, "", true)
+	ts := startYTDlpReleaseTestServer("2025.03.01", exeBody, "", true, nil)
 	defer ts.Server.Close()
 	cache := filepath.Join(t.TempDir(), "ytdlp", "yt-dlp.exe")
 	info, err := ts.Updater.FetchLatestRelease(context.Background())
@@ -243,7 +245,7 @@ func TestDownloadToCache_hashMismatch_keepsExisting(t *testing.T) {
 	t.Parallel()
 	const exeBody = "MZactual"
 	const wrongSums = "0000000000000000000000000000000000000000000000000000000000000000  yt-dlp.exe\n"
-	ts := startYTDlpReleaseTestServer(exeBody, wrongSums, true)
+	ts := startYTDlpReleaseTestServer("2025.03.01", exeBody, wrongSums, true, nil)
 	defer ts.Server.Close()
 	cache := filepath.Join(t.TempDir(), "ytdlp", "yt-dlp.exe")
 	const existing = "keep-me"
@@ -272,7 +274,7 @@ func TestDownloadToCache_hashMismatch_keepsExisting(t *testing.T) {
 func TestDownloadToCache_missingSUMSEntry(t *testing.T) {
 	t.Parallel()
 	const exeBody = "MZmissing-entry"
-	ts := startYTDlpReleaseTestServer(exeBody, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  other.bin\n", true)
+	ts := startYTDlpReleaseTestServer("2025.03.01", exeBody, "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa  other.bin\n", true, nil)
 	defer ts.Server.Close()
 	cache := filepath.Join(t.TempDir(), "ytdlp", "yt-dlp.exe")
 	info, err := ts.Updater.FetchLatestRelease(context.Background())
@@ -288,11 +290,10 @@ func TestDownloadToCache_missingSUMSEntry(t *testing.T) {
 
 func TestValidateYTDlpDownloadURL_nonPinnedURLRejected(t *testing.T) {
 	t.Parallel()
-	u := &YTDLPUpdater{}
-	if err := validateYTDlpDownloadURL(u, "https://github.com/not-yt-dlp/other/releases/download/1.0/yt-dlp.exe"); err == nil {
+	if err := validateYTDlpDownloadURL("https://github.com/not-yt-dlp/other/releases/download/1.0/yt-dlp.exe"); err == nil {
 		t.Fatal("expected reject")
 	}
-	if err := validateYTDlpDownloadURL(u, "https://github.com/yt-dlp/yt-dlp/releases/download/2026.01.01/yt-dlp.exe"); err != nil {
+	if err := validateYTDlpDownloadURL("https://github.com/yt-dlp/yt-dlp/releases/download/2026.01.01/yt-dlp.exe"); err != nil {
 		t.Fatalf("official URL should pass: %v", err)
 	}
 }

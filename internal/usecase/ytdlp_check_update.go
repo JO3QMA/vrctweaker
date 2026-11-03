@@ -112,11 +112,7 @@ func (uc *YTDLPMaintainUseCase) CheckAndUpdateOfficialCache(ctx context.Context)
 		return res, nil
 	}
 
-	_, cachePath, toolsPath, maintainDesired, perr := uc.statusPathsForUpdate(ctx)
-	if perr != nil {
-		return res, perr
-	}
-	updated, uerr := uc.applyOfficialCacheUpdate(ctx, st, cachePath, toolsPath, maintainDesired, info)
+	updated, uerr := uc.applyOfficialCacheUpdate(ctx, st, st.CachePath, st.ToolsPath, st.MaintainDesired, info)
 	res.Status = updated
 	if uerr != nil {
 		res.Outcome = YTDLPMaintainOutcomeError

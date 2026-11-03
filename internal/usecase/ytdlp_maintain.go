@@ -425,6 +425,10 @@ func (uc *YTDLPMaintainUseCase) getStatusLocked(ctx context.Context) (YTDLPMaint
 }
 
 func (uc *YTDLPMaintainUseCase) statusPathsForUpdate(ctx context.Context) (st YTDLPMaintainStatus, cachePath, toolsPath string, maintainDesired bool, err error) {
+	return uc.maintainUpdatePathsWithStatus(ctx)
+}
+
+func (uc *YTDLPMaintainUseCase) maintainUpdatePathsWithStatus(ctx context.Context) (st YTDLPMaintainStatus, cachePath, toolsPath string, maintainDesired bool, err error) {
 	uc.mu.Lock()
 	defer uc.mu.Unlock()
 	st, err = uc.getStatusLocked(ctx)

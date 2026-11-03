@@ -20,7 +20,10 @@ func TestRefreshLatestRelease_usesCacheWithinTTL(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/latest", func(w http.ResponseWriter, _ *http.Request) {
 		apiCalls++
-		_, _ = w.Write([]byte(`{"tag_name":"2026.01.01","assets":[{"name":"yt-dlp.exe","browser_download_url":"https://example.com/yt-dlp.exe"}]}`))
+		_, _ = w.Write([]byte(`{"tag_name":"2026.01.01","assets":[
+  {"name":"SHA2-256SUMS","browser_download_url":"https://example.com/sums"},
+  {"name":"yt-dlp.exe","browser_download_url":"https://example.com/yt-dlp.exe"}
+]}`))
 	})
 	srv := httptest.NewServer(mux)
 	defer srv.Close()
@@ -67,17 +70,8 @@ func TestCheckAndUpdateOfficialCache_unchangedSkipsDownload(t *testing.T) {
 	}
 	t.Parallel()
 	var downloads int
-	mux := http.NewServeMux()
-	srv := httptest.NewServer(mux)
-	base := srv.URL
-	mux.HandleFunc("/api/latest", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"tag_name":"2026.02.02","assets":[{"name":"yt-dlp.exe","browser_download_url":"` + base + `/bin/yt-dlp.exe"}]}`))
-	})
-	mux.HandleFunc("/bin/yt-dlp.exe", func(w http.ResponseWriter, _ *http.Request) {
-		downloads++
-		_, _ = w.Write([]byte("MZ"))
-	})
-	defer srv.Close()
+	ts := startYTDlpReleaseTestServer("2026.02.02", "MZ", "", true, &downloads)
+	defer ts.Server.Close()
 
 	dir := t.TempDir()
 	cache := filepath.Join(dir, "yt-dlp.exe")
@@ -89,12 +83,7 @@ func TestCheckAndUpdateOfficialCache_unchangedSkipsDownload(t *testing.T) {
 		keyYTDLPOfficialCacheTag: "2026.02.02",
 	}}
 	settings := NewSettingsUseCase(repo)
-	updater := &YTDLPUpdater{
-		HTTPClient:                srv.Client(),
-		ReleasesLatestURL:         srv.URL + "/api/latest",
-		SkipDownloadURLValidation: true,
-	}
-	uc := NewYTDLPMaintainUseCase(settings, updater)
+	uc := NewYTDLPMaintainUseCase(settings, ts.Updater)
 	uc.CachePathOverride = cache
 	uc.ToolsPathOverride = filepath.Join(dir, "Tools", "yt-dlp.exe")
 
@@ -116,16 +105,8 @@ func TestCheckAndUpdateOfficialCache_downloadsWhenNewer(t *testing.T) {
 		t.Skip("yt-dlp maintain status is Windows-gated")
 	}
 	t.Parallel()
-	mux := http.NewServeMux()
-	srv := httptest.NewServer(mux)
-	base := srv.URL
-	mux.HandleFunc("/api/latest", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"tag_name":"2026.03.03","assets":[{"name":"yt-dlp.exe","browser_download_url":"` + base + `/bin/yt-dlp.exe"}]}`))
-	})
-	mux.HandleFunc("/bin/yt-dlp.exe", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte("MZnew"))
-	})
-	defer srv.Close()
+	ts := startYTDlpReleaseTestServer("2026.03.03", "MZnew", "", true, nil)
+	defer ts.Server.Close()
 
 	dir := t.TempDir()
 	cache := filepath.Join(dir, "yt-dlp.exe")
@@ -137,12 +118,7 @@ func TestCheckAndUpdateOfficialCache_downloadsWhenNewer(t *testing.T) {
 		keyYTDLPOfficialCacheTag: "2026.01.01",
 	}}
 	settings := NewSettingsUseCase(repo)
-	updater := &YTDLPUpdater{
-		HTTPClient:                srv.Client(),
-		ReleasesLatestURL:         srv.URL + "/api/latest",
-		SkipDownloadURLValidation: true,
-	}
-	uc := NewYTDLPMaintainUseCase(settings, updater)
+	uc := NewYTDLPMaintainUseCase(settings, ts.Updater)
 	uc.CachePathOverride = cache
 
 	ctx := context.Background()
@@ -167,28 +143,15 @@ func TestCheckAndUpdateOfficialCache_firstDownload(t *testing.T) {
 		t.Skip("yt-dlp maintain status is Windows-gated")
 	}
 	t.Parallel()
-	mux := http.NewServeMux()
-	srv := httptest.NewServer(mux)
-	base := srv.URL
-	mux.HandleFunc("/api/latest", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"tag_name":"2026.04.04","assets":[{"name":"yt-dlp.exe","browser_download_url":"` + base + `/bin/yt-dlp.exe"}]}`))
-	})
-	mux.HandleFunc("/bin/yt-dlp.exe", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte("MZfirst"))
-	})
-	defer srv.Close()
+	ts := startYTDlpReleaseTestServer("2026.04.04", "MZfirst", "", true, nil)
+	defer ts.Server.Close()
 
 	dir := t.TempDir()
 	cache := filepath.Join(dir, "yt-dlp.exe")
 
 	repo := &fakeAppSettingsRepo{m: map[string]string{}}
 	settings := NewSettingsUseCase(repo)
-	updater := &YTDLPUpdater{
-		HTTPClient:                srv.Client(),
-		ReleasesLatestURL:         srv.URL + "/api/latest",
-		SkipDownloadURLValidation: true,
-	}
-	uc := NewYTDLPMaintainUseCase(settings, updater)
+	uc := NewYTDLPMaintainUseCase(settings, ts.Updater)
 	uc.CachePathOverride = cache
 
 	ctx := context.Background()

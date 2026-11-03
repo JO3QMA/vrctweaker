@@ -44,11 +44,9 @@ type githubReleaseLatest struct {
 
 // YTDLPUpdater fetches official yt-dlp releases into the Official yt-dlp cache.
 type YTDLPUpdater struct {
-	mu                        sync.Mutex
-	HTTPClient                *http.Client
-	ReleasesLatestURL         string
-	SkipDownloadURLValidation bool // tests only
-	SkipChecksumVerification  bool // tests only
+	mu                sync.Mutex
+	HTTPClient        *http.Client
+	ReleasesLatestURL string
 }
 
 // NewYTDLPUpdater returns an updater with sane defaults.
@@ -68,12 +66,6 @@ func (u *YTDLPUpdater) httpClient() *http.Client {
 	return http.DefaultClient
 }
 
-func ytdlpExeAssetFromReleaseJSON(data []byte) (tagName, downloadURL string, err error) {
-	tag, url, _, err := ytdlpReleaseAssetsFromReleaseJSON(data)
-	return tag, url, err
-}
-
-// ytdlpReleaseTagFromDownloadURL extracts the release tag from a GitHub browser_download_url.
 func ytdlpReleaseTagFromDownloadURL(raw string) string {
 	const marker = "/releases/download/"
 	i := strings.Index(raw, marker)
@@ -94,13 +86,10 @@ var allowedYTDlpDownloadHosts = map[string]struct{}{
 	"release-assets.githubusercontent.com": {}, // github.com/releases/download → 302
 }
 
-func validateYTDlpDownloadURL(u *YTDLPUpdater, raw string) error {
+func validateYTDlpDownloadURL(raw string) error {
 	raw = strings.TrimSpace(raw)
 	if raw == "" {
 		return errors.New("download URL is empty")
-	}
-	if u != nil && u.SkipDownloadURLValidation {
-		return nil
 	}
 	parsed, err := url.Parse(raw)
 	if err != nil {
@@ -116,7 +105,7 @@ func validateYTDlpDownloadURL(u *YTDLPUpdater, raw string) error {
 	if host == "github.com" {
 		return validateOfficialYTDlpGitHubDownloadPath(parsed.Path)
 	}
-	return validateYTDlpCDNAssetPath(parsed.Path)
+	return validateYTDlpCDNAssetPath(host, parsed.Path)
 }
 
 func validateOfficialYTDlpGitHubDownloadPath(path string) error {
@@ -141,14 +130,19 @@ func validateOfficialYTDlpGitHubDownloadPath(path string) error {
 	}
 }
 
-func validateYTDlpCDNAssetPath(path string) error {
-	base := filepath.Base(path)
-	switch base {
-	case ytdlpExeName, ytdlpSHA256SumsAssetName:
-		return nil
-	default:
-		return errors.New("download URL is not an official yt-dlp release asset")
+func validateYTDlpCDNAssetPath(host, path string) error {
+	path = strings.ToLower(path)
+	switch host {
+	case "release-assets.githubusercontent.com":
+		if strings.HasPrefix(path, "/github-production-release-asset/") {
+			return nil
+		}
+	case "objects.githubusercontent.com":
+		if strings.HasPrefix(path, "/github-production-release-asset/") {
+			return nil
+		}
 	}
+	return errors.New("download URL is not a GitHub release asset")
 }
 
 // FetchLatestRelease resolves the latest release tag and yt-dlp.exe browser_download_url.
@@ -260,7 +254,7 @@ func (u *YTDLPUpdater) downloadHTTPClient() *http.Client {
 		if len(via) >= 10 {
 			return errors.New("too many redirects")
 		}
-		return validateYTDlpDownloadURL(u, req.URL.String())
+		return validateYTDlpDownloadURL(req.URL.String())
 	}
 	if base.CheckRedirect != nil {
 		orig := base.CheckRedirect
@@ -268,7 +262,7 @@ func (u *YTDLPUpdater) downloadHTTPClient() *http.Client {
 			if err := orig(req, via); err != nil {
 				return err
 			}
-			return validateYTDlpDownloadURL(u, req.URL.String())
+			return validateYTDlpDownloadURL(req.URL.String())
 		}
 	}
 	c := *base
@@ -278,19 +272,15 @@ func (u *YTDLPUpdater) downloadHTTPClient() *http.Client {
 
 func (u *YTDLPUpdater) downloadReleaseToCacheLocked(ctx context.Context, cachePath string, release YTDLPReleaseInfo) error {
 	downloadURL := strings.TrimSpace(release.DownloadURL)
-	if err := validateYTDlpDownloadURL(u, downloadURL); err != nil {
+	if err := validateYTDlpDownloadURL(downloadURL); err != nil {
 		return err
 	}
 	sumsURL := strings.TrimSpace(release.ChecksumsURL)
 	if sumsURL == "" {
-		if u == nil || !u.SkipChecksumVerification {
-			return errors.New("release checksums URL is empty")
-		}
+		return errors.New("release checksums URL is empty")
 	}
-	if sumsURL != "" {
-		if err := validateYTDlpDownloadURL(u, sumsURL); err != nil {
-			return err
-		}
+	if err := validateYTDlpDownloadURL(sumsURL); err != nil {
+		return err
 	}
 	if st, err := os.Stat(cachePath); err == nil && st.IsDir() {
 		return fmt.Errorf("cache path is a directory: %s", cachePath)
@@ -302,9 +292,6 @@ func (u *YTDLPUpdater) downloadReleaseToCacheLocked(ctx context.Context, cachePa
 	if err := downloadToFile(ctx, u.downloadHTTPClient(), downloadURL, part); err != nil {
 		_ = os.Remove(part)
 		return err
-	}
-	if u != nil && u.SkipChecksumVerification {
-		return u.installDownloadedCache(part, cachePath)
 	}
 	sumsBody, err := fetchURLBody(ctx, u.downloadHTTPClient(), sumsURL, 4<<20)
 	if err != nil {

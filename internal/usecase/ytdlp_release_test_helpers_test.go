@@ -16,6 +16,13 @@ type ytdlpReleaseTestServer struct {
 	Updater *YTDLPUpdater
 }
 
+func serveYTDlpTestExe(w http.ResponseWriter, exeBody string, trackDownloads *int) {
+	if trackDownloads != nil {
+		*trackDownloads++
+	}
+	_, _ = w.Write([]byte(exeBody))
+}
+
 func ytdlpTestSumsBodyForExe(exeBody string) string {
 	sum := sha256.Sum256([]byte(exeBody))
 	return hex.EncodeToString(sum[:]) + "  yt-dlp.exe\n"
@@ -46,23 +53,25 @@ func (t rewriteGitHubHostTransport) RoundTrip(req *http.Request) (*http.Response
 
 // startYTDlpReleaseTestServer serves release API + exe + SHA2-256SUMS.
 // When officialGitHubPaths is true, asset URLs use github.com/yt-dlp/yt-dlp/releases/download/ (rewritten to srv).
-func startYTDlpReleaseTestServer(exeBody, sumsBody string, officialGitHubPaths bool) *ytdlpReleaseTestServer {
+func startYTDlpReleaseTestServer(tag, exeBody, sumsBody string, officialGitHubPaths bool, trackDownloads *int) *ytdlpReleaseTestServer {
+	if tag == "" {
+		tag = "2025.03.01"
+	}
 	if sumsBody == "" {
 		sumsBody = ytdlpTestSumsBodyForExe(exeBody)
 	}
-	const tag = "2025.03.01"
 	exePath := fmt.Sprintf("/yt-dlp/yt-dlp/releases/download/%s/yt-dlp.exe", tag)
 	sumsPath := fmt.Sprintf("/yt-dlp/yt-dlp/releases/download/%s/SHA2-256SUMS", tag)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/bin/yt-dlp.exe", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(exeBody))
+		serveYTDlpTestExe(w, exeBody, trackDownloads)
 	})
 	mux.HandleFunc("/bin/SHA2-256SUMS", func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(sumsBody))
 	})
 	mux.HandleFunc(exePath, func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(exeBody))
+		serveYTDlpTestExe(w, exeBody, trackDownloads)
 	})
 	mux.HandleFunc(sumsPath, func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = w.Write([]byte(sumsBody))
@@ -97,9 +106,6 @@ func startYTDlpReleaseTestServer(exeBody, sumsBody string, officialGitHubPaths b
 	updater := &YTDLPUpdater{
 		HTTPClient:        client,
 		ReleasesLatestURL: base + "/api/latest",
-	}
-	if !officialGitHubPaths {
-		updater.SkipDownloadURLValidation = true
 	}
 	return &ytdlpReleaseTestServer{Server: srv, Base: base, Updater: updater}
 }
