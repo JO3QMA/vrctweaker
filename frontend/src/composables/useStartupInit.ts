@@ -49,9 +49,12 @@ export function useStartupInit() {
     await refreshStatus();
     const eventsOn = getRuntime()?.EventsOn;
     if (eventsOn) {
-      cancelListen = eventsOn("app:startup-status-changed", (data?: unknown) => {
-        status.value = data as StartupInitStatus;
-      });
+      cancelListen = eventsOn(
+        "app:startup-status-changed",
+        (data?: unknown) => {
+          status.value = data as StartupInitStatus;
+        },
+      );
     }
   });
 
