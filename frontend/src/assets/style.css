@@ -482,13 +482,23 @@ a:hover {
   border-bottom-color: var(--color-border);
   color: var(--color-text-secondary);
   font-size: var(--font-size-14);
-  padding: 0 var(--space-16);
-  height: 40px;
+  padding-inline: var(--space-16);
+  padding-block: 10px;
+  height: auto;
   min-height: 40px;
-  line-height: 40px;
+  line-height: 20px;
+  border-radius: var(--radius);
+}
+
+.vt-collapse-panel .el-collapse-item.is-active .el-collapse-item__header {
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 
 .vt-collapse-panel .el-collapse-item__header.focusing {
+  color: var(--color-text-secondary);
+}
+
+.vt-collapse-panel .el-collapse-item__header.focusing:focus:not(:hover) {
   color: var(--color-text-secondary);
 }
 
@@ -499,6 +509,18 @@ a:hover {
 .vt-collapse-panel .el-collapse-item__header:focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: calc(-1 * var(--focus-ring-offset));
+}
+
+.vt-collapse-panel
+  .el-collapse-item:not(.is-active)
+  .el-collapse-item__header:focus-visible {
+  border-radius: var(--radius);
+}
+
+.vt-collapse-panel
+  .el-collapse-item.is-active
+  .el-collapse-item__header:focus-visible {
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 
 .vt-collapse-panel .el-collapse-item__content {

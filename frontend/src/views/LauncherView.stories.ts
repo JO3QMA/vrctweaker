@@ -66,3 +66,10 @@ export const ArgsCollapsePanel: Story = {
     viewport: { defaultViewport: "desktop1280" },
   },
 };
+
+export const ArgsCollapsePanelNarrow: Story = {
+  name: "Args collapse (600px)",
+  parameters: {
+    viewport: { defaultViewport: "mobile600" },
+  },
+};
