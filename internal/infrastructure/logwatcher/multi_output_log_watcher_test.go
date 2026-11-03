@@ -427,6 +427,58 @@ func TestMultiOutputLogWatcher_StopTailNoRaceWithTailExit(t *testing.T) {
 	}
 }
 
+func TestMultiOutputLogWatcher_checkpointBeyondFileSizeResetsToZero(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "output_log_trunc.txt")
+	line1 := "2026.03.21 11:32:04 Debug      -  [EOSManager] line1\n"
+	line2 := joinLine("TruncUser", "usr_trunc")
+	content := line1 + line2
+	if err := writeTestFile(path, content); err != nil {
+		t.Fatal(err)
+	}
+	size := int64(len(content))
+	staleCheckpoint := size + 4096
+
+	var mu sync.Mutex
+	joins := 0
+	handlerFactory := func(string) EventHandler {
+		return testEventHandler(func(ev activity.ParsedEvent) {
+			if _, ok := ev.(*activity.EncounterEvent); ok {
+				mu.Lock()
+				joins++
+				mu.Unlock()
+			}
+		})
+	}
+	w := newMultiWatcherForTest(t, dir, handlerFactory, MultiOutputLogWatcherCallbacks{
+		ResolvedReadOffset: func(p string) (int64, bool) {
+			if p == path {
+				return staleCheckpoint, true
+			}
+			return 0, false
+		},
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := w.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		mu.Lock()
+		got := joins
+		mu.Unlock()
+		if got >= 1 {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	t.Fatalf("join events = %d, want >=1 after stale checkpoint %d > file size %d", joins, staleCheckpoint, size)
+}
+
 func TestMultiOutputLogWatcher_resumesFromResolvedReadOffsetWithoutGrowth(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "output_log_resume.txt")

@@ -130,6 +130,10 @@ func (w *MultiOutputLogWatcher) run(ctx context.Context) {
 				state.markActivity(now)
 				if w.callbacks.ResolvedReadOffset != nil {
 					if off, ok := w.callbacks.ResolvedReadOffset(path); ok && off >= 0 {
+						if off > info.Size() {
+							w.logger("[multi-logwatcher] checkpoint offset %d past end of %s (size %d); re-read from start", off, path, info.Size())
+							off = 0
+						}
 						state.readOffset.Store(off)
 					}
 				}
