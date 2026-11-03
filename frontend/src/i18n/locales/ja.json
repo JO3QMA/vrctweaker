@@ -12,7 +12,8 @@
       "failed": {
         "dataDirResolve": "データフォルダの場所を取得できませんでした",
         "dataDirCreate": "データフォルダを作成できませんでした",
-        "databaseOpen": "データベースを開けませんでした"
+        "databaseOpen": "データベースを開けませんでした",
+        "statusFetch": "起動状態を取得できませんでした"
       }
     }
   },

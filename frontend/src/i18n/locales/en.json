@@ -12,7 +12,8 @@
       "failed": {
         "dataDirResolve": "Could not resolve the data folder location",
         "dataDirCreate": "Could not create the data folder",
-        "databaseOpen": "Could not open the database"
+        "databaseOpen": "Could not open the database",
+        "statusFetch": "Could not load startup status"
       }
     }
   },

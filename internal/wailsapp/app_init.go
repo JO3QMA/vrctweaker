@@ -56,7 +56,7 @@ func (a *App) startup(ctx context.Context) {
 	a.initLoading = true
 	a.initPhase = "opening"
 	a.initMu.Unlock()
-	a.emitStartupStatusChanged(ctx)
+	a.emitStartupStatusChanged()
 	go func() {
 		defer close(a.initDone)
 		a.runStartupSequence(initCtx)
@@ -84,7 +84,7 @@ func (a *App) runStartupSequence(ctx context.Context) {
 			a.initPhase = ""
 		}
 		a.initMu.Unlock()
-		a.emitStartupStatusChanged(ctx)
+		a.emitStartupStatusChanged()
 	}()
 
 	if err := a.initializeCore(ctx); err != nil {
@@ -102,7 +102,7 @@ func (a *App) runStartupSequence(ctx context.Context) {
 	a.initReady = true
 	a.initPhase = ""
 	a.initMu.Unlock()
-	a.emitStartupStatusChanged(ctx)
+	a.emitStartupStatusChanged()
 
 	if ctx.Err() != nil {
 		a.teardownCore()
@@ -127,14 +127,14 @@ func (a *App) initializeCore(ctx context.Context) error {
 	a.initMu.Lock()
 	a.initPhase = "opening"
 	a.initMu.Unlock()
-	a.emitStartupStatusChanged(ctx)
+	a.emitStartupStatusChanged()
 
 	db, err := sqlite.Open(dataDir, &sqlite.OpenOptions{
 		OnSchemaPhase: func(phase string) {
 			a.initMu.Lock()
 			a.initPhase = phase
 			a.initMu.Unlock()
-			a.emitStartupStatusChanged(ctx)
+			a.emitStartupStatusChanged()
 		},
 	})
 	if err != nil {
@@ -311,12 +311,20 @@ func (a *App) eventsEmit(event string, data ...any) {
 	runtime.EventsEmit(a.wailsLifecycleCtx, event, data...)
 }
 
-func (a *App) emitStartupStatusChanged(ctx context.Context) {
-	if ctx == nil || a.wailsLifecycleCtx == nil || ctx != a.wailsLifecycleCtx {
+func (a *App) emitStartupStatusChanged() {
+	st := a.getStartupInitStatus()
+	if startupStatusChangedTestHook != nil {
+		startupStatusChangedTestHook(st)
 		return
 	}
-	runtime.EventsEmit(ctx, startupStatusChangedEvent, a.getStartupInitStatus())
+	if a.wailsLifecycleCtx == nil {
+		return
+	}
+	runtime.EventsEmit(a.wailsLifecycleCtx, startupStatusChangedEvent, st)
 }
+
+// startupStatusChangedTestHook is set by tests to observe startup status emissions.
+var startupStatusChangedTestHook func(StartupInitStatus)
 
 // GetStartupInitStatus returns current core initialization state for the UI.
 func (a *App) GetStartupInitStatus() StartupInitStatus {
@@ -345,7 +353,8 @@ func (a *App) startupInitStatusLocked() StartupInitStatus {
 
 // RetryStartupInit re-runs core initialization after a failure.
 func (a *App) RetryStartupInit() (StartupInitStatus, error) {
-	ctx := a.appContext()
+	a.stopStartupSequence()
+
 	a.initMu.Lock()
 	if a.initLoading {
 		st := a.startupInitStatusLocked()
@@ -363,42 +372,71 @@ func (a *App) RetryStartupInit() (StartupInitStatus, error) {
 	a.initDetail = ""
 	a.initErr = nil
 	a.initMu.Unlock()
-	a.emitStartupStatusChanged(ctx)
+	a.emitStartupStatusChanged()
+
+	lifecycle := a.wailsLifecycleCtx
+	if lifecycle == nil {
+		lifecycle = a.appContext()
+	}
+	initCtx, cancel := context.WithCancel(lifecycle)
+	done := make(chan struct{})
+	result := make(chan StartupInitStatus, 1)
+
+	a.initMu.Lock()
+	a.initCancel = cancel
+	a.initDone = done
+	a.initMu.Unlock()
+
+	go func() {
+		defer close(done)
+		result <- a.runRetryInitSequence(initCtx)
+	}()
+
+	st := <-result
+	return st, nil
+}
+
+func (a *App) runRetryInitSequence(ctx context.Context) StartupInitStatus {
+	defer func() {
+		a.initMu.Lock()
+		a.initLoading = false
+		if !a.initReady {
+			a.initPhase = ""
+		}
+		a.initMu.Unlock()
+		a.emitStartupStatusChanged()
+	}()
 
 	if err := a.initializeCore(ctx); err != nil {
 		a.initMu.Lock()
-		a.initLoading = false
-		a.initPhase = ""
 		st := a.startupInitStatusLocked()
 		a.initMu.Unlock()
-		a.emitStartupStatusChanged(ctx)
-		return st, nil
+		a.emitStartupStatusChanged()
+		return st
 	}
 
 	if ctx.Err() != nil {
 		a.teardownCore()
 		a.initMu.Lock()
-		a.initLoading = false
-		a.initPhase = ""
 		st := a.startupInitStatusLocked()
 		a.initMu.Unlock()
-		a.emitStartupStatusChanged(ctx)
-		return st, nil
+		a.emitStartupStatusChanged()
+		return st
 	}
 
 	a.initMu.Lock()
 	a.initReady = true
-	a.initLoading = false
 	a.initPhase = ""
 	st := a.startupInitStatusLocked()
 	a.initMu.Unlock()
-	a.emitStartupStatusChanged(ctx)
+	a.emitStartupStatusChanged()
+
 	if ctx.Err() != nil {
 		a.teardownCore()
-		return st, nil
+		return st
 	}
 	a.startupPostInit(ctx)
-	return st, nil
+	return st
 }
 
 // OpenAppDataFolder opens the application data directory in the file manager.

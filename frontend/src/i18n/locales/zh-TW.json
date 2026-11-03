@@ -12,7 +12,8 @@
       "failed": {
         "dataDirResolve": "無法取得資料夾位置",
         "dataDirCreate": "無法建立資料夾",
-        "databaseOpen": "無法開啟資料庫"
+        "databaseOpen": "無法開啟資料庫",
+        "statusFetch": "無法載入啟動狀態"
       }
     }
   },

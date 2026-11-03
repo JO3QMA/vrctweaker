@@ -12,6 +12,8 @@ export type StartupInitStatus = {
   canOpenDataFolder: boolean;
 };
 
+const STATUS_FETCH_FAILURE_KEY = "app.startup.failed.statusFetch";
+
 const emptyStatus = (): StartupInitStatus => ({
   ready: import.meta.env.MODE === "e2e",
   loading: import.meta.env.MODE !== "e2e",
@@ -22,18 +24,46 @@ const emptyStatus = (): StartupInitStatus => ({
   canOpenDataFolder: false,
 });
 
+function statusFetchFailure(): StartupInitStatus {
+  return {
+    ready: false,
+    loading: false,
+    phase: "",
+    summaryKey: STATUS_FETCH_FAILURE_KEY,
+    detail: "",
+    dataDir: "",
+    canOpenDataFolder: false,
+  };
+}
+
 export function useStartupInit() {
   const status = ref<StartupInitStatus>(emptyStatus());
   const retrying = ref(false);
+  let receivedEvent = false;
 
   async function refreshStatus(): Promise<void> {
-    status.value = await WailsApp.getStartupInitStatus();
+    try {
+      const snapshot = await WailsApp.getStartupInitStatus();
+      if (!receivedEvent) {
+        status.value = snapshot;
+      }
+    } catch {
+      if (!receivedEvent) {
+        status.value = statusFetchFailure();
+      }
+    }
   }
 
   async function retryInit(): Promise<void> {
     retrying.value = true;
     try {
       status.value = await WailsApp.retryStartupInit();
+    } catch {
+      try {
+        await refreshStatus();
+      } catch {
+        status.value = statusFetchFailure();
+      }
     } finally {
       retrying.value = false;
     }
@@ -51,6 +81,7 @@ export function useStartupInit() {
       cancelListen = eventsOn(
         "app:startup-status-changed",
         (data?: unknown) => {
+          receivedEvent = true;
           status.value = data as StartupInitStatus;
         },
       );

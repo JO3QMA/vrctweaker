@@ -12,7 +12,8 @@
       "failed": {
         "dataDirResolve": "데이터 폴더 위치를 확인하지 못했습니다",
         "dataDirCreate": "데이터 폴더를 만들지 못했습니다",
-        "databaseOpen": "데이터베이스를 열지 못했습니다"
+        "databaseOpen": "데이터베이스를 열지 못했습니다",
+        "statusFetch": "시작 상태를 불러오지 못했습니다"
       }
     }
   },
