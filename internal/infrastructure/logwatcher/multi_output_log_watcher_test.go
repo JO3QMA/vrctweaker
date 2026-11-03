@@ -487,6 +487,7 @@ func TestMultiOutputLogWatcher_ingestRetryingBypassesStallStop(t *testing.T) {
 	}
 
 	oldWait := tailIngestRetryWait
+	tailIngestRetryWaitMu.Lock()
 	tailIngestRetryWait = func(ctx context.Context, attempt int) bool {
 		select {
 		case <-ctx.Done():
@@ -495,7 +496,7 @@ func TestMultiOutputLogWatcher_ingestRetryingBypassesStallStop(t *testing.T) {
 			return false
 		}
 	}
-	t.Cleanup(func() { tailIngestRetryWait = oldWait })
+	tailIngestRetryWaitMu.Unlock()
 
 	spy := &spyEncounterRepo{}
 	failAlways := &alwaysFailEncounterRepo{spyEncounterRepo: spy}
@@ -536,6 +537,11 @@ func TestMultiOutputLogWatcher_ingestRetryingBypassesStallStop(t *testing.T) {
 	if after <= before {
 		t.Fatalf("save attempts before=%d after=%d, want continued retries past stall timeout", before, after)
 	}
+	cancel()
+	time.Sleep(400 * time.Millisecond)
+	tailIngestRetryWaitMu.Lock()
+	tailIngestRetryWait = oldWait
+	tailIngestRetryWaitMu.Unlock()
 }
 
 type alwaysFailEncounterRepo struct {

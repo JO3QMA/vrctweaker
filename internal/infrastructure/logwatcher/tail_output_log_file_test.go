@@ -25,6 +25,7 @@ func TestTailIngestRetryDelay_capsAtMax(t *testing.T) {
 func TestTailOutputLogFile_retriesTransientIngestOnce(t *testing.T) {
 	t.Setenv("TZ", "UTC")
 	oldWait := tailIngestRetryWait
+	tailIngestRetryWaitMu.Lock()
 	tailIngestRetryWait = func(ctx context.Context, attempt int) bool {
 		select {
 		case <-ctx.Done():
@@ -33,7 +34,12 @@ func TestTailOutputLogFile_retriesTransientIngestOnce(t *testing.T) {
 			return false
 		}
 	}
-	t.Cleanup(func() { tailIngestRetryWait = oldWait })
+	tailIngestRetryWaitMu.Unlock()
+	t.Cleanup(func() {
+		tailIngestRetryWaitMu.Lock()
+		tailIngestRetryWait = oldWait
+		tailIngestRetryWaitMu.Unlock()
+	})
 
 	dir := t.TempDir()
 	path := filepath.Join(dir, "output_log.txt")

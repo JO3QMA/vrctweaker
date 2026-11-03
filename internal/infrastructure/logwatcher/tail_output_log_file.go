@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"sync"
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
@@ -19,8 +20,13 @@ const (
 	tailIngestRetryMax     = 30 * time.Second
 )
 
-// tailIngestRetryWait sleeps before retrying a failed live-tail ingest. Tests may replace it.
-var tailIngestRetryWait = func(ctx context.Context, attempt int) bool {
+// tailIngestRetryWait sleeps before retrying a failed live-tail ingest. Tests may replace the func under tailIngestRetryWaitMu.
+var (
+	tailIngestRetryWaitMu sync.RWMutex
+	tailIngestRetryWait   = defaultTailIngestRetryWait
+)
+
+func defaultTailIngestRetryWait(ctx context.Context, attempt int) bool {
 	delay := tailIngestRetryDelay(attempt)
 	select {
 	case <-ctx.Done():
@@ -28,6 +34,13 @@ var tailIngestRetryWait = func(ctx context.Context, attempt int) bool {
 	case <-time.After(delay):
 		return false
 	}
+}
+
+func waitTailIngestRetry(ctx context.Context, attempt int) bool {
+	tailIngestRetryWaitMu.RLock()
+	fn := tailIngestRetryWait
+	tailIngestRetryWaitMu.RUnlock()
+	return fn(ctx, attempt)
 }
 
 func tailIngestRetryDelay(attempt int) time.Duration {
@@ -142,7 +155,7 @@ func tailOutputLogFile(
 				if cb.onIngestRetryWait != nil {
 					cb.onIngestRetryWait()
 				}
-				if tailIngestRetryWait(ctx, attempt) {
+				if waitTailIngestRetry(ctx, attempt) {
 					if cb.setIngestRetrying != nil {
 						cb.setIngestRetrying(false)
 					}

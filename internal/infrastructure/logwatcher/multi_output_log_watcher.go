@@ -33,13 +33,28 @@ type MultiOutputLogWatcher struct {
 }
 
 type trackedLogFile struct {
-	lastSize       int64
-	lastGrowthAt   time.Time
-	readOffset     atomic.Int64
-	tailing        atomic.Bool
-	tailGen        atomic.Uint64
-	ingestRetrying atomic.Bool
-	cancel         context.CancelFunc
+	lastSize             int64
+	lastActivityUnixNano atomic.Int64
+	readOffset           atomic.Int64
+	tailing              atomic.Bool
+	tailGen              atomic.Uint64
+	ingestRetrying       atomic.Bool
+	cancel               context.CancelFunc
+}
+
+func (s *trackedLogFile) markActivity(t time.Time) {
+	if t.IsZero() {
+		t = time.Now()
+	}
+	s.lastActivityUnixNano.Store(t.UnixNano())
+}
+
+func (s *trackedLogFile) lastActivity() time.Time {
+	n := s.lastActivityUnixNano.Load()
+	if n <= 0 {
+		return time.Time{}
+	}
+	return time.Unix(0, n)
 }
 
 // NewMultiOutputLogWatcher creates a directory-only watcher for parallel output_log sources.
@@ -111,7 +126,8 @@ func (w *MultiOutputLogWatcher) run(ctx context.Context) {
 				if statErr != nil {
 					continue
 				}
-				state := &trackedLogFile{lastSize: info.Size(), lastGrowthAt: now}
+				state := &trackedLogFile{lastSize: info.Size()}
+				state.markActivity(now)
 				if w.callbacks.ResolvedReadOffset != nil {
 					if off, ok := w.callbacks.ResolvedReadOffset(path); ok && off >= 0 {
 						state.readOffset.Store(off)
@@ -143,13 +159,14 @@ func (w *MultiOutputLogWatcher) run(ctx context.Context) {
 
 			state, ok := tracked[path]
 			if !ok {
-				state = &trackedLogFile{lastGrowthAt: now}
+				state = &trackedLogFile{}
+				state.markActivity(now)
 				tracked[path] = state
 			}
 
 			if size > state.lastSize {
 				growingNow[path] = state.lastSize
-				state.lastGrowthAt = now
+				state.markActivity(now)
 				start := state.readOffset.Load()
 				if start > state.lastSize {
 					start = state.lastSize
@@ -163,7 +180,7 @@ func (w *MultiOutputLogWatcher) run(ctx context.Context) {
 				w.stopTail(state)
 				state.readOffset.Store(size)
 				state.lastSize = size
-				state.lastGrowthAt = now
+				state.markActivity(now)
 			} else {
 				state.lastSize = size
 			}
@@ -195,7 +212,7 @@ func (w *MultiOutputLogWatcher) run(ctx context.Context) {
 				}
 				continue
 			}
-			if now.Sub(state.lastGrowthAt) >= w.activeLogStallTimeout {
+			if now.Sub(state.lastActivity()) >= w.activeLogStallTimeout {
 				if state.ingestRetrying.Load() {
 					continue
 				}
@@ -219,7 +236,7 @@ func (w *MultiOutputLogWatcher) shouldHandoff(
 	growingNow map[string]int64,
 	path string,
 ) bool {
-	if now.Sub(state.lastGrowthAt) < pollInterval {
+	if now.Sub(state.lastActivity()) < pollInterval {
 		return false
 	}
 	for otherPath := range growingNow {
@@ -246,7 +263,7 @@ func (w *MultiOutputLogWatcher) startTail(ctx context.Context, path string, stat
 	}
 	state.cancel = cancel
 	state.tailing.Store(true)
-	state.lastGrowthAt = time.Now()
+	state.markActivity(time.Now())
 
 	handler := w.handlerFactory(path)
 	if handler == nil {
@@ -274,11 +291,11 @@ func (w *MultiOutputLogWatcher) startTail(ctx context.Context, path string, stat
 			setIngestRetrying: func(active bool) {
 				state.ingestRetrying.Store(active)
 				if active {
-					state.lastGrowthAt = time.Now()
+					state.markActivity(time.Now())
 				}
 			},
 			onIngestRetryWait: func() {
-				state.lastGrowthAt = time.Now()
+				state.markActivity(time.Now())
 			},
 		})
 	}()
