@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
+	"vrchat-tweaker/internal/infrastructure/logwatcher"
 	"vrchat-tweaker/internal/infrastructure/sqlite"
 	"vrchat-tweaker/internal/testvrc"
 	"vrchat-tweaker/internal/usecase"
@@ -410,6 +411,129 @@ func Test_ingestActivityLogsBootstrap_checkpointResume_worldNamesNotCrossAssigne
 	}
 	if cozyRows[0].WorldDisplayName != "Cozy with․" {
 		t.Fatalf("cozy world display = %q, want Cozy with․", cozyRows[0].WorldDisplayName)
+	}
+}
+
+func Test_ingestActivityLogsBootstrap_fullyIngestedCheckpoint_warmsCorrelator(t *testing.T) {
+	t.Setenv("TZ", "UTC")
+	ctx := context.Background()
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "output_log.txt")
+	content := []byte(
+		"2026.03.21 11:32:04 Debug      -  [Behaviour] Joining " + testBootstrapInstID + "\n" +
+			"2026.03.21 11:32:16 Debug      -  [Behaviour] OnPlayerJoined Alice (" + testBootstrapUserID + ")\n",
+	)
+	if err := os.WriteFile(logPath, content, 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	app, _ := newTestAppWithActivity(t)
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	absLogPath, err := filepath.Abs(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	joinedAt := time.Date(2026, 3, 21, 11, 32, 16, 0, time.UTC)
+	if setErr := app.activity.SetActivityLogCheckpoint(ctx, &usecase.ActivityLogCheckpoint{
+		WatchPath: absDir,
+		Files: map[string]usecase.ActivityLogFileCheckpoint{
+			absLogPath: {
+				ByteOffset:     int64(len(content)),
+				VRChatLineTime: joinedAt.Format(time.RFC3339),
+			},
+		},
+	}); setErr != nil {
+		t.Fatal(setErr)
+	}
+
+	app.resetActivityIngestAdapterCache()
+	parser := activity.NewLogParser()
+	logger := appDiagLogger()
+	app.ingestActivityLogsBootstrap(ctx, absDir, parser, logger, nil, nil)
+
+	tailAdapter := app.activityIngestAdapterForPath(ctx, logger, nil, nil, logPath)
+	liveLine := "2026.03.21 11:40:00 Debug      -  [Behaviour] OnPlayerJoined Bob (usr_live_buddy)"
+	events, parseErr := parser.ParseLine(liveLine, time.Time{})
+	if parseErr != nil {
+		t.Fatal(parseErr)
+	}
+	if handleErr := tailAdapter.Handle(events[0]); handleErr != nil {
+		t.Fatal(handleErr)
+	}
+
+	rows, err := app.activity.ListEncountersWithContext(ctx, &activity.EncounterFilter{VRCUserID: "usr_live_buddy"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("encounters = %d, want 1", len(rows))
+	}
+	if rows[0].Encounter.WorldID != testBootstrapWorldID {
+		t.Fatalf("world_id = %q, want %q (correlator must be warm after fully-ingested bootstrap)", rows[0].Encounter.WorldID, testBootstrapWorldID)
+	}
+}
+
+func Test_ingestActivityLogsBootstrap_checkpointUsesProcessedOffsetWhenFileGrowsAfterScan(t *testing.T) {
+	t.Setenv("TZ", "UTC")
+	ctx := context.Background()
+	dir := t.TempDir()
+	logPath := filepath.Join(dir, "output_log.txt")
+	line1 := "2026.03.21 11:32:04 Debug      -  [Behaviour] Joining " + testBootstrapInstID + "\n"
+	line2 := "2026.03.21 11:40:00 Debug      -  [Behaviour] OnPlayerJoined Bob (usr_post_scan)\n"
+	if err := os.WriteFile(logPath, []byte(line1), 0600); err != nil {
+		t.Fatal(err)
+	}
+
+	app, _ := newTestAppWithActivity(t)
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	absLogPath, err := filepath.Abs(logPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	app.resetActivityIngestAdapterCache()
+	parser := activity.NewLogParser()
+	logger := appDiagLogger()
+	adapter := app.activityIngestAdapterForPath(ctx, logger, nil, nil, logPath)
+	adapter.SetSuppressEncounterNotify(true)
+	defer adapter.SetSuppressEncounterNotify(false)
+
+	processedPos, procErr := logwatcher.ProcessOutputLogFileFromOffset(ctx, logPath, 0, parser, adapter, logger, nil)
+	if procErr != nil {
+		t.Fatal(procErr)
+	}
+	if writeErr := os.WriteFile(logPath, append([]byte(line1), []byte(line2)...), 0600); writeErr != nil {
+		t.Fatal(writeErr)
+	}
+	if cpErr := app.activity.SetActivityLogFileCheckpoint(ctx, absDir, absLogPath, processedPos, ""); cpErr != nil {
+		t.Fatal(cpErr)
+	}
+
+	cp, err := app.activity.GetActivityLogCheckpoint(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fc, ok := cp.FileCheckpoint(absLogPath)
+	if !ok {
+		t.Fatal("missing file checkpoint")
+	}
+	if fc.ByteOffset != int64(len(line1)) {
+		t.Fatalf("checkpoint offset = %d, want %d (must not include bytes appended after scan)", fc.ByteOffset, len(line1))
+	}
+
+	app.ingestActivityLogsBootstrap(ctx, absDir, parser, logger, nil, nil)
+	rows, err := app.activity.ListEncountersWithContext(ctx, &activity.EncounterFilter{VRCUserID: "usr_post_scan"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("encounters after resume = %d, want 1", len(rows))
 	}
 }
 

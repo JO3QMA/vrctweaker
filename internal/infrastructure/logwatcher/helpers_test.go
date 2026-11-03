@@ -9,10 +9,11 @@ import (
 
 type testEventHandler func(activity.ParsedEvent)
 
-func (h testEventHandler) Handle(event activity.ParsedEvent) {
+func (h testEventHandler) Handle(event activity.ParsedEvent) error {
 	if h != nil {
 		h(event)
 	}
+	return nil
 }
 
 type raceSafeLogBuffer struct {

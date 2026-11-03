@@ -2,6 +2,7 @@ package logwatcher
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
@@ -9,6 +10,7 @@ import (
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
+	"vrchat-tweaker/internal/usecase"
 )
 
 func joinLine(name, userID string) string {
@@ -423,4 +425,183 @@ func TestMultiOutputLogWatcher_StopTailNoRaceWithTailExit(t *testing.T) {
 			t.Fatal("tailing stuck true after cancel+stopTail")
 		}
 	}
+}
+
+func TestMultiOutputLogWatcher_checkpointBeyondFileSizeResetsToZero(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "output_log_trunc.txt")
+	line1 := "2026.03.21 11:32:04 Debug      -  [EOSManager] line1\n"
+	line2 := joinLine("TruncUser", "usr_trunc")
+	content := line1 + line2
+	if err := writeTestFile(path, content); err != nil {
+		t.Fatal(err)
+	}
+	size := int64(len(content))
+	staleCheckpoint := size + 4096
+
+	var mu sync.Mutex
+	joins := 0
+	handlerFactory := func(string) EventHandler {
+		return testEventHandler(func(ev activity.ParsedEvent) {
+			if _, ok := ev.(*activity.EncounterEvent); ok {
+				mu.Lock()
+				joins++
+				mu.Unlock()
+			}
+		})
+	}
+	w := newMultiWatcherForTest(t, dir, handlerFactory, MultiOutputLogWatcherCallbacks{
+		ResolvedReadOffset: func(p string) (int64, bool) {
+			if p == path {
+				return staleCheckpoint, true
+			}
+			return 0, false
+		},
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := w.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		mu.Lock()
+		got := joins
+		mu.Unlock()
+		if got >= 1 {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	t.Fatalf("join events = %d, want >=1 after stale checkpoint %d > file size %d", joins, staleCheckpoint, size)
+}
+
+func TestMultiOutputLogWatcher_resumesFromResolvedReadOffsetWithoutGrowth(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "output_log_resume.txt")
+	line1 := "2026.03.21 11:32:04 Debug      -  [EOSManager] line1\n"
+	line2 := joinLine("ResumeUser", "usr_resume")
+	if err := writeTestFile(path, line1+line2); err != nil {
+		t.Fatal(err)
+	}
+	resumeAt := int64(len(line1))
+
+	var mu sync.Mutex
+	joins := 0
+	handlerFactory := func(string) EventHandler {
+		return testEventHandler(func(ev activity.ParsedEvent) {
+			if _, ok := ev.(*activity.EncounterEvent); ok {
+				mu.Lock()
+				joins++
+				mu.Unlock()
+			}
+		})
+	}
+	w := newMultiWatcherForTest(t, dir, handlerFactory, MultiOutputLogWatcherCallbacks{
+		ResolvedReadOffset: func(p string) (int64, bool) {
+			if p == path {
+				return resumeAt, true
+			}
+			return 0, false
+		},
+	})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	if err := w.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		mu.Lock()
+		got := joins
+		mu.Unlock()
+		if got >= 1 {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	t.Fatalf("join events = %d, want 1 from offset %d", joins, resumeAt)
+}
+
+func TestMultiOutputLogWatcher_ingestRetryingBypassesStallStop(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "output_log_stall.txt")
+	line1 := "2026.03.21 11:32:04 Debug      -  [Behaviour] Joining wrld_x:1~region(jp)\n"
+	line2 := joinLine("StallUser", "usr_stall")
+	if err := writeTestFile(path, line1+line2); err != nil {
+		t.Fatal(err)
+	}
+
+	oldWait := tailIngestRetryWait
+	tailIngestRetryWaitMu.Lock()
+	tailIngestRetryWait = func(ctx context.Context, attempt int) bool {
+		select {
+		case <-ctx.Done():
+			return true
+		case <-time.After(80 * time.Millisecond):
+			return false
+		}
+	}
+	tailIngestRetryWaitMu.Unlock()
+
+	spy := &spyEncounterRepo{}
+	failAlways := &alwaysFailEncounterRepo{spyEncounterRepo: spy}
+	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, failAlways, &fakeAppSettingsRepo{m: map[string]string{}}, nil, nil)
+	adapter := NewActivityIngestAdapter(uc, context.Background(), nil, nil, path)
+
+	handlerFactory := func(string) EventHandler { return adapter }
+
+	w := newMultiWatcherForTest(t, dir, handlerFactory, MultiOutputLogWatcherCallbacks{
+		ResolvedReadOffset: func(p string) (int64, bool) {
+			if p == path {
+				return int64(len(line1)), true
+			}
+			return 0, false
+		},
+	})
+	w.activeLogStallTimeout = 200 * time.Millisecond
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := w.Start(ctx); err != nil {
+		t.Fatal(err)
+	}
+
+	deadline := time.Now().Add(4 * time.Second)
+	for time.Now().Before(deadline) {
+		if failAlways.saveAttempts.Load() > 0 {
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	if failAlways.saveAttempts.Load() == 0 {
+		t.Fatal("tail never reached failing encounter ingest")
+	}
+	before := failAlways.saveAttempts.Load()
+	time.Sleep(w.activeLogStallTimeout + 500*time.Millisecond)
+	after := failAlways.saveAttempts.Load()
+	if after <= before {
+		t.Fatalf("save attempts before=%d after=%d, want continued retries past stall timeout", before, after)
+	}
+	cancel()
+	time.Sleep(400 * time.Millisecond)
+	tailIngestRetryWaitMu.Lock()
+	tailIngestRetryWait = oldWait
+	tailIngestRetryWaitMu.Unlock()
+}
+
+type alwaysFailEncounterRepo struct {
+	*spyEncounterRepo
+	saveAttempts atomic.Int32
+}
+
+func (r *alwaysFailEncounterRepo) Save(context.Context, *activity.UserEncounter) error {
+	r.saveAttempts.Add(1)
+	return errors.New("always fail")
 }

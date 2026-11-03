@@ -15,6 +15,8 @@ const defaultActiveLogStallTimeout = 60 * time.Second
 type MultiOutputLogWatcherCallbacks struct {
 	OnLogRotationHandoff func(ctx context.Context, oldPath string) error
 	OnTailCheckpoint     func(ctx context.Context, path string, byteOffset int64, vrChatLineTime time.Time)
+	// ResolvedReadOffset returns the persisted ingest byte offset for path when known (e.g. app checkpoint).
+	ResolvedReadOffset func(path string) (int64, bool)
 }
 
 // MultiOutputLogWatcher polls a log directory and tails every output_log*.txt that is growing.
@@ -31,12 +33,28 @@ type MultiOutputLogWatcher struct {
 }
 
 type trackedLogFile struct {
-	lastSize     int64
-	lastGrowthAt time.Time
-	readOffset   atomic.Int64
-	tailing      atomic.Bool
-	tailGen      atomic.Uint64
-	cancel       context.CancelFunc
+	lastSize             int64
+	lastActivityUnixNano atomic.Int64
+	readOffset           atomic.Int64
+	tailing              atomic.Bool
+	tailGen              atomic.Uint64
+	ingestRetrying       atomic.Bool
+	cancel               context.CancelFunc
+}
+
+func (s *trackedLogFile) markActivity(t time.Time) {
+	if t.IsZero() {
+		t = time.Now()
+	}
+	s.lastActivityUnixNano.Store(t.UnixNano())
+}
+
+func (s *trackedLogFile) lastActivity() time.Time {
+	n := s.lastActivityUnixNano.Load()
+	if n <= 0 {
+		return time.Time{}
+	}
+	return time.Unix(0, n)
 }
 
 // NewMultiOutputLogWatcher creates a directory-only watcher for parallel output_log sources.
@@ -108,7 +126,18 @@ func (w *MultiOutputLogWatcher) run(ctx context.Context) {
 				if statErr != nil {
 					continue
 				}
-				tracked[path] = &trackedLogFile{lastSize: info.Size()}
+				state := &trackedLogFile{lastSize: info.Size()}
+				state.markActivity(now)
+				if w.callbacks.ResolvedReadOffset != nil {
+					if off, ok := w.callbacks.ResolvedReadOffset(path); ok && off >= 0 {
+						if off > info.Size() {
+							w.logger("[multi-logwatcher] checkpoint offset %d past end of %s (size %d); re-read from start", off, path, info.Size())
+							off = 0
+						}
+						state.readOffset.Store(off)
+					}
+				}
+				tracked[path] = state
 			}
 			baselineDone = true
 			select {
@@ -135,13 +164,18 @@ func (w *MultiOutputLogWatcher) run(ctx context.Context) {
 			state, ok := tracked[path]
 			if !ok {
 				state = &trackedLogFile{}
+				state.markActivity(now)
 				tracked[path] = state
 			}
 
 			if size > state.lastSize {
 				growingNow[path] = state.lastSize
-				state.lastGrowthAt = now
-				w.startTail(ctx, path, state, state.lastSize)
+				state.markActivity(now)
+				start := state.readOffset.Load()
+				if start > state.lastSize {
+					start = state.lastSize
+				}
+				w.startTail(ctx, path, state, start)
 				state.lastSize = size
 			} else if size < state.lastSize {
 				// ponytail: in-place truncate — stop tail and snap offset only; no finalize/replay.
@@ -150,9 +184,14 @@ func (w *MultiOutputLogWatcher) run(ctx context.Context) {
 				w.stopTail(state)
 				state.readOffset.Store(size)
 				state.lastSize = size
-				state.lastGrowthAt = now
+				state.markActivity(now)
 			} else {
 				state.lastSize = size
+			}
+			if !state.tailing.Load() {
+				if ro := state.readOffset.Load(); ro < size {
+					w.startTail(ctx, path, state, ro)
+				}
 			}
 		}
 
@@ -177,7 +216,10 @@ func (w *MultiOutputLogWatcher) run(ctx context.Context) {
 				}
 				continue
 			}
-			if now.Sub(state.lastGrowthAt) >= w.activeLogStallTimeout {
+			if now.Sub(state.lastActivity()) >= w.activeLogStallTimeout {
+				if state.ingestRetrying.Load() {
+					continue
+				}
 				w.stopTail(state)
 			}
 		}
@@ -198,7 +240,7 @@ func (w *MultiOutputLogWatcher) shouldHandoff(
 	growingNow map[string]int64,
 	path string,
 ) bool {
-	if now.Sub(state.lastGrowthAt) < pollInterval {
+	if now.Sub(state.lastActivity()) < pollInterval {
 		return false
 	}
 	for otherPath := range growingNow {
@@ -213,6 +255,9 @@ func (w *MultiOutputLogWatcher) startTail(ctx context.Context, path string, stat
 	if state.tailing.Load() {
 		return
 	}
+	if resume := state.readOffset.Load(); resume > 0 && resume < startOffset {
+		startOffset = resume
+	}
 	state.readOffset.Store(startOffset)
 	tailCtx, cancel := context.WithCancel(ctx)
 	myGen := state.tailGen.Add(1)
@@ -222,6 +267,7 @@ func (w *MultiOutputLogWatcher) startTail(ctx context.Context, path string, stat
 	}
 	state.cancel = cancel
 	state.tailing.Store(true)
+	state.markActivity(time.Now())
 
 	handler := w.handlerFactory(path)
 	if handler == nil {
@@ -239,11 +285,22 @@ func (w *MultiOutputLogWatcher) startTail(ctx context.Context, path string, stat
 				state.tailing.Store(false)
 			}
 		}()
-		tailOutputLogFile(tailCtx, path, startOffset, w.parser, handler, w.logger, func(offset int64, lineTime time.Time) {
-			state.readOffset.Store(offset)
-			if w.callbacks.OnTailCheckpoint != nil {
-				w.callbacks.OnTailCheckpoint(ctx, path, offset, lineTime)
-			}
+		tailOutputLogFile(tailCtx, path, startOffset, w.parser, handler, w.logger, tailCallbacks{
+			checkpoint: func(offset int64, lineTime time.Time) {
+				state.readOffset.Store(offset)
+				if w.callbacks.OnTailCheckpoint != nil {
+					w.callbacks.OnTailCheckpoint(ctx, path, offset, lineTime)
+				}
+			},
+			setIngestRetrying: func(active bool) {
+				state.ingestRetrying.Store(active)
+				if active {
+					state.markActivity(time.Now())
+				}
+			},
+			onIngestRetryWait: func() {
+				state.markActivity(time.Now())
+			},
 		})
 	}()
 }

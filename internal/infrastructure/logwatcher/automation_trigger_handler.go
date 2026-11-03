@@ -33,14 +33,14 @@ func NewAutomationTriggerHandler(automation FriendEncounterAutomation, ctx conte
 }
 
 // Handle implements EventHandler.
-func (h *AutomationTriggerHandler) Handle(ev activity.ParsedEvent) {
+func (h *AutomationTriggerHandler) Handle(ev activity.ParsedEvent) error {
 	if ev == nil {
-		return
+		return nil
 	}
 	switch e := ev.(type) {
 	case *activity.EncounterEvent:
 		if e.VRCUserID == "" {
-			return
+			return nil
 		}
 		switch e.Action {
 		case activity.EncounterActionJoin:
@@ -53,4 +53,5 @@ func (h *AutomationTriggerHandler) Handle(ev activity.ParsedEvent) {
 			}
 		}
 	}
+	return nil
 }

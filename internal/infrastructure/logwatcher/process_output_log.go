@@ -3,6 +3,7 @@ package logwatcher
 import (
 	"bufio"
 	"context"
+	"errors"
 	"io"
 	"os"
 
@@ -83,17 +84,25 @@ func ProcessOutputLogFileFromOffset(ctx context.Context, path string, startOffse
 	}
 
 	processor := NewLineProcessor(parser, handler)
+	lastProcessedPos := startOffset
 	pos, err := scanOutputLogFromReader(ctx, bufio.NewReader(f), startOffset, 0, func(line ScannedLine) error {
 		if line.Trimmed != "" {
 			if _, parseErr := processor.Process(line.Trimmed); parseErr != nil {
+				if errors.Is(parseErr, ErrHandlerDispatch) {
+					return parseErr
+				}
 				logLineProcessErr(logger, parseErr,
 					"[logwatcher] bootstrap parse error: %v", "[logwatcher] bootstrap dispatch error: %v")
 			}
 		}
+		lastProcessedPos = line.ByteOffset
 		if onProgress != nil {
 			onProgress(line.ByteOffset, trimNL(line.Raw))
 		}
 		return nil
 	})
+	if err != nil {
+		return lastProcessedPos, err
+	}
 	return pos, err
 }
