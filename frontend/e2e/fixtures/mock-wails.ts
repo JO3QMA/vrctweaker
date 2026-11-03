@@ -373,7 +373,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
             detailError: '',
           });
         },
-        UpdateOfficialYTDLPCache: function(_url, _tag) {
+        UpdateOfficialYTDLPCache: function() {
           return Promise.resolve(Object.assign({}, ytdlpMaintainStatus, {
             cachePresent: true,
             cacheVersion: '2025.01.01',

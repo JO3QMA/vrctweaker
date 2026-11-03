@@ -2,7 +2,6 @@ package usecase
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -23,11 +22,14 @@ const DefaultYTDLPReleasesLatestURL = "https://api.github.com/repos/yt-dlp/yt-dl
 
 const ytdlpExeName = "yt-dlp.exe"
 
+const officialYTDlpRepoReleaseDownloadPrefix = "/yt-dlp/yt-dlp/releases/download/"
+
 // YTDLPReleaseInfo is the latest official Windows exe from GitHub Releases.
 type YTDLPReleaseInfo struct {
-	Tag         string
-	Version     string
-	DownloadURL string
+	Tag          string
+	Version      string
+	DownloadURL  string
+	ChecksumsURL string
 }
 
 type githubReleaseAsset struct {
@@ -46,6 +48,7 @@ type YTDLPUpdater struct {
 	HTTPClient                *http.Client
 	ReleasesLatestURL         string
 	SkipDownloadURLValidation bool // tests only
+	SkipChecksumVerification  bool // tests only
 }
 
 // NewYTDLPUpdater returns an updater with sane defaults.
@@ -66,20 +69,8 @@ func (u *YTDLPUpdater) httpClient() *http.Client {
 }
 
 func ytdlpExeAssetFromReleaseJSON(data []byte) (tagName, downloadURL string, err error) {
-	var rel githubReleaseLatest
-	if err := json.Unmarshal(data, &rel); err != nil {
-		return "", "", fmt.Errorf("parse release JSON: %w", err)
-	}
-	tag := strings.TrimSpace(rel.TagName)
-	if tag == "" {
-		return "", "", errors.New("release has empty tag_name")
-	}
-	for _, a := range rel.Assets {
-		if a.Name == ytdlpExeName && strings.TrimSpace(a.BrowserDownloadURL) != "" {
-			return tag, a.BrowserDownloadURL, nil
-		}
-	}
-	return "", "", fmt.Errorf("asset %q not found in release", ytdlpExeName)
+	tag, url, _, err := ytdlpReleaseAssetsFromReleaseJSON(data)
+	return tag, url, err
 }
 
 // ytdlpReleaseTagFromDownloadURL extracts the release tag from a GitHub browser_download_url.
@@ -122,7 +113,42 @@ func validateYTDlpDownloadURL(u *YTDLPUpdater, raw string) error {
 	if _, ok := allowedYTDlpDownloadHosts[host]; !ok {
 		return fmt.Errorf("download URL host not allowed: %s", host)
 	}
-	return nil
+	if host == "github.com" {
+		return validateOfficialYTDlpGitHubDownloadPath(parsed.Path)
+	}
+	return validateYTDlpCDNAssetPath(parsed.Path)
+}
+
+func validateOfficialYTDlpGitHubDownloadPath(path string) error {
+	if !strings.HasPrefix(path, officialYTDlpRepoReleaseDownloadPrefix) {
+		return errors.New("download URL is not from official yt-dlp release")
+	}
+	rest := strings.TrimPrefix(path, officialYTDlpRepoReleaseDownloadPrefix)
+	parts := strings.Split(rest, "/")
+	if len(parts) != 2 {
+		return errors.New("download URL is not from official yt-dlp release")
+	}
+	tag := strings.TrimSpace(parts[0])
+	file := strings.TrimSpace(parts[1])
+	if tag == "" {
+		return errors.New("download URL is not from official yt-dlp release")
+	}
+	switch file {
+	case ytdlpExeName, ytdlpSHA256SumsAssetName:
+		return nil
+	default:
+		return errors.New("download URL is not from official yt-dlp release asset")
+	}
+}
+
+func validateYTDlpCDNAssetPath(path string) error {
+	base := filepath.Base(path)
+	switch base {
+	case ytdlpExeName, ytdlpSHA256SumsAssetName:
+		return nil
+	default:
+		return errors.New("download URL is not an official yt-dlp release asset")
+	}
 }
 
 // FetchLatestRelease resolves the latest release tag and yt-dlp.exe browser_download_url.
@@ -150,14 +176,15 @@ func (u *YTDLPUpdater) FetchLatestRelease(ctx context.Context) (YTDLPReleaseInfo
 	if resp.StatusCode != http.StatusOK {
 		return YTDLPReleaseInfo{}, fmt.Errorf("github api: %s: %s", resp.Status, errtext.TruncateForErr(string(body), 200))
 	}
-	tag, url, err := ytdlpExeAssetFromReleaseJSON(body)
+	tag, exeURL, sumsURL, err := ytdlpReleaseAssetsFromReleaseJSON(body)
 	if err != nil {
 		return YTDLPReleaseInfo{}, err
 	}
 	return YTDLPReleaseInfo{
-		Tag:         strings.TrimSpace(tag),
-		Version:     appversion.NormalizeProductVersion(tag),
-		DownloadURL: url,
+		Tag:          strings.TrimSpace(tag),
+		Version:      appversion.NormalizeProductVersion(tag),
+		DownloadURL:  exeURL,
+		ChecksumsURL: sumsURL,
 	}, nil
 }
 
@@ -174,11 +201,11 @@ func LocalYTDLPVersion(ctx context.Context, exePath string) string {
 	return localYTDLPFileVersionString(exePath)
 }
 
-// DownloadToCache downloads downloadURL into Official yt-dlp cache (atomic replace via .partial).
-func (u *YTDLPUpdater) DownloadToCache(ctx context.Context, cachePath, downloadURL string) error {
+// DownloadToCache downloads an official release into Official yt-dlp cache (atomic replace via .partial).
+func (u *YTDLPUpdater) DownloadToCache(ctx context.Context, cachePath string, release YTDLPReleaseInfo) error {
 	u.mu.Lock()
 	defer u.mu.Unlock()
-	return u.downloadToCacheLocked(ctx, cachePath, downloadURL)
+	return u.downloadReleaseToCacheLocked(ctx, cachePath, release)
 }
 
 func ytdlpCacheExePresent(cachePath string) bool {
@@ -218,7 +245,7 @@ func (u *YTDLPUpdater) EnsureOfficialCache(ctx context.Context, cachePath string
 			DownloadURL: info.DownloadURL,
 		}, nil
 	}
-	if err := u.downloadToCacheLocked(ctx, cachePath, info.DownloadURL); err != nil {
+	if err := u.downloadReleaseToCacheLocked(ctx, cachePath, info); err != nil {
 		return YTDLPReleaseInfo{}, err
 	}
 	if info.Version == "" {
@@ -249,9 +276,21 @@ func (u *YTDLPUpdater) downloadHTTPClient() *http.Client {
 	return &c
 }
 
-func (u *YTDLPUpdater) downloadToCacheLocked(ctx context.Context, cachePath, downloadURL string) error {
+func (u *YTDLPUpdater) downloadReleaseToCacheLocked(ctx context.Context, cachePath string, release YTDLPReleaseInfo) error {
+	downloadURL := strings.TrimSpace(release.DownloadURL)
 	if err := validateYTDlpDownloadURL(u, downloadURL); err != nil {
 		return err
+	}
+	sumsURL := strings.TrimSpace(release.ChecksumsURL)
+	if sumsURL == "" {
+		if u == nil || !u.SkipChecksumVerification {
+			return errors.New("release checksums URL is empty")
+		}
+	}
+	if sumsURL != "" {
+		if err := validateYTDlpDownloadURL(u, sumsURL); err != nil {
+			return err
+		}
 	}
 	if st, err := os.Stat(cachePath); err == nil && st.IsDir() {
 		return fmt.Errorf("cache path is a directory: %s", cachePath)
@@ -264,6 +303,32 @@ func (u *YTDLPUpdater) downloadToCacheLocked(ctx context.Context, cachePath, dow
 		_ = os.Remove(part)
 		return err
 	}
+	if u != nil && u.SkipChecksumVerification {
+		return u.installDownloadedCache(part, cachePath)
+	}
+	sumsBody, err := fetchURLBody(ctx, u.downloadHTTPClient(), sumsURL, 4<<20)
+	if err != nil {
+		_ = os.Remove(part)
+		return fmt.Errorf("fetch SHA2-256SUMS: %w", err)
+	}
+	expected, err := parseYTDlpSHA256SumForFile(sumsBody, ytdlpExeName)
+	if err != nil {
+		_ = os.Remove(part)
+		return err
+	}
+	got, err := sha256HexFile(part)
+	if err != nil {
+		_ = os.Remove(part)
+		return err
+	}
+	if !strings.EqualFold(got, expected) {
+		_ = os.Remove(part)
+		return fmt.Errorf("yt-dlp.exe checksum mismatch")
+	}
+	return u.installDownloadedCache(part, cachePath)
+}
+
+func (u *YTDLPUpdater) installDownloadedCache(part, cachePath string) error {
 	bak := cachePath + ".bak"
 	_ = os.Remove(bak)
 	if err := os.Rename(cachePath, bak); err != nil && !os.IsNotExist(err) {
@@ -277,6 +342,34 @@ func (u *YTDLPUpdater) downloadToCacheLocked(ctx context.Context, cachePath, dow
 	}
 	_ = os.Remove(bak)
 	return nil
+}
+
+func fetchURLBody(ctx context.Context, client *http.Client, rawURL string, maxBytes int64) ([]byte, error) {
+	if client == nil {
+		client = http.DefaultClient
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", appversion.UserAgent())
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("request failed: %w", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		slurp, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		return nil, fmt.Errorf("download failed (%s): %s", resp.Status, errtext.TruncateForErr(string(slurp), 200))
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if int64(len(body)) > maxBytes {
+		return nil, fmt.Errorf("response exceeds %d bytes", maxBytes)
+	}
+	return body, nil
 }
 
 const maxYTDlpDownloadBytes = 100 << 20

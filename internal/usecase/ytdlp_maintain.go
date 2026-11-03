@@ -211,8 +211,8 @@ func (uc *YTDLPMaintainUseCase) CheckLatest(ctx context.Context) (YTDLPMaintainS
 	return st, nil
 }
 
-// UpdateOfficialCache downloads latest into cache. When maintain is desired, re-links Tools.
-func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloadURL, expectedTag string) (YTDLPMaintainStatus, error) {
+// UpdateOfficialCache fetches the latest official release and downloads into cache. When maintain is desired, re-links Tools.
+func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context) (YTDLPMaintainStatus, error) {
 	st, cachePath, toolsPath, maintainDesired, err := uc.statusPathsForUpdate(ctx)
 	if err != nil {
 		return st, err
@@ -221,31 +221,28 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 		return st, ErrYTDLPUnsupportedPlatform
 	}
 
-	url := downloadURL
-	tag := expectedTag
-	version := ""
-	if url == "" {
-		info, ferr := uc.updater.FetchLatestRelease(ctx)
-		if ferr != nil {
-			st.LatestError = ferr.Error()
-			return st, ferr
-		}
-		url = info.DownloadURL
-		tag = info.Tag
-		version = info.Version
+	info, ferr := uc.updater.FetchLatestRelease(ctx)
+	if ferr != nil {
+		st.LatestError = ferr.Error()
+		return st, ferr
 	}
-	if dlErr := uc.updater.DownloadToCache(ctx, cachePath, url); dlErr != nil {
+	return uc.applyOfficialCacheUpdate(ctx, st, cachePath, toolsPath, maintainDesired, info)
+}
+
+func (uc *YTDLPMaintainUseCase) applyOfficialCacheUpdate(ctx context.Context, st YTDLPMaintainStatus, cachePath, toolsPath string, maintainDesired bool, info YTDLPReleaseInfo) (YTDLPMaintainStatus, error) {
+	if dlErr := uc.updater.DownloadToCache(ctx, cachePath, info); dlErr != nil {
 		return st, dlErr
 	}
 
 	uc.mu.Lock()
 	defer uc.mu.Unlock()
+	var err error
 	st, err = uc.getStatusLocked(ctx)
 	if err != nil {
 		return st, err
 	}
 	st.CachePresent = true
-	st = enrichYTDLPMaintainRelease(ctx, st, cachePath, tag, url, version)
+	st = enrichYTDLPMaintainRelease(ctx, st, cachePath, info.Tag, info.DownloadURL, info.Version)
 	st.LatestError = ""
 	if err := uc.persistKnownLatest(ctx, st); err != nil {
 		return st, fmt.Errorf("persist known latest: %w", err)
