@@ -213,6 +213,9 @@ func (w *MultiOutputLogWatcher) startTail(ctx context.Context, path string, stat
 	if state.tailing.Load() {
 		return
 	}
+	if resume := state.readOffset.Load(); resume > 0 && resume < startOffset {
+		startOffset = resume
+	}
 	state.readOffset.Store(startOffset)
 	tailCtx, cancel := context.WithCancel(ctx)
 	myGen := state.tailGen.Add(1)

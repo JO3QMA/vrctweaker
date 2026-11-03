@@ -14,7 +14,39 @@ import (
 const (
 	pollInterval   = 500 * time.Millisecond
 	readBufferSize = 64 * 1024
+
+	tailIngestRetryInitial = 500 * time.Millisecond
+	tailIngestRetryMax     = 30 * time.Second
 )
+
+// tailIngestRetryWait sleeps before retrying a failed live-tail ingest. Tests may replace it.
+var tailIngestRetryWait = func(ctx context.Context, attempt int) bool {
+	delay := tailIngestRetryDelay(attempt)
+	select {
+	case <-ctx.Done():
+		return true
+	case <-time.After(delay):
+		return false
+	}
+}
+
+func tailIngestRetryDelay(attempt int) time.Duration {
+	if attempt < 0 {
+		attempt = 0
+	}
+	delay := tailIngestRetryInitial
+	for i := 0; i < attempt && delay < tailIngestRetryMax; i++ {
+		delay *= 2
+		if delay > tailIngestRetryMax {
+			delay = tailIngestRetryMax
+			break
+		}
+	}
+	if delay > tailIngestRetryMax {
+		delay = tailIngestRetryMax
+	}
+	return delay
+}
 
 // tailCheckpoint reports read progress after each consumed line.
 type tailCheckpoint func(byteOffset int64, vrChatLineTime time.Time)
@@ -29,6 +61,9 @@ func tailOutputLogFile(
 	logger Logger,
 	checkpoint tailCheckpoint,
 ) {
+	if logger == nil {
+		logger = Nop
+	}
 	f, err := os.Open(path)
 	if err != nil {
 		logger("[multi-logwatcher] open %s: %v", path, err)
@@ -54,10 +89,12 @@ func tailOutputLogFile(
 		default:
 		}
 
+		lineStartOffset := offset
 		line, err := br.ReadString('\n')
 		consumed := int64(len(line))
+		lineEndOffset := lineStartOffset + consumed
 		if consumed > 0 {
-			offset += consumed
+			offset = lineEndOffset
 		}
 
 		if err != nil {
@@ -75,17 +112,53 @@ func tailOutputLogFile(
 
 		lineTrimmed := trimNL(line)
 		if lineTrimmed != "" {
-			baseTime, parseErr := processor.Process(lineTrimmed)
-			if parseErr != nil {
-				if errors.Is(parseErr, ErrHandlerDispatch) {
-					logger("[multi-logwatcher] ingest %s: %v", path, parseErr)
+			attempt := 0
+			for {
+				baseTime, parseErr := processor.Process(lineTrimmed)
+				if parseErr == nil {
+					if checkpoint != nil {
+						checkpoint(lineEndOffset, baseTime)
+					}
+					break
+				}
+				if !errors.Is(parseErr, ErrHandlerDispatch) {
+					logLineProcessErr(logger, parseErr,
+						"[multi-logwatcher] parse %s: %v", "[multi-logwatcher] dispatch %s: %v",
+						path)
+					break
+				}
+				delay := tailIngestRetryDelay(attempt)
+				inner := errors.Unwrap(parseErr)
+				if inner == nil {
+					inner = parseErr
+				}
+				logger("[multi-logwatcher] ingest %s at offset %d failed (attempt %d): %v; retry in %s",
+					path, lineStartOffset, attempt+1, inner, delay)
+				if tailIngestRetryWait(ctx, attempt) {
 					return
 				}
-				logLineProcessErr(logger, parseErr,
-					"[multi-logwatcher] parse %s: %v", "[multi-logwatcher] dispatch %s: %v",
-					path)
-			} else if checkpoint != nil {
-				checkpoint(offset, baseTime)
+				attempt++
+				offset = lineStartOffset
+				if _, seekErr := f.Seek(lineStartOffset, io.SeekStart); seekErr != nil {
+					logger("[multi-logwatcher] seek %s for ingest retry: %v", path, seekErr)
+					return
+				}
+				br.Reset(f)
+				line, err = br.ReadString('\n')
+				consumed = int64(len(line))
+				lineEndOffset = lineStartOffset + consumed
+				if consumed > 0 {
+					offset = lineEndOffset
+				}
+				if err != nil && err != io.EOF {
+					logger("[multi-logwatcher] read %s on ingest retry: %v", path, err)
+					return
+				}
+				lineTrimmed = trimNL(line)
+				if lineTrimmed == "" {
+					logger("[multi-logwatcher] ingest retry %s at offset %d: line became empty", path, lineStartOffset)
+					break
+				}
 			}
 		}
 
