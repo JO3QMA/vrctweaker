@@ -8,6 +8,9 @@ import (
 // immediately wrapped by the frontend via Web Crypto and persisted via
 // PersistWrappedCredential. The token is held in Go memory for the current session.
 func (a *App) Login(username, password, twoFactorCode string) LoginResultDTO {
+	if err := a.requireReady(); err != nil {
+		return LoginResultDTO{OK: false, Error: err.Error()}
+	}
 	token, err := a.identity.Login(a.ctx, username, password, twoFactorCode)
 	if err != nil {
 		return LoginResultDTO{OK: false, Error: err.Error()}

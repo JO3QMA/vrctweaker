@@ -68,10 +68,18 @@ func (a *App) SetSuppressSleepWhileVRChat(on bool) error {
 
 // GetLanguage returns the saved UI language code (ja, en, ko, zh-TW, zh-CN), or empty if unset.
 func (a *App) GetLanguage() (string, error) {
-	if err := a.requireReady(); err != nil {
-		return "", err
+	if a == nil {
+		return "", nil
 	}
-	return a.settings.GetLanguage(a.ctx)
+	a.initMu.RLock()
+	ready := a.initReady
+	settings := a.settings
+	ctx := a.ctx
+	a.initMu.RUnlock()
+	if !ready || settings == nil {
+		return "", nil
+	}
+	return settings.GetLanguage(ctx)
 }
 
 // SetLanguage persists the UI language code.

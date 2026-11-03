@@ -34,7 +34,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import TitleBar from "./components/TitleBar.vue";
@@ -124,20 +124,21 @@ async function initLocaleFromBackend(): Promise<void> {
   }
 }
 
-onMounted(() => {
-  void initLocaleFromBackend();
-});
-
-watch(startupReady, (ready) => {
-  if (!ready) {
-    return;
-  }
-  void loadFirstLaunchGuideState().then(() => {
-    if (firstLaunchGuideCompleted.value && !manualOpen.value) {
-      beginStartupUnlock().catch(() => undefined);
+watch(
+  startupReady,
+  (ready) => {
+    if (!ready) {
+      return;
     }
-  });
-});
+    void initLocaleFromBackend();
+    void loadFirstLaunchGuideState().then(() => {
+      if (firstLaunchGuideCompleted.value && !manualOpen.value) {
+        beginStartupUnlock().catch(() => undefined);
+      }
+    });
+  },
+  { immediate: true },
+);
 
 watch(
   () => [route.meta.titleKey, locale.value] as const,

@@ -46,7 +46,6 @@ export function useStartupInit() {
   let cancelListen: (() => void) | undefined;
 
   onMounted(async () => {
-    await refreshStatus();
     const eventsOn = getRuntime()?.EventsOn;
     if (eventsOn) {
       cancelListen = eventsOn(
@@ -56,6 +55,7 @@ export function useStartupInit() {
         },
       );
     }
+    await refreshStatus();
   });
 
   onUnmounted(() => {

@@ -13,7 +13,7 @@ func (a *App) OpenExternalURL(rawURL string) error {
 	if err := a.requireReady(); err != nil {
 		return err
 	}
-	if a == nil || a.ctx == nil {
+	if a.ctx == nil {
 		return errors.New("app not initialized")
 	}
 	safe, err := safeurl.ParseHTTPHTTPS(rawURL)

@@ -76,6 +76,8 @@ type App struct {
 	initErr           error
 	canOpenDataFolder bool
 	dataDir           string
+	initCancel        context.CancelFunc
+	initDone          chan struct{}
 	db                *sql.DB
 	wailsLifecycleCtx context.Context
 }
@@ -90,6 +92,7 @@ const selfCacheChangedEvent = "identity:self-cache-changed"
 
 // shutdown persists state before the process exits (Wails lifecycle).
 func (a *App) shutdown(ctx context.Context) {
+	a.stopStartupSequence()
 	a.stopTray()
 	a.stopActivityRetentionLoop()
 	a.stopVRChatActivityMonitor()
@@ -98,13 +101,13 @@ func (a *App) shutdown(ctx context.Context) {
 	}
 	a.stopSleepSuppressLoop()
 	a.stopYTDLPMaintainLoop()
+	a.stopGalleryScanAndWait()
+	if a.settings != nil {
+		if err := a.settings.SetGalleryLastExitAt(ctx, time.Now().UTC()); err != nil {
+			runtime.LogWarning(ctx, "gallery last exit at: "+err.Error())
+		}
+	}
 	a.closeDB()
-	if a.settings == nil {
-		return
-	}
-	if err := a.settings.SetGalleryLastExitAt(ctx, time.Now().UTC()); err != nil {
-		runtime.LogWarning(ctx, "gallery last exit at: "+err.Error())
-	}
 }
 
 func (a *App) appContext() context.Context {

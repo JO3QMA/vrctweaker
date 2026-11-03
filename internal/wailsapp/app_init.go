@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/gen2brain/beeep"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -50,12 +49,31 @@ type StartupInitStatus struct {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.wailsLifecycleCtx = ctx
+	initCtx, cancel := context.WithCancel(ctx)
 	a.initMu.Lock()
+	a.initCancel = cancel
+	a.initDone = make(chan struct{})
 	a.initLoading = true
 	a.initPhase = "opening"
 	a.initMu.Unlock()
 	a.emitStartupStatusChanged(ctx)
-	go a.runStartupSequence(ctx)
+	go func() {
+		defer close(a.initDone)
+		a.runStartupSequence(initCtx)
+	}()
+}
+
+func (a *App) stopStartupSequence() {
+	a.initMu.Lock()
+	cancel := a.initCancel
+	done := a.initDone
+	a.initMu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	if done != nil {
+		<-done
+	}
 }
 
 func (a *App) runStartupSequence(ctx context.Context) {
@@ -70,7 +88,13 @@ func (a *App) runStartupSequence(ctx context.Context) {
 	}()
 
 	if err := a.initializeCore(ctx); err != nil {
-		runtime.LogError(ctx, err.Error())
+		if a.wailsLifecycleCtx != nil {
+			runtime.LogError(a.wailsLifecycleCtx, err.Error())
+		}
+		return
+	}
+	if ctx.Err() != nil {
+		a.teardownCore()
 		return
 	}
 
@@ -79,6 +103,11 @@ func (a *App) runStartupSequence(ctx context.Context) {
 	a.initPhase = ""
 	a.initMu.Unlock()
 	a.emitStartupStatusChanged(ctx)
+
+	if ctx.Err() != nil {
+		a.teardownCore()
+		return
+	}
 	a.startupPostInit(ctx)
 }
 
@@ -222,29 +251,22 @@ func (a *App) recordInitFailure(kind initFailureKind, err error, dataDir string)
 		a.canOpenDataFolder = false
 	case initFailDataDirCreate:
 		a.initSummaryKey = "app.startup.failed.dataDirCreate"
-		a.canOpenDataFolder = canOpenDataFolderPath(dataDir)
+		a.canOpenDataFolder = dataDirExistsAsFolder(dataDir)
 	case initFailDatabaseOpen:
 		a.initSummaryKey = "app.startup.failed.databaseOpen"
-		a.canOpenDataFolder = canOpenDataFolderPath(dataDir)
+		a.canOpenDataFolder = dataDirExistsAsFolder(dataDir)
 	default:
 		a.initSummaryKey = "app.startup.failed.databaseOpen"
-		a.canOpenDataFolder = canOpenDataFolderPath(dataDir)
+		a.canOpenDataFolder = dataDirExistsAsFolder(dataDir)
 	}
 	a.teardownCoreLocked()
 }
 
-func canOpenDataFolderPath(dir string) bool {
+func dataDirExistsAsFolder(dir string) bool {
 	if dir == "" {
 		return false
 	}
 	info, err := os.Stat(dir)
-	if err != nil {
-		parent := filepath.Dir(dir)
-		if parent == "" {
-			return false
-		}
-		info, err = os.Stat(parent)
-	}
 	return err == nil && info.IsDir()
 }
 
@@ -353,6 +375,17 @@ func (a *App) RetryStartupInit() (StartupInitStatus, error) {
 		return st, nil
 	}
 
+	if ctx.Err() != nil {
+		a.teardownCore()
+		a.initMu.Lock()
+		a.initLoading = false
+		a.initPhase = ""
+		st := a.startupInitStatusLocked()
+		a.initMu.Unlock()
+		a.emitStartupStatusChanged(ctx)
+		return st, nil
+	}
+
 	a.initMu.Lock()
 	a.initReady = true
 	a.initLoading = false
@@ -360,6 +393,10 @@ func (a *App) RetryStartupInit() (StartupInitStatus, error) {
 	st := a.startupInitStatusLocked()
 	a.initMu.Unlock()
 	a.emitStartupStatusChanged(ctx)
+	if ctx.Err() != nil {
+		a.teardownCore()
+		return st, nil
+	}
 	a.startupPostInit(ctx)
 	return st, nil
 }
@@ -377,6 +414,9 @@ func (a *App) OpenAppDataFolder() error {
 }
 
 func (a *App) requireReady() error {
+	if a == nil {
+		return errAppNotInitialized
+	}
 	a.initMu.RLock()
 	defer a.initMu.RUnlock()
 	if a.initReady {
