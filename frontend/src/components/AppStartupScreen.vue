@@ -23,7 +23,10 @@
         data-testid="startup-failure"
       >
         <VtAlert variant="danger" :title="summaryText" />
-        <el-collapse class="startup-detail vt-collapse-panel">
+        <el-collapse
+          v-if="status.detail"
+          class="startup-detail vt-collapse-panel"
+        >
           <el-collapse-item :title="t('app.startup.details')" name="detail">
             <pre
               class="startup-detail__body text-body-sm vt-focus-ring"
@@ -58,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, nextTick, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import { Loading } from "@element-plus/icons-vue";
 import TitleBar from "./TitleBar.vue";
@@ -78,6 +81,35 @@ const emit = defineEmits<{
 }>();
 
 const { t, te } = useI18n();
+
+let retryHadFocus = false;
+
+function onRetry(): void {
+  const btn = document.querySelector('[data-testid="startup-retry"]');
+  const active = document.activeElement;
+  retryHadFocus =
+    btn instanceof HTMLElement &&
+    active instanceof Node &&
+    (active === btn || btn.contains(active));
+  emit("retry");
+}
+
+watch(
+  () => props.retrying,
+  async (retrying, wasRetrying) => {
+    if (wasRetrying && !retrying && retryHadFocus) {
+      retryHadFocus = false;
+      await nextTick();
+      document
+        .querySelector<HTMLElement>('[data-testid="startup-retry"]')
+        ?.focus();
+    }
+  },
+);
+
+function onOpenDataFolder(): void {
+  emit("openDataFolder");
+}
 
 const loading = computed(
   () =>
@@ -101,14 +133,6 @@ const summaryText = computed(() => {
   }
   return t("app.startup.failed.databaseOpen");
 });
-
-function onRetry(): void {
-  emit("retry");
-}
-
-function onOpenDataFolder(): void {
-  emit("openDataFolder");
-}
 </script>
 
 <style scoped>

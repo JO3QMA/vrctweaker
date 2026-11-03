@@ -121,3 +121,18 @@ export const FailureNoDataFolder: Story = {
     },
   },
 };
+
+export const StatusFetchFailure: Story = {
+  name: "Status fetch failure",
+  args: {
+    status: {
+      ready: false,
+      loading: false,
+      phase: "",
+      summaryKey: "app.startup.failed.statusFetch",
+      detail: "network unreachable",
+      dataDir: "",
+      canOpenDataFolder: false,
+    },
+  },
+};

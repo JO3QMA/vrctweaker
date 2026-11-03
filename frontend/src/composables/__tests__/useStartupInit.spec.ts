@@ -85,14 +85,14 @@ describe("useStartupInit", () => {
     const Comp = defineComponent({
       setup() {
         const { status } = useStartupInit();
-        return () => status.value.summaryKey;
+        return () => `${status.value.summaryKey}:${status.value.detail}`;
       },
     });
 
     const wrapper = mount(Comp);
     await flushPromises();
 
-    expect(wrapper.text()).toBe("app.startup.failed.statusFetch");
+    expect(wrapper.text()).toBe("app.startup.failed.statusFetch:offline");
   });
 
   it("does not overwrite event payload with stale fetch snapshot", async () => {

@@ -24,13 +24,23 @@ const emptyStatus = (): StartupInitStatus => ({
   canOpenDataFolder: false,
 });
 
-function statusFetchFailure(): StartupInitStatus {
+function errorDetail(err: unknown): string {
+  if (err instanceof Error) {
+    return err.message;
+  }
+  if (typeof err === "string") {
+    return err;
+  }
+  return String(err);
+}
+
+function statusFetchFailure(err: unknown): StartupInitStatus {
   return {
     ready: false,
     loading: false,
     phase: "",
     summaryKey: STATUS_FETCH_FAILURE_KEY,
-    detail: "",
+    detail: errorDetail(err),
     dataDir: "",
     canOpenDataFolder: false,
   };
@@ -47,9 +57,9 @@ export function useStartupInit() {
       if (!receivedEvent) {
         status.value = snapshot;
       }
-    } catch {
+    } catch (err) {
       if (!receivedEvent) {
-        status.value = statusFetchFailure();
+        status.value = statusFetchFailure(err);
       }
     }
   }
@@ -58,11 +68,11 @@ export function useStartupInit() {
     retrying.value = true;
     try {
       status.value = await WailsApp.retryStartupInit();
-    } catch {
+    } catch (retryErr) {
       try {
         await refreshStatus();
       } catch {
-        status.value = statusFetchFailure();
+        status.value = statusFetchFailure(retryErr);
       }
     } finally {
       retrying.value = false;
