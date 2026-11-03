@@ -8,7 +8,69 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"strings"
+	"sync"
 )
+
+type ytdlpBlockingExeGate struct {
+	startOnce sync.Once
+	Started   chan struct{}
+	Proceed   chan struct{}
+}
+
+func newYTDlpBlockingExeGate() *ytdlpBlockingExeGate {
+	return &ytdlpBlockingExeGate{
+		Started: make(chan struct{}),
+		Proceed: make(chan struct{}),
+	}
+}
+
+func (g *ytdlpBlockingExeGate) holdAndServe(w http.ResponseWriter, exeBody string) {
+	g.startOnce.Do(func() { close(g.Started) })
+	<-g.Proceed
+	_, _ = w.Write([]byte(exeBody))
+}
+
+func startYTDlpReleaseTestServerBlocking(tag, exeBody string, gate *ytdlpBlockingExeGate) *ytdlpReleaseTestServer {
+	if gate == nil {
+		gate = newYTDlpBlockingExeGate()
+	}
+	if tag == "" {
+		tag = "2025.03.01"
+	}
+	sumsBody := ytdlpTestSumsBodyForExe(exeBody)
+	exePath := fmt.Sprintf("/yt-dlp/yt-dlp/releases/download/%s/yt-dlp.exe", tag)
+	sumsPath := fmt.Sprintf("/yt-dlp/yt-dlp/releases/download/%s/SHA2-256SUMS", tag)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc(exePath, func(w http.ResponseWriter, _ *http.Request) {
+		gate.holdAndServe(w, exeBody)
+	})
+	mux.HandleFunc(sumsPath, func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(sumsBody))
+	})
+
+	var base string
+	mux.HandleFunc("/api/latest", func(w http.ResponseWriter, _ *http.Request) {
+		exeURL := "https://github.com" + exePath
+		sumsURL := "https://github.com" + sumsPath
+		payload := fmt.Sprintf(`{"tag_name":%q,"assets":[
+  {"name":"SHA2-256SUMS","browser_download_url":%q},
+  {"name":"yt-dlp.exe","browser_download_url":%q}
+]}`, tag, sumsURL, exeURL)
+		_, _ = w.Write([]byte(payload))
+	})
+
+	srv := httptest.NewServer(mux)
+	base = srv.URL
+	client := &http.Client{
+		Transport: rewriteGitHubHostTransport{testBase: base, base: srv.Client().Transport},
+	}
+	updater := &YTDLPUpdater{
+		HTTPClient:        client,
+		ReleasesLatestURL: base + "/api/latest",
+	}
+	return &ytdlpReleaseTestServer{Server: srv, Base: base, Updater: updater}
+}
 
 type ytdlpReleaseTestServer struct {
 	Server  *httptest.Server

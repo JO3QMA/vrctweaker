@@ -179,3 +179,155 @@ func TestIsYTDLPCacheOlderThan(t *testing.T) {
 		t.Fatal("empty cache should download")
 	}
 }
+
+func TestApplyOfficialCacheUpdate_rereadsMaintainAfterDownload(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Tools symlink maintain path is Windows-only")
+	}
+	gate := newYTDlpBlockingExeGate()
+	ts := startYTDlpReleaseTestServerBlocking("2026.06.06", "MZblock", gate)
+	defer ts.Server.Close()
+
+	dir := t.TempDir()
+	cache := filepath.Join(dir, "yt-dlp.exe")
+	tools := filepath.Join(dir, "Tools", "yt-dlp.exe")
+	if err := os.MkdirAll(filepath.Dir(tools), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	repo := &fakeAppSettingsRepo{m: map[string]string{}}
+	settings := NewSettingsUseCase(repo)
+	uc := NewYTDLPMaintainUseCase(settings, ts.Updater)
+	uc.CachePathOverride = cache
+	uc.ToolsPathOverride = tools
+	uc.UnlockTimeout = time.Second
+
+	ctx := context.Background()
+	if err := uc.AcknowledgeRisk(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := uc.SetMaintainDesired(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	st, err := uc.GetStatus(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := ts.Updater.FetchLatestRelease(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	done := make(chan struct{})
+	var updated YTDLPMaintainStatus
+	var applyErr error
+	go func() {
+		updated, applyErr = uc.applyOfficialCacheUpdate(ctx, st, cache, tools, info)
+		close(done)
+	}()
+
+	select {
+	case <-gate.Started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for blocked exe download")
+	}
+	if err := uc.SetMaintainDesired(ctx, false); err != nil {
+		t.Fatal(err)
+	}
+	close(gate.Proceed)
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for applyOfficialCacheUpdate")
+	}
+	if applyErr != nil {
+		t.Fatalf("applyOfficialCacheUpdate: %v", applyErr)
+	}
+	if updated.MaintainDesired {
+		t.Fatal("expected maintainDesired false after toggle")
+	}
+	eff, err := EffectiveOfficialLink(tools, cache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if eff {
+		t.Fatal("expected Tools not linked when maintain turned off before link step")
+	}
+}
+
+func TestApplyOfficialCacheUpdate_linksWhenMaintainEnabledDuringDownload(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Tools symlink maintain path is Windows-only")
+	}
+	gate := newYTDlpBlockingExeGate()
+	ts := startYTDlpReleaseTestServerBlocking("2026.06.07", "MZblock2", gate)
+	defer ts.Server.Close()
+
+	dir := t.TempDir()
+	cache := filepath.Join(dir, "yt-dlp.exe")
+	tools := filepath.Join(dir, "Tools", "yt-dlp.exe")
+	if err := os.MkdirAll(filepath.Dir(tools), 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	repo := &fakeAppSettingsRepo{m: map[string]string{}}
+	settings := NewSettingsUseCase(repo)
+	uc := NewYTDLPMaintainUseCase(settings, ts.Updater)
+	uc.CachePathOverride = cache
+	uc.ToolsPathOverride = tools
+	uc.UnlockTimeout = time.Second
+
+	ctx := context.Background()
+	if err := uc.AcknowledgeRisk(ctx); err != nil {
+		t.Fatal(err)
+	}
+	st, err := uc.GetStatus(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	info, err := ts.Updater.FetchLatestRelease(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	done := make(chan struct{})
+	var updated YTDLPMaintainStatus
+	var applyErr error
+	go func() {
+		updated, applyErr = uc.applyOfficialCacheUpdate(ctx, st, cache, tools, info)
+		close(done)
+	}()
+
+	select {
+	case <-gate.Started:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for blocked exe download")
+	}
+	if err := uc.AcknowledgeRisk(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if err := uc.SetMaintainDesired(ctx, true); err != nil {
+		t.Fatal(err)
+	}
+	close(gate.Proceed)
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for applyOfficialCacheUpdate")
+	}
+	if applyErr != nil {
+		t.Fatalf("applyOfficialCacheUpdate: %v", applyErr)
+	}
+	if !updated.MaintainDesired || !updated.EffectiveOfficial {
+		t.Fatalf("expected maintain on and linked, got %+v", updated)
+	}
+	eff, err := EffectiveOfficialLink(tools, cache)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !eff {
+		t.Fatal("expected effective official link")
+	}
+}

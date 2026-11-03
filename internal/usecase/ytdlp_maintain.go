@@ -213,7 +213,7 @@ func (uc *YTDLPMaintainUseCase) CheckLatest(ctx context.Context) (YTDLPMaintainS
 
 // UpdateOfficialCache fetches the latest official release and downloads into cache. When maintain is desired, re-links Tools.
 func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context) (YTDLPMaintainStatus, error) {
-	st, cachePath, toolsPath, maintainDesired, err := uc.statusPathsForUpdate(ctx)
+	st, cachePath, toolsPath, _, err := uc.statusPathsForUpdate(ctx)
 	if err != nil {
 		return st, err
 	}
@@ -226,10 +226,10 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context) (YTDLPM
 		st.LatestError = ferr.Error()
 		return st, ferr
 	}
-	return uc.applyOfficialCacheUpdate(ctx, st, cachePath, toolsPath, maintainDesired, info)
+	return uc.applyOfficialCacheUpdate(ctx, st, cachePath, toolsPath, info)
 }
 
-func (uc *YTDLPMaintainUseCase) applyOfficialCacheUpdate(ctx context.Context, st YTDLPMaintainStatus, cachePath, toolsPath string, maintainDesired bool, info YTDLPReleaseInfo) (YTDLPMaintainStatus, error) {
+func (uc *YTDLPMaintainUseCase) applyOfficialCacheUpdate(ctx context.Context, st YTDLPMaintainStatus, cachePath, toolsPath string, info YTDLPReleaseInfo) (YTDLPMaintainStatus, error) {
 	if dlErr := uc.updater.DownloadToCache(ctx, cachePath, info); dlErr != nil {
 		return st, dlErr
 	}
@@ -252,6 +252,22 @@ func (uc *YTDLPMaintainUseCase) applyOfficialCacheUpdate(ctx context.Context, st
 			return st, fmt.Errorf("persist cache tag: %w", err)
 		}
 	}
+	maintainDesired := false
+	if uc.settings != nil {
+		maintainDesired, err = uc.settings.GetYTDLPToolsReplaceMaintain(ctx)
+		if err != nil {
+			return st, err
+		}
+	}
+	toolsPath, err = uc.toolsPathLocked()
+	if err != nil {
+		return st, err
+	}
+	cachePath, err = uc.cachePathLocked()
+	if err != nil {
+		return st, err
+	}
+	st.MaintainDesired = maintainDesired
 	if maintainDesired {
 		if linkErr := uc.linkIfNeeded(ctx, toolsPath, cachePath); linkErr != nil {
 			st.PendingError = linkErr.Error()
@@ -259,6 +275,13 @@ func (uc *YTDLPMaintainUseCase) applyOfficialCacheUpdate(ctx context.Context, st
 		}
 		st.PendingError = ""
 		st.EffectiveOfficial = true
+	} else {
+		eff, effErr := EffectiveOfficialLink(toolsPath, cachePath)
+		if effErr != nil {
+			st.EffectiveOfficial = false
+		} else {
+			st.EffectiveOfficial = eff
+		}
 	}
 	return st, nil
 }
