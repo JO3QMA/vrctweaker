@@ -73,6 +73,18 @@ setup((app) => {
 
 const preview: Preview = {
   parameters: {
+    viewport: {
+      viewports: {
+        desktop1280: {
+          name: "Desktop 1280",
+          styles: { width: "1280px", height: "720px" },
+        },
+        mobile600: {
+          name: "Narrow 600",
+          styles: { width: "600px", height: "720px" },
+        },
+      },
+    },
     controls: {
       matchers: {
         color: /(background|color)$/i,

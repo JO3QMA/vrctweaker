@@ -205,7 +205,7 @@ func assertRetentionShape(t *testing.T, db *sql.DB, worldRepo *sqlite.WorldInfoR
 
 func openRetentionDB(t *testing.T) *sql.DB {
 	t.Helper()
-	db, err := sqlite.Open(t.TempDir())
+	db, err := sqlite.Open(t.TempDir(), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

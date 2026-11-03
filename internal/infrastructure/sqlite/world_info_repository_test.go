@@ -18,7 +18,7 @@ func TestWorldInfoRepository_UpsertVisit_emptyWorldID(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	repo := NewWorldInfoRepository(db)
@@ -36,7 +36,7 @@ func TestWorldInfoRepository_UpsertVisit_GetByWorldID(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	repo := NewWorldInfoRepository(db)
@@ -65,7 +65,7 @@ func TestWorldInfoRepository_GetByWorldID_missing(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	repo := NewWorldInfoRepository(db)
@@ -83,7 +83,7 @@ func TestWorldInfoRepository_UpsertDisplayName(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	repo := NewWorldInfoRepository(db)
@@ -116,7 +116,7 @@ func TestWorldInfoRepository_UpsertDisplayName_emptyWorldID(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	repo := NewWorldInfoRepository(db)

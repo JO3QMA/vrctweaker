@@ -416,18 +416,21 @@ func Test_ingestActivityLogsBootstrap_checkpointResume_worldNamesNotCrossAssigne
 func newTestAppWithActivity(t *testing.T) (*App, *sqlite.UserEncounterRepository) {
 	t.Helper()
 	dataDir := t.TempDir()
-	db, err := sqlite.Open(dataDir)
+	db, err := sqlite.Open(dataDir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
 	encounterRepo := sqlite.NewUserEncounterRepository(db)
+	settingsRepo := sqlite.NewAppSettingsRepository(db)
 	app := &App{
+		ctx:      context.Background(),
+		settings: usecase.NewSettingsUseCase(settingsRepo),
 		activity: usecase.NewActivityUseCase(
 			sqlite.NewPlaySessionRepository(db),
 			encounterRepo,
-			sqlite.NewAppSettingsRepository(db),
+			settingsRepo,
 			sqlite.NewUserCacheRepository(db),
 			sqlite.NewWorldInfoRepository(db),
 		),

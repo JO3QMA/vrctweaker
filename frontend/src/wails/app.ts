@@ -58,6 +58,7 @@ export type DetectedPowerPlanDTO = WailsDTO<automation.DetectedPowerPlan>;
 export type VRChatConfigDTO = WailsDTO<wailsapp.VRChatConfigDTO>;
 export type CookieLinkageStatusDTO = WailsDTO<usecase.CookieLinkageStatus>;
 export type AppUpdateStatusDTO = WailsDTO<usecase.AppUpdateStatus>;
+export type StartupInitStatusDTO = WailsDTO<wailsapp.StartupInitStatus>;
 
 function emptyServerStatus(): ServerStatusDTO {
   return {
@@ -158,6 +159,19 @@ export function logicalProcessorCountFallback(): number {
     return navigator.hardwareConcurrency;
   }
   return DEFAULT_LOGICAL_PROCESSOR_COUNT;
+}
+
+function emptyStartupInitStatus(): StartupInitStatusDTO {
+  const e2eMode = import.meta.env.MODE === "e2e";
+  return {
+    ready: e2eMode,
+    loading: !e2eMode,
+    phase: e2eMode ? "" : "opening",
+    summaryKey: "",
+    detail: "",
+    dataDir: "",
+    canOpenDataFolder: false,
+  };
 }
 
 function emptyAppUpdateStatus(): AppUpdateStatusDTO {
@@ -446,6 +460,15 @@ function emptyUserProfileNavigation(
 }
 
 export const App = {
+  getStartupInitStatus: bindGo(
+    (a) => a.GetStartupInitStatus(),
+    emptyStartupInitStatus(),
+  ),
+  retryStartupInit: bindGo(
+    (a) => a.RetryStartupInit(),
+    emptyStartupInitStatus(),
+  ),
+  openAppDataFolder: bindGo((a) => a.OpenAppDataFolder(), undefined),
   launchProfiles: bindGo((a) => a.LaunchProfiles(), []),
   launchVRChat: bindGo(
     (a, profileID: string) => a.LaunchVRChat(profileID),

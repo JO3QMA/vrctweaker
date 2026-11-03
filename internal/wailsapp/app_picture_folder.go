@@ -37,7 +37,7 @@ func (a *App) startPictureFolderWatcher(ctx context.Context) {
 			return ingestErr
 		}
 		if created {
-			runtime.EventsEmit(a.ctx, galleryScreenshotsChangedEvent, struct{}{})
+			a.eventsEmit(galleryScreenshotsChangedEvent, struct{}{})
 		}
 		return nil
 	}

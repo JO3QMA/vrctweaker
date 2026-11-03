@@ -8,6 +8,9 @@ import (
 
 // LaunchProfiles returns all launch profiles.
 func (a *App) LaunchProfiles() ([]LaunchProfileDTO, error) {
+	if err := a.requireReady(); err != nil {
+		return nil, err
+	}
 	list, err := a.launcher.ListProfiles(a.ctx)
 	if err != nil {
 		return nil, err
@@ -19,6 +22,9 @@ func (a *App) LaunchProfiles() ([]LaunchProfileDTO, error) {
 // Use when launching with current GUI settings without saving first.
 // lastLaunchProfileID updates Last launch profile on success when non-empty (Profile launch).
 func (a *App) LaunchVRChatWithArgs(args string, lastLaunchProfileID string) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	ps, err := a.settings.GetPathSettings(a.ctx)
 	if err != nil {
 		return err
@@ -38,6 +44,9 @@ func (a *App) LaunchVRChatWithArgs(args string, lastLaunchProfileID string) erro
 // LaunchVRChat starts VRChat with the given profile ID.
 // Uses path settings (VRChat/Steam paths) from app_settings when configured.
 func (a *App) LaunchVRChat(profileID string) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	ps, err := a.settings.GetPathSettings(a.ctx)
 	if err != nil {
 		return err
@@ -57,6 +66,9 @@ func (a *App) LaunchVRChat(profileID string) error {
 // JoinWorld launches VRChat into the specified world using default profile.
 // Uses vrchat://launch?id=<worldID> URL scheme.
 func (a *App) JoinWorld(worldID string) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	ps, err := a.settings.GetPathSettings(a.ctx)
 	if err != nil {
 		return err
@@ -75,6 +87,9 @@ func (a *App) JoinWorld(worldID string) error {
 // JoinWorldFromScreenshot launches VRChat into the world associated with the screenshot.
 // Returns error if screenshot has no world_id.
 func (a *App) JoinWorldFromScreenshot(screenshotID string) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	s, err := a.media.GetScreenshot(a.ctx, screenshotID)
 	if err != nil {
 		return err
@@ -90,11 +105,17 @@ func (a *App) JoinWorldFromScreenshot(screenshotID string) error {
 
 // SaveLaunchProfile persists a launch profile.
 func (a *App) SaveLaunchProfile(p LaunchProfileDTO) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	return a.launcher.SaveProfile(a.ctx, toLaunchProfile(p))
 }
 
 // DeleteLaunchProfile removes a launch profile by ID.
 func (a *App) DeleteLaunchProfile(id string) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	return a.launcher.DeleteProfile(a.ctx, id)
 }
 

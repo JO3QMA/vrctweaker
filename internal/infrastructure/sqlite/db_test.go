@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -43,7 +44,7 @@ func TestApplySchema_canonicalColumns(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
-	if err := applySchema(db); err != nil {
+	if err := applySchema(db, nil); err != nil {
 		t.Fatal(err)
 	}
 
@@ -109,7 +110,7 @@ func TestApplySchema_canonicalColumns(t *testing.T) {
 
 func TestOpen_setsBusyTimeoutAndWAL(t *testing.T) {
 	dir := t.TempDir()
-	db, err := Open(dir)
+	db, err := Open(dir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -134,7 +135,7 @@ func TestOpen_setsBusyTimeoutAndWAL(t *testing.T) {
 
 func TestOpen_foreignKeysCascadeDeletesThumbnails(t *testing.T) {
 	dir := t.TempDir()
-	db, err := Open(dir)
+	db, err := Open(dir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +178,7 @@ func TestOpen_foreignKeysCascadeDeletesThumbnails(t *testing.T) {
 
 func TestOpen_seedsDefaults(t *testing.T) {
 	dir := t.TempDir()
-	db, err := Open(dir)
+	db, err := Open(dir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -230,7 +231,7 @@ func TestOpen_doesNotAddVRWhenProfilesExist(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if applyErr := applySchema(db); applyErr != nil {
+	if applyErr := applySchema(db, nil); applyErr != nil {
 		t.Fatal(applyErr)
 	}
 	if _, delErr := db.Exec(`DELETE FROM launch_profiles`); delErr != nil {
@@ -244,7 +245,7 @@ func TestOpen_doesNotAddVRWhenProfilesExist(t *testing.T) {
 		t.Fatal(closeErr)
 	}
 
-	reopened, err := Open(dir)
+	reopened, err := Open(dir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -278,10 +279,10 @@ func TestApplySchema_idempotent(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if err := applySchema(db); err != nil {
+	if err := applySchema(db, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := applySchema(db); err != nil {
+	if err := applySchema(db, nil); err != nil {
 		t.Fatalf("second applySchema: %v", err)
 	}
 
@@ -301,11 +302,11 @@ func TestEnsureFriendAvatarObservationDedupIndex_skipsDuplicateProbeWhenIndexPre
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if err := applySchema(db); err != nil {
+	if err := applySchema(db, nil); err != nil {
 		t.Fatal(err)
 	}
 	for i := 0; i < 3; i++ {
-		if err := ensureFriendAvatarObservationDedupIndex(db); err != nil {
+		if err := ensureFriendAvatarObservationDedupIndex(db, nil); err != nil {
 			t.Fatalf("iteration %d: %v", i, err)
 		}
 	}
@@ -318,14 +319,14 @@ func TestEnsureFriendAvatarObservationDedupIndex_skipsDeleteWhenNoDuplicates(t *
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if err := applySchema(db); err != nil {
+	if err := applySchema(db, nil); err != nil {
 		t.Fatal(err)
 	}
 	var before int
 	if err := db.QueryRow(`SELECT COUNT(*) FROM friend_avatar_observations`).Scan(&before); err != nil {
 		t.Fatal(err)
 	}
-	if err := ensureFriendAvatarObservationDedupIndex(db); err != nil {
+	if err := ensureFriendAvatarObservationDedupIndex(db, nil); err != nil {
 		t.Fatal(err)
 	}
 	var after int
@@ -344,7 +345,7 @@ func TestEnsureFriendAvatarObservationDedupIndex_dedupesDuplicates(t *testing.T)
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if err := applySchema(db); err != nil {
+	if err := applySchema(db, nil); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.Exec(`DROP INDEX IF EXISTS idx_friend_avatar_obs_natural`); err != nil {
@@ -359,7 +360,7 @@ func TestEnsureFriendAvatarObservationDedupIndex_dedupesDuplicates(t *testing.T)
 			t.Fatal(err)
 		}
 	}
-	if err := ensureFriendAvatarObservationDedupIndex(db); err != nil {
+	if err := ensureFriendAvatarObservationDedupIndex(db, nil); err != nil {
 		t.Fatal(err)
 	}
 	var n int
@@ -371,8 +372,105 @@ func TestEnsureFriendAvatarObservationDedupIndex_dedupesDuplicates(t *testing.T)
 	}
 }
 
+func TestOpen_migratesDuplicateFriendAvatarRowsBeforeUniqueIndex(t *testing.T) {
+	dir := t.TempDir()
+	legacyPath := filepath.Join(dir, "legacy.db")
+	legacy, err := sql.Open("sqlite", legacyPath+"?_pragma=foreign_keys(1)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, stmt := range schemaStatements() {
+		if strings.Contains(stmt, "idx_friend_avatar_obs_natural") {
+			continue
+		}
+		if _, execErr := legacy.Exec(stmt); execErr != nil {
+			t.Fatalf("legacy schema: %v", execErr)
+		}
+	}
+	ts := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC).Format(time.RFC3339)
+	for _, id := range []string{"dup-a", "dup-b"} {
+		if _, execErr := legacy.Exec(`INSERT INTO friend_avatar_observations (
+			id, vrc_user_id, display_name, avatar_name, instance_id, world_id, log_source_path, observed_at
+		) VALUES (?, 'usr', 'Name', 'Avatar', '', '', '/log.txt', ?)`, id, ts); execErr != nil {
+			t.Fatal(execErr)
+		}
+	}
+	if closeErr := legacy.Close(); closeErr != nil {
+		t.Fatal(closeErr)
+	}
+
+	dataDir := filepath.Join(dir, "data")
+	if mkdirErr := os.MkdirAll(dataDir, 0o700); mkdirErr != nil {
+		t.Fatal(mkdirErr)
+	}
+	if renameErr := os.Rename(legacyPath, filepath.Join(dataDir, "vrchat-tweaker.db")); renameErr != nil {
+		t.Fatal(renameErr)
+	}
+
+	db, err := Open(dataDir, nil)
+	if err != nil {
+		t.Fatalf("Open with legacy duplicates: %v", err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM friend_avatar_observations`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 1 {
+		t.Fatalf("observations after migration = %d, want 1", n)
+	}
+	var indexCount int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type = 'index' AND name = 'idx_friend_avatar_obs_natural'`).Scan(&indexCount); err != nil {
+		t.Fatal(err)
+	}
+	if indexCount != 1 {
+		t.Fatalf("unique index count = %d, want 1", indexCount)
+	}
+}
+
+func TestFriendAvatarDedupe_completesQuicklyForLargeDuplicateSet(t *testing.T) {
+	if testing.Short() {
+		t.Skip("timing check")
+	}
+	dir := t.TempDir()
+	db, err := sql.Open("sqlite", filepath.Join(dir, "t.db")+"?_pragma=foreign_keys(1)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if err := applySchema(db, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`DROP INDEX IF EXISTS idx_friend_avatar_obs_natural`); err != nil {
+		t.Fatal(err)
+	}
+	ts := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC).Format(time.RFC3339)
+	const groups = 2000
+	for i := 0; i < groups; i++ {
+		for _, suffix := range []string{"a", "b"} {
+			id := fmt.Sprintf("obs-%d-%s", i, suffix)
+			_, err := db.Exec(`INSERT INTO friend_avatar_observations (
+				id, vrc_user_id, display_name, avatar_name, log_source_path, observed_at
+			) VALUES (?, '', ?, 'Av', '/log', ?)`, id, fmt.Sprintf("user-%d", i), ts)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	start := time.Now()
+	if err := ensureFriendAvatarObservationDedupIndex(db, nil); err != nil {
+		t.Fatal(err)
+	}
+	elapsed := time.Since(start)
+	const maxDuration = 2 * time.Second
+	if elapsed > maxDuration {
+		t.Fatalf("dedupe took %v, want <= %v (consider startup progress UI)", elapsed, maxDuration)
+	}
+}
+
 func TestOpen_rejectsInvalidDataDir(t *testing.T) {
-	_, err := Open("/proc/self/mem/not-a-directory")
+	_, err := Open("/proc/self/mem/not-a-directory", nil)
 	if err == nil {
 		t.Fatal("expected Open to fail for invalid data dir")
 	}

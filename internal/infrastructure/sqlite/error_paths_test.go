@@ -23,7 +23,7 @@ func openTestDB(t *testing.T) *sql.DB {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		_ = db.Close()
 		t.Fatal(schemaErr)
 	}

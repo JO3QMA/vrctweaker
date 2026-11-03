@@ -20,6 +20,9 @@ const activityVideoPlaybackChangedEvent = "activity:video-playback-changed"
 
 // GetActivityStats returns aggregated play stats for the date range.
 func (a *App) GetActivityStats(fromISO, toISO string) (activity.ActivityStats, error) {
+	if err := a.requireReady(); err != nil {
+		return activity.ActivityStats{}, err
+	}
 	stats, err := a.activity.GetActivityStats(a.ctx, fromISO, toISO)
 	if err != nil {
 		return activity.ActivityStats{}, err
@@ -41,6 +44,9 @@ func (a *App) GetActivityStats(fromISO, toISO string) (activity.ActivityStats, e
 
 // Encounters returns user encounters.
 func (a *App) Encounters() ([]UserEncounterDTO, error) {
+	if err := a.requireReady(); err != nil {
+		return nil, err
+	}
 	list, err := a.activity.ListEncountersWithContext(a.ctx, nil)
 	if err != nil {
 		return nil, err
@@ -50,6 +56,9 @@ func (a *App) Encounters() ([]UserEncounterDTO, error) {
 
 // VideoPlaybackHistory returns video playback attempts for the video tab (newest first).
 func (a *App) VideoPlaybackHistory() ([]VideoPlaybackDTO, error) {
+	if err := a.requireReady(); err != nil {
+		return nil, err
+	}
 	list, err := a.activity.ListVideoPlaybackHistory(a.ctx)
 	if err != nil {
 		return nil, err
@@ -59,6 +68,9 @@ func (a *App) VideoPlaybackHistory() ([]VideoPlaybackDTO, error) {
 
 // FriendAvatarUsageByVRCUserID returns aggregated avatar usage for a friend (from output_log).
 func (a *App) FriendAvatarUsageByVRCUserID(vrcUserID string) ([]FriendAvatarUsageDTO, error) {
+	if err := a.requireReady(); err != nil {
+		return nil, err
+	}
 	if a.activity == nil {
 		return []FriendAvatarUsageDTO{}, nil
 	}
@@ -93,6 +105,9 @@ func (a *App) FriendAvatarUsageByVRCUserID(vrcUserID string) ([]FriendAvatarUsag
 
 // EncountersByVRCUserID returns encounters for the given VRChat user id. Empty id yields an empty slice.
 func (a *App) EncountersByVRCUserID(vrcUserID string) ([]UserEncounterDTO, error) {
+	if err := a.requireReady(); err != nil {
+		return nil, err
+	}
 	if strings.TrimSpace(vrcUserID) == "" {
 		return []UserEncounterDTO{}, nil
 	}
@@ -105,6 +120,9 @@ func (a *App) EncountersByVRCUserID(vrcUserID string) ([]UserEncounterDTO, error
 
 // EncountersByWorldID returns encounters in the given world. Empty id yields an empty slice.
 func (a *App) EncountersByWorldID(worldID string) ([]UserEncounterDTO, error) {
+	if err := a.requireReady(); err != nil {
+		return nil, err
+	}
 	if strings.TrimSpace(worldID) == "" {
 		return []UserEncounterDTO{}, nil
 	}
@@ -117,6 +135,9 @@ func (a *App) EncountersByWorldID(worldID string) ([]UserEncounterDTO, error) {
 
 // OpenVRChatLogFolder opens the configured output_log directory (or default VRChat log dir) in the file manager.
 func (a *App) OpenVRChatLogFolder() error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	p, err := a.settings.GetOutputLogPath(a.ctx)
 	if err != nil {
 		return err
@@ -144,5 +165,8 @@ func (a *App) OpenVRChatLogFolder() error {
 
 // RotateEncounters runs the retention cleanup.
 func (a *App) RotateEncounters() (int64, error) {
+	if err := a.requireReady(); err != nil {
+		return 0, err
+	}
 	return a.activity.RotateEncounters(a.ctx)
 }

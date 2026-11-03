@@ -20,7 +20,7 @@ func TestPlaySessionRepository_Save_List_GetByID_Count(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 
@@ -65,7 +65,7 @@ func TestPlaySessionRepository_FindLatestWithoutEndTime(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 
@@ -92,7 +92,7 @@ func TestPlaySessionRepository_FindLatestWithInstanceID(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 
@@ -126,7 +126,7 @@ func TestPlaySessionRepository_List_emptyRange(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	repo := NewPlaySessionRepository(db)
@@ -151,7 +151,7 @@ func TestPlaySessionRepository_GetByID_missing(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	repo := NewPlaySessionRepository(db)
@@ -169,7 +169,7 @@ func TestPlaySessionRepository_DeleteOlderThan(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 

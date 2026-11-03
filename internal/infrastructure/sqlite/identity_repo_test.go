@@ -33,7 +33,7 @@ func TestUserCacheRepository_logMerge_lastContactNoRegression(t *testing.T) {
 		t.Fatal(dbErr)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := applySchema(db); migrateErr != nil {
+	if migrateErr := applySchema(db, nil); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 
@@ -93,7 +93,7 @@ func TestUserCacheRepository_logMerge_preservesFriendKind(t *testing.T) {
 		t.Fatal(dbErr)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := applySchema(db); migrateErr != nil {
+	if migrateErr := applySchema(db, nil); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 
@@ -130,7 +130,7 @@ func TestUserCacheRepository_UpsertSelf_promotesExistingContactRow(t *testing.T)
 		t.Fatal(dbErr)
 	}
 	defer func() { _ = db.Close() }()
-	if migErr := applySchema(db); migErr != nil {
+	if migErr := applySchema(db, nil); migErr != nil {
 		t.Fatal(migErr)
 	}
 	repo := NewUserCacheRepository(db)
@@ -186,7 +186,7 @@ func TestUserCacheRepository_List_onlyFriendsWithStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migErr := applySchema(db); migErr != nil {
+	if migErr := applySchema(db, nil); migErr != nil {
 		t.Fatal(migErr)
 	}
 	repo := NewUserCacheRepository(db)
@@ -245,7 +245,7 @@ func TestUserCacheRepository_List_omitsUnnamedFriends(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migErr := applySchema(db); migErr != nil {
+	if migErr := applySchema(db, nil); migErr != nil {
 		t.Fatal(migErr)
 	}
 	repo := NewUserCacheRepository(db)
@@ -281,7 +281,7 @@ func TestApplyDataMigrations_demotesUnnamedFriends(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migErr := applySchema(db); migErr != nil {
+	if migErr := applySchema(db, nil); migErr != nil {
 		t.Fatal(migErr)
 	}
 	repo := NewUserCacheRepository(db)
@@ -325,7 +325,7 @@ func TestUserCacheRepository_SaveBatch_persistsFriendExtendedFields(t *testing.T
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migErr := applySchema(db); migErr != nil {
+	if migErr := applySchema(db, nil); migErr != nil {
 		t.Fatal(migErr)
 	}
 	repo := NewUserCacheRepository(db)
@@ -384,7 +384,7 @@ func TestUserCacheRepository_SaveBatch_afterMergeFromAPIFriend_keepsSelf(t *test
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migErr := applySchema(db); migErr != nil {
+	if migErr := applySchema(db, nil); migErr != nil {
 		t.Fatal(migErr)
 	}
 	repo := NewUserCacheRepository(db)
@@ -444,7 +444,7 @@ func TestUserCacheRepository_GetSelfBySessionFingerprint(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migErr := applySchema(db); migErr != nil {
+	if migErr := applySchema(db, nil); migErr != nil {
 		t.Fatal(migErr)
 	}
 	repo := NewUserCacheRepository(db)
@@ -495,7 +495,7 @@ func TestUserCacheRepository_ListFavorites_Delete_DeleteSelfRows(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migErr := applySchema(db); migErr != nil {
+	if migErr := applySchema(db, nil); migErr != nil {
 		t.Fatal(migErr)
 	}
 	repo := NewUserCacheRepository(db)
@@ -559,7 +559,7 @@ func TestUserCacheRepository_UpsertSelf_rejectsEmptyID(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migErr := applySchema(db); migErr != nil {
+	if migErr := applySchema(db, nil); migErr != nil {
 		t.Fatal(migErr)
 	}
 	repo := NewUserCacheRepository(db)
@@ -577,7 +577,7 @@ func TestUserCacheRepository_GetByVRCUserID_missing(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migErr := applySchema(db); migErr != nil {
+	if migErr := applySchema(db, nil); migErr != nil {
 		t.Fatal(migErr)
 	}
 	repo := NewUserCacheRepository(db)
@@ -595,7 +595,7 @@ func TestUserCacheRepository_SaveBatch_empty(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migErr := applySchema(db); migErr != nil {
+	if migErr := applySchema(db, nil); migErr != nil {
 		t.Fatal(migErr)
 	}
 	repo := NewUserCacheRepository(db)
@@ -612,7 +612,7 @@ func TestUserCacheRepository_UpsertSelf_replacesOtherSelfAccount(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migErr := applySchema(db); migErr != nil {
+	if migErr := applySchema(db, nil); migErr != nil {
 		t.Fatal(migErr)
 	}
 	repo := NewUserCacheRepository(db)

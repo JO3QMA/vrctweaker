@@ -16,7 +16,7 @@ func TestMigrateAutomationRules_copiesLegacyWithoutOpenCursorWrite(t *testing.T)
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	ctx := context.Background()

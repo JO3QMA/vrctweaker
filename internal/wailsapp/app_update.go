@@ -19,6 +19,9 @@ const appUpdateStartupDelay = 2 * time.Second
 
 // GetAppUpdateAutoCheck returns whether startup should check for updates.
 func (a *App) GetAppUpdateAutoCheck() (bool, error) {
+	if err := a.requireReady(); err != nil {
+		return false, err
+	}
 	if a.appUpdate == nil || a.settings == nil {
 		return true, nil
 	}
@@ -27,6 +30,9 @@ func (a *App) GetAppUpdateAutoCheck() (bool, error) {
 
 // SetAppUpdateAutoCheck persists the auto-check toggle.
 func (a *App) SetAppUpdateAutoCheck(enabled bool) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if a.appUpdate == nil {
 		return errAppUpdateNotInitialized
 	}
@@ -35,6 +41,9 @@ func (a *App) SetAppUpdateAutoCheck(enabled bool) error {
 
 // CheckForAppUpdate queries GitHub for a newer stable release (manual check).
 func (a *App) CheckForAppUpdate() (usecase.AppUpdateStatus, error) {
+	if err := a.requireReady(); err != nil {
+		return usecase.AppUpdateStatus{}, err
+	}
 	if a.appUpdate == nil {
 		return usecase.AppUpdateStatus{CurrentVersion: appversion.Version}, errAppUpdateNotInitialized
 	}
@@ -43,6 +52,9 @@ func (a *App) CheckForAppUpdate() (usecase.AppUpdateStatus, error) {
 
 // DismissAppUpdate skips prompts for the given release version.
 func (a *App) DismissAppUpdate(version string) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if a.appUpdate == nil {
 		return errAppUpdateNotInitialized
 	}
@@ -51,6 +63,9 @@ func (a *App) DismissAppUpdate(version string) error {
 
 // ApplyAppUpdate downloads and applies the release for latestVersion, then quits for restart.
 func (a *App) ApplyAppUpdate(latestVersion string) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if a.appUpdate == nil {
 		return errAppUpdateNotInitialized
 	}
@@ -63,6 +78,9 @@ func (a *App) ApplyAppUpdate(latestVersion string) error {
 
 // ClaimStartupAppUpdatePrompt returns a startup prompt saved before the UI subscribed, then clears it.
 func (a *App) ClaimStartupAppUpdatePrompt() (usecase.AppUpdateStatus, error) {
+	if err := a.requireReady(); err != nil {
+		return usecase.AppUpdateStatus{}, err
+	}
 	st := usecase.AppUpdateStatus{CurrentVersion: appversion.Version}
 	a.appUpdatePendingMu.Lock()
 	defer a.appUpdatePendingMu.Unlock()
@@ -93,6 +111,9 @@ func (a *App) storePendingStartupAppUpdate(st usecase.AppUpdateStatus) {
 
 // OpenAppReleasePage opens the release page in the default browser.
 func (a *App) OpenAppReleasePage(url string) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if a.ctx == nil {
 		return errAppUpdateNotInitialized
 	}
@@ -135,6 +156,6 @@ func (a *App) startAppUpdateCheckOnStartup() {
 			return
 		}
 		a.storePendingStartupAppUpdate(st)
-		runtime.EventsEmit(a.ctx, appUpdateAvailableEvent, st)
+		a.eventsEmit(appUpdateAvailableEvent, st)
 	}()
 }

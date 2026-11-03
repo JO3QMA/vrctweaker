@@ -1,6 +1,8 @@
 package wailsapp
 
 import (
+	"context"
+	"errors"
 	"testing"
 
 	"vrchat-tweaker/internal/usecase"
@@ -9,16 +11,17 @@ import (
 func TestApp_appUpdateWhenNotInitialized(t *testing.T) {
 	a := NewApp()
 	_, err := a.CheckForAppUpdate()
-	if err == nil {
-		t.Fatal("expected error")
+	if !errors.Is(err, errAppNotInitialized) {
+		t.Fatalf("CheckForAppUpdate err = %v", err)
 	}
-	if err := a.SetAppUpdateAutoCheck(true); err == nil {
-		t.Fatal("expected error")
+	if err := a.SetAppUpdateAutoCheck(true); !errors.Is(err, errAppNotInitialized) {
+		t.Fatalf("SetAppUpdateAutoCheck err = %v", err)
 	}
 }
 
 func TestApp_appUpdateBindingsWithUseCase(t *testing.T) {
 	a := NewApp()
+	a.setInitReadyForTest(context.Background())
 	a.appUpdate = usecase.NewAppUpdateUseCase(nil, nil, nil)
 	if _, err := a.GetAppUpdateAutoCheck(); err != nil {
 		t.Fatal(err)
@@ -27,6 +30,7 @@ func TestApp_appUpdateBindingsWithUseCase(t *testing.T) {
 
 func TestApp_claimStartupAppUpdatePrompt(t *testing.T) {
 	a := NewApp()
+	a.setInitReadyForTest(context.Background())
 	a.storePendingStartupAppUpdate(usecase.AppUpdateStatus{
 		ShouldPrompt:  true,
 		LatestVersion: "9.0.0",
@@ -49,6 +53,7 @@ func TestApp_claimStartupAppUpdatePrompt(t *testing.T) {
 
 func TestApp_clearStartupAppUpdatePrompt(t *testing.T) {
 	a := NewApp()
+	a.setInitReadyForTest(context.Background())
 	a.storePendingStartupAppUpdate(usecase.AppUpdateStatus{ShouldPrompt: true})
 	a.ClearStartupAppUpdatePrompt()
 	st, err := a.ClaimStartupAppUpdatePrompt()

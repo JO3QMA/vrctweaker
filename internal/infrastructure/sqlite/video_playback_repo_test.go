@@ -10,7 +10,7 @@ import (
 
 func TestVideoPlaybackRepository_SaveListCompleteAndDelete(t *testing.T) {
 	dir := t.TempDir()
-	db, err := Open(dir)
+	db, err := Open(dir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func TestVideoPlaybackRepository_SaveListCompleteAndDelete(t *testing.T) {
 
 func TestVideoPlaybackRepository_CompleteFailure_noOpenReturnsZero(t *testing.T) {
 	dir := t.TempDir()
-	db, err := Open(dir)
+	db, err := Open(dir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

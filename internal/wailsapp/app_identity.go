@@ -2,8 +2,6 @@ package wailsapp
 
 import (
 	"errors"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // Login authenticates with VRChat. On success the returned PlaintextToken must be
@@ -20,18 +18,27 @@ func (a *App) Login(username, password, twoFactorCode string) LoginResultDTO {
 
 // Logout clears stored credentials.
 func (a *App) Logout() error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	a.stopVRChatPipeline()
 	return a.identity.Logout(a.ctx)
 }
 
 // IsLoggedIn returns true when the session is active (token in memory).
 func (a *App) IsLoggedIn() (bool, error) {
+	if err := a.requireReady(); err != nil {
+		return false, err
+	}
 	return a.identity.IsLoggedIn(a.ctx)
 }
 
 // HasStoredCredential returns true when the credential store has a value (blob or legacy).
 // Use this on startup to decide whether to attempt unlock before showing the login form.
 func (a *App) HasStoredCredential() (bool, error) {
+	if err := a.requireReady(); err != nil {
+		return false, err
+	}
 	return a.identity.HasStoredCredential(a.ctx)
 }
 
@@ -39,12 +46,18 @@ func (a *App) HasStoredCredential() (bool, error) {
 // The frontend inspects the value to decide whether to decrypt (wrapped blob, starts with
 // "VRCTWKV1:") or forward as-is (legacy plaintext) before calling UnlockVRChatSession.
 func (a *App) GetCredentialBlob() (string, error) {
+	if err := a.requireReady(); err != nil {
+		return "", err
+	}
 	return a.identity.GetCredentialBlob(a.ctx)
 }
 
 // UnlockVRChatSession sets the decrypted auth token from the frontend and loads the user profile.
 // Must be called after the frontend successfully decrypts the credential blob.
 func (a *App) UnlockVRChatSession(token string) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if err := a.identity.UnlockSession(a.ctx, token); err != nil {
 		return err
 	}
@@ -56,24 +69,33 @@ func (a *App) UnlockVRChatSession(token string) error {
 // The blob must start with "VRCTWKV1:" (the WrappedBlobMagic prefix).
 // Call this after every successful login or key migration.
 func (a *App) PersistWrappedCredential(blob string) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	return a.identity.PersistWrappedCredential(a.ctx, blob)
 }
 
 // ClearStoredCredential removes the credential blob from the store.
 // Call when IDB key loss makes the blob unrecoverable, or for a full logout.
 func (a *App) ClearStoredCredential() error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	return a.identity.ClearStoredCredential(a.ctx)
 }
 
 // GetVRChatCurrentUser returns the logged-in user's profile from the VRChat API.
 // When forceRefresh is true, bypasses the local self-profile cache and refetches from the API.
 func (a *App) GetVRChatCurrentUser(forceRefresh bool) (VRChatCurrentUserDTO, error) {
+	if err := a.requireReady(); err != nil {
+		return VRChatCurrentUserDTO{}, err
+	}
 	u, refreshed, err := a.identity.GetCurrentUser(a.ctx, forceRefresh)
 	if err != nil {
 		return VRChatCurrentUserDTO{}, err
 	}
 	if refreshed {
-		runtime.EventsEmit(a.ctx, selfCacheChangedEvent, struct{}{})
+		a.eventsEmit(selfCacheChangedEvent, struct{}{})
 	}
 	if u == nil {
 		return VRChatCurrentUserDTO{}, errors.New("empty current user")
@@ -93,20 +115,29 @@ func (a *App) GetVRChatCurrentUser(forceRefresh bool) (VRChatCurrentUserDTO, err
 
 // RefreshFriends fetches friends from API and updates cache.
 func (a *App) RefreshFriends() error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	return a.identity.RefreshFriends(a.ctx)
 }
 
 // ReconcileVRChatSocialCache refreshes self and friends from the VRChat REST API (e.g. after sleep resume).
 func (a *App) ReconcileVRChatSocialCache() error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if err := a.identity.ReconcileSocialCacheFromAPIHandled(a.ctx); err != nil {
 		return err
 	}
-	runtime.EventsEmit(a.ctx, friendsChangedEvent, struct{}{})
+	a.eventsEmit(friendsChangedEvent, struct{}{})
 	return nil
 }
 
 // Friends returns cached friends.
 func (a *App) Friends() ([]UserCacheDTO, error) {
+	if err := a.requireReady(); err != nil {
+		return nil, err
+	}
 	list, err := a.identity.ListFriends(a.ctx)
 	if err != nil {
 		return nil, err
@@ -118,6 +149,9 @@ func (a *App) Friends() ([]UserCacheDTO, error) {
 // the cached row has an API profile snapshot (username or current avatar) and LastUpdated is
 // within UserCacheTTL. Log-only contacts are still fetched. forceRefresh is reserved for an explicit refresh.
 func (a *App) ResolveUserProfileNavigation(vrcUserID string) (UserProfileNavigationDTO, error) {
+	if err := a.requireReady(); err != nil {
+		return UserProfileNavigationDTO{}, err
+	}
 	u, openFriends, openSelf, err := a.identity.ResolveUserProfileForNavigation(a.ctx, vrcUserID, false)
 	if err != nil {
 		return UserProfileNavigationDTO{}, err
@@ -131,6 +165,9 @@ func (a *App) ResolveUserProfileNavigation(vrcUserID string) (UserProfileNavigat
 
 // GetSelfProfile returns the logged-in user's cached profile row (users_cache user_kind=self).
 func (a *App) GetSelfProfile(forceRefresh bool) (UserCacheDTO, error) {
+	if err := a.requireReady(); err != nil {
+		return UserCacheDTO{}, err
+	}
 	u, err := a.identity.GetSelfProfile(a.ctx, forceRefresh)
 	if err != nil {
 		return UserCacheDTO{}, err
@@ -140,5 +177,8 @@ func (a *App) GetSelfProfile(forceRefresh bool) (UserCacheDTO, error) {
 
 // SetFavorite updates a friend's favorite flag.
 func (a *App) SetFavorite(vrcUserID string, favorite bool) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	return a.identity.SetFavorite(a.ctx, vrcUserID, favorite)
 }

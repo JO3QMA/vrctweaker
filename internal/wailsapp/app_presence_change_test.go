@@ -12,9 +12,11 @@ import (
 
 func TestGetPresenceChangeSection_notLoggedIn(t *testing.T) {
 	a := &App{ctx: context.Background()}
+	settingsRepo := &memSettingsRepo{m: map[string]string{}}
+	a.settings = usecase.NewSettingsUseCase(settingsRepo)
 	a.presenceChange = usecase.NewPresenceChangeUseCase(
 		newAppPresenceIdentity(t, false).uc,
-		&memSettingsRepo{m: map[string]string{}},
+		settingsRepo,
 	)
 	got, err := a.GetPresenceChangeSection()
 	if err != nil || got == nil || got.LoggedIn {
@@ -35,11 +37,13 @@ func TestGetPresenceChangeSection_notLoggedIn(t *testing.T) {
 
 func TestGetPresenceChangeSection_loggedIn(t *testing.T) {
 	a := &App{ctx: context.Background()}
+	settingsRepo := &memSettingsRepo{m: map[string]string{}}
+	a.settings = usecase.NewSettingsUseCase(settingsRepo)
 	idUC := newAppPresenceIdentity(t, true)
 	idUC.selfRow.Status = "busy"
 	idUC.selfRow.StatusDescription = "work"
 	idUC.userRepo.getSelfRow = idUC.selfRow
-	a.presenceChange = usecase.NewPresenceChangeUseCase(idUC.uc, &memSettingsRepo{m: map[string]string{}})
+	a.presenceChange = usecase.NewPresenceChangeUseCase(idUC.uc, settingsRepo)
 	got, err := a.GetPresenceChangeSection()
 	if err != nil || got == nil || !got.LoggedIn || got.Status != "busy" {
 		t.Fatalf("got=%+v err=%v", got, err)
@@ -48,8 +52,10 @@ func TestGetPresenceChangeSection_loggedIn(t *testing.T) {
 
 func TestApplyPresenceChange_success(t *testing.T) {
 	a := &App{ctx: context.Background()}
+	settingsRepo := &memSettingsRepo{m: map[string]string{}}
+	a.settings = usecase.NewSettingsUseCase(settingsRepo)
 	idUC := newAppPresenceIdentity(t, true)
-	a.presenceChange = usecase.NewPresenceChangeUseCase(idUC.uc, &memSettingsRepo{m: map[string]string{}})
+	a.presenceChange = usecase.NewPresenceChangeUseCase(idUC.uc, settingsRepo)
 	got, err := a.ApplyPresenceChange("ask me", "hello")
 	if err != nil || got == nil || got.Status != "busy" {
 		t.Fatalf("got=%+v err=%v api=%q", got, err, idUC.api.lastBothStatus)

@@ -147,11 +147,17 @@ func (a *App) RequestClose() {
 
 // GetCloseToTray returns whether closing hides to the system tray (default true).
 func (a *App) GetCloseToTray() (bool, error) {
+	if err := a.requireReady(); err != nil {
+		return false, err
+	}
 	return a.settings.GetCloseToTray(a.ctx)
 }
 
 // SetCloseToTray enables or disables close-to-tray behavior and syncs the tray icon.
 func (a *App) SetCloseToTray(on bool) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if err := a.settings.SetCloseToTray(a.ctx, on); err != nil {
 		return err
 	}

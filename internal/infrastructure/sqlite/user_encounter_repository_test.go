@@ -22,7 +22,7 @@ func TestUserEncounterRepository_List_FilterVRCUserID(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 
@@ -63,7 +63,7 @@ func TestUserEncounterRepository_List_FilterWorldID(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 
@@ -99,7 +99,7 @@ func TestUserEncounterRepository_ListWithContext_FilterWorldID(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 
@@ -136,7 +136,7 @@ func TestUserEncounterRepository_BackfillMissingWorldContext(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 
@@ -189,7 +189,7 @@ func TestUserEncounterRepository_CloseEncounterLeave(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	repo := NewUserEncounterRepository(db)
@@ -219,7 +219,7 @@ func TestUserEncounterRepository_List_AllFilters(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 
@@ -261,7 +261,7 @@ func TestUserEncounterRepository_ListWithContext_joinsWorldAndUserCache(t *testi
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 
@@ -332,7 +332,7 @@ func TestUserEncounterRepository_ListWithContext_isListableFriend(t *testing.T) 
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 
@@ -400,7 +400,7 @@ func TestUserEncounterRepository_ListWithContext_firstEncounterWithinOneSecond(t
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 
@@ -440,7 +440,7 @@ func TestUserEncounterRepository_List_nilFilter(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	repo := NewUserEncounterRepository(db)
@@ -464,7 +464,7 @@ func TestUserEncounterRepository_DeleteOlderThan_and_Count(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 
@@ -516,7 +516,7 @@ func TestUserEncounterRepository_BackfillMissingWorldContext_noAnchor(t *testing
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 
@@ -542,7 +542,7 @@ func TestUserEncounterRepository_BackfillMissingWorldContext_preservesRowInstanc
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 
@@ -579,7 +579,7 @@ func TestUserEncounterRepository_CloseEncounterLeave_noMatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	repo := NewUserEncounterRepository(db)
@@ -597,7 +597,7 @@ func TestUserEncounterRepository_DeleteOlderThan_noneRemoved(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	repo := NewUserEncounterRepository(db)
@@ -621,7 +621,7 @@ func TestUserEncounterRepository_CloseOpenEncountersAt(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	repo := NewUserEncounterRepository(db)
@@ -655,7 +655,7 @@ func TestUserEncounterRepository_CloseEncounterLeave_closesLatestOpenOnly(t *tes
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	repo := NewUserEncounterRepository(db)
@@ -703,7 +703,7 @@ func TestUserEncounterRepository_CloseOpenEncountersAt_skipsFutureJoins(t *testi
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	repo := NewUserEncounterRepository(db)
@@ -733,7 +733,7 @@ func TestUserEncounterRepository_DeduplicateEncounters(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	repo := NewUserEncounterRepository(db)
