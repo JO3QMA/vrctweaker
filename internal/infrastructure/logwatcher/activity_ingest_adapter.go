@@ -63,10 +63,14 @@ func (a *ActivityIngestAdapter) WarmFromParsedEvent(event activity.ParsedEvent) 
 }
 
 // Handle implements EventHandler.
-func (a *ActivityIngestAdapter) Handle(event activity.ParsedEvent) {
-	for _, cmd := range a.correlator.Apply(event) {
+func (a *ActivityIngestAdapter) Handle(event activity.ParsedEvent) error {
+	snap := a.correlator.Snapshot()
+	cmds := a.correlator.Apply(event)
+	for _, cmd := range cmds {
 		if err := a.uc.ApplyCommand(a.ctx, a.logSourcePath, cmd); err != nil {
+			a.correlator.Restore(snap)
 			a.logger("[activity_ingest] %T: %v", cmd, err)
+			return err
 		}
 		switch cmd.(type) {
 		case activity.RecordEncounterJoinCmd, activity.RecordEncounterLeaveCmd:
@@ -81,4 +85,5 @@ func (a *ActivityIngestAdapter) Handle(event activity.ParsedEvent) {
 			}
 		}
 	}
+	return nil
 }

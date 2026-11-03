@@ -185,8 +185,8 @@ func (a *App) CheckAndUpdateOfficialYTDLPCache() (usecase.YTDLPMaintainActionRes
 	return res, nil
 }
 
-// UpdateOfficialYTDLPCache downloads latest (or given URL) into Official cache; re-links when maintain is on.
-func (a *App) UpdateOfficialYTDLPCache(downloadURL, latestTag string) (usecase.YTDLPMaintainStatus, error) {
+// UpdateOfficialYTDLPCache downloads the latest official release into Official cache; re-links when maintain is on.
+func (a *App) UpdateOfficialYTDLPCache() (usecase.YTDLPMaintainStatus, error) {
 	if err := a.requireReady(); err != nil {
 		return usecase.YTDLPMaintainStatus{}, err
 	}
@@ -196,7 +196,7 @@ func (a *App) UpdateOfficialYTDLPCache(downloadURL, latestTag string) (usecase.Y
 			UnsupportedReason: "notInitialized",
 		}, nil
 	}
-	return a.ytdlp.UpdateOfficialCache(a.ctx, downloadURL, latestTag)
+	return a.ytdlp.UpdateOfficialCache(a.ctx)
 }
 
 // OpenYTDLPCacheFolder opens the Official yt-dlp cache directory in the file manager.
