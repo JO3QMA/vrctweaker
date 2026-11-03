@@ -84,6 +84,11 @@ const { t, te } = useI18n();
 
 let retryHadFocus = false;
 
+function focusWasLost(): boolean {
+  const active = document.activeElement;
+  return active == null || active === document.body;
+}
+
 function onRetry(): void {
   const btn = document.querySelector('[data-testid="startup-retry"]');
   const active = document.activeElement;
@@ -100,6 +105,9 @@ watch(
     if (wasRetrying && !retrying && retryHadFocus) {
       retryHadFocus = false;
       await nextTick();
+      if (!focusWasLost()) {
+        return;
+      }
       document
         .querySelector<HTMLElement>('[data-testid="startup-retry"]')
         ?.focus();

@@ -109,4 +109,39 @@ describe("AppStartupScreen", () => {
     expect(document.activeElement).toBe(btn);
     wrapper.unmount();
   });
+
+  it("does not restore retry focus when focus moved elsewhere during retry", async () => {
+    const wrapper = mountScreen(
+      {
+        ready: false,
+        loading: false,
+        phase: "",
+        summaryKey: "app.startup.failed.databaseOpen",
+        detail: "db error",
+        dataDir: "",
+        canOpenDataFolder: false,
+      },
+      false,
+    );
+    const btn = wrapper.get('[data-testid="startup-retry"]')
+      .element as HTMLElement;
+    const detail = wrapper.get('[data-testid="startup-failure-detail"]')
+      .element as HTMLElement;
+    btn.focus();
+    await wrapper.get('[data-testid="startup-retry"]').trigger("click");
+    await wrapper.setProps({ retrying: true });
+    const collapseHeader = wrapper.find(".el-collapse-item__header");
+    if (collapseHeader.exists()) {
+      await collapseHeader.trigger("click");
+      await nextTick();
+    }
+    btn.blur();
+    detail.focus();
+    expect(document.activeElement).toBe(detail);
+    await wrapper.setProps({ retrying: false });
+    await nextTick();
+    expect(document.activeElement).toBe(detail);
+    expect(document.activeElement).not.toBe(btn);
+    wrapper.unmount();
+  });
 });
