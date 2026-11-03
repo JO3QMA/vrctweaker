@@ -597,8 +597,7 @@ export const App = {
     emptyYTDLPMaintainActionResult(),
   ),
   updateOfficialYTDLPCache: bindGo(
-    (a, downloadURL: string, latestTag: string) =>
-      a.UpdateOfficialYTDLPCache(downloadURL, latestTag),
+    (a) => a.UpdateOfficialYTDLPCache(),
     emptyYTDLPMaintainStatus(),
   ),
   openYTDLPCacheFolder: bindGo((a) => a.OpenYTDLPCacheFolder(), undefined),

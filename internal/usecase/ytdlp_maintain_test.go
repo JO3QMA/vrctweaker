@@ -3,8 +3,6 @@ package usecase
 import (
 	"context"
 	"errors"
-	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -36,26 +34,11 @@ func TestYTDLPMaintain_enableLinksTools(t *testing.T) {
 		// On Linux we unit-test LinkToolsToCache separately; skip full maintain here.
 		t.Skip("full maintain flow is Windows-only")
 	}
-	var base string
-	mux := http.NewServeMux()
-	mux.HandleFunc("/api/latest", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte(`{"tag_name":"2025.04.01","assets":[{"name":"yt-dlp.exe","browser_download_url":"` + base + `/bin/yt-dlp.exe"}]}`))
-	})
-	mux.HandleFunc("/bin/yt-dlp.exe", func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte("MZcache"))
-	})
-	srv := httptest.NewServer(mux)
-	base = srv.URL
-	defer srv.Close()
-
 	repo := &fakeAppSettingsRepo{m: map[string]string{}}
 	settings := NewSettingsUseCase(repo)
-	updater := &YTDLPUpdater{
-		HTTPClient:                srv.Client(),
-		ReleasesLatestURL:         srv.URL + "/api/latest",
-		SkipDownloadURLValidation: true,
-	}
-	uc := NewYTDLPMaintainUseCase(settings, updater)
+	ts := startYTDlpReleaseTestServer("2025.04.01", "MZcache", "", true, nil)
+	defer ts.Server.Close()
+	uc := NewYTDLPMaintainUseCase(settings, ts.Updater)
 	dir := t.TempDir()
 	uc.ToolsPathOverride = filepath.Join(dir, "Tools", "yt-dlp.exe")
 	uc.CachePathOverride = filepath.Join(dir, "cache", "yt-dlp.exe")

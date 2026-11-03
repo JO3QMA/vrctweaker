@@ -211,9 +211,9 @@ func (uc *YTDLPMaintainUseCase) CheckLatest(ctx context.Context) (YTDLPMaintainS
 	return st, nil
 }
 
-// UpdateOfficialCache downloads latest into cache. When maintain is desired, re-links Tools.
-func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloadURL, expectedTag string) (YTDLPMaintainStatus, error) {
-	st, cachePath, toolsPath, maintainDesired, err := uc.statusPathsForUpdate(ctx)
+// UpdateOfficialCache fetches the latest official release and downloads into cache. When maintain is desired, re-links Tools.
+func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context) (YTDLPMaintainStatus, error) {
+	st, cachePath, _, _, err := uc.statusPathsForUpdate(ctx)
 	if err != nil {
 		return st, err
 	}
@@ -221,40 +221,53 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 		return st, ErrYTDLPUnsupportedPlatform
 	}
 
-	url := downloadURL
-	tag := expectedTag
-	version := ""
-	if url == "" {
-		info, ferr := uc.updater.FetchLatestRelease(ctx)
-		if ferr != nil {
-			st.LatestError = ferr.Error()
-			return st, ferr
-		}
-		url = info.DownloadURL
-		tag = info.Tag
-		version = info.Version
+	info, ferr := uc.updater.FetchLatestRelease(ctx)
+	if ferr != nil {
+		st.LatestError = ferr.Error()
+		return st, ferr
 	}
-	if dlErr := uc.updater.DownloadToCache(ctx, cachePath, url); dlErr != nil {
+	return uc.applyOfficialCacheUpdate(ctx, st, cachePath, info)
+}
+
+func (uc *YTDLPMaintainUseCase) applyOfficialCacheUpdate(ctx context.Context, st YTDLPMaintainStatus, downloadCachePath string, info YTDLPReleaseInfo) (YTDLPMaintainStatus, error) {
+	if dlErr := uc.updater.DownloadToCache(ctx, downloadCachePath, info); dlErr != nil {
 		return st, dlErr
 	}
 
 	uc.mu.Lock()
 	defer uc.mu.Unlock()
+	var err error
 	st, err = uc.getStatusLocked(ctx)
 	if err != nil {
 		return st, err
 	}
 	st.CachePresent = true
-	st = enrichYTDLPMaintainRelease(ctx, st, cachePath, tag, url, version)
+	st = enrichYTDLPMaintainRelease(ctx, st, downloadCachePath, info.Tag, info.DownloadURL, info.Version)
 	st.LatestError = ""
-	if err := uc.persistKnownLatest(ctx, st); err != nil {
+	if err = uc.persistKnownLatest(ctx, st); err != nil {
 		return st, fmt.Errorf("persist known latest: %w", err)
 	}
 	if st.CacheVersion != "" {
-		if err := uc.persistOfficialCacheTag(ctx, st.CacheVersion); err != nil {
+		if err = uc.persistOfficialCacheTag(ctx, st.CacheVersion); err != nil {
 			return st, fmt.Errorf("persist cache tag: %w", err)
 		}
 	}
+	maintainDesired := false
+	if uc.settings != nil {
+		maintainDesired, err = uc.settings.GetYTDLPToolsReplaceMaintain(ctx)
+		if err != nil {
+			return st, err
+		}
+	}
+	toolsPath, err := uc.toolsPathLocked()
+	if err != nil {
+		return st, err
+	}
+	cachePath, err := uc.cachePathLocked()
+	if err != nil {
+		return st, err
+	}
+	st.MaintainDesired = maintainDesired
 	if maintainDesired {
 		if linkErr := uc.linkIfNeeded(ctx, toolsPath, cachePath); linkErr != nil {
 			st.PendingError = linkErr.Error()
@@ -262,6 +275,13 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context, downloa
 		}
 		st.PendingError = ""
 		st.EffectiveOfficial = true
+	} else {
+		eff, effErr := EffectiveOfficialLink(toolsPath, cachePath)
+		if effErr != nil {
+			st.EffectiveOfficial = false
+		} else {
+			st.EffectiveOfficial = eff
+		}
 	}
 	return st, nil
 }
@@ -428,6 +448,10 @@ func (uc *YTDLPMaintainUseCase) getStatusLocked(ctx context.Context) (YTDLPMaint
 }
 
 func (uc *YTDLPMaintainUseCase) statusPathsForUpdate(ctx context.Context) (st YTDLPMaintainStatus, cachePath, toolsPath string, maintainDesired bool, err error) {
+	return uc.maintainUpdatePathsWithStatus(ctx)
+}
+
+func (uc *YTDLPMaintainUseCase) maintainUpdatePathsWithStatus(ctx context.Context) (st YTDLPMaintainStatus, cachePath, toolsPath string, maintainDesired bool, err error) {
 	uc.mu.Lock()
 	defer uc.mu.Unlock()
 	st, err = uc.getStatusLocked(ctx)

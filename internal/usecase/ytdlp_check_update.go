@@ -112,7 +112,7 @@ func (uc *YTDLPMaintainUseCase) CheckAndUpdateOfficialCache(ctx context.Context)
 		return res, nil
 	}
 
-	updated, uerr := uc.UpdateOfficialCache(ctx, info.DownloadURL, info.Tag)
+	updated, uerr := uc.applyOfficialCacheUpdate(ctx, st, st.CachePath, info)
 	res.Status = updated
 	if uerr != nil {
 		res.Outcome = YTDLPMaintainOutcomeError
