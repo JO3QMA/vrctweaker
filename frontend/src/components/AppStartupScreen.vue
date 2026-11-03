@@ -143,7 +143,11 @@ function onOpenDataFolder(): void {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-inline-tight);
+}
+
+.startup-panel__lead-row :deep(.startup-panel__spinner) {
+  flex-shrink: 0;
+  margin-inline-end: var(--space-inline-tight);
 }
 
 .startup-panel__spinner {

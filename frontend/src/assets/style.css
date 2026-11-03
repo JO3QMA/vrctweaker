@@ -482,8 +482,14 @@ a:hover {
   border-bottom-color: var(--color-border);
   color: var(--color-text-secondary);
   font-size: var(--font-size-14);
-  padding: 0 var(--space-form-field);
+  padding: 0 var(--space-16);
   height: 40px;
+  min-height: 40px;
+  line-height: 40px;
+}
+
+.vt-collapse-panel .el-collapse-item__header.focusing {
+  color: var(--color-text-secondary);
 }
 
 .vt-collapse-panel .el-collapse-item__header:focus:not(:focus-visible) {
@@ -492,11 +498,11 @@ a:hover {
 
 .vt-collapse-panel .el-collapse-item__header:focus-visible {
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
-  outline-offset: var(--focus-ring-offset);
+  outline-offset: calc(-1 * var(--focus-ring-offset));
 }
 
 .vt-collapse-panel .el-collapse-item__content {
-  padding: var(--space-form-field);
+  padding: var(--space-16);
 }
 
 .vt-collapse-panel .el-collapse-item__wrap {
@@ -512,9 +518,10 @@ a:hover {
   --el-button-active-bg-color: #26374a;
   --el-button-active-border-color: #4a5f7a;
   --el-button-active-text-color: #e8eaed;
+  --el-button-bg-color: var(--color-bg-muted);
   border-color: var(--color-border);
   color: #e8eaed;
-  background-color: var(--el-button-bg-color);
+  background-color: var(--color-bg-muted);
 }
 
 .vt-btn-secondary-dark.el-button:hover:not(.is-disabled) {
@@ -536,7 +543,7 @@ a:hover {
 
 .vt-btn-secondary-dark.el-button:focus-visible {
   color: #e8eaed !important;
-  background-color: var(--el-button-bg-color) !important;
+  background-color: var(--color-bg-muted) !important;
   border-color: var(--color-border) !important;
   outline: var(--focus-ring-width) solid var(--focus-ring-color);
   outline-offset: var(--focus-ring-offset);
