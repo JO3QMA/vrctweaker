@@ -51,6 +51,12 @@ func tailIngestRetryDelay(attempt int) time.Duration {
 // tailCheckpoint reports read progress after each consumed line.
 type tailCheckpoint func(byteOffset int64, vrChatLineTime time.Time)
 
+type tailCallbacks struct {
+	checkpoint        tailCheckpoint
+	setIngestRetrying func(active bool)
+	onIngestRetryWait func()
+}
+
 // tailOutputLogFile reads new lines from path starting at startOffset until ctx is cancelled.
 func tailOutputLogFile(
 	ctx context.Context,
@@ -59,7 +65,7 @@ func tailOutputLogFile(
 	parser *activity.LogParser,
 	handler EventHandler,
 	logger Logger,
-	checkpoint tailCheckpoint,
+	cb tailCallbacks,
 ) {
 	if logger == nil {
 		logger = Nop
@@ -116,8 +122,8 @@ func tailOutputLogFile(
 			for {
 				baseTime, parseErr := processor.Process(lineTrimmed)
 				if parseErr == nil {
-					if checkpoint != nil {
-						checkpoint(lineEndOffset, baseTime)
+					if cb.checkpoint != nil {
+						cb.checkpoint(lineEndOffset, baseTime)
 					}
 					break
 				}
@@ -128,13 +134,18 @@ func tailOutputLogFile(
 					break
 				}
 				delay := tailIngestRetryDelay(attempt)
-				inner := errors.Unwrap(parseErr)
-				if inner == nil {
-					inner = parseErr
-				}
 				logger("[multi-logwatcher] ingest %s at offset %d failed (attempt %d): %v; retry in %s",
-					path, lineStartOffset, attempt+1, inner, delay)
+					path, lineStartOffset, attempt+1, parseErr, delay)
+				if cb.setIngestRetrying != nil {
+					cb.setIngestRetrying(true)
+				}
+				if cb.onIngestRetryWait != nil {
+					cb.onIngestRetryWait()
+				}
 				if tailIngestRetryWait(ctx, attempt) {
+					if cb.setIngestRetrying != nil {
+						cb.setIngestRetrying(false)
+					}
 					return
 				}
 				attempt++
@@ -159,6 +170,9 @@ func tailOutputLogFile(
 					logger("[multi-logwatcher] ingest retry %s at offset %d: line became empty", path, lineStartOffset)
 					break
 				}
+			}
+			if cb.setIngestRetrying != nil {
+				cb.setIngestRetrying(false)
 			}
 		}
 

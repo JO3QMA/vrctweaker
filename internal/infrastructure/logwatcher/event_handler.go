@@ -28,13 +28,12 @@ type FanoutHandler []EventHandler
 // Each non-nil handler is invoked in order. Handlers must be safe for concurrent use
 // from other goroutines; FanoutHandler does not synchronize between them.
 func (h FanoutHandler) Handle(event activity.ParsedEvent) error {
-	var firstErr error
 	for _, handler := range h {
 		if handler != nil {
-			if err := handler.Handle(event); err != nil && firstErr == nil {
-				firstErr = err
+			if err := handler.Handle(event); err != nil {
+				return err
 			}
 		}
 	}
-	return firstErr
+	return nil
 }

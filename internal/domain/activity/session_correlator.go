@@ -1,5 +1,7 @@
 package activity
 
+import "maps"
+
 // SessionCorrelator maps parsed log events to fine-grained Activity commands using
 // instance/world correlation state. It is pure (no I/O).
 type SessionCorrelator struct {
@@ -26,6 +28,25 @@ func (c *SessionCorrelator) Reset() {
 	c.lastLeftWorldID = ""
 	c.pendingVideo = nil
 	c.displayNameToVRCUserID = nil
+}
+
+// Snapshot returns a deep copy of correlator state for rollback when persistence fails.
+func (c *SessionCorrelator) Snapshot() SessionCorrelator {
+	snap := *c
+	if len(c.pendingVideo) > 0 {
+		snap.pendingVideo = append([]string(nil), c.pendingVideo...)
+	} else {
+		snap.pendingVideo = nil
+	}
+	if c.displayNameToVRCUserID != nil {
+		snap.displayNameToVRCUserID = maps.Clone(c.displayNameToVRCUserID)
+	}
+	return snap
+}
+
+// Restore replaces correlator state with a snapshot (deep-copied).
+func (c *SessionCorrelator) Restore(snap SessionCorrelator) {
+	*c = snap.Snapshot()
 }
 
 // Apply consumes one parsed event and returns commands to persist. AvatarSwitch yields nil.

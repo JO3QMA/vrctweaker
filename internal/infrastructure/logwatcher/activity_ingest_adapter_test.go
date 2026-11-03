@@ -362,8 +362,13 @@ func TestActivityIngestAdapter_LogsUpsertErrors(t *testing.T) {
 	h := NewActivityIngestAdapter(uc, ctx, buf.logger(), nil, testLogSource)
 
 	h.Handle(nil)
-	h.Handle(&activity.DestinationSetEvent{WorldID: testWorldID, OccurredAt: base})
-	h.Handle(&activity.RoomNameEvent{RoomName: "Room", OccurredAt: base})
+	h.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: testFullInstance, OccurredAt: base})
+	if err := h.Handle(&activity.DestinationSetEvent{WorldID: testWorldID, OccurredAt: base}); err == nil {
+		t.Fatal("expected visit error")
+	}
+	if err := h.Handle(&activity.RoomNameEvent{RoomName: "Room", OccurredAt: base}); err == nil {
+		t.Fatal("expected display error")
+	}
 
 	if buf.len() < 2 {
 		t.Fatalf("logs = %d, want visit and display errors", buf.len())
@@ -455,5 +460,91 @@ func TestActivityIngestAdapter_VideoPlaybackNotify(t *testing.T) {
 	}
 	if encCalls != 0 {
 		t.Fatalf("encCalls = %d, want 0", encCalls)
+	}
+}
+
+type failOnceVideoSaveRepo struct {
+	stubVideoPlaybackRepo
+	saved bool
+	saves int
+}
+
+func (r *failOnceVideoSaveRepo) Save(context.Context, *activity.VideoPlaybackAttempt) error {
+	if !r.saved {
+		r.saved = true
+		return errors.New("transient video save")
+	}
+	r.saves++
+	return nil
+}
+
+type failOnceVideoCompleteFailureRepo struct {
+	stubVideoPlaybackRepo
+	openSaved bool
+	failures  int
+}
+
+func (r *failOnceVideoCompleteFailureRepo) Save(context.Context, *activity.VideoPlaybackAttempt) error {
+	r.openSaved = true
+	return nil
+}
+
+func (r *failOnceVideoCompleteFailureRepo) CompleteFailure(context.Context, string, string, string, time.Time) (int64, error) {
+	if r.failures == 0 {
+		r.failures++
+		return 0, errors.New("transient complete fail")
+	}
+	r.failures++
+	return 1, nil
+}
+
+func TestActivityIngestAdapter_retryVideoAttempt_idempotent(t *testing.T) {
+	ctx := context.Background()
+	base := time.Date(2026, 3, 18, 0, 10, 0, 0, time.UTC)
+	const url = "https://youtu.be/retry-once"
+	videoRepo := &failOnceVideoSaveRepo{}
+	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, stubEncounterRepo{}, &fakeAppSettingsRepo{m: map[string]string{}}, nil, nil).
+		WithVideoPlaybackRepo(videoRepo)
+	a := NewActivityIngestAdapter(uc, ctx, nil, nil, testLogSource)
+	a.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: testFullInstance, OccurredAt: base})
+
+	ev := &activity.VideoPlaybackEvent{URL: url, OccurredAt: base.Add(time.Second)}
+	if err := a.Handle(ev); err == nil {
+		t.Fatal("first handle want error")
+	}
+	if err := a.Handle(ev); err != nil {
+		t.Fatalf("retry handle: %v", err)
+	}
+	if videoRepo.saves != 1 {
+		t.Fatalf("video saves = %d, want 1 after failed-then-success retry", videoRepo.saves)
+	}
+	// Completing the open attempt must still work (single pending entry).
+	if err := a.Handle(&activity.VideoPlaybackErrorEvent{Message: "boom", OccurredAt: base.Add(2 * time.Second)}); err != nil {
+		t.Fatalf("complete after retry: %v", err)
+	}
+}
+
+func TestActivityIngestAdapter_retryVideoError_idempotent(t *testing.T) {
+	ctx := context.Background()
+	base := time.Date(2026, 3, 18, 0, 10, 0, 0, time.UTC)
+	const url = "https://youtu.be/error-retry"
+	videoRepo := &failOnceVideoCompleteFailureRepo{}
+	uc := usecase.NewActivityUseCase(stubPlaySessionRepo{}, stubEncounterRepo{}, &fakeAppSettingsRepo{m: map[string]string{}}, nil, nil).
+		WithVideoPlaybackRepo(videoRepo)
+	a := NewActivityIngestAdapter(uc, ctx, nil, nil, testLogSource)
+	a.Handle(&activity.SessionEvent{Type: activity.SessionEventStart, InstanceID: testFullInstance, OccurredAt: base})
+	if err := a.Handle(&activity.VideoPlaybackEvent{URL: url, OccurredAt: base.Add(time.Second)}); err != nil {
+		t.Fatal(err)
+	}
+
+	errEv := &activity.VideoPlaybackErrorEvent{Message: "boom", OccurredAt: base.Add(2 * time.Second)}
+	if err := a.Handle(errEv); err == nil {
+		t.Fatal("first error handle want failure")
+	}
+	if err := a.Handle(errEv); err != nil {
+		t.Fatalf("retry error handle: %v", err)
+	}
+	if videoRepo.failures != 2 {
+		t.Fatalf("complete failures = %d, want 2 (fail then success)", videoRepo.failures)
 	}
 }

@@ -53,7 +53,8 @@ func (a *App) ingestActivityLogsBootstrap(ctx context.Context, absWatch string, 
 	live := logwatcher.BootstrapLiveLogFiles(files, 5*time.Second)
 	for _, fp := range files {
 		finalize := live == nil || !live[fp]
-		a.ingestOneActivityLogBootstrap(ctx, absWatch, fp, parser, logger, emitEncounters, emitVideoPlayback, cp, finalize, nil)
+		warmCorrelator := live == nil || live[fp]
+		a.ingestOneActivityLogBootstrap(ctx, absWatch, fp, parser, logger, emitEncounters, emitVideoPlayback, cp, finalize, warmCorrelator, nil)
 	}
 	a.retryScreenshotEnrichment()
 }
@@ -66,6 +67,7 @@ func (a *App) ingestOneActivityLogBootstrap(
 	emitEncounters, emitVideoPlayback func(),
 	cp *usecase.ActivityLogCheckpoint,
 	finalizeAtEnd bool,
+	warmCorrelatorAtEnd bool,
 	ingestAdapter *logwatcher.ActivityIngestAdapter,
 ) {
 	absFile := logwatcher.AbsLogPath(filePath)
@@ -78,8 +80,10 @@ func (a *App) ingestOneActivityLogBootstrap(
 		if fc, ok := cp.FileCheckpoint(absFile); ok {
 			off = fc.ByteOffset
 			if st, statErr := os.Stat(filePath); statErr == nil && st != nil && st.Size() > 0 && off >= st.Size() {
-				if warmErr := logwatcher.WarmSessionCorrelatorFromLogFile(ctx, pathCopy, st.Size(), parser, ingestAdapter, logger); warmErr != nil {
-					runtime.LogWarning(ctx, "activity log correlator warm: "+warmErr.Error())
+				if warmCorrelatorAtEnd {
+					if warmErr := logwatcher.WarmSessionCorrelatorFromLogFile(ctx, pathCopy, st.Size(), parser, ingestAdapter, logger); warmErr != nil {
+						runtime.LogWarning(ctx, "activity log correlator warm: "+warmErr.Error())
+					}
 				}
 				if finalizeAtEnd {
 					lastVRLineTime := time.Time{}
@@ -191,6 +195,20 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 				return
 			}
 			_ = a.activity.SetActivityLogFileCheckpoint(c, watchDeps.watchPath, logwatcher.AbsLogPath(path), offset, logwatcher.CheckpointVRTime(lineTime))
+		},
+		ResolvedReadOffset: func(path string) (int64, bool) {
+			if a.activity == nil {
+				return 0, false
+			}
+			cp, err := a.activity.GetActivityLogCheckpoint(ctx)
+			if err != nil || cp == nil || !logwatcher.MatchAbsPaths(cp.WatchPath, watchPath) {
+				return 0, false
+			}
+			fc, ok := cp.FileCheckpoint(logwatcher.AbsLogPath(path))
+			if !ok {
+				return 0, false
+			}
+			return fc.ByteOffset, true
 		},
 	}, logger)
 	if startErr := watcher.Start(ctx); startErr != nil {

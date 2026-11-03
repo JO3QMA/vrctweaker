@@ -60,14 +60,16 @@ func TestTailOutputLogFile_retriesTransientIngestOnce(t *testing.T) {
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
-		tailOutputLogFile(ctx, path, 0, activity.NewLogParser(), adapter, nil, func(offset int64, _ time.Time) {
-			mu.Lock()
-			checkpoints = append(checkpoints, offset)
-			lastCheckpoint = offset
-			if offset == int64(len(content)) {
-				cancel()
-			}
-			mu.Unlock()
+		tailOutputLogFile(ctx, path, 0, activity.NewLogParser(), adapter, nil, tailCallbacks{
+			checkpoint: func(offset int64, _ time.Time) {
+				mu.Lock()
+				checkpoints = append(checkpoints, offset)
+				lastCheckpoint = offset
+				if offset == int64(len(content)) {
+					cancel()
+				}
+				mu.Unlock()
+			},
 		})
 	}()
 
