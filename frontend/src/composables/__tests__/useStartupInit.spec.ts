@@ -2,6 +2,8 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { defineComponent } from "vue";
 import { describe, expect, it, vi, beforeEach } from "vitest";
 
+/* eslint-disable vue/one-component-per-file -- inline harness components per test */
+
 const getStartupInitStatus = vi.fn();
 const retryStartupInit = vi.fn();
 const eventsOn = vi.fn();
