@@ -3,6 +3,7 @@ package logwatcher
 import (
 	"bufio"
 	"context"
+	"errors"
 	"io"
 	"os"
 	"time"
@@ -76,11 +77,14 @@ func tailOutputLogFile(
 		if lineTrimmed != "" {
 			baseTime, parseErr := processor.Process(lineTrimmed)
 			if parseErr != nil {
+				if errors.Is(parseErr, ErrHandlerDispatch) {
+					logger("[multi-logwatcher] ingest %s: %v", path, parseErr)
+					return
+				}
 				logLineProcessErr(logger, parseErr,
 					"[multi-logwatcher] parse %s: %v", "[multi-logwatcher] dispatch %s: %v",
 					path)
-			}
-			if checkpoint != nil {
+			} else if checkpoint != nil {
 				checkpoint(offset, baseTime)
 			}
 		}

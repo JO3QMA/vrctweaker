@@ -2,12 +2,16 @@ package logwatcher
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"vrchat-tweaker/internal/domain/activity"
 )
 
 var errNilLineProcessorArg = errors.New("logwatcher: nil parser or handler")
+
+// ErrHandlerDispatch marks a failure from EventHandler.Handle (ingest/persist), as opposed to parse errors.
+var ErrHandlerDispatch = errors.New("logwatcher: handler dispatch failed")
 
 // parseOutputLogLine parses a trimmed non-empty output_log line into events.
 // baseTime is taken from the line timestamp when present; otherwise now is used.
@@ -44,7 +48,9 @@ func (p *LineProcessor) Process(lineTrimmed string) (baseTime time.Time, err err
 	}
 	for _, ev := range events {
 		if ev != nil {
-			p.Handler.Handle(ev)
+			if err := p.Handler.Handle(ev); err != nil {
+				return baseTime, fmt.Errorf("%w: %w", ErrHandlerDispatch, err)
+			}
 		}
 	}
 	return baseTime, nil
