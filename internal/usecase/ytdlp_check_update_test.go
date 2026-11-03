@@ -222,7 +222,7 @@ func TestApplyOfficialCacheUpdate_rereadsMaintainAfterDownload(t *testing.T) {
 	var updated YTDLPMaintainStatus
 	var applyErr error
 	go func() {
-		updated, applyErr = uc.applyOfficialCacheUpdate(ctx, st, cache, tools, info)
+		updated, applyErr = uc.applyOfficialCacheUpdate(ctx, st, cache, info)
 		close(done)
 	}()
 
@@ -231,8 +231,8 @@ func TestApplyOfficialCacheUpdate_rereadsMaintainAfterDownload(t *testing.T) {
 	case <-time.After(5 * time.Second):
 		t.Fatal("timed out waiting for blocked exe download")
 	}
-	if err := uc.SetMaintainDesired(ctx, false); err != nil {
-		t.Fatal(err)
+	if setErr := uc.SetMaintainDesired(ctx, false); setErr != nil {
+		t.Fatal(setErr)
 	}
 	close(gate.Proceed)
 
@@ -295,7 +295,7 @@ func TestApplyOfficialCacheUpdate_linksWhenMaintainEnabledDuringDownload(t *test
 	var updated YTDLPMaintainStatus
 	var applyErr error
 	go func() {
-		updated, applyErr = uc.applyOfficialCacheUpdate(ctx, st, cache, tools, info)
+		updated, applyErr = uc.applyOfficialCacheUpdate(ctx, st, cache, info)
 		close(done)
 	}()
 
@@ -304,11 +304,11 @@ func TestApplyOfficialCacheUpdate_linksWhenMaintainEnabledDuringDownload(t *test
 	case <-time.After(5 * time.Second):
 		t.Fatal("timed out waiting for blocked exe download")
 	}
-	if err := uc.AcknowledgeRisk(ctx); err != nil {
-		t.Fatal(err)
+	if ackErr := uc.AcknowledgeRisk(ctx); ackErr != nil {
+		t.Fatal(ackErr)
 	}
-	if err := uc.SetMaintainDesired(ctx, true); err != nil {
-		t.Fatal(err)
+	if setErr := uc.SetMaintainDesired(ctx, true); setErr != nil {
+		t.Fatal(setErr)
 	}
 	close(gate.Proceed)
 

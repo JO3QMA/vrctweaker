@@ -213,7 +213,7 @@ func (uc *YTDLPMaintainUseCase) CheckLatest(ctx context.Context) (YTDLPMaintainS
 
 // UpdateOfficialCache fetches the latest official release and downloads into cache. When maintain is desired, re-links Tools.
 func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context) (YTDLPMaintainStatus, error) {
-	st, cachePath, toolsPath, _, err := uc.statusPathsForUpdate(ctx)
+	st, cachePath, _, _, err := uc.statusPathsForUpdate(ctx)
 	if err != nil {
 		return st, err
 	}
@@ -226,11 +226,11 @@ func (uc *YTDLPMaintainUseCase) UpdateOfficialCache(ctx context.Context) (YTDLPM
 		st.LatestError = ferr.Error()
 		return st, ferr
 	}
-	return uc.applyOfficialCacheUpdate(ctx, st, cachePath, toolsPath, info)
+	return uc.applyOfficialCacheUpdate(ctx, st, cachePath, info)
 }
 
-func (uc *YTDLPMaintainUseCase) applyOfficialCacheUpdate(ctx context.Context, st YTDLPMaintainStatus, cachePath, toolsPath string, info YTDLPReleaseInfo) (YTDLPMaintainStatus, error) {
-	if dlErr := uc.updater.DownloadToCache(ctx, cachePath, info); dlErr != nil {
+func (uc *YTDLPMaintainUseCase) applyOfficialCacheUpdate(ctx context.Context, st YTDLPMaintainStatus, downloadCachePath string, info YTDLPReleaseInfo) (YTDLPMaintainStatus, error) {
+	if dlErr := uc.updater.DownloadToCache(ctx, downloadCachePath, info); dlErr != nil {
 		return st, dlErr
 	}
 
@@ -242,13 +242,13 @@ func (uc *YTDLPMaintainUseCase) applyOfficialCacheUpdate(ctx context.Context, st
 		return st, err
 	}
 	st.CachePresent = true
-	st = enrichYTDLPMaintainRelease(ctx, st, cachePath, info.Tag, info.DownloadURL, info.Version)
+	st = enrichYTDLPMaintainRelease(ctx, st, downloadCachePath, info.Tag, info.DownloadURL, info.Version)
 	st.LatestError = ""
-	if err := uc.persistKnownLatest(ctx, st); err != nil {
+	if err = uc.persistKnownLatest(ctx, st); err != nil {
 		return st, fmt.Errorf("persist known latest: %w", err)
 	}
 	if st.CacheVersion != "" {
-		if err := uc.persistOfficialCacheTag(ctx, st.CacheVersion); err != nil {
+		if err = uc.persistOfficialCacheTag(ctx, st.CacheVersion); err != nil {
 			return st, fmt.Errorf("persist cache tag: %w", err)
 		}
 	}
@@ -259,11 +259,11 @@ func (uc *YTDLPMaintainUseCase) applyOfficialCacheUpdate(ctx context.Context, st
 			return st, err
 		}
 	}
-	toolsPath, err = uc.toolsPathLocked()
+	toolsPath, err := uc.toolsPathLocked()
 	if err != nil {
 		return st, err
 	}
-	cachePath, err = uc.cachePathLocked()
+	cachePath, err := uc.cachePathLocked()
 	if err != nil {
 		return st, err
 	}
