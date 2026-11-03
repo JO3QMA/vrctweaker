@@ -55,6 +55,42 @@ export const Migrating: Story = {
   },
 };
 
+export const MigratingWide: Story = {
+  name: "Migrating (1280px)",
+  parameters: {
+    viewport: { defaultViewport: "desktop1280" },
+  },
+  args: {
+    status: {
+      ready: false,
+      loading: true,
+      phase: "dedupe",
+      summaryKey: "",
+      detail: "",
+      dataDir: "",
+      canOpenDataFolder: false,
+    },
+  },
+};
+
+export const MigratingNarrow: Story = {
+  name: "Migrating (600px)",
+  parameters: {
+    viewport: { defaultViewport: "mobile600" },
+  },
+  args: {
+    status: {
+      ready: false,
+      loading: true,
+      phase: "dedupe",
+      summaryKey: "",
+      detail: "",
+      dataDir: "",
+      canOpenDataFolder: false,
+    },
+  },
+};
+
 export const DatabaseFailureWide: Story = {
   name: "Failure (1280px)",
   parameters: {

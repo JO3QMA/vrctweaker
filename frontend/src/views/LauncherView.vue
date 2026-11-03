@@ -140,7 +140,7 @@
 
               <el-collapse
                 v-model="advancedCollapseActive"
-                class="args-collapse"
+                class="args-collapse vt-collapse-panel"
               >
                 <el-collapse-item
                   :title="t('launcher.allOptions')"
@@ -1394,28 +1394,7 @@ onBeforeRouteLeave(async (_to, _from, next) => {
 }
 
 .args-collapse {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius);
-  background: var(--color-bg-muted);
   margin: var(--space-action-group) 0;
-}
-
-.args-collapse :deep(.el-collapse-item__header) {
-  background: transparent;
-  border-bottom-color: var(--color-border);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-14);
-  padding: 0 var(--space-form-field);
-  height: 40px;
-}
-
-.args-collapse :deep(.el-collapse-item__content) {
-  padding: var(--space-form-field);
-}
-
-.args-collapse :deep(.el-collapse-item__wrap) {
-  border-bottom-color: var(--color-border);
-  background: transparent;
 }
 
 .advanced-section {
