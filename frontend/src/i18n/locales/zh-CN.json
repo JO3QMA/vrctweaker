@@ -1,7 +1,21 @@
 {
   "app": {
     "name": "VRChat Tweaker",
-    "errClose": "无法关闭窗口"
+    "errClose": "无法关闭窗口",
+    "startup": {
+      "loading": "正在启动…",
+      "migrating": "正在整理数据…",
+      "details": "详情",
+      "retry": "重试",
+      "openDataFolder": "打开数据文件夹",
+      "openDataFolderFailed": "无法打开数据文件夹",
+      "failed": {
+        "dataDirResolve": "无法确定数据文件夹位置",
+        "dataDirCreate": "无法创建数据文件夹",
+        "databaseOpen": "无法打开数据库",
+        "statusFetch": "无法加载启动状态"
+      }
+    }
   },
   "routes": {
     "dashboard": "仪表盘",

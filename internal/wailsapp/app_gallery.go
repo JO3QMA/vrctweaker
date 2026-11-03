@@ -26,7 +26,7 @@ const galleryScanProgressEmitMinInterval = 90 * time.Millisecond
 
 // scanProgressEmitter throttles gallery:scan-progress EventsEmit; flush sends the latest pending payload.
 type scanProgressEmitter struct {
-	ctx        context.Context
+	app        *App
 	mu         sync.Mutex
 	lastEmit   time.Time
 	pending    usecase.ScanProgress
@@ -39,7 +39,7 @@ func (e *scanProgressEmitter) emit(p usecase.ScanProgress) {
 	e.pending = p
 	e.hasPending = true
 	if time.Since(e.lastEmit) >= galleryScanProgressEmitMinInterval {
-		runtime.EventsEmit(e.ctx, galleryScanProgressEvent, e.pending)
+		e.app.eventsEmit(galleryScanProgressEvent, e.pending)
 		e.lastEmit = time.Now()
 		e.hasPending = false
 	}
@@ -51,13 +51,16 @@ func (e *scanProgressEmitter) flush() {
 	if !e.hasPending {
 		return
 	}
-	runtime.EventsEmit(e.ctx, galleryScanProgressEvent, e.pending)
+	e.app.eventsEmit(galleryScanProgressEvent, e.pending)
 	e.lastEmit = time.Now()
 	e.hasPending = false
 }
 
 // Screenshots returns screenshots (optional worldId filter) within the current picture folder.
 func (a *App) Screenshots(worldId string) ([]ScreenshotDTO, error) {
+	if err := a.requireReady(); err != nil {
+		return nil, err
+	}
 	filter := &media.ScreenshotFilter{}
 	if worldId != "" {
 		filter.WorldID = worldId
@@ -67,6 +70,9 @@ func (a *App) Screenshots(worldId string) ([]ScreenshotDTO, error) {
 
 // SearchScreenshots returns screenshots matching the filter (worldId, worldName, dateFrom, dateTo).
 func (a *App) SearchScreenshots(filter ScreenshotSearchDTO) ([]ScreenshotDTO, error) {
+	if err := a.requireReady(); err != nil {
+		return nil, err
+	}
 	f := toScreenshotFilter(filter)
 	return a.listGalleryScreenshotDTOs(f)
 }
@@ -82,6 +88,9 @@ func (a *App) listGalleryScreenshotDTOs(filter *media.ScreenshotFilter) ([]Scree
 
 // GetScreenshot returns a screenshot by ID, or nil if not found.
 func (a *App) GetScreenshot(id string) (*ScreenshotDTO, error) {
+	if err := a.requireReady(); err != nil {
+		return nil, err
+	}
 	s, err := a.media.GetScreenshot(a.ctx, id)
 	if err != nil || s == nil {
 		return nil, err
@@ -91,11 +100,17 @@ func (a *App) GetScreenshot(id string) (*ScreenshotDTO, error) {
 
 // GetGalleryAutoEnrichMetadata returns whether screenshot ingest auto-enrichment is enabled.
 func (a *App) GetGalleryAutoEnrichMetadata() (bool, error) {
+	if err := a.requireReady(); err != nil {
+		return false, err
+	}
 	return a.settings.GetGalleryAutoEnrichMetadata(a.ctx)
 }
 
 // SetGalleryAutoEnrichMetadata saves the screenshot ingest auto-enrichment toggle.
 func (a *App) SetGalleryAutoEnrichMetadata(enabled bool) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	return a.settings.SetGalleryAutoEnrichMetadata(a.ctx, enabled)
 }
 
@@ -112,11 +127,17 @@ func (a *App) retryScreenshotEnrichment() {
 // ScreenshotThumbnailDataURL returns a JPEG data URL for the screenshot thumbnail (for WebView; avoids file://).
 // Uses the DB cache when valid; otherwise builds and stores a thumbnail from the source file (lazy fill for legacy rows).
 func (a *App) ScreenshotThumbnailDataURL(id string) (string, error) {
+	if err := a.requireReady(); err != nil {
+		return "", err
+	}
 	return a.media.ScreenshotThumbnailDataURL(a.ctx, id)
 }
 
 // OpenScreenshotExternally opens the screenshot file with the OS default application.
 func (a *App) OpenScreenshotExternally(id string) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return fmt.Errorf("screenshot id is empty")
@@ -133,6 +154,9 @@ func (a *App) OpenScreenshotExternally(id string) error {
 
 // RevealScreenshotInFileManager opens the file manager and shows the screenshot file where supported.
 func (a *App) RevealScreenshotInFileManager(id string) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	id = strings.TrimSpace(id)
 	if id == "" {
 		return fmt.Errorf("screenshot id is empty")
@@ -149,6 +173,9 @@ func (a *App) RevealScreenshotInFileManager(id string) error {
 
 // ScanScreenshotDir synchronizes a picture folder (ingest new files + selective reindex).
 func (a *App) ScanScreenshotDir(path string) (int, error) {
+	if err := a.requireReady(); err != nil {
+		return 0, err
+	}
 	a.galleryScanMu.Lock()
 	for a.galleryScanCancel != nil || a.galleryScanDone != nil {
 		cancel := a.galleryScanCancel
@@ -179,7 +206,7 @@ func (a *App) ScanScreenshotDir(path string) (int, error) {
 		a.galleryScanMu.Unlock()
 	}()
 
-	em := &scanProgressEmitter{ctx: a.ctx}
+	em := &scanProgressEmitter{app: a}
 	var count int
 	var err error
 	defer func() {
@@ -191,7 +218,7 @@ func (a *App) ScanScreenshotDir(path string) (int, error) {
 				dto.Cancelled = true
 			}
 		}
-		runtime.EventsEmit(a.ctx, galleryScanDoneEvent, dto)
+		a.eventsEmit(galleryScanDoneEvent, dto)
 	}()
 
 	count, err = a.media.SyncPictureFolder(scanCtx, path, em.emit)
@@ -203,6 +230,9 @@ func (a *App) ScanScreenshotDir(path string) (int, error) {
 
 // IsGalleryScanning reports whether a gallery folder scan is in progress.
 func (a *App) IsGalleryScanning() bool {
+	if err := a.requireReady(); err != nil {
+		return false
+	}
 	a.galleryScanMu.Lock()
 	defer a.galleryScanMu.Unlock()
 	return a.galleryScanCancel != nil
@@ -233,6 +263,9 @@ func (a *App) stopGalleryScanAndWait() {
 // ReindexScreenshotDir re-extracts metadata for existing screenshots under path.
 // Returns the number of updated records.
 func (a *App) ReindexScreenshotDir(path string) (int, error) {
+	if err := a.requireReady(); err != nil {
+		return 0, err
+	}
 	return a.media.ReindexScreenshots(a.ctx, path)
 }
 
@@ -271,6 +304,6 @@ func (a *App) startupGalleryIncremental() {
 		return
 	}
 	if count > 0 {
-		runtime.EventsEmit(a.ctx, galleryScreenshotsChangedEvent, struct{}{})
+		a.eventsEmit(galleryScreenshotsChangedEvent, struct{}{})
 	}
 }

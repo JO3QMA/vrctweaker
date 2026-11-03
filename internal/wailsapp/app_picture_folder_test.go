@@ -1,6 +1,7 @@
 package wailsapp
 
 import (
+	"context"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -14,6 +15,7 @@ func TestApp_DefaultVRChatPictureFolder(t *testing.T) {
 	}
 
 	a := NewApp()
+	a.setInitReadyForTest(context.Background())
 	got, err := a.DefaultVRChatPictureFolder()
 	if err != nil {
 		t.Fatalf("DefaultVRChatPictureFolder: %v", err)

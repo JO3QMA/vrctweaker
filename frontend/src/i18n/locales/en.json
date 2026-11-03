@@ -1,7 +1,21 @@
 {
   "app": {
     "name": "VRChat Tweaker",
-    "errClose": "Could not close the window"
+    "errClose": "Could not close the window",
+    "startup": {
+      "loading": "Starting…",
+      "migrating": "Organizing data…",
+      "details": "Details",
+      "retry": "Retry",
+      "openDataFolder": "Open data folder",
+      "openDataFolderFailed": "Could not open the data folder",
+      "failed": {
+        "dataDirResolve": "Could not resolve the data folder location",
+        "dataDirCreate": "Could not create the data folder",
+        "databaseOpen": "Could not open the database",
+        "statusFetch": "Could not load startup status"
+      }
+    }
   },
   "routes": {
     "dashboard": "Dashboard",

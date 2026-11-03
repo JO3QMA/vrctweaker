@@ -21,7 +21,7 @@ func TestScreenshotRepository_ThumbnailRoundTrip(t *testing.T) {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 
-	if migErr := applySchema(db); migErr != nil {
+	if migErr := applySchema(db, nil); migErr != nil {
 		t.Fatal(migErr)
 	}
 
@@ -85,7 +85,7 @@ func TestScreenshotRepository_ListJoinsWorldAndAuthorDisplayNames(t *testing.T) 
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if mErr := applySchema(db); mErr != nil {
+	if mErr := applySchema(db, nil); mErr != nil {
 		t.Fatal(mErr)
 	}
 	ctx := context.Background()
@@ -147,7 +147,7 @@ func TestScreenshotRepository_GetByID_GetByFilePath_ListFilters(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	if mErr := applySchema(db); mErr != nil {
+	if mErr := applySchema(db, nil); mErr != nil {
 		t.Fatal(mErr)
 	}
 	ctx := context.Background()
@@ -209,7 +209,7 @@ func TestScreenshotRepository_List_FilePathPrefix_excludesSiblingFolder(t *testi
 		t.Fatal(err)
 	}
 	defer db.Close()
-	if schemaErr := applySchema(db); schemaErr != nil {
+	if schemaErr := applySchema(db, nil); schemaErr != nil {
 		t.Fatal(schemaErr)
 	}
 	ctx := context.Background()

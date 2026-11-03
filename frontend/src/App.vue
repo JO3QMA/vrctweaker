@@ -1,6 +1,13 @@
 <template>
   <el-config-provider :locale="elLocale">
-    <div class="app-layout">
+    <AppStartupScreen
+      v-if="!startupReady"
+      :status="startupStatus"
+      :retrying="startupRetrying"
+      @retry="onStartupRetry"
+      @open-data-folder="handleOpenDataFolder"
+    />
+    <div v-else class="app-layout">
       <TitleBar />
       <OnboardingWizard
         v-if="showOnboardingWizard"
@@ -22,22 +29,42 @@
         </main>
       </div>
     </div>
-    <AppUpdateDialog />
+    <AppUpdateDialog v-if="startupReady" />
   </el-config-provider>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useI18n } from "vue-i18n";
 import TitleBar from "./components/TitleBar.vue";
 import Sidebar from "./components/Sidebar.vue";
 import AppUpdateDialog from "./components/AppUpdateDialog.vue";
 import OnboardingWizard from "./components/OnboardingWizard.vue";
+import AppStartupScreen from "./components/AppStartupScreen.vue";
+import { useStartupInit } from "./composables/useStartupInit";
 import { useFirstLaunchGuide } from "./composables/useFirstLaunchGuide";
 import { useSessionUnlock } from "./composables/useSessionUnlock";
 import { elLocale, isAppLocale, setLanguage } from "./i18n";
 import { App as WailsApp } from "./wails/app";
+import { showToast } from "./utils/showToast";
+
+const {
+  status: startupStatus,
+  retrying: startupRetrying,
+  retryInit: onStartupRetry,
+  openDataFolder: onOpenDataFolder,
+} = useStartupInit();
+
+const startupReady = computed(() => startupStatus.value.ready);
+
+async function handleOpenDataFolder(): Promise<void> {
+  try {
+    await onOpenDataFolder();
+  } catch {
+    showToast.error(t("app.startup.openDataFolderFailed"));
+  }
+}
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => {
@@ -97,13 +124,21 @@ async function initLocaleFromBackend(): Promise<void> {
   }
 }
 
-onMounted(async () => {
-  void initLocaleFromBackend();
-  await loadFirstLaunchGuideState();
-  if (firstLaunchGuideCompleted.value && !manualOpen.value) {
-    beginStartupUnlock().catch(() => undefined);
-  }
-});
+watch(
+  startupReady,
+  (ready) => {
+    if (!ready) {
+      return;
+    }
+    void initLocaleFromBackend();
+    void loadFirstLaunchGuideState().then(() => {
+      if (firstLaunchGuideCompleted.value && !manualOpen.value) {
+        beginStartupUnlock().catch(() => undefined);
+      }
+    });
+  },
+  { immediate: true },
+);
 
 watch(
   () => [route.meta.titleKey, locale.value] as const,

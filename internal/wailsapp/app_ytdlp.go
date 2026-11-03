@@ -95,11 +95,17 @@ func (a *App) stopYTDLPMaintainLoop() {
 
 // RuntimeIsWindows reports whether the backend process is running on Windows.
 func (a *App) RuntimeIsWindows() bool {
+	if err := a.requireReady(); err != nil {
+		return false
+	}
 	return goruntime.GOOS == "windows"
 }
 
 // GetYTDLPMaintainStatus returns desired/effective Tools replace maintain state (no GitHub call).
 func (a *App) GetYTDLPMaintainStatus() (usecase.YTDLPMaintainStatus, error) {
+	if err := a.requireReady(); err != nil {
+		return usecase.YTDLPMaintainStatus{}, err
+	}
 	if a.ytdlp == nil {
 		return usecase.YTDLPMaintainStatus{
 			Supported:         false,
@@ -111,6 +117,9 @@ func (a *App) GetYTDLPMaintainStatus() (usecase.YTDLPMaintainStatus, error) {
 
 // AcknowledgeYTDLPToolsReplaceRisk records first-enable risk acknowledgment.
 func (a *App) AcknowledgeYTDLPToolsReplaceRisk() error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if a.ytdlp == nil {
 		return errors.New("notInitialized")
 	}
@@ -119,6 +128,9 @@ func (a *App) AcknowledgeYTDLPToolsReplaceRisk() error {
 
 // SetYTDLPToolsReplaceMaintain enables or disables maintain (enable requires risk ack).
 func (a *App) SetYTDLPToolsReplaceMaintain(on bool) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if a.ytdlp == nil {
 		return errors.New("notInitialized")
 	}
@@ -127,6 +139,9 @@ func (a *App) SetYTDLPToolsReplaceMaintain(on bool) error {
 
 // CheckYTDLPLatestRelease queries GitHub for the latest official yt-dlp.exe.
 func (a *App) CheckYTDLPLatestRelease() (usecase.YTDLPMaintainStatus, error) {
+	if err := a.requireReady(); err != nil {
+		return usecase.YTDLPMaintainStatus{}, err
+	}
 	if a.ytdlp == nil {
 		return usecase.YTDLPMaintainStatus{
 			Supported:         false,
@@ -138,6 +153,9 @@ func (a *App) CheckYTDLPLatestRelease() (usecase.YTDLPMaintainStatus, error) {
 
 // RefreshYTDLPLatestRelease returns GitHub latest metadata, using a persisted cache unless force is true.
 func (a *App) RefreshYTDLPLatestRelease(force bool) (usecase.YTDLPMaintainStatus, error) {
+	if err := a.requireReady(); err != nil {
+		return usecase.YTDLPMaintainStatus{}, err
+	}
 	if a.ytdlp == nil {
 		return usecase.YTDLPMaintainStatus{
 			Supported:         false,
@@ -149,6 +167,9 @@ func (a *App) RefreshYTDLPLatestRelease(force bool) (usecase.YTDLPMaintainStatus
 
 // CheckAndUpdateOfficialYTDLPCache checks GitHub and downloads when the cache is missing or older.
 func (a *App) CheckAndUpdateOfficialYTDLPCache() (usecase.YTDLPMaintainActionResult, error) {
+	if err := a.requireReady(); err != nil {
+		return usecase.YTDLPMaintainActionResult{}, err
+	}
 	if a.ytdlp == nil {
 		return usecase.YTDLPMaintainActionResult{
 			Status: usecase.YTDLPMaintainStatus{
@@ -166,6 +187,9 @@ func (a *App) CheckAndUpdateOfficialYTDLPCache() (usecase.YTDLPMaintainActionRes
 
 // UpdateOfficialYTDLPCache downloads the latest official release into Official cache; re-links when maintain is on.
 func (a *App) UpdateOfficialYTDLPCache() (usecase.YTDLPMaintainStatus, error) {
+	if err := a.requireReady(); err != nil {
+		return usecase.YTDLPMaintainStatus{}, err
+	}
 	if a.ytdlp == nil {
 		return usecase.YTDLPMaintainStatus{
 			Supported:         false,
@@ -177,16 +201,25 @@ func (a *App) UpdateOfficialYTDLPCache() (usecase.YTDLPMaintainStatus, error) {
 
 // OpenYTDLPCacheFolder opens the Official yt-dlp cache directory in the file manager.
 func (a *App) OpenYTDLPCacheFolder() error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	return openYTDLPFolderInFileManager(usecase.OfficialYTDLPCachePath)
 }
 
 // OpenYTDLPToolsFolder opens VRChat's Tools directory (parent of yt-dlp.exe) in the file manager.
 func (a *App) OpenYTDLPToolsFolder() error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	return openYTDLPFolderInFileManager(usecase.VRChatYTDLPToolsPath)
 }
 
 // GetYTDLPCookieLinkageStatus returns Cookie linkage effective state (yt-dlp user config).
 func (a *App) GetYTDLPCookieLinkageStatus() (usecase.CookieLinkageStatus, error) {
+	if err := a.requireReady(); err != nil {
+		return usecase.CookieLinkageStatus{}, err
+	}
 	if a.cookieLinkage == nil {
 		return usecase.CookieLinkageStatus{
 			Supported:         false,
@@ -199,6 +232,9 @@ func (a *App) GetYTDLPCookieLinkageStatus() (usecase.CookieLinkageStatus, error)
 
 // AcknowledgeYTDLPCookieLinkageRisk records Cookie linkage risk acknowledgment.
 func (a *App) AcknowledgeYTDLPCookieLinkageRisk() error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if a.cookieLinkage == nil {
 		return errors.New("notInitialized")
 	}
@@ -207,6 +243,9 @@ func (a *App) AcknowledgeYTDLPCookieLinkageRisk() error {
 
 // SetYTDLPCookieLinkageBrowser upserts Browser cookie source (chrome/edge/firefox).
 func (a *App) SetYTDLPCookieLinkageBrowser(browser string) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if a.cookieLinkage == nil {
 		return errors.New("notInitialized")
 	}
@@ -215,6 +254,9 @@ func (a *App) SetYTDLPCookieLinkageBrowser(browser string) error {
 
 // SetYTDLPCookieLinkageCookiesFile upserts Cookies file source.
 func (a *App) SetYTDLPCookieLinkageCookiesFile(path string) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if a.cookieLinkage == nil {
 		return errors.New("notInitialized")
 	}
@@ -223,6 +265,9 @@ func (a *App) SetYTDLPCookieLinkageCookiesFile(path string) error {
 
 // DisableYTDLPCookieLinkage removes Managed cookie options from yt-dlp user config.
 func (a *App) DisableYTDLPCookieLinkage() error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if a.cookieLinkage == nil {
 		return errors.New("notInitialized")
 	}

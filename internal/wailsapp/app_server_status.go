@@ -3,20 +3,22 @@ package wailsapp
 import (
 	"context"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"vrchat-tweaker/internal/infrastructure/statuspage"
 )
 
 // GetServerStatus returns VRChat service health from status.vrchat.com for the Dashboard.
 // Infrastructure failures are expressed via FetchState on the snapshot, not via error.
 func (a *App) GetServerStatus() (statuspage.Snapshot, error) {
+	if err := a.requireReady(); err != nil {
+		return statuspage.Snapshot{}, err
+	}
 	ctx := a.ctx
 	if ctx == nil {
 		ctx = context.Background()
 	}
 	snap := a.serverStatusClient().Fetch(ctx)
-	if snap.FetchState != statuspage.FetchStateOK && a.ctx != nil {
-		runtime.LogWarning(a.ctx, "server status fetch: state="+snap.FetchState)
+	if snap.FetchState != statuspage.FetchStateOK {
+		a.logWarning("server status fetch: state=" + snap.FetchState)
 	}
 	return normalizeServerStatus(snap), nil
 }

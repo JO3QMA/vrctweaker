@@ -10,7 +10,10 @@ import (
 
 // OpenExternalURL opens an http(s) URL in the system default browser.
 func (a *App) OpenExternalURL(rawURL string) error {
-	if a == nil || a.ctx == nil {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
+	if a.ctx == nil {
 		return errors.New("app not initialized")
 	}
 	safe, err := safeurl.ParseHTTPHTTPS(rawURL)

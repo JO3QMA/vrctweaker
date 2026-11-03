@@ -140,7 +140,7 @@ func (m *maintUserCacheRepo) ListContactsNeedingProfileResolution(context.Contex
 func TestDBMaintenanceUseCase_VacuumDb(t *testing.T) {
 	ctx := context.Background()
 	dir := t.TempDir()
-	db, err := sqlite.Open(dir)
+	db, err := sqlite.Open(dir, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -39,6 +39,9 @@ func (a *App) setLastLaunchProfileOnSuccess(profileID string, launchErr error) e
 
 // GetDashboardLaunchBlock returns Dashboard launch block UI state (always shown when load succeeds).
 func (a *App) GetDashboardLaunchBlock() (*DashboardLaunchBlockDTO, error) {
+	if err := a.requireReady(); err != nil {
+		return nil, err
+	}
 	profiles, err := a.launcher.ListProfiles(a.ctx)
 	if err != nil {
 		return nil, fmt.Errorf("dashboard launch block: list profiles: %w", err)
@@ -68,6 +71,9 @@ func (a *App) GetDashboardLaunchBlock() (*DashboardLaunchBlockDTO, error) {
 
 // InstanceRejoin launches VRChat into the Rejoin target for playSessionID using the given launch profile.
 func (a *App) InstanceRejoin(profileID, playSessionID string) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	profileID = strings.TrimSpace(profileID)
 	if profileID == "" {
 		return fmt.Errorf("profile id is required")

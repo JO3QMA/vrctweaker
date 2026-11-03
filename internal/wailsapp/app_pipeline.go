@@ -95,13 +95,13 @@ func (a *App) startVRChatPipeline() {
 				}
 				return err
 			}
-			runtime.EventsEmit(a.ctx, friendsChangedEvent, struct{}{})
+			a.eventsEmit(friendsChangedEvent, struct{}{})
 			return nil
 		},
 		OnEvent: func(ctx context.Context, typ string, payload []byte) error {
 			err := a.identity.HandleVRChatPipelineEvent(ctx, typ, payload)
 			if err == nil && pipelineEventUpdatesFriends(typ) {
-				runtime.EventsEmit(a.ctx, friendsChangedEvent, struct{}{})
+				a.eventsEmit(friendsChangedEvent, struct{}{})
 			}
 			return err
 		},

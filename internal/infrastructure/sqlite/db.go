@@ -23,8 +23,14 @@ const defaultLogRetentionDays = 30
 // Mitigates bursts (e.g. Pipeline + REST reconcile) after sleep resume.
 const defaultBusyTimeoutMs = 5000
 
+// OpenOptions configures optional behavior when opening the database.
+type OpenOptions struct {
+	// OnSchemaPhase is called before potentially slow schema steps (e.g. dedupe).
+	OnSchemaPhase func(phase string)
+}
+
 // Open opens or creates the SQLite database and applies the canonical schema.
-func Open(dataDir string) (*sql.DB, error) {
+func Open(dataDir string, opts *OpenOptions) (*sql.DB, error) {
 	dbPath := filepath.Join(dataDir, "vrchat-tweaker.db")
 	// Foreign keys are per-connection; database/sql pools connections, so a one-off
 	// PRAGMA after Open only affects one handle. _pragma runs on every new connection.
@@ -41,7 +47,7 @@ func Open(dataDir string) (*sql.DB, error) {
 		return nil, fmt.Errorf("ping db: %w", err)
 	}
 
-	if err := applySchema(conn); err != nil {
+	if err := applySchema(conn, schemaProgress(opts)); err != nil {
 		_ = conn.Close()
 		return nil, fmt.Errorf("apply schema: %w", err)
 	}
@@ -55,7 +61,14 @@ func Open(dataDir string) (*sql.DB, error) {
 	return conn, nil
 }
 
-func applySchema(db *sql.DB) error {
+func schemaProgress(opts *OpenOptions) func(string) {
+	if opts == nil || opts.OnSchemaPhase == nil {
+		return nil
+	}
+	return opts.OnSchemaPhase
+}
+
+func applySchema(db *sql.DB, onPhase func(string)) error {
 	for _, stmt := range schemaStatements() {
 		if _, err := db.Exec(stmt); err != nil {
 			return fmt.Errorf("schema: %w", err)
@@ -92,7 +105,7 @@ func applySchema(db *sql.DB) error {
 		return err
 	}
 
-	if err := ensureFriendAvatarObservationDedupIndex(db); err != nil {
+	if err := ensureFriendAvatarObservationDedupIndex(db, onPhase); err != nil {
 		return err
 	}
 
@@ -129,7 +142,7 @@ func ensureActivityLogSourceColumns(db *sql.DB) error {
 	return nil
 }
 
-func ensureFriendAvatarObservationDedupIndex(db *sql.DB) error {
+func ensureFriendAvatarObservationDedupIndex(db *sql.DB, onPhase func(string)) error {
 	const indexName = "idx_friend_avatar_obs_natural"
 	indexMissing, err := friendAvatarDedupIndexMissing(db, indexName)
 	if err != nil {
@@ -140,6 +153,9 @@ func ensureFriendAvatarObservationDedupIndex(db *sql.DB) error {
 	// still missing (first migration or after a forced DROP).
 	needDedupe := indexMissing
 	if needDedupe {
+		if onPhase != nil {
+			onPhase("dedupe")
+		}
 		if _, dedupeErr := db.Exec(`DELETE FROM friend_avatar_observations
 			WHERE id NOT IN (
 				SELECT MIN(id) FROM friend_avatar_observations
@@ -261,7 +277,6 @@ func schemaStatements() []string {
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_friend_avatar_obs_vrc_user_id ON friend_avatar_observations(vrc_user_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_friend_avatar_obs_observed_at ON friend_avatar_observations(observed_at)`,
-		`CREATE UNIQUE INDEX IF NOT EXISTS idx_friend_avatar_obs_natural ON friend_avatar_observations(log_source_path, display_name, avatar_name, observed_at)`,
 		`CREATE INDEX IF NOT EXISTS idx_play_sessions_start_time ON play_sessions(start_time)`,
 		`CREATE TABLE IF NOT EXISTS users_cache (
 			vrc_user_id TEXT PRIMARY KEY,

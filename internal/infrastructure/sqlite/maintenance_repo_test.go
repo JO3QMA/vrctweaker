@@ -21,7 +21,7 @@ func TestMaintenance_ClearEncounters_Integration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := applySchema(db); migrateErr != nil {
+	if migrateErr := applySchema(db, nil); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 
@@ -75,7 +75,7 @@ func TestMaintenance_ClearScreenshots_Integration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := applySchema(db); migrateErr != nil {
+	if migrateErr := applySchema(db, nil); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 
@@ -124,7 +124,7 @@ func TestMaintenance_ClearFriendsCache_Integration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := applySchema(db); migrateErr != nil {
+	if migrateErr := applySchema(db, nil); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 
@@ -176,7 +176,7 @@ func TestMaintenance_Vacuum_Integration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if err := applySchema(db); err != nil {
+	if err := applySchema(db, nil); err != nil {
 		t.Fatal(err)
 	}
 

@@ -470,6 +470,107 @@ a:hover {
   outline-offset: calc(-1 * var(--focus-ring-offset));
 }
 
+/* Collapse panel (Launcher advanced args, startup failure detail) */
+.vt-collapse-panel {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg-muted);
+}
+
+.vt-collapse-panel .el-collapse-item__header {
+  background: transparent;
+  border-bottom-color: var(--color-border);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-14);
+  padding-inline: var(--space-16);
+  padding-block: 10px;
+  height: auto;
+  min-height: 40px;
+  line-height: 20px;
+  border-radius: var(--radius);
+}
+
+.vt-collapse-panel .el-collapse-item.is-active .el-collapse-item__header {
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.vt-collapse-panel .el-collapse-item__header.focusing {
+  color: var(--color-text-secondary);
+}
+
+.vt-collapse-panel .el-collapse-item__header.focusing:focus:not(:hover) {
+  color: var(--color-text-secondary);
+}
+
+.vt-collapse-panel .el-collapse-item__header:focus:not(:focus-visible) {
+  outline: none;
+}
+
+.vt-collapse-panel .el-collapse-item__header:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: calc(-1 * var(--focus-ring-offset));
+}
+
+.vt-collapse-panel
+  .el-collapse-item:not(.is-active)
+  .el-collapse-item__header:focus-visible {
+  border-radius: var(--radius);
+}
+
+.vt-collapse-panel
+  .el-collapse-item.is-active
+  .el-collapse-item__header:focus-visible {
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.vt-collapse-panel .el-collapse-item__content {
+  padding: var(--space-16);
+}
+
+.vt-collapse-panel .el-collapse-item__wrap {
+  border-bottom-color: var(--color-border);
+  background: transparent;
+}
+
+/* Dark-theme secondary button (design #369; Ytdlp video folder pattern) */
+.vt-btn-secondary-dark.el-button {
+  --el-button-hover-bg-color: #36495f;
+  --el-button-hover-border-color: #4a5f7a;
+  --el-button-hover-text-color: #e8eaed;
+  --el-button-active-bg-color: #26374a;
+  --el-button-active-border-color: #4a5f7a;
+  --el-button-active-text-color: #e8eaed;
+  --el-button-bg-color: var(--color-bg-muted);
+  border-color: var(--color-border);
+  color: #e8eaed;
+  background-color: var(--color-bg-muted);
+}
+
+.vt-btn-secondary-dark.el-button:hover:not(.is-disabled) {
+  color: #e8eaed !important;
+  background-color: #36495f !important;
+  border-color: #4a5f7a !important;
+}
+
+.vt-btn-secondary-dark.el-button:active:not(.is-disabled) {
+  color: #e8eaed !important;
+  background-color: #26374a !important;
+  border-color: #4a5f7a !important;
+}
+
+.vt-btn-secondary-dark.el-button:focus:not(:focus-visible) {
+  outline: none;
+  box-shadow: none;
+}
+
+.vt-btn-secondary-dark.el-button:focus-visible {
+  color: #e8eaed !important;
+  background-color: var(--color-bg-muted) !important;
+  border-color: var(--color-border) !important;
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
 /* ─── Settings screen layout ───────────────────────────────────── */
 /* Nav mode follows this frame, which does not scroll. A scrollbar on
    .settings-view must not change the measured width (or the mode would

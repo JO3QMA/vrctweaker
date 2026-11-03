@@ -27,7 +27,7 @@ func TestApp_GetFirstLaunchGuideCompleted_defaultFalse(t *testing.T) {
 func TestApp_GetFirstLaunchGuideCompleted_nilSettings(t *testing.T) {
 	a := &App{ctx: context.Background()}
 	_, err := a.GetFirstLaunchGuideCompleted()
-	if !errors.Is(err, errSettingsNotInitialized) {
+	if !errors.Is(err, errAppNotInitialized) {
 		t.Fatalf("err = %v", err)
 	}
 }

@@ -9,6 +9,9 @@ import (
 var errAutomationNotInitialized = errors.New("automation not initialized")
 
 func (a *App) requireAutomation() error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if a == nil || a.automation == nil || a.ctx == nil {
 		return errAutomationNotInitialized
 	}
@@ -17,6 +20,9 @@ func (a *App) requireAutomation() error {
 
 // ListAutomationItems returns all automation items.
 func (a *App) ListAutomationItems() ([]*automation.AutomationItem, error) {
+	if err := a.requireReady(); err != nil {
+		return nil, err
+	}
 	if err := a.requireAutomation(); err != nil {
 		return nil, err
 	}
@@ -32,6 +38,9 @@ func (a *App) ListAutomationItems() ([]*automation.AutomationItem, error) {
 
 // SaveAutomationItem persists an automation item.
 func (a *App) SaveAutomationItem(item automation.AutomationItem) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if err := a.requireAutomation(); err != nil {
 		return err
 	}
@@ -40,6 +49,9 @@ func (a *App) SaveAutomationItem(item automation.AutomationItem) error {
 
 // DeleteAutomationItem removes an automation item.
 func (a *App) DeleteAutomationItem(id string) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if err := a.requireAutomation(); err != nil {
 		return err
 	}
@@ -48,6 +60,9 @@ func (a *App) DeleteAutomationItem(id string) error {
 
 // ToggleAutomationItem enables or disables an item.
 func (a *App) ToggleAutomationItem(id string, enabled bool) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if err := a.requireAutomation(); err != nil {
 		return err
 	}
@@ -56,6 +71,9 @@ func (a *App) ToggleAutomationItem(id string, enabled bool) error {
 
 // GetAutomationRunLog returns recent run log entries.
 func (a *App) GetAutomationRunLog() ([]automation.RunLogEntry, error) {
+	if err := a.requireReady(); err != nil {
+		return nil, err
+	}
 	if err := a.requireAutomation(); err != nil {
 		return nil, err
 	}
@@ -76,6 +94,9 @@ func (a *App) GetAutomationRuntimeStatus() (automation.RuntimeStatus, error) {
 
 // ListDetectedPowerPlans returns OS power plans (empty off Windows).
 func (a *App) ListDetectedPowerPlans() ([]automation.DetectedPowerPlan, error) {
+	if err := a.requireReady(); err != nil {
+		return nil, err
+	}
 	if err := a.requireAutomation(); err != nil {
 		return nil, err
 	}

@@ -34,6 +34,9 @@ type OnboardingFolderSaveDTO struct {
 
 // GetFirstLaunchGuideCompleted returns whether the setup wizard was completed or skipped.
 func (a *App) GetFirstLaunchGuideCompleted() (bool, error) {
+	if err := a.requireReady(); err != nil {
+		return false, err
+	}
 	if a.settings == nil {
 		return false, errSettingsNotInitialized
 	}
@@ -42,6 +45,9 @@ func (a *App) GetFirstLaunchGuideCompleted() (bool, error) {
 
 // SetFirstLaunchGuideCompleted marks the setup wizard as done.
 func (a *App) SetFirstLaunchGuideCompleted(completed bool) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if a.settings == nil {
 		return errSettingsNotInitialized
 	}
@@ -50,6 +56,9 @@ func (a *App) SetFirstLaunchGuideCompleted(completed bool) error {
 
 // GetOnboardingFolderDefaults returns path settings with auto-detected values for empty fields.
 func (a *App) GetOnboardingFolderDefaults() (OnboardingFolderDefaultsDTO, error) {
+	if err := a.requireReady(); err != nil {
+		return OnboardingFolderDefaultsDTO{}, err
+	}
 	if a.settings == nil {
 		return OnboardingFolderDefaultsDTO{}, errSettingsNotInitialized
 	}
@@ -90,6 +99,9 @@ func (a *App) resolveOnboardingPictureFolder() (string, error) {
 
 // SaveOnboardingFolderSettings persists only wizard fields marked with Apply* and non-empty values.
 func (a *App) SaveOnboardingFolderSettings(save OnboardingFolderSaveDTO) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	if a.settings == nil {
 		return errSettingsNotInitialized
 	}

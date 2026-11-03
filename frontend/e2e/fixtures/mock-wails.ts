@@ -198,6 +198,27 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
       window.go = window.go || {};
       window.go.wailsapp = window.go.wailsapp || {};
       window.go.wailsapp.App = {
+        GetStartupInitStatus: () =>
+          Promise.resolve({
+            ready: true,
+            loading: false,
+            phase: "",
+            summaryKey: "",
+            detail: "",
+            dataDir: "",
+            canOpenDataFolder: false,
+          }),
+        RetryStartupInit: () =>
+          Promise.resolve({
+            ready: true,
+            loading: false,
+            phase: "",
+            summaryKey: "",
+            detail: "",
+            dataDir: "",
+            canOpenDataFolder: false,
+          }),
+        OpenAppDataFolder: () => Promise.resolve(),
         LaunchProfiles: () => Promise.resolve(launchProfiles),
         GetLogicalProcessorCount: () => Promise.resolve(16),
         SaveLaunchProfile: (p) => {

@@ -1,6 +1,8 @@
 package wailsapp
 
 import (
+	"context"
+	"errors"
 	"runtime"
 	"testing"
 
@@ -10,20 +12,14 @@ import (
 func TestApp_ytdlpStatusWhenNotInitialized(t *testing.T) {
 	a := NewApp()
 
-	maintain, err := a.GetYTDLPMaintainStatus()
-	if err != nil {
+	_, err := a.GetYTDLPMaintainStatus()
+	if !errors.Is(err, errAppNotInitialized) {
 		t.Fatalf("GetYTDLPMaintainStatus error: %v", err)
 	}
-	if maintain.Supported || maintain.UnsupportedReason != "notInitialized" {
-		t.Fatalf("GetYTDLPMaintainStatus: got %+v", maintain)
-	}
 
-	cookie, err := a.GetYTDLPCookieLinkageStatus()
-	if err != nil {
+	_, err = a.GetYTDLPCookieLinkageStatus()
+	if !errors.Is(err, errAppNotInitialized) {
 		t.Fatalf("GetYTDLPCookieLinkageStatus error: %v", err)
-	}
-	if cookie.Supported || cookie.UnsupportedReason != "notInitialized" || cookie.SourceKind != usecase.CookieSourceNone {
-		t.Fatalf("GetYTDLPCookieLinkageStatus: got %+v", cookie)
 	}
 }
 
@@ -40,10 +36,29 @@ func TestApp_ytdlpOperationsWhenNotInitialized(t *testing.T) {
 
 	for name, operation := range operations {
 		t.Run(name, func(t *testing.T) {
-			if err := operation(); err == nil || err.Error() != "notInitialized" {
-				t.Fatalf("error: got %v, want notInitialized", err)
+			if err := operation(); !errors.Is(err, errAppNotInitialized) {
+				t.Fatalf("error: got %v, want %v", err, errAppNotInitialized)
 			}
 		})
+	}
+}
+
+func TestApp_ytdlpStatusWhenUseCaseUnsetButInitReady(t *testing.T) {
+	a := NewApp()
+	a.setInitReadyForTest(context.Background())
+	maintain, err := a.GetYTDLPMaintainStatus()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if maintain.Supported || maintain.UnsupportedReason != "notInitialized" {
+		t.Fatalf("GetYTDLPMaintainStatus: got %+v", maintain)
+	}
+	cookie, err := a.GetYTDLPCookieLinkageStatus()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cookie.Supported || cookie.UnsupportedReason != "notInitialized" || cookie.SourceKind != usecase.CookieSourceNone {
+		t.Fatalf("GetYTDLPCookieLinkageStatus: got %+v", cookie)
 	}
 }
 

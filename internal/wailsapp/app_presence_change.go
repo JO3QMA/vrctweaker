@@ -8,6 +8,9 @@ import (
 
 // GetPresenceChangeSection returns Dashboard presence change section state.
 func (a *App) GetPresenceChangeSection() (*usecase.PresenceChangeSection, error) {
+	if err := a.requireReady(); err != nil {
+		return nil, err
+	}
 	if a.presenceChange == nil {
 		return nil, fmt.Errorf("presence change section: not initialized")
 	}
@@ -24,6 +27,9 @@ func (a *App) GetPresenceChangeSection() (*usecase.PresenceChangeSection, error)
 
 // ApplyPresenceChange updates VRChat presence (status + description) and records history.
 func (a *App) ApplyPresenceChange(status, description string) (*usecase.PresenceChangeApplyResult, error) {
+	if err := a.requireReady(); err != nil {
+		return nil, err
+	}
 	if a.presenceChange == nil {
 		return nil, fmt.Errorf("presence change apply: not initialized")
 	}

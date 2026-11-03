@@ -1,7 +1,21 @@
 {
   "app": {
     "name": "VRChat Tweaker",
-    "errClose": "ウィンドウを閉じられませんでした"
+    "errClose": "ウィンドウを閉じられませんでした",
+    "startup": {
+      "loading": "起動しています…",
+      "migrating": "データを整理しています…",
+      "details": "詳細",
+      "retry": "再試行",
+      "openDataFolder": "データフォルダを開く",
+      "openDataFolderFailed": "データフォルダを開けませんでした",
+      "failed": {
+        "dataDirResolve": "データフォルダの場所を取得できませんでした",
+        "dataDirCreate": "データフォルダを作成できませんでした",
+        "databaseOpen": "データベースを開けませんでした",
+        "statusFetch": "起動状態を取得できませんでした"
+      }
+    }
   },
   "routes": {
     "dashboard": "ダッシュボード",

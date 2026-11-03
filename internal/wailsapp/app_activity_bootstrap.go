@@ -159,10 +159,10 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 	parser := activity.NewLogParser()
 	logger := appDiagLogger()
 	emitEncounters := func() {
-		runtime.EventsEmit(a.ctx, activityEncountersChangedEvent, struct{}{})
+		a.eventsEmit(activityEncountersChangedEvent, struct{}{})
 	}
 	emitVideoPlayback := func() {
-		runtime.EventsEmit(a.ctx, activityVideoPlaybackChangedEvent, struct{}{})
+		a.eventsEmit(activityVideoPlaybackChangedEvent, struct{}{})
 	}
 
 	a.resetActivityIngestAdapterCache()
@@ -222,5 +222,8 @@ func (a *App) startOutputLogWatcher(ctx context.Context) {
 
 // ValidateOutputLogPath checks if path is an existing directory (empty dirs allowed).
 func (a *App) ValidateOutputLogPath(path string) bool {
+	if err := a.requireReady(); err != nil {
+		return false
+	}
 	return logwatcher.OutputLogPathValid(path)
 }

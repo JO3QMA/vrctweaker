@@ -47,7 +47,7 @@ func (a *App) finalizeOpenActivityForLogSource(ctx context.Context, logPath stri
 	}
 	_ = a.activity.FinalizeOpenActivityForLogSource(ctx, logwatcher.AbsLogPath(logPath), lastTime)
 	if a.ctx != nil {
-		runtime.EventsEmit(a.ctx, activityEncountersChangedEvent, struct{}{})
+		a.eventsEmit(activityEncountersChangedEvent, struct{}{})
 	}
 }
 
@@ -143,6 +143,6 @@ func (a *App) finalizeAllLogSourcesOnVRChatExit(ctx context.Context, watchPath s
 	_ = a.activity.FinalizeAllOpenActivity(ctx, lastLine)
 
 	if a.ctx != nil {
-		runtime.EventsEmit(a.ctx, activityEncountersChangedEvent, struct{}{})
+		a.eventsEmit(activityEncountersChangedEvent, struct{}{})
 	}
 }

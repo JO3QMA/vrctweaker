@@ -9,6 +9,9 @@ import (
 // ResolveVRChatAssetCachePath returns the absolute path Asset cache clear would target
 // (saved config.json; empty cache_directory → platform default Cache-WindowsPlayer).
 func (a *App) ResolveVRChatAssetCachePath() (string, error) {
+	if err := a.requireReady(); err != nil {
+		return "", err
+	}
 	if a.assetCache == nil {
 		return "", errors.New("asset cache not initialized")
 	}
@@ -18,6 +21,9 @@ func (a *App) ResolveVRChatAssetCachePath() (string, error) {
 // ClearVRChatAssetCache deletes all entries inside the resolved VRChat asset cache directory.
 // Returns the number of top-level entries removed. See ADR 0011.
 func (a *App) ClearVRChatAssetCache() (int64, error) {
+	if err := a.requireReady(); err != nil {
+		return 0, err
+	}
 	if a.assetCache == nil {
 		return 0, errors.New("asset cache not initialized")
 	}
@@ -26,11 +32,17 @@ func (a *App) ClearVRChatAssetCache() (int64, error) {
 
 // VRChatConfigExists checks if config.json exists.
 func (a *App) VRChatConfigExists() (bool, error) {
+	if err := a.requireReady(); err != nil {
+		return false, err
+	}
 	return a.vrchatConfigRepo.Exists()
 }
 
 // GetVRChatConfig reads the current config.json.
 func (a *App) GetVRChatConfig() (VRChatConfigDTO, error) {
+	if err := a.requireReady(); err != nil {
+		return VRChatConfigDTO{}, err
+	}
 	cfg, err := a.vrchatConfigRepo.Read()
 	if err != nil {
 		return VRChatConfigDTO{}, err
@@ -41,6 +53,9 @@ func (a *App) GetVRChatConfig() (VRChatConfigDTO, error) {
 // SaveVRChatConfig writes config.json, preserving fields not covered by the DTO
 // (betas / ps_* / dynamic_bone_* etc.) by merging onto the existing file.
 func (a *App) SaveVRChatConfig(dto VRChatConfigDTO) error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	cfg, err := a.vrchatConfigRepo.Read()
 	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
@@ -66,6 +81,9 @@ func (a *App) SaveVRChatConfig(dto VRChatConfigDTO) error {
 
 // DeleteVRChatConfig removes config.json.
 func (a *App) DeleteVRChatConfig() error {
+	if err := a.requireReady(); err != nil {
+		return err
+	}
 	return a.vrchatConfigRepo.Delete()
 }
 
@@ -78,6 +96,9 @@ func (a *App) DeleteVRChatConfig() error {
 // no direct equivalent, so this path is a conventional default and may differ from the
 // actual save location when Pictures is redirected.
 func (a *App) DefaultVRChatPictureFolder() (string, error) {
+	if err := a.requireReady(); err != nil {
+		return "", err
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err

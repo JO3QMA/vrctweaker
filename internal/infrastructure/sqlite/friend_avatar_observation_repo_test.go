@@ -11,7 +11,7 @@ import (
 func TestFriendAvatarObservationRepository_saveAndSummarize(t *testing.T) {
 	db := openTestDB(t)
 	t.Cleanup(func() { _ = db.Close() })
-	if err := applySchema(db); err != nil {
+	if err := applySchema(db, nil); err != nil {
 		t.Fatal(err)
 	}
 	repo := NewFriendAvatarObservationRepository(db)
@@ -53,7 +53,7 @@ func TestFriendAvatarObservationRepository_saveAndSummarize(t *testing.T) {
 func TestFriendAvatarObservationRepository_listSkipsCorruptObservedAt(t *testing.T) {
 	db := openTestDB(t)
 	t.Cleanup(func() { _ = db.Close() })
-	if err := applySchema(db); err != nil {
+	if err := applySchema(db, nil); err != nil {
 		t.Fatal(err)
 	}
 	ctx := context.Background()

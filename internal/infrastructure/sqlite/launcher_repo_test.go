@@ -19,7 +19,7 @@ func TestLauncherProfileRepository_CRUD(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := applySchema(db); migrateErr != nil {
+	if migrateErr := applySchema(db, nil); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 	repo := NewLauncherProfileRepository(db)
@@ -59,7 +59,7 @@ func TestLauncherProfileRepository_GetDefault_and_Delete(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
-	if migrateErr := applySchema(db); migrateErr != nil {
+	if migrateErr := applySchema(db, nil); migrateErr != nil {
 		t.Fatal(migrateErr)
 	}
 	repo := NewLauncherProfileRepository(db)
