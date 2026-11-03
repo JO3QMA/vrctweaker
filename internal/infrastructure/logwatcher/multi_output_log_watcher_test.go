@@ -514,15 +514,24 @@ func TestMultiOutputLogWatcher_ingestRetryingBypassesStallStop(t *testing.T) {
 	})
 	w.activeLogStallTimeout = 200 * time.Millisecond
 
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	if err := w.Start(ctx); err != nil {
 		t.Fatal(err)
 	}
 
-	time.Sleep(w.activeLogStallTimeout + 400*time.Millisecond)
+	deadline := time.Now().Add(4 * time.Second)
+	for time.Now().Before(deadline) {
+		if failAlways.saveAttempts.Load() > 0 {
+			break
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	if failAlways.saveAttempts.Load() == 0 {
+		t.Fatal("tail never reached failing encounter ingest")
+	}
 	before := failAlways.saveAttempts.Load()
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(w.activeLogStallTimeout + 500*time.Millisecond)
 	after := failAlways.saveAttempts.Load()
 	if after <= before {
 		t.Fatalf("save attempts before=%d after=%d, want continued retries past stall timeout", before, after)
