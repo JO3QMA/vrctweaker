@@ -217,16 +217,14 @@
                               v-model="launchArgs.screenWidth"
                               :min="VRCHAT_LAUNCHER_SCREEN_RES.WIDTH_MIN"
                               :max="VRCHAT_LAUNCHER_SCREEN_RES.WIDTH_MAX"
+                              :precision="0"
+                              :step="1"
                               :disabled="resolutionPreset !== 'custom'"
-                              :aria-describedby="
-                                resolutionPreset === 'custom'
-                                  ? LAUNCHER_SCREEN_WIDTH_RANGE_HINT_ID
-                                  : undefined
-                              "
                               data-testid="screen-width-input"
                               size="small"
                               :placeholder="t('launcher.widthPh')"
                               class="resolution-number-input"
+                              @change="onScreenWidthChange"
                             />
                             <p
                               v-if="resolutionPreset === 'custom'"
@@ -246,16 +244,14 @@
                               v-model="launchArgs.screenHeight"
                               :min="VRCHAT_LAUNCHER_SCREEN_RES.HEIGHT_MIN"
                               :max="VRCHAT_LAUNCHER_SCREEN_RES.HEIGHT_MAX"
+                              :precision="0"
+                              :step="1"
                               :disabled="resolutionPreset !== 'custom'"
-                              :aria-describedby="
-                                resolutionPreset === 'custom'
-                                  ? LAUNCHER_SCREEN_HEIGHT_RANGE_HINT_ID
-                                  : undefined
-                              "
                               data-testid="screen-height-input"
                               size="small"
                               :placeholder="t('launcher.heightPh')"
                               class="resolution-number-input"
+                              @change="onScreenHeightChange"
                             />
                             <p
                               v-if="resolutionPreset === 'custom'"
@@ -685,6 +681,7 @@ import {
   onMounted,
   onBeforeUnmount,
   watchEffect,
+  nextTick,
 } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 import { useI18n } from "vue-i18n";
@@ -734,6 +731,8 @@ import {
   requiredTrimmedRule,
 } from "../utils/elFormRules";
 import { validateElForm } from "../utils/elFormValidate";
+import { useValidatedFormA11y } from "../composables/useValidatedFormA11y";
+import { normalizeResolutionDimension } from "../utils/resolutionInput";
 import { formatNumericRangeHint } from "../utils/formNumericRangeHint";
 import { VRCHAT_LAUNCHER_SCREEN_RES } from "../utils/vrchatResolutionLimits";
 
@@ -759,6 +758,7 @@ const launcherScreenHeightRangeHint = computed(() =>
 );
 
 const launcherFormRef = ref<FormInstance>();
+useValidatedFormA11y(launcherFormRef);
 const launcherFormModel = reactive({
   name: "",
   custom: "",
@@ -975,6 +975,24 @@ function syncResolutionPresetFromArgs() {
     launchArgs.value.screenWidth,
     launchArgs.value.screenHeight,
   );
+}
+
+function onScreenWidthChange(value: number | undefined) {
+  const n = normalizeResolutionDimension(value);
+  launchArgs.value.screenWidth = n;
+  launcherFormModel.screenWidth = n;
+  void nextTick(() => {
+    launcherFormRef.value?.validateField("screenWidth").catch(() => {});
+  });
+}
+
+function onScreenHeightChange(value: number | undefined) {
+  const n = normalizeResolutionDimension(value);
+  launchArgs.value.screenHeight = n;
+  launcherFormModel.screenHeight = n;
+  void nextTick(() => {
+    launcherFormRef.value?.validateField("screenHeight").catch(() => {});
+  });
 }
 
 function applyResolutionPreset() {
@@ -1539,16 +1557,14 @@ onBeforeRouteLeave(async (_to, _from, next) => {
 }
 
 .resolution-fields {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-action-group);
+  /* layout: global style.css */
 }
 
 .resolution-form-item {
   margin-bottom: 0 !important;
 }
 
-.resolution-form-item :deep(.el-form-item__content) {
+.resolution-form-item .el-form-item__content {
   line-height: normal;
 }
 

@@ -92,12 +92,14 @@
                   v-model="config.cameraResWidth"
                   :min="VRCHAT_CAMERA_RES.WIDTH_MIN"
                   :max="VRCHAT_CAMERA_RES.WIDTH_MAX"
+                  :precision="0"
+                  :step="1"
                   :disabled="cameraPreset !== 'custom'"
-                  :aria-describedby="CONFIG_CAMERA_WIDTH_RANGE_HINT_ID"
                   data-testid="camera-width-input"
                   size="small"
                   :placeholder="t('launcher.widthPh')"
                   class="resolution-number-input"
+                  @change="onCameraResWidthChange"
                 />
                 <p
                   :id="CONFIG_CAMERA_WIDTH_RANGE_HINT_ID"
@@ -116,12 +118,14 @@
                   v-model="config.cameraResHeight"
                   :min="VRCHAT_CAMERA_RES.HEIGHT_MIN"
                   :max="VRCHAT_CAMERA_RES.HEIGHT_MAX"
+                  :precision="0"
+                  :step="1"
                   :disabled="cameraPreset !== 'custom'"
-                  :aria-describedby="CONFIG_CAMERA_HEIGHT_RANGE_HINT_ID"
                   data-testid="camera-height-input"
                   size="small"
                   :placeholder="t('launcher.heightPh')"
                   class="resolution-number-input"
+                  @change="onCameraResHeightChange"
                 />
                 <p
                   :id="CONFIG_CAMERA_HEIGHT_RANGE_HINT_ID"
@@ -185,12 +189,14 @@
                   v-model="config.screenshotResWidth"
                   :min="VRCHAT_SCREENSHOT_RES.WIDTH_MIN"
                   :max="VRCHAT_SCREENSHOT_RES.WIDTH_MAX"
+                  :precision="0"
+                  :step="1"
                   :disabled="screenshotPreset !== 'custom'"
-                  :aria-describedby="CONFIG_SCREENSHOT_WIDTH_RANGE_HINT_ID"
                   data-testid="screenshot-width-input"
                   size="small"
                   :placeholder="t('launcher.widthPh')"
                   class="resolution-number-input"
+                  @change="onScreenshotResWidthChange"
                 />
                 <p
                   :id="CONFIG_SCREENSHOT_WIDTH_RANGE_HINT_ID"
@@ -209,12 +215,14 @@
                   v-model="config.screenshotResHeight"
                   :min="VRCHAT_SCREENSHOT_RES.HEIGHT_MIN"
                   :max="VRCHAT_SCREENSHOT_RES.HEIGHT_MAX"
+                  :precision="0"
+                  :step="1"
                   :disabled="screenshotPreset !== 'custom'"
-                  :aria-describedby="CONFIG_SCREENSHOT_HEIGHT_RANGE_HINT_ID"
                   data-testid="screenshot-height-input"
                   size="small"
                   :placeholder="t('launcher.heightPh')"
                   class="resolution-number-input"
+                  @change="onScreenshotResHeightChange"
                 />
                 <p
                   :id="CONFIG_SCREENSHOT_HEIGHT_RANGE_HINT_ID"
@@ -411,7 +419,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useI18n } from "vue-i18n";
 import { ElMessageBox, type FormInstance, type FormRules } from "element-plus";
 import VtAlert from "../components/VtAlert.vue";
@@ -427,6 +435,8 @@ import {
   optionalPathLineRule,
 } from "../utils/elFormRules";
 import { validateElForms } from "../utils/elFormValidate";
+import { useValidatedFormsA11y } from "../composables/useValidatedFormA11y";
+import { normalizeResolutionDimension } from "../utils/resolutionInput";
 import { formatNumericRangeHint } from "../utils/formNumericRangeHint";
 import {
   VRCHAT_CAMERA_RES,
@@ -509,6 +519,12 @@ const photoFormRef = ref<FormInstance>();
 const cacheFormRef = ref<FormInstance>();
 const cameraResolutionFormRef = ref<FormInstance>();
 const screenshotResolutionFormRef = ref<FormInstance>();
+useValidatedFormsA11y([
+  cameraResolutionFormRef,
+  screenshotResolutionFormRef,
+  photoFormRef,
+  cacheFormRef,
+]);
 const photoFormRules = computed<FormRules>(() => ({
   pictureOutputFolder: [optionalPathLineRule(t)],
 }));
@@ -615,6 +631,41 @@ function syncFromConfig(cfg: VRChatConfigDTO) {
   );
   pictureOutputSplitByDate.value = cfg.pictureOutputSplitByDate ?? true;
   disableRichPresence.value = cfg.disableRichPresence ?? false;
+}
+
+function revalidateResolutionField(
+  formRef: FormInstance | undefined,
+  prop: string,
+) {
+  void nextTick(() => {
+    formRef?.validateField(prop).catch(() => {});
+  });
+}
+
+function onCameraResWidthChange(value: number | undefined) {
+  config.value.cameraResWidth = normalizeResolutionDimension(value);
+  revalidateResolutionField(cameraResolutionFormRef.value, "cameraResWidth");
+}
+
+function onCameraResHeightChange(value: number | undefined) {
+  config.value.cameraResHeight = normalizeResolutionDimension(value);
+  revalidateResolutionField(cameraResolutionFormRef.value, "cameraResHeight");
+}
+
+function onScreenshotResWidthChange(value: number | undefined) {
+  config.value.screenshotResWidth = normalizeResolutionDimension(value);
+  revalidateResolutionField(
+    screenshotResolutionFormRef.value,
+    "screenshotResWidth",
+  );
+}
+
+function onScreenshotResHeightChange(value: number | undefined) {
+  config.value.screenshotResHeight = normalizeResolutionDimension(value);
+  revalidateResolutionField(
+    screenshotResolutionFormRef.value,
+    "screenshotResHeight",
+  );
 }
 
 function applyCameraPreset() {

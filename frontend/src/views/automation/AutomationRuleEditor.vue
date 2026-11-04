@@ -1,5 +1,12 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watchEffect } from "vue";
+import {
+  computed,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watchEffect,
+} from "vue";
 import { useI18n } from "vue-i18n";
 import type { FormInstance, FormRules } from "element-plus";
 import SettingsRow from "../../components/settings/SettingsRow.vue";
@@ -11,6 +18,7 @@ import {
   scheduleWeekdaysRule,
 } from "../../utils/elFormRules";
 import { validateElForm } from "../../utils/elFormValidate";
+import { useValidatedFormA11y } from "../../composables/useValidatedFormA11y";
 
 type SelectOption = { value: string; label: string; disabled?: boolean };
 type WeekdayOption = { value: number; label: string };
@@ -44,6 +52,7 @@ const emit = defineEmits<{
 const { t } = useI18n();
 
 const ruleFormRef = ref<FormInstance>();
+useValidatedFormA11y(ruleFormRef);
 const validationModel = reactive({
   scheduleWeekdays: [] as number[],
   scheduleHour: 0,
@@ -76,6 +85,30 @@ async function validateEditorForm(): Promise<boolean> {
 }
 
 defineExpose({ validateEditorForm });
+
+let actionBarResizeObserver: ResizeObserver | undefined;
+
+onMounted(() => {
+  const root = ruleFormRef.value?.$el?.closest(
+    ".automation-rule-editor",
+  ) as HTMLElement | null;
+  const bar = root?.querySelector<HTMLElement>(".automation-action-bar");
+  if (!root || !bar) return;
+  const applyInset = () => {
+    root.style.setProperty(
+      "--automation-action-bar-inset",
+      `${Math.ceil(bar.getBoundingClientRect().height) + 32}px`,
+    );
+  };
+  applyInset();
+  actionBarResizeObserver = new ResizeObserver(applyInset);
+  actionBarResizeObserver.observe(bar);
+});
+
+onBeforeUnmount(() => {
+  actionBarResizeObserver?.disconnect();
+  actionBarResizeObserver = undefined;
+});
 
 const canDeleteItem = computed(
   () => !!editor.value.id && editor.value.isNew !== true,
@@ -770,14 +803,6 @@ function onHeaderCommand(command: string | number | object) {
   width: 120px;
   flex: 0 0 120px;
   max-width: 120px;
-}
-
-.automation-inline-form-item {
-  margin-bottom: 0 !important;
-}
-
-.automation-name-form-item {
-  margin-bottom: 0 !important;
 }
 
 .automation-inline-form-item :deep(.el-form-item__content) {

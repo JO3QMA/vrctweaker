@@ -33,9 +33,30 @@ function rangeHintIdsInFormItem(formItemEl: HTMLElement): string[] {
 }
 
 function findControlsInFormItem(formItemEl: HTMLElement): HTMLElement[] {
+  const inputNumberInputs = formItemEl.querySelectorAll<HTMLElement>(
+    ".el-input-number input:not([type='hidden'])",
+  );
+  if (inputNumberInputs.length > 0) {
+    return Array.from(inputNumberInputs);
+  }
   return Array.from(
     formItemEl.querySelectorAll<HTMLElement>(FOCUSABLE_CONTROL_SELECTOR),
   );
+}
+
+function applyControlDisabledA11y(control: HTMLElement): void {
+  const disabled =
+    control instanceof HTMLInputElement ||
+    control instanceof HTMLTextAreaElement ||
+    control instanceof HTMLSelectElement ||
+    control instanceof HTMLButtonElement
+      ? control.disabled
+      : control.hasAttribute("disabled");
+  if (disabled) {
+    control.setAttribute("aria-disabled", "true");
+  } else {
+    control.removeAttribute("aria-disabled");
+  }
 }
 
 function describedByForField(
@@ -111,13 +132,18 @@ export async function syncValidatedFormFieldA11y(
       for (const control of controls) {
         control.setAttribute("aria-invalid", "true");
         applyControlDescribedBy(control, describedBy);
+        applyControlDisabledA11y(control);
       }
     } else {
       const describedBy = describedByForField(undefined, hintIds);
       for (const control of controls) {
         control.removeAttribute("aria-invalid");
         applyControlDescribedBy(control, describedBy);
+        applyControlDisabledA11y(control);
       }
+      const staleErrorId = formFieldValidationErrorId(scopeId, prop);
+      const stale = itemEl.querySelector(`#${CSS.escape(staleErrorId)}`);
+      stale?.removeAttribute("id");
     }
   }
 }
