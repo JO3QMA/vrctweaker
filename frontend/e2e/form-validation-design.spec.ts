@@ -52,7 +52,9 @@ test.describe("Form validation layout (design QA)", () => {
     expect(await row.evaluate((el) => getComputedStyle(el).flexWrap)).toBe(
       "wrap",
     );
-    const rowWidth = await row.evaluate((el) => el.getBoundingClientRect().width);
+    const rowWidth = await row.evaluate(
+      (el) => el.getBoundingClientRect().width,
+    );
     expect(rowWidth).toBeLessThanOrEqual(600);
   });
 
