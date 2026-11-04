@@ -74,8 +74,10 @@ describe("AppUpdateDialog", () => {
   });
 
   it("applies brand focus ring styles to teleported dialog buttons", async () => {
+    expect(appUpdateDialogSource).toContain(".app-update-dialog");
+    expect(appUpdateDialogSource).toContain(".dialog-actions");
     expect(appUpdateDialogSource).toContain(
-      ".app-update-dialog .el-button:focus-visible",
+      ".el-button.is-text:not(.is-disabled):focus-visible",
     );
     expect(appUpdateDialogSource).toContain("outline: 2px solid #5c9ce6");
     expect(appUpdateDialogSource).toContain("outline-offset: 2px");

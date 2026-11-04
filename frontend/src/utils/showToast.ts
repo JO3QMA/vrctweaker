@@ -13,6 +13,16 @@ function applyToastStackZIndex(): void {
   }
 }
 
+/** ElMessage sets z-index from ConfigProvider counter on mount; patch after paint. */
+function scheduleApplyToastStackZIndex(): void {
+  const run = (): void => applyToastStackZIndex();
+  queueMicrotask(run);
+  requestAnimationFrame(() => {
+    run();
+    requestAnimationFrame(run);
+  });
+}
+
 function toastOptions(message: string): MessageParams {
   return {
     message,
@@ -41,7 +51,7 @@ function show(variant: ToastVariant, message: string): MessageHandler {
       throw new Error(`Unknown toast variant: ${String(_exhaustive)}`);
     }
   }
-  queueMicrotask(applyToastStackZIndex);
+  scheduleApplyToastStackZIndex();
   return handler;
 }
 

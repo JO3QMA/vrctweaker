@@ -132,9 +132,18 @@ async function onOpenRelease() {
 }
 </style>
 
-<!-- Dialog footer is teleported; focus ring must be global. -->
+<!-- Dialog footer is teleported; focus ring must be global (beat EP .is-text:focus-visible). -->
 <style>
-.app-update-dialog .el-button:focus-visible {
+.app-update-dialog .dialog-actions .el-button:focus-visible,
+.app-update-dialog
+  .dialog-actions
+  .el-button.is-text:not(.is-disabled):focus-visible,
+.app-update-dialog
+  .dialog-actions
+  .el-button.is-link:not(.is-disabled):focus-visible,
+.app-update-dialog
+  .dialog-actions
+  .el-button.is-plain:not(.is-disabled):focus-visible {
   outline: 2px solid #5c9ce6;
   outline-offset: 2px;
 }
