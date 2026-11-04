@@ -9,6 +9,14 @@ import {
   ElSwitch,
 } from "element-plus";
 
+import "element-plus/es/components/checkbox/style/css";
+import "element-plus/es/components/form/style/css";
+import "element-plus/es/components/form-item/style/css";
+import "element-plus/es/components/input/style/css";
+import "element-plus/es/components/option/style/css";
+import "element-plus/es/components/select/style/css";
+import "element-plus/es/components/switch/style/css";
+
 /** String-template stories do not get unplugin-vue-components transforms. */
 export function registerElementPlusFormComponents(app: App): void {
   app.component(ElInput.name!, ElInput);
