@@ -287,6 +287,8 @@
     "noData": "沒有資料",
     "noEncounters": "沒有相遇紀錄。",
     "noEncountersHint": "在設定中指定 output_log 資料夾並遊玩 VRChat 後會出現相遇紀錄。",
+    "encounterTableEmpty": "還沒有相遇紀錄",
+    "encounterTableEmptyFiltered": "沒有符合條件的相遇紀錄",
     "noDataHint": "遊玩時間從 output_log 匯總。請先設定記錄資料夾並啟動 VRChat。",
     "colJoin": "進入",
     "colLeave": "離開",
@@ -301,6 +303,7 @@
     "invalidQuery": "無法顯示。請檢查 URL 中的 kind / vrcUserId / worldId。",
     "loading": "載入中…",
     "empty": "沒有符合的相遇紀錄。",
+    "tableEmpty": "還沒有相遇紀錄",
     "fetchFailedGeneric": "無法載入資料。",
     "colJoin": "進入",
     "colLeave": "離開",
@@ -311,6 +314,7 @@
   },
   "friendAvatars": {
     "empty": "尚無從日誌記錄的 Avatar。",
+    "tableEmpty": "還沒有 Avatar",
     "fetchFailedGeneric": "無法載入 Avatar 列表。",
     "colAvatarName": "Avatar 名稱",
     "colCachePath": "本機快取",
@@ -386,6 +390,8 @@
     "kindScript": "腳本",
     "sectionBasics": "基本",
     "enabled": "啟用",
+    "enableItem": "啟用{name}",
+    "enableThisRule": "啟用此規則",
     "sectionWhen": "何時（觸發）",
     "sectionIf": "如果（條件）",
     "sectionThen": "則（動作）",
@@ -429,6 +435,7 @@
     "scriptSource": "腳本",
     "scriptPlaceholder": "使用 tweaker.subscribe(...) 訂閱事件",
     "runLogTitle": "執行記錄",
+    "runLogTableEmpty": "還沒有執行記錄",
     "runLogLoadError": "無法取得執行記錄",
     "runLogAt": "時間",
     "runLogEvent": "事件",
@@ -477,7 +484,9 @@
     "colPackageGo": "套件",
     "colVersion": "版本",
     "colLicense": "授權",
-    "colRepo": "儲存庫"
+    "colRepo": "儲存庫",
+    "tableEmptyFrontend": "還沒有可顯示的前端套件",
+    "tableEmptyBackend": "還沒有可顯示的後端套件"
   },
   "settings": {
     "title": "設定",

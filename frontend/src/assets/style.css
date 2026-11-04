@@ -64,6 +64,11 @@
   --button-min-width: 96px; /* 設定行のボタン最小幅 */
   --path-input-min-width: 240px; /* これより狭いパス入力はボタンを下へ折る */
 
+  /* Element Plus overlay stack (see constants/elementPlusStack.ts) */
+  --vt-z-index-onboarding: 1500;
+  --vt-z-index-element-plus-base: 2000;
+  --vt-z-index-toast: 4000;
+
   /* Spacing scale (ADR 0018) */
   --space-4: 4px;
   --space-8: 8px;
@@ -1038,3 +1043,14 @@ a:hover {
 .settings-view .login-error {
   margin-bottom: var(--space-form-field);
 }
+
+/* Empty table placeholder height (8px grid; EP default is 60px). */
+.el-table__empty-block {
+  min-height: 56px;
+}
+
+.el-table__empty-text {
+  line-height: 56px;
+}
+
+/* App toast stack: z-index is set in showToast (EP inline z-index ignores MessageOptions.zIndex). */

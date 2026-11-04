@@ -66,6 +66,15 @@ describe("AutomationRuleEditor", () => {
     ).toHaveLength(1);
   });
 
+  it("uses enableThisRule label on the header switch", async () => {
+    const wrapper = mount(Harness);
+    await flushPromises();
+    const input = wrapper.get(
+      '[data-testid="editor-enabled"] input[role="switch"]',
+    );
+    expect(input.attributes("aria-label")).toBe("このルールを有効にする");
+  });
+
   it("labels an unknown trigger and keeps that option disabled", async () => {
     const unknown = dtoToEditor({
       ...item,

@@ -1,11 +1,13 @@
 <template>
   <el-dialog
     v-model="dialogVisible"
+    class="app-update-dialog"
     :title="t('appUpdate.title')"
     width="520px"
     :close-on-click-modal="false"
     :show-close="false"
     :close-on-press-escape="false"
+    :trap-focus="true"
     data-testid="app-update-dialog"
   >
     <p class="version-line text-body-sm">
@@ -26,7 +28,12 @@
       >{{ status.releaseNotes }}</pre>
     <template #footer>
       <div class="dialog-actions">
-        <VtButton variant="tertiary" :disabled="applying" @click="onLater">
+        <VtButton
+          variant="tertiary"
+          data-testid="app-update-later"
+          :disabled="applying"
+          @click="onLater"
+        >
           {{ t("appUpdate.later") }}
         </VtButton>
         <VtButton
@@ -122,5 +129,22 @@ async function onOpenRelease() {
   flex-wrap: wrap;
   gap: var(--space-action-group);
   justify-content: flex-end;
+}
+</style>
+
+<!-- Dialog footer is teleported; focus ring must be global (beat EP .is-text:focus-visible). -->
+<style>
+.app-update-dialog .dialog-actions .el-button:focus-visible,
+.app-update-dialog
+  .dialog-actions
+  .el-button.is-text:not(.is-disabled):focus-visible,
+.app-update-dialog
+  .dialog-actions
+  .el-button.is-link:not(.is-disabled):focus-visible,
+.app-update-dialog
+  .dialog-actions
+  .el-button.is-plain:not(.is-disabled):focus-visible {
+  outline: 2px solid #5c9ce6;
+  outline-offset: 2px;
 }
 </style>

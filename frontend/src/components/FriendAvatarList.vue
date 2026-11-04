@@ -3,10 +3,15 @@
     <template v-if="canLoad">
       <div v-if="loading" class="message">{{ t("common.loading") }}</div>
       <VtAlert v-else-if="error" variant="danger" :title="error" />
-      <div v-else-if="rows.length === 0" class="message">
-        {{ t("friendAvatars.empty") }}
-      </div>
-      <el-table v-else :data="rows" style="width: 100%" size="small" stripe>
+      <el-table
+        v-else
+        :data="rows"
+        style="width: 100%"
+        size="small"
+        stripe
+        :aria-label="t('userDetail.tabAvatars')"
+        :empty-text="t('friendAvatars.tableEmpty')"
+      >
         <el-table-column
           :label="t('friendAvatars.colAvatarName')"
           min-width="200"

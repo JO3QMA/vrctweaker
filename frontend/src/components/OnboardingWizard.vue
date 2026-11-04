@@ -707,7 +707,7 @@ async function changeSteamPath(): Promise<void> {
 .onboarding-wizard {
   position: fixed;
   inset: 0;
-  z-index: 2000;
+  z-index: var(--vt-z-index-onboarding);
   display: flex;
   flex-direction: column;
   background: var(--color-bg-base);
