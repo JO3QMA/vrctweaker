@@ -1,5 +1,9 @@
 import type { FormInstance } from "element-plus";
 import { nextTick } from "vue";
+import {
+  scrollFormFieldIntoView,
+  syncValidatedFormFieldA11y,
+} from "./formFieldA11y";
 
 type InvalidFieldsMap = Record<string, unknown> | undefined;
 
@@ -16,8 +20,9 @@ async function focusFirstInvalidField(
 ): Promise<void> {
   const firstProp = invalidFields ? Object.keys(invalidFields)[0] : undefined;
   if (firstProp) {
-    formRef.scrollToField(firstProp);
+    scrollFormFieldIntoView(formRef, firstProp);
   }
+  await syncValidatedFormFieldA11y(formRef);
   await nextTick();
   const formEl = formRef.$el as HTMLElement | undefined;
   if (!formEl) return;
@@ -35,6 +40,7 @@ export async function validateElForm(
   if (!formRef) return false;
   try {
     await formRef.validate();
+    await syncValidatedFormFieldA11y(formRef);
     return true;
   } catch (failure) {
     await focusFirstInvalidField(formRef, invalidFieldsFromFailure(failure));

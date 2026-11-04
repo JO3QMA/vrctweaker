@@ -265,6 +265,7 @@ function onHeaderCommand(command: string | number | object) {
                       :max="23"
                       :disabled="disabled"
                       :aria-label="t('automation.scheduleHour')"
+                      data-testid="schedule-hour-input"
                     />
                   </el-form-item>
                   <span class="automation-time__sep" aria-hidden="true">:</span>
@@ -278,6 +279,7 @@ function onHeaderCommand(command: string | number | object) {
                       :max="59"
                       :disabled="disabled"
                       :aria-label="t('automation.scheduleMinute')"
+                      data-testid="schedule-minute-input"
                     />
                   </el-form-item>
                 </div>
@@ -754,10 +756,14 @@ function onHeaderCommand(command: string | number | object) {
 
 .automation-time {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   flex-wrap: nowrap;
   gap: var(--space-action-group);
   max-width: 100%;
+}
+
+.automation-time .automation-inline-form-item.is-error {
+  scroll-margin-bottom: 88px;
 }
 
 .automation-time :deep(.el-input-number) {
