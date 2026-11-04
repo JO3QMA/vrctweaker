@@ -26,7 +26,7 @@ description: >-
 
 ## アイコン
 
-- `@element-plus/icons-vue` は `main.ts` で全コンポーネント登録済み。テンプレートでは `<Plus />` のように **PascalCase タグ**で使う（名前は [Icons 一覧](https://element-plus.org/en-US/component/icon.html) に従う）。
+- `@element-plus/icons-vue` は利用箇所で **named import** する（例: `import { Search } from '@element-plus/icons-vue'`）。`<VtIcon>` でラップする（Iconography ADR）。
 
 ## 既存パターン
 
