@@ -789,9 +789,10 @@ function onHeaderCommand(command: string | number | object) {
 
 .automation-time {
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
   flex-wrap: nowrap;
-  gap: var(--space-action-group);
+  gap: var(--space-8);
   max-width: 100%;
 }
 
@@ -810,7 +811,7 @@ function onHeaderCommand(command: string | number | object) {
 }
 
 .automation-time__sep {
-  color: var(--color-text-secondary);
+  display: none;
 }
 
 .automation-add-action {

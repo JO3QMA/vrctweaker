@@ -166,7 +166,7 @@ describe("resolution-fields responsive layout", () => {
     ).toContain("--automation-action-bar-inset");
   });
 
-  it("uses 22px margin on automation inline form items", () => {
+  it("uses 8px margin on automation inline form items", () => {
     const root = document.createElement("div");
     root.className = "automation-rule-editor";
     const form = document.createElement("form");
@@ -177,7 +177,7 @@ describe("resolution-fields responsive layout", () => {
     form.append(item);
     root.append(form);
     document.body.append(root);
-    expect(getComputedStyle(item).marginBottom).toBe("22px");
+    expect(getComputedStyle(item).marginBottom).toBe("var(--space-8)");
     root.remove();
   });
 });

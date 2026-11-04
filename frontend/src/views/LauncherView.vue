@@ -1546,6 +1546,12 @@ onBeforeRouteLeave(async (_to, _from, next) => {
   flex-wrap: wrap;
 }
 
+.sub-options:has(.resolution-fields) {
+  margin-bottom: 0;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
 .nested-form-item {
   margin-bottom: var(--space-action-group) !important;
 }
@@ -1599,6 +1605,6 @@ onBeforeRouteLeave(async (_to, _from, next) => {
 .launch-args-advanced {
   display: flex;
   flex-direction: column;
-  gap: var(--space-inline-tight);
+  gap: var(--space-8);
 }
 </style>
