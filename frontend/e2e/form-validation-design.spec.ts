@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { getMockWailsInitScript } from "./fixtures/mock-wails";
 
 const FIELD_GAP_PX = 8;
+const INPUT_TO_ERROR_PX = 4;
 const GAP_TOLERANCE_PX = 1;
 
 test.beforeEach(async ({ page }) => {
@@ -13,10 +14,41 @@ function expectGapPx(actual: number, expected = FIELD_GAP_PX) {
   expect(actual).toBeLessThanOrEqual(expected + GAP_TOLERANCE_PX);
 }
 
-/** After error margin, the next field should sit flush (margin supplies the 8px band). */
-function expectFlushAfterErrorMargin(actual: number) {
-  expect(actual).toBeGreaterThanOrEqual(-3);
-  expect(actual).toBeLessThanOrEqual(3);
+function expectInputToErrorGap(actual: number) {
+  expect(actual).toBeGreaterThanOrEqual(-GAP_TOLERANCE_PX);
+  expect(actual).toBeLessThanOrEqual(INPUT_TO_ERROR_PX + GAP_TOLERANCE_PX);
+}
+
+async function expectInlineErrorInputSpacing(
+  page: import("@playwright/test").Page,
+  formItem: import("@playwright/test").Locator,
+) {
+  expectInputToErrorGap(
+    await measureInputControlBottomToErrorTop(page, formItem),
+  );
+  await expect(formItem.locator(".el-form-item__error")).toHaveCSS(
+    "padding-top",
+    `${INPUT_TO_ERROR_PX}px`,
+  );
+}
+
+async function measureAutomationHourToMinuteSpacing(
+  page: import("@playwright/test").Page,
+): Promise<{ axis: "x" | "y"; gap: number }> {
+  return page.evaluate(() => {
+    const hour = document
+      .querySelector('[data-testid="schedule-hour-input"]')!
+      .closest(".el-form-item")!;
+    const minute = document
+      .querySelector('[data-testid="schedule-minute-input"]')!
+      .closest(".el-form-item")!;
+    const h = hour.getBoundingClientRect();
+    const m = minute.getBoundingClientRect();
+    if (m.left > h.right + 1) {
+      return { axis: "x" as const, gap: m.left - h.right };
+    }
+    return { axis: "y" as const, gap: m.top - h.bottom };
+  });
 }
 
 async function openLauncherResolution(page: import("@playwright/test").Page) {
@@ -73,34 +105,115 @@ async function measureVerticalGap(
   );
 }
 
-/** Error line box includes extra descent; include the error's margin in the gap. */
-async function measureVerticalGapAfterFormError(
+async function measureInputControlBottomToErrorTop(
   page: import("@playwright/test").Page,
   formItem: import("@playwright/test").Locator,
-  topLocator: import("@playwright/test").Locator,
 ): Promise<number> {
-  const itemHandle = await formItem.elementHandle();
-  const topHandle = await topLocator.elementHandle();
-  expect(itemHandle).toBeTruthy();
-  expect(topHandle).toBeTruthy();
-  return page.evaluate(
-    ([item, top]) => {
-      const err = (item as HTMLElement).querySelector(
-        ".el-form-item__error",
-      ) as HTMLElement | null;
-      if (!err) {
-        return -1;
+  const handle = await formItem.elementHandle();
+  expect(handle).toBeTruthy();
+  return page.evaluate((item) => {
+    const root = item as HTMLElement;
+    const control =
+      root.querySelector(".el-input-number") ??
+      root.querySelector(".el-checkbox-group");
+    const err = root.querySelector(".el-form-item__error");
+    if (!control || !err) {
+      return -1;
+    }
+    return (
+      err.getBoundingClientRect().top - control.getBoundingClientRect().bottom
+    );
+  }, handle!);
+}
+
+async function expectErrorBelowControl(
+  page: import("@playwright/test").Page,
+  formItem: import("@playwright/test").Locator,
+) {
+  const handle = await formItem.elementHandle();
+  expect(handle).toBeTruthy();
+  const layout = await page.evaluate((item) => {
+    const root = item as HTMLElement;
+    const control = root.querySelector(".el-input-number")!;
+    const err = root.querySelector(".el-form-item__error")!;
+    const c = control.getBoundingClientRect();
+    const e = err.getBoundingClientRect();
+    return {
+      below: e.top >= c.bottom - 1,
+      alignedLeft: Math.abs(e.left - c.left) <= 4,
+    };
+  }, handle!);
+  expect(layout.below).toBe(true);
+  expect(layout.alignedLeft).toBe(true);
+}
+
+async function triggerLauncherScreenWidthRangeError(
+  page: import("@playwright/test").Page,
+) {
+  await openLauncherResolution(page);
+  await page.evaluate(async () => {
+    type VueNode = {
+      setupState?: Record<string, unknown>;
+      parent?: VueNode;
+    };
+    const findLauncherStateInDom = (): Record<string, unknown> | null => {
+      for (const el of document.querySelectorAll("*")) {
+        let vnode = (el as HTMLElement & { __vueParentComponent?: VueNode })
+          .__vueParentComponent;
+        let depth = 0;
+        while (vnode && depth < 32) {
+          const state = vnode.setupState;
+          if (state?.launcherFormRef && state?.launcherFormModel) {
+            return state;
+          }
+          vnode = vnode.parent;
+          depth += 1;
+        }
       }
-      const marginBottom = parseFloat(getComputedStyle(err).marginBottom) || 0;
-      const from = err.getBoundingClientRect().bottom + marginBottom;
-      return (top as HTMLElement).getBoundingClientRect().top - from;
-    },
-    [itemHandle!, topHandle!],
-  );
+      return null;
+    };
+    const launcherState = findLauncherStateInDom();
+    if (!launcherState) {
+      throw new Error("launcher form state not found");
+    }
+    const model = launcherState.launcherFormModel as { screenWidth: number };
+    model.screenWidth = 1279;
+    const rawRef = launcherState.launcherFormRef as
+      | {
+          value?: {
+            validateField: (p: string) => Promise<void>;
+            validate: () => Promise<boolean>;
+          };
+        }
+      | {
+          validateField?: (p: string) => Promise<void>;
+          validate?: () => Promise<boolean>;
+        };
+    const form =
+      rawRef &&
+      "value" in rawRef &&
+      rawRef.value &&
+      typeof rawRef.value.validateField === "function"
+        ? rawRef.value
+        : rawRef;
+    if (!form || typeof form.validateField !== "function") {
+      throw new Error("launcher form ref missing validateField");
+    }
+    await form.validateField("screenWidth").catch(() => {});
+    if (typeof form.validate === "function") {
+      await form.validate().catch(() => {});
+    }
+  });
+  const widthItem = page
+    .locator(".resolution-form-item")
+    .filter({ has: page.getByTestId("screen-width-input") });
+  await expect(widthItem).toHaveClass(/is-error/);
+  await expect(widthItem.locator(".el-form-item__error")).not.toBeEmpty();
+  return widthItem;
 }
 
 test.describe("Form validation layout (design QA)", () => {
-  test("launcher resolution hint uses grid below inputs at 1280px", async ({
+  test("launcher resolution hint uses flex column below inputs at 1280px", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
@@ -111,7 +224,7 @@ test.describe("Form validation layout (design QA)", () => {
       .first();
     await expect(content).toBeVisible();
     expect(await content.evaluate((el) => getComputedStyle(el).display)).toBe(
-      "grid",
+      "flex",
     );
 
     const hintBelow = await page
@@ -158,6 +271,41 @@ test.describe("Form validation layout (design QA)", () => {
       });
       expect(gap).toBeGreaterThanOrEqual(0);
       expectGapPx(gap);
+    });
+
+    test(`launcher resolution width error spacing at ${viewport.name}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({
+        width: viewport.width,
+        height: viewport.height,
+      });
+      const widthItem = await triggerLauncherScreenWidthRangeError(page);
+
+      expectInputToErrorGap(
+        await measureInputControlBottomToErrorTop(page, widthItem),
+      );
+      await expectErrorBelowControl(page, widthItem);
+
+      const metrics = await page.evaluate(() => {
+        const widthItem = document
+          .querySelector('[data-testid="screen-width-input"]')!
+          .closest(".el-form-item")!;
+        const err = widthItem.querySelector(".el-form-item__error")!;
+        const height = document.querySelector(
+          '[data-testid="screen-height-input"]',
+        )!;
+        const errBottom = err.getBoundingClientRect().bottom;
+        const heightTop = height.getBoundingClientRect().top;
+        const itemBottom = widthItem.getBoundingClientRect().bottom;
+        return {
+          errorToHeight: heightTop - errBottom,
+          itemToHeight: heightTop - itemBottom,
+          overlapPx: errBottom - heightTop,
+        };
+      });
+      expect(metrics.overlapPx).toBeLessThanOrEqual(GAP_TOLERANCE_PX);
+      expectGapPx(metrics.itemToHeight);
     });
   }
 
@@ -243,21 +391,20 @@ test.describe("Form validation layout (design QA)", () => {
       await expect(weekdayItem).toHaveClass(/is-error/);
       await expect(weekdayItem.locator(".el-form-item__error")).toBeVisible();
 
+      await expectInlineErrorInputSpacing(page, weekdayItem);
+
       const timeRow = page
         .getByTestId("automation-section-when")
         .locator(".setting-row")
         .filter({ has: page.getByTestId("schedule-hour-input") });
 
-      const gap = await measureVerticalGapAfterFormError(
+      const gap = await measureVerticalGap(
         page,
-        weekdayItem,
+        weekdayItem.locator(".el-form-item__error"),
         timeRow,
       );
-      expectFlushAfterErrorMargin(gap);
-      await expect(weekdayItem.locator(".el-form-item__error")).toHaveCSS(
-        "margin-bottom",
-        `${FIELD_GAP_PX}px`,
-      );
+      expect(gap).toBeGreaterThanOrEqual(FIELD_GAP_PX - GAP_TOLERANCE_PX);
+      expect(gap).toBeLessThanOrEqual(FIELD_GAP_PX + 3);
     });
 
     test(`automation schedule weekday control to time row is ${FIELD_GAP_PX}px without error at ${viewport.name}`, async ({
@@ -292,7 +439,7 @@ test.describe("Form validation layout (design QA)", () => {
       expectGapPx(gap);
     });
 
-    test(`automation schedule hour error to minute field is ${FIELD_GAP_PX}px at ${viewport.name}`, async ({
+    test(`automation schedule hour error layout at ${viewport.name}`, async ({
       page,
     }) => {
       await page.setViewportSize({
@@ -319,20 +466,27 @@ test.describe("Form validation layout (design QA)", () => {
         .filter({ has: page.getByTestId("schedule-hour-input") });
       await expect(hourItem).toHaveClass(/is-error/);
 
-      const minuteItem = page
-        .locator(".automation-inline-form-item")
-        .filter({ has: page.getByTestId("schedule-minute-input") });
+      await expectInlineErrorInputSpacing(page, hourItem);
+      await expectErrorBelowControl(page, hourItem);
 
-      const gap = await measureVerticalGapAfterFormError(
-        page,
-        hourItem,
-        minuteItem,
+      const timeFlexGap = await page
+        .locator(".automation-time")
+        .evaluate((el) => {
+          return parseFloat(
+            getComputedStyle(el).columnGap || getComputedStyle(el).gap,
+          );
+        });
+      expectGapPx(timeFlexGap);
+
+      const spacing = await measureAutomationHourToMinuteSpacing(page);
+      expect(spacing.gap).toBeGreaterThanOrEqual(
+        FIELD_GAP_PX - GAP_TOLERANCE_PX,
       );
-      expectFlushAfterErrorMargin(gap);
-      await expect(hourItem.locator(".el-form-item__error")).toHaveCSS(
-        "margin-bottom",
-        `${FIELD_GAP_PX}px`,
-      );
+      if (spacing.axis === "x") {
+        expect(spacing.gap).toBeGreaterThan(FIELD_GAP_PX - GAP_TOLERANCE_PX);
+      } else {
+        expectGapPx(spacing.gap);
+      }
     });
 
     test(`automation schedule hour control to minute field is ${FIELD_GAP_PX}px without error at ${viewport.name}`, async ({
@@ -349,15 +503,66 @@ test.describe("Form validation layout (design QA)", () => {
         .first()
         .click();
 
-      const hourItem = page
-        .locator(".automation-inline-form-item")
-        .filter({ has: page.getByTestId("schedule-hour-input") });
-      const minuteItem = page
-        .locator(".automation-inline-form-item")
-        .filter({ has: page.getByTestId("schedule-minute-input") });
+      const spacing = await measureAutomationHourToMinuteSpacing(page);
+      expect(spacing.gap).toBeGreaterThanOrEqual(
+        FIELD_GAP_PX - GAP_TOLERANCE_PX,
+      );
+      if (spacing.axis === "y") {
+        expectGapPx(spacing.gap);
+      }
+    });
 
-      const gap = await measureVerticalGap(page, hourItem, minuteItem);
-      expectGapPx(gap);
+    test(`automation schedule time row keeps row padding and divider at ${viewport.name}`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({
+        width: viewport.width,
+        height: viewport.height,
+      });
+      await openAutomationScheduleEditor(page);
+
+      const whenSection = page.getByTestId("automation-section-when");
+      const triggerLabel = whenSection
+        .locator(".setting-row")
+        .first()
+        .locator(".setting-row__label");
+      const timeRow = whenSection
+        .locator(".setting-row")
+        .filter({ has: page.getByTestId("schedule-hour-input") });
+      const timeLabel = timeRow.locator(".setting-row__label");
+
+      const timeRowStyle = await timeRow.evaluate((el) => {
+        const style = getComputedStyle(el);
+        return {
+          paddingTop: parseFloat(style.paddingTop),
+          borderTopWidth: parseFloat(style.borderTopWidth),
+        };
+      });
+      expect(timeRowStyle.paddingTop).toBe(16);
+      expect(timeRowStyle.borderTopWidth).toBe(1);
+
+      const fonts = await page.evaluate(
+        ([trigger, time]) => {
+          const t = getComputedStyle(trigger as Element);
+          const s = getComputedStyle(time as Element);
+          return {
+            trigger: {
+              size: t.fontSize,
+              weight: t.fontWeight,
+              lineHeight: t.lineHeight,
+            },
+            time: {
+              size: s.fontSize,
+              weight: s.fontWeight,
+              lineHeight: s.lineHeight,
+            },
+          };
+        },
+        [await triggerLabel.elementHandle(), await timeLabel.elementHandle()],
+      );
+      expect(fonts.time.size).toBe(fonts.trigger.size);
+      expect(fonts.time.weight).toBe(fonts.trigger.weight);
+      expect(fonts.time.lineHeight).toBe(fonts.trigger.lineHeight);
     });
   }
 });

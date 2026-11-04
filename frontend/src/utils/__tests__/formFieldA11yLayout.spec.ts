@@ -51,13 +51,13 @@ const GridHintForm = defineComponent({
 });
 
 describe("vt-form-item-with-range-hint layout", () => {
-  it("declares grid layout on form item content in style.css", () => {
-    expect(declarationValue("vt-form-item-with-range-hint", "display")).toBe(
-      "grid",
-    );
+  it("declares flex column layout on form item content in style.css", () => {
+    expect(
+      declarationValue("vt-form-item-with-range-hint", "flex-direction"),
+    ).toBe("column");
   });
 
-  it("uses CSS grid on el-form-item__content so hint is below the control", async () => {
+  it("uses flex column on el-form-item__content so hint is below the control", async () => {
     const wrapper = mount(GridHintForm, {
       global: { plugins: [ElementPlus] },
       attachTo: document.body,
@@ -69,7 +69,8 @@ describe("vt-form-item-with-range-hint layout", () => {
       ".vt-form-item-with-range-hint .el-form-item__content",
     ) as HTMLElement | null;
     expect(content).toBeTruthy();
-    expect(getComputedStyle(content!).display).toBe("grid");
+    expect(getComputedStyle(content!).display).toBe("flex");
+    expect(getComputedStyle(content!).flexDirection).toBe("column");
 
     const hint = wrapper.get(".form-field-range-hint").element as HTMLElement;
     const inputWrap = wrapper.get(".el-input-number").element as HTMLElement;

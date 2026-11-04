@@ -789,9 +789,9 @@ function onHeaderCommand(command: string | number | object) {
 
 .automation-time {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: flex-start;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: var(--space-8);
   max-width: 100%;
 }
@@ -811,7 +811,13 @@ function onHeaderCommand(command: string | number | object) {
 }
 
 .automation-time__sep {
-  display: none;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  align-self: flex-start;
+  height: var(--el-component-size);
+  line-height: var(--el-component-size);
+  color: var(--color-text-secondary);
 }
 
 .automation-add-action {

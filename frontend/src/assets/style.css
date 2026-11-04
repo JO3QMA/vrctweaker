@@ -1067,18 +1067,11 @@ a:hover {
 
 .automation-rule-editor
   .vt-validated-form.el-form
-  .el-form-item.automation-inline-form-item.is-error {
-  margin-bottom: 0;
-  display: flow-root;
-}
-
-.automation-rule-editor
-  .vt-validated-form.el-form
-  .el-form-item.automation-inline-form-item.is-error
-  .el-form-item__error {
-  margin-bottom: var(--space-8);
-  overflow: hidden;
-  padding-top: 2px;
+  .el-form-item.automation-inline-form-item
+  > .el-form-item__content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .automation-rule-editor
@@ -1086,29 +1079,22 @@ a:hover {
   .el-form-item.automation-inline-form-item
   .el-form-item__error {
   position: static;
-  line-height: 1;
-  padding-top: 2px;
+  padding-top: var(--space-4);
+  line-height: 16px;
+  margin-bottom: 0;
 }
 
-.automation-rule-editor
-  .automation-card
-  .setting-row:has(.automation-inline-form-item) {
+.automation-rule-editor .automation-card .setting-row:has(.el-checkbox-group) {
   padding-bottom: 0;
 }
 
 .automation-rule-editor
   .automation-card
-  .setting-row:has(.automation-inline-form-item)
-  + .setting-row {
-  padding-top: 0;
-  border-top: none;
-}
-
-.automation-rule-editor
-  .automation-card
-  .setting-row:has(.automation-inline-form-item)
-  + .setting-row:not(:has(.automation-inline-form-item)) {
-  padding-top: var(--space-block);
+  .setting-row:has(.automation-time)
+  .setting-row__label {
+  font-size: var(--font-size-14);
+  font-weight: 400;
+  line-height: var(--line-height-normal);
 }
 
 .automation-rule-editor
@@ -1120,11 +1106,6 @@ a:hover {
 
 .automation-rule-editor .automation-time {
   margin-bottom: var(--space-8);
-}
-
-.automation-rule-editor
-  .automation-time:has(.automation-inline-form-item.is-error) {
-  gap: 0;
 }
 
 .automation-rule-editor .automation-editor__scroll {
@@ -1140,17 +1121,17 @@ a:hover {
 }
 
 .el-form-item.vt-form-item-with-range-hint > .el-form-item__content {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto auto;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
   min-width: 0;
 }
 
 .el-form-item.vt-form-item-with-range-hint
   > .el-form-item__content
   > .el-input-number {
-  grid-row: 1;
+  order: 1;
   width: 100%;
   max-width: 100%;
 }
@@ -1158,15 +1139,28 @@ a:hover {
 .el-form-item.vt-form-item-with-range-hint
   > .el-form-item__content
   > .el-form-item__error {
-  grid-row: 2;
+  order: 2;
+  position: static;
+  padding-top: 0;
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-8);
+  line-height: 16px;
+  visibility: visible;
 }
 
 .el-form-item.vt-form-item-with-range-hint
   > .el-form-item__content
   > .form-field-range-hint {
-  grid-row: 3;
+  order: 3;
+  margin-top: var(--space-8);
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.el-form-item.vt-form-item-with-range-hint.is-error
+  > .el-form-item__content
+  > .form-field-range-hint {
+  margin-top: 0;
 }
 
 .vt-validated-form .resolution-fields .el-form-item.resolution-form-item,
@@ -1180,7 +1174,7 @@ a:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: var(--space-action-group);
+  gap: var(--space-8);
   max-width: 100%;
   margin-bottom: 0;
 }
@@ -1200,6 +1194,11 @@ a:hover {
 .resolution-fields .resolution-form-item {
   flex: 1 1 120px;
   min-width: 0;
+  max-width: 100%;
+}
+
+.resolution-fields .resolution-form-item.is-error {
+  flex: 1 1 100%;
   max-width: 100%;
 }
 
