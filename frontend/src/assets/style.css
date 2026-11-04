@@ -1059,8 +1059,10 @@ a:hover {
   scroll-margin-bottom: 88px;
 }
 
-.automation-rule-editor .vt-validated-form .automation-inline-form-item {
-  margin-bottom: 22px !important;
+.automation-rule-editor
+  .vt-validated-form.el-form
+  .el-form-item.automation-inline-form-item {
+  margin-bottom: 22px;
 }
 
 .automation-rule-editor .automation-editor__scroll {

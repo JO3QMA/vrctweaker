@@ -951,10 +951,6 @@ onBeforeUnmount(() => {
   gap: var(--space-action-group);
 }
 
-.config-resolution-form-item {
-  margin-bottom: 0 !important;
-}
-
 .config-resolution-form-item :deep(.el-form-item__content) {
   line-height: normal;
 }

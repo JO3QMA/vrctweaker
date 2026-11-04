@@ -1560,8 +1560,11 @@ onBeforeRouteLeave(async (_to, _from, next) => {
   /* layout: global style.css */
 }
 
-.resolution-form-item {
-  margin-bottom: 0 !important;
+.vt-validated-form .resolution-fields .el-form-item.resolution-form-item,
+.vt-validated-form
+  .resolution-fields
+  .el-form-item.config-resolution-form-item {
+  margin-bottom: 0;
 }
 
 .resolution-form-item .el-form-item__content {

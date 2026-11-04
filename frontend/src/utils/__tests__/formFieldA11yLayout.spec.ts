@@ -172,7 +172,8 @@ describe("resolution-fields responsive layout", () => {
     const form = document.createElement("form");
     form.className = "el-form vt-validated-form";
     const item = document.createElement("div");
-    item.className = "el-form-item automation-inline-form-item";
+    item.className =
+      "el-form-item el-form-item--default automation-inline-form-item";
     form.append(item);
     root.append(form);
     document.body.append(root);

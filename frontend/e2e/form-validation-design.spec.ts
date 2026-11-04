@@ -103,4 +103,32 @@ test.describe("Form validation layout (design QA)", () => {
     await expect(inner).toBeDisabled();
     await expect(inner).toHaveAttribute("aria-disabled", "true");
   });
+
+  test("automation schedule inline form items use 22px bottom margin at 600px", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 600, height: 800 });
+    await page.goto("/#/automation");
+    await page.getByTestId("add-item").click();
+    await page.getByTestId("add-rule").click();
+    await expect(page.locator(".rule-editor")).toBeVisible();
+    await page.getByTestId("trigger-type").click();
+    await page
+      .locator(".el-select-dropdown__item")
+      .filter({ hasText: "スケジュール" })
+      .click();
+
+    const margins = await page.evaluate(() => {
+      const items = Array.from(
+        document.querySelectorAll(
+          ".automation-rule-editor .el-form-item.automation-inline-form-item",
+        ),
+      );
+      return items.map((el) => getComputedStyle(el).marginBottom);
+    });
+    expect(margins.length).toBeGreaterThanOrEqual(2);
+    for (const marginBottom of margins) {
+      expect(marginBottom).toBe("22px");
+    }
+  });
 });
