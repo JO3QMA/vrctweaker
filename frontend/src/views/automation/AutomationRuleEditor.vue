@@ -81,11 +81,7 @@ function onHeaderCommand(command: string | number | object) {
           v-model="editor.isEnabled"
           :disabled="disabled"
           data-testid="editor-enabled"
-          :aria-label="
-            t('automation.enableItem', {
-              name: editor.name.trim() || t('automation.ruleNamePh'),
-            })
-          "
+          :aria-label="t('automation.enableThisRule')"
         />
         <el-dropdown
           v-if="canDeleteItem"

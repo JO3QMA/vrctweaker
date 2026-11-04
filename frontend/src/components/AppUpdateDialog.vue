@@ -1,6 +1,7 @@
 <template>
   <el-dialog
     v-model="dialogVisible"
+    class="app-update-dialog"
     :title="t('appUpdate.title')"
     width="520px"
     :close-on-click-modal="false"
@@ -27,7 +28,12 @@
       >{{ status.releaseNotes }}</pre>
     <template #footer>
       <div class="dialog-actions">
-        <VtButton variant="tertiary" :disabled="applying" @click="onLater">
+        <VtButton
+          variant="tertiary"
+          data-testid="app-update-later"
+          :disabled="applying"
+          @click="onLater"
+        >
           {{ t("appUpdate.later") }}
         </VtButton>
         <VtButton
@@ -124,8 +130,11 @@ async function onOpenRelease() {
   gap: var(--space-action-group);
   justify-content: flex-end;
 }
+</style>
 
-:deep(.el-button:focus-visible) {
+<!-- Dialog footer is teleported; focus ring must be global. -->
+<style>
+.app-update-dialog .el-button:focus-visible {
   outline: 2px solid #5c9ce6;
   outline-offset: 2px;
 }

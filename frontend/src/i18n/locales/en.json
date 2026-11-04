@@ -391,6 +391,7 @@
     "sectionBasics": "Basics",
     "enabled": "Enabled",
     "enableItem": "Enable {name}",
+    "enableThisRule": "Enable this rule",
     "sectionWhen": "When (trigger)",
     "sectionIf": "If (conditions)",
     "sectionThen": "Then (actions)",

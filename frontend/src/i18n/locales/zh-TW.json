@@ -391,6 +391,7 @@
     "sectionBasics": "基本",
     "enabled": "啟用",
     "enableItem": "啟用{name}",
+    "enableThisRule": "啟用此規則",
     "sectionWhen": "何時（觸發）",
     "sectionIf": "如果（條件）",
     "sectionThen": "則（動作）",
