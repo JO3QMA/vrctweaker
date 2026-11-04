@@ -1044,7 +1044,9 @@ a:hover {
   margin-bottom: var(--space-form-field);
 }
 
-/* Toast must sit above MessageBox / dialog (design stack). EP sets inline z-index lower. */
-.el-message {
-  z-index: var(--vt-z-index-toast) !important;
+/* Empty table placeholder height (8px grid; EP default is 60px). */
+.el-table__empty-block {
+  min-height: 56px;
 }
+
+/* App toast stack: z-index is set in showToast (EP inline z-index ignores MessageOptions.zIndex). */

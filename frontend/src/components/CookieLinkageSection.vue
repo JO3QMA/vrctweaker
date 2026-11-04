@@ -36,9 +36,7 @@
       </div>
       <div class="cookie-switch-row">
         <div class="cookie-toggle-label">
-          <span id="video-cookie-enable-label">{{
-            t("video.cookieLinkage.enableLabel")
-          }}</span>
+          <span>{{ t("video.cookieLinkage.enableLabel") }}</span>
           <el-text type="info" size="small" class="hint block-hint">{{
             t("video.cookieLinkage.lockHint")
           }}</el-text>
@@ -48,7 +46,7 @@
           class="cookie-switch"
           data-testid="video-cookie-enable"
           :disabled="cookieBusy"
-          aria-labelledby="video-cookie-enable-label"
+          :aria-label="t('video.cookieLinkage.enableLabel')"
           @change="onCookieEnableChange"
         />
       </div>

@@ -390,6 +390,7 @@
     "kindScript": "Script",
     "sectionBasics": "Basics",
     "enabled": "Enabled",
+    "enableItem": "Enable {name}",
     "sectionWhen": "When (trigger)",
     "sectionIf": "If (conditions)",
     "sectionThen": "Then (actions)",

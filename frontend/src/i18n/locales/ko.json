@@ -390,6 +390,7 @@
     "kindScript": "스크립트",
     "sectionBasics": "기본",
     "enabled": "사용",
+    "enableItem": "{name} 사용",
     "sectionWhen": "언제 (트리거)",
     "sectionIf": "만약 (조건)",
     "sectionThen": "그러면 (동작)",

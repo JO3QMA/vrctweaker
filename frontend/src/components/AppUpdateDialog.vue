@@ -124,4 +124,9 @@ async function onOpenRelease() {
   gap: var(--space-action-group);
   justify-content: flex-end;
 }
+
+:deep(.el-button:focus-visible) {
+  outline: 2px solid #5c9ce6;
+  outline-offset: 2px;
+}
 </style>

@@ -390,6 +390,7 @@
     "kindScript": "スクリプト",
     "sectionBasics": "基本",
     "enabled": "有効",
+    "enableItem": "{name}を有効にする",
     "sectionWhen": "いつ（トリガー）",
     "sectionIf": "もし（条件）",
     "sectionThen": "したら（アクション）",

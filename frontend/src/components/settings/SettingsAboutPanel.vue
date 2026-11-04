@@ -42,11 +42,11 @@
         :description="t('settings.updateAutoCheckHint')"
         control="switch"
       >
-        <template #default="{ labelId }">
+        <template #default="{ ariaLabel }">
           <el-switch
             v-model="appUpdateAutoCheck"
             data-testid="settings-app-update-auto-check"
-            :aria-labelledby="labelId"
+            :aria-label="ariaLabel"
             @change="saveAppUpdateAutoCheck"
           />
         </template>

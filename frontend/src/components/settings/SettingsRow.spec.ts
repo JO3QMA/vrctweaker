@@ -20,7 +20,7 @@ describe("SettingsRow", () => {
     const sw = mount(SettingsRow, {
       props: { label: "トレイ", control: "switch" },
       slots: {
-        default: `<el-switch aria-labelledby="x" data-testid="sw" />`,
+        default: `<el-switch data-testid="sw" aria-label="トレイ" />`,
       },
     });
     const num = mount(SettingsRow, {

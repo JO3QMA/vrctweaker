@@ -40,7 +40,7 @@ const rowClass = computed(() => ({
       </p>
     </div>
     <div class="setting-row__control">
-      <slot :label-id="labelId" />
+      <slot :label-id="labelId" :aria-label="label" />
     </div>
   </div>
 </template>

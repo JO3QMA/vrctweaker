@@ -13,5 +13,5 @@ export const Z_INDEX_DIALOG_FIRST = Z_INDEX_ELEMENT_PLUS_BASE + 1;
 /** MessageBox uses the same EP z-index counter; opens above an open dialog when shown later. */
 export const Z_INDEX_MESSAGEBOX_TYPICAL = Z_INDEX_ELEMENT_PLUS_BASE + 2;
 
-/** Toast (`ElMessage`) — enforced in `style.css` so it stays above MessageBox. */
+/** Toast (`ElMessage`) — applied in showToast (see utils/showToast.ts). */
 export const Z_INDEX_TOAST = 4000;

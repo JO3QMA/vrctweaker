@@ -1,23 +1,48 @@
 import { ElMessage } from "element-plus";
-import type { MessageHandler } from "element-plus";
+import type { MessageHandler, MessageParams } from "element-plus";
+import { Z_INDEX_TOAST } from "../constants/elementPlusStack";
 
 export type ToastVariant = "success" | "warning" | "danger" | "info";
 
+function applyToastStackZIndex(): void {
+  if (typeof document === "undefined") return;
+  const nodes = document.querySelectorAll(".el-message");
+  const last = nodes.item(nodes.length - 1);
+  if (last instanceof HTMLElement) {
+    last.style.zIndex = String(Z_INDEX_TOAST);
+  }
+}
+
+function toastOptions(message: string): MessageParams {
+  return {
+    message,
+    zIndex: Z_INDEX_TOAST,
+  };
+}
+
 function show(variant: ToastVariant, message: string): MessageHandler {
+  const options = toastOptions(message);
+  let handler: MessageHandler;
   switch (variant) {
     case "success":
-      return ElMessage.success(message);
+      handler = ElMessage.success(options);
+      break;
     case "warning":
-      return ElMessage.warning(message);
+      handler = ElMessage.warning(options);
+      break;
     case "danger":
-      return ElMessage.error(message);
+      handler = ElMessage.error(options);
+      break;
     case "info":
-      return ElMessage.info(message);
+      handler = ElMessage.info(options);
+      break;
     default: {
       const _exhaustive: never = variant;
       throw new Error(`Unknown toast variant: ${String(_exhaustive)}`);
     }
   }
+  queueMicrotask(applyToastStackZIndex);
+  return handler;
 }
 
 /** Toast feedback (i18n-ready string only). See ADR 0022 / showToast adoption. */
