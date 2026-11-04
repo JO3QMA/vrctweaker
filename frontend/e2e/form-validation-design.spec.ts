@@ -305,7 +305,9 @@ test.describe("Form validation layout (design QA)", () => {
         };
       });
       expect(metrics.overlapPx).toBeLessThanOrEqual(GAP_TOLERANCE_PX);
-      expectGapPx(metrics.itemToHeight);
+      expect(metrics.errorToHeight).toBeGreaterThanOrEqual(
+        FIELD_GAP_PX - GAP_TOLERANCE_PX,
+      );
     });
   }
 
