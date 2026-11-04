@@ -87,6 +87,7 @@
           :rules="launcherFormRules"
           label-position="top"
           size="default"
+          class="vt-validated-form"
         >
           <el-form-item :label="t('launcher.profileName')" prop="name">
             <el-input v-model="selected.name" />
@@ -210,34 +211,60 @@
                         <div class="resolution-fields">
                           <el-form-item
                             prop="screenWidth"
-                            class="resolution-form-item"
+                            class="resolution-form-item vt-form-item-with-range-hint"
                           >
                             <el-input-number
                               v-model="launchArgs.screenWidth"
-                              :min="1280"
-                              :max="7680"
+                              :min="VRCHAT_LAUNCHER_SCREEN_RES.WIDTH_MIN"
+                              :max="VRCHAT_LAUNCHER_SCREEN_RES.WIDTH_MAX"
                               :disabled="resolutionPreset !== 'custom'"
+                              :aria-describedby="
+                                resolutionPreset === 'custom'
+                                  ? LAUNCHER_SCREEN_WIDTH_RANGE_HINT_ID
+                                  : undefined
+                              "
                               data-testid="screen-width-input"
                               size="small"
                               :placeholder="t('launcher.widthPh')"
                               class="resolution-number-input"
                             />
+                            <p
+                              v-if="resolutionPreset === 'custom'"
+                              :id="LAUNCHER_SCREEN_WIDTH_RANGE_HINT_ID"
+                              class="form-field-range-hint"
+                              data-testid="screen-width-range-hint"
+                            >
+                              {{ launcherScreenWidthRangeHint }}
+                            </p>
                           </el-form-item>
                           <span class="resolution-sep">×</span>
                           <el-form-item
                             prop="screenHeight"
-                            class="resolution-form-item"
+                            class="resolution-form-item vt-form-item-with-range-hint"
                           >
                             <el-input-number
                               v-model="launchArgs.screenHeight"
-                              :min="720"
-                              :max="4320"
+                              :min="VRCHAT_LAUNCHER_SCREEN_RES.HEIGHT_MIN"
+                              :max="VRCHAT_LAUNCHER_SCREEN_RES.HEIGHT_MAX"
                               :disabled="resolutionPreset !== 'custom'"
+                              :aria-describedby="
+                                resolutionPreset === 'custom'
+                                  ? LAUNCHER_SCREEN_HEIGHT_RANGE_HINT_ID
+                                  : undefined
+                              "
                               data-testid="screen-height-input"
                               size="small"
                               :placeholder="t('launcher.heightPh')"
                               class="resolution-number-input"
                             />
+                            <p
+                              v-if="resolutionPreset === 'custom'"
+                              :id="LAUNCHER_SCREEN_HEIGHT_RANGE_HINT_ID"
+                              class="form-field-range-hint"
+                              data-testid="screen-height-range-hint"
+                            >
+                              {{ launcherScreenHeightRangeHint }}
+                            </p>
                           </el-form-item>
                         </div>
                       </div>
@@ -707,8 +734,29 @@ import {
   requiredTrimmedRule,
 } from "../utils/elFormRules";
 import { validateElForm } from "../utils/elFormValidate";
+import { formatNumericRangeHint } from "../utils/formNumericRangeHint";
+import { VRCHAT_LAUNCHER_SCREEN_RES } from "../utils/vrchatResolutionLimits";
 
 const { t } = useI18n();
+
+const LAUNCHER_SCREEN_WIDTH_RANGE_HINT_ID = "launcher-screen-width-range-hint";
+const LAUNCHER_SCREEN_HEIGHT_RANGE_HINT_ID =
+  "launcher-screen-height-range-hint";
+
+const launcherScreenWidthRangeHint = computed(() =>
+  formatNumericRangeHint(
+    t,
+    VRCHAT_LAUNCHER_SCREEN_RES.WIDTH_MIN,
+    VRCHAT_LAUNCHER_SCREEN_RES.WIDTH_MAX,
+  ),
+);
+const launcherScreenHeightRangeHint = computed(() =>
+  formatNumericRangeHint(
+    t,
+    VRCHAT_LAUNCHER_SCREEN_RES.HEIGHT_MIN,
+    VRCHAT_LAUNCHER_SCREEN_RES.HEIGHT_MAX,
+  ),
+);
 
 const launcherFormRef = ref<FormInstance>();
 const launcherFormModel = reactive({
@@ -781,8 +829,20 @@ const launcherFormRules = computed<FormRules>(() => {
     custom: [optionalLaunchArgLineRule(t)],
   };
   if (valueOptionsEnabled.resolution && resolutionPreset.value === "custom") {
-    rules.screenWidth = [integerRangeRule(1280, 7680, t)];
-    rules.screenHeight = [integerRangeRule(720, 4320, t)];
+    rules.screenWidth = [
+      integerRangeRule(
+        VRCHAT_LAUNCHER_SCREEN_RES.WIDTH_MIN,
+        VRCHAT_LAUNCHER_SCREEN_RES.WIDTH_MAX,
+        t,
+      ),
+    ];
+    rules.screenHeight = [
+      integerRangeRule(
+        VRCHAT_LAUNCHER_SCREEN_RES.HEIGHT_MIN,
+        VRCHAT_LAUNCHER_SCREEN_RES.HEIGHT_MAX,
+        t,
+      ),
+    ];
   }
   if (valueOptionsEnabled.monitor) {
     rules.monitor = [integerMinRule(1, t)];
@@ -1480,7 +1540,7 @@ onBeforeRouteLeave(async (_to, _from, next) => {
 
 .resolution-fields {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-action-group);
 }
 

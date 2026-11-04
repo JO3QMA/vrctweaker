@@ -91,6 +91,7 @@
     "pathInvalid": "パスに使用できない文字が含まれています。",
     "integerMin": "{min}以上の整数を入力してください。",
     "integerRange": "{min}から{max}までの整数を入力してください。",
+    "numericRangeHint": "{min}〜{max}",
     "launchArgInvalid": "起動引数は改行を含めない1行で入力してください。",
     "scheduleWeekdaysRequired": "曜日を1つ以上選択してください。"
   },

@@ -91,6 +91,7 @@
     "pathInvalid": "The path contains characters that cannot be used.",
     "integerMin": "Enter an integer of at least {min}.",
     "integerRange": "Enter an integer from {min} through {max}.",
+    "numericRangeHint": "{min}–{max}",
     "launchArgInvalid": "Launch arguments must be a single line without line breaks.",
     "scheduleWeekdaysRequired": "Select at least one weekday."
   },

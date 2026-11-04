@@ -1038,3 +1038,57 @@ a:hover {
 .settings-view .login-error {
   margin-bottom: var(--space-form-field);
 }
+
+/* ─── Validated el-form layout (design: error contrast, spacing, range hints) ─── */
+
+.section-card .el-form-item__error,
+.vt-validated-form .el-form-item__error {
+  color: #ef8a8a;
+}
+
+.vt-validated-form > .el-form-item,
+.vt-validated-form.el-form > .el-form-item {
+  margin-bottom: 22px;
+}
+
+.vt-validated-form .el-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.automation-rule-editor .vt-validated-form .el-form-item.is-error {
+  scroll-margin-bottom: 88px;
+}
+
+.form-field-range-hint {
+  margin: 0;
+  margin-top: var(--space-4);
+  font-size: var(--font-size-12);
+  line-height: var(--line-height-normal);
+  color: #9aa0a6;
+}
+
+.vt-form-item-with-range-hint :deep(.el-form-item__content) {
+  display: grid;
+  grid-template-rows: auto auto auto;
+}
+
+.vt-form-item-with-range-hint :deep(.el-form-item__content > .el-input-number) {
+  grid-row: 1;
+}
+
+.vt-form-item-with-range-hint :deep(.el-form-item__error) {
+  grid-row: 2;
+}
+
+.vt-form-item-with-range-hint :deep(.form-field-range-hint) {
+  grid-row: 3;
+}
+
+.vt-numeric-field-with-hint {
+  display: grid;
+  grid-template-rows: auto auto;
+}
+
+.vt-numeric-field-with-hint .form-field-range-hint {
+  grid-row: 2;
+}

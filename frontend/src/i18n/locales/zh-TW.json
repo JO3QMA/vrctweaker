@@ -91,6 +91,7 @@
     "pathInvalid": "路徑包含無法使用的字元。",
     "integerMin": "請輸入至少 {min} 的整數。",
     "integerRange": "請輸入 {min} 到 {max} 之間的整數。",
+    "numericRangeHint": "{min}–{max}",
     "launchArgInvalid": "啟動引數必須為不含換行的單行。",
     "scheduleWeekdaysRequired": "請至少選擇一個曜日。"
   },

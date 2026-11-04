@@ -93,10 +93,13 @@ function onHeaderCommand(command: string | number | object) {
 </script>
 
 <template>
-  <div class="automation-editor rule-editor" data-testid="rule-editor">
+  <div
+    class="automation-editor rule-editor automation-rule-editor"
+    data-testid="rule-editor"
+  >
     <el-form
       ref="ruleFormRef"
-      class="automation-editor__scroll"
+      class="automation-editor__scroll vt-validated-form"
       :model="validationModel"
       :rules="editorFormRules"
       @submit.prevent="emit('save')"

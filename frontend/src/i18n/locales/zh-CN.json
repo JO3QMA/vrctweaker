@@ -91,6 +91,7 @@
     "pathInvalid": "路径包含无法使用的字符。",
     "integerMin": "请输入至少 {min} 的整数。",
     "integerRange": "请输入 {min} 到 {max} 之间的整数。",
+    "numericRangeHint": "{min}–{max}",
     "launchArgInvalid": "启动参数必须为不含换行的单行。",
     "scheduleWeekdaysRequired": "请至少选择一个星期。"
   },
