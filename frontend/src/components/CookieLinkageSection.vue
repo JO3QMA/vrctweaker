@@ -49,7 +49,14 @@
           @change="onCookieEnableChange"
         />
       </div>
-      <el-form label-position="top" size="default" class="cookie-form">
+      <el-form
+        ref="cookieFormRef"
+        :model="cookieFormModel"
+        :rules="cookieFormRules"
+        label-position="top"
+        size="default"
+        class="cookie-form"
+      >
         <el-form-item :label="t('video.cookieLinkage.sourceLabel')">
           <el-radio-group
             v-model="cookieDraftSource"
@@ -80,10 +87,14 @@
             <el-option value="firefox" label="Firefox" />
           </el-select>
         </el-form-item>
-        <el-form-item v-else :label="t('video.cookieLinkage.cookiesFileLabel')">
+        <el-form-item
+          v-else
+          :label="t('video.cookieLinkage.cookiesFileLabel')"
+          prop="cookiesFilePath"
+        >
           <div class="path-input-group">
             <el-input
-              v-model="cookieDraftCookiesPath"
+              v-model="cookieFormModel.cookiesFilePath"
               data-testid="video-cookie-file-path"
               :placeholder="t('video.cookieLinkage.cookiesFilePh')"
               :disabled="cookieBusy"
@@ -111,15 +122,17 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue";
+import { onBeforeUnmount, onMounted, reactive, ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
-import { ElMessageBox } from "element-plus";
+import { ElMessageBox, type FormInstance, type FormRules } from "element-plus";
 import VtAlert from "./VtAlert.vue";
 import VtButton from "./VtButton.vue";
 import {
   VT_BUTTON_DANGER_CONFIRM_CLASS,
   VT_BUTTON_SECONDARY_CANCEL_CLASS,
 } from "./vtButtonClasses";
+import { cookiesFilePathRule } from "../utils/elFormRules";
+import { validateElForm } from "../utils/elFormValidate";
 import { App, type CookieLinkageStatusDTO } from "../wails/app";
 import { cookieLinkageErrorI18nKey } from "../views/cookieLinkageErrors";
 
@@ -134,6 +147,12 @@ const cookieSourceKind = ref("");
 const cookieDraftSource = ref<"browser" | "file">("browser");
 const cookieDraftBrowser = ref("chrome");
 const cookieDraftCookiesPath = ref("");
+const cookieFormRef = ref<FormInstance>();
+const cookieFormModel = reactive({ cookiesFilePath: "" });
+const cookieFormRules = computed<FormRules>(() => ({
+  cookiesFilePath:
+    cookieDraftSource.value === "file" ? [cookiesFilePathRule(t)] : [],
+}));
 const toolsEffectiveOfficial = ref(true);
 let cookieViewGen = 0;
 
@@ -151,7 +170,7 @@ function userFacingCookieError(raw: string): string {
 }
 
 function isFileDraftReadyForWrite(): boolean {
-  return cookieDraftCookiesPath.value.trim() !== "";
+  return cookieFormModel.cookiesFilePath.trim() !== "";
 }
 
 function isBrowserFileKindSwitch(priorEffectiveKind: string): boolean {
@@ -170,6 +189,7 @@ function revertDraftToEffective(
   if (priorEffectiveKind === "file") {
     cookieDraftSource.value = "file";
     cookieDraftCookiesPath.value = priorDraftPath;
+    cookieFormModel.cookiesFilePath = priorDraftPath;
   } else if (priorEffectiveKind === "browser") {
     cookieDraftSource.value = "browser";
     cookieDraftBrowser.value = priorDraftBrowser;
@@ -187,6 +207,7 @@ function applyCookieStatus(st: CookieLinkageStatusDTO) {
   } else if (st.sourceKind === "file" && st.cookiesFilePath) {
     cookieDraftSource.value = "file";
     cookieDraftCookiesPath.value = st.cookiesFilePath;
+    cookieFormModel.cookiesFilePath = st.cookiesFilePath;
   } else if (st.sourceKind === "unsupported") {
     // keep draft; user picks v1 form to replace
   }
@@ -225,14 +246,19 @@ async function ensureCookieRiskAck(gen: number): Promise<boolean> {
   return true;
 }
 
-async function writeCookieFromDraft(gen: number) {
+async function writeCookieFromDraft(gen: number): Promise<boolean> {
   if (cookieDraftSource.value === "browser") {
     await App.setYTDLPCookieLinkageBrowser(cookieDraftBrowser.value);
   } else {
+    if (!(await validateElForm(cookieFormRef.value))) {
+      return false;
+    }
+    cookieDraftCookiesPath.value = cookieFormModel.cookiesFilePath;
     await App.setYTDLPCookieLinkageCookiesFile(cookieDraftCookiesPath.value);
   }
-  if (isCookieViewStale(gen)) return;
+  if (isCookieViewStale(gen)) return false;
   await refreshCookieStatus(gen);
+  return true;
 }
 
 async function refreshAfterError(gen: number) {
@@ -256,7 +282,7 @@ async function onCookieEnableChange(on: boolean) {
     await ensureCookieRiskAck(gen);
     if (isCookieViewStale(gen)) return;
     if (desired) {
-      await writeCookieFromDraft(gen);
+      if (!(await writeCookieFromDraft(gen))) return;
     } else {
       await App.disableYTDLPCookieLinkage();
       if (isCookieViewStale(gen)) return;
@@ -295,7 +321,7 @@ async function onCookieSourceChange() {
       await refreshCookieStatus(gen);
       return;
     }
-    await writeCookieFromDraft(gen);
+    if (!(await writeCookieFromDraft(gen))) return;
   } catch (e) {
     if (isCookieViewStale(gen)) return;
     if (isMessageBoxDismiss(e)) {
@@ -356,10 +382,11 @@ async function browseCookieFile() {
     );
     if (!picked || isCookieViewStale(gen)) return;
     cookieDraftCookiesPath.value = picked;
+    cookieFormModel.cookiesFilePath = picked;
     if (!cookieEnabled.value || cookieDraftSource.value !== "file") return;
     await ensureCookieRiskAck(gen);
     if (isCookieViewStale(gen)) return;
-    await writeCookieFromDraft(gen);
+    if (!(await writeCookieFromDraft(gen))) return;
   } catch (e) {
     if (isCookieViewStale(gen)) return;
     if (isMessageBoxDismiss(e)) return;

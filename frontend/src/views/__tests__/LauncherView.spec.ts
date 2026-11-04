@@ -1079,6 +1079,33 @@ describe("LauncherView", () => {
     expect(isDisabled(wrapper, "screen-height-input")).toBe(false);
   });
 
+  it("shows resolution range hints when manual preset is selected", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+    const card = wrapper.findAll(".profile-card")[0];
+    await card?.trigger("click");
+    await flushPromises();
+
+    await openAdvancedCollapse(wrapper);
+
+    await checkInput(wrapper, "resolution-enabled-checkbox").setValue(true);
+    await flushPromises();
+
+    await wrapper
+      .find("[data-testid='resolution-preset-custom'] input")
+      .setValue(true);
+    await flushPromises();
+
+    const widthHint = wrapper.find("[data-testid='screen-width-range-hint']");
+    expect(widthHint.exists()).toBe(true);
+    expect(widthHint.text()).toMatch(/1280/);
+    expect(widthHint.text()).toMatch(/7680/);
+
+    const heightHint = wrapper.find("[data-testid='screen-height-range-hint']");
+    expect(heightHint.text()).toMatch(/720/);
+    expect(heightHint.text()).toMatch(/4320/);
+  });
+
   it("launches with popupwindow screen mode", async () => {
     const wrapper = mount(LauncherView);
     await flushPromises();

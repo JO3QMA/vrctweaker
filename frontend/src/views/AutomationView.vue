@@ -85,6 +85,7 @@
         />
         <AutomationRuleEditor
           v-if="editor"
+          ref="ruleEditorRef"
           v-model:editor="editor"
           :saving="saving"
           :is-dirty="isDirty"
@@ -176,6 +177,9 @@ const powerPlans = ref<DetectedPowerPlanDTO[]>([]);
 const friends = ref<UserCacheDTO[]>([]);
 const saving = ref(false);
 const nameError = ref("");
+const ruleEditorRef = ref<InstanceType<typeof AutomationRuleEditor> | null>(
+  null,
+);
 const tab = ref<"rules" | "log">("rules");
 const preferList = ref(false);
 const rulesTabEl = ref<HTMLButtonElement | null>(null);
@@ -489,6 +493,10 @@ async function save(): Promise<boolean> {
     return false;
   }
   nameError.value = "";
+  const editorRef = ruleEditorRef.value;
+  if (!editorRef || !(await editorRef.validateEditorForm())) {
+    return false;
+  }
   saving.value = true;
   try {
     const dto = editorToDto(editor.value);

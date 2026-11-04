@@ -1038,3 +1038,196 @@ a:hover {
 .settings-view .login-error {
   margin-bottom: var(--space-form-field);
 }
+
+/* ─── Validated el-form layout (design: error contrast, spacing, range hints) ─── */
+
+.section-card .el-form-item__error,
+.vt-validated-form .el-form-item__error {
+  color: #ef8a8a;
+}
+
+.vt-validated-form > .el-form-item,
+.vt-validated-form.el-form > .el-form-item {
+  margin-bottom: 22px;
+}
+
+.vt-validated-form .el-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.automation-rule-editor .vt-validated-form .el-form-item.is-error {
+  scroll-margin-bottom: 88px;
+}
+
+.automation-rule-editor
+  .vt-validated-form.el-form
+  .el-form-item.automation-inline-form-item {
+  margin-bottom: var(--space-8);
+}
+
+.automation-rule-editor
+  .vt-validated-form.el-form
+  .el-form-item.automation-inline-form-item
+  > .el-form-item__content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.automation-rule-editor
+  .vt-validated-form.el-form
+  .el-form-item.automation-inline-form-item
+  .el-form-item__error {
+  position: static;
+  padding-top: var(--space-4);
+  line-height: 16px;
+  margin-bottom: 0;
+}
+
+.automation-rule-editor .automation-card .setting-row:has(.el-checkbox-group) {
+  padding-bottom: 0;
+}
+
+.automation-rule-editor
+  .automation-card
+  .setting-row:has(.automation-time)
+  .setting-row__label {
+  font-size: var(--font-size-14);
+  font-weight: 400;
+  line-height: var(--line-height-normal);
+}
+
+.automation-rule-editor
+  .vt-validated-form.el-form
+  .automation-time
+  > .el-form-item.automation-inline-form-item {
+  margin-bottom: 0;
+}
+
+.automation-rule-editor .automation-time {
+  margin-bottom: var(--space-8);
+}
+
+.automation-rule-editor .automation-editor__scroll {
+  padding-bottom: var(--automation-action-bar-inset, 104px);
+}
+
+.form-field-range-hint {
+  margin: 0;
+  margin-top: var(--space-4);
+  font-size: var(--font-size-12);
+  line-height: var(--line-height-normal);
+  color: #9aa0a6;
+}
+
+.el-form-item.vt-form-item-with-range-hint > .el-form-item__content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  min-width: 0;
+}
+
+.el-form-item.vt-form-item-with-range-hint
+  > .el-form-item__content
+  > .el-input-number {
+  order: 1;
+  width: 100%;
+  max-width: 100%;
+}
+
+.el-form-item.vt-form-item-with-range-hint
+  > .el-form-item__content
+  > .el-form-item__error {
+  order: 2;
+  position: static;
+  padding-top: 0;
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-8);
+  line-height: 16px;
+  visibility: visible;
+}
+
+.el-form-item.vt-form-item-with-range-hint
+  > .el-form-item__content
+  > .form-field-range-hint {
+  order: 3;
+  margin-top: var(--space-8);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.el-form-item.vt-form-item-with-range-hint.is-error
+  > .el-form-item__content
+  > .form-field-range-hint {
+  margin-top: 0;
+}
+
+.vt-validated-form .resolution-fields .el-form-item.resolution-form-item,
+.vt-validated-form
+  .resolution-fields
+  .el-form-item.config-resolution-form-item {
+  margin-bottom: 0;
+}
+
+.resolution-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-8);
+  max-width: 100%;
+  margin-bottom: 0;
+}
+
+.sub-options:has(.resolution-fields) {
+  margin: var(--space-inline-tight) 0 0 var(--space-section);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-8);
+}
+
+.launch-args-advanced > .sub-options:has(.resolution-fields) + .arg-row {
+  margin-top: 0;
+}
+
+.resolution-fields .resolution-form-item {
+  flex: 1 1 120px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.resolution-fields .resolution-form-item.is-error {
+  flex: 1 1 100%;
+  max-width: 100%;
+}
+
+.resolution-fields .resolution-sep {
+  align-self: center;
+  flex-shrink: 0;
+}
+
+@media (max-width: 640px) {
+  .resolution-fields {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .resolution-fields .resolution-sep {
+    display: none;
+  }
+
+  .resolution-fields .resolution-form-item {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+}
+
+.vt-numeric-field-with-hint {
+  display: grid;
+  grid-template-rows: auto auto;
+}
+
+.vt-numeric-field-with-hint .form-field-range-hint {
+  grid-row: 2;
+}
