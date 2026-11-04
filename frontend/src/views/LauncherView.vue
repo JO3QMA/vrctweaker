@@ -81,8 +81,14 @@
           </div>
         </div>
 
-        <el-form label-position="top" size="default">
-          <el-form-item :label="t('launcher.profileName')">
+        <el-form
+          ref="launcherFormRef"
+          :model="launcherFormModel"
+          :rules="launcherFormRules"
+          label-position="top"
+          size="default"
+        >
+          <el-form-item :label="t('launcher.profileName')" prop="name">
             <el-input v-model="selected.name" />
           </el-form-item>
 
@@ -130,7 +136,7 @@
                 </el-radio-group>
               </el-form-item>
 
-              <el-form-item :label="t('launcher.customArgs')">
+              <el-form-item :label="t('launcher.customArgs')" prop="custom">
                 <el-input
                   v-model="launchArgs.custom"
                   placeholder="-batchmode"
@@ -202,27 +208,37 @@
                           </el-radio-group>
                         </el-form-item>
                         <div class="resolution-fields">
-                          <el-input-number
-                            v-model="launchArgs.screenWidth"
-                            :min="1280"
-                            :max="7680"
-                            :disabled="resolutionPreset !== 'custom'"
-                            data-testid="screen-width-input"
-                            size="small"
-                            :placeholder="t('launcher.widthPh')"
-                            style="width: 120px"
-                          />
+                          <el-form-item
+                            prop="screenWidth"
+                            class="resolution-form-item"
+                          >
+                            <el-input-number
+                              v-model="launchArgs.screenWidth"
+                              :min="1280"
+                              :max="7680"
+                              :disabled="resolutionPreset !== 'custom'"
+                              data-testid="screen-width-input"
+                              size="small"
+                              :placeholder="t('launcher.widthPh')"
+                              class="resolution-number-input"
+                            />
+                          </el-form-item>
                           <span class="resolution-sep">×</span>
-                          <el-input-number
-                            v-model="launchArgs.screenHeight"
-                            :min="720"
-                            :max="4320"
-                            :disabled="resolutionPreset !== 'custom'"
-                            data-testid="screen-height-input"
-                            size="small"
-                            :placeholder="t('launcher.heightPh')"
-                            style="width: 120px"
-                          />
+                          <el-form-item
+                            prop="screenHeight"
+                            class="resolution-form-item"
+                          >
+                            <el-input-number
+                              v-model="launchArgs.screenHeight"
+                              :min="720"
+                              :max="4320"
+                              :disabled="resolutionPreset !== 'custom'"
+                              data-testid="screen-height-input"
+                              size="small"
+                              :placeholder="t('launcher.heightPh')"
+                              class="resolution-number-input"
+                            />
+                          </el-form-item>
                         </div>
                       </div>
 
@@ -239,14 +255,16 @@
                         v-if="valueOptionsEnabled.monitor"
                         class="sub-options"
                       >
-                        <el-input-number
-                          v-model="launchArgs.monitor"
-                          :min="1"
-                          data-testid="monitor-input"
-                          size="small"
-                          :placeholder="t('launcher.monitorPh')"
-                          style="width: 120px"
-                        />
+                        <el-form-item prop="monitor" class="nested-form-item">
+                          <el-input-number
+                            v-model="launchArgs.monitor"
+                            :min="1"
+                            data-testid="monitor-input"
+                            size="small"
+                            :placeholder="t('launcher.monitorPh')"
+                            style="width: 120px"
+                          />
+                        </el-form-item>
                       </div>
 
                       <div class="arg-row">
@@ -259,14 +277,16 @@
                         </el-checkbox>
                       </div>
                       <div v-if="valueOptionsEnabled.fps" class="sub-options">
-                        <el-input-number
-                          v-model="launchArgs.fps"
-                          :min="1"
-                          data-testid="fps-input"
-                          size="small"
-                          placeholder="90"
-                          style="width: 120px"
-                        />
+                        <el-form-item prop="fps" class="nested-form-item">
+                          <el-input-number
+                            v-model="launchArgs.fps"
+                            :min="1"
+                            data-testid="fps-input"
+                            size="small"
+                            placeholder="90"
+                            style="width: 120px"
+                          />
+                        </el-form-item>
                       </div>
 
                       <div class="arg-row">
@@ -416,13 +436,15 @@
                         </el-checkbox>
                       </div>
                       <div v-if="valueOptionsEnabled.midi" class="sub-options">
-                        <el-input
-                          v-model="launchArgs.midi"
-                          :placeholder="t('launcher.midiPh')"
-                          data-testid="midi-input"
-                          size="small"
-                          style="max-width: 240px"
-                        />
+                        <el-form-item prop="midi" class="nested-form-item">
+                          <el-input
+                            v-model="launchArgs.midi"
+                            :placeholder="t('launcher.midiPh')"
+                            data-testid="midi-input"
+                            size="small"
+                            style="max-width: 240px"
+                          />
+                        </el-form-item>
                       </div>
 
                       <div class="arg-row">
@@ -438,13 +460,18 @@
                         v-if="valueOptionsEnabled.ignoreTrackers"
                         class="sub-options"
                       >
-                        <el-input
-                          v-model="launchArgs.ignoreTrackers"
-                          placeholder="serial1,serial2"
-                          data-testid="ignore-trackers-input"
-                          size="small"
-                          style="max-width: 240px"
-                        />
+                        <el-form-item
+                          prop="ignoreTrackers"
+                          class="nested-form-item"
+                        >
+                          <el-input
+                            v-model="launchArgs.ignoreTrackers"
+                            placeholder="serial1,serial2"
+                            data-testid="ignore-trackers-input"
+                            size="small"
+                            style="max-width: 240px"
+                          />
+                        </el-form-item>
                       </div>
 
                       <el-form-item
@@ -499,13 +526,15 @@
                         </el-checkbox>
                       </div>
                       <div v-if="valueOptionsEnabled.osc" class="sub-options">
-                        <el-input
-                          v-model="launchArgs.osc"
-                          :placeholder="t('launcher.oscPh')"
-                          data-testid="osc-input"
-                          size="small"
-                          style="max-width: 240px"
-                        />
+                        <el-form-item prop="osc" class="nested-form-item">
+                          <el-input
+                            v-model="launchArgs.osc"
+                            :placeholder="t('launcher.oscPh')"
+                            data-testid="osc-input"
+                            size="small"
+                            style="max-width: 240px"
+                          />
+                        </el-form-item>
                       </div>
 
                       <div class="arg-row">
@@ -622,10 +651,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, onMounted, onBeforeUnmount } from "vue";
+import {
+  ref,
+  reactive,
+  computed,
+  onMounted,
+  onBeforeUnmount,
+  watchEffect,
+} from "vue";
 import { onBeforeRouteLeave } from "vue-router";
 import { useI18n } from "vue-i18n";
-import { ElMessageBox } from "element-plus";
+import { ElMessageBox, type FormInstance, type FormRules } from "element-plus";
 import { Expand, Fold } from "@element-plus/icons-vue";
 import VtAlert from "../components/VtAlert.vue";
 import VtButton from "../components/VtButton.vue";
@@ -664,8 +700,28 @@ import {
   VT_BUTTON_DANGER_CONFIRM_CLASS,
   VT_BUTTON_SECONDARY_CANCEL_CLASS,
 } from "../components/vtButtonClasses";
+import {
+  integerMinRule,
+  integerRangeRule,
+  optionalLaunchArgLineRule,
+  requiredTrimmedRule,
+} from "../utils/elFormRules";
+import { validateElForm } from "../utils/elFormValidate";
 
 const { t } = useI18n();
+
+const launcherFormRef = ref<FormInstance>();
+const launcherFormModel = reactive({
+  name: "",
+  custom: "",
+  screenWidth: 0,
+  screenHeight: 0,
+  monitor: 0,
+  fps: 0,
+  osc: "",
+  midi: "",
+  ignoreTrackers: "",
+});
 
 type ResolutionPreset = "HD" | "FHD" | "WQHD" | "4K" | "custom";
 
@@ -719,6 +775,43 @@ const resolutionPreset = ref<ResolutionPreset>("FHD");
 const valueOptionsEnabled = reactive<ValueOptionsEnabled>(
   defaultValueOptionsEnabled(),
 );
+const launcherFormRules = computed<FormRules>(() => {
+  const rules: FormRules = {
+    name: [requiredTrimmedRule(t)],
+    custom: [optionalLaunchArgLineRule(t)],
+  };
+  if (valueOptionsEnabled.resolution && resolutionPreset.value === "custom") {
+    rules.screenWidth = [integerRangeRule(1280, 7680, t)];
+    rules.screenHeight = [integerRangeRule(720, 4320, t)];
+  }
+  if (valueOptionsEnabled.monitor) {
+    rules.monitor = [integerMinRule(1, t)];
+  }
+  if (valueOptionsEnabled.fps) {
+    rules.fps = [integerMinRule(1, t)];
+  }
+  if (valueOptionsEnabled.osc) {
+    rules.osc = [optionalLaunchArgLineRule(t)];
+  }
+  if (valueOptionsEnabled.midi) {
+    rules.midi = [optionalLaunchArgLineRule(t)];
+  }
+  if (valueOptionsEnabled.ignoreTrackers) {
+    rules.ignoreTrackers = [optionalLaunchArgLineRule(t)];
+  }
+  return rules;
+});
+watchEffect(() => {
+  launcherFormModel.name = selected.value?.name ?? "";
+  launcherFormModel.custom = launchArgs.value.custom ?? "";
+  launcherFormModel.screenWidth = launchArgs.value.screenWidth;
+  launcherFormModel.screenHeight = launchArgs.value.screenHeight;
+  launcherFormModel.monitor = launchArgs.value.monitor;
+  launcherFormModel.fps = launchArgs.value.fps;
+  launcherFormModel.osc = launchArgs.value.osc ?? "";
+  launcherFormModel.midi = launchArgs.value.midi ?? "";
+  launcherFormModel.ignoreTrackers = launchArgs.value.ignoreTrackers ?? "";
+});
 const savedSnapshot = ref<LaunchProfileEditSnapshot | null>(null);
 const sidebarOpen = ref(readSidebarOpenPreference());
 const advancedCollapseActive = ref<string[]>([]);
@@ -1098,6 +1191,7 @@ async function affinityBlocksLaunch(): Promise<boolean> {
 
 async function save(): Promise<boolean> {
   if (!selected.value) return false;
+  if (!(await validateElForm(launcherFormRef.value))) return false;
   if (await affinityBlocksLaunch()) return false;
   const gen = ++profileSaveGen;
   try {
@@ -1131,6 +1225,7 @@ async function save(): Promise<boolean> {
 
 async function launch() {
   if (!selected.value) return;
+  if (!(await validateElForm(launcherFormRef.value))) return;
   if (await affinityBlocksLaunch()) return;
   const argsStr = await App.mergeLaunchArgsForGUI(
     sanitizeLaunchArgs(launchArgs.value),
@@ -1387,6 +1482,18 @@ onBeforeRouteLeave(async (_to, _from, next) => {
   display: flex;
   align-items: center;
   gap: var(--space-action-group);
+}
+
+.resolution-form-item {
+  margin-bottom: 0 !important;
+}
+
+.resolution-form-item :deep(.el-form-item__content) {
+  line-height: normal;
+}
+
+.resolution-number-input {
+  width: 120px;
 }
 
 .resolution-sep {

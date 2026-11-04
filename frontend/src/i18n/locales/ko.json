@@ -86,6 +86,14 @@
     "no": "No",
     "unofficialDisclaimer": "VRChat Tweaker는 VRChat 공식 제품이 아니며 VRChat Inc.와 제휴 관계가 없는 비공식 도구입니다."
   },
+  "formValidation": {
+    "required": "입력이 필요합니다.",
+    "pathInvalid": "경로에 사용할 수 없는 문자가 포함되어 있습니다.",
+    "integerMin": "{min} 이상의 정수를 입력하세요.",
+    "integerRange": "{min}부터 {max}까지의 정수를 입력하세요.",
+    "launchArgInvalid": "실행 인수는 줄바꿈 없이 한 줄로 입력하세요.",
+    "scheduleWeekdaysRequired": "요일을 하나 이상 선택하세요."
+  },
   "chart": {
     "hour": "시간",
     "minute": "분",

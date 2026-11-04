@@ -86,6 +86,14 @@
     "no": "No",
     "unofficialDisclaimer": "VRChat TweakerはVRChat公式の製品ではなく、VRChat株式会社とは無関係の非公式ツールです。"
   },
+  "formValidation": {
+    "required": "入力が必要です。",
+    "pathInvalid": "パスに使用できない文字が含まれています。",
+    "integerMin": "{min}以上の整数を入力してください。",
+    "integerRange": "{min}から{max}までの整数を入力してください。",
+    "launchArgInvalid": "起動引数は改行を含めない1行で入力してください。",
+    "scheduleWeekdaysRequired": "曜日を1つ以上選択してください。"
+  },
   "chart": {
     "hour": "時間",
     "minute": "分",

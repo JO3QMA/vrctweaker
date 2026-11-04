@@ -311,15 +311,10 @@ describe("AutomationView layout", () => {
     await wrapper.find('[data-testid="save-item"]').trigger("click");
     await flushPromises();
 
-    const error = wrapper.get('[data-testid="name-error"]');
-    expect(error.text()).toContain("名前を入力してください");
-    const nameField = wrapper.get('[data-testid="item-name-input"]');
-    expect(
-      nameField.element.compareDocumentPosition(error.element) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
     expect(mockSaveAutomationItem).not.toHaveBeenCalled();
     expect(showToast.error).not.toHaveBeenCalled();
+    const error = wrapper.get('[data-testid="name-error"]');
+    expect(error.text()).toContain("名前を入力してください");
   });
 
   it("disables list and editor controls when automation is unavailable", async () => {

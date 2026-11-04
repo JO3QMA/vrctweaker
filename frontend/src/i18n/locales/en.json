@@ -86,6 +86,14 @@
     "no": "No",
     "unofficialDisclaimer": "VRChat Tweaker is not an official VRChat product and is not affiliated with VRChat Inc."
   },
+  "formValidation": {
+    "required": "This field is required.",
+    "pathInvalid": "The path contains characters that cannot be used.",
+    "integerMin": "Enter an integer of at least {min}.",
+    "integerRange": "Enter an integer from {min} through {max}.",
+    "launchArgInvalid": "Launch arguments must be a single line without line breaks.",
+    "scheduleWeekdaysRequired": "Select at least one weekday."
+  },
   "chart": {
     "hour": "h",
     "minute": "m",

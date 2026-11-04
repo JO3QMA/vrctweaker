@@ -1,10 +1,16 @@
 <script setup lang="ts">
-import { computed } from "vue";
+import { computed, reactive, ref, watchEffect } from "vue";
 import { useI18n } from "vue-i18n";
+import type { FormInstance, FormRules } from "element-plus";
 import SettingsRow from "../../components/settings/SettingsRow.vue";
 import VtButton from "../../components/VtButton.vue";
 import type { DetectedPowerPlanDTO, UserCacheDTO } from "../../wails/app";
 import type { EditorState } from "../automationEditorMapping";
+import {
+  integerRangeRule,
+  scheduleWeekdaysRule,
+} from "../../utils/elFormRules";
+import { validateElForm } from "../../utils/elFormValidate";
 
 type SelectOption = { value: string; label: string; disabled?: boolean };
 type WeekdayOption = { value: number; label: string };
@@ -37,6 +43,40 @@ const emit = defineEmits<{
 
 const { t } = useI18n();
 
+const ruleFormRef = ref<FormInstance>();
+const validationModel = reactive({
+  scheduleWeekdays: [] as number[],
+  scheduleHour: 0,
+  scheduleMinute: 0,
+});
+function syncValidationModel() {
+  validationModel.scheduleWeekdays = editor.value.scheduleWeekdays;
+  validationModel.scheduleHour = editor.value.scheduleHour;
+  validationModel.scheduleMinute = editor.value.scheduleMinute;
+}
+watchEffect(() => {
+  syncValidationModel();
+});
+const editorFormRules = computed<FormRules>(() => {
+  const rules: FormRules = {};
+  if (editor.value.triggerType === "schedule.tick") {
+    rules.scheduleWeekdays = [scheduleWeekdaysRule(t)];
+    rules.scheduleHour = [integerRangeRule(0, 23, t)];
+    rules.scheduleMinute = [integerRangeRule(0, 59, t)];
+  }
+  return rules;
+});
+
+async function validateEditorForm(): Promise<boolean> {
+  syncValidationModel();
+  if (editor.value.triggerType !== "schedule.tick") {
+    return true;
+  }
+  return validateElForm(ruleFormRef.value);
+}
+
+defineExpose({ validateEditorForm });
+
 const canDeleteItem = computed(
   () => !!editor.value.id && editor.value.isNew !== true,
 );
@@ -54,7 +94,13 @@ function onHeaderCommand(command: string | number | object) {
 
 <template>
   <div class="automation-editor rule-editor" data-testid="rule-editor">
-    <el-form class="automation-editor__scroll" @submit.prevent="emit('save')">
+    <el-form
+      ref="ruleFormRef"
+      class="automation-editor__scroll"
+      :model="validationModel"
+      :rules="editorFormRules"
+      @submit.prevent="emit('save')"
+    >
       <VtButton
         class="automation-back"
         variant="tertiary"
@@ -181,41 +227,56 @@ function onHeaderCommand(command: string | number | object) {
             </SettingsRow>
             <template v-if="editor.triggerType === 'schedule.tick'">
               <SettingsRow :label="t('automation.schedule')" control="field">
-                <div class="automation-control">
-                  <el-checkbox-group
-                    v-model="editor.scheduleWeekdays"
-                    :disabled="disabled"
-                  >
-                    <el-checkbox
-                      v-for="d in weekdayOptions"
-                      :key="d.value"
-                      :value="d.value"
+                <el-form-item
+                  prop="scheduleWeekdays"
+                  class="automation-inline-form-item"
+                >
+                  <div class="automation-control">
+                    <el-checkbox-group
+                      v-model="editor.scheduleWeekdays"
+                      :disabled="disabled"
                     >
-                      {{ d.label }}
-                    </el-checkbox>
-                  </el-checkbox-group>
-                </div>
+                      <el-checkbox
+                        v-for="d in weekdayOptions"
+                        :key="d.value"
+                        :value="d.value"
+                      >
+                        {{ d.label }}
+                      </el-checkbox>
+                    </el-checkbox-group>
+                  </div>
+                </el-form-item>
               </SettingsRow>
               <SettingsRow
                 :label="t('automation.scheduleTime')"
                 control="field"
               >
                 <div class="automation-time">
-                  <el-input-number
-                    v-model="editor.scheduleHour"
-                    :min="0"
-                    :max="23"
-                    :disabled="disabled"
-                    :aria-label="t('automation.scheduleHour')"
-                  />
+                  <el-form-item
+                    prop="scheduleHour"
+                    class="automation-inline-form-item"
+                  >
+                    <el-input-number
+                      v-model="editor.scheduleHour"
+                      :min="0"
+                      :max="23"
+                      :disabled="disabled"
+                      :aria-label="t('automation.scheduleHour')"
+                    />
+                  </el-form-item>
                   <span class="automation-time__sep" aria-hidden="true">:</span>
-                  <el-input-number
-                    v-model="editor.scheduleMinute"
-                    :min="0"
-                    :max="59"
-                    :disabled="disabled"
-                    :aria-label="t('automation.scheduleMinute')"
-                  />
+                  <el-form-item
+                    prop="scheduleMinute"
+                    class="automation-inline-form-item"
+                  >
+                    <el-input-number
+                      v-model="editor.scheduleMinute"
+                      :min="0"
+                      :max="59"
+                      :disabled="disabled"
+                      :aria-label="t('automation.scheduleMinute')"
+                    />
+                  </el-form-item>
                 </div>
               </SettingsRow>
             </template>
@@ -700,6 +761,18 @@ function onHeaderCommand(command: string | number | object) {
   width: 120px;
   flex: 0 0 120px;
   max-width: 120px;
+}
+
+.automation-inline-form-item {
+  margin-bottom: 0 !important;
+}
+
+.automation-name-form-item {
+  margin-bottom: 0 !important;
+}
+
+.automation-inline-form-item :deep(.el-form-item__content) {
+  line-height: normal;
 }
 
 .automation-time__sep {

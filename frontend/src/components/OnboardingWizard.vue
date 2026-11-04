@@ -54,14 +54,22 @@
             {{ displayName }}
           </p>
         </div>
-        <el-form v-else label-position="top" size="default" class="login-form">
+        <el-form
+          v-else
+          ref="loginFormRef"
+          :model="loginForm"
+          :rules="loginFormRules"
+          label-position="top"
+          size="default"
+          class="login-form"
+        >
           <VtAlert
             v-if="unlockState === 'needs-relogin' && unlockErrorMessage"
             variant="warning"
             :title="unlockErrorMessage"
             class="login-error"
           />
-          <el-form-item :label="t('settings.username')">
+          <el-form-item :label="t('settings.username')" prop="username">
             <el-input
               v-model="loginForm.username"
               data-testid="onboarding-login-username"
@@ -69,7 +77,7 @@
               autocomplete="username"
             />
           </el-form-item>
-          <el-form-item :label="t('settings.password')">
+          <el-form-item :label="t('settings.password')" prop="password">
             <el-input
               v-model="loginForm.password"
               data-testid="onboarding-login-password"
@@ -210,6 +218,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import type { FormInstance, FormRules } from "element-plus";
 import VtAlert from "./VtAlert.vue";
 import VtButton from "./VtButton.vue";
 import LoginTwoFactorCodeField from "./LoginTwoFactorCodeField.vue";
@@ -220,6 +229,8 @@ import type { OnboardingFolderDefaultsDTO, PathSettingsDTO } from "@/wails/app";
 import { useSessionUnlock } from "@/composables/useSessionUnlock";
 import { isLoginBlockedByTwoFactorCode } from "@/utils/loginTwoFactorSubmit";
 import { isLoginTwoFactorRequired } from "@/utils/vrchatLoginResult";
+import { requiredTrimmedRule } from "@/utils/elFormRules";
+import { validateElForm } from "@/utils/elFormValidate";
 
 const emit = defineEmits<{
   finished: [];
@@ -246,6 +257,11 @@ const loginForm = reactive({
   password: "",
   twoFactorCode: "",
 });
+const loginFormRef = ref<FormInstance>();
+const loginFormRules = computed<FormRules>(() => ({
+  username: [requiredTrimmedRule(t)],
+  password: [requiredTrimmedRule(t)],
+}));
 const loginError = ref("");
 const loginLoading = ref(false);
 const twoFactorRequired = ref(false);
@@ -502,6 +518,9 @@ watch(step, (s) => {
 
 async function submitLogin(): Promise<void> {
   loginError.value = "";
+  if (!(await validateElForm(loginFormRef.value))) {
+    return;
+  }
   loginLoading.value = true;
   try {
     const result = await App.login(

@@ -162,8 +162,17 @@
       <!-- Picture Output -->
       <el-card shadow="never" class="section-card">
         <template #header>{{ t("config.photoHeader") }}</template>
-        <el-form label-position="top" size="default">
-          <el-form-item :label="t('config.outputFolder')">
+        <el-form
+          ref="photoFormRef"
+          :model="config"
+          :rules="photoFormRules"
+          label-position="top"
+          size="default"
+        >
+          <el-form-item
+            :label="t('config.outputFolder')"
+            prop="pictureOutputFolder"
+          >
             <div class="path-input-group">
               <el-input
                 id="picture-output-folder"
@@ -226,8 +235,14 @@
         <p class="text-body-sm config-help">
           {{ t("config.cacheHelp") }}
         </p>
-        <el-form label-position="top" size="default">
-          <el-form-item :label="t('config.cacheDir')">
+        <el-form
+          ref="cacheFormRef"
+          :model="config"
+          :rules="cacheFormRules"
+          label-position="top"
+          size="default"
+        >
+          <el-form-item :label="t('config.cacheDir')" prop="cacheDirectory">
             <div class="path-input-group">
               <el-input
                 id="cache-directory"
@@ -244,7 +259,7 @@
               </VtButton>
             </div>
           </el-form-item>
-          <el-form-item :label="t('config.cacheSizeGb')">
+          <el-form-item :label="t('config.cacheSizeGb')" prop="cacheSize">
             <el-input-number
               id="cache-size"
               v-model="config.cacheSize"
@@ -254,7 +269,10 @@
               data-testid="cache-size-input"
             />
           </el-form-item>
-          <el-form-item :label="t('config.cacheExpiryDays')">
+          <el-form-item
+            :label="t('config.cacheExpiryDays')"
+            prop="cacheExpiryDelay"
+          >
             <el-input-number
               id="cache-expiry"
               v-model="config.cacheExpiryDelay"
@@ -323,7 +341,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useI18n } from "vue-i18n";
-import { ElMessageBox } from "element-plus";
+import { ElMessageBox, type FormInstance, type FormRules } from "element-plus";
 import VtAlert from "../components/VtAlert.vue";
 import VtButton from "../components/VtButton.vue";
 import {
@@ -331,6 +349,8 @@ import {
   VT_BUTTON_SECONDARY_CANCEL_CLASS,
 } from "../components/vtButtonClasses";
 import { showToast } from "../utils/showToast";
+import { integerMinRule, optionalPathLineRule } from "../utils/elFormRules";
+import { validateElForms } from "../utils/elFormValidate";
 import { App } from "../wails/app";
 import type { VRChatConfigDTO } from "../wails/app";
 import { AssetCacheErr } from "../utils/assetCacheErrors";
@@ -368,6 +388,16 @@ const assetCacheClearLoading = ref(false);
 let clearGeneration = 0;
 
 const CACHE_MIN = 30;
+const photoFormRef = ref<FormInstance>();
+const cacheFormRef = ref<FormInstance>();
+const photoFormRules = computed<FormRules>(() => ({
+  pictureOutputFolder: [optionalPathLineRule(t)],
+}));
+const cacheFormRules = computed<FormRules>(() => ({
+  cacheDirectory: [optionalPathLineRule(t)],
+  cacheSize: [integerMinRule(CACHE_MIN, t)],
+  cacheExpiryDelay: [integerMinRule(CACHE_MIN, t)],
+}));
 const STEADYCAM_FOV_MIN = 30;
 const STEADYCAM_FOV_MAX = 100;
 const STEADYCAM_FOV_PLACEHOLDER = 50;
@@ -498,6 +528,9 @@ async function createConfig() {
 async function saveConfig() {
   saveError.value = "";
   saveSuccess.value = false;
+  if (!(await validateElForms([photoFormRef.value, cacheFormRef.value]))) {
+    return;
+  }
   const cacheSize = clampCacheNumeric(config.value.cacheSize, CACHE_MIN);
   const cacheExpiryDelay = clampCacheNumeric(
     config.value.cacheExpiryDelay,
