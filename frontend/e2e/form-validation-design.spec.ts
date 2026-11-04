@@ -67,7 +67,7 @@ test.describe("Form validation layout (design QA)", () => {
     await page.getByTestId("add-rule").click();
     await expect(page.locator(".rule-editor")).toBeVisible();
 
-    const scroll = page.locator(".automation-editor__scroll");
+    await expect(page.locator(".automation-editor__scroll")).toBeVisible();
     const { paddingBottom, insetPx } = await page.evaluate(() => {
       const scrollEl = document.querySelector(
         ".automation-editor__scroll",
