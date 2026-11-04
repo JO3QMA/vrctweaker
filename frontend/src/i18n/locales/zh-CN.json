@@ -287,6 +287,8 @@
     "noData": "没有数据",
     "noEncounters": "没有相遇记录。",
     "noEncountersHint": "在设置中指定 output_log 文件夹并游玩 VRChat 后会出现相遇记录。",
+    "encounterTableEmpty": "还没有相遇记录",
+    "encounterTableEmptyFiltered": "没有符合条件的相遇记录",
     "noDataHint": "游玩时长从 output_log 汇总。请先设置日志文件夹并启动 VRChat。",
     "colJoin": "进入",
     "colLeave": "离开",
@@ -301,6 +303,7 @@
     "invalidQuery": "无法显示。请检查 URL 中的 kind / vrcUserId / worldId。",
     "loading": "加载中…",
     "empty": "没有匹配的相遇记录。",
+    "tableEmpty": "还没有相遇记录",
     "fetchFailedGeneric": "无法加载数据。",
     "colJoin": "进入",
     "colLeave": "离开",
@@ -311,6 +314,7 @@
   },
   "friendAvatars": {
     "empty": "尚无从日志记录的 Avatar。",
+    "tableEmpty": "还没有 Avatar",
     "fetchFailedGeneric": "无法加载 Avatar 列表。",
     "colAvatarName": "Avatar 名称",
     "colCachePath": "本地缓存",
@@ -429,6 +433,7 @@
     "scriptSource": "脚本",
     "scriptPlaceholder": "使用 tweaker.subscribe(...) 订阅事件",
     "runLogTitle": "运行日志",
+    "runLogTableEmpty": "还没有运行日志",
     "runLogLoadError": "无法获取运行日志",
     "runLogAt": "时间",
     "runLogEvent": "事件",
@@ -477,7 +482,9 @@
     "colPackageGo": "软件包",
     "colVersion": "版本",
     "colLicense": "许可",
-    "colRepo": "仓库"
+    "colRepo": "仓库",
+    "tableEmptyFrontend": "还没有可显示的前端包",
+    "tableEmptyBackend": "还没有可显示的后端包"
   },
   "settings": {
     "title": "设置",

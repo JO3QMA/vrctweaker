@@ -44,11 +44,14 @@
         :description="t('settings.closeToTrayHint')"
         control="switch"
       >
-        <el-switch
-          v-model="closeToTray"
-          data-testid="settings-close-to-tray"
-          @change="saveCloseToTray"
-        />
+        <template #default="{ labelId }">
+          <el-switch
+            v-model="closeToTray"
+            data-testid="settings-close-to-tray"
+            :aria-labelledby="labelId"
+            @change="saveCloseToTray"
+          />
+        </template>
       </SettingsRow>
     </el-card>
 
@@ -65,11 +68,14 @@
         :description="t('settings.suppressSleepHint')"
         control="switch"
       >
-        <el-switch
-          v-model="suppressSleepWhileVRChat"
-          class="power-switch"
-          @change="saveSuppressSleepWhileVRChat"
-        />
+        <template #default="{ labelId }">
+          <el-switch
+            v-model="suppressSleepWhileVRChat"
+            class="power-switch"
+            :aria-labelledby="labelId"
+            @change="saveSuppressSleepWhileVRChat"
+          />
+        </template>
       </SettingsRow>
     </el-card>
   </div>

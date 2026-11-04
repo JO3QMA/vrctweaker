@@ -1258,7 +1258,7 @@ onMounted(() => {
 /* Toolbar control height alignment (Element Plus default size) */
 .filters :deep(.el-input__wrapper),
 .filters :deep(.el-date-editor.el-input__wrapper) {
-  height: var(--el-component-size);
+  height: var(--el-component-size, 32px);
   box-sizing: border-box;
 }
 
@@ -1267,7 +1267,7 @@ onMounted(() => {
 }
 
 .filters-actions :deep(.el-button) {
-  height: var(--el-component-size);
+  height: var(--el-component-size, 32px);
 }
 
 .gallery-body {

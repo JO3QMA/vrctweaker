@@ -32,12 +32,6 @@
         <div v-if="encountersLoading" class="loading">
           {{ t("common.loading") }}
         </div>
-        <div v-else-if="filteredEncounters.length === 0" class="empty">
-          <p class="empty-title">{{ t("activity.noEncounters") }}</p>
-          <p v-if="encounters.length === 0" class="empty-hint text-body-sm">
-            {{ t("activity.noEncountersHint") }}
-          </p>
-        </div>
         <el-table
           v-else
           :data="filteredEncounters"
@@ -45,7 +39,17 @@
           size="small"
           :border="false"
           stripe
+          :aria-label="t('activity.encounterSection')"
+          :empty-text="encounterTableEmptyText"
         >
+          <template #empty>
+            <div class="empty">
+              <p class="empty-title">{{ encounterTableEmptyText }}</p>
+              <p v-if="encounters.length === 0" class="empty-hint text-body-sm">
+                {{ t("activity.noEncountersHint") }}
+              </p>
+            </div>
+          </template>
           <el-table-column
             :label="t('activity.colJoin')"
             :width="ENCOUNTER_LOG_TIME_COL_WIDTH"
@@ -224,6 +228,16 @@ const filteredEncounters = computed(() => {
   const q = displayNameFilter.value.trim().toLowerCase();
   if (!q) return list;
   return list.filter((e) => e.displayName.toLowerCase().includes(q));
+});
+
+const encounterTableEmptyText = computed(() => {
+  if (encounters.value.length === 0) {
+    return t("activity.encounterTableEmpty");
+  }
+  if (displayNameFilter.value.trim()) {
+    return t("activity.encounterTableEmptyFiltered");
+  }
+  return t("activity.encounterTableEmpty");
 });
 
 function formatDateShort(dateStr: string): string {

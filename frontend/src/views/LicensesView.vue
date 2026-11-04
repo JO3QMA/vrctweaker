@@ -22,6 +22,8 @@
         style="width: 100%"
         size="small"
         stripe
+        :aria-label="t('licenses.frontend')"
+        :empty-text="t('licenses.tableEmptyFrontend')"
       >
         <el-table-column
           prop="name"
@@ -63,7 +65,14 @@
 
     <section class="licenses-section">
       <h2 class="text-h2 section-title">{{ t("licenses.backend") }}</h2>
-      <el-table :data="goLicenses" style="width: 100%" size="small" stripe>
+      <el-table
+        :data="goLicenses"
+        style="width: 100%"
+        size="small"
+        stripe
+        :aria-label="t('licenses.backend')"
+        :empty-text="t('licenses.tableEmptyBackend')"
+      >
         <el-table-column
           prop="path"
           :label="t('licenses.colPackageGo')"

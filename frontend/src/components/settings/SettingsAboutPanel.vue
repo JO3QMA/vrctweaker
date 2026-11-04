@@ -42,11 +42,14 @@
         :description="t('settings.updateAutoCheckHint')"
         control="switch"
       >
-        <el-switch
-          v-model="appUpdateAutoCheck"
-          data-testid="settings-app-update-auto-check"
-          @change="saveAppUpdateAutoCheck"
-        />
+        <template #default="{ labelId }">
+          <el-switch
+            v-model="appUpdateAutoCheck"
+            data-testid="settings-app-update-auto-check"
+            :aria-labelledby="labelId"
+            @change="saveAppUpdateAutoCheck"
+          />
+        </template>
       </SettingsRow>
       <div class="settings-about-footer">
         <p

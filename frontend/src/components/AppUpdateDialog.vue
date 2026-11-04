@@ -6,6 +6,7 @@
     :close-on-click-modal="false"
     :show-close="false"
     :close-on-press-escape="false"
+    :trap-focus="true"
     data-testid="app-update-dialog"
   >
     <p class="version-line text-body-sm">

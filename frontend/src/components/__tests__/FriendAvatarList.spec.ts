@@ -192,9 +192,7 @@ describe("FriendAvatarList", () => {
   it("shows empty message when no rows", async () => {
     const wrapper = mountList();
     await flushPromises();
-    expect(wrapper.text()).toContain(
-      "ログから記録されたアバターはまだありません",
-    );
+    expect(wrapper.text()).toContain("アバターはまだありません");
   });
 
   it("shows generic error on fetch failure", async () => {

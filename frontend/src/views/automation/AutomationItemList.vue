@@ -118,6 +118,7 @@ function onCreate(command: string) {
                 :model-value="item.isEnabled"
                 :disabled="disabled"
                 size="small"
+                :aria-label="item.name"
                 @change="(v: string | number | boolean) => onToggle(item, v)"
               />
             </div>

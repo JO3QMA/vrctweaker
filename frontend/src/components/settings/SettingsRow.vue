@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useSlots } from "vue";
+import { computed, useId, useSlots } from "vue";
 
 const props = withDefaults(
   defineProps<{
@@ -14,6 +14,7 @@ const props = withDefaults(
 );
 
 const slots = useSlots();
+const labelId = useId();
 
 const showDescription = computed(
   () => Boolean(props.description) || Boolean(slots.description),
@@ -33,13 +34,13 @@ const rowClass = computed(() => ({
 <template>
   <div class="setting-row" :class="rowClass">
     <div class="setting-row__text">
-      <div class="setting-row__label">{{ label }}</div>
+      <div :id="labelId" class="setting-row__label">{{ label }}</div>
       <p v-if="showDescription" class="setting-row__desc text-body-sm">
         <slot name="description">{{ description }}</slot>
       </p>
     </div>
     <div class="setting-row__control">
-      <slot />
+      <slot :label-id="labelId" />
     </div>
   </div>
 </template>

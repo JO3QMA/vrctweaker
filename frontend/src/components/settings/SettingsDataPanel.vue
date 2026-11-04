@@ -93,11 +93,14 @@
         :description="t('settings.galleryAutoEnrichHint')"
         control="switch"
       >
-        <el-switch
-          v-model="galleryAutoEnrichMetadata"
-          data-testid="settings-gallery-auto-enrich"
-          @change="saveGalleryAutoEnrich"
-        />
+        <template #default="{ labelId }">
+          <el-switch
+            v-model="galleryAutoEnrichMetadata"
+            data-testid="settings-gallery-auto-enrich"
+            :aria-labelledby="labelId"
+            @change="saveGalleryAutoEnrich"
+          />
+        </template>
       </SettingsRow>
       <p
         class="settings-note text-body-sm"

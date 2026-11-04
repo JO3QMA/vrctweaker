@@ -81,7 +81,7 @@ function onHeaderCommand(command: string | number | object) {
           v-model="editor.isEnabled"
           :disabled="disabled"
           data-testid="editor-enabled"
-          :aria-label="t('automation.enabled')"
+          :aria-label="editor.name.trim() || t('automation.ruleNamePh')"
         />
         <el-dropdown
           v-if="canDeleteItem"
@@ -235,7 +235,13 @@ function onHeaderCommand(command: string | number | object) {
               :label="t('automation.conditionVrchatRunning')"
               control="switch"
             >
-              <el-switch v-model="editor.vrchatRunning" :disabled="disabled" />
+              <template #default="{ labelId }">
+                <el-switch
+                  v-model="editor.vrchatRunning"
+                  :disabled="disabled"
+                  :aria-labelledby="labelId"
+                />
+              </template>
             </SettingsRow>
             <SettingsRow
               v-if="
@@ -431,10 +437,13 @@ function onHeaderCommand(command: string | number | object) {
                 :label="t('automation.continueOnError')"
                 control="switch"
               >
-                <el-switch
-                  v-model="action.continueOnError"
-                  :disabled="disabled"
-                />
+                <template #default="{ labelId }">
+                  <el-switch
+                    v-model="action.continueOnError"
+                    :disabled="disabled"
+                    :aria-labelledby="labelId"
+                  />
+                </template>
               </SettingsRow>
             </div>
             <div

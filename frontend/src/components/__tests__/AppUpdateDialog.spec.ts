@@ -45,4 +45,20 @@ describe("AppUpdateDialog", () => {
     );
     wrapper.unmount();
   });
+
+  it("keeps keyboard focus inside the dialog", async () => {
+    const outside = document.createElement("button");
+    outside.textContent = "outside";
+    document.body.appendChild(outside);
+    outside.focus();
+
+    mount(AppUpdateDialog, { attachTo: document.body });
+    await flushPromises();
+
+    const dialog = document.querySelector('[data-testid="app-update-dialog"]');
+    expect(dialog).toBeTruthy();
+    expect(dialog?.contains(document.activeElement)).toBe(true);
+
+    document.body.innerHTML = "";
+  });
 });

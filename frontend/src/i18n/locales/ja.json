@@ -287,6 +287,8 @@
     "noData": "データがありません",
     "noEncounters": "遭遇ログがありません。",
     "noEncountersHint": "VRChatのoutput_logを監視するには、設定でログフォルダを指定してVRChatをプレイしてください。",
+    "encounterTableEmpty": "遭遇ログはまだありません",
+    "encounterTableEmptyFiltered": "条件に合う遭遇ログはありません",
     "noDataHint": "プレイ時間はoutput_logから集計されます。ログフォルダを設定してからVRChatを起動してください。",
     "colJoin": "入室",
     "colLeave": "退室",
@@ -301,6 +303,7 @@
     "invalidQuery": "表示できません。URLのkind / vrcUserId / worldIdを確認してください。",
     "loading": "読み込み中…",
     "empty": "該当する遭遇ログがありません。",
+    "tableEmpty": "遭遇ログはまだありません",
     "fetchFailedGeneric": "データの取得に失敗しました。",
     "colJoin": "入室",
     "colLeave": "退室",
@@ -311,6 +314,7 @@
   },
   "friendAvatars": {
     "empty": "ログから記録されたアバターはまだありません。",
+    "tableEmpty": "アバターはまだありません",
     "fetchFailedGeneric": "アバター一覧の取得に失敗しました。",
     "colAvatarName": "アバター名",
     "colCachePath": "ローカルキャッシュ",
@@ -429,6 +433,7 @@
     "scriptSource": "スクリプト",
     "scriptPlaceholder": "tweaker.subscribe(...) でイベントを購読",
     "runLogTitle": "実行ログ",
+    "runLogTableEmpty": "実行ログはまだありません",
     "runLogLoadError": "実行ログを取得できませんでした",
     "runLogAt": "時刻",
     "runLogEvent": "イベント",
@@ -477,7 +482,9 @@
     "colPackageGo": "パッケージ",
     "colVersion": "バージョン",
     "colLicense": "ライセンス",
-    "colRepo": "リポジトリ"
+    "colRepo": "リポジトリ",
+    "tableEmptyFrontend": "フロントエンドのパッケージはまだありません",
+    "tableEmptyBackend": "バックエンドのパッケージはまだありません"
   },
   "settings": {
     "title": "設定",

@@ -23,13 +23,6 @@
       <div v-else-if="historyLoading" class="vt-text-muted">
         {{ t("common.loading") }}
       </div>
-      <div
-        v-else-if="historyRows.length === 0"
-        class="vt-text-muted"
-        data-testid="video-history-empty"
-      >
-        {{ t("video.historyEmpty") }}
-      </div>
       <el-table
         v-else
         :data="historyRows"
@@ -37,6 +30,8 @@
         size="small"
         class="history-table"
         data-testid="video-history-table"
+        :aria-label="t('video.historySection')"
+        :empty-text="t('video.historyEmpty')"
       >
         <el-table-column :label="t('video.historyColTime')" min-width="140">
           <template #default="{ row }">
