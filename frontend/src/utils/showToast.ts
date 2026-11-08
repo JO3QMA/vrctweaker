@@ -13,35 +13,82 @@ function messageNeedsZIndexPatch(node: HTMLElement): boolean {
   return getComputedStyle(node).zIndex !== zIndexTarget;
 }
 
+function patchMessageZIndex(node: HTMLElement): void {
+  if (messageNeedsZIndexPatch(node)) {
+    node.style.zIndex = zIndexTarget;
+  }
+}
+
 function applyToastStackZIndex(): void {
   if (typeof document === "undefined") return;
   document.querySelectorAll(".el-message").forEach((node) => {
-    if (node instanceof HTMLElement && messageNeedsZIndexPatch(node)) {
-      node.style.zIndex = zIndexTarget;
+    if (node instanceof HTMLElement) {
+      patchMessageZIndex(node);
     }
   });
 }
 
-let toastZIndexGuard: MutationObserver | undefined;
+const messageObserverByEl = new Map<HTMLElement, MutationObserver>();
+let messageListObserver: MutationObserver | undefined;
 
-/** Re-apply when EP rewrites inline z-index (e.g. after another overlay opens). */
-function ensureToastZIndexGuard(): void {
-  if (typeof document === "undefined" || toastZIndexGuard) return;
-  toastZIndexGuard = new MutationObserver(() => {
-    if (!document.querySelector(".el-message")) return;
-    if (
-      [...document.querySelectorAll(".el-message")].some(
-        (n) => n instanceof HTMLElement && messageNeedsZIndexPatch(n),
-      )
-    ) {
-      applyToastStackZIndex();
-    }
+function forEachMessageInNode(
+  node: Node,
+  visit: (el: HTMLElement) => void,
+): void {
+  if (!(node instanceof HTMLElement)) return;
+  if (node.classList.contains("el-message")) {
+    visit(node);
+  }
+  node.querySelectorAll(".el-message").forEach((el) => {
+    if (el instanceof HTMLElement) visit(el);
   });
-  toastZIndexGuard.observe(document.body, {
+}
+
+function observeMessageElement(el: HTMLElement): void {
+  patchMessageZIndex(el);
+  if (messageObserverByEl.has(el)) return;
+  const observer = new MutationObserver(() => {
+    patchMessageZIndex(el);
+  });
+  observer.observe(el, { attributes: true, attributeFilter: ["style"] });
+  messageObserverByEl.set(el, observer);
+}
+
+function unobserveMessageElement(el: HTMLElement): void {
+  messageObserverByEl.get(el)?.disconnect();
+  messageObserverByEl.delete(el);
+}
+
+function teardownToastWatchersIfIdle(): void {
+  if (document.querySelector(".el-message")) return;
+  messageListObserver?.disconnect();
+  messageListObserver = undefined;
+  for (const [, observer] of messageObserverByEl) {
+    observer.disconnect();
+  }
+  messageObserverByEl.clear();
+}
+
+/** Watch only toast mount/unmount; per-toast observers handle EP style rewrites. */
+function ensureToastZIndexWatchers(): void {
+  if (typeof document === "undefined" || messageListObserver) return;
+  messageListObserver = new MutationObserver((records) => {
+    for (const record of records) {
+      record.addedNodes.forEach((node) => {
+        forEachMessageInNode(node, observeMessageElement);
+      });
+      record.removedNodes.forEach((node) => {
+        forEachMessageInNode(node, unobserveMessageElement);
+      });
+    }
+    teardownToastWatchersIfIdle();
+  });
+  messageListObserver.observe(document.body, {
     childList: true,
     subtree: true,
-    attributes: true,
-    attributeFilter: ["style"],
+  });
+  document.querySelectorAll(".el-message").forEach((node) => {
+    if (node instanceof HTMLElement) observeMessageElement(node);
   });
 }
 
@@ -83,7 +130,7 @@ function show(variant: ToastVariant, message: string): MessageHandler {
       throw new Error(`Unknown toast variant: ${String(_exhaustive)}`);
     }
   }
-  ensureToastZIndexGuard();
+  ensureToastZIndexWatchers();
   scheduleApplyToastStackZIndex();
   return handler;
 }
@@ -94,4 +141,10 @@ export const showToast = {
   warning: (message: string) => show("warning", message),
   error: (message: string) => show("danger", message),
   info: (message: string) => show("info", message),
+};
+
+/** @internal Vitest hooks for observer lifecycle */
+export const showToastStackInternals = {
+  activePerMessageObservers: (): number => messageObserverByEl.size,
+  isMessageListObserverActive: (): boolean => messageListObserver !== undefined,
 };
