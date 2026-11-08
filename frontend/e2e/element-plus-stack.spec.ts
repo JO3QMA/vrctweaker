@@ -112,7 +112,10 @@ test.describe("Element Plus stack (App.vue path)", () => {
         modalTop,
         toasts: [...document.querySelectorAll(".el-message")].map((el) => {
           const z = parseInt(getComputedStyle(el).zIndex, 10) || 0;
-          return { zIndex: getComputedStyle(el).zIndex, aboveModal: z > modalTop };
+          return {
+            zIndex: getComputedStyle(el).zIndex,
+            aboveModal: z > modalTop,
+          };
         }),
       };
     });
