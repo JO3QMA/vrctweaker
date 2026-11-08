@@ -19,12 +19,16 @@ describe("SettingsRow", () => {
   it("keeps switches and number inputs on a non-wrapping row", () => {
     const sw = mount(SettingsRow, {
       props: { label: "トレイ", control: "switch" },
+      slots: {
+        default: `<el-switch data-testid="sw" aria-label="トレイ" />`,
+      },
     });
     const num = mount(SettingsRow, {
       props: { label: "日数", control: "number" },
     });
 
     expect(sw.classes()).toContain("setting-row--fixed");
+    expect(sw.get(".setting-row__label").attributes("id")).toBeTruthy();
     expect(sw.classes()).not.toContain("setting-row--number");
     expect(num.classes()).toContain("setting-row--fixed");
     expect(num.classes()).toContain("setting-row--number");

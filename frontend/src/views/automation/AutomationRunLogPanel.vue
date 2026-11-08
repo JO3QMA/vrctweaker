@@ -83,7 +83,8 @@ onBeforeUnmount(() => {
         :data="entries"
         size="small"
         stripe
-        empty-text="—"
+        :empty-text="t('automation.runLogTableEmpty')"
+        :aria-label="t('automation.runLogTitle')"
         class="automation-log__table"
         data-testid="automation-run-log-table"
         table-layout="fixed"

@@ -45,6 +45,7 @@
               v-model="maintainOn"
               data-testid="ytdlp-maintain-switch"
               :disabled="busy"
+              :aria-label="t('video.replaceLabel')"
               @change="onMaintainChange"
             />
             <span class="switch-status" data-testid="ytdlp-effective-inline">

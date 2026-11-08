@@ -3,10 +3,15 @@
     <template v-if="canLoad">
       <div v-if="loading" class="message">{{ t("common.loading") }}</div>
       <VtAlert v-else-if="error" variant="danger" :title="error" />
-      <div v-else-if="rows.length === 0" class="message">
-        {{ t("encounterHistory.empty") }}
-      </div>
-      <el-table v-else :data="rows" style="width: 100%" size="small" stripe>
+      <el-table
+        v-else
+        :data="rows"
+        style="width: 100%"
+        size="small"
+        stripe
+        :aria-label="tableAriaLabel"
+        :empty-text="tableEmptyText"
+      >
         <el-table-column
           :label="t('encounterHistory.colJoin')"
           :width="ENCOUNTER_LOG_TIME_COL_WIDTH"
@@ -103,6 +108,14 @@ const targetId = computed(() => {
 });
 
 const canLoad = computed(() => targetId.value !== "");
+
+const tableAriaLabel = computed(() => {
+  if (props.mode === "user") return t("encounterHistory.titleUser");
+  if (props.mode === "world") return t("encounterHistory.titleWorld");
+  return t("encounterHistory.titleDefault");
+});
+
+const tableEmptyText = computed(() => t("encounterHistory.tableEmpty"));
 
 async function load(): Promise<void> {
   const id = targetId.value;

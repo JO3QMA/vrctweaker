@@ -46,6 +46,7 @@
           class="cookie-switch"
           data-testid="video-cookie-enable"
           :disabled="cookieBusy"
+          :aria-label="t('video.cookieLinkage.enableLabel')"
           @change="onCookieEnableChange"
         />
       </div>
