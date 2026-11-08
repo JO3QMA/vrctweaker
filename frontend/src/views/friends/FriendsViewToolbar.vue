@@ -12,7 +12,7 @@
         <el-switch
           v-model="showOfflineList"
           data-testid="friends-filter-mode"
-          :aria-label="t('friends.toolbarOnlineOffline')"
+          :aria-label="t('friends.toolbarOfflineSwitch')"
         />
         <span :class="['mode-label', { active: showOfflineList }]"
           >Offline</span

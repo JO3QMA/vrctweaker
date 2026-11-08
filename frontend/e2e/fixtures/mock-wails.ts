@@ -187,6 +187,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         var handlers = wailsEventHandlers[eventName] || [];
         handlers.forEach(function(h) { h(data); });
       }
+      window.__e2eEmitWailsEvent = emitWailsEvent;
 
       window.runtime = {
         EventsOn: function(eventName, cb) {

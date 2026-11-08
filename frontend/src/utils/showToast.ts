@@ -4,13 +4,45 @@ import { Z_INDEX_TOAST } from "../constants/elementPlusStack";
 
 export type ToastVariant = "success" | "warning" | "danger" | "info";
 
+const zIndexTarget = String(Z_INDEX_TOAST);
+
+function messageNeedsZIndexPatch(node: HTMLElement): boolean {
+  const inline = node.style.zIndex;
+  if (inline === zIndexTarget) return false;
+  if (inline !== "") return true;
+  return getComputedStyle(node).zIndex !== zIndexTarget;
+}
+
 function applyToastStackZIndex(): void {
   if (typeof document === "undefined") return;
-  const nodes = document.querySelectorAll(".el-message");
-  const last = nodes.item(nodes.length - 1);
-  if (last instanceof HTMLElement) {
-    last.style.zIndex = String(Z_INDEX_TOAST);
-  }
+  document.querySelectorAll(".el-message").forEach((node) => {
+    if (node instanceof HTMLElement && messageNeedsZIndexPatch(node)) {
+      node.style.zIndex = zIndexTarget;
+    }
+  });
+}
+
+let toastZIndexGuard: MutationObserver | undefined;
+
+/** Re-apply when EP rewrites inline z-index (e.g. after another overlay opens). */
+function ensureToastZIndexGuard(): void {
+  if (typeof document === "undefined" || toastZIndexGuard) return;
+  toastZIndexGuard = new MutationObserver(() => {
+    if (!document.querySelector(".el-message")) return;
+    if (
+      [...document.querySelectorAll(".el-message")].some(
+        (n) => n instanceof HTMLElement && messageNeedsZIndexPatch(n),
+      )
+    ) {
+      applyToastStackZIndex();
+    }
+  });
+  toastZIndexGuard.observe(document.body, {
+    childList: true,
+    subtree: true,
+    attributes: true,
+    attributeFilter: ["style"],
+  });
 }
 
 /** ElMessage sets z-index from ConfigProvider counter on mount; patch after paint. */
@@ -51,6 +83,7 @@ function show(variant: ToastVariant, message: string): MessageHandler {
       throw new Error(`Unknown toast variant: ${String(_exhaustive)}`);
     }
   }
+  ensureToastZIndexGuard();
   scheduleApplyToastStackZIndex();
   return handler;
 }
