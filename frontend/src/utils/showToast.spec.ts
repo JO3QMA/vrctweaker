@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { ElMessage } from "element-plus";
-import { showToast } from "./showToast";
+import { showToast, showToastStackInternals } from "./showToast";
 import { Z_INDEX_TOAST } from "../constants/elementPlusStack";
 
 describe("showToast", () => {
@@ -43,5 +43,99 @@ describe("showToast", () => {
       message: "Note",
       zIndex: Z_INDEX_TOAST,
     });
+  });
+
+  async function flushToastZIndexPatches(): Promise<void> {
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => resolve());
+    });
+  }
+
+  function stubElMessageAddToast(
+    spy: ReturnType<typeof vi.spyOn>,
+    seedZIndex: number,
+  ): void {
+    spy.mockImplementation(() => {
+      const el = document.createElement("div");
+      el.className = "el-message";
+      el.style.zIndex = String(seedZIndex);
+      document.body.appendChild(el);
+      return {} as never;
+    });
+  }
+
+  it("patches z-index on every .el-message after multiple toasts", async () => {
+    const successSpy = vi.spyOn(ElMessage, "success");
+    const warningSpy = vi.spyOn(ElMessage, "warning");
+    const errorSpy = vi.spyOn(ElMessage, "error");
+    stubElMessageAddToast(successSpy, 2001);
+    stubElMessageAddToast(warningSpy, 2002);
+    stubElMessageAddToast(errorSpy, 2003);
+
+    showToast.success("a");
+    showToast.warning("b");
+    showToast.error("c");
+    await flushToastZIndexPatches();
+
+    const zIndexes = [...document.querySelectorAll(".el-message")].map((el) =>
+      el instanceof HTMLElement ? el.style.zIndex : "",
+    );
+    expect(zIndexes).toEqual(["4000", "4000", "4000"]);
+  });
+
+  it("ignores unrelated style mutations (no per-toast observer on other nodes)", async () => {
+    const successSpy = vi.spyOn(ElMessage, "success");
+    stubElMessageAddToast(successSpy, 2001);
+    showToast.success("only");
+    await flushToastZIndexPatches();
+    expect(showToastStackInternals.isMessageListObserverActive()).toBe(true);
+    expect(showToastStackInternals.activePerMessageObservers()).toBe(1);
+
+    const unrelated = document.createElement("div");
+    document.body.appendChild(unrelated);
+    for (let i = 0; i < 25; i++) {
+      unrelated.style.transform = `translateX(${i}px)`;
+    }
+    expect(showToastStackInternals.activePerMessageObservers()).toBe(1);
+    const toast = document.querySelector(".el-message") as HTMLElement;
+    expect(toast.style.zIndex).toBe("4000");
+  });
+
+  it("disconnects watchers when all toasts are removed and reattaches on new toast", async () => {
+    const successSpy = vi.spyOn(ElMessage, "success");
+    const infoSpy = vi.spyOn(ElMessage, "info");
+    stubElMessageAddToast(successSpy, 2001);
+    stubElMessageAddToast(infoSpy, 2002);
+
+    showToast.success("one");
+    await flushToastZIndexPatches();
+    document.querySelector(".el-message")?.remove();
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+
+    expect(showToastStackInternals.isMessageListObserverActive()).toBe(false);
+    expect(showToastStackInternals.activePerMessageObservers()).toBe(0);
+
+    showToast.info("again");
+    await flushToastZIndexPatches();
+    expect(showToastStackInternals.isMessageListObserverActive()).toBe(true);
+    expect(showToastStackInternals.activePerMessageObservers()).toBe(1);
+    expect(
+      (document.querySelector(".el-message") as HTMLElement).style.zIndex,
+    ).toBe("4000");
+  });
+
+  it("re-patches z-index when EP rewrites a toast inline style", async () => {
+    const successSpy = vi.spyOn(ElMessage, "success");
+    stubElMessageAddToast(successSpy, 2001);
+    showToast.success("toast");
+    await flushToastZIndexPatches();
+    const toast = document.querySelector(".el-message") as HTMLElement;
+    toast.style.zIndex = "2007";
+    await new Promise<void>((resolve) => queueMicrotask(resolve));
+    expect(toast.style.zIndex).toBe("4000");
   });
 });
