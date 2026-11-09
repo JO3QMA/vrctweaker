@@ -18,6 +18,14 @@
 
   /* Semantic: タグ・メッセージ・検証のフィードバック。サーバー状態とプレゼンスには使わない */
   --color-danger: #e57373; /* 危険・破壊 */
+  --color-error: #ef8a8a; /* インライン検証（カード上コントラスト 5.23:1） */
+  /* automation 固定アクションバー高の初期近似（ResizeObserver 適用前のフォールバック） */
+  --vt-automation-action-bar-inset-fallback: 104px;
+  /* scroll-margin ≈ action bar inset − label breathing room */
+  --vt-automation-error-scroll-margin: calc(
+    var(--automation-action-bar-inset, var(--vt-automation-action-bar-inset-fallback)) -
+      16px
+  );
   --color-success: #81c784; /* 成功 */
   --color-warning: #ffb74d; /* 警告 */
   --color-info: #9aa0a6; /* 情報 */
@@ -63,6 +71,11 @@
   --control-width-md: 320px; /* セレクト・短いテキスト入力 */
   --button-min-width: 96px; /* 設定行のボタン最小幅 */
   --path-input-min-width: 240px; /* これより狭いパス入力はボタンを下へ折る */
+
+  /* Element Plus overlay stack (see constants/elementPlusStack.ts) */
+  --vt-z-index-onboarding: 1500;
+  --vt-z-index-element-plus-base: 2000;
+  --vt-z-index-toast: 4000;
 
   /* Spacing scale (ADR 0018) */
   --space-4: 4px;
@@ -1043,7 +1056,7 @@ a:hover {
 
 .section-card .el-form-item__error,
 .vt-validated-form .el-form-item__error {
-  color: #ef8a8a;
+  color: var(--color-error);
 }
 
 .vt-validated-form > .el-form-item,
@@ -1056,7 +1069,7 @@ a:hover {
 }
 
 .automation-rule-editor .vt-validated-form .el-form-item.is-error {
-  scroll-margin-bottom: 88px;
+  scroll-margin-bottom: var(--vt-automation-error-scroll-margin);
 }
 
 .automation-rule-editor
@@ -1109,7 +1122,10 @@ a:hover {
 }
 
 .automation-rule-editor .automation-editor__scroll {
-  padding-bottom: var(--automation-action-bar-inset, 104px);
+  padding-bottom: var(
+    --automation-action-bar-inset,
+    var(--vt-automation-action-bar-inset-fallback)
+  );
 }
 
 .form-field-range-hint {
@@ -1117,7 +1133,7 @@ a:hover {
   margin-top: var(--space-4);
   font-size: var(--font-size-12);
   line-height: var(--line-height-normal);
-  color: #9aa0a6;
+  color: var(--color-text-secondary);
 }
 
 .el-form-item.vt-form-item-with-range-hint > .el-form-item__content {
@@ -1132,8 +1148,9 @@ a:hover {
   > .el-form-item__content
   > .el-input-number {
   order: 1;
-  width: 100%;
-  max-width: 100%;
+  width: 120px;
+  max-width: 120px;
+  flex: none;
 }
 
 .el-form-item.vt-form-item-with-range-hint
@@ -1191,20 +1208,20 @@ a:hover {
   margin-top: 0;
 }
 
-.resolution-fields .resolution-form-item {
-  flex: 1 1 120px;
+.resolution-fields .resolution-form-item,
+.resolution-fields .config-resolution-form-item {
+  flex: 0 1 auto;
   min-width: 0;
   max-width: 100%;
 }
 
-.resolution-fields .resolution-form-item.is-error {
-  flex: 1 1 100%;
-  max-width: 100%;
-}
-
 .resolution-fields .resolution-sep {
-  align-self: center;
+  align-self: flex-start;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  height: var(--el-component-size);
+  line-height: var(--el-component-size);
 }
 
 @media (max-width: 640px) {
@@ -1223,11 +1240,13 @@ a:hover {
   }
 }
 
-.vt-numeric-field-with-hint {
-  display: grid;
-  grid-template-rows: auto auto;
+/* Empty table placeholder height (8px grid; EP default is 60px). */
+.el-table__empty-block {
+  min-height: 56px;
 }
 
-.vt-numeric-field-with-hint .form-field-range-hint {
-  grid-row: 2;
+.el-table__empty-text {
+  line-height: 56px;
 }
+
+/* App toast stack: z-index is set in showToast (EP inline z-index ignores MessageOptions.zIndex). */

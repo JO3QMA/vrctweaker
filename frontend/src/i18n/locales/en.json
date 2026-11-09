@@ -296,6 +296,8 @@
     "noData": "No data",
     "noEncounters": "No encounter logs.",
     "noEncountersHint": "Set the output_log folder in Settings and play VRChat to record encounters.",
+    "encounterTableEmpty": "No encounter logs yet",
+    "encounterTableEmptyFiltered": "No encounter logs match your filters",
     "noDataHint": "Play time is aggregated from output_log. Set the log folder and launch VRChat.",
     "colJoin": "Joined",
     "colLeave": "Left",
@@ -310,6 +312,7 @@
     "invalidQuery": "Cannot display. Check kind / vrcUserId / worldId in the URL.",
     "loading": "Loading…",
     "empty": "No matching encounter logs.",
+    "tableEmpty": "No encounter logs yet",
     "fetchFailedGeneric": "Failed to load data.",
     "colJoin": "Joined",
     "colLeave": "Left",
@@ -320,6 +323,7 @@
   },
   "friendAvatars": {
     "empty": "No avatars recorded from logs yet.",
+    "tableEmpty": "No avatars yet",
     "fetchFailedGeneric": "Failed to load avatar list.",
     "colAvatarName": "Avatar name",
     "colCachePath": "Local cache",
@@ -395,6 +399,8 @@
     "kindScript": "Script",
     "sectionBasics": "Basics",
     "enabled": "Enabled",
+    "enableItem": "Enable {name}",
+    "enableThisRule": "Enable this rule",
     "sectionWhen": "When (trigger)",
     "sectionIf": "If (conditions)",
     "sectionThen": "Then (actions)",
@@ -438,6 +444,7 @@
     "scriptSource": "Script",
     "scriptPlaceholder": "Use tweaker.subscribe(...) to listen for events",
     "runLogTitle": "Run log",
+    "runLogTableEmpty": "No run logs yet",
     "runLogLoadError": "Could not load the run log",
     "runLogAt": "Time",
     "runLogEvent": "Event",
@@ -486,7 +493,9 @@
     "colPackageGo": "Package",
     "colVersion": "Version",
     "colLicense": "License",
-    "colRepo": "Repository"
+    "colRepo": "Repository",
+    "tableEmptyFrontend": "No frontend packages to show yet",
+    "tableEmptyBackend": "No backend packages to show yet"
   },
   "settings": {
     "title": "Settings",

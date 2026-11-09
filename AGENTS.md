@@ -20,4 +20,5 @@
 ## 関連
 
 - 公開 PR/Issue の redaction: [`docs/agents/redaction.md`](docs/agents/redaction.md)（`.cursor/rules/redaction-public-artifacts.mdc`）
+- ダークモード固定: [`docs/agents/dark-mode-fixed.md`](docs/agents/dark-mode-fixed.md)
 - Issue → PR フロー: [`.cursor/skills/issue-to-pr-workflow/SKILL.md`](.cursor/skills/issue-to-pr-workflow/SKILL.md)

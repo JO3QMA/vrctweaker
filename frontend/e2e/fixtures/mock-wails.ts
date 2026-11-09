@@ -30,11 +30,14 @@ import {
 export interface MockWailsOptions {
   /** true のとき IsLoggedIn / GetSelfProfile がログイン済みを返す */
   loggedIn?: boolean;
+  /** true のとき起動時に AppUpdateDialog が開く */
+  startupAppUpdatePrompt?: boolean;
 }
 
 /** ページ読み込み前に注入する window.go スタブの初期化スクリプトを返す（中身はブラウザでそのまま実行されるため TypeScript 構文不可） */
 export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
   const loggedIn = options.loggedIn ?? false;
+  const startupAppUpdatePrompt = options.startupAppUpdatePrompt ?? false;
   const profilesJson = JSON.stringify(SEED_LAUNCH_PROFILES);
   const pathSettingsJson = JSON.stringify(SEED_PATH_SETTINGS);
   const screenshotsJson = JSON.stringify(SEED_SCREENSHOTS);
@@ -55,6 +58,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
     seedUserProfileNavigation(E2E_SELF_USER_ID),
   );
   const loggedInJson = JSON.stringify(loggedIn);
+  const startupAppUpdatePromptJson = JSON.stringify(startupAppUpdatePrompt);
   const ytdlpMaintainStatus = {
     supported: true,
     unsupportedReason: "",
@@ -100,6 +104,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
       const resolveUserProfileSeed = ${resolveUserProfileSeedJson};
       const resolveSelfProfileSeed = ${resolveSelfProfileSeedJson};
       const loggedIn = ${loggedInJson};
+      const startupAppUpdatePrompt = ${startupAppUpdatePromptJson};
       const ytdlpMaintainStatus = ${ytdlpMaintainStatusJson};
       const serverStatus = ${serverStatusJson};
       var selfProfile = Object.assign({}, selfProfileSeed);
@@ -182,6 +187,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         var handlers = wailsEventHandlers[eventName] || [];
         handlers.forEach(function(h) { h(data); });
       }
+      window.__e2eEmitWailsEvent = emitWailsEvent;
 
       window.runtime = {
         EventsOn: function(eventName, cb) {
@@ -345,11 +351,11 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         }),
         ClaimStartupAppUpdatePrompt: () => Promise.resolve({
           currentVersion: '0.1.0',
-          updateAvailable: false,
-          shouldPrompt: false,
-          latestVersion: '0.1.0',
-          latestTag: 'v0.1.0',
-          releaseNotes: '',
+          updateAvailable: startupAppUpdatePrompt,
+          shouldPrompt: startupAppUpdatePrompt,
+          latestVersion: startupAppUpdatePrompt ? '0.2.0' : '0.1.0',
+          latestTag: startupAppUpdatePrompt ? 'v0.2.0' : 'v0.1.0',
+          releaseNotes: startupAppUpdatePrompt ? 'E2E release notes' : '',
           downloadUrl: '',
           zipSha256: '',
           releasePageUrl: 'https://github.com/JO3QMA/vrctweaker/releases/latest',
