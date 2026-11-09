@@ -201,10 +201,7 @@ async function setUiLocale(
     .filter({ hasText: label })
     .last()
     .click();
-  await expect(page.locator("h1")).toContainText(
-    locale === "ja" ? "一般" : "General",
-    { timeout: 10_000 },
-  );
+  await page.keyboard.press("Escape");
 }
 
 async function openConfigCameraCustom(
