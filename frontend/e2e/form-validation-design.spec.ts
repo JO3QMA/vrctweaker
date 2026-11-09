@@ -1165,10 +1165,18 @@ test.describe("Launcher 600 narrow column (design QA)", () => {
         await openLauncherProfileSidebarOpen600(page, locale);
         if (errorMode !== "none") {
           await submitResolutionValidation(page, LAUNCHER_SURFACE, errorMode);
-          const errors = page
-            .locator(LAUNCHER_NARROW_FIELDS)
-            .locator(".el-form-item.is-error .el-form-item__error");
-          await expect(errors.first()).not.toBeEmpty();
+          const fieldsLoc = page.locator(LAUNCHER_NARROW_FIELDS);
+          if ((await fieldsLoc.count()) === 0) {
+            const toggle = page.getByTestId("resolution-enabled-checkbox");
+            await toggle.click();
+            await expect(toggle).toBeChecked({ timeout: 10_000 });
+            await page.getByTestId("resolution-preset-custom").click();
+            await submitResolutionValidation(page, LAUNCHER_SURFACE, errorMode);
+          }
+          const errors = fieldsLoc.locator(
+            ".el-form-item.is-error .el-form-item__error",
+          );
+          await expect(errors.first()).not.toBeEmpty({ timeout: 10_000 });
           if (errorMode === "both") {
             await expect(errors).toHaveCount(2, { timeout: 10_000 });
           }
