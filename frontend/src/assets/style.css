@@ -1191,7 +1191,11 @@ a:hover {
   margin-bottom: 0;
 }
 
+/* 120px + gap + × + gap + 120px — stack when the resolution block is narrower than this. */
 .resolution-fields {
+  container-type: inline-size;
+  container-name: resolution-fields;
+  contain: inline-size;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
@@ -1209,6 +1213,17 @@ a:hover {
   flex-direction: column;
   align-items: flex-start;
   gap: var(--space-8);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.resolution-section {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .launch-args-advanced > .sub-options:has(.resolution-fields) + .arg-row {
@@ -1308,31 +1323,7 @@ a:hover {
   margin-bottom: 0;
 }
 
-@media (max-width: 640px) {
-  .launch-args-advanced .sub-options:has(.resolution-fields) {
-    margin-left: 0;
-    margin-right: 0;
-    width: 100%;
-    max-width: 100%;
-    align-self: stretch;
-    box-sizing: border-box;
-    min-width: 0;
-  }
-
-  .sub-options:has(.resolution-fields) {
-    margin-left: 0;
-    margin-right: 0;
-    width: 100%;
-    max-width: 100%;
-    align-self: stretch;
-    box-sizing: border-box;
-  }
-
-  .resolution-fields {
-    width: 100%;
-    max-width: 100%;
-  }
-
+@container resolution-fields (max-width: 279px) {
   .resolution-input-row {
     grid-template-columns: minmax(0, 1fr);
     width: 100%;
@@ -1343,6 +1334,7 @@ a:hover {
   .resolution-input-row > .config-resolution-form-item:nth-child(1),
   .resolution-input-row > .resolution-form-item:nth-child(3),
   .resolution-input-row > .config-resolution-form-item:nth-child(3) {
+    grid-column: 1;
     width: 100%;
     max-width: 100%;
     flex: none;
@@ -1354,34 +1346,62 @@ a:hover {
     max-width: 100%;
   }
 
+  .resolution-fields .el-input-number,
+  .resolution-input-row .el-input-number,
+  .resolution-input-row .resolution-number-input {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex: 0 0 auto;
+  }
+
+  .resolution-input-row .el-form-item__content {
+    min-width: 0;
+    overflow-x: clip;
+  }
+
+  .resolution-input-row .el-input-number .el-input__wrapper {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
   .resolution-input-row .el-form-item__error {
     width: 100%;
     max-width: 100%;
+    min-width: 0;
   }
 
-  .resolution-input-row [data-testid="screen-width-input"],
-  .resolution-input-row [data-testid="camera-width-input"],
-  .resolution-input-row [data-testid="screenshot-width-input"],
-  .resolution-input-row [data-testid="screen-height-input"],
-  .resolution-input-row [data-testid="camera-height-input"],
-  .resolution-input-row [data-testid="screenshot-height-input"] {
-    grid-column: 1;
-  }
-
-  .resolution-input-row [data-testid="screen-width-input"],
-  .resolution-input-row [data-testid="camera-width-input"],
-  .resolution-input-row [data-testid="screenshot-width-input"] {
+  .resolution-input-row > .resolution-form-item:nth-child(1),
+  .resolution-input-row > .config-resolution-form-item:nth-child(1) {
     grid-row: 1;
   }
 
-  .resolution-input-row [data-testid="screen-height-input"],
-  .resolution-input-row [data-testid="camera-height-input"],
-  .resolution-input-row [data-testid="screenshot-height-input"] {
+  .resolution-input-row > .resolution-form-item:nth-child(3),
+  .resolution-input-row > .config-resolution-form-item:nth-child(3) {
     grid-row: 2;
   }
 
   .resolution-input-row .resolution-sep {
     display: none;
+  }
+
+  .resolution-fields .form-field-range-hint {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 640px) {
+  .launch-args-advanced .sub-options:has(.resolution-fields) {
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+    max-width: 100%;
+    align-self: stretch;
+    box-sizing: border-box;
+    min-width: 0;
   }
 }
 

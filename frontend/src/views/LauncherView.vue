@@ -1615,6 +1615,7 @@ onBeforeRouteLeave(async (_to, _from, next) => {
 
 .resolution-number-input {
   width: 120px;
+  max-width: 100%;
 }
 
 .resolution-sep {

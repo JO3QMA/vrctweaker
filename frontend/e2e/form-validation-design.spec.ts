@@ -533,6 +533,137 @@ function rectInsideParent(
   );
 }
 
+const MIN_ERROR_READABLE_WIDTH_PX = 48;
+const MAX_ERROR_STACKED_LINES = 4;
+const NARROW_FIELDS_MAX_WIDTH_PX = 280;
+const LAUNCHER_NARROW_FIELDS = ".launch-args-advanced .resolution-fields";
+
+async function openLauncherProfileSidebarOpen600(
+  page: import("@playwright/test").Page,
+  locale: "ja" | "en",
+) {
+  await setUiLocale(page, locale);
+  await page.setViewportSize({ width: 600, height: 900 });
+  await page.goto("/#/launcher");
+  if (locale === "ja") {
+    await expect(page.locator("h1")).toContainText("ランチャー");
+  } else {
+    await expect(page.locator("h1")).toContainText("Launcher");
+  }
+  await page.getByTestId("profile-card-profile-1").click();
+  await expect(page.locator(".launcher-layout")).not.toHaveClass(
+    /sidebar-collapsed/,
+  );
+  const collapseHeader = page.locator(
+    ".args-collapse .el-collapse-item__header",
+  );
+  await collapseHeader.click();
+  const resolutionToggle = page.getByTestId("resolution-enabled-checkbox");
+  await expect(resolutionToggle).toBeVisible({ timeout: 10_000 });
+  await resolutionToggle.click();
+  await expect(resolutionToggle).toBeChecked({ timeout: 10_000 });
+  await page.getByTestId("resolution-preset-custom").click();
+  await expect(page.getByTestId("screen-width-input")).toBeVisible({
+    timeout: 10_000,
+  });
+}
+
+async function measureLauncherNarrowResolutionLayout(
+  page: import("@playwright/test").Page,
+) {
+  return page.evaluate(
+    ({ fieldsSelector, overlapTol }) => {
+      const fields = document.querySelector(fieldsSelector) as HTMLElement;
+      const parent = fields;
+      if (!fields) {
+        return {
+          fieldsWidth: 0,
+          overlaps: ["missing-fields"],
+          errorMinWidth: 0,
+          allInside: false,
+        };
+      }
+      const pick = (testId: string) =>
+        (fields.querySelector(`[data-testid="${testId}"] .el-input-number`) ??
+          fields.querySelector(`[data-testid="${testId}"]`)) as HTMLElement;
+      const width = pick("screen-width-input");
+      const height = pick("screen-height-input");
+      const hints = Array.from(
+        fields.querySelectorAll(".form-field-range-hint"),
+      ) as HTMLElement[];
+      const errors = Array.from(
+        fields.querySelectorAll(".el-form-item.is-error .el-form-item__error"),
+      ).filter((e) => (e.textContent ?? "").trim().length > 0) as HTMLElement[];
+      const labeled: { name: string; rect: DOMRect }[] = [];
+      if (width)
+        labeled.push({ name: "width", rect: width.getBoundingClientRect() });
+      if (height) {
+        labeled.push({ name: "height", rect: height.getBoundingClientRect() });
+      }
+      for (const [i, h] of hints.entries()) {
+        labeled.push({ name: `hint-${i}`, rect: h.getBoundingClientRect() });
+      }
+      for (const [i, e] of errors.entries()) {
+        labeled.push({ name: `error-${i}`, rect: e.getBoundingClientRect() });
+      }
+      const overlaps: string[] = [];
+      for (let i = 0; i < labeled.length; i++) {
+        for (let j = i + 1; j < labeled.length; j++) {
+          const a = labeled[i]!;
+          const b = labeled[j]!;
+          const hOverlap =
+            Math.min(a.rect.right, b.rect.right) -
+            Math.max(a.rect.left, b.rect.left);
+          const vOverlap =
+            Math.min(a.rect.bottom, b.rect.bottom) -
+            Math.max(a.rect.top, b.rect.top);
+          if (hOverlap > overlapTol && vOverlap > overlapTol) {
+            overlaps.push(`${a.name}×${b.name}`);
+          }
+        }
+      }
+      const parentRect = parent.getBoundingClientRect();
+      const outside: string[] = [];
+      const allInside = labeled.every(({ name, rect }) => {
+        const inside =
+          rect.left >= parentRect.left - overlapTol &&
+          rect.right <= parentRect.right + overlapTol &&
+          rect.top >= parentRect.top - overlapTol &&
+          rect.bottom <= parentRect.bottom + overlapTol;
+        if (!inside) {
+          outside.push(name);
+        }
+        return inside;
+      });
+      const errorMinWidth =
+        errors.length === 0
+          ? 48
+          : Math.min(...errors.map((e) => e.getBoundingClientRect().width));
+      let errorMaxLines = 0;
+      for (const err of errors) {
+        const style = getComputedStyle(err);
+        const lh = parseFloat(style.lineHeight) || 16;
+        const h = err.getBoundingClientRect().height;
+        errorMaxLines = Math.max(errorMaxLines, Math.ceil(h / lh));
+      }
+      return {
+        fieldsWidth: fields.getBoundingClientRect().width,
+        overlaps,
+        errorMinWidth,
+        allInside,
+        errorMaxLines,
+        outside,
+        fieldsScrollOverflow: fields.scrollWidth - fields.clientWidth,
+        fieldsClientWidth: fields.clientWidth,
+      };
+    },
+    {
+      fieldsSelector: LAUNCHER_NARROW_FIELDS,
+      overlapTol: GAP_TOLERANCE_PX,
+    },
+  );
+}
+
 test.describe("Form validation layout (design QA)", () => {
   test("launcher resolution hint sits below inputs in resolution row at 1280px", async ({
     page,
@@ -606,6 +737,10 @@ test.describe("Form validation layout (design QA)", () => {
         const sepRect = document
           .querySelector(".resolution-fields .resolution-sep")
           ?.getBoundingClientRect();
+        const fields = document.querySelector(
+          ".launch-args-advanced .resolution-fields",
+        );
+        const fieldsRect = fields?.getBoundingClientRect();
         const horizontalOverlap =
           Math.min(errRect.right, heightRect.right) -
           Math.max(errRect.left, heightRect.left);
@@ -613,13 +748,16 @@ test.describe("Form validation layout (design QA)", () => {
           horizontalOverlap,
           sepTop: sepRect?.top ?? 0,
           heightTop: heightRect.top,
+          fieldsWidth: fieldsRect?.width ?? 0,
           inputWidth: (
             widthItem.querySelector('[data-testid="screen-width-input"]') ??
             widthItem.querySelector(".el-input-number")
           )?.getBoundingClientRect().width,
         };
       });
-      expect(metrics.horizontalOverlap).toBeLessThanOrEqual(GAP_TOLERANCE_PX);
+      if (metrics.fieldsWidth >= 279 || viewport.width >= 1280) {
+        expect(metrics.horizontalOverlap).toBeLessThanOrEqual(GAP_TOLERANCE_PX);
+      }
       if (viewport.width >= 1280) {
         expect(
           Math.abs(metrics.sepTop - metrics.heightTop),
@@ -932,18 +1070,27 @@ test.describe("Resolution layout acceptance (design QA)", () => {
             ).toBeLessThanOrEqual(4);
           }
 
-          expect(afterWidthError.widthInputWidth).toBeGreaterThanOrEqual(
-            RESOLUTION_INPUT_WIDTH_PX - SUBPIXEL_PX,
-          );
-          expect(afterWidthError.widthInputWidth).toBeLessThanOrEqual(
-            RESOLUTION_INPUT_WIDTH_PX + SUBPIXEL_PX,
-          );
-          expect(afterWidthError.heightInputWidth).toBeGreaterThanOrEqual(
-            RESOLUTION_INPUT_WIDTH_PX - SUBPIXEL_PX,
-          );
-          expect(afterWidthError.heightInputWidth).toBeLessThanOrEqual(
-            RESOLUTION_INPUT_WIDTH_PX + SUBPIXEL_PX,
-          );
+          if (viewport.width >= 1280) {
+            expect(afterWidthError.widthInputWidth).toBeGreaterThanOrEqual(
+              RESOLUTION_INPUT_WIDTH_PX - SUBPIXEL_PX,
+            );
+            expect(afterWidthError.widthInputWidth).toBeLessThanOrEqual(
+              RESOLUTION_INPUT_WIDTH_PX + SUBPIXEL_PX,
+            );
+            expect(afterWidthError.heightInputWidth).toBeGreaterThanOrEqual(
+              RESOLUTION_INPUT_WIDTH_PX - SUBPIXEL_PX,
+            );
+            expect(afterWidthError.heightInputWidth).toBeLessThanOrEqual(
+              RESOLUTION_INPUT_WIDTH_PX + SUBPIXEL_PX,
+            );
+          } else if (afterWidthError.fieldsRect.width >= 279 - SUBPIXEL_PX) {
+            expect(afterWidthError.widthInputWidth).toBeLessThanOrEqual(
+              afterWidthError.fieldsRect.width + SUBPIXEL_PX,
+            );
+            expect(afterWidthError.heightInputWidth).toBeLessThanOrEqual(
+              afterWidthError.fieldsRect.width + SUBPIXEL_PX,
+            );
+          }
 
           expect(afterWidthError.errors.length).toBeGreaterThanOrEqual(1);
           const gapToError =
@@ -1001,6 +1148,52 @@ test.describe("Resolution layout acceptance (design QA)", () => {
           ).toBe(true);
         });
       }
+    }
+  }
+});
+
+test.describe("Launcher 600 narrow column (design QA)", () => {
+  test.setTimeout(120_000);
+  const LAUNCHER_SURFACE = RESOLUTION_SURFACES[0]!;
+  for (const locale of ["ja", "en"] as const) {
+    for (const errorMode of ["none", "width", "both"] as const) {
+      test(`launcher ${locale} 600px sidebar open (${errorMode} error): no overlap`, async ({
+        page,
+      }) => {
+        await openLauncherProfileSidebarOpen600(page, locale);
+        if (errorMode !== "none") {
+          await triggerResolutionErrorsAndMeasure(
+            page,
+            LAUNCHER_SURFACE,
+            errorMode,
+            locale,
+          );
+          await ensureResolutionSurfaceReady(page, LAUNCHER_SURFACE, locale);
+        }
+        const layout = await measureLauncherNarrowResolutionLayout(page);
+        expect(layout.fieldsWidth).toBeGreaterThan(0);
+        expect(layout.fieldsWidth).toBeLessThanOrEqual(
+          NARROW_FIELDS_MAX_WIDTH_PX,
+        );
+        expect(layout.overlaps).toEqual([]);
+        expect(layout.fieldsScrollOverflow).toBeLessThanOrEqual(1);
+        expect(layout.fieldsClientWidth).toBeGreaterThan(0);
+        if (errorMode !== "none") {
+          expect(layout.errorMinWidth).toBeGreaterThanOrEqual(
+            MIN_ERROR_READABLE_WIDTH_PX,
+          );
+          expect(layout.errorMaxLines).toBeLessThanOrEqual(
+            MAX_ERROR_STACKED_LINES,
+          );
+        }
+        const scroll = await page.evaluate(() => ({
+          doc:
+            document.documentElement.scrollWidth <=
+            document.documentElement.clientWidth + 1,
+          body: document.body.scrollWidth <= document.body.clientWidth + 1,
+        }));
+        expectNoHorizontalScroll(scroll.doc, scroll.body);
+      });
     }
   }
 });
