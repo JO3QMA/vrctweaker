@@ -379,30 +379,28 @@ async function submitResolutionValidation(
       if (!ss) {
         throw new Error(`resolution form setup not found (${surfaceName})`);
       }
-      if (surfaceName === "launcher") {
-        const model = reactive(ss.launcherFormModel);
-        const valueEnabled = reactive(ss.valueOptionsEnabled) as Record<
+      const setLauncherResolutionEditing = () => {
+        const valueEnabled = reactive(ss!.valueOptionsEnabled) as Record<
           string,
           unknown
         >;
-        const preset = ss.resolutionPreset as { value?: string } | string;
-        const setPreset = (v: string) => {
-          if (typeof preset === "object" && preset && "value" in preset) {
-            preset.value = v;
-          } else if (
-            typeof ss.resolutionPreset === "object" &&
-            ss.resolutionPreset
-          ) {
-            (ss.resolutionPreset as { value: string }).value = v;
-          }
-        };
+        const preset = ss!.resolutionPreset as { value?: string } | string;
+        Object.assign(valueEnabled, { resolution: true });
+        if (typeof preset === "object" && preset && "value" in preset) {
+          preset.value = "custom";
+        } else if (
+          typeof ss!.resolutionPreset === "object" &&
+          ss!.resolutionPreset
+        ) {
+          (ss!.resolutionPreset as { value: string }).value = "custom";
+        }
+      };
+      if (surfaceName === "launcher") {
+        const model = reactive(ss.launcherFormModel);
+        setLauncherResolutionEditing();
         if (m === "width") {
-          Object.assign(valueEnabled, { resolution: true });
-          setPreset("custom");
           model.screenWidth = invalidWidth;
         } else if (m === "both") {
-          Object.assign(valueEnabled, { resolution: true });
-          setPreset("custom");
           model.screenWidth = null;
           model.screenHeight = null;
         }
@@ -456,6 +454,9 @@ async function submitResolutionValidation(
           } catch {
             /* expected invalid */
           }
+        }
+        if (surfaceName === "launcher") {
+          setLauncherResolutionEditing();
         }
         return;
       }
