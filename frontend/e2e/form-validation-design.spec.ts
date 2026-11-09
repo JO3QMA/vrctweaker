@@ -251,12 +251,14 @@ async function measureResolutionRow(
       const sep = fields?.querySelector(
         ".resolution-sep",
       ) as HTMLElement | null;
-      const widthEl = document.querySelector(
-        `[data-testid="${widthTestId}"]`,
-      ) as HTMLElement;
-      const heightEl = document.querySelector(
-        `[data-testid="${heightTestId}"]`,
-      ) as HTMLElement;
+      const widthEl = (fields.querySelector(
+        `[data-testid="${widthTestId}"] .el-input-number`,
+      ) ??
+        fields.querySelector(`[data-testid="${widthTestId}"]`)) as HTMLElement;
+      const heightEl = (fields.querySelector(
+        `[data-testid="${heightTestId}"] .el-input-number`,
+      ) ??
+        fields.querySelector(`[data-testid="${heightTestId}"]`)) as HTMLElement;
       const errors = Array.from(
         fields.querySelectorAll(".el-form-item.is-error .el-form-item__error"),
       )
@@ -887,19 +889,11 @@ test.describe("Resolution layout acceptance (design QA)", () => {
           const { before: baseline, after: afterWidthError } = widthError;
 
           if (viewport.width >= 1280) {
-            const baselineHeightOffset =
-              baseline.heightLeft - baseline.fieldsRect.left;
-            const afterHeightOffset =
-              afterWidthError.heightLeft - afterWidthError.fieldsRect.left;
             expect(
-              Math.abs(afterHeightOffset - baselineHeightOffset),
+              Math.abs(afterWidthError.heightLeft - baseline.heightLeft),
             ).toBeLessThanOrEqual(SUBPIXEL_PX);
-            const baselineSepOffset =
-              baseline.sepLeft - baseline.fieldsRect.left;
-            const afterSepOffset =
-              afterWidthError.sepLeft - afterWidthError.fieldsRect.left;
             expect(
-              Math.abs(afterSepOffset - baselineSepOffset),
+              Math.abs(afterWidthError.sepLeft - baseline.sepLeft),
             ).toBeLessThanOrEqual(SUBPIXEL_PX);
             expect(
               Math.abs(afterWidthError.sepTop - afterWidthError.heightTop),
