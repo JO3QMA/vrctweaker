@@ -1164,15 +1164,14 @@ test.describe("Launcher 600 narrow column (design QA)", () => {
       }) => {
         await openLauncherProfileSidebarOpen600(page, locale);
         if (errorMode !== "none") {
-          await triggerResolutionErrorsAndMeasure(
-            page,
-            LAUNCHER_SURFACE,
-            errorMode,
-            locale,
-          );
-          await expect(page.locator(LAUNCHER_NARROW_FIELDS)).toBeAttached({
-            timeout: 10_000,
-          });
+          await submitResolutionValidation(page, LAUNCHER_SURFACE, errorMode);
+          const errors = page
+            .locator(LAUNCHER_NARROW_FIELDS)
+            .locator(".el-form-item.is-error .el-form-item__error");
+          await expect(errors.first()).not.toBeEmpty();
+          if (errorMode === "both") {
+            await expect(errors).toHaveCount(2, { timeout: 10_000 });
+          }
         }
         const layout = await measureLauncherNarrowResolutionLayout(page);
         expect(layout.fieldsWidth).toBeGreaterThan(0);
