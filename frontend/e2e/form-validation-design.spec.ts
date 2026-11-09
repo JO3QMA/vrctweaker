@@ -391,6 +391,8 @@ async function submitResolutionValidation(
           }
         };
         if (m === "width") {
+          Object.assign(valueEnabled, { resolution: true });
+          setPreset("custom");
           model.screenWidth = null;
         } else if (m === "both") {
           Object.assign(valueEnabled, { resolution: true });
@@ -1168,7 +1170,9 @@ test.describe("Launcher 600 narrow column (design QA)", () => {
             errorMode,
             locale,
           );
-          await ensureResolutionSurfaceReady(page, LAUNCHER_SURFACE, locale);
+          await expect(page.locator(LAUNCHER_NARROW_FIELDS)).toBeAttached({
+            timeout: 10_000,
+          });
         }
         const layout = await measureLauncherNarrowResolutionLayout(page);
         expect(layout.fieldsWidth).toBeGreaterThan(0);

@@ -1195,7 +1195,6 @@ a:hover {
 .resolution-fields {
   container-type: inline-size;
   container-name: resolution-fields;
-  contain: inline-size;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
