@@ -1195,9 +1195,12 @@ a:hover {
   display: flex;
   flex-wrap: wrap;
   align-items: flex-start;
-  gap: var(--space-8);
+  column-gap: var(--space-8);
+  row-gap: var(--space-4);
+  width: 100%;
   max-width: 100%;
   margin-bottom: 0;
+  box-sizing: border-box;
 }
 
 .sub-options:has(.resolution-fields) {
@@ -1212,35 +1215,163 @@ a:hover {
   margin-top: 0;
 }
 
-.resolution-fields .resolution-form-item,
-.resolution-fields .config-resolution-form-item {
-  flex: 0 1 auto;
-  min-width: 0;
+.resolution-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 120px) minmax(0, max-content) minmax(
+      0,
+      120px
+    );
+  column-gap: var(--space-8);
+  row-gap: var(--space-4);
+  align-items: start;
+  width: 100%;
   max-width: 100%;
+  box-sizing: border-box;
 }
 
-.resolution-fields .resolution-sep {
-  align-self: flex-start;
-  flex-shrink: 0;
+.resolution-input-row > .resolution-form-item:nth-child(1),
+.resolution-input-row > .config-resolution-form-item:nth-child(1) {
+  grid-column: 1;
+  grid-row: 1;
+  width: 120px;
+  min-width: 0;
+  max-width: 120px;
+  margin-bottom: 0;
+  align-self: start;
+  flex: 0 0 120px;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.resolution-input-row > .resolution-sep {
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
   align-items: center;
   height: var(--el-component-size);
   line-height: var(--el-component-size);
+  color: var(--color-text-secondary);
+  align-self: start;
+}
+
+.resolution-input-row > .resolution-form-item:nth-child(3),
+.resolution-input-row > .config-resolution-form-item:nth-child(3) {
+  grid-column: 3;
+  grid-row: 1;
+  width: 120px;
+  min-width: 0;
+  max-width: 120px;
+  margin-bottom: 0;
+  align-self: start;
+  flex: 0 0 120px;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.resolution-input-row > .resolution-form-item .el-form-item__content,
+.resolution-input-row > .config-resolution-form-item .el-form-item__content {
+  width: 120px;
+  max-width: 120px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.resolution-fields .el-input-number,
+.resolution-input-row .el-input-number {
+  flex: 0 0 120px;
+  width: 120px;
+  max-width: 120px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.resolution-fields .el-form-item__error,
+.resolution-input-row .el-form-item__error {
+  position: static;
+  padding-top: 0;
+  margin-top: var(--space-4);
+  margin-bottom: 0;
+  line-height: 16px;
+  color: var(--color-error);
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
+
+.resolution-input-row .el-form-item__error {
+  width: 120px;
+  max-width: 120px;
+  min-width: 0;
+}
+
+.resolution-fields .form-field-range-hint {
+  margin-top: var(--space-8);
+  margin-bottom: 0;
 }
 
 @media (max-width: 640px) {
-  .resolution-fields {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .resolution-fields .resolution-sep {
-    display: none;
-  }
-
-  .resolution-fields .resolution-form-item {
-    flex: 1 1 auto;
+  .sub-options:has(.resolution-fields) {
+    margin-left: 0;
+    margin-right: 0;
     width: 100%;
+    max-width: 100%;
+    align-self: stretch;
+    box-sizing: border-box;
+  }
+
+  .resolution-fields {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .resolution-input-row {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .resolution-input-row > .resolution-form-item:nth-child(1),
+  .resolution-input-row > .config-resolution-form-item:nth-child(1),
+  .resolution-input-row > .resolution-form-item:nth-child(3),
+  .resolution-input-row > .config-resolution-form-item:nth-child(3) {
+    width: 100%;
+    max-width: 100%;
+    flex: none;
+  }
+
+  .resolution-input-row > .resolution-form-item .el-form-item__content,
+  .resolution-input-row > .config-resolution-form-item .el-form-item__content {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .resolution-input-row .el-form-item__error {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .resolution-input-row [data-testid="screen-width-input"],
+  .resolution-input-row [data-testid="camera-width-input"],
+  .resolution-input-row [data-testid="screenshot-width-input"],
+  .resolution-input-row [data-testid="screen-height-input"],
+  .resolution-input-row [data-testid="camera-height-input"],
+  .resolution-input-row [data-testid="screenshot-height-input"] {
+    grid-column: 1;
+  }
+
+  .resolution-input-row [data-testid="screen-width-input"],
+  .resolution-input-row [data-testid="camera-width-input"],
+  .resolution-input-row [data-testid="screenshot-width-input"] {
+    grid-row: 1;
+  }
+
+  .resolution-input-row [data-testid="screen-height-input"],
+  .resolution-input-row [data-testid="camera-height-input"],
+  .resolution-input-row [data-testid="screenshot-height-input"] {
+    grid-row: 2;
+  }
+
+  .resolution-input-row .resolution-sep {
+    display: none;
   }
 }
 

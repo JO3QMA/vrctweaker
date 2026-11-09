@@ -90,7 +90,7 @@
           class="vt-validated-form"
         >
           <el-form-item :label="t('launcher.profileName')" prop="name">
-            <el-input v-model="selected.name" />
+            <el-input v-model="launcherFormModel.name" />
           </el-form-item>
 
           <el-form-item>
@@ -139,7 +139,7 @@
 
               <el-form-item :label="t('launcher.customArgs')" prop="custom">
                 <el-input
-                  v-model="launchArgs.custom"
+                  v-model="launcherFormModel.custom"
                   placeholder="-batchmode"
                   data-testid="custom-args-input"
                 />
@@ -209,59 +209,63 @@
                           </el-radio-group>
                         </el-form-item>
                         <div class="resolution-fields">
-                          <el-form-item
-                            prop="screenWidth"
-                            class="resolution-form-item vt-form-item-with-range-hint"
-                          >
-                            <el-input-number
-                              v-model="launchArgs.screenWidth"
-                              :min="VRCHAT_LAUNCHER_SCREEN_RES.WIDTH_MIN"
-                              :max="VRCHAT_LAUNCHER_SCREEN_RES.WIDTH_MAX"
-                              :precision="0"
-                              :step="1"
-                              :disabled="resolutionPreset !== 'custom'"
-                              data-testid="screen-width-input"
-                              size="small"
-                              :placeholder="t('launcher.widthPh')"
-                              class="resolution-number-input"
-                              @change="onScreenWidthChange"
-                            />
-                            <p
-                              v-if="resolutionPreset === 'custom'"
-                              :id="LAUNCHER_SCREEN_WIDTH_RANGE_HINT_ID"
-                              class="form-field-range-hint"
-                              data-testid="screen-width-range-hint"
+                          <div class="resolution-input-row">
+                            <el-form-item
+                              prop="screenWidth"
+                              class="resolution-form-item vt-form-item-with-range-hint"
                             >
-                              {{ launcherScreenWidthRangeHint }}
-                            </p>
-                          </el-form-item>
-                          <span class="resolution-sep">×</span>
-                          <el-form-item
-                            prop="screenHeight"
-                            class="resolution-form-item vt-form-item-with-range-hint"
-                          >
-                            <el-input-number
-                              v-model="launchArgs.screenHeight"
-                              :min="VRCHAT_LAUNCHER_SCREEN_RES.HEIGHT_MIN"
-                              :max="VRCHAT_LAUNCHER_SCREEN_RES.HEIGHT_MAX"
-                              :precision="0"
-                              :step="1"
-                              :disabled="resolutionPreset !== 'custom'"
-                              data-testid="screen-height-input"
-                              size="small"
-                              :placeholder="t('launcher.heightPh')"
-                              class="resolution-number-input"
-                              @change="onScreenHeightChange"
-                            />
-                            <p
-                              v-if="resolutionPreset === 'custom'"
-                              :id="LAUNCHER_SCREEN_HEIGHT_RANGE_HINT_ID"
-                              class="form-field-range-hint"
-                              data-testid="screen-height-range-hint"
+                              <el-input-number
+                                v-model="launcherFormModel.screenWidth"
+                                :min="VRCHAT_LAUNCHER_SCREEN_RES.WIDTH_MIN"
+                                :max="VRCHAT_LAUNCHER_SCREEN_RES.WIDTH_MAX"
+                                :precision="0"
+                                :step="1"
+                                :validate-event="false"
+                                :disabled="resolutionPreset !== 'custom'"
+                                data-testid="screen-width-input"
+                                size="small"
+                                :placeholder="t('launcher.widthPh')"
+                                class="resolution-number-input"
+                                @change="onScreenWidthChange"
+                              />
+                              <p
+                                v-if="resolutionPreset === 'custom'"
+                                :id="LAUNCHER_SCREEN_WIDTH_RANGE_HINT_ID"
+                                class="form-field-range-hint"
+                                data-testid="screen-width-range-hint"
+                              >
+                                {{ launcherScreenWidthRangeHint }}
+                              </p>
+                            </el-form-item>
+                            <span class="resolution-sep">×</span>
+                            <el-form-item
+                              prop="screenHeight"
+                              class="resolution-form-item vt-form-item-with-range-hint"
                             >
-                              {{ launcherScreenHeightRangeHint }}
-                            </p>
-                          </el-form-item>
+                              <el-input-number
+                                v-model="launcherFormModel.screenHeight"
+                                :min="VRCHAT_LAUNCHER_SCREEN_RES.HEIGHT_MIN"
+                                :max="VRCHAT_LAUNCHER_SCREEN_RES.HEIGHT_MAX"
+                                :precision="0"
+                                :step="1"
+                                :validate-event="false"
+                                :disabled="resolutionPreset !== 'custom'"
+                                data-testid="screen-height-input"
+                                size="small"
+                                :placeholder="t('launcher.heightPh')"
+                                class="resolution-number-input"
+                                @change="onScreenHeightChange"
+                              />
+                              <p
+                                v-if="resolutionPreset === 'custom'"
+                                :id="LAUNCHER_SCREEN_HEIGHT_RANGE_HINT_ID"
+                                class="form-field-range-hint"
+                                data-testid="screen-height-range-hint"
+                              >
+                                {{ launcherScreenHeightRangeHint }}
+                              </p>
+                            </el-form-item>
+                          </div>
                         </div>
                       </div>
 
@@ -280,7 +284,7 @@
                       >
                         <el-form-item prop="monitor" class="nested-form-item">
                           <el-input-number
-                            v-model="launchArgs.monitor"
+                            v-model="launcherFormModel.monitor"
                             :min="1"
                             data-testid="monitor-input"
                             size="small"
@@ -302,7 +306,7 @@
                       <div v-if="valueOptionsEnabled.fps" class="sub-options">
                         <el-form-item prop="fps" class="nested-form-item">
                           <el-input-number
-                            v-model="launchArgs.fps"
+                            v-model="launcherFormModel.fps"
                             :min="1"
                             data-testid="fps-input"
                             size="small"
@@ -461,7 +465,7 @@
                       <div v-if="valueOptionsEnabled.midi" class="sub-options">
                         <el-form-item prop="midi" class="nested-form-item">
                           <el-input
-                            v-model="launchArgs.midi"
+                            v-model="launcherFormModel.midi"
                             :placeholder="t('launcher.midiPh')"
                             data-testid="midi-input"
                             size="small"
@@ -488,7 +492,7 @@
                           class="nested-form-item"
                         >
                           <el-input
-                            v-model="launchArgs.ignoreTrackers"
+                            v-model="launcherFormModel.ignoreTrackers"
                             placeholder="serial1,serial2"
                             data-testid="ignore-trackers-input"
                             size="small"
@@ -551,7 +555,7 @@
                       <div v-if="valueOptionsEnabled.osc" class="sub-options">
                         <el-form-item prop="osc" class="nested-form-item">
                           <el-input
-                            v-model="launchArgs.osc"
+                            v-model="launcherFormModel.osc"
                             :placeholder="t('launcher.oscPh')"
                             data-testid="osc-input"
                             size="small"
@@ -730,7 +734,7 @@ import {
   optionalLaunchArgLineRule,
   requiredTrimmedRule,
 } from "../utils/elFormRules";
-import { revalidateElFormField, validateElForm } from "../utils/elFormValidate";
+import { validateElForm } from "../utils/elFormValidate";
 import { useValidatedFormA11y } from "../composables/useValidatedFormA11y";
 import { normalizeResolutionDimension } from "../utils/resolutionInput";
 import { formatNumericRangeHint } from "../utils/formNumericRangeHint";
@@ -861,16 +865,27 @@ const launcherFormRules = computed<FormRules>(() => {
   }
   return rules;
 });
+let syncingLauncherFormFromSources = false;
+
 function syncLauncherFormModelFromSources() {
-  launcherFormModel.name = selected.value?.name ?? "";
-  launcherFormModel.custom = launchArgs.value.custom ?? "";
-  launcherFormModel.screenWidth = launchArgs.value.screenWidth;
-  launcherFormModel.screenHeight = launchArgs.value.screenHeight;
-  launcherFormModel.monitor = launchArgs.value.monitor;
-  launcherFormModel.fps = launchArgs.value.fps;
-  launcherFormModel.osc = launchArgs.value.osc ?? "";
-  launcherFormModel.midi = launchArgs.value.midi ?? "";
-  launcherFormModel.ignoreTrackers = launchArgs.value.ignoreTrackers ?? "";
+  syncingLauncherFormFromSources = true;
+  try {
+    launcherFormModel.name = selected.value?.name ?? "";
+    launcherFormModel.custom = launchArgs.value.custom ?? "";
+    launcherFormModel.screenWidth = launchArgs.value.screenWidth;
+    launcherFormModel.screenHeight = launchArgs.value.screenHeight;
+    launcherFormModel.monitor = launchArgs.value.monitor;
+    launcherFormModel.fps = launchArgs.value.fps;
+    launcherFormModel.osc = launchArgs.value.osc ?? "";
+    launcherFormModel.midi = launchArgs.value.midi ?? "";
+    launcherFormModel.ignoreTrackers = launchArgs.value.ignoreTrackers ?? "";
+  } finally {
+    syncingLauncherFormFromSources = false;
+  }
+}
+
+function syncValueOptionsFromLaunchArgs() {
+  Object.assign(valueOptionsEnabled, syncValueOptionsEnabled(launchArgs.value));
 }
 
 watch(() => selected.value, syncLauncherFormModelFromSources, {
@@ -881,6 +896,24 @@ watch(launchArgs, syncLauncherFormModelFromSources, {
   deep: true,
   flush: "sync",
 });
+watch(
+  launcherFormModel,
+  (m) => {
+    if (syncingLauncherFormFromSources || !selected.value) {
+      return;
+    }
+    selected.value.name = m.name;
+    launchArgs.value.custom = m.custom;
+    launchArgs.value.screenWidth = m.screenWidth;
+    launchArgs.value.screenHeight = m.screenHeight;
+    launchArgs.value.monitor = m.monitor;
+    launchArgs.value.fps = m.fps;
+    launchArgs.value.osc = m.osc;
+    launchArgs.value.midi = m.midi;
+    launchArgs.value.ignoreTrackers = m.ignoreTrackers;
+  },
+  { deep: true, flush: "sync" },
+);
 const savedSnapshot = ref<LaunchProfileEditSnapshot | null>(null);
 const sidebarOpen = ref(readSidebarOpenPreference());
 const advancedCollapseActive = ref<string[]>([]);
@@ -987,17 +1020,11 @@ function syncResolutionPresetFromArgs() {
 }
 
 function onScreenWidthChange(value: number | undefined) {
-  const n = normalizeResolutionDimension(value);
-  launchArgs.value.screenWidth = n;
-  launcherFormModel.screenWidth = n;
-  revalidateElFormField(launcherFormRef.value, "screenWidth");
+  launcherFormModel.screenWidth = normalizeResolutionDimension(value);
 }
 
 function onScreenHeightChange(value: number | undefined) {
-  const n = normalizeResolutionDimension(value);
-  launchArgs.value.screenHeight = n;
-  launcherFormModel.screenHeight = n;
-  revalidateElFormField(launcherFormRef.value, "screenHeight");
+  launcherFormModel.screenHeight = normalizeResolutionDimension(value);
 }
 
 function applyResolutionPreset() {
@@ -1110,7 +1137,7 @@ function onCalibrationRangeEnabledChange() {
 
 async function syncLaunchArgsFromProfile(p: LaunchProfileDTO) {
   launchArgs.value = await App.parseLaunchArgsForGUI(p.arguments);
-  Object.assign(valueOptionsEnabled, syncValueOptionsEnabled(launchArgs.value));
+  syncValueOptionsFromLaunchArgs();
   syncResolutionPresetFromArgs();
   syncAdvancedCollapseOpenState();
 }

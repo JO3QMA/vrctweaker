@@ -147,63 +147,329 @@ async function expectErrorBelowControl(
   expect(layout.alignedLeft).toBe(true);
 }
 
+const RESOLUTION_INPUT_WIDTH_PX = 120;
+const ERROR_COLOR_RGB = "rgb(239, 138, 138)";
+const SUBPIXEL_PX = 1;
+
+type ResolutionSurface = {
+  name: "launcher" | "config";
+  widthTestId: string;
+  heightTestId: string;
+  invalidWidth: number;
+  invalidHeight: number;
+};
+
+function resolutionFieldsSelector(surface: ResolutionSurface): string {
+  return surface.name === "config"
+    ? '.vt-config-resolution-form:has([data-testid="camera-width-input"]) .resolution-fields'
+    : ".launch-args-advanced .resolution-fields";
+}
+
+function resolutionFieldsLocator(
+  page: import("@playwright/test").Page,
+  surface: ResolutionSurface,
+) {
+  return page.locator(resolutionFieldsSelector(surface));
+}
+
+const RESOLUTION_SURFACES: ResolutionSurface[] = [
+  {
+    name: "launcher",
+    widthTestId: "screen-width-input",
+    heightTestId: "screen-height-input",
+    invalidWidth: 1279,
+    invalidHeight: 719,
+  },
+  {
+    name: "config",
+    widthTestId: "camera-width-input",
+    heightTestId: "camera-height-input",
+    invalidWidth: 1279,
+    invalidHeight: 719,
+  },
+];
+
+async function setUiLocale(
+  page: import("@playwright/test").Page,
+  locale: "ja" | "en",
+) {
+  await page.goto("/#/settings/general");
+  await page.getByTestId("settings-ui-language").click();
+  const label = locale === "ja" ? "日本語" : "English";
+  await page
+    .locator(".el-select-dropdown__item")
+    .filter({ hasText: label })
+    .last()
+    .click();
+}
+
+async function openConfigCameraCustom(
+  page: import("@playwright/test").Page,
+  locale: "ja" | "en",
+) {
+  await page.goto("/#/config");
+  if (locale === "ja") {
+    await expect(page.locator("h1")).toContainText("その他の設定");
+  } else {
+    await expect(page.locator("h1")).toContainText("Other settings");
+  }
+  await expect(page.getByTestId("save-config-btn")).toBeVisible();
+  await page.getByTestId("camera-preset-custom").click();
+  await expect(page.getByTestId("camera-width-input")).toBeVisible();
+}
+
+async function openResolutionSurface(
+  page: import("@playwright/test").Page,
+  surface: ResolutionSurface,
+  locale: "ja" | "en",
+) {
+  if (surface.name === "launcher") {
+    await page.goto("/#/launcher");
+    if (locale === "ja") {
+      await expect(page.locator("h1")).toContainText("ランチャー");
+    } else {
+      await expect(page.locator("h1")).toContainText("Launcher");
+    }
+    await page.getByTestId("profile-card-profile-1").click();
+    await page.locator(".args-collapse .el-collapse-item__header").click();
+    await page.getByTestId("resolution-enabled-checkbox").click();
+    await page.getByTestId("resolution-preset-custom").click();
+    await expect(page.getByTestId(surface.widthTestId)).toBeVisible();
+    return;
+  }
+  await openConfigCameraCustom(page, locale);
+}
+
+async function measureResolutionRow(
+  page: import("@playwright/test").Page,
+  surface: ResolutionSurface,
+) {
+  return page.evaluate(
+    ({ widthTestId, heightTestId, fieldsSelector }) => {
+      const fields = document.querySelector(fieldsSelector) as HTMLElement;
+      const parent = (fields?.parentElement ?? fields) as HTMLElement;
+      const sep = fields?.querySelector(
+        ".resolution-sep",
+      ) as HTMLElement | null;
+      const widthEl = document.querySelector(
+        `[data-testid="${widthTestId}"]`,
+      ) as HTMLElement;
+      const heightEl = document.querySelector(
+        `[data-testid="${heightTestId}"]`,
+      ) as HTMLElement;
+      const errors = Array.from(
+        fields.querySelectorAll(".el-form-item.is-error .el-form-item__error"),
+      )
+        .filter((e) => (e.textContent ?? "").trim().length > 0)
+        .map((e) => e.getBoundingClientRect());
+      const widthRect = widthEl.getBoundingClientRect();
+      const heightRect = heightEl.getBoundingClientRect();
+      const inputsRowBottom = Math.max(
+        widthRect.bottom,
+        heightRect.bottom,
+        sep?.getBoundingClientRect().bottom ?? 0,
+      );
+      return {
+        sepLeft: sep?.getBoundingClientRect().left ?? 0,
+        heightLeft: heightRect.left,
+        widthInputWidth: widthRect.width,
+        heightInputWidth: heightRect.width,
+        parentRect: parent.getBoundingClientRect(),
+        fieldsRect: fields.getBoundingClientRect(),
+        widthRect,
+        heightRect,
+        errors,
+        inputsRowBottom,
+        sepTop: sep?.getBoundingClientRect().top ?? 0,
+        heightTop: heightRect.top,
+      };
+    },
+    {
+      widthTestId: surface.widthTestId,
+      heightTestId: surface.heightTestId,
+      fieldsSelector: resolutionFieldsSelector(surface),
+    },
+  );
+}
+
+async function submitResolutionValidation(
+  page: import("@playwright/test").Page,
+  surface: ResolutionSurface,
+  mode: "width" | "both" = "width",
+): Promise<void> {
+  await page.evaluate(
+    async ({ surfaceName, m, fieldsSelector }) => {
+      type VNode = {
+        parent?: VNode;
+        setupState?: Record<string, unknown>;
+      };
+      const fields = document.querySelector(fieldsSelector);
+      if (!fields) {
+        throw new Error("resolution-fields missing");
+      }
+      const reactive = (refLike: unknown) => {
+        const maybe = refLike as {
+          value?: Record<string, number | null>;
+        } & Record<string, number | null>;
+        return maybe.value ?? maybe;
+      };
+      let vnode = (fields as HTMLElement & { __vueParentComponent?: VNode })
+        .__vueParentComponent;
+      let ss: Record<string, unknown> | undefined;
+      while (vnode) {
+        const state = vnode.setupState;
+        if (
+          surfaceName === "launcher" &&
+          state?.launcherFormModel &&
+          state?.launcherFormRef
+        ) {
+          ss = state;
+          break;
+        }
+        if (
+          surfaceName === "config" &&
+          state?.config &&
+          state?.cameraResolutionFormRef
+        ) {
+          ss = state;
+          break;
+        }
+        vnode = vnode.parent;
+      }
+      if (!ss) {
+        throw new Error(`resolution form setup not found (${surfaceName})`);
+      }
+      if (surfaceName === "launcher") {
+        const model = reactive(ss.launcherFormModel);
+        const valueEnabled = reactive(ss.valueOptionsEnabled) as Record<
+          string,
+          unknown
+        >;
+        const preset = ss.resolutionPreset as { value?: string } | string;
+        const setPreset = (v: string) => {
+          if (typeof preset === "object" && preset && "value" in preset) {
+            preset.value = v;
+          } else if (
+            typeof ss.resolutionPreset === "object" &&
+            ss.resolutionPreset
+          ) {
+            (ss.resolutionPreset as { value: string }).value = v;
+          }
+        };
+        if (m === "width") {
+          model.screenWidth = null;
+        } else if (m === "both") {
+          Object.assign(valueEnabled, { resolution: true });
+          setPreset("custom");
+          model.screenWidth = null;
+          model.screenHeight = null;
+        }
+      } else {
+        const cfg = reactive(ss.config);
+        const cameraPreset = ss.cameraPreset as { value?: string };
+        if (m === "width") {
+          cfg.cameraResWidth = null;
+        } else if (m === "both") {
+          if (cameraPreset?.value !== undefined) {
+            cameraPreset.value = "custom";
+          }
+          cfg.cameraResWidth = null;
+          cfg.cameraResHeight = null;
+        }
+      }
+      const formRefLike =
+        surfaceName === "launcher"
+          ? ss.launcherFormRef
+          : ss.cameraResolutionFormRef;
+      const unwrapRef = (refLike: unknown) => {
+        const maybe = refLike as { value?: { validate?: () => Promise<void> } };
+        return maybe?.value ?? maybe;
+      };
+      const form = unwrapRef(formRefLike) as
+        | {
+            validate?: () => Promise<boolean>;
+            validateField?: (props: string) => Promise<boolean>;
+          }
+        | undefined;
+      if (form?.validate) {
+        const props =
+          surfaceName === "launcher"
+            ? m === "both"
+              ? (["screenWidth", "screenHeight"] as const)
+              : (["screenWidth"] as const)
+            : m === "both"
+              ? (["cameraResWidth", "cameraResHeight"] as const)
+              : (["cameraResWidth"] as const);
+        if (form.validateField) {
+          for (const prop of props) {
+            try {
+              await form.validateField(prop);
+            } catch {
+              /* expected invalid */
+            }
+          }
+        } else {
+          try {
+            await form.validate();
+          } catch {
+            /* expected invalid */
+          }
+        }
+        return;
+      }
+      const save =
+        surfaceName === "launcher"
+          ? document.querySelector(".btn-save")
+          : document.querySelector('[data-testid="save-config-btn"]');
+      (save as HTMLElement | null)?.click();
+    },
+    {
+      surfaceName: surface.name,
+      m: mode,
+      fieldsSelector: resolutionFieldsSelector(surface),
+    },
+  );
+}
+
+async function ensureResolutionSurfaceReady(
+  page: import("@playwright/test").Page,
+  surface: ResolutionSurface,
+  locale: "ja" | "en",
+) {
+  const fields = resolutionFieldsLocator(page, surface);
+  if ((await fields.count()) === 0) {
+    await openResolutionSurface(page, surface, locale);
+  }
+  await expect(fields).toBeVisible();
+  await expect(page.getByTestId(surface.widthTestId)).toBeVisible();
+}
+
+async function triggerResolutionErrorsAndMeasure(
+  page: import("@playwright/test").Page,
+  surface: ResolutionSurface,
+  mode: "width" | "both",
+  locale: "ja" | "en",
+) {
+  await ensureResolutionSurfaceReady(page, surface, locale);
+  const before = await measureResolutionRow(page, surface);
+  await submitResolutionValidation(page, surface, mode);
+  const errors = resolutionFieldsLocator(page, surface).locator(
+    ".el-form-item.is-error .el-form-item__error",
+  );
+  await expect(errors.first()).toBeAttached();
+  await expect(errors.first()).not.toBeEmpty();
+  if (mode === "both") {
+    await expect(errors).toHaveCount(2, { timeout: 10_000 });
+  }
+  const after = await measureResolutionRow(page, surface);
+  return { before, after };
+}
+
 async function triggerLauncherScreenWidthRangeError(
   page: import("@playwright/test").Page,
 ) {
   await openLauncherResolution(page);
-  await page.evaluate(async () => {
-    type VueNode = {
-      setupState?: Record<string, unknown>;
-      parent?: VueNode;
-    };
-    const findLauncherStateInDom = (): Record<string, unknown> | null => {
-      for (const el of document.querySelectorAll("*")) {
-        let vnode = (el as HTMLElement & { __vueParentComponent?: VueNode })
-          .__vueParentComponent;
-        let depth = 0;
-        while (vnode && depth < 32) {
-          const state = vnode.setupState;
-          if (state?.launcherFormRef && state?.launcherFormModel) {
-            return state;
-          }
-          vnode = vnode.parent;
-          depth += 1;
-        }
-      }
-      return null;
-    };
-    const launcherState = findLauncherStateInDom();
-    if (!launcherState) {
-      throw new Error("launcher form state not found");
-    }
-    const model = launcherState.launcherFormModel as { screenWidth: number };
-    model.screenWidth = 1279;
-    const rawRef = launcherState.launcherFormRef as
-      | {
-          value?: {
-            validateField: (p: string) => Promise<void>;
-            validate: () => Promise<boolean>;
-          };
-        }
-      | {
-          validateField?: (p: string) => Promise<void>;
-          validate?: () => Promise<boolean>;
-        };
-    const form =
-      rawRef &&
-      "value" in rawRef &&
-      rawRef.value &&
-      typeof rawRef.value.validateField === "function"
-        ? rawRef.value
-        : rawRef;
-    if (!form || typeof form.validateField !== "function") {
-      throw new Error("launcher form ref missing validateField");
-    }
-    await form.validateField("screenWidth").catch(() => {});
-    if (typeof form.validate === "function") {
-      await form.validate().catch(() => {});
-    }
-  });
+  await submitResolutionValidation(page, RESOLUTION_SURFACES[0]!, "width");
   const widthItem = page
     .locator(".resolution-form-item")
     .filter({ has: page.getByTestId("screen-width-input") });
@@ -212,32 +478,43 @@ async function triggerLauncherScreenWidthRangeError(
   return widthItem;
 }
 
+function expectNoHorizontalScroll(
+  docScroll: boolean,
+  bodyScroll: boolean,
+): void {
+  expect(docScroll).toBe(true);
+  expect(bodyScroll).toBe(true);
+}
+
+function rectInsideParent(
+  child: DOMRect,
+  parent: DOMRect,
+  tolerance = SUBPIXEL_PX,
+): boolean {
+  return (
+    child.left >= parent.left - tolerance &&
+    child.right <= parent.right + tolerance &&
+    child.top >= parent.top - tolerance &&
+    child.bottom <= parent.bottom + tolerance
+  );
+}
+
 test.describe("Form validation layout (design QA)", () => {
-  test("launcher resolution hint uses flex column below inputs at 1280px", async ({
+  test("launcher resolution hint sits below inputs in resolution row at 1280px", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await openLauncherResolution(page);
 
-    const content = page
-      .locator(".vt-form-item-with-range-hint .el-form-item__content")
-      .first();
-    await expect(content).toBeVisible();
-    expect(await content.evaluate((el) => getComputedStyle(el).display)).toBe(
-      "flex",
-    );
-
-    const hintBelow = await page
-      .locator(".resolution-form-item")
-      .first()
-      .evaluate((item) => {
-        const input = item.querySelector(".el-input-number")!;
-        const hint = item.querySelector(".form-field-range-hint")!;
-        return (
-          hint.getBoundingClientRect().top >=
-          input.getBoundingClientRect().bottom - 1
-        );
-      });
+    const hintBelow = await page.evaluate(() => {
+      const fields = document.querySelector(".resolution-fields")!;
+      const input = fields.querySelector('[data-testid="screen-width-input"]')!;
+      const hint = fields.querySelector(".form-field-range-hint")!;
+      return (
+        hint.getBoundingClientRect().top >=
+        input.getBoundingClientRect().bottom - 1
+      );
+    });
     expect(hintBelow).toBe(true);
   });
 
@@ -280,12 +557,7 @@ test.describe("Form validation layout (design QA)", () => {
         width: viewport.width,
         height: viewport.height,
       });
-      const widthItem = await triggerLauncherScreenWidthRangeError(page);
-
-      expectInputToErrorGap(
-        await measureInputControlBottomToErrorTop(page, widthItem),
-      );
-      await expectErrorBelowControl(page, widthItem);
+      await triggerLauncherScreenWidthRangeError(page);
 
       const metrics = await page.evaluate(() => {
         const widthItem = document
@@ -588,5 +860,121 @@ test.describe("Form validation layout (design QA)", () => {
       expect(fonts.time.weight).toBe(fonts.trigger.weight);
       expect(fonts.time.lineHeight).toBe(fonts.trigger.lineHeight);
     });
+  }
+});
+
+test.describe("Resolution layout acceptance (design QA)", () => {
+  test.setTimeout(90_000);
+  for (const locale of ["ja", "en"] as const) {
+    for (const viewport of [
+      { width: 1280, height: 600 },
+      { width: 600, height: 900 },
+    ] as const) {
+      for (const surface of RESOLUTION_SURFACES) {
+        test(`${surface.name} ${locale} ${viewport.width}px: row stable and errors below row`, async ({
+          page,
+        }) => {
+          await setUiLocale(page, locale);
+          await page.setViewportSize(viewport);
+          await openResolutionSurface(page, surface, locale);
+
+          const widthError = await triggerResolutionErrorsAndMeasure(
+            page,
+            surface,
+            "width",
+            locale,
+          );
+          const { before: baseline, after: afterWidthError } = widthError;
+
+          if (viewport.width >= 1280) {
+            const baselineHeightOffset =
+              baseline.heightLeft - baseline.fieldsRect.left;
+            const afterHeightOffset =
+              afterWidthError.heightLeft - afterWidthError.fieldsRect.left;
+            expect(
+              Math.abs(afterHeightOffset - baselineHeightOffset),
+            ).toBeLessThanOrEqual(SUBPIXEL_PX);
+            const baselineSepOffset =
+              baseline.sepLeft - baseline.fieldsRect.left;
+            const afterSepOffset =
+              afterWidthError.sepLeft - afterWidthError.fieldsRect.left;
+            expect(
+              Math.abs(afterSepOffset - baselineSepOffset),
+            ).toBeLessThanOrEqual(SUBPIXEL_PX);
+            expect(
+              Math.abs(afterWidthError.sepTop - afterWidthError.heightTop),
+            ).toBeLessThanOrEqual(4);
+          }
+
+          expect(afterWidthError.widthInputWidth).toBeGreaterThanOrEqual(
+            RESOLUTION_INPUT_WIDTH_PX - SUBPIXEL_PX,
+          );
+          expect(afterWidthError.widthInputWidth).toBeLessThanOrEqual(
+            RESOLUTION_INPUT_WIDTH_PX + SUBPIXEL_PX,
+          );
+          expect(afterWidthError.heightInputWidth).toBeGreaterThanOrEqual(
+            RESOLUTION_INPUT_WIDTH_PX - SUBPIXEL_PX,
+          );
+          expect(afterWidthError.heightInputWidth).toBeLessThanOrEqual(
+            RESOLUTION_INPUT_WIDTH_PX + SUBPIXEL_PX,
+          );
+
+          expect(afterWidthError.errors.length).toBeGreaterThanOrEqual(1);
+          const gapToError =
+            afterWidthError.errors[0]!.top - afterWidthError.widthRect.bottom;
+          expect(gapToError).toBeGreaterThanOrEqual(
+            INPUT_TO_ERROR_PX - GAP_TOLERANCE_PX,
+          );
+          expect(gapToError).toBeLessThanOrEqual(
+            INPUT_TO_ERROR_PX + GAP_TOLERANCE_PX,
+          );
+
+          const errorColor = await page.evaluate((fieldsSelector) => {
+            const el = document.querySelector(
+              `${fieldsSelector} .el-form-item__error`,
+            );
+            return el ? getComputedStyle(el).color : "";
+          }, resolutionFieldsSelector(surface));
+          expect(errorColor).toBe(ERROR_COLOR_RGB);
+
+          const bothError = await triggerResolutionErrorsAndMeasure(
+            page,
+            surface,
+            "both",
+            locale,
+          );
+          const afterBoth = bothError.after;
+          expect(afterBoth.errors.length).toBeGreaterThanOrEqual(2);
+          const sortedErrors = [...afterBoth.errors].sort(
+            (a, b) => a.top - b.top || a.left - b.left,
+          );
+          const errA = sortedErrors[0]!;
+          const errB = sortedErrors[1]!;
+          if (Math.abs(errA.left - errB.left) > SUBPIXEL_PX) {
+            expect(Math.abs(errA.top - errB.top)).toBeLessThanOrEqual(4);
+          } else {
+            expect(errB.top).toBeGreaterThanOrEqual(errA.bottom - SUBPIXEL_PX);
+          }
+
+          const scroll = await page.evaluate(() => ({
+            doc:
+              document.documentElement.scrollWidth <=
+              document.documentElement.clientWidth + 1,
+            body: document.body.scrollWidth <= document.body.clientWidth + 1,
+          }));
+          expectNoHorizontalScroll(scroll.doc, scroll.body);
+
+          expect(
+            rectInsideParent(afterBoth.widthRect, afterBoth.parentRect),
+          ).toBe(true);
+          expect(
+            rectInsideParent(afterBoth.heightRect, afterBoth.parentRect),
+          ).toBe(true);
+          expect(
+            rectInsideParent(afterBoth.fieldsRect, afterBoth.parentRect),
+          ).toBe(true);
+        });
+      }
+    }
   }
 });
