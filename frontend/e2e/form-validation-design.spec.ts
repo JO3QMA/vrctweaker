@@ -404,13 +404,13 @@ async function submitResolutionValidation(
         const cfg = reactive(ss.config);
         const cameraPreset = ss.cameraPreset as { value?: string };
         if (m === "width") {
-          cfg.cameraResWidth = null;
+          cfg.cameraResWidth = invalidWidth;
         } else if (m === "both") {
           if (cameraPreset?.value !== undefined) {
             cameraPreset.value = "custom";
           }
-          cfg.cameraResWidth = null;
-          cfg.cameraResHeight = null;
+          cfg.cameraResWidth = invalidWidth;
+          cfg.cameraResHeight = invalidHeight;
         }
       }
       const formRefLike =
@@ -671,7 +671,7 @@ async function measureLauncherNarrowResolutionLayout(
       const allInside =
         containmentTargets.length > 0 &&
         containmentOverflow.length === 0 &&
-        containmentTargets.every(({ name, el }) => {
+        containmentTargets.every(({ el }) => {
           const rect = el.getBoundingClientRect();
           return (
             rect.left >= parentRect.left - overlapTol &&
