@@ -332,7 +332,13 @@ async function submitResolutionValidation(
   mode: "width" | "both" = "width",
 ): Promise<void> {
   await page.evaluate(
-    async ({ surfaceName, m, fieldsSelector, invalidWidth, invalidHeight }) => {
+    async ({
+      surfaceName,
+      m,
+      fieldsSelector,
+      invalidWidth,
+      invalidHeight: _invalidHeight,
+    }) => {
       type VNode = {
         parent?: VNode;
         setupState?: Record<string, unknown>;
@@ -404,13 +410,13 @@ async function submitResolutionValidation(
         const cfg = reactive(ss.config);
         const cameraPreset = ss.cameraPreset as { value?: string };
         if (m === "width") {
-          cfg.cameraResWidth = invalidWidth;
+          cfg.cameraResWidth = null;
         } else if (m === "both") {
           if (cameraPreset?.value !== undefined) {
             cameraPreset.value = "custom";
           }
-          cfg.cameraResWidth = invalidWidth;
-          cfg.cameraResHeight = invalidHeight;
+          cfg.cameraResWidth = null;
+          cfg.cameraResHeight = null;
         }
       }
       const formRefLike =
