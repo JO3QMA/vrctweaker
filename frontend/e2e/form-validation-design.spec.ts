@@ -332,7 +332,7 @@ async function submitResolutionValidation(
   mode: "width" | "both" = "width",
 ): Promise<void> {
   await page.evaluate(
-    async ({ surfaceName, m, fieldsSelector }) => {
+    async ({ surfaceName, m, fieldsSelector, invalidWidth, invalidHeight }) => {
       type VNode = {
         parent?: VNode;
         setupState?: Record<string, unknown>;
@@ -393,7 +393,7 @@ async function submitResolutionValidation(
         if (m === "width") {
           Object.assign(valueEnabled, { resolution: true });
           setPreset("custom");
-          model.screenWidth = null;
+          model.screenWidth = invalidWidth;
         } else if (m === "both") {
           Object.assign(valueEnabled, { resolution: true });
           setPreset("custom");
@@ -463,6 +463,8 @@ async function submitResolutionValidation(
       surfaceName: surface.name,
       m: mode,
       fieldsSelector: resolutionFieldsSelector(surface),
+      invalidWidth: surface.invalidWidth,
+      invalidHeight: surface.invalidHeight,
     },
   );
 }
@@ -585,11 +587,18 @@ async function measureLauncherNarrowResolutionLayout(
           allInside: false,
         };
       }
-      const pick = (testId: string) =>
-        (fields.querySelector(`[data-testid="${testId}"] .el-input-number`) ??
-          fields.querySelector(`[data-testid="${testId}"]`)) as HTMLElement;
-      const width = pick("screen-width-input");
-      const height = pick("screen-height-input");
+      const pickInputNumber = (testId: string) =>
+        fields.querySelector(
+          `[data-testid="${testId}"].el-input-number, [data-testid="${testId}"] .el-input-number`,
+        ) as HTMLElement | null;
+      const width = pickInputNumber("screen-width-input");
+      const height = pickInputNumber("screen-height-input");
+      const pickIncrease = (inputNumber: HTMLElement | null) =>
+        inputNumber?.querySelector(
+          ".el-input-number__increase",
+        ) as HTMLElement | null;
+      const widthIncrease = pickIncrease(width);
+      const heightIncrease = pickIncrease(height);
       const hints = Array.from(
         fields.querySelectorAll(".form-field-range-hint"),
       ) as HTMLElement[];
@@ -597,10 +606,26 @@ async function measureLauncherNarrowResolutionLayout(
         fields.querySelectorAll(".el-form-item.is-error .el-form-item__error"),
       ).filter((e) => (e.textContent ?? "").trim().length > 0) as HTMLElement[];
       const labeled: { name: string; rect: DOMRect }[] = [];
-      if (width)
+      const containmentTargets: { name: string; el: HTMLElement }[] = [];
+      if (width) {
         labeled.push({ name: "width", rect: width.getBoundingClientRect() });
+        containmentTargets.push({ name: "width-input", el: width });
+      }
       if (height) {
         labeled.push({ name: "height", rect: height.getBoundingClientRect() });
+        containmentTargets.push({ name: "height-input", el: height });
+      }
+      if (widthIncrease) {
+        containmentTargets.push({
+          name: "width-increase",
+          el: widthIncrease,
+        });
+      }
+      if (heightIncrease) {
+        containmentTargets.push({
+          name: "height-increase",
+          el: heightIncrease,
+        });
       }
       for (const [i, h] of hints.entries()) {
         labeled.push({ name: `hint-${i}`, rect: h.getBoundingClientRect() });
@@ -626,17 +651,35 @@ async function measureLauncherNarrowResolutionLayout(
       }
       const parentRect = parent.getBoundingClientRect();
       const outside: string[] = [];
-      const allInside = labeled.every(({ name, rect }) => {
+      const containmentOverflow: { name: string; rightOverflow: number }[] = [];
+      for (const { name, el } of containmentTargets) {
+        const rect = el.getBoundingClientRect();
+        const rightOverflow = rect.right - parentRect.right;
+        if (rightOverflow > overlapTol) {
+          containmentOverflow.push({ name, rightOverflow });
+          outside.push(name);
+        }
         const inside =
           rect.left >= parentRect.left - overlapTol &&
           rect.right <= parentRect.right + overlapTol &&
           rect.top >= parentRect.top - overlapTol &&
           rect.bottom <= parentRect.bottom + overlapTol;
-        if (!inside) {
+        if (!inside && !outside.includes(name)) {
           outside.push(name);
         }
-        return inside;
-      });
+      }
+      const allInside =
+        containmentTargets.length > 0 &&
+        containmentOverflow.length === 0 &&
+        containmentTargets.every(({ name, el }) => {
+          const rect = el.getBoundingClientRect();
+          return (
+            rect.left >= parentRect.left - overlapTol &&
+            rect.right <= parentRect.right + overlapTol &&
+            rect.top >= parentRect.top - overlapTol &&
+            rect.bottom <= parentRect.bottom + overlapTol
+          );
+        });
       const errorMinWidth =
         errors.length === 0
           ? 48
@@ -655,6 +698,7 @@ async function measureLauncherNarrowResolutionLayout(
         allInside,
         errorMaxLines,
         outside,
+        containmentOverflow,
         fieldsScrollOverflow: fields.scrollWidth - fields.clientWidth,
         fieldsClientWidth: fields.clientWidth,
       };
@@ -767,7 +811,16 @@ test.describe("Form validation layout (design QA)", () => {
       }
       if (metrics.inputWidth != null && metrics.inputWidth > 0) {
         expect(metrics.inputWidth).toBeLessThanOrEqual(200);
-        expect(metrics.inputWidth).toBeGreaterThanOrEqual(110);
+        if (
+          viewport.width >= 1280 ||
+          metrics.fieldsWidth >= 279 - SUBPIXEL_PX
+        ) {
+          expect(metrics.inputWidth).toBeGreaterThanOrEqual(110);
+        } else if (metrics.fieldsWidth > 0) {
+          expect(metrics.inputWidth).toBeLessThanOrEqual(
+            metrics.fieldsWidth + GAP_TOLERANCE_PX,
+          );
+        }
       }
     });
   }
@@ -1166,13 +1219,7 @@ test.describe("Launcher 600 narrow column (design QA)", () => {
         if (errorMode !== "none") {
           await submitResolutionValidation(page, LAUNCHER_SURFACE, errorMode);
           const fieldsLoc = page.locator(LAUNCHER_NARROW_FIELDS);
-          if ((await fieldsLoc.count()) === 0) {
-            const toggle = page.getByTestId("resolution-enabled-checkbox");
-            await toggle.click();
-            await expect(toggle).toBeChecked({ timeout: 10_000 });
-            await page.getByTestId("resolution-preset-custom").click();
-            await submitResolutionValidation(page, LAUNCHER_SURFACE, errorMode);
-          }
+          await expect(fieldsLoc).toBeVisible({ timeout: 10_000 });
           const errors = fieldsLoc.locator(
             ".el-form-item.is-error .el-form-item__error",
           );
@@ -1186,6 +1233,11 @@ test.describe("Launcher 600 narrow column (design QA)", () => {
         expect(layout.fieldsWidth).toBeLessThanOrEqual(
           NARROW_FIELDS_MAX_WIDTH_PX,
         );
+        expect(
+          layout.allInside,
+          JSON.stringify(layout.containmentOverflow),
+        ).toBe(true);
+        expect(layout.outside).toEqual([]);
         expect(layout.overlaps).toEqual([]);
         expect(layout.fieldsScrollOverflow).toBeLessThanOrEqual(1);
         expect(layout.fieldsClientWidth).toBeGreaterThan(0);
