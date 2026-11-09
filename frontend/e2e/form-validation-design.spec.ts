@@ -235,11 +235,11 @@ async function openResolutionSurface(
     const collapseHeader = page.locator(
       ".args-collapse .el-collapse-item__header",
     );
-    await collapseHeader.click();
-    await expect(
-      page.locator(".args-collapse .el-collapse-item.is-active"),
-    ).toBeVisible();
+    if (!(await page.getByTestId("resolution-enabled-checkbox").isVisible())) {
+      await collapseHeader.click();
+    }
     const resolutionToggle = page.getByTestId("resolution-enabled-checkbox");
+    await expect(resolutionToggle).toBeVisible({ timeout: 10_000 });
     await resolutionToggle.click();
     await expect(resolutionToggle).toBeChecked({ timeout: 10_000 });
     await page.getByTestId("resolution-preset-custom").click();
