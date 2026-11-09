@@ -201,6 +201,10 @@ async function setUiLocale(
     .filter({ hasText: label })
     .last()
     .click();
+  await expect(page.locator("h1")).toContainText(
+    locale === "ja" ? "一般" : "General",
+    { timeout: 10_000 },
+  );
 }
 
 async function openConfigCameraCustom(
@@ -231,10 +235,23 @@ async function openResolutionSurface(
       await expect(page.locator("h1")).toContainText("Launcher");
     }
     await page.getByTestId("profile-card-profile-1").click();
-    await page.locator(".args-collapse .el-collapse-item__header").click();
-    await page.getByTestId("resolution-enabled-checkbox").click();
+    const collapseHeader = page.locator(
+      ".args-collapse .el-collapse-item__header",
+    );
+    await collapseHeader.click();
+    await expect(
+      page.locator(".args-collapse .el-collapse-item.is-active"),
+    ).toBeVisible();
+    const resolutionToggle = page.getByTestId("resolution-enabled-checkbox");
+    await resolutionToggle.click();
+    await expect(resolutionToggle).toBeChecked({ timeout: 10_000 });
     await page.getByTestId("resolution-preset-custom").click();
-    await expect(page.getByTestId(surface.widthTestId)).toBeVisible();
+    await expect(page.getByTestId(surface.widthTestId)).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(
+      page.locator(".launch-args-advanced .resolution-sep"),
+    ).toBeVisible({ timeout: 10_000 });
     return;
   }
   await openConfigCameraCustom(page, locale);
@@ -866,7 +883,8 @@ test.describe("Form validation layout (design QA)", () => {
 });
 
 test.describe("Resolution layout acceptance (design QA)", () => {
-  test.setTimeout(90_000);
+  test.describe.configure({ mode: "serial" });
+  test.setTimeout(120_000);
   for (const locale of ["ja", "en"] as const) {
     for (const viewport of [
       { width: 1280, height: 600 },
