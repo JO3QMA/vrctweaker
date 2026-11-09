@@ -379,25 +379,22 @@ async function submitResolutionValidation(
       if (!ss) {
         throw new Error(`resolution form setup not found (${surfaceName})`);
       }
-      const setLauncherResolutionEditing = () => {
-        const valueEnabled = reactive(ss!.valueOptionsEnabled) as Record<
+      if (surfaceName === "launcher") {
+        const model = reactive(ss.launcherFormModel);
+        const valueEnabled = reactive(ss.valueOptionsEnabled) as Record<
           string,
           unknown
         >;
-        const preset = ss!.resolutionPreset as { value?: string } | string;
         Object.assign(valueEnabled, { resolution: true });
+        const preset = ss.resolutionPreset as { value?: string } | string;
         if (typeof preset === "object" && preset && "value" in preset) {
           preset.value = "custom";
         } else if (
-          typeof ss!.resolutionPreset === "object" &&
-          ss!.resolutionPreset
+          typeof ss.resolutionPreset === "object" &&
+          ss.resolutionPreset
         ) {
-          (ss!.resolutionPreset as { value: string }).value = "custom";
+          (ss.resolutionPreset as { value: string }).value = "custom";
         }
-      };
-      if (surfaceName === "launcher") {
-        const model = reactive(ss.launcherFormModel);
-        setLauncherResolutionEditing();
         if (m === "width") {
           model.screenWidth = invalidWidth;
         } else if (m === "both") {
@@ -454,9 +451,6 @@ async function submitResolutionValidation(
           } catch {
             /* expected invalid */
           }
-        }
-        if (surfaceName === "launcher") {
-          setLauncherResolutionEditing();
         }
         return;
       }

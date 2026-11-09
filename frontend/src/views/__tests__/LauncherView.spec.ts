@@ -805,6 +805,38 @@ describe("LauncherView", () => {
     expect(mockLaunchProfiles).toHaveBeenCalled();
   });
 
+  it("saves custom resolution entered in form (1920x720)", async () => {
+    const wrapper = mount(LauncherView);
+    await flushPromises();
+
+    await wrapper.findAll(".profile-card")[0]?.trigger("click");
+    await flushPromises();
+    await openAdvancedCollapse(wrapper);
+
+    await checkInput(wrapper, "resolution-enabled-checkbox").setValue(true);
+    await flushPromises();
+    await wrapper
+      .find("[data-testid='resolution-preset-custom'] input")
+      .setValue(true);
+    await flushPromises();
+    await inputInner(wrapper, "screen-width-input").setValue(1920);
+    await inputInner(wrapper, "screen-height-input").setValue(720);
+    await flushPromises();
+
+    mockMergeLaunchArgsForGUI.mockResolvedValue(
+      "-screen-width 1920 -screen-height 720",
+    );
+    await wrapper.find(".btn-save").trigger("click");
+    await flushPromises();
+
+    expect(mockMergeLaunchArgsForGUI).toHaveBeenCalledWith(
+      expect.objectContaining({
+        screenWidth: 1920,
+        screenHeight: 720,
+      }),
+    );
+  });
+
   it("applies resolution preset dimensions on save", async () => {
     const wrapper = mount(LauncherView);
     await flushPromises();

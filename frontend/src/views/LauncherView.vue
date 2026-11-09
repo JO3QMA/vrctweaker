@@ -888,6 +888,26 @@ function syncValueOptionsFromLaunchArgs() {
   Object.assign(valueOptionsEnabled, syncValueOptionsEnabled(launchArgs.value));
 }
 
+/** Persisted save/launch use launchArgs; resolution fields bind to launcherFormModel (#389). */
+function applyLauncherFormModelToLaunchArgs() {
+  if (!selected.value) return;
+  launchArgs.value.custom = launcherFormModel.custom ?? "";
+  launchArgs.value.screenWidth = normalizeResolutionDimension(
+    launcherFormModel.screenWidth,
+  );
+  launchArgs.value.screenHeight = normalizeResolutionDimension(
+    launcherFormModel.screenHeight,
+  );
+  launchArgs.value.monitor = Math.max(
+    0,
+    Math.floor(Number(launcherFormModel.monitor) || 0),
+  );
+  launchArgs.value.fps = Math.max(0, Number(launcherFormModel.fps) || 0);
+  launchArgs.value.osc = launcherFormModel.osc ?? "";
+  launchArgs.value.midi = launcherFormModel.midi ?? "";
+  launchArgs.value.ignoreTrackers = launcherFormModel.ignoreTrackers ?? "";
+}
+
 watch(() => selected.value, syncLauncherFormModelFromSources, {
   deep: true,
   flush: "sync",
@@ -1310,6 +1330,7 @@ async function save(): Promise<boolean> {
   launcherFormModel.name = selected.value.name;
   if (!(await validateElForm(launcherFormRef.value))) return false;
   if (await affinityBlocksLaunch()) return false;
+  applyLauncherFormModelToLaunchArgs();
   const gen = ++profileSaveGen;
   try {
     const argsStr = await App.mergeLaunchArgsForGUI(
@@ -1344,6 +1365,7 @@ async function launch() {
   if (!selected.value) return;
   if (!(await validateElForm(launcherFormRef.value))) return;
   if (await affinityBlocksLaunch()) return;
+  applyLauncherFormModelToLaunchArgs();
   const argsStr = await App.mergeLaunchArgsForGUI(
     sanitizeLaunchArgs(launchArgs.value),
   );
