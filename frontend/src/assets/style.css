@@ -19,16 +19,20 @@
   /* Semantic: タグ・メッセージ・検証のフィードバック。サーバー状態とプレゼンスには使わない */
   --color-danger: #e57373; /* 危険・破壊 */
   --color-error: #ef8a8a; /* インライン検証（カード上コントラスト 5.23:1） */
+  --color-success: #81c784; /* 成功 */
+  --color-warning: #ffb74d; /* 警告 */
+  --color-info: #9aa0a6; /* 情報 */
+
   /* automation 固定アクションバー高の初期近似（ResizeObserver 適用前のフォールバック） */
   --vt-automation-action-bar-inset-fallback: 104px;
   /* scroll-margin ≈ action bar inset − label breathing room */
   --vt-automation-error-scroll-margin: calc(
-    var(--automation-action-bar-inset, var(--vt-automation-action-bar-inset-fallback)) -
+    var(
+        --automation-action-bar-inset,
+        var(--vt-automation-action-bar-inset-fallback)
+      ) -
       16px
   );
-  --color-success: #81c784; /* 成功 */
-  --color-warning: #ffb74d; /* 警告 */
-  --color-info: #9aa0a6; /* 情報 */
 
   /* Server status (domain): ダッシュボードのサーバー状態。セマンティックには流用しない */
   --color-status-operational: #2e9f4a; /* 正常 */

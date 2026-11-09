@@ -5,6 +5,7 @@ import {
   onMounted,
   reactive,
   ref,
+  watch,
   watchEffect,
 } from "vue";
 import { useI18n } from "vue-i18n";
@@ -75,6 +76,13 @@ const editorFormRules = computed<FormRules>(() => {
   }
   return rules;
 });
+
+watch(
+  () => editor.value.triggerType,
+  () => {
+    ruleFormRef.value?.clearValidate();
+  },
+);
 
 async function validateEditorForm(): Promise<boolean> {
   syncValidationModel();
@@ -806,13 +814,13 @@ function onHeaderCommand(command: string | number | object) {
 }
 
 .automation-time .automation-inline-form-item.is-error {
-  scroll-margin-bottom: 88px;
+  scroll-margin-bottom: var(--vt-automation-error-scroll-margin);
 }
 
 .automation-time :deep(.el-input-number) {
   width: 120px;
-  flex: 0 0 120px;
   max-width: 120px;
+  flex: none;
 }
 
 .automation-inline-form-item :deep(.el-form-item__content) {

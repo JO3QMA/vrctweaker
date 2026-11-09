@@ -6,8 +6,6 @@ import { syncValidatedFormFieldA11y } from "../utils/formFieldA11y";
 export function useValidatedFormA11y(
   formRef: Ref<FormInstance | undefined>,
 ): void {
-  let syncGeneration = 0;
-
   const stop = watchEffect(
     () => {
       const form = formRef.value;
@@ -17,16 +15,12 @@ export function useValidatedFormA11y(
         void field.validateMessage;
         void field.propString;
       }
-      const gen = ++syncGeneration;
-      void syncValidatedFormFieldA11y(form).then(() => {
-        if (gen !== syncGeneration) return;
-      });
+      void syncValidatedFormFieldA11y(form);
     },
     { flush: "post" },
   );
 
   onBeforeUnmount(() => {
-    syncGeneration += 1;
     stop();
   });
 }

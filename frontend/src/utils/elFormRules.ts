@@ -5,12 +5,11 @@ export type FormRuleTranslator = (
   params?: Record<string, string>,
 ) => string;
 
-const PATH_LINE_FORBIDDEN = /[\n\r]/;
+const LINE_BREAK_FORBIDDEN = /[\n\r]/;
 const COOKIES_FILE_FORBIDDEN = /[\n\r"']/;
-const LAUNCH_ARG_LINE_FORBIDDEN = /[\n\r]/;
 
 export function pathLineHasForbiddenChars(value: string): boolean {
-  return PATH_LINE_FORBIDDEN.test(value);
+  return LINE_BREAK_FORBIDDEN.test(value);
 }
 
 export function cookiesFilePathHasForbiddenChars(value: string): boolean {
@@ -18,11 +17,27 @@ export function cookiesFilePathHasForbiddenChars(value: string): boolean {
 }
 
 export function launchArgLineHasForbiddenChars(value: string): boolean {
-  return LAUNCH_ARG_LINE_FORBIDDEN.test(value);
+  return LINE_BREAK_FORBIDDEN.test(value);
 }
 
 function requiredMessage(t: FormRuleTranslator): string {
   return t("formValidation.required");
+}
+
+function parseIntegerFieldValue(value: unknown): number | null | typeof NaN {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
+  if (typeof value === "string" && value.trim() === "") {
+    return null;
+  }
+  if (typeof value !== "number") {
+    return NaN;
+  }
+  if (!Number.isFinite(value) || !Number.isInteger(value)) {
+    return NaN;
+  }
+  return value;
 }
 
 export function requiredTrimmedRule(t: FormRuleTranslator): FormItemRule {
@@ -84,12 +99,16 @@ export function integerMinRule(
   return {
     type: "number",
     validator: (_rule, value, callback) => {
-      if (value === null || value === undefined || value === "") {
+      const parsed = parseIntegerFieldValue(value);
+      if (parsed === null) {
         callback(new Error(requiredMessage(t)));
         return;
       }
-      const n = Number(value);
-      if (!Number.isFinite(n) || !Number.isInteger(n) || n < min) {
+      if (typeof parsed !== "number" || Number.isNaN(parsed)) {
+        callback(new Error(t("formValidation.integerRequired")));
+        return;
+      }
+      if (parsed < min) {
         callback(
           new Error(t("formValidation.integerMin", { min: String(min) })),
         );
@@ -109,12 +128,16 @@ export function integerRangeRule(
   return {
     type: "number",
     validator: (_rule, value, callback) => {
-      if (value === null || value === undefined || value === "") {
+      const parsed = parseIntegerFieldValue(value);
+      if (parsed === null) {
         callback(new Error(requiredMessage(t)));
         return;
       }
-      const n = Number(value);
-      if (!Number.isFinite(n) || !Number.isInteger(n) || n < min || n > max) {
+      if (typeof parsed !== "number" || Number.isNaN(parsed)) {
+        callback(new Error(t("formValidation.integerRequired")));
+        return;
+      }
+      if (parsed < min || parsed > max) {
         callback(
           new Error(
             t("formValidation.integerRange", {

@@ -295,19 +295,34 @@ test.describe("Form validation layout (design QA)", () => {
         const height = document.querySelector(
           '[data-testid="screen-height-input"]',
         )!;
-        const errBottom = err.getBoundingClientRect().bottom;
-        const heightTop = height.getBoundingClientRect().top;
-        const itemBottom = widthItem.getBoundingClientRect().bottom;
+        const errRect = err.getBoundingClientRect();
+        const heightRect = height.getBoundingClientRect();
+        const sepRect = document
+          .querySelector(".resolution-fields .resolution-sep")
+          ?.getBoundingClientRect();
+        const horizontalOverlap =
+          Math.min(errRect.right, heightRect.right) -
+          Math.max(errRect.left, heightRect.left);
         return {
-          errorToHeight: heightTop - errBottom,
-          itemToHeight: heightTop - itemBottom,
-          overlapPx: errBottom - heightTop,
+          horizontalOverlap,
+          sepTop: sepRect?.top ?? 0,
+          heightTop: heightRect.top,
+          inputWidth: (
+            widthItem.querySelector('[data-testid="screen-width-input"]') ??
+            widthItem.querySelector(".el-input-number")
+          )?.getBoundingClientRect().width,
         };
       });
-      expect(metrics.overlapPx).toBeLessThanOrEqual(GAP_TOLERANCE_PX);
-      expect(metrics.errorToHeight).toBeGreaterThanOrEqual(
-        FIELD_GAP_PX - GAP_TOLERANCE_PX,
-      );
+      expect(metrics.horizontalOverlap).toBeLessThanOrEqual(GAP_TOLERANCE_PX);
+      if (viewport.width >= 1280) {
+        expect(
+          Math.abs(metrics.sepTop - metrics.heightTop),
+        ).toBeLessThanOrEqual(4);
+      }
+      if (metrics.inputWidth != null && metrics.inputWidth > 0) {
+        expect(metrics.inputWidth).toBeLessThanOrEqual(200);
+        expect(metrics.inputWidth).toBeGreaterThanOrEqual(110);
+      }
     });
   }
 
@@ -470,6 +485,13 @@ test.describe("Form validation layout (design QA)", () => {
 
       await expectInlineErrorInputSpacing(page, hourItem);
       await expectErrorBelowControl(page, hourItem);
+
+      const hourControlBox = await page
+        .getByTestId("schedule-hour-input")
+        .boundingBox();
+      expect(hourControlBox?.height ?? 999).toBeLessThanOrEqual(40);
+      expect(hourControlBox?.height ?? 0).toBeGreaterThanOrEqual(28);
+      expect(hourControlBox?.width ?? 999).toBeLessThanOrEqual(140);
 
       const timeFlexGap = await page
         .locator(".automation-time")

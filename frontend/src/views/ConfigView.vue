@@ -102,6 +102,7 @@
                   @change="onCameraResWidthChange"
                 />
                 <p
+                  v-if="cameraPreset === 'custom'"
                   :id="CONFIG_CAMERA_WIDTH_RANGE_HINT_ID"
                   class="form-field-range-hint"
                   data-testid="camera-width-range-hint"
@@ -128,6 +129,7 @@
                   @change="onCameraResHeightChange"
                 />
                 <p
+                  v-if="cameraPreset === 'custom'"
                   :id="CONFIG_CAMERA_HEIGHT_RANGE_HINT_ID"
                   class="form-field-range-hint"
                   data-testid="camera-height-range-hint"
@@ -199,6 +201,7 @@
                   @change="onScreenshotResWidthChange"
                 />
                 <p
+                  v-if="screenshotPreset === 'custom'"
                   :id="CONFIG_SCREENSHOT_WIDTH_RANGE_HINT_ID"
                   class="form-field-range-hint"
                   data-testid="screenshot-width-range-hint"
@@ -225,6 +228,7 @@
                   @change="onScreenshotResHeightChange"
                 />
                 <p
+                  v-if="screenshotPreset === 'custom'"
                   :id="CONFIG_SCREENSHOT_HEIGHT_RANGE_HINT_ID"
                   class="form-field-range-hint"
                   data-testid="screenshot-height-range-hint"
@@ -434,7 +438,10 @@ import {
   integerRangeRule,
   optionalPathLineRule,
 } from "../utils/elFormRules";
-import { validateElForms } from "../utils/elFormValidate";
+import {
+  revalidateElFormField,
+  validateElForms,
+} from "../utils/elFormValidate";
 import { useValidatedFormsA11y } from "../composables/useValidatedFormA11y";
 import { normalizeResolutionDimension } from "../utils/resolutionInput";
 import { formatNumericRangeHint } from "../utils/formNumericRangeHint";
@@ -633,28 +640,19 @@ function syncFromConfig(cfg: VRChatConfigDTO) {
   disableRichPresence.value = cfg.disableRichPresence ?? false;
 }
 
-function revalidateResolutionField(
-  formRef: FormInstance | undefined,
-  prop: string,
-) {
-  void nextTick(() => {
-    formRef?.validateField(prop).catch(() => {});
-  });
-}
-
 function onCameraResWidthChange(value: number | undefined) {
   config.value.cameraResWidth = normalizeResolutionDimension(value);
-  revalidateResolutionField(cameraResolutionFormRef.value, "cameraResWidth");
+  revalidateElFormField(cameraResolutionFormRef.value, "cameraResWidth");
 }
 
 function onCameraResHeightChange(value: number | undefined) {
   config.value.cameraResHeight = normalizeResolutionDimension(value);
-  revalidateResolutionField(cameraResolutionFormRef.value, "cameraResHeight");
+  revalidateElFormField(cameraResolutionFormRef.value, "cameraResHeight");
 }
 
 function onScreenshotResWidthChange(value: number | undefined) {
   config.value.screenshotResWidth = normalizeResolutionDimension(value);
-  revalidateResolutionField(
+  revalidateElFormField(
     screenshotResolutionFormRef.value,
     "screenshotResWidth",
   );
@@ -662,7 +660,7 @@ function onScreenshotResWidthChange(value: number | undefined) {
 
 function onScreenshotResHeightChange(value: number | undefined) {
   config.value.screenshotResHeight = normalizeResolutionDimension(value);
-  revalidateResolutionField(
+  revalidateElFormField(
     screenshotResolutionFormRef.value,
     "screenshotResHeight",
   );
@@ -674,6 +672,12 @@ function applyCameraPreset() {
     config.value.cameraResWidth = preset.width;
     config.value.cameraResHeight = preset.height;
   }
+  void nextTick(() => {
+    cameraResolutionFormRef.value?.clearValidate([
+      "cameraResWidth",
+      "cameraResHeight",
+    ]);
+  });
 }
 
 function applyScreenshotPreset() {
@@ -682,6 +686,12 @@ function applyScreenshotPreset() {
     config.value.screenshotResWidth = preset.width;
     config.value.screenshotResHeight = preset.height;
   }
+  void nextTick(() => {
+    screenshotResolutionFormRef.value?.clearValidate([
+      "screenshotResWidth",
+      "screenshotResHeight",
+    ]);
+  });
 }
 
 function clampCacheNumeric(n: number | undefined, min: number): number {
@@ -943,12 +953,6 @@ onBeforeUnmount(() => {
 .resolution-presets {
   flex-wrap: wrap;
   gap: var(--space-inline-tight);
-}
-
-.resolution-fields {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-action-group);
 }
 
 .config-resolution-form-item :deep(.el-form-item__content) {

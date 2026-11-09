@@ -680,7 +680,7 @@ import {
   computed,
   onMounted,
   onBeforeUnmount,
-  watchEffect,
+  watch,
   nextTick,
 } from "vue";
 import { onBeforeRouteLeave } from "vue-router";
@@ -730,7 +730,7 @@ import {
   optionalLaunchArgLineRule,
   requiredTrimmedRule,
 } from "../utils/elFormRules";
-import { validateElForm } from "../utils/elFormValidate";
+import { revalidateElFormField, validateElForm } from "../utils/elFormValidate";
 import { useValidatedFormA11y } from "../composables/useValidatedFormA11y";
 import { normalizeResolutionDimension } from "../utils/resolutionInput";
 import { formatNumericRangeHint } from "../utils/formNumericRangeHint";
@@ -861,7 +861,7 @@ const launcherFormRules = computed<FormRules>(() => {
   }
   return rules;
 });
-watchEffect(() => {
+function syncLauncherFormModelFromSources() {
   launcherFormModel.name = selected.value?.name ?? "";
   launcherFormModel.custom = launchArgs.value.custom ?? "";
   launcherFormModel.screenWidth = launchArgs.value.screenWidth;
@@ -871,6 +871,15 @@ watchEffect(() => {
   launcherFormModel.osc = launchArgs.value.osc ?? "";
   launcherFormModel.midi = launchArgs.value.midi ?? "";
   launcherFormModel.ignoreTrackers = launchArgs.value.ignoreTrackers ?? "";
+}
+
+watch(() => selected.value, syncLauncherFormModelFromSources, {
+  deep: true,
+  flush: "sync",
+});
+watch(launchArgs, syncLauncherFormModelFromSources, {
+  deep: true,
+  flush: "sync",
 });
 const savedSnapshot = ref<LaunchProfileEditSnapshot | null>(null);
 const sidebarOpen = ref(readSidebarOpenPreference());
@@ -981,18 +990,14 @@ function onScreenWidthChange(value: number | undefined) {
   const n = normalizeResolutionDimension(value);
   launchArgs.value.screenWidth = n;
   launcherFormModel.screenWidth = n;
-  void nextTick(() => {
-    launcherFormRef.value?.validateField("screenWidth").catch(() => {});
-  });
+  revalidateElFormField(launcherFormRef.value, "screenWidth");
 }
 
 function onScreenHeightChange(value: number | undefined) {
   const n = normalizeResolutionDimension(value);
   launchArgs.value.screenHeight = n;
   launcherFormModel.screenHeight = n;
-  void nextTick(() => {
-    launcherFormRef.value?.validateField("screenHeight").catch(() => {});
-  });
+  revalidateElFormField(launcherFormRef.value, "screenHeight");
 }
 
 function applyResolutionPreset() {
@@ -1000,7 +1005,12 @@ function applyResolutionPreset() {
   if (preset) {
     launchArgs.value.screenWidth = preset.width;
     launchArgs.value.screenHeight = preset.height;
+    launcherFormModel.screenWidth = preset.width;
+    launcherFormModel.screenHeight = preset.height;
   }
+  void nextTick(() => {
+    launcherFormRef.value?.clearValidate(["screenWidth", "screenHeight"]);
+  });
 }
 
 function onResolutionEnabledChange() {
@@ -1269,6 +1279,8 @@ async function affinityBlocksLaunch(): Promise<boolean> {
 
 async function save(): Promise<boolean> {
   if (!selected.value) return false;
+  selected.value.name = selected.value.name.trim();
+  launcherFormModel.name = selected.value.name;
   if (!(await validateElForm(launcherFormRef.value))) return false;
   if (await affinityBlocksLaunch()) return false;
   const gen = ++profileSaveGen;
@@ -1566,10 +1578,7 @@ onBeforeRouteLeave(async (_to, _from, next) => {
   /* layout: global style.css */
 }
 
-.vt-validated-form .resolution-fields .el-form-item.resolution-form-item,
-.vt-validated-form
-  .resolution-fields
-  .el-form-item.config-resolution-form-item {
+.vt-validated-form .resolution-fields .el-form-item.resolution-form-item {
   margin-bottom: 0;
 }
 

@@ -18,7 +18,10 @@ export function formFieldValidationErrorId(
 export function ensureFormA11yScopeId(formEl: HTMLElement): string {
   let scopeId = formEl.getAttribute(FORM_A11Y_SCOPE_ATTR);
   if (!scopeId) {
-    scopeId = `vt-form-${Math.random().toString(36).slice(2, 10)}`;
+    scopeId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? `vt-form-${crypto.randomUUID()}`
+        : `vt-form-${Math.random().toString(36).slice(2, 10)}`;
     formEl.setAttribute(FORM_A11Y_SCOPE_ATTR, scopeId);
   }
   return scopeId;
@@ -59,6 +62,7 @@ function applyControlDisabledA11y(control: HTMLElement): void {
   }
 }
 
+/** Skips ids that are not present in the document (e.g. error node not painted yet). */
 function describedByForField(
   errorId: string | undefined,
   hintIds: string[],
@@ -82,18 +86,16 @@ function applyControlDescribedBy(
   }
 }
 
-/** Wait for Element Plus debounced error message to appear in the DOM. */
+/** Wait one frame so Element Plus can paint inline errors after nextTick. */
 async function waitForFormItemErrorPaint(formRef: FormInstance): Promise<void> {
   await nextTick();
-  const deadline = Date.now() + 500;
-  while (Date.now() < deadline) {
-    const painted = formRef.fields.some((field) => {
-      if (field.validateState !== "error") return false;
-      return !!field.$el?.querySelector(".el-form-item__error");
-    });
-    if (painted) return;
-    await new Promise((resolve) => setTimeout(resolve, 25));
+  if (!formRef.fields.some((field) => field.validateState === "error")) {
+    return;
   }
+  await new Promise<void>((resolve) => {
+    requestAnimationFrame(() => resolve());
+  });
+  await nextTick();
 }
 
 /**
@@ -125,12 +127,17 @@ export async function syncValidatedFormFieldA11y(
     if (isError) {
       const errorEl = itemEl.querySelector<HTMLElement>(".el-form-item__error");
       const errorId = formFieldValidationErrorId(scopeId, prop);
+      const paintedErrorId = errorEl ? errorId : undefined;
       if (errorEl) {
         errorEl.id = errorId;
       }
-      const describedBy = describedByForField(errorId, hintIds);
+      const describedBy = describedByForField(paintedErrorId, hintIds);
       for (const control of controls) {
-        control.setAttribute("aria-invalid", "true");
+        if (errorEl) {
+          control.setAttribute("aria-invalid", "true");
+        } else {
+          control.removeAttribute("aria-invalid");
+        }
         applyControlDescribedBy(control, describedBy);
         applyControlDisabledA11y(control);
       }
@@ -149,11 +156,17 @@ export async function syncValidatedFormFieldA11y(
 }
 
 /** Bottom inset (px) for sticky bars obscuring invalid fields. */
-export function stickyBottomInsetForForm(formEl: HTMLElement): number {
-  const editorRoot = formEl.closest(".automation-rule-editor");
-  const bar = editorRoot?.querySelector<HTMLElement>(".automation-action-bar");
+export function stickyBottomInsetForForm(
+  formEl: HTMLElement,
+  stickyBarRootSelector = ".automation-rule-editor",
+  stickyBarSelector = ".automation-action-bar",
+  extraPaddingPx = 8,
+): number {
+  const bar = formEl
+    .closest(stickyBarRootSelector)
+    ?.querySelector<HTMLElement>(stickyBarSelector);
   if (!bar) return 0;
-  return Math.ceil(bar.getBoundingClientRect().height) + 8;
+  return Math.ceil(bar.getBoundingClientRect().height) + extraPaddingPx;
 }
 
 /**

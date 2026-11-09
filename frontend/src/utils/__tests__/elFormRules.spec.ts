@@ -91,6 +91,12 @@ describe("integerMinRule", () => {
     await expect(runValidator(rule, null)).rejects.toThrow(
       "formValidation.required",
     );
+    await expect(runValidator(rule, " ")).rejects.toThrow(
+      "formValidation.required",
+    );
+    await expect(runValidator(rule, 3.5)).rejects.toThrow(
+      "formValidation.integerRequired",
+    );
   });
 });
 
@@ -99,6 +105,9 @@ describe("integerRangeRule", () => {
     const rule = integerRangeRule(0, 23, t);
     await expect(runValidator(rule, 24)).rejects.toThrow(/integerRange/);
     await expect(runValidator(rule, 12)).resolves.toBeUndefined();
+    await expect(runValidator(rule, 3.5)).rejects.toThrow(
+      "formValidation.integerRequired",
+    );
   });
 });
 

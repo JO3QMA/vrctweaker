@@ -90,6 +90,7 @@
     "required": "This field is required.",
     "pathInvalid": "The path contains characters that cannot be used.",
     "integerMin": "Enter an integer of at least {min}.",
+    "integerRequired": "Enter an integer.",
     "integerRange": "Enter an integer from {min} through {max}.",
     "numericRangeHint": "{min}–{max}",
     "launchArgInvalid": "Launch arguments must be a single line without line breaks.",

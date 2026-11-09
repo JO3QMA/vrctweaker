@@ -283,7 +283,10 @@ async function onCookieEnableChange(on: boolean) {
     await ensureCookieRiskAck(gen);
     if (isCookieViewStale(gen)) return;
     if (desired) {
-      if (!(await writeCookieFromDraft(gen))) return;
+      if (!(await writeCookieFromDraft(gen))) {
+        cookieEnabled.value = false;
+        return;
+      }
     } else {
       await App.disableYTDLPCookieLinkage();
       if (isCookieViewStale(gen)) return;

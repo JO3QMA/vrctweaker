@@ -19,9 +19,11 @@ async function focusFirstInvalidField(
   invalidFields: InvalidFieldsMap,
 ): Promise<void> {
   const firstProp = invalidFields ? Object.keys(invalidFields)[0] : undefined;
-  if (firstProp) {
-    scrollFormFieldIntoView(formRef, firstProp);
+  if (!firstProp || invalidFields?.[firstProp] === undefined) {
+    await syncValidatedFormFieldA11y(formRef);
+    return;
   }
+  scrollFormFieldIntoView(formRef, firstProp);
   await syncValidatedFormFieldA11y(formRef);
   await nextTick();
   const formEl = formRef.$el as HTMLElement | undefined;
@@ -58,4 +60,14 @@ export async function validateElForms(
     }
   }
   return true;
+}
+
+/** Re-runs validation for a single prop after model normalization. */
+export function revalidateElFormField(
+  formRef: FormInstance | undefined,
+  prop: string,
+): void {
+  void nextTick(() => {
+    formRef?.validateField(prop).catch(() => {});
+  });
 }

@@ -258,10 +258,10 @@ const loginForm = reactive({
   twoFactorCode: "",
 });
 const loginFormRef = ref<FormInstance>();
-const loginFormRules = computed<FormRules>(() => ({
+const loginFormRules: FormRules = {
   username: [requiredTrimmedRule(t)],
   password: [requiredTrimmedRule(t)],
-}));
+};
 const loginError = ref("");
 const loginLoading = ref(false);
 const twoFactorRequired = ref(false);

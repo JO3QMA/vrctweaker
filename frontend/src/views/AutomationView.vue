@@ -494,11 +494,11 @@ async function save(): Promise<boolean> {
   }
   nameError.value = "";
   const editorRef = ruleEditorRef.value;
-  if (!editorRef || !(await editorRef.validateEditorForm())) {
-    return false;
-  }
   saving.value = true;
   try {
+    if (!editorRef || !(await editorRef.validateEditorForm())) {
+      return false;
+    }
     const dto = editorToDto(editor.value);
     if (!dto.id) {
       dto.id = newAutomationId();
