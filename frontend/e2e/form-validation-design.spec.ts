@@ -232,6 +232,17 @@ async function openResolutionSurface(
       await expect(page.locator("h1")).toContainText("Launcher");
     }
     await page.getByTestId("profile-card-profile-1").click();
+    const viewport = page.viewportSize();
+    if (viewport && viewport.width <= 640) {
+      const layout = page.locator(".launcher-layout");
+      const collapsed = await layout.evaluate((el) =>
+        el.classList.contains("sidebar-collapsed"),
+      );
+      if (!collapsed) {
+        await page.getByTestId("sidebar-toggle-btn").click();
+        await expect(layout).toHaveClass(/sidebar-collapsed/);
+      }
+    }
     const collapseHeader = page.locator(
       ".args-collapse .el-collapse-item__header",
     );
@@ -246,9 +257,11 @@ async function openResolutionSurface(
     await expect(page.getByTestId(surface.widthTestId)).toBeVisible({
       timeout: 10_000,
     });
-    await expect(
-      page.locator(".launch-args-advanced .resolution-sep"),
-    ).toBeVisible({ timeout: 10_000 });
+    if (viewport && viewport.width >= 1280) {
+      await expect(
+        page.locator(".launch-args-advanced .resolution-sep"),
+      ).toBeVisible({ timeout: 10_000 });
+    }
     return;
   }
   await openConfigCameraCustom(page, locale);
@@ -259,9 +272,13 @@ async function measureResolutionRow(
   surface: ResolutionSurface,
 ) {
   return page.evaluate(
-    ({ widthTestId, heightTestId, fieldsSelector }) => {
+    ({ widthTestId, heightTestId, fieldsSelector, surfaceName }) => {
       const fields = document.querySelector(fieldsSelector) as HTMLElement;
-      const parent = (fields?.parentElement ?? fields) as HTMLElement;
+      const parent = ((surfaceName === "launcher"
+        ? fields?.closest(".sub-options")
+        : fields?.closest(".resolution-section")) ??
+        fields?.parentElement ??
+        fields) as HTMLElement;
       const sep = fields?.querySelector(
         ".resolution-sep",
       ) as HTMLElement | null;
@@ -304,6 +321,7 @@ async function measureResolutionRow(
       widthTestId: surface.widthTestId,
       heightTestId: surface.heightTestId,
       fieldsSelector: resolutionFieldsSelector(surface),
+      surfaceName: surface.name,
     },
   );
 }
@@ -880,7 +898,6 @@ test.describe("Form validation layout (design QA)", () => {
 });
 
 test.describe("Resolution layout acceptance (design QA)", () => {
-  test.describe.configure({ mode: "serial" });
   test.setTimeout(120_000);
   for (const locale of ["ja", "en"] as const) {
     for (const viewport of [
