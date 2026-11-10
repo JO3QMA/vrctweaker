@@ -167,18 +167,9 @@ describe("resolution-fields responsive layout", () => {
     ).toContain("--automation-action-bar-inset");
   });
 
-  it("uses 8px margin on automation inline form items", () => {
-    const root = document.createElement("div");
-    root.className = "automation-rule-editor";
-    const form = document.createElement("form");
-    form.className = "el-form vt-validated-form";
-    const item = document.createElement("div");
-    item.className =
-      "el-form-item el-form-item--default automation-inline-form-item";
-    form.append(item);
-    root.append(form);
-    document.body.append(root);
-    expect(getComputedStyle(item).marginBottom).toBe("var(--space-8)");
-    root.remove();
+  it("uses spacing token margin on automation inline form items", () => {
+    expect(
+      declarationValue("automation-inline-form-item", "margin-bottom"),
+    ).toBe("var(--space-8)");
   });
 });
