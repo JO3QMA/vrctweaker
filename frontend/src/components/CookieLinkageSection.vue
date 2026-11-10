@@ -46,6 +46,7 @@
           class="cookie-switch"
           data-testid="video-cookie-enable"
           :disabled="cookieBusy"
+          :aria-label="t('video.cookieLinkage.enableLabel')"
           @change="onCookieEnableChange"
         />
       </div>
@@ -113,7 +114,7 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { ElMessageBox } from "element-plus";
+import { ElMessageBox, type CheckboxValueType } from "element-plus";
 import VtAlert from "./VtAlert.vue";
 import VtButton from "./VtButton.vue";
 import {
@@ -247,8 +248,8 @@ async function refreshAfterError(gen: number) {
   }
 }
 
-async function onCookieEnableChange(on: boolean) {
-  const desired = on;
+async function onCookieEnableChange(on: CheckboxValueType) {
+  const desired = on === true;
   const gen = ++cookieViewGen;
   cookieBusy.value = true;
   cookieActionError.value = "";

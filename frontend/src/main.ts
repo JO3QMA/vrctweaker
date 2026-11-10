@@ -1,5 +1,6 @@
 import { createApp } from "vue";
 import { createRouter, createWebHashHistory } from "vue-router";
+/** Dark theme is fixed; requires `class="dark"` on `<html>` (see docs/agents/dark-mode-fixed.md). */
 import "element-plus/theme-chalk/dark/css-vars.css";
 import App from "./App.vue";
 import type { RouteRecordRaw } from "vue-router";

@@ -45,6 +45,7 @@
               v-model="maintainOn"
               data-testid="ytdlp-maintain-switch"
               :disabled="busy"
+              :aria-label="t('video.replaceLabel')"
               @change="onMaintainChange"
             />
             <span class="switch-status" data-testid="ytdlp-effective-inline">
@@ -180,7 +181,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
-import { ElMessageBox } from "element-plus";
+import { ElMessageBox, type CheckboxValueType } from "element-plus";
 import { CaretBottom, CaretRight, FolderOpened } from "@element-plus/icons-vue";
 import VtAlert from "./VtAlert.vue";
 import VtButton from "./VtButton.vue";
@@ -468,9 +469,9 @@ async function refresh() {
   }
 }
 
-async function onMaintainChange(on: boolean) {
+async function onMaintainChange(on: CheckboxValueType) {
   const gen = sectionGeneration;
-  const desired = on;
+  const desired = on === true;
   busy.value = true;
   clearFeedback();
   try {

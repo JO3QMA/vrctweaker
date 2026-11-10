@@ -1,5 +1,9 @@
 <template>
-  <el-config-provider :locale="elLocale">
+  <el-config-provider
+    :locale="elLocale"
+    size="default"
+    :z-index="elementPlusZIndex"
+  >
     <AppStartupScreen
       v-if="!startupReady"
       :status="startupStatus"
@@ -45,7 +49,10 @@ import AppStartupScreen from "./components/AppStartupScreen.vue";
 import { useStartupInit } from "./composables/useStartupInit";
 import { useFirstLaunchGuide } from "./composables/useFirstLaunchGuide";
 import { useSessionUnlock } from "./composables/useSessionUnlock";
+import { Z_INDEX_ELEMENT_PLUS_BASE } from "./constants/elementPlusStack";
 import { elLocale, isAppLocale, setLanguage } from "./i18n";
+
+const elementPlusZIndex = Z_INDEX_ELEMENT_PLUS_BASE;
 import { App as WailsApp } from "./wails/app";
 import { showToast } from "./utils/showToast";
 
