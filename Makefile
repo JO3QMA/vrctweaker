@@ -65,10 +65,10 @@ lint: lint-back lint-front
 lint-back:
 	GOLANGCI_LINT_CACHE=$(CURDIR)/.cache/golangci-lint golangci-lint run ./...
 
-## フロントエンド Lint（ESLint + vue-tsc）
+## フロントエンド Lint（ESLint + tsrs + vue-tsc）
 lint-front:
 	cd frontend && pnpm run lint
-	cd frontend && pnpm exec vue-tsc --noEmit
+	cd frontend && pnpm run typecheck
 
 # --- フォーマット ---
 
@@ -146,7 +146,7 @@ help:
 	@echo "  make dev-wails     - Wails dev（xvfb 付き・ヘッドレス向け）"
 	@echo ""
 	@echo "品質チェック:"
-	@echo "  make lint         - 全体の Lint（golangci-lint + ESLint + vue-tsc）"
+	@echo "  make lint         - 全体の Lint（golangci-lint + ESLint + tsrs + vue-tsc）"
 	@echo "  make lint-back    - バックエンド Lint"
 	@echo "  make lint-front   - フロントエンド Lint"
 	@echo ""
