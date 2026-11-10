@@ -84,7 +84,7 @@ describe("AutomationRuleEditor", () => {
       },
     });
 
-      const saveBtn = wrapper.get('[data-testid="save-item"]');
+    const saveBtn = wrapper.get('[data-testid="save-item"]');
     expect(saveBtn.classes()).toContain("is-loading");
     expect(saveBtn.attributes("disabled")).toBeDefined();
   });
