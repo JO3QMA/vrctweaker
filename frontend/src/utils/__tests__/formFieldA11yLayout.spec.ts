@@ -172,4 +172,13 @@ describe("resolution-fields responsive layout", () => {
       declarationValue("automation-inline-form-item", "margin-bottom"),
     ).toBe("var(--space-8)");
   });
+
+  it("keeps 22px validated-form item spacing via token", () => {
+    expect(
+      declarationValue("vt-validated-form > .el-form-item", "margin-bottom"),
+    ).toBe("var(--space-validated-form-field)");
+    expect(declarationValue(":root", "--space-validated-form-field")).toBe(
+      "22px",
+    );
+  });
 });

@@ -87,6 +87,7 @@
   --space-inline-tight: var(--space-4); /* チップ横・バッジ内・インライン詰め */
   --space-action-group: var(--space-8); /* Action group・ツールバーの間隔 */
   --space-form-field: var(--space-12); /* フォーム項目間 */
+  --space-validated-form-field: 22px; /* vt-validated-form直下項目（インラインエラー余白） */
   --space-block: var(--space-16); /* 見出し下・段落間 */
   --space-section: var(--space-24); /* セクションカード間 */
   --space-page: var(--space-32); /* ページ外周 */
@@ -1057,7 +1058,7 @@ a:hover {
 
 .vt-validated-form > .el-form-item,
 .vt-validated-form.el-form > .el-form-item {
-  margin-bottom: var(--space-form-field);
+  margin-bottom: var(--space-validated-form-field);
 }
 
 .vt-validated-form > .el-form-item:last-child,
