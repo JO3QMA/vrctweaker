@@ -1,13 +1,5 @@
 <script setup lang="ts">
-import {
-  computed,
-  onBeforeUnmount,
-  onMounted,
-  reactive,
-  ref,
-  watch,
-  watchEffect,
-} from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
 import type { FormInstance, FormRules } from "element-plus";
 import SettingsRow from "../../components/settings/SettingsRow.vue";
@@ -54,19 +46,6 @@ const { t } = useI18n();
 
 const ruleFormRef = ref<FormInstance>();
 useValidatedFormA11y(ruleFormRef);
-const validationModel = reactive({
-  scheduleWeekdays: [] as number[],
-  scheduleHour: 0,
-  scheduleMinute: 0,
-});
-function syncValidationModel() {
-  validationModel.scheduleWeekdays = editor.value.scheduleWeekdays;
-  validationModel.scheduleHour = editor.value.scheduleHour;
-  validationModel.scheduleMinute = editor.value.scheduleMinute;
-}
-watchEffect(() => {
-  syncValidationModel();
-});
 const editorFormRules = computed<FormRules>(() => {
   const rules: FormRules = {};
   if (editor.value.triggerType === "schedule.tick") {
@@ -85,7 +64,6 @@ watch(
 );
 
 async function validateEditorForm(): Promise<boolean> {
-  syncValidationModel();
   if (editor.value.triggerType !== "schedule.tick") {
     return true;
   }
@@ -93,6 +71,9 @@ async function validateEditorForm(): Promise<boolean> {
 }
 
 defineExpose({ validateEditorForm });
+
+/** Extra padding below measured action bar height (scroll + sticky inset). */
+const AUTOMATION_ACTION_BAR_SCROLL_PAD_PX = 32;
 
 let actionBarResizeObserver: ResizeObserver | undefined;
 
@@ -105,10 +86,11 @@ onMounted(() => {
   const applyInset = () => {
     root.style.setProperty(
       "--automation-action-bar-inset",
-      `${Math.ceil(bar.getBoundingClientRect().height) + 32}px`,
+      `${Math.ceil(bar.getBoundingClientRect().height) + AUTOMATION_ACTION_BAR_SCROLL_PAD_PX}px`,
     );
   };
   applyInset();
+  if (typeof ResizeObserver === "undefined") return;
   actionBarResizeObserver = new ResizeObserver(applyInset);
   actionBarResizeObserver.observe(bar);
 });
@@ -141,7 +123,7 @@ function onHeaderCommand(command: string | number | object) {
     <el-form
       ref="ruleFormRef"
       class="automation-editor__scroll vt-validated-form"
-      :model="validationModel"
+      :model="editor"
       :rules="editorFormRules"
       @submit.prevent="emit('save')"
     >

@@ -496,7 +496,11 @@ async function save(): Promise<boolean> {
   const editorRef = ruleEditorRef.value;
   saving.value = true;
   try {
-    if (!editorRef || !(await editorRef.validateEditorForm())) {
+    if (!editorRef) {
+      showToast.error(t("automation.saveError"));
+      return false;
+    }
+    if (!(await editorRef.validateEditorForm())) {
       return false;
     }
     const dto = editorToDto(editor.value);

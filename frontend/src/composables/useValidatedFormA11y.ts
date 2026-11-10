@@ -10,12 +10,13 @@ export function useValidatedFormA11y(
     () => {
       const form = formRef.value;
       if (!form) return;
+      void form.fields.length;
       for (const field of form.fields) {
         void field.validateState;
         void field.validateMessage;
         void field.propString;
       }
-      void syncValidatedFormFieldA11y(form);
+      void syncValidatedFormFieldA11y(form).catch(() => {});
     },
     { flush: "post" },
   );

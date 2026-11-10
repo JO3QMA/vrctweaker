@@ -286,6 +286,8 @@
                           <el-input-number
                             v-model="launcherFormModel.monitor"
                             :min="1"
+                            :precision="0"
+                            :step="1"
                             data-testid="monitor-input"
                             size="small"
                             :placeholder="t('launcher.monitorPh')"
@@ -308,6 +310,8 @@
                           <el-input-number
                             v-model="launcherFormModel.fps"
                             :min="1"
+                            :precision="0"
+                            :step="1"
                             data-testid="fps-input"
                             size="small"
                             placeholder="90"
@@ -734,7 +738,7 @@ import {
   optionalLaunchArgLineRule,
   requiredTrimmedRule,
 } from "../utils/elFormRules";
-import { validateElForm } from "../utils/elFormValidate";
+import { revalidateElFormField, validateElForm } from "../utils/elFormValidate";
 import { useValidatedFormA11y } from "../composables/useValidatedFormA11y";
 import { normalizeResolutionDimension } from "../utils/resolutionInput";
 import { formatNumericRangeHint } from "../utils/formNumericRangeHint";
@@ -1041,10 +1045,12 @@ function syncResolutionPresetFromArgs() {
 
 function onScreenWidthChange(value: number | undefined) {
   launcherFormModel.screenWidth = normalizeResolutionDimension(value);
+  revalidateElFormField(launcherFormRef.value, "screenWidth");
 }
 
 function onScreenHeightChange(value: number | undefined) {
   launcherFormModel.screenHeight = normalizeResolutionDimension(value);
+  revalidateElFormField(launcherFormRef.value, "screenHeight");
 }
 
 function applyResolutionPreset() {
@@ -1326,9 +1332,10 @@ async function affinityBlocksLaunch(): Promise<boolean> {
 
 async function save(): Promise<boolean> {
   if (!selected.value) return false;
-  selected.value.name = selected.value.name.trim();
-  launcherFormModel.name = selected.value.name;
   if (!(await validateElForm(launcherFormRef.value))) return false;
+  const trimmedName = launcherFormModel.name.trim();
+  launcherFormModel.name = trimmedName;
+  selected.value.name = trimmedName;
   if (await affinityBlocksLaunch()) return false;
   applyLauncherFormModelToLaunchArgs();
   const gen = ++profileSaveGen;
@@ -1364,6 +1371,9 @@ async function save(): Promise<boolean> {
 async function launch() {
   if (!selected.value) return;
   if (!(await validateElForm(launcherFormRef.value))) return;
+  const trimmedName = launcherFormModel.name.trim();
+  launcherFormModel.name = trimmedName;
+  selected.value.name = trimmedName;
   if (await affinityBlocksLaunch()) return;
   applyLauncherFormModelToLaunchArgs();
   const argsStr = await App.mergeLaunchArgsForGUI(

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import type { FormInstance } from "element-plus";
 import { nextTick } from "vue";
 import { validateElForm } from "../elFormValidate";
+import * as formFieldA11y from "../formFieldA11y";
 import {
   formFieldValidationErrorId,
   scrollFormItemIntoView,
@@ -125,6 +126,20 @@ describe("validateElForm", () => {
       "-scheduleHour-error",
     );
 
+    formEl.remove();
+  });
+
+  it("returns true when validate passes even if a11y sync throws", async () => {
+    const { formEl, itemEl } = mockErrorFormItem({ prop: "name" });
+    const formRef = mockFormRef(formEl, itemEl, "name", "");
+    formRef.validate = vi.fn().mockResolvedValue(true);
+    const syncSpy = vi
+      .spyOn(formFieldA11y, "syncValidatedFormFieldA11y")
+      .mockRejectedValue(new Error("a11y failed"));
+
+    const ok = await validateElForm(formRef);
+    expect(ok).toBe(true);
+    syncSpy.mockRestore();
     formEl.remove();
   });
 });

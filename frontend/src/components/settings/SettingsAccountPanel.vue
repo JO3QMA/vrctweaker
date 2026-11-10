@@ -167,6 +167,7 @@ import type { UserCacheDTO } from "../../wails/app";
 import { formatBackendError } from "../../views/settings/formatBackendError";
 import { requiredTrimmedRule } from "../../utils/elFormRules";
 import { validateElForm } from "../../utils/elFormValidate";
+import { useValidatedFormA11y } from "../../composables/useValidatedFormA11y";
 
 const {
   state: unlockState,
@@ -195,6 +196,7 @@ const loginForm = reactive({
   twoFactorCode: "",
 });
 const loginFormRef = ref<FormInstance>();
+useValidatedFormA11y(loginFormRef);
 const loginFormRules: FormRules = {
   username: [requiredTrimmedRule(t)],
   password: [requiredTrimmedRule(t)],

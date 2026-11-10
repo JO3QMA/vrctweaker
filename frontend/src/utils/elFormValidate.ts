@@ -42,12 +42,20 @@ export async function validateElForm(
   if (!formRef) return false;
   try {
     await formRef.validate();
-    await syncValidatedFormFieldA11y(formRef);
-    return true;
   } catch (failure) {
-    await focusFirstInvalidField(formRef, invalidFieldsFromFailure(failure));
+    try {
+      await focusFirstInvalidField(formRef, invalidFieldsFromFailure(failure));
+    } catch {
+      /* a11y sync must not block validation failure handling */
+    }
     return false;
   }
+  try {
+    await syncValidatedFormFieldA11y(formRef);
+  } catch {
+    /* a11y sync failure must not reject a valid form */
+  }
+  return true;
 }
 
 /** Validates every form; stops at the first failure. */

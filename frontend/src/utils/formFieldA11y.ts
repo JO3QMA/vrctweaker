@@ -169,6 +169,21 @@ export function stickyBottomInsetForForm(
   return Math.ceil(bar.getBoundingClientRect().height) + extraPaddingPx;
 }
 
+function verticalScrollContainer(el: HTMLElement): HTMLElement | null {
+  let parent = el.parentElement;
+  while (parent) {
+    const { overflowY } = getComputedStyle(parent);
+    if (
+      (overflowY === "auto" || overflowY === "scroll") &&
+      parent.scrollHeight > parent.clientHeight
+    ) {
+      return parent;
+    }
+    parent = parent.parentElement;
+  }
+  return null;
+}
+
 /**
  * Scrolls a form item into view, keeping it above a sticky footer when present.
  */
@@ -177,8 +192,22 @@ export function scrollFormItemIntoView(
   bottomInset = 0,
 ): void {
   itemEl.scrollIntoView({ block: "nearest", inline: "nearest" });
-  if (bottomInset <= 0 || typeof window === "undefined") return;
+  if (bottomInset <= 0) return;
+
   const rect = itemEl.getBoundingClientRect();
+  const scrollParent = verticalScrollContainer(itemEl);
+  if (scrollParent) {
+    const containerRect = scrollParent.getBoundingClientRect();
+    const maxBottom = containerRect.bottom - bottomInset;
+    if (rect.bottom > maxBottom) {
+      scrollParent.scrollTop += rect.bottom - maxBottom;
+    } else if (rect.top < containerRect.top) {
+      scrollParent.scrollTop += rect.top - containerRect.top;
+    }
+    return;
+  }
+
+  if (typeof window === "undefined") return;
   const maxBottom = window.innerHeight - bottomInset;
   if (rect.bottom > maxBottom) {
     window.scrollBy({ top: rect.bottom - maxBottom, behavior: "auto" });

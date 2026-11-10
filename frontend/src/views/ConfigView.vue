@@ -446,7 +446,10 @@ import {
   integerRangeRule,
   optionalPathLineRule,
 } from "../utils/elFormRules";
-import { validateElForms } from "../utils/elFormValidate";
+import {
+  revalidateElFormField,
+  validateElForms,
+} from "../utils/elFormValidate";
 import { useValidatedFormsA11y } from "../composables/useValidatedFormA11y";
 import { normalizeResolutionDimension } from "../utils/resolutionInput";
 import { formatNumericRangeHint } from "../utils/formNumericRangeHint";
@@ -647,18 +650,28 @@ function syncFromConfig(cfg: VRChatConfigDTO) {
 
 function onCameraResWidthChange(value: number | undefined) {
   config.value.cameraResWidth = normalizeResolutionDimension(value);
+  revalidateElFormField(cameraResolutionFormRef.value, "cameraResWidth");
 }
 
 function onCameraResHeightChange(value: number | undefined) {
   config.value.cameraResHeight = normalizeResolutionDimension(value);
+  revalidateElFormField(cameraResolutionFormRef.value, "cameraResHeight");
 }
 
 function onScreenshotResWidthChange(value: number | undefined) {
   config.value.screenshotResWidth = normalizeResolutionDimension(value);
+  revalidateElFormField(
+    screenshotResolutionFormRef.value,
+    "screenshotResWidth",
+  );
 }
 
 function onScreenshotResHeightChange(value: number | undefined) {
   config.value.screenshotResHeight = normalizeResolutionDimension(value);
+  revalidateElFormField(
+    screenshotResolutionFormRef.value,
+    "screenshotResHeight",
+  );
 }
 
 function applyCameraPreset() {

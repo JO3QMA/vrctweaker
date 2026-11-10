@@ -134,6 +134,7 @@ import {
 } from "./vtButtonClasses";
 import { cookiesFilePathRule } from "../utils/elFormRules";
 import { validateElForm } from "../utils/elFormValidate";
+import { useValidatedFormA11y } from "../composables/useValidatedFormA11y";
 import { App, type CookieLinkageStatusDTO } from "../wails/app";
 import { cookieLinkageErrorI18nKey } from "../views/cookieLinkageErrors";
 
@@ -149,6 +150,7 @@ const cookieDraftSource = ref<"browser" | "file">("browser");
 const cookieDraftBrowser = ref("chrome");
 const cookieDraftCookiesPath = ref("");
 const cookieFormRef = ref<FormInstance>();
+useValidatedFormA11y(cookieFormRef);
 const cookieFormModel = reactive({ cookiesFilePath: "" });
 const cookieFormRules = computed<FormRules>(() => ({
   cookiesFilePath:
@@ -325,7 +327,14 @@ async function onCookieSourceChange() {
       await refreshCookieStatus(gen);
       return;
     }
-    if (!(await writeCookieFromDraft(gen))) return;
+    if (!(await writeCookieFromDraft(gen))) {
+      revertDraftToEffective(
+        priorEffectiveKind,
+        priorDraftBrowser,
+        priorDraftPath,
+      );
+      return;
+    }
   } catch (e) {
     if (isCookieViewStale(gen)) return;
     if (isMessageBoxDismiss(e)) {

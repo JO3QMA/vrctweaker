@@ -231,6 +231,7 @@ import { isLoginBlockedByTwoFactorCode } from "@/utils/loginTwoFactorSubmit";
 import { isLoginTwoFactorRequired } from "@/utils/vrchatLoginResult";
 import { requiredTrimmedRule } from "@/utils/elFormRules";
 import { validateElForm } from "@/utils/elFormValidate";
+import { useValidatedFormA11y } from "@/composables/useValidatedFormA11y";
 
 const emit = defineEmits<{
   finished: [];
@@ -258,6 +259,7 @@ const loginForm = reactive({
   twoFactorCode: "",
 });
 const loginFormRef = ref<FormInstance>();
+useValidatedFormA11y(loginFormRef);
 const loginFormRules: FormRules = {
   username: [requiredTrimmedRule(t)],
   password: [requiredTrimmedRule(t)],
