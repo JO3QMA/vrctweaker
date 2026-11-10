@@ -137,6 +137,7 @@ import { validateElForm } from "../utils/elFormValidate";
 import { useValidatedFormA11y } from "../composables/useValidatedFormA11y";
 import { App, type CookieLinkageStatusDTO } from "../wails/app";
 import { cookieLinkageErrorI18nKey } from "../views/cookieLinkageErrors";
+import { showToast } from "../utils/showToast";
 
 const { t } = useI18n();
 
@@ -287,6 +288,9 @@ async function onCookieEnableChange(on: boolean) {
     if (desired) {
       if (!(await writeCookieFromDraft(gen))) {
         cookieEnabled.value = false;
+        if (!isCookieViewStale(gen)) {
+          showToast.error(t("video.cookieLinkage.errors.generic"));
+        }
         return;
       }
     } else {
@@ -298,9 +302,11 @@ async function onCookieEnableChange(on: boolean) {
     if (isCookieViewStale(gen)) return;
     cookieEnabled.value = !desired;
     if (isMessageBoxDismiss(e)) return;
-    cookieActionError.value = userFacingCookieError(
+    const message = userFacingCookieError(
       e instanceof Error ? e.message : String(e),
     );
+    cookieActionError.value = message;
+    showToast.error(message);
   } finally {
     if (!isCookieViewStale(gen)) cookieBusy.value = false;
   }
@@ -333,6 +339,10 @@ async function onCookieSourceChange() {
         priorDraftBrowser,
         priorDraftPath,
       );
+      await refreshCookieStatus(gen);
+      if (!isCookieViewStale(gen)) {
+        showToast.error(t("video.cookieLinkage.errors.generic"));
+      }
       return;
     }
   } catch (e) {
@@ -345,9 +355,11 @@ async function onCookieSourceChange() {
       );
       return;
     }
-    cookieActionError.value = userFacingCookieError(
+    const message = userFacingCookieError(
       e instanceof Error ? e.message : String(e),
     );
+    cookieActionError.value = message;
+    showToast.error(message);
     if (
       isBrowserFileKindSwitch(priorEffectiveKind) &&
       cookieDraftSource.value === "file" &&

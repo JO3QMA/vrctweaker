@@ -611,7 +611,7 @@ function onHeaderCommand(command: string | number | object) {
             variant="primary"
             data-testid="save-item"
             :loading="saving"
-            :disabled="disabled"
+            :disabled="disabled || saving"
             @click="emit('save')"
           >
             {{ t("automation.save") }}
@@ -894,6 +894,10 @@ function onHeaderCommand(command: string | number | object) {
 .automation-action-bar :deep(.el-button) {
   min-width: var(--button-min-width);
   margin-left: 0;
+}
+
+.automation-action-bar :deep(.el-button.is-loading) {
+  min-width: var(--button-min-width);
 }
 
 .automation-action-bar :deep(.el-button + .el-button) {

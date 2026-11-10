@@ -530,6 +530,7 @@ async function save(): Promise<boolean> {
     }
     captureSnapshot();
     preferList.value = false;
+    showToast.success(t("automation.saved"));
     return true;
   } catch {
     showToast.error(t("automation.saveError"));

@@ -66,6 +66,29 @@ describe("AutomationRuleEditor", () => {
     ).toHaveLength(1);
   });
 
+  it("keeps the save button width stable while loading", async () => {
+    const wrapper = mount(AutomationRuleEditor, {
+      props: {
+        editor: dtoToEditor(item),
+        saving: true,
+        isDirty: true,
+        disabled: false,
+        nameError: "",
+        triggerOptions: [{ value: "friend_joined", label: "Join" }],
+        statusOptions: [],
+        powerPlanPresets: [],
+        weekdayOptions: [],
+        actionOptions: [],
+        powerPlans: [],
+        friends: [],
+      },
+    });
+
+      const saveBtn = wrapper.get('[data-testid="save-item"]');
+    expect(saveBtn.classes()).toContain("is-loading");
+    expect(saveBtn.attributes("disabled")).toBeDefined();
+  });
+
   it("uses enableThisRule label on the header switch", async () => {
     const wrapper = mount(Harness);
     await flushPromises();

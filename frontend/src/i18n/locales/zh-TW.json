@@ -461,6 +461,7 @@
     "saveAndContinue": "儲存並繼續",
     "discardAndContinue": "捨棄並繼續",
     "saveError": "儲存失敗",
+    "saved": "已儲存",
     "itemParseError": "資料損毀，無法安全編輯",
     "toggleError": "切換失敗",
     "deleteError": "無法刪除規則",

@@ -461,6 +461,7 @@
     "saveAndContinue": "保存并继续",
     "discardAndContinue": "放弃并继续",
     "saveError": "保存失败",
+    "saved": "已保存",
     "itemParseError": "数据损坏，无法安全编辑",
     "toggleError": "切换失败",
     "deleteError": "无法删除规则",
