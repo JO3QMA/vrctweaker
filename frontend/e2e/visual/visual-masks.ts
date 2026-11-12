@@ -50,3 +50,45 @@ export async function assertMaskLocatorsMatch(
     ).toBeGreaterThan(0);
   }
 }
+
+function rectanglesOverlap(
+  a: { x: number; y: number; width: number; height: number },
+  b: { x: number; y: number; width: number; height: number },
+): boolean {
+  return (
+    a.x < b.x + b.width &&
+    a.x + a.width > b.x &&
+    a.y < b.y + b.height &&
+    a.y + a.height > b.y
+  );
+}
+
+/** Playwright mask は z-order を無視するため、ダイアログと交差するmaskは禁止 */
+export async function assertMasksDoNotOverlapLocator(
+  masks: Locator[],
+  protectedLocator: Locator,
+  context: string,
+): Promise<void> {
+  const protectedBox = await protectedLocator.boundingBox();
+  expect(
+    protectedBox,
+    `${context}: protected locator must have a box`,
+  ).not.toBeNull();
+  if (!protectedBox) {
+    return;
+  }
+  for (let m = 0; m < masks.length; m++) {
+    const mask = masks[m];
+    const count = await mask.count();
+    for (let i = 0; i < count; i++) {
+      const box = await mask.nth(i).boundingBox();
+      if (!box) {
+        continue;
+      }
+      expect(
+        rectanglesOverlap(box, protectedBox),
+        `${context}: mask #${m + 1} element ${i + 1} overlaps protected region`,
+      ).toBe(false);
+    }
+  }
+}

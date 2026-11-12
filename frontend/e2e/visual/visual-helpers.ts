@@ -7,6 +7,7 @@ import {
 import { VISUAL_FIXED_CLOCK_ISO, type VisualRouteName } from "./visual-routes";
 import {
   assertMaskLocatorsMatch,
+  assertMasksDoNotOverlapLocator,
   combineVisualMasks,
   type CombineMaskOptions,
 } from "./visual-masks";
@@ -148,7 +149,15 @@ export async function assertScrollerAtEnd(
   expect(metrics.scrollTop).toBeGreaterThan(0);
 }
 
+export async function waitForElOverlayStable(page: Page): Promise<void> {
+  await page.locator(".el-overlay").last().waitFor({ state: "visible" });
+  await page.waitForTimeout(350);
+}
+
 export async function openLegalDocumentDialog(page: Page): Promise<void> {
+  await page.goto("/#/");
+  await page.locator(".dashboard .page-title").waitFor({ state: "visible" });
+  await page.waitForTimeout(150);
   await page.goto("/#/settings/reset");
   await page.getByTestId("settings-reset-setup-section").waitFor({
     state: "visible",
@@ -156,7 +165,13 @@ export async function openLegalDocumentDialog(page: Page): Promise<void> {
   await page.getByTestId("settings-open-onboarding").click();
   await page.getByTestId("onboarding-wizard").waitFor({ state: "visible" });
   await page.getByTestId("legal-link-privacy").click();
-  await page.getByTestId("legal-document-dialog").waitFor({ state: "visible" });
+  const dialog = page.getByTestId("legal-document-dialog").last();
+  await dialog.waitFor({ state: "visible" });
+  await waitForElOverlayStable(page);
+  await page.getByTestId("onboarding-wizard").evaluate((el) => {
+    (el as HTMLElement).style.setProperty("display", "none", "important");
+  });
+  await page.waitForTimeout(100);
 }
 
 export async function prepareOnboardingWizard(
@@ -180,7 +195,8 @@ export async function prepareAppUpdateDialog(
   await page.locator(".app-layout").waitFor({ state: "visible" });
   await page.getByTestId("app-update-dialog").waitFor({ state: "visible" });
   await page.locator(".dashboard .page-title").waitFor({ state: "visible" });
-  await page.waitForTimeout(250);
+  await waitForElOverlayStable(page);
+  await page.waitForTimeout(150);
 }
 
 export async function captureAppLayoutScreenshot(
@@ -198,15 +214,27 @@ export async function captureAppLayoutScreenshot(
 }
 
 /** append-to-body の `el-dialog` を含める */
+export type CaptureViewportScreenshotOptions = CombineMaskOptions & {
+  /** maskが重なってはいけない領域（モーダル本体など） */
+  protectFromMaskOverlap?: Locator;
+};
+
 export async function captureViewportScreenshot(
   page: Page,
   screenshotName: string,
   extraMasks: Locator[] = [],
-  maskOptions?: CombineMaskOptions,
+  maskOptions?: CaptureViewportScreenshotOptions,
 ): Promise<void> {
   const masks = combineVisualMasks(page, undefined, extraMasks, maskOptions);
   if (masks.length > 0) {
     await assertMaskLocatorsMatch(masks, screenshotName);
+  }
+  if (maskOptions?.protectFromMaskOverlap) {
+    await assertMasksDoNotOverlapLocator(
+      masks,
+      maskOptions.protectFromMaskOverlap,
+      screenshotName,
+    );
   }
   await expect(page).toHaveScreenshot(screenshotName, {
     mask: masks,

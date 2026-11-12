@@ -21,7 +21,8 @@ for (const locale of VISUAL_LOCALES) {
     for (const dialog of VISUAL_DIALOG_SCENARIOS) {
       test(`dialog ${dialog.id} ${locale} ${viewport.label}`, async ({
         page,
-      }) => {
+      }, testInfo) => {
+        testInfo.setTimeout(60_000);
         const screenshotName = `dialog-${dialog.id}-${locale}-${viewport.label}.png`;
 
         if (dialog.id === "legal-document") {
@@ -29,12 +30,11 @@ for (const locale of VISUAL_LOCALES) {
           await page.setViewportSize(viewport);
           await page.addStyleTag({ content: VISUAL_FONT_CSS });
           await openLegalDocumentDialog(page);
-          await captureViewportScreenshot(
-            page,
-            screenshotName,
-            [page.locator(".app-layout .main-content")],
-            { includeSidebarIcons: false },
-          );
+          const legalDialog = page.getByTestId("legal-document-dialog").last();
+          await captureViewportScreenshot(page, screenshotName, [], {
+            includeSidebarIcons: false,
+            protectFromMaskOverlap: legalDialog,
+          });
           return;
         }
 
@@ -43,16 +43,11 @@ for (const locale of VISUAL_LOCALES) {
             startupAppUpdatePrompt: true,
           });
           await prepareAppUpdateDialog(page, viewport);
-          await page
-            .locator(".dashboard .page-title")
-            .waitFor({ state: "visible" });
-          await page.waitForTimeout(250);
-          await captureViewportScreenshot(
-            page,
-            screenshotName,
-            [page.locator(".app-layout .main-content")],
-            { includeSidebarIcons: false },
-          );
+          const updateDialog = page.getByTestId("app-update-dialog");
+          await captureViewportScreenshot(page, screenshotName, [], {
+            includeSidebarIcons: false,
+            protectFromMaskOverlap: updateDialog,
+          });
           return;
         }
 
