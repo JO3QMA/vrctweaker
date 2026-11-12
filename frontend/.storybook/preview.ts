@@ -2,16 +2,16 @@ import type { Preview } from "@storybook/vue3-vite";
 import { setup } from "@storybook/vue3-vite";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { createI18n } from "vue-i18n";
-import ElementPlus from "element-plus";
-import "element-plus/dist/index.css";
 import "element-plus/theme-chalk/dark/css-vars.css";
 import "../src/assets/style.css";
+import "../src/element-plus/function-api-styles";
 import en from "../src/i18n/locales/en.json";
 import ja from "../src/i18n/locales/ja.json";
 import ko from "../src/i18n/locales/ko.json";
 import zhTW from "../src/i18n/locales/zh-TW.json";
 import zhCN from "../src/i18n/locales/zh-CN.json";
 import { settingsChildRoutes } from "../src/views/settings/settingsSections";
+import { registerElementPlusFormComponents } from "./registerElementPlusFormComponents";
 
 const storybookI18n = createI18n({
   legacy: false,
@@ -68,7 +68,7 @@ const router = createRouter({
 setup((app) => {
   app.use(router);
   app.use(storybookI18n);
-  app.use(ElementPlus);
+  registerElementPlusFormComponents(app);
 });
 
 const preview: Preview = {

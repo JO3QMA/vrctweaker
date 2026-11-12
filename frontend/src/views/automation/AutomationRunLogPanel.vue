@@ -125,7 +125,7 @@ onBeforeUnmount(() => {
             >
               <template #content>
                 <span data-testid="automation-log-result-tooltip">{{
-                  resultTooltip(row)
+                  resultTooltip(row as AutomationRunLogEntryDTO)
                 }}</span>
               </template>
               <VtTag

@@ -125,7 +125,12 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, reactive, ref, computed } from "vue";
 import { useI18n } from "vue-i18n";
-import { ElMessageBox, type FormInstance, type FormRules } from "element-plus";
+import {
+  ElMessageBox,
+  type CheckboxValueType,
+  type FormInstance,
+  type FormRules,
+} from "element-plus";
 import VtAlert from "./VtAlert.vue";
 import VtButton from "./VtButton.vue";
 import {
@@ -277,8 +282,8 @@ async function refreshAfterError(gen: number) {
   }
 }
 
-async function onCookieEnableChange(on: boolean) {
-  const desired = on;
+async function onCookieEnableChange(on: CheckboxValueType) {
+  const desired = on === true;
   const gen = ++cookieViewGen;
   cookieBusy.value = true;
   cookieActionError.value = "";

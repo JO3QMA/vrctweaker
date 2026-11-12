@@ -11,6 +11,25 @@ test.describe("Element Plus stack (App.vue path)", () => {
     );
   });
 
+  test("ElMessage toast loads theme styles (fixed position, non-transparent surface)", async ({
+    page,
+  }) => {
+    await page.addInitScript(getMockWailsInitScript());
+    await page.goto("/");
+    await page.evaluate(async () => {
+      const { showToast } = await import("/src/utils/showToast.ts");
+      showToast.success("e2e style probe");
+    });
+    const toast = page.locator(".el-message").first();
+    await expect(toast).toBeVisible();
+    await expect(toast).toHaveCSS("position", "fixed");
+    const bg = await toast.evaluate(
+      (el) => getComputedStyle(el).backgroundColor,
+    );
+    expect(bg).not.toBe("rgba(0, 0, 0, 0)");
+    expect(bg).not.toBe("transparent");
+  });
+
   test("AppUpdateDialog later button uses brand focus ring (computed outline)", async ({
     page,
   }) => {
