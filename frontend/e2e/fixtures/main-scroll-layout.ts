@@ -3,9 +3,9 @@ import { expect } from "@playwright/test";
 
 /**
  * メイン余白E2Eで試すビューポート幅。将来は `app-window-bounds.ts`（最小ウィンドウなど）
- * と揃える想定。現行は600、#396マージ後は768へ差し替え。
+ * と揃える。最小ウィンドウ幅768（Wails MinWidth=768、PR#396）に合わせる。
  */
-export const MAIN_SCROLL_LAYOUT_VIEWPORT_WIDTHS = [1280, 600] as const;
+export const MAIN_SCROLL_LAYOUT_VIEWPORT_WIDTHS = [1280, 768] as const;
 
 /** main.ts の `meta.selfScroll: true` と対応（ドキュメント用） */
 export const SELF_SCROLL_ROUTE_NAMES = [
