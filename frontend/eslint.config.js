@@ -15,6 +15,8 @@ export default tseslint.config(
       "**/playwright-report/**",
       "**/test-results/**",
       "**/coverage/**",
+      "**/src/auto-imports.d.ts",
+      "**/src/components.d.ts",
       "**/*.local",
     ],
   },
