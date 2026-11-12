@@ -46,59 +46,104 @@
         <p class="text-body-sm config-help">
           {{ t("config.cameraHelp") }}
         </p>
-        <div class="resolution-section">
-          <el-radio-group
-            v-model="cameraPreset"
-            :aria-label="t('config.cameraPresetAria')"
-            size="small"
-            class="resolution-presets"
-            @change="applyCameraPreset"
-          >
-            <el-radio-button value="HD" data-testid="camera-preset-hd"
-              >HD</el-radio-button
-            >
-            <el-radio-button value="FHD" data-testid="camera-preset-fhd"
-              >FHD</el-radio-button
-            >
-            <el-radio-button value="WQHD" data-testid="camera-preset-wqhd"
-              >WQHD</el-radio-button
-            >
-            <el-radio-button value="4K" data-testid="camera-preset-4k"
-              >4K</el-radio-button
-            >
-            <el-radio-button value="8K" data-testid="camera-preset-8k"
-              >8K</el-radio-button
-            >
-            <el-radio-button
-              value="custom"
-              data-testid="camera-preset-custom"
-              >{{ t("launcher.manual") }}</el-radio-button
-            >
-          </el-radio-group>
-          <div class="resolution-fields">
-            <el-input-number
-              v-model="config.cameraResWidth"
-              :min="1280"
-              :max="7680"
-              :disabled="cameraPreset !== 'custom'"
-              data-testid="camera-width-input"
+        <el-form
+          ref="cameraResolutionFormRef"
+          :model="config"
+          :rules="cameraResolutionFormRules"
+          label-position="top"
+          size="default"
+          class="vt-validated-form vt-config-resolution-form"
+        >
+          <div class="resolution-section">
+            <el-radio-group
+              v-model="cameraPreset"
+              :aria-label="t('config.cameraPresetAria')"
               size="small"
-              :placeholder="t('launcher.widthPh')"
-              class="resolution-number-input"
-            />
-            <span class="resolution-sep">×</span>
-            <el-input-number
-              v-model="config.cameraResHeight"
-              :min="720"
-              :max="4320"
-              :disabled="cameraPreset !== 'custom'"
-              data-testid="camera-height-input"
-              size="small"
-              :placeholder="t('launcher.heightPh')"
-              class="resolution-number-input"
-            />
+              class="resolution-presets"
+              @change="applyCameraPreset"
+            >
+              <el-radio-button value="HD" data-testid="camera-preset-hd"
+                >HD</el-radio-button
+              >
+              <el-radio-button value="FHD" data-testid="camera-preset-fhd"
+                >FHD</el-radio-button
+              >
+              <el-radio-button value="WQHD" data-testid="camera-preset-wqhd"
+                >WQHD</el-radio-button
+              >
+              <el-radio-button value="4K" data-testid="camera-preset-4k"
+                >4K</el-radio-button
+              >
+              <el-radio-button value="8K" data-testid="camera-preset-8k"
+                >8K</el-radio-button
+              >
+              <el-radio-button
+                value="custom"
+                data-testid="camera-preset-custom"
+                >{{ t("launcher.manual") }}</el-radio-button
+              >
+            </el-radio-group>
+            <div class="resolution-fields">
+              <div class="resolution-input-row">
+                <el-form-item
+                  prop="cameraResWidth"
+                  class="config-resolution-form-item vt-form-item-with-range-hint"
+                >
+                  <el-input-number
+                    v-model="config.cameraResWidth"
+                    :min="VRCHAT_CAMERA_RES.WIDTH_MIN"
+                    :max="VRCHAT_CAMERA_RES.WIDTH_MAX"
+                    :precision="0"
+                    :step="1"
+                    :validate-event="false"
+                    :disabled="cameraPreset !== 'custom'"
+                    data-testid="camera-width-input"
+                    size="small"
+                    :placeholder="t('launcher.widthPh')"
+                    class="resolution-number-input"
+                    @change="onCameraResWidthChange"
+                  />
+                  <p
+                    v-if="cameraPreset === 'custom'"
+                    :id="CONFIG_CAMERA_WIDTH_RANGE_HINT_ID"
+                    class="form-field-range-hint"
+                    data-testid="camera-width-range-hint"
+                  >
+                    {{ cameraWidthRangeHint }}
+                  </p>
+                </el-form-item>
+                <span class="resolution-sep">×</span>
+                <el-form-item
+                  prop="cameraResHeight"
+                  class="config-resolution-form-item vt-form-item-with-range-hint"
+                >
+                  <el-input-number
+                    v-model="config.cameraResHeight"
+                    :min="VRCHAT_CAMERA_RES.HEIGHT_MIN"
+                    :max="VRCHAT_CAMERA_RES.HEIGHT_MAX"
+                    :precision="0"
+                    :step="1"
+                    :validate-event="false"
+                    :disabled="cameraPreset !== 'custom'"
+                    data-testid="camera-height-input"
+                    size="small"
+                    :placeholder="t('launcher.heightPh')"
+                    class="resolution-number-input"
+                    @change="onCameraResHeightChange"
+                  />
+                  <p
+                    v-if="cameraPreset === 'custom'"
+                    :id="CONFIG_CAMERA_HEIGHT_RANGE_HINT_ID"
+                    class="form-field-range-hint"
+                    data-testid="camera-height-range-hint"
+                  >
+                    {{ cameraHeightRangeHint }}
+                  </p>
+                </el-form-item>
+              </div>
+            </div>
           </div>
-        </div>
+        </el-form>
       </el-card>
 
       <!-- Screenshot Resolution -->
@@ -107,63 +152,118 @@
         <p class="text-body-sm config-help">
           {{ t("config.screenshotHelp") }}
         </p>
-        <div class="resolution-section">
-          <el-radio-group
-            v-model="screenshotPreset"
-            :aria-label="t('config.screenshotPresetAria')"
-            size="small"
-            class="resolution-presets"
-            @change="applyScreenshotPreset"
-          >
-            <el-radio-button value="HD" data-testid="screenshot-preset-hd"
-              >HD</el-radio-button
-            >
-            <el-radio-button value="FHD" data-testid="screenshot-preset-fhd"
-              >FHD</el-radio-button
-            >
-            <el-radio-button value="WQHD" data-testid="screenshot-preset-wqhd"
-              >WQHD</el-radio-button
-            >
-            <el-radio-button value="4K" data-testid="screenshot-preset-4k"
-              >4K</el-radio-button
-            >
-            <el-radio-button
-              value="custom"
-              data-testid="screenshot-preset-custom"
-              >{{ t("launcher.manual") }}</el-radio-button
-            >
-          </el-radio-group>
-          <div class="resolution-fields">
-            <el-input-number
-              v-model="config.screenshotResWidth"
-              :min="1280"
-              :max="3840"
-              :disabled="screenshotPreset !== 'custom'"
-              data-testid="screenshot-width-input"
+        <el-form
+          ref="screenshotResolutionFormRef"
+          :model="config"
+          :rules="screenshotResolutionFormRules"
+          label-position="top"
+          size="default"
+          class="vt-validated-form vt-config-resolution-form"
+        >
+          <div class="resolution-section">
+            <el-radio-group
+              v-model="screenshotPreset"
+              :aria-label="t('config.screenshotPresetAria')"
               size="small"
-              :placeholder="t('launcher.widthPh')"
-              class="resolution-number-input"
-            />
-            <span class="resolution-sep">×</span>
-            <el-input-number
-              v-model="config.screenshotResHeight"
-              :min="720"
-              :max="2160"
-              :disabled="screenshotPreset !== 'custom'"
-              data-testid="screenshot-height-input"
-              size="small"
-              :placeholder="t('launcher.heightPh')"
-              class="resolution-number-input"
-            />
+              class="resolution-presets"
+              @change="applyScreenshotPreset"
+            >
+              <el-radio-button value="HD" data-testid="screenshot-preset-hd"
+                >HD</el-radio-button
+              >
+              <el-radio-button value="FHD" data-testid="screenshot-preset-fhd"
+                >FHD</el-radio-button
+              >
+              <el-radio-button value="WQHD" data-testid="screenshot-preset-wqhd"
+                >WQHD</el-radio-button
+              >
+              <el-radio-button value="4K" data-testid="screenshot-preset-4k"
+                >4K</el-radio-button
+              >
+              <el-radio-button
+                value="custom"
+                data-testid="screenshot-preset-custom"
+                >{{ t("launcher.manual") }}</el-radio-button
+              >
+            </el-radio-group>
+            <div class="resolution-fields">
+              <div class="resolution-input-row">
+                <el-form-item
+                  prop="screenshotResWidth"
+                  class="config-resolution-form-item vt-form-item-with-range-hint"
+                >
+                  <el-input-number
+                    v-model="config.screenshotResWidth"
+                    :min="VRCHAT_SCREENSHOT_RES.WIDTH_MIN"
+                    :max="VRCHAT_SCREENSHOT_RES.WIDTH_MAX"
+                    :precision="0"
+                    :step="1"
+                    :validate-event="false"
+                    :disabled="screenshotPreset !== 'custom'"
+                    data-testid="screenshot-width-input"
+                    size="small"
+                    :placeholder="t('launcher.widthPh')"
+                    class="resolution-number-input"
+                    @change="onScreenshotResWidthChange"
+                  />
+                  <p
+                    v-if="screenshotPreset === 'custom'"
+                    :id="CONFIG_SCREENSHOT_WIDTH_RANGE_HINT_ID"
+                    class="form-field-range-hint"
+                    data-testid="screenshot-width-range-hint"
+                  >
+                    {{ screenshotWidthRangeHint }}
+                  </p>
+                </el-form-item>
+                <span class="resolution-sep">×</span>
+                <el-form-item
+                  prop="screenshotResHeight"
+                  class="config-resolution-form-item vt-form-item-with-range-hint"
+                >
+                  <el-input-number
+                    v-model="config.screenshotResHeight"
+                    :min="VRCHAT_SCREENSHOT_RES.HEIGHT_MIN"
+                    :max="VRCHAT_SCREENSHOT_RES.HEIGHT_MAX"
+                    :precision="0"
+                    :step="1"
+                    :validate-event="false"
+                    :disabled="screenshotPreset !== 'custom'"
+                    data-testid="screenshot-height-input"
+                    size="small"
+                    :placeholder="t('launcher.heightPh')"
+                    class="resolution-number-input"
+                    @change="onScreenshotResHeightChange"
+                  />
+                  <p
+                    v-if="screenshotPreset === 'custom'"
+                    :id="CONFIG_SCREENSHOT_HEIGHT_RANGE_HINT_ID"
+                    class="form-field-range-hint"
+                    data-testid="screenshot-height-range-hint"
+                  >
+                    {{ screenshotHeightRangeHint }}
+                  </p>
+                </el-form-item>
+              </div>
+            </div>
           </div>
-        </div>
+        </el-form>
       </el-card>
 
       <!-- Picture Output -->
       <el-card shadow="never" class="section-card">
         <template #header>{{ t("config.photoHeader") }}</template>
-        <el-form label-position="top" size="default">
-          <el-form-item :label="t('config.outputFolder')">
+        <el-form
+          ref="photoFormRef"
+          :model="config"
+          :rules="photoFormRules"
+          label-position="top"
+          size="default"
+          class="vt-validated-form"
+        >
+          <el-form-item
+            :label="t('config.outputFolder')"
+            prop="pictureOutputFolder"
+          >
             <div class="path-input-group">
               <el-input
                 id="picture-output-folder"
@@ -226,8 +326,15 @@
         <p class="text-body-sm config-help">
           {{ t("config.cacheHelp") }}
         </p>
-        <el-form label-position="top" size="default">
-          <el-form-item :label="t('config.cacheDir')">
+        <el-form
+          ref="cacheFormRef"
+          :model="config"
+          :rules="cacheFormRules"
+          label-position="top"
+          size="default"
+          class="vt-validated-form"
+        >
+          <el-form-item :label="t('config.cacheDir')" prop="cacheDirectory">
             <div class="path-input-group">
               <el-input
                 id="cache-directory"
@@ -244,7 +351,7 @@
               </VtButton>
             </div>
           </el-form-item>
-          <el-form-item :label="t('config.cacheSizeGb')">
+          <el-form-item :label="t('config.cacheSizeGb')" prop="cacheSize">
             <el-input-number
               id="cache-size"
               v-model="config.cacheSize"
@@ -254,7 +361,10 @@
               data-testid="cache-size-input"
             />
           </el-form-item>
-          <el-form-item :label="t('config.cacheExpiryDays')">
+          <el-form-item
+            :label="t('config.cacheExpiryDays')"
+            prop="cacheExpiryDelay"
+          >
             <el-input-number
               id="cache-expiry"
               v-model="config.cacheExpiryDelay"
@@ -321,9 +431,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from "vue";
 import { useI18n } from "vue-i18n";
-import { ElMessageBox } from "element-plus";
+import { ElMessageBox, type FormInstance, type FormRules } from "element-plus";
 import VtAlert from "../components/VtAlert.vue";
 import VtButton from "../components/VtButton.vue";
 import {
@@ -331,11 +441,63 @@ import {
   VT_BUTTON_SECONDARY_CANCEL_CLASS,
 } from "../components/vtButtonClasses";
 import { showToast } from "../utils/showToast";
+import {
+  integerMinRule,
+  integerRangeRule,
+  optionalPathLineRule,
+} from "../utils/elFormRules";
+import {
+  revalidateElFormField,
+  validateElForms,
+} from "../utils/elFormValidate";
+import { useValidatedFormsA11y } from "../composables/useValidatedFormA11y";
+import { normalizeResolutionDimension } from "../utils/resolutionInput";
+import { formatNumericRangeHint } from "../utils/formNumericRangeHint";
+import {
+  VRCHAT_CAMERA_RES,
+  VRCHAT_SCREENSHOT_RES,
+} from "../utils/vrchatResolutionLimits";
 import { App } from "../wails/app";
 import type { VRChatConfigDTO } from "../wails/app";
 import { AssetCacheErr } from "../utils/assetCacheErrors";
 
 const { t } = useI18n();
+
+const CONFIG_CAMERA_WIDTH_RANGE_HINT_ID = "config-camera-width-range-hint";
+const CONFIG_CAMERA_HEIGHT_RANGE_HINT_ID = "config-camera-height-range-hint";
+const CONFIG_SCREENSHOT_WIDTH_RANGE_HINT_ID =
+  "config-screenshot-width-range-hint";
+const CONFIG_SCREENSHOT_HEIGHT_RANGE_HINT_ID =
+  "config-screenshot-height-range-hint";
+
+const cameraWidthRangeHint = computed(() =>
+  formatNumericRangeHint(
+    t,
+    VRCHAT_CAMERA_RES.WIDTH_MIN,
+    VRCHAT_CAMERA_RES.WIDTH_MAX,
+  ),
+);
+const cameraHeightRangeHint = computed(() =>
+  formatNumericRangeHint(
+    t,
+    VRCHAT_CAMERA_RES.HEIGHT_MIN,
+    VRCHAT_CAMERA_RES.HEIGHT_MAX,
+  ),
+);
+const screenshotWidthRangeHint = computed(() =>
+  formatNumericRangeHint(
+    t,
+    VRCHAT_SCREENSHOT_RES.WIDTH_MIN,
+    VRCHAT_SCREENSHOT_RES.WIDTH_MAX,
+  ),
+);
+const screenshotHeightRangeHint = computed(() =>
+  formatNumericRangeHint(
+    t,
+    VRCHAT_SCREENSHOT_RES.HEIGHT_MIN,
+    VRCHAT_SCREENSHOT_RES.HEIGHT_MAX,
+  ),
+);
 
 type ResolutionPreset = "HD" | "FHD" | "WQHD" | "4K" | "8K" | "custom";
 
@@ -368,6 +530,62 @@ const assetCacheClearLoading = ref(false);
 let clearGeneration = 0;
 
 const CACHE_MIN = 30;
+const photoFormRef = ref<FormInstance>();
+const cacheFormRef = ref<FormInstance>();
+const cameraResolutionFormRef = ref<FormInstance>();
+const screenshotResolutionFormRef = ref<FormInstance>();
+useValidatedFormsA11y([
+  cameraResolutionFormRef,
+  screenshotResolutionFormRef,
+  photoFormRef,
+  cacheFormRef,
+]);
+const photoFormRules = computed<FormRules>(() => ({
+  pictureOutputFolder: [optionalPathLineRule(t)],
+}));
+const cacheFormRules = computed<FormRules>(() => ({
+  cacheDirectory: [optionalPathLineRule(t)],
+  cacheSize: [integerMinRule(CACHE_MIN, t)],
+  cacheExpiryDelay: [integerMinRule(CACHE_MIN, t)],
+}));
+const cameraResolutionFormRules = computed<FormRules>(() => {
+  if (cameraPreset.value !== "custom") return {};
+  return {
+    cameraResWidth: [
+      integerRangeRule(
+        VRCHAT_CAMERA_RES.WIDTH_MIN,
+        VRCHAT_CAMERA_RES.WIDTH_MAX,
+        t,
+      ),
+    ],
+    cameraResHeight: [
+      integerRangeRule(
+        VRCHAT_CAMERA_RES.HEIGHT_MIN,
+        VRCHAT_CAMERA_RES.HEIGHT_MAX,
+        t,
+      ),
+    ],
+  };
+});
+const screenshotResolutionFormRules = computed<FormRules>(() => {
+  if (screenshotPreset.value !== "custom") return {};
+  return {
+    screenshotResWidth: [
+      integerRangeRule(
+        VRCHAT_SCREENSHOT_RES.WIDTH_MIN,
+        VRCHAT_SCREENSHOT_RES.WIDTH_MAX,
+        t,
+      ),
+    ],
+    screenshotResHeight: [
+      integerRangeRule(
+        VRCHAT_SCREENSHOT_RES.HEIGHT_MIN,
+        VRCHAT_SCREENSHOT_RES.HEIGHT_MAX,
+        t,
+      ),
+    ],
+  };
+});
 const STEADYCAM_FOV_MIN = 30;
 const STEADYCAM_FOV_MAX = 100;
 const STEADYCAM_FOV_PLACEHOLDER = 50;
@@ -430,12 +648,44 @@ function syncFromConfig(cfg: VRChatConfigDTO) {
   disableRichPresence.value = cfg.disableRichPresence ?? false;
 }
 
+function onCameraResWidthChange(value: number | undefined) {
+  config.value.cameraResWidth = normalizeResolutionDimension(value);
+  revalidateElFormField(cameraResolutionFormRef.value, "cameraResWidth");
+}
+
+function onCameraResHeightChange(value: number | undefined) {
+  config.value.cameraResHeight = normalizeResolutionDimension(value);
+  revalidateElFormField(cameraResolutionFormRef.value, "cameraResHeight");
+}
+
+function onScreenshotResWidthChange(value: number | undefined) {
+  config.value.screenshotResWidth = normalizeResolutionDimension(value);
+  revalidateElFormField(
+    screenshotResolutionFormRef.value,
+    "screenshotResWidth",
+  );
+}
+
+function onScreenshotResHeightChange(value: number | undefined) {
+  config.value.screenshotResHeight = normalizeResolutionDimension(value);
+  revalidateElFormField(
+    screenshotResolutionFormRef.value,
+    "screenshotResHeight",
+  );
+}
+
 function applyCameraPreset() {
   const preset = CAMERA_PRESETS[cameraPreset.value];
   if (preset) {
     config.value.cameraResWidth = preset.width;
     config.value.cameraResHeight = preset.height;
   }
+  void nextTick(() => {
+    cameraResolutionFormRef.value?.clearValidate([
+      "cameraResWidth",
+      "cameraResHeight",
+    ]);
+  });
 }
 
 function applyScreenshotPreset() {
@@ -444,6 +694,12 @@ function applyScreenshotPreset() {
     config.value.screenshotResWidth = preset.width;
     config.value.screenshotResHeight = preset.height;
   }
+  void nextTick(() => {
+    screenshotResolutionFormRef.value?.clearValidate([
+      "screenshotResWidth",
+      "screenshotResHeight",
+    ]);
+  });
 }
 
 function clampCacheNumeric(n: number | undefined, min: number): number {
@@ -499,6 +755,16 @@ async function createConfig() {
 async function saveConfig() {
   saveError.value = "";
   saveSuccess.value = false;
+  if (
+    !(await validateElForms([
+      cameraResolutionFormRef.value,
+      screenshotResolutionFormRef.value,
+      photoFormRef.value,
+      cacheFormRef.value,
+    ]))
+  ) {
+    return;
+  }
   const cacheSize = clampCacheNumeric(config.value.cacheSize, CACHE_MIN);
   const cacheExpiryDelay = clampCacheNumeric(
     config.value.cacheExpiryDelay,
@@ -698,14 +964,16 @@ onBeforeUnmount(() => {
   gap: var(--space-inline-tight);
 }
 
-.resolution-fields {
-  display: flex;
-  align-items: center;
-  gap: var(--space-action-group);
+.config-resolution-form-item :deep(.el-form-item__content) {
+  line-height: normal;
+}
+
+.vt-config-resolution-form > .resolution-section {
+  margin-bottom: 0;
 }
 
 .resolution-number-input {
-  width: 130px;
+  width: 120px;
 }
 
 .resolution-sep {

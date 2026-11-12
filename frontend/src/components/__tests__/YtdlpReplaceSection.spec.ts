@@ -231,9 +231,11 @@ describe("YtdlpReplaceSection", () => {
     );
     const retryMsg = "しばらくしてからもう一度お試しください。";
     expect(wrapper.text().split(retryMsg).length - 1).toBe(1);
-    expect(wrapper.find('[data-testid="ytdlp-detail-error"]').isVisible()).toBe(
-      false,
-    );
+    expect(
+      wrapper
+        .get('[data-testid="ytdlp-error-details-toggle"]')
+        .attributes("aria-expanded"),
+    ).toBe("false");
     await wrapper
       .get('[data-testid="ytdlp-error-details-toggle"]')
       .trigger("click");

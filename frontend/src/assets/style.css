@@ -18,9 +18,13 @@
 
   /* Semantic: タグ・メッセージ・検証のフィードバック。サーバー状態とプレゼンスには使わない */
   --color-danger: #e57373; /* 危険・破壊 */
+  --color-error: #ef8a8a; /* インライン検証（カード上コントラスト 5.23:1） */
   --color-success: #81c784; /* 成功 */
   --color-warning: #ffb74d; /* 警告 */
   --color-info: #9aa0a6; /* 情報 */
+
+  /* automation 固定アクションバー高の初期近似（ResizeObserver 適用前のフォールバック） */
+  --vt-automation-action-bar-inset-fallback: 104px;
 
   /* Server status (domain): ダッシュボードのサーバー状態。セマンティックには流用しない */
   --color-status-operational: #2e9f4a; /* 正常 */
@@ -83,6 +87,7 @@
   --space-inline-tight: var(--space-4); /* チップ横・バッジ内・インライン詰め */
   --space-action-group: var(--space-8); /* Action group・ツールバーの間隔 */
   --space-form-field: var(--space-12); /* フォーム項目間 */
+  --space-validated-form-field: 22px; /* vt-validated-form直下項目（インラインエラー余白） */
   --space-block: var(--space-16); /* 見出し下・段落間 */
   --space-section: var(--space-24); /* セクションカード間 */
   --space-page: var(--space-32); /* ページ外周 */
@@ -1048,6 +1053,365 @@ a:hover {
 
 .settings-view .login-error {
   margin-bottom: var(--space-form-field);
+}
+
+/* ─── Validated el-form layout (design: error contrast, spacing, range hints) ─── */
+
+.section-card .el-form-item__error,
+.vt-validated-form .el-form-item__error {
+  color: var(--color-error);
+}
+
+.vt-validated-form > .el-form-item,
+.vt-validated-form.el-form > .el-form-item {
+  margin-bottom: var(--space-validated-form-field);
+}
+
+.vt-validated-form > .el-form-item:last-child,
+.vt-validated-form.el-form > .el-form-item:last-child {
+  margin-bottom: 0;
+}
+
+.automation-rule-editor {
+  --vt-automation-error-scroll-margin: calc(
+    var(
+        --automation-action-bar-inset,
+        var(--vt-automation-action-bar-inset-fallback)
+      ) -
+      var(--space-16)
+  );
+}
+
+.automation-rule-editor .vt-validated-form .el-form-item.is-error {
+  scroll-margin-bottom: var(--vt-automation-error-scroll-margin);
+}
+
+.automation-rule-editor
+  .vt-validated-form.el-form
+  .el-form-item.automation-inline-form-item {
+  margin-bottom: var(--space-8);
+}
+
+.automation-rule-editor
+  .vt-validated-form.el-form
+  .el-form-item.automation-inline-form-item
+  > .el-form-item__content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.automation-rule-editor
+  .vt-validated-form.el-form
+  .el-form-item.automation-inline-form-item
+  .el-form-item__error {
+  position: static;
+  padding-top: var(--space-4);
+  line-height: 16px;
+  margin-bottom: 0;
+}
+
+.automation-rule-editor .automation-card .setting-row:has(.el-checkbox-group) {
+  padding-bottom: 0;
+}
+
+.automation-rule-editor
+  .automation-card
+  .setting-row:has(.automation-time)
+  .setting-row__label {
+  font-size: var(--font-size-14);
+  font-weight: 400;
+  line-height: var(--line-height-normal);
+}
+
+.automation-rule-editor
+  .vt-validated-form.el-form
+  .automation-time
+  > .el-form-item.automation-inline-form-item {
+  margin-bottom: 0;
+}
+
+.automation-rule-editor .automation-time {
+  margin-bottom: var(--space-8);
+}
+
+.automation-rule-editor .automation-editor__scroll {
+  padding-bottom: var(
+    --automation-action-bar-inset,
+    var(--vt-automation-action-bar-inset-fallback)
+  );
+}
+
+.form-field-range-hint {
+  margin: 0;
+  margin-top: var(--space-4);
+  font-size: var(--font-size-12);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-secondary);
+}
+
+.el-form-item.vt-form-item-with-range-hint > .el-form-item__content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  min-width: 0;
+}
+
+.el-form-item.vt-form-item-with-range-hint
+  > .el-form-item__content
+  > .el-input-number {
+  order: 1;
+  width: 120px;
+  max-width: 100%;
+  flex: none;
+}
+
+.el-form-item.vt-form-item-with-range-hint
+  > .el-form-item__content
+  > .el-form-item__error {
+  order: 2;
+  position: static;
+  padding-top: 0;
+  margin-top: var(--space-4);
+  margin-bottom: var(--space-8);
+  line-height: 16px;
+  visibility: visible;
+}
+
+.el-form-item.vt-form-item-with-range-hint
+  > .el-form-item__content
+  > .form-field-range-hint {
+  order: 3;
+  margin-top: var(--space-8);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.el-form-item.vt-form-item-with-range-hint.is-error
+  > .el-form-item__content
+  > .form-field-range-hint {
+  margin-top: 0;
+}
+
+.vt-validated-form .resolution-fields .el-form-item.resolution-form-item,
+.vt-validated-form
+  .resolution-fields
+  .el-form-item.config-resolution-form-item {
+  margin-bottom: 0;
+}
+
+/* 120px + gap + × + gap + 120px — stack when the resolution block is narrower than this. */
+.resolution-fields {
+  container-type: inline-size;
+  container-name: resolution-fields;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  column-gap: var(--space-8);
+  row-gap: var(--space-4);
+  width: 100%;
+  max-width: 100%;
+  margin-bottom: 0;
+  box-sizing: border-box;
+}
+
+.sub-options:has(.resolution-fields) {
+  margin: var(--space-inline-tight) 0 0 var(--space-section);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-8);
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.resolution-section {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.launch-args-advanced > .sub-options:has(.resolution-fields) + .arg-row {
+  margin-top: 0;
+}
+
+.resolution-input-row {
+  display: grid;
+  grid-template-columns: minmax(0, 120px) minmax(0, max-content) minmax(
+      0,
+      120px
+    );
+  column-gap: var(--space-8);
+  row-gap: var(--space-4);
+  align-items: start;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.resolution-input-row > .resolution-form-item:nth-child(1),
+.resolution-input-row > .config-resolution-form-item:nth-child(1) {
+  grid-column: 1;
+  grid-row: 1;
+  width: 120px;
+  min-width: 0;
+  max-width: 120px;
+  margin-bottom: 0;
+  align-self: start;
+  flex: 0 0 120px;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.resolution-input-row > .resolution-sep {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: center;
+  height: var(--el-component-size);
+  line-height: var(--el-component-size);
+  color: var(--color-text-secondary);
+  align-self: start;
+}
+
+.resolution-input-row > .resolution-form-item:nth-child(3),
+.resolution-input-row > .config-resolution-form-item:nth-child(3) {
+  grid-column: 3;
+  grid-row: 1;
+  width: 120px;
+  min-width: 0;
+  max-width: 120px;
+  margin-bottom: 0;
+  align-self: start;
+  flex: 0 0 120px;
+  box-sizing: border-box;
+  overflow: visible;
+}
+
+.resolution-input-row > .resolution-form-item .el-form-item__content,
+.resolution-input-row > .config-resolution-form-item .el-form-item__content {
+  width: 120px;
+  max-width: 120px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.resolution-fields .el-input-number,
+.resolution-input-row .el-input-number {
+  flex: 0 0 120px;
+  width: 120px;
+  max-width: 120px;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.resolution-fields .el-form-item__error,
+.resolution-input-row .el-form-item__error {
+  position: static;
+  padding-top: 0;
+  margin-top: var(--space-4);
+  margin-bottom: 0;
+  line-height: 16px;
+  color: var(--color-error);
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
+
+.resolution-input-row .el-form-item__error {
+  width: 120px;
+  max-width: 120px;
+  min-width: 0;
+}
+
+.resolution-fields .form-field-range-hint {
+  margin-top: var(--space-8);
+  margin-bottom: 0;
+}
+
+@container resolution-fields (max-width: 279px) {
+  .resolution-input-row {
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .resolution-input-row > .resolution-form-item:nth-child(1),
+  .resolution-input-row > .config-resolution-form-item:nth-child(1),
+  .resolution-input-row > .resolution-form-item:nth-child(3),
+  .resolution-input-row > .config-resolution-form-item:nth-child(3) {
+    grid-column: 1;
+    width: 100%;
+    max-width: 100%;
+    flex: none;
+  }
+
+  .resolution-input-row > .resolution-form-item .el-form-item__content,
+  .resolution-input-row > .config-resolution-form-item .el-form-item__content {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .resolution-fields .el-input-number,
+  .resolution-input-row .el-input-number,
+  .resolution-input-row .resolution-number-input {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex: 0 0 auto;
+  }
+
+  .resolution-input-row .el-form-item__content {
+    min-width: 0;
+    overflow-x: clip;
+  }
+
+  .resolution-input-row .el-input-number .el-input__wrapper {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .resolution-input-row .el-form-item__error {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .resolution-input-row > .resolution-form-item:nth-child(1),
+  .resolution-input-row > .config-resolution-form-item:nth-child(1) {
+    grid-row: 1;
+  }
+
+  .resolution-input-row > .resolution-form-item:nth-child(3),
+  .resolution-input-row > .config-resolution-form-item:nth-child(3) {
+    grid-row: 2;
+  }
+
+  .resolution-input-row .resolution-sep {
+    display: none;
+  }
+
+  .resolution-fields .form-field-range-hint {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 640px) {
+  .launch-args-advanced .sub-options:has(.resolution-fields) {
+    margin-left: 0;
+    margin-right: 0;
+    width: 100%;
+    max-width: 100%;
+    align-self: stretch;
+    box-sizing: border-box;
+    min-width: 0;
+  }
 }
 
 /* Empty table placeholder height (8px grid; EP default is 60px). */

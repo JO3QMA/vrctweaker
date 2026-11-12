@@ -2,6 +2,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount, flushPromises, type VueWrapper } from "@vue/test-utils";
 import CookieLinkageSection from "../CookieLinkageSection.vue";
 import { App } from "../../wails/app";
+import { showToast } from "../../utils/showToast";
+
+vi.mock("../../utils/showToast", () => ({
+  showToast: {
+    success: vi.fn(),
+    warning: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+  },
+}));
 
 const maintainOfficial = {
   supported: true,
@@ -51,6 +61,15 @@ async function selectCookieSource(
   const group = wrapper.findComponent({ name: "ElRadioGroup" });
   await group.setValue(source);
   await group.vm.$emit("change", source);
+  await flushPromises();
+}
+
+async function setCookieSwitch(wrapper: VueWrapper, on: boolean) {
+  const sw = wrapper.findComponent({
+    name: "ElSwitch",
+  });
+  await sw.setValue(on);
+  await sw.vm.$emit("change", on);
   await flushPromises();
 }
 
@@ -155,6 +174,33 @@ describe("CookieLinkageSection source kind switch", () => {
       .get('[data-testid="video-cookie-source"]')
       .findAll(".el-radio-button")[1]!;
     expect(fileRadio.classes()).toContain("is-active");
+  });
+
+  it("reverts the enable switch and toasts when enabling fails to save", async () => {
+    vi.mocked(App.getYTDLPCookieLinkageStatus).mockResolvedValue({
+      supported: true,
+      enabled: false,
+      sourceKind: "",
+      riskAcknowledged: true,
+      browser: "chrome",
+      cookiesFilePath: "",
+    });
+    vi.mocked(App.setYTDLPCookieLinkageCookiesFile).mockRejectedValue(
+      new Error("cookie linkage cookies file missing"),
+    );
+
+    const wrapper = mountSection();
+    await flushPromises();
+
+    await selectCookieSource(wrapper, "file");
+    await wrapper
+      .get('[data-testid="video-cookie-file-path"]')
+      .setValue("C:\\cookies.txt");
+    await flushPromises();
+    await setCookieSwitch(wrapper, true);
+
+    expect(isSwitchOn(wrapper)).toBe(false);
+    expect(showToast.error).toHaveBeenCalled();
   });
 
   it("reverts source radio on disable failure when switching to file with empty path", async () => {

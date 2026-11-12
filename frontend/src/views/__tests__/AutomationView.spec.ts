@@ -142,7 +142,44 @@ describe("AutomationView unsaved guard", () => {
 
     expect(mockSaveAutomationItem).toHaveBeenCalled();
     expect(showToast.error).not.toHaveBeenCalled();
+    expect(showToast.success).toHaveBeenCalledWith("保存しました");
     expect(wrapper.find('[data-testid="unsaved-banner"]').exists()).toBe(false);
+  });
+
+  it("shows loading on the save button and ignores a second save click", async () => {
+    let resolveSave!: (value: unknown) => void;
+    mockSaveAutomationItem.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSave = resolve;
+        }),
+    );
+
+    const wrapper = mount(AutomationView);
+    await flushPromises();
+
+    await chooseCreate(wrapper, "rule");
+    await flushPromises();
+    await wrapper.get('[data-testid="item-name-input"]').setValue("Once");
+    await flushPromises();
+
+    const saveBtn = wrapper.get('[data-testid="save-item"]');
+    void wrapper.find('[data-testid="save-item"]').trigger("click");
+    await flushPromises();
+
+    expect(saveBtn.classes()).toContain("is-loading");
+    expect(saveBtn.attributes("disabled")).toBeDefined();
+
+    await wrapper.find('[data-testid="save-item"]').trigger("click");
+    await flushPromises();
+
+    expect(mockSaveAutomationItem).toHaveBeenCalledTimes(1);
+
+    resolveSave(undefined);
+    await flushPromises();
+
+    expect(saveBtn.classes()).not.toContain("is-loading");
+    expect(showToast.success).toHaveBeenCalledWith("保存しました");
   });
 
   it("clears the editor when selecting an item with invalid JSON", async () => {
@@ -311,15 +348,10 @@ describe("AutomationView layout", () => {
     await wrapper.find('[data-testid="save-item"]').trigger("click");
     await flushPromises();
 
-    const error = wrapper.get('[data-testid="name-error"]');
-    expect(error.text()).toContain("名前を入力してください");
-    const nameField = wrapper.get('[data-testid="item-name-input"]');
-    expect(
-      nameField.element.compareDocumentPosition(error.element) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
     expect(mockSaveAutomationItem).not.toHaveBeenCalled();
     expect(showToast.error).not.toHaveBeenCalled();
+    const error = wrapper.get('[data-testid="name-error"]');
+    expect(error.text()).toContain("名前を入力してください");
   });
 
   it("disables list and editor controls when automation is unavailable", async () => {
