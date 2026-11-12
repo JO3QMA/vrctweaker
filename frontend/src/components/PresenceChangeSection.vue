@@ -52,25 +52,27 @@
         </router-link>
       </p>
 
-      <div
-        class="presence-color-buttons"
-        role="group"
-        :aria-label="t('dashboard.presenceChange.colorGroupLabel')"
-      >
-        <el-button
-          v-for="option in colorOptions"
-          :key="option.value"
-          :data-testid="option.testId"
-          :class="[
-            'presence-color-btn',
-            option.colorClass,
-            { 'presence-color-btn--selected': draftStatus === option.value },
-          ]"
-          :disabled="!loggedIn || applying"
-          @click="selectColor(option.value)"
+      <div class="presence-color-buttons-container">
+        <div
+          class="presence-color-buttons"
+          role="group"
+          :aria-label="t('dashboard.presenceChange.colorGroupLabel')"
         >
-          {{ option.label }}
-        </el-button>
+          <el-button
+            v-for="option in colorOptions"
+            :key="option.value"
+            :data-testid="option.testId"
+            :class="[
+              'presence-color-btn',
+              option.colorClass,
+              { 'presence-color-btn--selected': draftStatus === option.value },
+            ]"
+            :disabled="!loggedIn || applying"
+            @click="selectColor(option.value)"
+          >
+            {{ option.label }}
+          </el-button>
+        </div>
       </div>
 
       <div class="presence-description-row">
@@ -380,10 +382,16 @@ onUnmounted(() => {
   margin-left: var(--space-inline-tight);
 }
 
+.presence-color-buttons-container {
+  container-type: inline-size;
+  container-name: presence-change;
+  width: 100%;
+}
+
 .presence-color-buttons {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-inline-tight);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-action-group);
   margin-bottom: var(--space-action-group);
 }
 
@@ -394,7 +402,19 @@ onUnmounted(() => {
 .presence-color-btn {
   border: 1px solid transparent;
   color: var(--color-text-inverse) !important;
-  flex: 0 0 auto;
+  width: 100%;
+  white-space: nowrap;
+}
+
+.presence-color-buttons :deep(.presence-color-btn.el-button) {
+  padding-left: var(--space-action-group);
+  padding-right: var(--space-action-group);
+}
+
+@container presence-change (max-width: 479px) {
+  .presence-color-buttons {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .presence-color-btn:hover,
