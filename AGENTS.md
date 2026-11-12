@@ -11,6 +11,12 @@
 
 `frontend/src/i18n/locales/ja.json` の各文言は Vitest（`frontend/src/i18n/locales/ja.spacing.spec.ts`）で上記の**英数字↔日本語の半角スペース**を検査する。文言を追加・変更したらテストが通ることを確認する。
 
+## Element Plus フォーム（`el-form`）
+
+- **制約のある入力**（パス、起動引数、数値の範囲・必須など）には `el-form` の **`rules` と保存/適用前の `validate()`** を使う。エラー文言は i18n キー（`formValidation.*`）で各項目直下に表示する。
+- **レイアウト目的だけ**の `el-form`（ラジオ群・チェックボックスのみなど）はそのままでよい。
+- 共有ルールは `frontend/src/utils/elFormRules.ts`、検証ヘルパは `frontend/src/utils/elFormValidate.ts` を参照。
+
 ## 関連
 
 - 公開 PR/Issue の redaction: [`docs/agents/redaction.md`](docs/agents/redaction.md)（`.cursor/rules/redaction-public-artifacts.mdc`）

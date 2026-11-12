@@ -86,6 +86,16 @@
     "no": "No",
     "unofficialDisclaimer": "VRChat Tweaker is not an official VRChat product and is not affiliated with VRChat Inc."
   },
+  "formValidation": {
+    "required": "This field is required.",
+    "pathInvalid": "The path contains characters that cannot be used.",
+    "integerMin": "Enter an integer of at least {min}.",
+    "integerRequired": "Enter an integer.",
+    "integerRange": "Enter an integer from {min} through {max}.",
+    "numericRangeHint": "{min}–{max}",
+    "launchArgInvalid": "Launch arguments must be a single line without line breaks.",
+    "scheduleWeekdaysRequired": "Select at least one weekday."
+  },
   "chart": {
     "hour": "h",
     "minute": "m",
@@ -451,6 +461,7 @@
     "saveAndContinue": "Save and continue",
     "discardAndContinue": "Discard and continue",
     "saveError": "Could not save",
+    "saved": "Saved",
     "itemParseError": "This item has invalid data and cannot be edited safely",
     "toggleError": "Could not toggle item",
     "deleteError": "Could not delete the rule",

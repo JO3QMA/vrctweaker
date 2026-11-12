@@ -86,6 +86,16 @@
     "no": "No",
     "unofficialDisclaimer": "VRChat Tweaker 並非 VRChat 官方產品，與 VRChat Inc. 無任何關聯，屬非官方工具。"
   },
+  "formValidation": {
+    "required": "必須填寫。",
+    "pathInvalid": "路徑包含無法使用的字元。",
+    "integerMin": "請輸入至少 {min} 的整數。",
+    "integerRequired": "請輸入整數。",
+    "integerRange": "請輸入 {min} 到 {max} 之間的整數。",
+    "numericRangeHint": "{min}–{max}",
+    "launchArgInvalid": "啟動引數必須為不含換行的單行。",
+    "scheduleWeekdaysRequired": "請至少選擇一個曜日。"
+  },
   "chart": {
     "hour": "小時",
     "minute": "分",
@@ -451,6 +461,7 @@
     "saveAndContinue": "儲存並繼續",
     "discardAndContinue": "捨棄並繼續",
     "saveError": "儲存失敗",
+    "saved": "已儲存",
     "itemParseError": "資料損毀，無法安全編輯",
     "toggleError": "切換失敗",
     "deleteError": "無法刪除規則",
