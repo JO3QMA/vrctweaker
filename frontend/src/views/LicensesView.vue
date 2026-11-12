@@ -1,110 +1,112 @@
 <template>
-  <div class="licenses-view">
-    <h1 class="page-title">{{ t("licenses.title") }}</h1>
-    <p class="text-body-sm intro-with-siblings">
-      {{ t("licenses.intro") }}
-    </p>
-    <el-text
-      type="info"
-      size="small"
-      class="hint block-hint unofficial-note"
-      data-testid="licenses-unofficial-disclaimer"
-    >
-      {{ t("common.unofficialDisclaimer") }}
-    </el-text>
-    <LegalDocLinks :intro="t('legal.licensesIntro')" />
-
-    <section class="licenses-section">
-      <h2 class="text-h2 section-title">{{ t("licenses.frontend") }}</h2>
-      <el-table
-        :data="npmLicensesArray"
-        class="licenses-table"
-        style="width: 100%"
+  <div class="licenses-view route-scroll-root">
+    <div class="licenses-view__content">
+      <h1 class="page-title">{{ t("licenses.title") }}</h1>
+      <p class="text-body-sm intro-with-siblings">
+        {{ t("licenses.intro") }}
+      </p>
+      <el-text
+        type="info"
         size="small"
-        stripe
-        :aria-label="t('licenses.frontend')"
-        :empty-text="t('licenses.tableEmptyFrontend')"
+        class="hint block-hint unofficial-note"
+        data-testid="licenses-unofficial-disclaimer"
       >
-        <el-table-column
-          prop="name"
-          :label="t('licenses.colPackage')"
-          min-width="200"
-        >
-          <template #default="{ row }">
-            <span class="package-name">{{ row.name }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column
-          prop="version"
-          :label="t('licenses.colVersion')"
-          width="100"
-        />
-        <el-table-column :label="t('licenses.colLicense')" width="120">
-          <template #default="{ row }">
-            <VtTag size="small" variant="neutral">{{ row.licenses }}</VtTag>
-          </template>
-        </el-table-column>
-        <el-table-column :label="t('licenses.colRepo')" min-width="200">
-          <template #default="{ row }">
-            <a
-              v-if="row.repository"
-              :href="row.repository"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="repo-link"
-            >
-              {{ truncateUrl(row.repository) }}
-            </a>
-            <span v-else class="text-caption repo-missing">{{
-              t("common.dash")
-            }}</span>
-          </template>
-        </el-table-column>
-      </el-table>
-    </section>
+        {{ t("common.unofficialDisclaimer") }}
+      </el-text>
+      <LegalDocLinks :intro="t('legal.licensesIntro')" />
 
-    <section class="licenses-section">
-      <h2 class="text-h2 section-title">{{ t("licenses.backend") }}</h2>
-      <el-table
-        :data="goLicenses"
-        style="width: 100%"
-        size="small"
-        stripe
-        :aria-label="t('licenses.backend')"
-        :empty-text="t('licenses.tableEmptyBackend')"
-      >
-        <el-table-column
-          prop="path"
-          :label="t('licenses.colPackageGo')"
-          min-width="220"
+      <section class="licenses-section">
+        <h2 class="text-h2 section-title">{{ t("licenses.frontend") }}</h2>
+        <el-table
+          :data="npmLicensesArray"
+          class="licenses-table"
+          style="width: 100%"
+          size="small"
+          stripe
+          :aria-label="t('licenses.frontend')"
+          :empty-text="t('licenses.tableEmptyFrontend')"
         >
-          <template #default="{ row }">
-            <span class="package-name">{{ row.path }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column :label="t('licenses.colLicense')" width="120">
-          <template #default="{ row }">
-            <VtTag size="small" variant="neutral">{{ row.license }}</VtTag>
-          </template>
-        </el-table-column>
-        <el-table-column :label="t('licenses.colRepo')" min-width="200">
-          <template #default="{ row }">
-            <a
-              v-if="row.repository"
-              :href="row.repository"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="repo-link"
-            >
-              {{ truncateUrl(row.repository) }}
-            </a>
-            <span v-else class="text-caption repo-missing">{{
-              t("common.dash")
-            }}</span>
-          </template>
-        </el-table-column>
-      </el-table>
-    </section>
+          <el-table-column
+            prop="name"
+            :label="t('licenses.colPackage')"
+            min-width="200"
+          >
+            <template #default="{ row }">
+              <span class="package-name">{{ row.name }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column
+            prop="version"
+            :label="t('licenses.colVersion')"
+            width="100"
+          />
+          <el-table-column :label="t('licenses.colLicense')" width="120">
+            <template #default="{ row }">
+              <VtTag size="small" variant="neutral">{{ row.licenses }}</VtTag>
+            </template>
+          </el-table-column>
+          <el-table-column :label="t('licenses.colRepo')" min-width="200">
+            <template #default="{ row }">
+              <a
+                v-if="row.repository"
+                :href="row.repository"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="repo-link"
+              >
+                {{ truncateUrl(row.repository) }}
+              </a>
+              <span v-else class="text-caption repo-missing">{{
+                t("common.dash")
+              }}</span>
+            </template>
+          </el-table-column>
+        </el-table>
+      </section>
+
+      <section class="licenses-section">
+        <h2 class="text-h2 section-title">{{ t("licenses.backend") }}</h2>
+        <el-table
+          :data="goLicenses"
+          style="width: 100%"
+          size="small"
+          stripe
+          :aria-label="t('licenses.backend')"
+          :empty-text="t('licenses.tableEmptyBackend')"
+        >
+          <el-table-column
+            prop="path"
+            :label="t('licenses.colPackageGo')"
+            min-width="220"
+          >
+            <template #default="{ row }">
+              <span class="package-name">{{ row.path }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column :label="t('licenses.colLicense')" width="120">
+            <template #default="{ row }">
+              <VtTag size="small" variant="neutral">{{ row.license }}</VtTag>
+            </template>
+          </el-table-column>
+          <el-table-column :label="t('licenses.colRepo')" min-width="200">
+            <template #default="{ row }">
+              <a
+                v-if="row.repository"
+                :href="row.repository"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="repo-link"
+              >
+                {{ truncateUrl(row.repository) }}
+              </a>
+              <span v-else class="text-caption repo-missing">{{
+                t("common.dash")
+              }}</span>
+            </template>
+          </el-table-column>
+        </el-table>
+      </section>
+    </div>
   </div>
 </template>
 
@@ -154,7 +156,7 @@ function truncateUrl(url: string): string {
 </script>
 
 <style scoped>
-.licenses-view {
+.licenses-view__content {
   max-width: 900px;
 }
 

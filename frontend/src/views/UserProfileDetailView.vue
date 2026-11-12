@@ -1,5 +1,5 @@
 <template>
-  <div class="user-profile-detail-view">
+  <div class="user-profile-detail-view main-scroll-region">
     <h1 class="page-title">{{ t("userProfile.title") }}</h1>
     <div v-if="loading" class="msg">{{ t("userProfile.loading") }}</div>
     <VtAlert

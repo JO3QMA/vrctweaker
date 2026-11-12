@@ -588,6 +588,7 @@ a:hover {
 .settings-frame {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -602,6 +603,45 @@ a:hover {
   overflow-x: hidden;
   overflow-y: auto;
   scrollbar-gutter: stable;
+}
+
+/* Routed pages carry their own scroll + padding (survives route transition fade). */
+.route-scroll-root {
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: var(--space-section);
+  scrollbar-gutter: stable;
+}
+
+.route-scroll-root--bare {
+  padding: var(--space-block);
+}
+
+/* Main area scroll padding (opt-in via route meta.selfScroll + class on inner scroller). */
+.main-scroll-region {
+  box-sizing: border-box;
+  padding: var(--space-section);
+}
+
+/* Gallery: header keeps side padding; grid scroller reaches the main area's right edge. */
+.gallery-view--scroll-frame {
+  box-sizing: border-box;
+  padding: var(--space-section);
+  padding-right: 0;
+}
+
+/* タイトル・フィルタなどスクロールしない行も右余白を揃える（本体グリッドだけ右端まで伸ばす） */
+.gallery-view--scroll-frame > :not(.gallery-body) {
+  box-sizing: border-box;
+  padding-right: var(--space-section);
+}
+
+.gallery-view--scroll-frame .grid-scroll.main-scroll-region {
+  padding: 0 var(--space-section) 0 0;
 }
 
 .settings-layout {

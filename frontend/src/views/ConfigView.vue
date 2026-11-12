@@ -1,5 +1,5 @@
 <template>
-  <div class="config-view">
+  <div class="config-view route-scroll-root">
     <h1 class="page-title">{{ t("config.title") }}</h1>
     <p class="text-body-sm config-intro">
       {{ t("config.intro") }}

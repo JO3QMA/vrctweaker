@@ -1,5 +1,5 @@
 <template>
-  <div class="video-view">
+  <div class="video-view route-scroll-root">
     <h1 class="page-title">{{ t("video.title") }}</h1>
 
     <el-card
