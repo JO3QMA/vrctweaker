@@ -16,7 +16,14 @@ IMAGE="mcr.microsoft.com/playwright:v${PLAYWRIGHT_VERSION}-noble"
 
 echo "Using Docker image: ${IMAGE}"
 
-docker run --rm \
+DOCKER=(docker)
+if ! docker info >/dev/null 2>&1; then
+  if sudo docker info >/dev/null 2>&1; then
+    DOCKER=(sudo docker)
+  fi
+fi
+
+"${DOCKER[@]}" run --rm \
   -v "${REPO_ROOT}:/work" \
   -w /work/frontend \
   -e CI=1 \
@@ -26,6 +33,7 @@ docker run --rm \
     apt-get update -qq
     apt-get install -y -qq fonts-noto-cjk
     fc-cache -f
+    npm install -g pnpm@9
     pnpm install --frozen-lockfile
     pnpm exec playwright install chromium
     if [[ \"${UPDATE_SNAPSHOTS}\" == \"--update-snapshots\" ]]; then
