@@ -179,7 +179,8 @@ export async function prepareAppUpdateDialog(
   await page.goto("/#/");
   await page.locator(".app-layout").waitFor({ state: "visible" });
   await page.getByTestId("app-update-dialog").waitFor({ state: "visible" });
-  await page.waitForTimeout(150);
+  await page.locator(".dashboard .page-title").waitFor({ state: "visible" });
+  await page.waitForTimeout(250);
 }
 
 export async function captureAppLayoutScreenshot(
