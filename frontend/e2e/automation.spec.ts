@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { getMockWailsInitScript } from "./fixtures/mock-wails";
+import { E2E_VIEWPORT_WIDTHS } from "./fixtures/app-window-bounds";
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(getMockWailsInitScript());
@@ -53,7 +54,7 @@ test.describe("Automation", () => {
     page,
   }) => {
     test.setTimeout(60_000);
-    for (const width of [1280, 960, 720, 600]) {
+    for (const width of E2E_VIEWPORT_WIDTHS) {
       await page.setViewportSize({ width, height: 800 });
       await page.goto("/#/automation");
       await page.reload();

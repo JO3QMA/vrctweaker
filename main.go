@@ -82,9 +82,11 @@ func main() {
 	lc := wailsapp.NewLifecycle(app)
 
 	err = wails.Run(&options.App{
-		Title:  appWindowTitle,
-		Width:  1024,
-		Height: 768,
+		Title:     appWindowTitle,
+		Width:     1024,
+		Height:    768,
+		MinWidth:  wailsapp.MinWindowWidth,
+		MinHeight: wailsapp.MinWindowHeight,
 		AssetServer: &assetserver.Options{
 			Assets:     assets,
 			Middleware: cspMiddleware,
