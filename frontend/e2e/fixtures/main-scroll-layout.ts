@@ -361,9 +361,7 @@ export async function readVisibleRouteInsets(
     const padT = parseFloat(carrierStyle.paddingTop);
     const padL = parseFloat(carrierStyle.paddingLeft);
     const padR = parseFloat(carrierStyle.paddingRight);
-    const h1 = carrier.querySelector(
-      "h1.page-title, h1",
-    ) as HTMLElement | null;
+    const h1 = carrier.querySelector("h1.page-title, h1") as HTMLElement | null;
     const topInset = h1
       ? h1.getBoundingClientRect().top - mainRect.top
       : carrierRect.top - mainRect.top + padT;
