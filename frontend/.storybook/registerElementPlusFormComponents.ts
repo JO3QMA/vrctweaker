@@ -1,4 +1,4 @@
-import type { App } from "vue";
+import type { App, Component } from "vue";
 import {
   ElCheckbox,
   ElForm,
@@ -17,13 +17,28 @@ import "element-plus/es/components/option/style/css";
 import "element-plus/es/components/select/style/css";
 import "element-plus/es/components/switch/style/css";
 
-/** String-template stories do not get unplugin-vue-components transforms. */
+function registerNamed(
+  app: App,
+  component: Component & { name?: string },
+): void {
+  const name = component.name;
+  if (!name) {
+    throw new Error("Element Plus component is missing name");
+  }
+  app.component(name, component);
+}
+
+/**
+ * String-template Storybook stories do not get unplugin-vue-components transforms.
+ * When adding `<el-...>` to a string-template story, register the component here
+ * and import its `element-plus/es/components/.../style/css` above.
+ */
 export function registerElementPlusFormComponents(app: App): void {
-  app.component(ElInput.name!, ElInput);
-  app.component(ElSelect.name!, ElSelect);
-  app.component(ElOption.name!, ElOption);
-  app.component(ElCheckbox.name!, ElCheckbox);
-  app.component(ElSwitch.name!, ElSwitch);
-  app.component(ElForm.name!, ElForm);
-  app.component(ElFormItem.name!, ElFormItem);
+  registerNamed(app, ElInput);
+  registerNamed(app, ElSelect);
+  registerNamed(app, ElOption);
+  registerNamed(app, ElCheckbox);
+  registerNamed(app, ElSwitch);
+  registerNamed(app, ElForm);
+  registerNamed(app, ElFormItem);
 }

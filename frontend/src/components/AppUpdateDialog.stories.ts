@@ -4,10 +4,39 @@ import AppUpdateDialog from "./AppUpdateDialog.vue";
 import { useAppUpdate } from "../composables/useAppUpdate";
 import { withWailsApp } from "../stories/wailsDecorator";
 
+const appUpdateWailsStub = {
+  ClaimStartupAppUpdatePrompt: () =>
+    Promise.resolve({
+      currentVersion: "1.0.0",
+      updateAvailable: false,
+      shouldPrompt: false,
+      latestVersion: "",
+      latestTag: "",
+      releaseNotes: "",
+      downloadUrl: "",
+      zipSha256: "",
+      releasePageUrl: "",
+      autoApplySupported: true,
+    }),
+  DismissAppUpdate: () => Promise.resolve(),
+  ApplyAppUpdate: () => Promise.resolve(),
+  OpenAppReleasePage: () => Promise.resolve(),
+};
+
+function resetAppUpdateSingleton() {
+  const { dialogVisible, status } = useAppUpdate();
+  dialogVisible.value = false;
+  status.value = null;
+}
+
 const meta: Meta<typeof AppUpdateDialog> = {
   title: "Shell/AppUpdateDialog",
   component: AppUpdateDialog,
-  decorators: [withWailsApp({})],
+  decorators: [
+    withWailsApp(appUpdateWailsStub, {
+      beforeUnmount: resetAppUpdateSingleton,
+    }),
+  ],
   parameters: {
     viewport: { defaultViewport: "desktop1280" },
   },

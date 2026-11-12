@@ -716,7 +716,8 @@ const steadycamFovSliderValue = computed(() => {
 });
 
 function onSteadycamFovSliderInput(val: number | number[]) {
-  const n = Array.isArray(val) ? val[0]! : val;
+  const n = Array.isArray(val) ? val[0] : val;
+  if (typeof n !== "number") return;
   config.value.fpvSteadycamFov = Math.round(n);
 }
 

@@ -464,12 +464,6 @@ a:hover {
   font-size: var(--icon-size-large);
 }
 
-/* Prefix/suffix icons inside inputs (Search, etc.) */
-.el-input__prefix .el-icon.vt-icon.vt-icon--size-default,
-.el-input__suffix .el-icon.vt-icon.vt-icon--size-default {
-  font-size: var(--icon-size-default);
-}
-
 /* Shared keyboard focus ring (shell chrome) */
 .vt-focus-ring:focus:not(:focus-visible),
 .vt-focus-ring--inset:focus:not(:focus-visible) {
@@ -1415,11 +1409,11 @@ a:hover {
 }
 
 /* Empty table placeholder height (8px grid; EP default is 60px). */
-.el-table__empty-block {
+.el-table .el-table__empty-block {
   min-height: 56px;
 }
 
-.el-table__empty-text {
+.el-table .el-table__empty-text {
   line-height: 56px;
 }
 

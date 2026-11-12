@@ -6,8 +6,8 @@ import App from "./App.vue";
 import type { RouteRecordRaw } from "vue-router";
 import { i18n } from "./i18n";
 import { settingsChildRoutes } from "./views/settings/settingsSections";
-import "./assets/style.css";
 import "./element-plus/function-api-styles";
+import "./assets/style.css";
 
 declare module "vue-router" {
   interface RouteMeta {

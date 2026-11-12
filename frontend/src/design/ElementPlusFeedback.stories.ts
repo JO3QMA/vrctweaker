@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/vue3-vite";
-import { onMounted } from "vue";
+import { onMounted, onUnmounted } from "vue";
 import { ElMessageBox } from "element-plus";
+import type { MessageHandler } from "element-plus";
 import { showToast } from "../utils/showToast";
 import { withWailsApp } from "../stories/wailsDecorator";
 
@@ -22,13 +23,18 @@ export const ToastAndConfirmDialog: Story = {
   render: () => ({
     template: '<div data-testid="feedback-story-host" />',
     setup() {
+      let toastHandler: MessageHandler | undefined;
       onMounted(() => {
-        showToast.success("保存しました");
+        toastHandler = showToast.success("保存しました");
         void ElMessageBox.confirm("この操作を実行しますか？", "確認", {
           confirmButtonText: "OK",
           cancelButtonText: "キャンセル",
           type: "warning",
         }).catch(() => undefined);
+      });
+      onUnmounted(() => {
+        ElMessageBox.close();
+        toastHandler?.close();
       });
     },
   }),

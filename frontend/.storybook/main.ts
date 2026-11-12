@@ -12,7 +12,7 @@ const config: StorybookConfig = {
   framework: "@storybook/vue3-vite",
   async viteFinal(config) {
     return mergeConfig(config, {
-      plugins: [...elementPlusPlugins()],
+      plugins: elementPlusPlugins({ emitDts: false }),
       resolve: {
         alias: {
           "@": path.resolve(__dirname, "../src"),

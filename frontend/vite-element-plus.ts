@@ -5,16 +5,25 @@ import type { PluginOption } from "vite";
 
 const elementPlusResolver = ElementPlusResolver({ importStyle: "css" });
 
-/** Element Plus on-demand (components + function APIs such as ElMessage). */
-export function elementPlusPlugins(): PluginOption[] {
+export type ElementPlusPluginOptions = {
+  /** When false, skip writing src/auto-imports.d.ts and src/components.d.ts (Storybook). */
+  emitDts?: boolean;
+};
+
+/** Element Plus on-demand (components + optional auto-import for EP function APIs). */
+export function elementPlusPlugins(
+  options: ElementPlusPluginOptions = {},
+): PluginOption[] {
+  const emitDts = options.emitDts !== false;
   return [
+    // Insurance if a future edit adds EP APIs without explicit imports + function-api-styles.
     AutoImport({
       resolvers: [elementPlusResolver],
-      dts: "src/auto-imports.d.ts",
+      dts: emitDts ? "src/auto-imports.d.ts" : false,
     }),
     Components({
       resolvers: [elementPlusResolver],
-      dts: "src/components.d.ts",
+      dts: emitDts ? "src/components.d.ts" : false,
     }),
   ];
 }
