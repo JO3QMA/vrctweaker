@@ -27,6 +27,7 @@ import {
   seedUserProfileNavigation,
 } from "./seed-data";
 import { E2E_STABLE_THUMBNAIL_DATA_URL } from "./e2e-stable-thumbnail";
+import { VISUAL_ACTIVITY_STATS } from "./visual-activity-stats";
 
 export interface MockWailsOptions {
   /** true のとき IsLoggedIn / GetSelfProfile がログイン済みを返す */
@@ -45,6 +46,8 @@ export interface MockWailsOptions {
   emptyAutomation?: boolean;
   /** 遭遇ログ・プレイ時間統計を空にする */
   emptyActivity?: boolean;
+  /** ビジュアル用にプレイ時間チャートの日付・値を固定する */
+  stableActivityChart?: boolean;
 }
 
 /** ページ読み込み前に注入する window.go スタブの初期化スクリプトを返す（中身はブラウザでそのまま実行されるため TypeScript 構文不可） */
@@ -67,11 +70,12 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
   );
   const friendAvatarUsageJson = JSON.stringify(SEED_FRIEND_AVATAR_USAGE);
   const friendsJson = JSON.stringify(options.emptyFriends ? [] : SEED_FRIENDS);
-  const activityStatsJson = JSON.stringify(
-    options.emptyActivity
-      ? { dailyPlaySeconds: [], topWorlds: [] }
-      : SEED_ACTIVITY_STATS,
-  );
+  const activityStatsPayload = options.emptyActivity
+    ? { dailyPlaySeconds: [], topWorlds: [] }
+    : options.stableActivityChart
+      ? VISUAL_ACTIVITY_STATS
+      : SEED_ACTIVITY_STATS;
+  const activityStatsJson = JSON.stringify(activityStatsPayload);
   const automationItemsJson = JSON.stringify(
     options.emptyAutomation ? [] : SEED_AUTOMATION_ITEMS,
   );

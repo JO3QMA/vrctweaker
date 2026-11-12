@@ -15,7 +15,36 @@ const VISUAL_FONT_CSS = `
 
 export type VisualMockOptions = Omit<MockWailsOptions, "language">;
 
+/**
+ * PlayTimeChartの軸・凡例はcanvas内描画のためmaskしない。
+ * devicePixelRatio=1・stableActivityChart・セクション展開後に描画完了を待つ。
+ */
+async function prepareActivityPlaytimeForVisual(page: Page): Promise<void> {
+  const playtime = page.locator(".section-card--playtime");
+  await playtime.waitFor({ state: "visible" });
+  await expect(playtime.locator(".loading")).toBeHidden({ timeout: 15_000 });
+  if (await playtime.locator(".empty-stats").isVisible()) {
+    return;
+  }
+  const toggle = playtime.locator(".section-card__toggle");
+  if ((await toggle.getAttribute("aria-expanded")) === "false") {
+    await toggle.click();
+  }
+  const canvas = playtime.locator("canvas");
+  await expect(canvas).toBeVisible();
+  await page.waitForFunction(() => {
+    const c = document.querySelector(
+      ".section-card--playtime canvas",
+    ) as HTMLCanvasElement | null;
+    return Boolean(c && c.clientWidth > 0 && c.height > 0);
+  });
+  await page.waitForTimeout(200);
+}
+
 async function waitForRouteReady(page: Page, routePath: string): Promise<void> {
+  if (routePath.includes("/activity")) {
+    await prepareActivityPlaytimeForVisual(page);
+  }
   if (routePath.includes("/gallery")) {
     const empty = page.getByTestId("gallery-empty");
     const grid = page.getByTestId("gallery-grid-scroll");
@@ -40,8 +69,18 @@ export async function installVisualTestContext(
   locale: "ja" | "en",
   extra: VisualMockOptions = {},
 ): Promise<void> {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "devicePixelRatio", {
+      get: () => 1,
+      configurable: true,
+    });
+  });
   await page.addInitScript(
-    getMockWailsInitScript({ language: locale, ...extra }),
+    getMockWailsInitScript({
+      language: locale,
+      stableActivityChart: true,
+      ...extra,
+    }),
   );
   await page.clock.install({ time: new Date(VISUAL_FIXED_CLOCK_ISO) });
 }

@@ -30,7 +30,6 @@ export const VISUAL_ROUTE_MASK_SELECTORS: Partial<
   Record<VisualRouteName, string[]>
 > = {
   gallery: [".gallery-grid-scroll .thumbnail"],
-  activity: [".section-card--playtime canvas"],
 };
 
 export const VISUAL_VIEWPORTS = [
