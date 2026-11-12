@@ -1,5 +1,5 @@
 <template>
-  <div class="automation-view">
+  <div class="automation-view main-scroll-region">
     <h1 class="page-title">{{ t("automation.title") }}</h1>
     <div
       class="automation-tabs"
@@ -85,6 +85,7 @@
         />
         <AutomationRuleEditor
           v-if="editor"
+          ref="ruleEditorRef"
           v-model:editor="editor"
           :saving="saving"
           :is-dirty="isDirty"
@@ -176,6 +177,9 @@ const powerPlans = ref<DetectedPowerPlanDTO[]>([]);
 const friends = ref<UserCacheDTO[]>([]);
 const saving = ref(false);
 const nameError = ref("");
+const ruleEditorRef = ref<InstanceType<typeof AutomationRuleEditor> | null>(
+  null,
+);
 const tab = ref<"rules" | "log">("rules");
 const preferList = ref(false);
 const rulesTabEl = ref<HTMLButtonElement | null>(null);
@@ -489,8 +493,16 @@ async function save(): Promise<boolean> {
     return false;
   }
   nameError.value = "";
+  const editorRef = ruleEditorRef.value;
   saving.value = true;
   try {
+    if (!editorRef) {
+      showToast.error(t("automation.saveError"));
+      return false;
+    }
+    if (!(await editorRef.validateEditorForm())) {
+      return false;
+    }
     const dto = editorToDto(editor.value);
     if (!dto.id) {
       dto.id = newAutomationId();
@@ -518,6 +530,7 @@ async function save(): Promise<boolean> {
     }
     captureSnapshot();
     preferList.value = false;
+    showToast.success(t("automation.saved"));
     return true;
   } catch {
     showToast.error(t("automation.saveError"));

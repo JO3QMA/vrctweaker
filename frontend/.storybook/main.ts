@@ -2,6 +2,7 @@ import type { StorybookConfig } from "@storybook/vue3-vite";
 import { mergeConfig } from "vite";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { elementPlusPlugins } from "../vite-element-plus";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -11,6 +12,7 @@ const config: StorybookConfig = {
   framework: "@storybook/vue3-vite",
   async viteFinal(config) {
     return mergeConfig(config, {
+      plugins: elementPlusPlugins({ emitDts: false }),
       resolve: {
         alias: {
           "@": path.resolve(__dirname, "../src"),

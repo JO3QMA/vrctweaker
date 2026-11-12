@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { useI18n } from "vue-i18n";
+import type { CheckboxValueType } from "element-plus";
 import VtAlert from "../VtAlert.vue";
 import VtButton from "../VtButton.vue";
 import {
@@ -90,9 +91,9 @@ function applyCoreStates(states: boolean[]) {
   emitMask(mergeVisibleWithHidden(states, hiddenMask.value));
 }
 
-function setCoreAllowed(index: number, allowed: boolean) {
+function setCoreAllowed(index: number, allowed: CheckboxValueType) {
   const next = [...coreStates.value];
-  next[index] = allowed;
+  next[index] = allowed === true;
   applyCoreStates(next);
 }
 
@@ -116,8 +117,9 @@ function commitHexDraft() {
   emitMask(parsed.mask);
 }
 
-function onHexDraftKeydown(e: KeyboardEvent) {
-  if (e.key === "Enter") {
+function onHexDraftKeydown(evt: Event | KeyboardEvent) {
+  if (!(evt instanceof KeyboardEvent)) return;
+  if (evt.key === "Enter") {
     commitHexDraft();
   }
 }

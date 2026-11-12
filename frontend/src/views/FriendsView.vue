@@ -1,5 +1,5 @@
 <template>
-  <div class="friends-view">
+  <div class="friends-view main-scroll-region">
     <div class="friends-section">
       <section class="friends-pane friends-pane--left">
         <h1 class="page-title">{{ t("friends.title") }}</h1>

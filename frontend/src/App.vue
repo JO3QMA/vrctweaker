@@ -182,11 +182,6 @@ watch(
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: var(--space-section);
-}
-
-.main-content--bare {
-  padding: var(--space-block);
 }
 
 .router-outlet-host {
@@ -202,19 +197,6 @@ watch(
   flex: 1;
   min-height: 0;
   min-width: 0;
-}
-
-/* `> *` matches the routed SFC root: Vue 3 applies this parent’s scope attribute to child
-   component roots, so the combinator resolves to one element. `<Transition>` adds no wrapper
-   DOM node. Gallery manages its own scroll, so its root `.gallery-view` is excluded here.
-   Settings scrolls an inner element so the nav breakpoint can sit on the outer frame.
-   Automation scrolls inside the list, editor, and run log. */
-/* アクティビティは遭遇ログカード内でスクロールするためルートははみ出し抑制 */
-.router-outlet-host
-  > *:not(.gallery-view):not(.activity-view):not(.settings-frame):not(
-    .automation-view
-  ) {
-  overflow-y: auto;
 }
 
 .fade-enter-active,

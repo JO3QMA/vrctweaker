@@ -297,6 +297,12 @@ describe("style.css catalog", () => {
       value: "var(--space-12)",
       description: "フォーム項目間",
     });
+    expect(
+      root.find((prop) => prop.name === "--space-validated-form-field"),
+    ).toMatchObject({
+      value: "22px",
+      description: "vt-validated-form直下項目（インラインエラー余白）",
+    });
     expect(root.find((prop) => prop.name === "--font-size-h1")?.value).toBe(
       "calc(var(--font-size-14) * 1.4)",
     );

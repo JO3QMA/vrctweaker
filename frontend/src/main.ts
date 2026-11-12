@@ -1,20 +1,24 @@
 import { createApp } from "vue";
 import { createRouter, createWebHashHistory } from "vue-router";
-import ElementPlus from "element-plus";
-import "element-plus/dist/index.css";
 /** Dark theme is fixed; requires `class="dark"` on `<html>` (see docs/agents/dark-mode-fixed.md). */
 import "element-plus/theme-chalk/dark/css-vars.css";
 import App from "./App.vue";
-import "./assets/style.css";
 import type { RouteRecordRaw } from "vue-router";
 import { i18n } from "./i18n";
 import { settingsChildRoutes } from "./views/settings/settingsSections";
+import "./element-plus/function-api-styles";
+import "./assets/style.css";
 
 declare module "vue-router" {
   interface RouteMeta {
     /** vue-i18n key under `routes.*` */
     titleKey?: string;
     bare?: boolean;
+    /**
+     * ルート内のネストした要素が縦スクロールする。App.vue はルート直下に
+     * `overflow-y: auto` を当てず、`main-scroll-region` で余白を当てる。
+     */
+    selfScroll?: boolean;
   }
 }
 
@@ -35,13 +39,13 @@ const routes: RouteRecordRaw[] = [
     path: "/gallery",
     name: "gallery",
     component: () => import("./views/GalleryView.vue"),
-    meta: { titleKey: "routes.gallery" },
+    meta: { titleKey: "routes.gallery", selfScroll: true },
   },
   {
     path: "/activity",
     name: "activity",
     component: () => import("./views/ActivityView.vue"),
-    meta: { titleKey: "routes.activity" },
+    meta: { titleKey: "routes.activity", selfScroll: true },
   },
   {
     path: "/activity/encounter-history",
@@ -53,25 +57,25 @@ const routes: RouteRecordRaw[] = [
     path: "/me",
     name: "me",
     component: () => import("./views/SelfProfileView.vue"),
-    meta: { titleKey: "routes.me" },
+    meta: { titleKey: "routes.me", selfScroll: true },
   },
   {
     path: "/friends",
     name: "friends",
     component: () => import("./views/FriendsView.vue"),
-    meta: { titleKey: "routes.friends" },
+    meta: { titleKey: "routes.friends", selfScroll: true },
   },
   {
     path: "/user-profile",
     name: "user-profile",
     component: () => import("./views/UserProfileDetailView.vue"),
-    meta: { titleKey: "routes.user" },
+    meta: { titleKey: "routes.user", selfScroll: true },
   },
   {
     path: "/automation",
     name: "automation",
     component: () => import("./views/AutomationView.vue"),
-    meta: { titleKey: "routes.automation" },
+    meta: { titleKey: "routes.automation", selfScroll: true },
   },
   {
     path: "/config",
@@ -88,7 +92,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/settings",
     component: () => import("./views/SettingsView.vue"),
-    meta: { titleKey: "routes.settings" },
+    meta: { titleKey: "routes.settings", selfScroll: true },
     children: settingsChildRoutes(),
   },
   {
@@ -121,5 +125,4 @@ const router = createRouter({
 const app = createApp(App);
 app.use(router);
 app.use(i18n);
-app.use(ElementPlus);
 app.mount("#app");

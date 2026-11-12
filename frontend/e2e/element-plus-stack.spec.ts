@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { E2E_VIEWPORT_WIDTHS } from "./fixtures/app-window-bounds";
 import { getMockWailsInitScript } from "./fixtures/mock-wails";
 
 const BRAND_FOCUS_RGB = "rgb(92, 156, 230)";
@@ -8,6 +9,25 @@ test.describe("Element Plus stack (App.vue path)", () => {
     await page.addInitScript(
       getMockWailsInitScript({ startupAppUpdatePrompt: true }),
     );
+  });
+
+  test("ElMessage toast loads theme styles (fixed position, non-transparent surface)", async ({
+    page,
+  }) => {
+    await page.addInitScript(getMockWailsInitScript());
+    await page.goto("/");
+    await page.evaluate(async () => {
+      const { showToast } = await import("/src/utils/showToast.ts");
+      showToast.success("e2e style probe");
+    });
+    const toast = page.locator(".el-message").first();
+    await expect(toast).toBeVisible();
+    await expect(toast).toHaveCSS("position", "fixed");
+    const bg = await toast.evaluate(
+      (el) => getComputedStyle(el).backgroundColor,
+    );
+    expect(bg).not.toBe("rgba(0, 0, 0, 0)");
+    expect(bg).not.toBe("transparent");
   });
 
   test("AppUpdateDialog later button uses brand focus ring (computed outline)", async ({
@@ -35,7 +55,7 @@ test.describe("Element Plus stack (App.vue path)", () => {
     expect(outline.outlineOffset).toBe("2px");
   });
 
-  for (const viewportWidth of [1280, 600] as const) {
+  for (const viewportWidth of E2E_VIEWPORT_WIDTHS) {
     test(`all concurrent toasts stay at z-index 4000 above a later dialog (viewport ${viewportWidth}px)`, async ({
       page,
     }) => {

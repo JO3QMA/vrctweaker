@@ -89,6 +89,75 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
       if (typeof window === 'undefined') return;
       const profiles = ${profilesJson};
       let launchProfiles = profiles.slice();
+      window.__e2eLastSaveLaunchProfile = null;
+      window.__e2eLastMergeLaunchArgsDTO = null;
+      function e2eDefaultLaunchArgsDTO() {
+        return {
+          noVr: false,
+          screenMode: '',
+          screenWidth: 0,
+          screenHeight: 0,
+          fps: 0,
+          skipRegistry: false,
+          processPriority: -999,
+          mainThreadPriority: -999,
+          monitor: 0,
+          profile: -1,
+          enableDebugGui: false,
+          enableSDKLogLevels: false,
+          enableUdonDebugLogging: false,
+          midi: '',
+          watchWorlds: false,
+          watchAvatars: false,
+          ignoreTrackers: '',
+          videoDecoding: '',
+          disableAMDStutterWorkaround: false,
+          osc: '',
+          affinity: '',
+          enforceWorldServerChecks: false,
+          customArmRatio: 0,
+          disableShoulderTracking: false,
+          enableIkDebugLogging: false,
+          calibrationRange: 0,
+          freezeTrackingOnDisconnect: false,
+          custom: '',
+        };
+      }
+      function e2eParseLaunchArgsForGUI(args) {
+        const dto = e2eDefaultLaunchArgsDTO();
+        const text = String(args || '');
+        if (text.includes('-no-vr')) dto.noVr = true;
+        if (text.includes('-screen-fullscreen')) dto.screenMode = 'fullscreen';
+        if (text.includes('-windowed')) dto.screenMode = 'windowed';
+        if (text.includes('-popupwindow')) dto.screenMode = 'popupwindow';
+        const w = text.match(/-screen-width\\s+(\\d+)/);
+        if (w) dto.screenWidth = Number(w[1]);
+        const h = text.match(/-screen-height\\s+(\\d+)/);
+        if (h) dto.screenHeight = Number(h[1]);
+        const fps = text.match(/--fps=(\\d+)/);
+        if (fps) dto.fps = Number(fps[1]);
+        if (text.includes('--skip-registry-install')) dto.skipRegistry = true;
+        const pp = text.match(/--process-priority=(-?\\d+)/);
+        if (pp) dto.processPriority = Number(pp[1]);
+        if (text.includes('-batchmode')) dto.custom = '-batchmode';
+        return dto;
+      }
+      function e2eMergeLaunchArgsForGUI(dto) {
+        const parts = [];
+        if (dto.noVr) parts.push('-no-vr');
+        if (dto.screenMode === 'fullscreen') parts.push('-screen-fullscreen 1');
+        if (dto.screenMode === 'windowed') parts.push('-windowed');
+        if (dto.screenMode === 'popupwindow') parts.push('-popupwindow');
+        if (dto.screenWidth > 0) parts.push('-screen-width', String(dto.screenWidth));
+        if (dto.screenHeight > 0) parts.push('-screen-height', String(dto.screenHeight));
+        if (dto.fps > 0) parts.push('--fps=' + String(dto.fps));
+        if (dto.skipRegistry) parts.push('--skip-registry-install');
+        if (dto.processPriority >= -2 && dto.processPriority <= 2 && dto.processPriority !== -999) {
+          parts.push('--process-priority=' + String(dto.processPriority));
+        }
+        if (dto.custom) parts.push(dto.custom);
+        return parts.join(' ');
+      }
       const pathSettings = ${pathSettingsJson};
       const screenshots = ${screenshotsJson};
       const encounters = ${encountersJson};
@@ -229,6 +298,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         GetLogicalProcessorCount: () => Promise.resolve(16),
         SaveLaunchProfile: (p) => {
           const next = Object.assign({}, p);
+          window.__e2eLastSaveLaunchProfile = Object.assign({}, next);
           if (!next.id) {
             const maxId = launchProfiles.reduce(function(max, cur) {
               const num = Number(String(cur.id || "").replace(/^profile-/, ""));
@@ -276,38 +346,17 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         },
         GetServerStatus: () => Promise.resolve(serverStatus),
         InstanceRejoin: (_profileId, _playSessionId) => Promise.resolve(),
-        ParseLaunchArgsForGUI: () =>
-          Promise.resolve({
-            noVr: false,
-            screenMode: '',
-            screenWidth: 0,
-            screenHeight: 0,
-            fps: 90,
-            skipRegistry: false,
-            processPriority: -999,
-            mainThreadPriority: -999,
-            monitor: 0,
-            profile: -1,
-            enableDebugGui: false,
-            enableSDKLogLevels: false,
-            enableUdonDebugLogging: false,
-            midi: '',
-            watchWorlds: false,
-            watchAvatars: false,
-            ignoreTrackers: '',
-            videoDecoding: '',
-            disableAMDStutterWorkaround: false,
-            osc: '',
-            affinity: '',
-            enforceWorldServerChecks: false,
-            customArmRatio: 0,
-            disableShoulderTracking: false,
-            enableIkDebugLogging: false,
-            calibrationRange: 0,
-            freezeTrackingOnDisconnect: false,
-            custom: '',
-          }),
-        MergeLaunchArgsForGUI: () => Promise.resolve(''),
+        ParseLaunchArgsForGUI: (args) =>
+          Promise.resolve(e2eParseLaunchArgsForGUI(args)),
+        MergeLaunchArgsForGUI: (dto) => {
+          window.__e2eLastMergeLaunchArgsDTO = Object.assign(
+            {},
+            dto || e2eDefaultLaunchArgsDTO(),
+          );
+          return Promise.resolve(
+            e2eMergeLaunchArgsForGUI(dto || e2eDefaultLaunchArgsDTO()),
+          );
+        },
         JoinWorld: () => Promise.resolve(),
         JoinWorldFromScreenshot: () => Promise.resolve(),
         GetLogRetentionDays: () => Promise.resolve(30),
