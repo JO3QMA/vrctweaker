@@ -617,7 +617,7 @@ a:hover {
   scrollbar-gutter: stable;
 }
 
-.main-content--bare .route-scroll-root {
+.route-scroll-root--bare {
   padding: var(--space-block);
 }
 
@@ -625,10 +625,6 @@ a:hover {
 .main-scroll-region {
   box-sizing: border-box;
   padding: var(--space-section);
-}
-
-.main-content--bare .main-scroll-region {
-  padding: var(--space-block);
 }
 
 /* Gallery: header keeps side padding; grid scroller reaches the main area's right edge. */

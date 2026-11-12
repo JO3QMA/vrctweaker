@@ -1,5 +1,6 @@
 import { test, expect } from "@playwright/test";
 import {
+  MAIN_SCROLL_LAYOUT_VIEWPORT_WIDTHS,
   expectStableTransitionInsets,
   sampleRouteTransitionInsets,
 } from "./fixtures/main-scroll-layout";
@@ -41,26 +42,30 @@ const TRANSITION_PAIRS = [
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(getMockWailsInitScript({ loggedIn: true }));
-  await page.setViewportSize({ width: 1280, height: 800 });
 });
 
 for (const pair of TRANSITION_PAIRS) {
-  test(`route transition keeps 24px insets ${pair.name}`, async ({ page }) => {
-    await page.goto(pair.from);
-    await expect(page.locator("h1").first()).toBeVisible({ timeout: 20_000 });
+  for (const width of MAIN_SCROLL_LAYOUT_VIEWPORT_WIDTHS) {
+    test(`route transition keeps 24px insets ${pair.name} @ ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto(pair.from);
+      await expect(page.locator("h1").first()).toBeVisible({ timeout: 20_000 });
 
-    if ("footerNav" in pair && pair.footerNav) {
-      await page
-        .locator(".sidebar-footer")
-        .getByRole("menuitem", { name: pair.targetMenu })
-        .click();
-    } else {
-      await page.getByRole("menuitem", { name: pair.targetMenu }).click();
-    }
+      if ("footerNav" in pair && pair.footerNav) {
+        await page
+          .locator(".sidebar-footer")
+          .getByRole("menuitem", { name: pair.targetMenu })
+          .click();
+      } else {
+        await page.getByRole("menuitem", { name: pair.targetMenu }).click();
+      }
 
-    const samples = await sampleRouteTransitionInsets(page);
-    expectStableTransitionInsets(samples, 24);
+      const samples = await sampleRouteTransitionInsets(page);
+      expectStableTransitionInsets(samples, 24);
 
-    await expect(page.locator("h1").first()).toBeVisible({ timeout: 20_000 });
-  });
+      await expect(page.locator("h1").first()).toBeVisible({ timeout: 20_000 });
+    });
+  }
 }

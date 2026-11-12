@@ -1,5 +1,5 @@
 <template>
-  <div class="encounter-history-view route-scroll-root">
+  <div class="encounter-history-view route-scroll-root route-scroll-root--bare">
     <h1 class="page-title">{{ pageTitle }}</h1>
     <p v-if="idLine" class="text-caption id-line">{{ idLine }}</p>
 
