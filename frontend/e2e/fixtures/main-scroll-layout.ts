@@ -31,6 +31,19 @@ type RouteScrollLayoutConfig = {
   bare?: boolean;
 };
 
+/**
+ * フレーム右paddingを0にし内側スクロールだけ右端まで伸ばす画面の、
+ * 固定ヘッダー／ツールバー（スクロール外）の右余白を検証する。
+ */
+export const ROUTE_FIXED_CHROME_SELECTORS: Partial<
+  Record<string, readonly string[]>
+> = {
+  gallery: [
+    ".gallery-view--scroll-frame .page-title",
+    ".gallery-view--scroll-frame .filters",
+  ],
+};
+
 const ROUTE_SCROLL_LAYOUT: Record<string, RouteScrollLayoutConfig> = {
   dashboard: { paddingRoot: ".router-outlet-host > :first-child" },
   launcher: { paddingRoot: ".router-outlet-host > :first-child" },
@@ -225,8 +238,58 @@ export async function expectRouteMainScrollLayout(
       expectedPad,
       0,
     );
+    const chromeSelectors = ROUTE_FIXED_CHROME_SELECTORS.gallery;
+    if (chromeSelectors?.length) {
+      const chrome = await page.evaluate(
+        ({ selectors }) => {
+          const main = document.querySelector(
+            ".main-content",
+          ) as HTMLElement | null;
+          if (!main) throw new Error("main missing");
+          const mainRight = main.getBoundingClientRect().right;
+          const pads = selectors.map((sel) => {
+            const el = document.querySelector(sel) as HTMLElement | null;
+            if (!el) throw new Error(`chrome missing: ${sel}`);
+            return parseFloat(getComputedStyle(el).paddingRight);
+          });
+          const filters = document.querySelector(
+            ".gallery-view--scroll-frame .filters",
+          ) as HTMLElement | null;
+          const lastControl = filters?.querySelector(
+            ".filters-actions > *:last-child",
+          ) as HTMLElement | null;
+          const toolbarVisualGap = lastControl
+            ? mainRight - lastControl.getBoundingClientRect().right
+            : null;
+          return { pads, toolbarVisualGap };
+        },
+        { selectors: [...chromeSelectors] },
+      );
+      for (const pad of chrome.pads) {
+        expect(pad, "fixed chrome padding-right").toBeCloseTo(expectedPad, 0);
+      }
+      expect(
+        chrome.toolbarVisualGap,
+        "toolbar rightmost control inset",
+      ).toBeCloseTo(expectedPad, 0);
+    }
   } else {
     expect(metrics.padRight, "padding right").toBeCloseTo(expectedPad, 0);
+    const chromeSelectors = ROUTE_FIXED_CHROME_SELECTORS[routeName];
+    if (chromeSelectors?.length) {
+      const pads = await page.evaluate(
+        ({ selectors }) =>
+          selectors.map((sel) => {
+            const el = document.querySelector(sel) as HTMLElement | null;
+            if (!el) throw new Error(`chrome missing: ${sel}`);
+            return parseFloat(getComputedStyle(el).paddingRight);
+          }),
+        { selectors: [...chromeSelectors] },
+      );
+      for (const pad of pads) {
+        expect(pad, "fixed chrome padding-right").toBeCloseTo(expectedPad, 0);
+      }
+    }
   }
 
   expect(metrics.horizontalOverflow, "no horizontal overflow").toBe(false);

@@ -621,6 +621,12 @@ a:hover {
   padding-right: 0;
 }
 
+/* タイトル・フィルタなどスクロールしない行も右余白を揃える（本体グリッドだけ右端まで伸ばす） */
+.gallery-view--scroll-frame > :not(.gallery-body) {
+  box-sizing: border-box;
+  padding-right: var(--space-section);
+}
+
 .gallery-view--scroll-frame .grid-scroll.main-scroll-region {
   padding: 0 var(--space-section) 0 0;
 }
