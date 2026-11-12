@@ -26,6 +26,7 @@ import {
   SEED_VRCHAT_CONFIG,
   seedUserProfileNavigation,
 } from "./seed-data";
+import { E2E_STABLE_THUMBNAIL_DATA_URL } from "./e2e-stable-thumbnail";
 
 export interface MockWailsOptions {
   /** true のとき IsLoggedIn / GetSelfProfile がログイン済みを返す */
@@ -104,6 +105,9 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
     latestError: "",
   };
   const ytdlpMaintainStatusJson = JSON.stringify(ytdlpMaintainStatus);
+  const stableThumbnailDataUrlJson = JSON.stringify(
+    E2E_STABLE_THUMBNAIL_DATA_URL,
+  );
   const serverStatusJson = JSON.stringify({
     fetchState: "ok",
     summary: { indicator: "none", description: "All Systems Operational" },
@@ -521,9 +525,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
             screenshots.find(function(s) { return s.id === id; }) || null,
           ),
         ScreenshotThumbnailDataURL: () =>
-          Promise.resolve(
-            'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
-          ),
+          Promise.resolve(${stableThumbnailDataUrlJson}),
         OpenScreenshotExternally: () => Promise.resolve(),
         RevealScreenshotInFileManager: () => Promise.resolve(),
         ScanScreenshotDir: function() {

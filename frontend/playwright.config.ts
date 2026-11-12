@@ -1,8 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
- * 閾値は意図的に小さくしている。Docker（Playwright 公式イメージ）上の Chromium と
- * Noto CJK で生成した基準画像との比較であり、フォント・アンチエイリアス以外の差分は許さない。
+ * 閾値は意図的に小さくしている。Playwright公式Dockerイメージ上のChromiumと
+ * Noto CJKで生成した基準画像との比較であり、フォント・アンチエイリアス以外の差分は許さない。
  */
 const visualScreenshotExpect = {
   animations: "disabled" as const,
@@ -30,6 +30,7 @@ export default defineConfig({
     {
       name: "visual",
       testMatch: /\/visual\/.*\.visual\.spec\.ts/,
+      retries: 0,
       use: {
         ...devices["Desktop Chrome"],
         locale: "ja-JP",

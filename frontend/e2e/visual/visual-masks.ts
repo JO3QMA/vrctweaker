@@ -3,8 +3,8 @@ import type { VisualRouteName } from "./visual-routes";
 import { VISUAL_ROUTE_MASK_SELECTORS } from "./visual-routes";
 
 /**
- * サイドバーアイコン（SVG）は環境差でアンチエイリアスが揺れるため mask する。
- * ナビのラベル・選択状態は `.sidebar` 内のテキスト／背景で検証する。
+ * サイドバーアイコン（SVG）は環境差でアンチエイリアスが揺れるためmaskする。
+ * ナビのラベル・選択状態は`.sidebar`内のテキスト／背景で検証する。
  */
 export function globalVisualMasks(page: Page): Locator[] {
   return [page.locator(".sidebar-icon")];
