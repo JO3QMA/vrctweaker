@@ -1,9 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { APP_ROUTES } from "./fixtures/app-routes";
-import { expectRouteMainScrollLayout } from "./fixtures/main-scroll-layout";
+import {
+  expectRouteMainScrollLayout,
+  MAIN_SCROLL_LAYOUT_VIEWPORT_WIDTHS,
+} from "./fixtures/main-scroll-layout";
 import { getMockWailsInitScript } from "./fixtures/mock-wails";
-
-const VIEWPORTS = [1280, 600] as const;
 
 const ROUTES_FOR_LAYOUT = APP_ROUTES;
 
@@ -12,7 +13,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const route of ROUTES_FOR_LAYOUT) {
-  for (const width of VIEWPORTS) {
+  for (const width of MAIN_SCROLL_LAYOUT_VIEWPORT_WIDTHS) {
     test(`main scroll layout ${route.name} @ ${width}px`, async ({ page }) => {
       await page.goto(`/#${route.path}`);
       await expect(page.locator("h1").first()).toBeVisible({ timeout: 20_000 });
