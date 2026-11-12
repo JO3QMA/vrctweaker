@@ -1,5 +1,5 @@
 <template>
-  <div class="gallery-view">
+  <div class="gallery-view gallery-view--scroll-frame">
     <h1 class="page-title">{{ t("routes.gallery") }}</h1>
 
     <div class="filters">
@@ -131,7 +131,7 @@
           v-else
           ref="gridScrollRef"
           data-testid="gallery-grid-scroll"
-          class="grid-scroll"
+          class="grid-scroll main-scroll-region"
           @scroll.passive="onGridScroll"
         >
           <!-- Visual sticky duplicate; in-list role="heading" rows are canonical. -->

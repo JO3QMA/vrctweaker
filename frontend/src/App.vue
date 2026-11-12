@@ -23,7 +23,10 @@
           class="main-content"
           :class="{ 'main-content--bare': bareLayout }"
         >
-          <div class="router-outlet-host">
+          <div
+            class="router-outlet-host"
+            :class="{ 'router-outlet-host--self-scroll': routeSelfScroll }"
+          >
             <router-view v-slot="{ Component }">
               <transition name="fade" mode="out-in">
                 <component :is="Component" />
@@ -82,6 +85,10 @@ function delay(ms: number): Promise<void> {
 const route = useRoute();
 const { t, locale } = useI18n();
 const bareLayout = computed(() => route.meta.bare === true);
+
+const routeSelfScroll = computed(() =>
+  route.matched.some((record) => record.meta.selfScroll === true),
+);
 
 const { beginStartupUnlock } = useSessionUnlock();
 const { manualOpen, clearManualFirstLaunchRequest } = useFirstLaunchGuide();
@@ -182,11 +189,6 @@ watch(
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  padding: var(--space-section);
-}
-
-.main-content--bare {
-  padding: var(--space-block);
 }
 
 .router-outlet-host {
@@ -204,17 +206,19 @@ watch(
   min-width: 0;
 }
 
-/* `> *` matches the routed SFC root: Vue 3 applies this parent’s scope attribute to child
-   component roots, so the combinator resolves to one element. `<Transition>` adds no wrapper
-   DOM node. Gallery manages its own scroll, so its root `.gallery-view` is excluded here.
-   Settings scrolls an inner element so the nav breakpoint can sit on the outer frame.
-   Automation scrolls inside the list, editor, and run log. */
-/* アクティビティは遭遇ログカード内でスクロールするためルートははみ出し抑制 */
-.router-outlet-host
-  > *:not(.gallery-view):not(.activity-view):not(.settings-frame):not(
-    .automation-view
-  ) {
+/* Routed view root scrolls unless the route sets meta.selfScroll (inner scroller). */
+.router-outlet-host:not(.router-outlet-host--self-scroll) > * {
+  overflow-x: hidden;
   overflow-y: auto;
+  padding: var(--space-section);
+  box-sizing: border-box;
+  scrollbar-gutter: stable;
+}
+
+.main-content--bare
+  .router-outlet-host:not(.router-outlet-host--self-scroll)
+  > * {
+  padding: var(--space-block);
 }
 
 .fade-enter-active,

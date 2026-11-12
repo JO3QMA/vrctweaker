@@ -1,5 +1,5 @@
 <template>
-  <div class="activity-view">
+  <div class="activity-view main-scroll-region">
     <h1 class="page-title">{{ t("activity.title") }}</h1>
     <p class="retention-hint page-retention-hint">
       {{ t("activity.retentionHint", { days: logRetentionDays }) }}

@@ -15,6 +15,11 @@ declare module "vue-router" {
     /** vue-i18n key under `routes.*` */
     titleKey?: string;
     bare?: boolean;
+    /**
+     * ルート内のネストした要素が縦スクロールする。App.vue はルート直下に
+     * `overflow-y: auto` を当てず、`main-scroll-region` で余白を当てる。
+     */
+    selfScroll?: boolean;
   }
 }
 
@@ -35,13 +40,13 @@ const routes: RouteRecordRaw[] = [
     path: "/gallery",
     name: "gallery",
     component: () => import("./views/GalleryView.vue"),
-    meta: { titleKey: "routes.gallery" },
+    meta: { titleKey: "routes.gallery", selfScroll: true },
   },
   {
     path: "/activity",
     name: "activity",
     component: () => import("./views/ActivityView.vue"),
-    meta: { titleKey: "routes.activity" },
+    meta: { titleKey: "routes.activity", selfScroll: true },
   },
   {
     path: "/activity/encounter-history",
@@ -53,25 +58,25 @@ const routes: RouteRecordRaw[] = [
     path: "/me",
     name: "me",
     component: () => import("./views/SelfProfileView.vue"),
-    meta: { titleKey: "routes.me" },
+    meta: { titleKey: "routes.me", selfScroll: true },
   },
   {
     path: "/friends",
     name: "friends",
     component: () => import("./views/FriendsView.vue"),
-    meta: { titleKey: "routes.friends" },
+    meta: { titleKey: "routes.friends", selfScroll: true },
   },
   {
     path: "/user-profile",
     name: "user-profile",
     component: () => import("./views/UserProfileDetailView.vue"),
-    meta: { titleKey: "routes.user" },
+    meta: { titleKey: "routes.user", selfScroll: true },
   },
   {
     path: "/automation",
     name: "automation",
     component: () => import("./views/AutomationView.vue"),
-    meta: { titleKey: "routes.automation" },
+    meta: { titleKey: "routes.automation", selfScroll: true },
   },
   {
     path: "/config",
@@ -88,7 +93,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/settings",
     component: () => import("./views/SettingsView.vue"),
-    meta: { titleKey: "routes.settings" },
+    meta: { titleKey: "routes.settings", selfScroll: true },
     children: settingsChildRoutes(),
   },
   {

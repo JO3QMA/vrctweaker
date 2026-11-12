@@ -1,7 +1,9 @@
 <template>
   <div class="legal-document-view">
-    <h1 class="page-title">{{ pageTitle }}</h1>
-    <LegalDocumentPanel :kind="kind" />
+    <div class="legal-document-view__content">
+      <h1 class="page-title">{{ pageTitle }}</h1>
+      <LegalDocumentPanel :kind="kind" />
+    </div>
   </div>
 </template>
 
@@ -23,7 +25,7 @@ const pageTitle = computed(() =>
 </script>
 
 <style scoped>
-.legal-document-view {
+.legal-document-view__content {
   max-width: 52rem;
 }
 </style>

@@ -599,6 +599,27 @@ a:hover {
   scrollbar-gutter: stable;
 }
 
+/* Main area scroll padding (opt-in via route meta.selfScroll + class on inner scroller). */
+.main-scroll-region {
+  box-sizing: border-box;
+  padding: var(--space-section);
+}
+
+.main-content--bare .main-scroll-region {
+  padding: var(--space-block);
+}
+
+/* Gallery: header keeps side padding; grid scroller reaches the main area's right edge. */
+.gallery-view--scroll-frame {
+  box-sizing: border-box;
+  padding: var(--space-section);
+  padding-right: 0;
+}
+
+.gallery-view--scroll-frame .grid-scroll.main-scroll-region {
+  padding: 0 var(--space-section) 0 0;
+}
+
 .settings-layout {
   display: flex;
   align-items: flex-start;
