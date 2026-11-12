@@ -18,6 +18,8 @@ frontend/vite.config.js
 frontend/vite.config.d.ts
 frontend/vite-plugin-legal-md.js
 frontend/vite-plugin-legal-md.d.ts
+frontend/vite-element-plus.js
+frontend/vite-element-plus.d.ts
 frontend/src/data/licenses.json
 
 # Go

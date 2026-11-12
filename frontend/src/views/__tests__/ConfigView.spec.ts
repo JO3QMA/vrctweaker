@@ -5,6 +5,7 @@ import { ElMessageBox, ElSlider } from "element-plus";
 import ConfigView from "../ConfigView.vue";
 import { App } from "../../wails/app";
 import { showToast } from "../../utils/showToast";
+import * as elFormValidate from "../../utils/elFormValidate";
 import type { VRChatConfigDTO } from "../../wails/app";
 
 const router = createRouter({
@@ -666,6 +667,26 @@ describe("ConfigView asset cache clear", () => {
     expect(successSpy).toHaveBeenCalled();
     const msg = String(successSpy.mock.calls[0]?.[0] ?? "");
     expect(msg).toContain("12");
+  });
+
+  it("does not save when form validation fails", async () => {
+    vi.spyOn(App, "vrchatConfigExists").mockResolvedValue(true);
+    vi.spyOn(App, "getVRChatConfig").mockResolvedValue(sampleConfig);
+    const saveSpy = vi
+      .spyOn(App, "saveVRChatConfig")
+      .mockResolvedValue(undefined);
+    const validateSpy = vi
+      .spyOn(elFormValidate, "validateElForms")
+      .mockResolvedValue(false);
+    await router.push("/config");
+    await router.isReady();
+    const wrapper = mount(ConfigView, { global: { plugins: [router] } });
+    await flushPromises();
+    await wrapper.find("[data-testid='save-config-btn']").trigger("click");
+    await flushPromises();
+    expect(validateSpy).toHaveBeenCalled();
+    expect(saveSpy).not.toHaveBeenCalled();
+    validateSpy.mockRestore();
   });
 
   it("shows asset cache clear blocked when vrchat running", async () => {

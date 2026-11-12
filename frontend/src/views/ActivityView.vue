@@ -97,7 +97,7 @@
                   variant="primary"
                   link
                   class="timeline-link"
-                  @click="openUserFromEncounter(row)"
+                  @click="openUserFromEncounter(row as UserEncounterDTO)"
                 >
                   {{ row.displayName }}
                 </VtButton>

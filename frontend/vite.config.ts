@@ -2,6 +2,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vite";
+import { elementPlusPlugins } from "./vite-element-plus";
 import { legalMarkdownPlugin } from "./vite-plugin-legal-md";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -14,6 +15,7 @@ const defaultWailsDevTarget =
 export default defineConfig(({ command, mode }) => ({
   plugins: [
     vue(),
+    ...elementPlusPlugins(),
     legalMarkdownPlugin(repoRoot),
     {
       name: "wails-dev-ipc-scripts",

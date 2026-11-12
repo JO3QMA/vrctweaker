@@ -83,8 +83,14 @@
           :title="unlockErrorMessage"
           class="settings-inline-alert login-error"
         />
-        <el-form label-position="top" size="default">
-          <el-form-item :label="t('settings.username')">
+        <el-form
+          ref="loginFormRef"
+          :model="loginForm"
+          :rules="loginFormRules"
+          label-position="top"
+          size="default"
+        >
+          <el-form-item :label="t('settings.username')" prop="username">
             <el-input
               id="login-username"
               v-model="loginForm.username"
@@ -92,7 +98,7 @@
               autocomplete="username"
             />
           </el-form-item>
-          <el-form-item :label="t('settings.password')">
+          <el-form-item :label="t('settings.password')" prop="password">
             <el-input
               id="login-password"
               v-model="loginForm.password"
@@ -146,6 +152,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import type { FormInstance, FormRules } from "element-plus";
 import LoginTwoFactorCodeField from "../LoginTwoFactorCodeField.vue";
 import VtAlert from "../VtAlert.vue";
 import VtButton from "../VtButton.vue";
@@ -158,6 +165,9 @@ import { isLoginTwoFactorRequired } from "../../utils/vrchatLoginResult";
 import { App } from "../../wails/app";
 import type { UserCacheDTO } from "../../wails/app";
 import { formatBackendError } from "../../views/settings/formatBackendError";
+import { requiredTrimmedRule } from "../../utils/elFormRules";
+import { validateElForm } from "../../utils/elFormValidate";
+import { useValidatedFormA11y } from "../../composables/useValidatedFormA11y";
 
 const {
   state: unlockState,
@@ -185,6 +195,12 @@ const loginForm = reactive({
   password: "",
   twoFactorCode: "",
 });
+const loginFormRef = ref<FormInstance>();
+useValidatedFormA11y(loginFormRef);
+const loginFormRules: FormRules = {
+  username: [requiredTrimmedRule(t)],
+  password: [requiredTrimmedRule(t)],
+};
 const loginError = ref("");
 const loginLoading = ref(false);
 const twoFactorRequired = ref(false);
@@ -232,6 +248,9 @@ async function loadSelfProfileSummary(forceRefresh = false) {
 
 async function login() {
   loginError.value = "";
+  if (!(await validateElForm(loginFormRef.value))) {
+    return;
+  }
   loginLoading.value = true;
   try {
     const result = await App.login(

@@ -300,8 +300,11 @@ function queryHistory(
   cb(items);
 }
 
-function onDescriptionSelect(item: { value: string }): void {
-  draftDescription.value = item.value;
+function onDescriptionSelect(item: Record<string, unknown>): void {
+  const value = item.value;
+  if (typeof value === "string") {
+    draftDescription.value = value;
+  }
 }
 
 function syncSnapshotFromApply(
