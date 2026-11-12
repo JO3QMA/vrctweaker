@@ -21,6 +21,8 @@ frontend/vite-plugin-legal-md.d.ts
 frontend/vite-element-plus.js
 frontend/vite-element-plus.d.ts
 frontend/src/data/licenses.json
+frontend/src/auto-imports.d.ts
+frontend/src/components.d.ts
 
 # Go
 *.test
