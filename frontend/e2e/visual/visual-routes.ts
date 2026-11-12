@@ -29,7 +29,7 @@ export type VisualRouteName = (typeof VISUAL_ROUTES)[number]["name"];
 export const VISUAL_ROUTE_MASK_SELECTORS: Partial<
   Record<VisualRouteName, string[]>
 > = {
-  gallery: [".gallery-grid-scroll .thumbnail"],
+  gallery: ['[data-testid="gallery-grid-scroll"] .thumbnail'],
 };
 
 export const VISUAL_VIEWPORTS = [

@@ -29,7 +29,9 @@ for (const locale of VISUAL_LOCALES) {
           await page.setViewportSize(viewport);
           await page.addStyleTag({ content: VISUAL_FONT_CSS });
           await openLegalDocumentDialog(page);
-          await captureViewportScreenshot(page, screenshotName);
+          await captureViewportScreenshot(page, screenshotName, [], {
+            includeSidebarIcons: false,
+          });
           return;
         }
 
@@ -38,7 +40,9 @@ for (const locale of VISUAL_LOCALES) {
             startupAppUpdatePrompt: true,
           });
           await prepareAppUpdateDialog(page, viewport);
-          await captureViewportScreenshot(page, screenshotName);
+          await captureViewportScreenshot(page, screenshotName, [], {
+            includeSidebarIcons: false,
+          });
           return;
         }
 

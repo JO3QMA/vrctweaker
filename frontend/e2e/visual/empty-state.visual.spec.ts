@@ -19,11 +19,9 @@ for (const locale of VISUAL_LOCALES) {
           await expect(page.getByTestId(scenario.readyTestId)).toBeVisible();
         }
         const screenshotName = `empty-${scenario.name}-${locale}-${viewport.label}.png`;
-        await captureAppLayoutScreenshot(
-          page,
-          screenshotName,
-          scenario.routeName,
-        );
+        const maskRoute =
+          scenario.name === "gallery" ? undefined : scenario.routeName;
+        await captureAppLayoutScreenshot(page, screenshotName, maskRoute);
       });
     }
   }

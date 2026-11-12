@@ -5,7 +5,11 @@ import {
   type MockWailsOptions,
 } from "../fixtures/mock-wails";
 import { VISUAL_FIXED_CLOCK_ISO, type VisualRouteName } from "./visual-routes";
-import { combineVisualMasks } from "./visual-masks";
+import {
+  assertMaskLocatorsMatch,
+  combineVisualMasks,
+  type CombineMaskOptions,
+} from "./visual-masks";
 
 const VISUAL_FONT_CSS = `
 :root {
@@ -39,6 +43,11 @@ async function prepareActivityPlaytimeForVisual(page: Page): Promise<void> {
     return Boolean(c && c.clientWidth > 0 && c.height > 0);
   });
   await page.waitForTimeout(200);
+  const main = page.locator(".activity-view.main-scroll-region");
+  await main.evaluate((el) => {
+    el.scrollTop = 0;
+  });
+  await page.waitForTimeout(100);
 }
 
 async function waitForRouteReady(page: Page, routePath: string): Promise<void> {
@@ -62,6 +71,19 @@ async function waitForRouteReady(page: Page, routePath: string): Promise<void> {
       );
     });
   }
+  if (routePath.includes("/automation")) {
+    await page.locator(".automation-list__rows").waitFor({ state: "visible" });
+  }
+  if (routePath.includes("/me")) {
+    await page
+      .locator(".self-profile-view .friend-detail-card .el-card__body")
+      .waitFor({ state: "visible" });
+  }
+  if (routePath.includes("/friends")) {
+    await page.locator(".friends-pane--left .friends-list").waitFor({
+      state: "visible",
+    });
+  }
 }
 
 export async function installVisualTestContext(
@@ -79,6 +101,8 @@ export async function installVisualTestContext(
     getMockWailsInitScript({
       language: locale,
       stableActivityChart: true,
+      visualRichScrollContent: true,
+      loggedIn: true,
       ...extra,
     }),
   );
@@ -109,6 +133,19 @@ export async function scrollRegionToEnd(
     el.scrollTop = Math.max(0, el.scrollHeight - el.clientHeight);
   });
   await page.waitForTimeout(150);
+}
+
+export async function assertScrollerAtEnd(
+  page: Page,
+  scrollerSelector: string,
+): Promise<void> {
+  const metrics = await page.locator(scrollerSelector).evaluate((el) => ({
+    scrollHeight: el.scrollHeight,
+    clientHeight: el.clientHeight,
+    scrollTop: el.scrollTop,
+  }));
+  expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+  expect(metrics.scrollTop).toBeGreaterThan(0);
 }
 
 export async function openLegalDocumentDialog(page: Page): Promise<void> {
@@ -150,8 +187,10 @@ export async function captureAppLayoutScreenshot(
   screenshotName: string,
   routeName?: VisualRouteName,
   extraMasks: Locator[] = [],
+  maskOptions?: CombineMaskOptions,
 ): Promise<void> {
-  const masks = combineVisualMasks(page, routeName, extraMasks);
+  const masks = combineVisualMasks(page, routeName, extraMasks, maskOptions);
+  await assertMaskLocatorsMatch(masks, screenshotName);
   await expect(page.locator(".app-layout")).toHaveScreenshot(screenshotName, {
     mask: masks,
   });
@@ -162,8 +201,12 @@ export async function captureViewportScreenshot(
   page: Page,
   screenshotName: string,
   extraMasks: Locator[] = [],
+  maskOptions?: CombineMaskOptions,
 ): Promise<void> {
-  const masks = combineVisualMasks(page, undefined, extraMasks);
+  const masks = combineVisualMasks(page, undefined, extraMasks, maskOptions);
+  if (masks.length > 0) {
+    await assertMaskLocatorsMatch(masks, screenshotName);
+  }
   await expect(page).toHaveScreenshot(screenshotName, {
     mask: masks,
   });

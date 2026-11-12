@@ -28,6 +28,13 @@ import {
 } from "./seed-data";
 import { E2E_STABLE_THUMBNAIL_DATA_URL } from "./e2e-stable-thumbnail";
 import { VISUAL_ACTIVITY_STATS } from "./visual-activity-stats";
+import {
+  VISUAL_RICH_AUTOMATION_ITEMS,
+  VISUAL_RICH_ENCOUNTERS,
+  VISUAL_RICH_FRIENDS,
+  VISUAL_RICH_SCREENSHOTS,
+  VISUAL_RICH_SELF_PROFILE,
+} from "./visual-scroll-seed";
 
 export interface MockWailsOptions {
   /** true のとき IsLoggedIn / GetSelfProfile がログイン済みを返す */
@@ -48,6 +55,8 @@ export interface MockWailsOptions {
   emptyActivity?: boolean;
   /** ビジュアル用にプレイ時間チャートの日付・値を固定する */
   stableActivityChart?: boolean;
+  /** ビジュアル用にスクロール余白を確保する多めのシード */
+  visualRichScrollContent?: boolean;
 }
 
 /** ページ読み込み前に注入する window.go スタブの初期化スクリプトを返す（中身はブラウザでそのまま実行されるため TypeScript 構文不可） */
@@ -62,14 +71,25 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
   );
   const profilesJson = JSON.stringify(SEED_LAUNCH_PROFILES);
   const pathSettingsJson = JSON.stringify(SEED_PATH_SETTINGS);
+  const rich = options.visualRichScrollContent ?? false;
   const screenshotsJson = JSON.stringify(
-    options.emptyGallery ? [] : SEED_SCREENSHOTS,
+    options.emptyGallery
+      ? []
+      : rich
+        ? VISUAL_RICH_SCREENSHOTS
+        : SEED_SCREENSHOTS,
   );
   const encountersJson = JSON.stringify(
-    options.emptyActivity ? [] : SEED_ENCOUNTERS,
+    options.emptyActivity
+      ? []
+      : rich
+        ? VISUAL_RICH_ENCOUNTERS
+        : SEED_ENCOUNTERS,
   );
   const friendAvatarUsageJson = JSON.stringify(SEED_FRIEND_AVATAR_USAGE);
-  const friendsJson = JSON.stringify(options.emptyFriends ? [] : SEED_FRIENDS);
+  const friendsJson = JSON.stringify(
+    options.emptyFriends ? [] : rich ? VISUAL_RICH_FRIENDS : SEED_FRIENDS,
+  );
   const activityStatsPayload = options.emptyActivity
     ? { dailyPlaySeconds: [], topWorlds: [] }
     : options.stableActivityChart
@@ -77,13 +97,19 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
       : SEED_ACTIVITY_STATS;
   const activityStatsJson = JSON.stringify(activityStatsPayload);
   const automationItemsJson = JSON.stringify(
-    options.emptyAutomation ? [] : SEED_AUTOMATION_ITEMS,
+    options.emptyAutomation
+      ? []
+      : rich
+        ? VISUAL_RICH_AUTOMATION_ITEMS
+        : SEED_AUTOMATION_ITEMS,
   );
   const automationRunLogJson = JSON.stringify(SEED_AUTOMATION_RUN_LOG);
   const vrchatConfigJson = JSON.stringify(SEED_VRCHAT_CONFIG);
   const e2eTestUserIdJson = JSON.stringify(E2E_TEST_USER_ID);
   const e2eSelfUserIdJson = JSON.stringify(E2E_SELF_USER_ID);
-  const selfProfileJson = JSON.stringify(SEED_SELF_PROFILE);
+  const selfProfileJson = JSON.stringify(
+    loggedIn && rich ? VISUAL_RICH_SELF_PROFILE : SEED_SELF_PROFILE,
+  );
   const resolveUserProfileSeedJson = JSON.stringify(
     seedUserProfileNavigation(E2E_TEST_USER_ID),
   );

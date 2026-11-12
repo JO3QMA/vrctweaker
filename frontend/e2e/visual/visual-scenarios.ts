@@ -1,5 +1,6 @@
 import type { MockWailsOptions } from "../fixtures/mock-wails";
 import type { VisualRouteName } from "./visual-routes";
+import { VISUAL_VIEWPORTS } from "./visual-routes";
 
 /** スクロール末尾まで撮るルート（主要 selfScroll 画面） */
 export const VISUAL_SCROLL_END_SCENARIOS: {
@@ -20,22 +21,31 @@ export const VISUAL_SCROLL_END_SCENARIOS: {
   {
     name: "friends",
     path: "/#/friends",
-    scroller: ".friends-view.main-scroll-region",
+    scroller: ".friends-pane--left .friends-list",
   },
   {
     name: "me",
     path: "/#/me",
-    scroller: ".self-profile-view.main-scroll-region",
+    scroller: ".self-profile-view .friend-detail-card .el-card__body",
   },
   {
     name: "automation",
     path: "/#/automation",
-    scroller: ".automation-view.main-scroll-region",
+    scroller: ".automation-list__rows",
   },
+];
+
+/** ビューポート上でスクロール余白が発生しない組み合わせ（撮影対象外） */
+export const VISUAL_SCROLL_END_SKIP: {
+  name: (typeof VISUAL_SCROLL_END_SCENARIOS)[number]["name"];
+  viewportLabel: (typeof VISUAL_VIEWPORTS)[number]["label"];
+  reason: string;
+}[] = [
   {
-    name: "settings",
-    path: "/#/settings/general",
-    scroller: ".settings-view.main-scroll-region",
+    name: "activity",
+    viewportLabel: "1280x800",
+    reason:
+      "プレイ時間展開後も activity-view 全体が収まり、main-scroll-region がオーバーフローしない",
   },
 ];
 
