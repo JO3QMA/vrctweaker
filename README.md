@@ -102,6 +102,21 @@ make setup-e2e   # 初回のみ
 make test-e2e
 ```
 
+#### ビジュアルリグレッション（Playwright `toHaveScreenshot`）
+
+CI と同じ Playwright 公式 Docker イメージで基準画像を生成・更新する。通常の `pnpm run test:e2e`（`--project=chromium`）ではビジュアルテストは実行されない。
+
+```bash
+cd frontend
+# 比較のみ（基準画像がないと失敗）
+pnpm run test:visual
+# 基準画像の更新（Docker 経由・CI 相当環境）
+chmod +x scripts/run-visual-tests-docker.sh
+./scripts/run-visual-tests-docker.sh --update-snapshots
+```
+
+見た目を意図的に変えたPRでは、上記の更新コマンドで `frontend/e2e/visual/routes.visual.spec.ts-snapshots/` 内の PNG を再生成し、差分をコミットする。更新後は同じ Docker 環境で `pnpm run test:visual` を3回連続実行し、いずれも成功することを確認する。閾値は `frontend/playwright.config.ts` の `maxDiffPixelRatio: 0.001`（フォントレンダリング以外のピクセル差を許容しない）。
+
 `make help` で Makefile の全ターゲットを確認できます。
 
 ### リポジトリ構成（抜粋）

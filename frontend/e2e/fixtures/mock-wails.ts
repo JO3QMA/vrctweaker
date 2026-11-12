@@ -32,12 +32,16 @@ export interface MockWailsOptions {
   loggedIn?: boolean;
   /** true のとき起動時に AppUpdateDialog が開く */
   startupAppUpdatePrompt?: boolean;
+  /** App.getLanguage / initLocaleFromBackend の初期 UI 言語 */
+  language?: "ja" | "en";
 }
 
 /** ページ読み込み前に注入する window.go スタブの初期化スクリプトを返す（中身はブラウザでそのまま実行されるため TypeScript 構文不可） */
 export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
   const loggedIn = options.loggedIn ?? false;
   const startupAppUpdatePrompt = options.startupAppUpdatePrompt ?? false;
+  const language = options.language ?? "ja";
+  const languageJson = JSON.stringify(language);
   const profilesJson = JSON.stringify(SEED_LAUNCH_PROFILES);
   const pathSettingsJson = JSON.stringify(SEED_PATH_SETTINGS);
   const screenshotsJson = JSON.stringify(SEED_SCREENSHOTS);
@@ -363,9 +367,9 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         SetLogRetentionDays: () => Promise.resolve(),
         GetGalleryAutoEnrichMetadata: () => Promise.resolve(true),
         SetGalleryAutoEnrichMetadata: () => Promise.resolve(),
-        GetLanguage: () => Promise.resolve('ja'),
+        GetLanguage: () => Promise.resolve(${languageJson}),
         SetLanguage: () => Promise.resolve(),
-        GetSystemLocale: () => Promise.resolve('ja'),
+        GetSystemLocale: () => Promise.resolve(${languageJson}),
         GetPathSettings: () => Promise.resolve(pathSettings),
         SetPathSettings: () => Promise.resolve(),
         GetFirstLaunchGuideCompleted: () => Promise.resolve(true),
