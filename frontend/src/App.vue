@@ -23,10 +23,7 @@
           class="main-content"
           :class="{ 'main-content--bare': bareLayout }"
         >
-          <div
-            class="router-outlet-host"
-            :class="{ 'router-outlet-host--self-scroll': routeSelfScroll }"
-          >
+          <div class="router-outlet-host">
             <router-view v-slot="{ Component }">
               <transition name="fade" mode="out-in">
                 <component :is="Component" />
@@ -85,10 +82,6 @@ function delay(ms: number): Promise<void> {
 const route = useRoute();
 const { t, locale } = useI18n();
 const bareLayout = computed(() => route.meta.bare === true);
-
-const routeSelfScroll = computed(() =>
-  route.matched.some((record) => record.meta.selfScroll === true),
-);
 
 const { beginStartupUnlock } = useSessionUnlock();
 const { manualOpen, clearManualFirstLaunchRequest } = useFirstLaunchGuide();
@@ -204,21 +197,6 @@ watch(
   flex: 1;
   min-height: 0;
   min-width: 0;
-}
-
-/* Routed view root scrolls unless the route sets meta.selfScroll (inner scroller). */
-.router-outlet-host:not(.router-outlet-host--self-scroll) > * {
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding: var(--space-section);
-  box-sizing: border-box;
-  scrollbar-gutter: stable;
-}
-
-.main-content--bare
-  .router-outlet-host:not(.router-outlet-host--self-scroll)
-  > * {
-  padding: var(--space-block);
 }
 
 .fade-enter-active,

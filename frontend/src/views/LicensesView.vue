@@ -1,5 +1,5 @@
 <template>
-  <div class="licenses-view">
+  <div class="licenses-view route-scroll-root">
     <div class="licenses-view__content">
       <h1 class="page-title">{{ t("licenses.title") }}</h1>
       <p class="text-body-sm intro-with-siblings">

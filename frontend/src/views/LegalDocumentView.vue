@@ -1,5 +1,5 @@
 <template>
-  <div class="legal-document-view">
+  <div class="legal-document-view route-scroll-root">
     <div class="legal-document-view__content">
       <h1 class="page-title">{{ pageTitle }}</h1>
       <LegalDocumentPanel :kind="kind" />

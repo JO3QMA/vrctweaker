@@ -45,8 +45,8 @@ export const ROUTE_FIXED_CHROME_SELECTORS: Partial<
 };
 
 const ROUTE_SCROLL_LAYOUT: Record<string, RouteScrollLayoutConfig> = {
-  dashboard: { paddingRoot: ".router-outlet-host > :first-child" },
-  launcher: { paddingRoot: ".router-outlet-host > :first-child" },
+  dashboard: { paddingRoot: ".dashboard.route-scroll-root" },
+  launcher: { paddingRoot: ".launcher-view.route-scroll-root" },
   gallery: {
     paddingRoot: ".gallery-view--scroll-frame",
     edgeScroller: '[data-testid="gallery-grid-scroll"]',
@@ -55,7 +55,7 @@ const ROUTE_SCROLL_LAYOUT: Record<string, RouteScrollLayoutConfig> = {
     paddingRoot: ".activity-view.main-scroll-region",
   },
   "encounter-history": {
-    paddingRoot: ".router-outlet-host > :first-child",
+    paddingRoot: ".encounter-history-view.route-scroll-root",
     bare: true,
   },
   me: { paddingRoot: ".self-profile-view.main-scroll-region" },
@@ -64,8 +64,8 @@ const ROUTE_SCROLL_LAYOUT: Record<string, RouteScrollLayoutConfig> = {
     paddingRoot: ".user-profile-detail-view.main-scroll-region",
   },
   automation: { paddingRoot: ".automation-view.main-scroll-region" },
-  config: { paddingRoot: ".router-outlet-host > :first-child" },
-  video: { paddingRoot: ".router-outlet-host > :first-child" },
+  config: { paddingRoot: ".config-view.route-scroll-root" },
+  video: { paddingRoot: ".video-view.route-scroll-root" },
   settings: {
     paddingRoot: ".settings-view.main-scroll-region",
     edgeScroller: ".settings-view.main-scroll-region",
@@ -90,9 +90,9 @@ const ROUTE_SCROLL_LAYOUT: Record<string, RouteScrollLayoutConfig> = {
     paddingRoot: ".settings-view.main-scroll-region",
     edgeScroller: ".settings-view.main-scroll-region",
   },
-  licenses: { paddingRoot: ".router-outlet-host > :first-child" },
-  "legal-privacy": { paddingRoot: ".router-outlet-host > :first-child" },
-  "legal-terms": { paddingRoot: ".router-outlet-host > :first-child" },
+  licenses: { paddingRoot: ".licenses-view.route-scroll-root" },
+  "legal-privacy": { paddingRoot: ".legal-document-view.route-scroll-root" },
+  "legal-terms": { paddingRoot: ".legal-document-view.route-scroll-root" },
 };
 
 type LayoutMetrics = {
@@ -299,8 +299,7 @@ export async function expectRouteMainScrollLayout(
     metrics.edgeIsScroller &&
     metrics.edgeScrollHeight > metrics.edgeClientHeight + 1;
 
-  const usesOutletPadding =
-    config.paddingRoot === ".router-outlet-host > :first-child";
+  const usesOutletPadding = config.paddingRoot.includes("route-scroll-root");
   const edgeAlign =
     usesOutletPadding ||
     config.edgeScroller === ".settings-view.main-scroll-region" ||
@@ -325,5 +324,88 @@ export async function expectRouteMainScrollLayout(
       metrics.atRestBottomGap,
       "at-rest bottom inset",
     ).toBeGreaterThanOrEqual(expectedPad - 2);
+  }
+}
+
+export type RouteTransitionInsets = {
+  top: number;
+  left: number;
+  right: number;
+};
+
+/** ルート transition 中の見出し／コンテンツ余白（main-content 基準） */
+export async function readVisibleRouteInsets(
+  page: Page,
+): Promise<RouteTransitionInsets | null> {
+  return page.evaluate(() => {
+    const main = document.querySelector(".main-content") as HTMLElement | null;
+    const host = document.querySelector(
+      ".router-outlet-host",
+    ) as HTMLElement | null;
+    if (!main || !host) return null;
+    const routeRoot = host.firstElementChild as HTMLElement | null;
+    if (!routeRoot) return null;
+
+    const carrier = routeRoot.matches(
+      ".route-scroll-root, .main-scroll-region, .gallery-view--scroll-frame",
+    )
+      ? routeRoot
+      : (routeRoot.querySelector(
+          ".route-scroll-root, .main-scroll-region, .settings-view, .gallery-view--scroll-frame",
+        ) as HTMLElement | null);
+    if (!carrier) return null;
+
+    const mainRect = main.getBoundingClientRect();
+    const carrierRect = carrier.getBoundingClientRect();
+    const carrierStyle = getComputedStyle(carrier);
+    const padT = parseFloat(carrierStyle.paddingTop);
+    const padL = parseFloat(carrierStyle.paddingLeft);
+    const padR = parseFloat(carrierStyle.paddingRight);
+    const h1 = carrier.querySelector(
+      "h1.page-title, h1",
+    ) as HTMLElement | null;
+    const topInset = h1
+      ? h1.getBoundingClientRect().top - mainRect.top
+      : carrierRect.top - mainRect.top + padT;
+    let rightPad = padR;
+    if (carrier.classList.contains("gallery-view--scroll-frame")) {
+      const chrome = carrier.querySelector(
+        ".filters, .page-title",
+      ) as HTMLElement | null;
+      if (chrome) {
+        rightPad = parseFloat(getComputedStyle(chrome).paddingRight);
+      }
+    }
+    return {
+      top: topInset,
+      left: padL,
+      right: rightPad,
+    };
+  });
+}
+
+export async function sampleRouteTransitionInsets(
+  page: Page,
+  frameCount = 14,
+  frameMs = 12,
+): Promise<RouteTransitionInsets[]> {
+  const samples: RouteTransitionInsets[] = [];
+  for (let i = 0; i < frameCount; i++) {
+    await page.waitForTimeout(frameMs);
+    const sample = await readVisibleRouteInsets(page);
+    if (sample) samples.push(sample);
+  }
+  return samples;
+}
+
+export function expectStableTransitionInsets(
+  samples: RouteTransitionInsets[],
+  expectedPad = 24,
+): void {
+  expect(samples.length, "transition samples").toBeGreaterThan(0);
+  for (const [idx, s] of samples.entries()) {
+    expect(s.top, `frame ${idx} top inset`).toBeCloseTo(expectedPad, 0);
+    expect(s.left, `frame ${idx} left inset`).toBeCloseTo(expectedPad, 0);
+    expect(s.right, `frame ${idx} right inset`).toBeCloseTo(expectedPad, 0);
   }
 }
