@@ -42,8 +42,9 @@ function onClosed(): void {
 }
 </script>
 
-<style scoped>
-.legal-document-dialog :deep(.el-dialog__body) {
+<!-- append-to-body: scoped selectors do not reach the teleported dialog. -->
+<style>
+.legal-document-dialog .el-dialog__body {
   max-height: min(70vh, 640px);
   overflow-y: auto;
 }
