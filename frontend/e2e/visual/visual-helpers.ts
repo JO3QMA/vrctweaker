@@ -6,6 +6,22 @@ import {
   VISUAL_ROUTE_MASK_SELECTORS,
 } from "./visual-routes";
 
+async function waitForRouteReady(page: Page, routePath: string): Promise<void> {
+  if (routePath.includes("/gallery")) {
+    const grid = page.getByTestId("gallery-grid-scroll");
+    await grid.waitFor({ state: "visible" });
+    await page.waitForFunction(() => {
+      const thumbs = document.querySelectorAll(".thumbnail");
+      if (thumbs.length === 0) {
+        return false;
+      }
+      return Array.from(thumbs).every(
+        (img) => (img as HTMLImageElement).complete,
+      );
+    });
+  }
+}
+
 const VISUAL_FONT_CSS = `
 :root {
   --font-family-ui: "Noto Sans CJK JP", "Noto Sans JP", "Segoe UI", system-ui, sans-serif;
@@ -30,6 +46,7 @@ export async function prepareVisualRoute(
   await page.goto(routePath);
   await page.locator(".app-layout").waitFor({ state: "visible" });
   await page.locator("h1.page-title, h1").first().waitFor({ state: "visible" });
+  await waitForRouteReady(page, routePath);
   // ルート遷移フェードの完了を待つ
   await page.waitForTimeout(150);
 }
