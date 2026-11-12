@@ -1436,18 +1436,6 @@ a:hover {
   }
 }
 
-@media (max-width: 640px) {
-  .launch-args-advanced .sub-options:has(.resolution-fields) {
-    margin-left: 0;
-    margin-right: 0;
-    width: 100%;
-    max-width: 100%;
-    align-self: stretch;
-    box-sizing: border-box;
-    min-width: 0;
-  }
-}
-
 /* Empty table placeholder height (8px grid; EP default is 60px). */
 .el-table .el-table__empty-block {
   min-height: 56px;

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { E2E_VIEWPORT_WIDTHS } from "./fixtures/app-window-bounds";
 import { getMockWailsInitScript } from "./fixtures/mock-wails";
 
 const BRAND_FOCUS_RGB = "rgb(92, 156, 230)";
@@ -54,7 +55,7 @@ test.describe("Element Plus stack (App.vue path)", () => {
     expect(outline.outlineOffset).toBe("2px");
   });
 
-  for (const viewportWidth of [1280, 600] as const) {
+  for (const viewportWidth of E2E_VIEWPORT_WIDTHS) {
     test(`all concurrent toasts stay at z-index 4000 above a later dialog (viewport ${viewportWidth}px)`, async ({
       page,
     }) => {

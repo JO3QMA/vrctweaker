@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { getMockWailsInitScript } from "./fixtures/mock-wails";
+import {
+  APP_MIN_WINDOW_WIDTH,
+  E2E_VIEWPORT_WIDTHS,
+} from "./fixtures/app-window-bounds";
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(getMockWailsInitScript());
@@ -38,8 +42,12 @@ async function typeResolution(
 }
 
 for (const viewport of [
-  { width: 1280, height: 800, label: "1280px" },
-  { width: 600, height: 900, label: "600px" },
+  { width: E2E_VIEWPORT_WIDTHS[0], height: 800, label: "1280px" },
+  {
+    width: APP_MIN_WINDOW_WIDTH,
+    height: 900,
+    label: `${APP_MIN_WINDOW_WIDTH}px`,
+  },
 ] as const) {
   test(`saves custom resolution 1920x720 and keeps UI state (${viewport.label})`, async ({
     page,

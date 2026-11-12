@@ -1,5 +1,9 @@
 import { test, expect } from "@playwright/test";
 import { getMockWailsInitScript } from "./fixtures/mock-wails";
+import { APP_MIN_WINDOW_WIDTH } from "./fixtures/app-window-bounds";
+
+const MIN_VIEWPORT_WIDTH = APP_MIN_WINDOW_WIDTH;
+const MIN_VIEWPORT_LABEL = `${APP_MIN_WINDOW_WIDTH}px`;
 
 const FIELD_GAP_PX = 8;
 const INPUT_TO_ERROR_PX = 4;
@@ -233,16 +237,6 @@ async function openResolutionSurface(
     }
     await page.getByTestId("profile-card-profile-1").click();
     const viewport = page.viewportSize();
-    if (viewport && viewport.width <= 640) {
-      const layout = page.locator(".launcher-layout");
-      const collapsed = await layout.evaluate((el) =>
-        el.classList.contains("sidebar-collapsed"),
-      );
-      if (!collapsed) {
-        await page.getByTestId("sidebar-toggle-btn").click();
-        await expect(layout).toHaveClass(/sidebar-collapsed/);
-      }
-    }
     const collapseHeader = page.locator(
       ".args-collapse .el-collapse-item__header",
     );
@@ -543,12 +537,12 @@ const MAX_ERROR_STACKED_LINES = 4;
 const NARROW_FIELDS_MAX_WIDTH_PX = 280;
 const LAUNCHER_NARROW_FIELDS = ".launch-args-advanced .resolution-fields";
 
-async function openLauncherProfileSidebarOpen600(
+async function openLauncherProfileSidebarOpenAtMinWidth(
   page: import("@playwright/test").Page,
   locale: "ja" | "en",
 ) {
   await setUiLocale(page, locale);
-  await page.setViewportSize({ width: 600, height: 900 });
+  await page.setViewportSize({ width: MIN_VIEWPORT_WIDTH, height: 900 });
   await page.goto("/#/launcher");
   if (locale === "ja") {
     await expect(page.locator("h1")).toContainText("ランチャー");
@@ -732,7 +726,7 @@ test.describe("Form validation layout (design QA)", () => {
 
   for (const viewport of [
     { width: 1280, height: 800, name: "1280px" },
-    { width: 600, height: 900, name: "600px" },
+    { width: MIN_VIEWPORT_WIDTH, height: 900, name: MIN_VIEWPORT_LABEL },
   ] as const) {
     test(`launcher leaves ${FIELD_GAP_PX}px below resolution hint before next row at ${viewport.name}`, async ({
       page,
@@ -826,8 +820,10 @@ test.describe("Form validation layout (design QA)", () => {
     });
   }
 
-  test("launcher resolution row uses flex-wrap at 600px", async ({ page }) => {
-    await page.setViewportSize({ width: 600, height: 900 });
+  test(`launcher resolution row uses flex-wrap at ${MIN_VIEWPORT_LABEL}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: MIN_VIEWPORT_WIDTH, height: 900 });
     await openLauncherResolution(page);
 
     const row = page.locator(".resolution-fields");
@@ -837,13 +833,13 @@ test.describe("Form validation layout (design QA)", () => {
     const rowWidth = await row.evaluate(
       (el) => el.getBoundingClientRect().width,
     );
-    expect(rowWidth).toBeLessThanOrEqual(600);
+    expect(rowWidth).toBeLessThanOrEqual(MIN_VIEWPORT_WIDTH);
   });
 
-  test("automation editor scroll padding follows sticky action bar inset at 600px", async ({
+  test(`automation editor scroll padding follows sticky action bar inset at ${MIN_VIEWPORT_LABEL}`, async ({
     page,
   }) => {
-    await page.setViewportSize({ width: 600, height: 800 });
+    await page.setViewportSize({ width: MIN_VIEWPORT_WIDTH, height: 800 });
     await page.goto("/#/automation");
     await page.getByTestId("add-item").click();
     await page.getByTestId("add-rule").click();
@@ -888,7 +884,7 @@ test.describe("Form validation layout (design QA)", () => {
 
   for (const viewport of [
     { width: 1280, height: 800, name: "1280px" },
-    { width: 600, height: 900, name: "600px" },
+    { width: MIN_VIEWPORT_WIDTH, height: 900, name: MIN_VIEWPORT_LABEL },
   ] as const) {
     test(`automation schedule weekday error to time row is ${FIELD_GAP_PX}px at ${viewport.name}`, async ({
       page,
@@ -1096,7 +1092,7 @@ test.describe("Resolution layout acceptance (design QA)", () => {
   for (const locale of ["ja", "en"] as const) {
     for (const viewport of [
       { width: 1280, height: 600 },
-      { width: 600, height: 900 },
+      { width: MIN_VIEWPORT_WIDTH, height: 900 },
     ] as const) {
       for (const surface of RESOLUTION_SURFACES) {
         test(`${surface.name} ${locale} ${viewport.width}px: row stable and errors below row`, async ({
@@ -1265,15 +1261,15 @@ test.describe("on-demand Element Plus form chrome", () => {
   });
 });
 
-test.describe("Launcher 600 narrow column (design QA)", () => {
+test.describe(`Launcher ${MIN_VIEWPORT_LABEL} narrow column (design QA)`, () => {
   test.setTimeout(120_000);
   const LAUNCHER_SURFACE = RESOLUTION_SURFACES[0]!;
   for (const locale of ["ja", "en"] as const) {
     for (const errorMode of ["none", "width", "both"] as const) {
-      test(`launcher ${locale} 600px sidebar open (${errorMode} error): no overlap`, async ({
+      test(`launcher ${locale} ${MIN_VIEWPORT_LABEL} sidebar open (${errorMode} error): no overlap`, async ({
         page,
       }) => {
-        await openLauncherProfileSidebarOpen600(page, locale);
+        await openLauncherProfileSidebarOpenAtMinWidth(page, locale);
         if (errorMode !== "none") {
           await submitResolutionValidation(page, LAUNCHER_SURFACE, errorMode);
           const fieldsLoc = page.locator(LAUNCHER_NARROW_FIELDS);
