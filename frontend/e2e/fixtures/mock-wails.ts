@@ -34,6 +34,16 @@ export interface MockWailsOptions {
   startupAppUpdatePrompt?: boolean;
   /** App.getLanguage / initLocaleFromBackend の初期 UI 言語 */
   language?: "ja" | "en";
+  /** false のとき初回ガイド（OnboardingWizard）を表示する */
+  firstLaunchGuideCompleted?: boolean;
+  /** ギャラリーのスクリーンショット一覧を空にする */
+  emptyGallery?: boolean;
+  /** フレンド一覧を空にする */
+  emptyFriends?: boolean;
+  /** オートメーション一覧を空にする */
+  emptyAutomation?: boolean;
+  /** 遭遇ログ・プレイ時間統計を空にする */
+  emptyActivity?: boolean;
 }
 
 /** ページ読み込み前に注入する window.go スタブの初期化スクリプトを返す（中身はブラウザでそのまま実行されるため TypeScript 構文不可） */
@@ -41,15 +51,29 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
   const loggedIn = options.loggedIn ?? false;
   const startupAppUpdatePrompt = options.startupAppUpdatePrompt ?? false;
   const language = options.language ?? "ja";
+  const firstLaunchGuideCompleted = options.firstLaunchGuideCompleted ?? true;
   const languageJson = JSON.stringify(language);
+  const firstLaunchGuideCompletedJson = JSON.stringify(
+    firstLaunchGuideCompleted,
+  );
   const profilesJson = JSON.stringify(SEED_LAUNCH_PROFILES);
   const pathSettingsJson = JSON.stringify(SEED_PATH_SETTINGS);
-  const screenshotsJson = JSON.stringify(SEED_SCREENSHOTS);
-  const encountersJson = JSON.stringify(SEED_ENCOUNTERS);
+  const screenshotsJson = JSON.stringify(
+    options.emptyGallery ? [] : SEED_SCREENSHOTS,
+  );
+  const encountersJson = JSON.stringify(
+    options.emptyActivity ? [] : SEED_ENCOUNTERS,
+  );
   const friendAvatarUsageJson = JSON.stringify(SEED_FRIEND_AVATAR_USAGE);
-  const friendsJson = JSON.stringify(SEED_FRIENDS);
-  const activityStatsJson = JSON.stringify(SEED_ACTIVITY_STATS);
-  const automationItemsJson = JSON.stringify(SEED_AUTOMATION_ITEMS);
+  const friendsJson = JSON.stringify(options.emptyFriends ? [] : SEED_FRIENDS);
+  const activityStatsJson = JSON.stringify(
+    options.emptyActivity
+      ? { dailyPlaySeconds: [], topWorlds: [] }
+      : SEED_ACTIVITY_STATS,
+  );
+  const automationItemsJson = JSON.stringify(
+    options.emptyAutomation ? [] : SEED_AUTOMATION_ITEMS,
+  );
   const automationRunLogJson = JSON.stringify(SEED_AUTOMATION_RUN_LOG);
   const vrchatConfigJson = JSON.stringify(SEED_VRCHAT_CONFIG);
   const e2eTestUserIdJson = JSON.stringify(E2E_TEST_USER_ID);
@@ -372,7 +396,8 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         GetSystemLocale: () => Promise.resolve(${languageJson}),
         GetPathSettings: () => Promise.resolve(pathSettings),
         SetPathSettings: () => Promise.resolve(),
-        GetFirstLaunchGuideCompleted: () => Promise.resolve(true),
+        GetFirstLaunchGuideCompleted: () =>
+          Promise.resolve(${firstLaunchGuideCompletedJson}),
         SetFirstLaunchGuideCompleted: () => Promise.resolve(),
         GetOnboardingFolderDefaults: () =>
           Promise.resolve({

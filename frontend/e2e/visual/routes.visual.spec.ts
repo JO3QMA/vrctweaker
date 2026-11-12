@@ -1,12 +1,12 @@
-import { test, expect } from "@playwright/test";
+import { test } from "@playwright/test";
 import {
   VISUAL_LOCALES,
   VISUAL_ROUTES,
   VISUAL_VIEWPORTS,
 } from "./visual-routes";
 import {
+  captureAppLayoutScreenshot,
   installVisualTestContext,
-  maskLocatorsForRoute,
   prepareVisualRoute,
 } from "./visual-helpers";
 
@@ -16,14 +16,8 @@ for (const locale of VISUAL_LOCALES) {
       test(`${route.name} ${locale} ${viewport.label}`, async ({ page }) => {
         await installVisualTestContext(page, locale);
         await prepareVisualRoute(page, route.path, viewport);
-        const masks = maskLocatorsForRoute(page, route.name);
-        const screenshotName = `${route.name}-${locale}-${viewport.label}.png`;
-        await expect(page.locator(".app-layout")).toHaveScreenshot(
-          screenshotName,
-          {
-            mask: masks,
-          },
-        );
+        const screenshotName = `route-${route.name}-${locale}-${viewport.label}.png`;
+        await captureAppLayoutScreenshot(page, screenshotName, route.name);
       });
     }
   }

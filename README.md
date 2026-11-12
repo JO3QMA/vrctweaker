@@ -115,7 +115,7 @@ chmod +x scripts/run-visual-tests-docker.sh
 ./scripts/run-visual-tests-docker.sh --update-snapshots
 ```
 
-見た目を意図的に変えたPRでは、上記の更新コマンドで `frontend/e2e/visual/routes.visual.spec.ts-snapshots/` 内の PNG を再生成し、差分をコミットする。更新後は同じ Docker 環境で `pnpm run test:visual` を3回連続実行し、いずれも成功することを確認する。閾値は `frontend/playwright.config.ts` の `maxDiffPixelRatio: 0.001`（フォントレンダリング以外のピクセル差を許容しない）。
+見た目を意図的に変えたPRでは、上記の更新コマンドで `frontend/e2e/visual/*.visual.spec.ts-snapshots/` 内の PNG を再生成し、差分をコミットする。更新後は同じ Docker 環境で `pnpm run test:visual` を3回連続実行し、いずれも成功することを確認する。閾値は `frontend/playwright.config.ts` の `maxDiffPixelRatio: 0.001`（数pxの余白ずれも検知する想定。アンチエイリアスが揺れる部位は `frontend/e2e/visual/visual-masks.ts` で mask し、閾値を緩めない）。
 
 `make help` で Makefile の全ターゲットを確認できます。
 
