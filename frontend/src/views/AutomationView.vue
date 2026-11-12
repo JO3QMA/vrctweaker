@@ -1,5 +1,5 @@
 <template>
-  <div class="automation-view">
+  <div class="automation-view main-scroll-region">
     <h1 class="page-title">{{ t("automation.title") }}</h1>
     <div
       class="automation-tabs"

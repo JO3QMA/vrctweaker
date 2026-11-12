@@ -1,6 +1,6 @@
 <template>
   <div class="settings-frame">
-    <div class="settings-view">
+    <div class="settings-view main-scroll-region">
       <h1 class="page-title">{{ t("settings.title") }}</h1>
       <div class="settings-shell">
         <div class="settings-layout">

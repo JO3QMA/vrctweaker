@@ -1,5 +1,5 @@
 <template>
-  <div class="dashboard">
+  <div class="dashboard route-scroll-root">
     <h1 class="page-title">{{ t("routes.dashboard") }}</h1>
     <div class="quick-actions">
       <ServerStatusSection />

@@ -1,5 +1,5 @@
 <template>
-  <div class="launcher-view">
+  <div class="launcher-view route-scroll-root">
     <h1 class="page-title">{{ t("routes.launcher") }}</h1>
     <div class="launcher-layout" :class="{ 'sidebar-collapsed': !sidebarOpen }">
       <aside class="profiles-sidebar">

@@ -1,5 +1,5 @@
 <template>
-  <div class="self-profile-view">
+  <div class="self-profile-view main-scroll-region">
     <h1 class="page-title">{{ t("selfProfile.title") }}</h1>
     <VtAlert
       v-if="!isLoggedIn"
