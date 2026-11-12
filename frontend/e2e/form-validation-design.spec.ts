@@ -1247,14 +1247,14 @@ test.describe("on-demand Element Plus form chrome", () => {
       const errEl = document.querySelector(
         ".vt-config-resolution-form .resolution-fields .el-form-item__error",
       ) as HTMLElement | null;
-      const errRgb = errEl
-        ? getComputedStyle(errEl).color
-        : "";
+      const errRgb = errEl ? getComputedStyle(errEl).color : "";
       const token = getComputedStyle(document.documentElement)
         .getPropertyValue("--color-error")
         .trim();
       const probe = document.createElement("div");
-      probe.style.color = token.startsWith("var(") ? token : `var(--color-error)`;
+      probe.style.color = token.startsWith("var(")
+        ? token
+        : `var(--color-error)`;
       document.body.appendChild(probe);
       const tokenRgb = getComputedStyle(probe).color;
       probe.remove();
