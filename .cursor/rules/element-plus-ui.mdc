@@ -9,8 +9,8 @@ alwaysApply: false
 ## スタック
 
 - **element-plus**（Vue 3 向け）と **@element-plus/icons-vue** を標準 UI とする。
-- `frontend/src/main.ts` で `app.use(ElementPlus)` とアイコンを **グローバル登録**している。新規画面でも `el-*` コンポーネントをそのまま使う（このリポジトリでは unplugin によるオートインポートは未使用）。
-- スタイル: `element-plus/dist/index.css` とダーク用 `theme-chalk/dark/css-vars.css` を読み込み済み。テーマは既存の `style.css` / 各ビューに合わせる。
+- `unplugin-vue-components` / `unplugin-auto-import` の **ElementPlusResolver**（`frontend/vite-element-plus.ts`）でコンポーネントと `ElMessage` 等の関数 API をオンデマンド読み込みする。アイコンは利用箇所で `@element-plus/icons-vue` を import する。
+- スタイル: コンポーネント CSS は resolver 経由。共通のダーク用 `element-plus/theme-chalk/dark/css-vars.css` を `main.ts` で読み込み。テーマは既存の `style.css` / 各ビューに合わせる。
 
 ## 実装の指針
 

@@ -715,8 +715,10 @@ const steadycamFovSliderValue = computed(() => {
   return Math.max(STEADYCAM_FOV_MIN, Math.min(STEADYCAM_FOV_MAX, v));
 });
 
-function onSteadycamFovSliderInput(val: number) {
-  config.value.fpvSteadycamFov = Math.round(val);
+function onSteadycamFovSliderInput(val: number | number[]) {
+  const n = Array.isArray(val) ? val[0] : val;
+  if (typeof n !== "number") return;
+  config.value.fpvSteadycamFov = Math.round(n);
 }
 
 function onSteadycamFovChange(val: number | undefined) {

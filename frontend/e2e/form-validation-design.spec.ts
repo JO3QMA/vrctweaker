@@ -1208,6 +1208,63 @@ test.describe("Resolution layout acceptance (design QA)", () => {
   }
 });
 
+test.describe("on-demand Element Plus form chrome", () => {
+  const VALIDATED_FIELD_SPACING_PX = 22;
+  const CONFIG_SURFACE = RESOLUTION_SURFACES.find((s) => s.name === "config")!;
+
+  test("vt-validated-form applies 22px direct child item spacing on launcher", async ({
+    page,
+  }) => {
+    await page.goto("/#/launcher");
+    await expect(page.locator("h1")).toContainText("ランチャー");
+    await page.getByTestId("profile-card-profile-1").click();
+    const form = page.locator(".profile-editor .vt-validated-form.el-form");
+    await expect(form).toBeVisible();
+    const firstItem = form.locator(":scope > .el-form-item").first();
+    await expect(firstItem).toBeVisible();
+    await expect(firstItem).toHaveCSS(
+      "margin-bottom",
+      `${VALIDATED_FIELD_SPACING_PX}px`,
+    );
+  });
+
+  test("config resolution error uses themed form-item error chrome", async ({
+    page,
+  }) => {
+    await triggerResolutionErrorsAndMeasure(
+      page,
+      CONFIG_SURFACE,
+      "width",
+      "ja",
+    );
+    const err = resolutionFieldsLocator(page, CONFIG_SURFACE)
+      .locator(".el-form-item.is-error .el-form-item__error")
+      .first();
+    await expect(err).toBeVisible();
+    await expect(err).toHaveAttribute("role", "alert");
+    await expect(err).toHaveCSS("line-height", "16px");
+    const [errColor, tokenColor] = await page.evaluate(() => {
+      const errEl = document.querySelector(
+        ".vt-config-resolution-form .resolution-fields .el-form-item__error",
+      ) as HTMLElement | null;
+      const errRgb = errEl ? getComputedStyle(errEl).color : "";
+      const token = getComputedStyle(document.documentElement)
+        .getPropertyValue("--color-error")
+        .trim();
+      const probe = document.createElement("div");
+      probe.style.color = token.startsWith("var(")
+        ? token
+        : `var(--color-error)`;
+      document.body.appendChild(probe);
+      const tokenRgb = getComputedStyle(probe).color;
+      probe.remove();
+      return [errRgb, tokenRgb] as const;
+    });
+    expect(errColor).toBe(tokenColor);
+    expect(errColor).not.toBe("rgb(0, 0, 0)");
+  });
+});
+
 test.describe("Launcher 600 narrow column (design QA)", () => {
   test.setTimeout(120_000);
   const LAUNCHER_SURFACE = RESOLUTION_SURFACES[0]!;
