@@ -38,31 +38,6 @@
           </template>
         </el-table-column>
         <el-table-column
-          :label="t('friendAvatars.colCachePath')"
-          min-width="220"
-        >
-          <template #default="{ row }">
-            <div v-if="row.localCachePath" class="cache-path-cell">
-              <span class="mono cache-path" :title="row.localCachePath">{{
-                row.localCachePath
-              }}</span>
-              <VtButton
-                variant="tertiary"
-                link
-                :title="t('friendAvatars.copyCachePath')"
-                :aria-label="t('friendAvatars.copyCachePath')"
-                :data-testid="`friend-avatar-copy-path-${row.avatarId || row.avatarName}`"
-                @click="copyCachePath(row.localCachePath)"
-              >
-                <VtIcon size="compact"><CopyDocument /></VtIcon>
-              </VtButton>
-            </div>
-            <span v-else class="cache-missing">{{
-              t("friendAvatars.cachePathMissing")
-            }}</span>
-          </template>
-        </el-table-column>
-        <el-table-column
           :label="t('friendAvatars.colLastSeen')"
           :width="ENCOUNTER_LOG_TIME_COL_WIDTH"
         >
@@ -126,36 +101,14 @@ let loadToken = 0;
 
 const canLoad = computed(() => Boolean(props.userId?.trim()));
 
-async function copyToClipboardWithToast(
-  text: string | undefined,
-  successKey:
-    "friendAvatars.copyAvatarIdSuccess" | "friendAvatars.copyCachePathSuccess",
-  errorKey:
-    "friendAvatars.copyAvatarIdError" | "friendAvatars.copyCachePathError",
-): Promise<void> {
-  if (!text?.trim()) return;
-  try {
-    await copyTextToClipboard(text.trim());
-    showToast.success(t(successKey));
-  } catch {
-    showToast.error(t(errorKey));
-  }
-}
-
 async function copyAvatarId(avatarId?: string): Promise<void> {
-  await copyToClipboardWithToast(
-    avatarId,
-    "friendAvatars.copyAvatarIdSuccess",
-    "friendAvatars.copyAvatarIdError",
-  );
-}
-
-async function copyCachePath(path?: string): Promise<void> {
-  await copyToClipboardWithToast(
-    path,
-    "friendAvatars.copyCachePathSuccess",
-    "friendAvatars.copyCachePathError",
-  );
+  if (!avatarId?.trim()) return;
+  try {
+    await copyTextToClipboard(avatarId.trim());
+    showToast.success(t("friendAvatars.copyAvatarIdSuccess"));
+  } catch {
+    showToast.error(t("friendAvatars.copyAvatarIdError"));
+  }
 }
 
 async function load(): Promise<void> {
@@ -215,8 +168,7 @@ watch(
   white-space: nowrap;
 }
 
-.avatar-name-cell,
-.cache-path-cell {
+.avatar-name-cell {
   display: flex;
   align-items: center;
   gap: var(--space-inline-tight);
@@ -226,23 +178,5 @@ watch(
 .avatar-name {
   min-width: 0;
   word-break: break-word;
-}
-
-.cache-path {
-  flex: 1;
-  min-width: 0;
-  font-size: var(--font-size-12);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cache-missing {
-  color: var(--color-text-muted);
-  font-size: var(--font-size-12);
-}
-
-.mono {
-  font-family: ui-monospace, monospace;
 }
 </style>
