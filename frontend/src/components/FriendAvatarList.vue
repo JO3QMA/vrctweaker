@@ -12,14 +12,12 @@
         :aria-label="t('userDetail.tabAvatars')"
         :empty-text="t('friendAvatars.tableEmpty')"
       >
-        <el-table-column
-          :label="t('friendAvatars.colAvatarName')"
-          min-width="200"
-        >
+        <el-table-column :label="t('friendAvatars.colAvatarName')">
           <template #default="{ row }">
             <div class="avatar-name-cell">
               <span class="avatar-name">{{ row.avatarName }}</span>
               <VtButton
+                class="avatar-copy-btn"
                 variant="tertiary"
                 link
                 :disabled="!row.avatarId?.trim()"
@@ -178,5 +176,9 @@ watch(
 .avatar-name {
   min-width: 0;
   word-break: break-word;
+}
+
+.avatar-copy-btn {
+  flex-shrink: 0;
 }
 </style>
