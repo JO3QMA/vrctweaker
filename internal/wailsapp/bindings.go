@@ -143,24 +143,22 @@ func toScreenshotFilter(d ScreenshotSearchDTO) *media.ScreenshotFilter {
 
 // FriendAvatarUsageDTO is aggregated avatar usage for one friend profile tab row.
 type FriendAvatarUsageDTO struct {
-	AvatarName     string `json:"avatarName"`
-	AvatarID       string `json:"avatarId,omitempty"`
-	LocalCachePath string `json:"localCachePath,omitempty"`
-	UseCount       int64  `json:"useCount"`
-	FirstSeenAt    string `json:"firstSeenAt"`
-	LastSeenAt     string `json:"lastSeenAt"`
+	AvatarName  string `json:"avatarName"`
+	AvatarID    string `json:"avatarId,omitempty"`
+	UseCount    int64  `json:"useCount"`
+	FirstSeenAt string `json:"firstSeenAt"`
+	LastSeenAt  string `json:"lastSeenAt"`
 }
 
 func toFriendAvatarUsageDTOs(list []usecase.EnrichedFriendAvatarUsage) []FriendAvatarUsageDTO {
 	out := make([]FriendAvatarUsageDTO, len(list))
 	for i, row := range list {
 		out[i] = FriendAvatarUsageDTO{
-			AvatarName:     row.AvatarName,
-			AvatarID:       row.AvatarID,
-			LocalCachePath: row.LocalCachePath,
-			UseCount:       row.UseCount,
-			FirstSeenAt:    formatRFC3339(row.FirstSeenAt),
-			LastSeenAt:     formatRFC3339(row.LastSeenAt),
+			AvatarName:  row.AvatarName,
+			AvatarID:    row.AvatarID,
+			UseCount:    row.UseCount,
+			FirstSeenAt: formatRFC3339(row.FirstSeenAt),
+			LastSeenAt:  formatRFC3339(row.LastSeenAt),
 		}
 	}
 	return out
