@@ -26,31 +26,90 @@ import {
   SEED_VRCHAT_CONFIG,
   seedUserProfileNavigation,
 } from "./seed-data";
+import { E2E_STABLE_THUMBNAIL_DATA_URL } from "./e2e-stable-thumbnail";
+import { VISUAL_ACTIVITY_STATS } from "./visual-activity-stats";
+import {
+  VISUAL_RICH_AUTOMATION_ITEMS,
+  VISUAL_RICH_ENCOUNTERS,
+  VISUAL_RICH_FRIENDS,
+  VISUAL_RICH_SCREENSHOTS,
+  VISUAL_RICH_SELF_PROFILE,
+} from "./visual-scroll-seed";
 
 export interface MockWailsOptions {
   /** true のとき IsLoggedIn / GetSelfProfile がログイン済みを返す */
   loggedIn?: boolean;
   /** true のとき起動時に AppUpdateDialog が開く */
   startupAppUpdatePrompt?: boolean;
+  /** App.getLanguage / initLocaleFromBackend の初期 UI 言語 */
+  language?: "ja" | "en";
+  /** false のとき初回ガイド（OnboardingWizard）を表示する */
+  firstLaunchGuideCompleted?: boolean;
+  /** ギャラリーのスクリーンショット一覧を空にする */
+  emptyGallery?: boolean;
+  /** フレンド一覧を空にする */
+  emptyFriends?: boolean;
+  /** オートメーション一覧を空にする */
+  emptyAutomation?: boolean;
+  /** 遭遇ログ・プレイ時間統計を空にする */
+  emptyActivity?: boolean;
+  /** ビジュアル用にプレイ時間チャートの日付・値を固定する */
+  stableActivityChart?: boolean;
+  /** ビジュアル用にスクロール余白を確保する多めのシード */
+  visualRichScrollContent?: boolean;
 }
 
 /** ページ読み込み前に注入する window.go スタブの初期化スクリプトを返す（中身はブラウザでそのまま実行されるため TypeScript 構文不可） */
 export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
   const loggedIn = options.loggedIn ?? false;
   const startupAppUpdatePrompt = options.startupAppUpdatePrompt ?? false;
+  const language = options.language ?? "ja";
+  const firstLaunchGuideCompleted = options.firstLaunchGuideCompleted ?? true;
+  const languageJson = JSON.stringify(language);
+  const firstLaunchGuideCompletedJson = JSON.stringify(
+    firstLaunchGuideCompleted,
+  );
   const profilesJson = JSON.stringify(SEED_LAUNCH_PROFILES);
   const pathSettingsJson = JSON.stringify(SEED_PATH_SETTINGS);
-  const screenshotsJson = JSON.stringify(SEED_SCREENSHOTS);
-  const encountersJson = JSON.stringify(SEED_ENCOUNTERS);
+  const rich = options.visualRichScrollContent ?? false;
+  const screenshotsJson = JSON.stringify(
+    options.emptyGallery
+      ? []
+      : rich
+        ? VISUAL_RICH_SCREENSHOTS
+        : SEED_SCREENSHOTS,
+  );
+  const encountersJson = JSON.stringify(
+    options.emptyActivity
+      ? []
+      : rich
+        ? VISUAL_RICH_ENCOUNTERS
+        : SEED_ENCOUNTERS,
+  );
   const friendAvatarUsageJson = JSON.stringify(SEED_FRIEND_AVATAR_USAGE);
-  const friendsJson = JSON.stringify(SEED_FRIENDS);
-  const activityStatsJson = JSON.stringify(SEED_ACTIVITY_STATS);
-  const automationItemsJson = JSON.stringify(SEED_AUTOMATION_ITEMS);
+  const friendsJson = JSON.stringify(
+    options.emptyFriends ? [] : rich ? VISUAL_RICH_FRIENDS : SEED_FRIENDS,
+  );
+  const activityStatsPayload = options.emptyActivity
+    ? { dailyPlaySeconds: [], topWorlds: [] }
+    : options.stableActivityChart
+      ? VISUAL_ACTIVITY_STATS
+      : SEED_ACTIVITY_STATS;
+  const activityStatsJson = JSON.stringify(activityStatsPayload);
+  const automationItemsJson = JSON.stringify(
+    options.emptyAutomation
+      ? []
+      : rich
+        ? VISUAL_RICH_AUTOMATION_ITEMS
+        : SEED_AUTOMATION_ITEMS,
+  );
   const automationRunLogJson = JSON.stringify(SEED_AUTOMATION_RUN_LOG);
   const vrchatConfigJson = JSON.stringify(SEED_VRCHAT_CONFIG);
   const e2eTestUserIdJson = JSON.stringify(E2E_TEST_USER_ID);
   const e2eSelfUserIdJson = JSON.stringify(E2E_SELF_USER_ID);
-  const selfProfileJson = JSON.stringify(SEED_SELF_PROFILE);
+  const selfProfileJson = JSON.stringify(
+    loggedIn && rich ? VISUAL_RICH_SELF_PROFILE : SEED_SELF_PROFILE,
+  );
   const resolveUserProfileSeedJson = JSON.stringify(
     seedUserProfileNavigation(E2E_TEST_USER_ID),
   );
@@ -76,6 +135,9 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
     latestError: "",
   };
   const ytdlpMaintainStatusJson = JSON.stringify(ytdlpMaintainStatus);
+  const stableThumbnailDataUrlJson = JSON.stringify(
+    E2E_STABLE_THUMBNAIL_DATA_URL,
+  );
   const serverStatusJson = JSON.stringify({
     fetchState: "ok",
     summary: { indicator: "none", description: "All Systems Operational" },
@@ -363,12 +425,13 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
         SetLogRetentionDays: () => Promise.resolve(),
         GetGalleryAutoEnrichMetadata: () => Promise.resolve(true),
         SetGalleryAutoEnrichMetadata: () => Promise.resolve(),
-        GetLanguage: () => Promise.resolve('ja'),
+        GetLanguage: () => Promise.resolve(${languageJson}),
         SetLanguage: () => Promise.resolve(),
-        GetSystemLocale: () => Promise.resolve('ja'),
+        GetSystemLocale: () => Promise.resolve(${languageJson}),
         GetPathSettings: () => Promise.resolve(pathSettings),
         SetPathSettings: () => Promise.resolve(),
-        GetFirstLaunchGuideCompleted: () => Promise.resolve(true),
+        GetFirstLaunchGuideCompleted: () =>
+          Promise.resolve(${firstLaunchGuideCompletedJson}),
         SetFirstLaunchGuideCompleted: () => Promise.resolve(),
         GetOnboardingFolderDefaults: () =>
           Promise.resolve({
@@ -492,9 +555,7 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
             screenshots.find(function(s) { return s.id === id; }) || null,
           ),
         ScreenshotThumbnailDataURL: () =>
-          Promise.resolve(
-            'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
-          ),
+          Promise.resolve(${stableThumbnailDataUrlJson}),
         OpenScreenshotExternally: () => Promise.resolve(),
         RevealScreenshotInFileManager: () => Promise.resolve(),
         ScanScreenshotDir: function() {

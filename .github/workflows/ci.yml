@@ -136,3 +136,46 @@ jobs:
 
       - name: E2E Test
         run: cd frontend && pnpm run test:e2e
+
+  visual:
+    name: Playwright Visual
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.64.1-noble
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install Japanese fonts
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq fonts-noto-cjk
+          fc-cache -f
+
+      - name: Install frontend dependencies
+        run: cd frontend && pnpm install --frozen-lockfile
+
+      - name: Install Playwright chromium
+        run: cd frontend && pnpm exec playwright install chromium
+
+      - name: Visual regression tests
+        run: cd frontend && pnpm run test:visual
+
+      - name: Upload visual test artifacts
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: playwright-visual-${{ github.run_id }}
+          path: |
+            frontend/test-results/
+            frontend/playwright-report/
+          retention-days: 14
