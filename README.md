@@ -86,7 +86,7 @@ WSL 上でホストの VRChat フォルダ（`/mnt/c/...`）をマウントす�
 # 依存関係
 make install-front
 
-# pre-commit（golangci-lint / go test compile / vue-tsc）— clone 後に一度
+# pre-commit（golangci-lint / go test compile / tsrs + vue-tsc）— clone 後に一度
 make setup-hooks
 
 # 開発サーバー（ヘッドレス環境では xvfb 付き）

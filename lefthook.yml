@@ -20,4 +20,4 @@ pre-commit:
       priority: 1
       glob: "frontend/**/*.{ts,vue}"
       exclude: "(^|/)frontend/node_modules/"
-      run: bash scripts/ensure-wails-bindings.sh && cd frontend && pnpm exec vue-tsc --noEmit
+      run: bash scripts/ensure-wails-bindings.sh && cd frontend && pnpm run typecheck
