@@ -30,7 +30,7 @@ type ActivityStats struct {
 // lastObserved extends open sessions (no end time) through that instant for daily totals.
 // For topWorlds: without world_id, returns a single "_total" entry with total seconds and session count.
 func AggregatePlaySessions(sessions []*PlaySession, from, to time.Time, lastObserved *time.Time) ([]DailyPlaySeconds, []TopWorldSummary) {
-	dailyMap := make(map[string]int)
+	dailySegments := make(map[string][]playTimeInterval)
 	var totalSeconds int
 	var includedSessions int
 
@@ -73,16 +73,22 @@ func AggregatePlaySessions(sessions []*PlaySession, from, to time.Time, lastObse
 				segEnd = dayEnd
 			}
 			if !curDay.Before(fromDate) && segStart.Before(segEnd) {
-				daySec := int(segEnd.Sub(segStart).Seconds())
-				if daySec > 0 {
-					dailyMap[LocalDateISO(curDay)] += daySec
-				}
+				dayKey := LocalDateISO(curDay)
+				dailySegments[dayKey] = append(dailySegments[dayKey], playTimeInterval{
+					start: segStart,
+					end:   segEnd,
+				})
 			}
 			if !dayEnd.Before(*end) {
 				break
 			}
 			curDay = dayEnd
 		}
+	}
+
+	dailyMap := make(map[string]int, len(dailySegments))
+	for day, segments := range dailySegments {
+		dailyMap[day] = mergePlayTimeIntervalSeconds(segments)
 	}
 
 	// Build daily array in date order
@@ -105,6 +111,41 @@ func AggregatePlaySessions(sessions []*PlaySession, from, to time.Time, lastObse
 	}
 
 	return daily, topWorlds
+}
+
+type playTimeInterval struct {
+	start time.Time
+	end   time.Time
+}
+
+// mergePlayTimeIntervalSeconds returns the total seconds covered by intervals after merging overlaps.
+func mergePlayTimeIntervalSeconds(intervals []playTimeInterval) int {
+	if len(intervals) == 0 {
+		return 0
+	}
+	sorted := append([]playTimeInterval(nil), intervals...)
+	sort.Slice(sorted, func(i, j int) bool {
+		if sorted[i].start.Equal(sorted[j].start) {
+			return sorted[i].end.Before(sorted[j].end)
+		}
+		return sorted[i].start.Before(sorted[j].start)
+	})
+
+	curStart := sorted[0].start
+	curEnd := sorted[0].end
+	var total int
+	for _, iv := range sorted[1:] {
+		if !iv.start.After(curEnd) {
+			if iv.end.After(curEnd) {
+				curEnd = iv.end
+			}
+			continue
+		}
+		total += int(curEnd.Sub(curStart).Seconds())
+		curStart, curEnd = iv.start, iv.end
+	}
+	total += int(curEnd.Sub(curStart).Seconds())
+	return total
 }
 
 // effectiveTimeRange returns start and end for aggregation. Open sessions use lastObserved when set.
