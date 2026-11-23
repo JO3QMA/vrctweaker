@@ -795,6 +795,59 @@ func TestActivityUseCase_CloseOpenPlaySessionAtLastLogLine_zeroTime(t *testing.T
 	}
 }
 
+func TestActivityUseCase_EndPlaySession_splitsAcrossLocalDays(t *testing.T) {
+	ctx := context.Background()
+	const logSource = "/logs/output_log.txt"
+	uc, play, _, _ := newActivityUC(t)
+
+	start := time.Date(2025, 1, 1, 22, 0, 0, 0, time.Local)
+	end := time.Date(2025, 1, 2, 2, 0, 0, 0, time.Local)
+	if err := uc.StartPlaySession(ctx, logSource, "wrld:1~x", start); err != nil {
+		t.Fatal(err)
+	}
+	if err := uc.EndPlaySession(ctx, logSource, end); err != nil {
+		t.Fatal(err)
+	}
+	if len(play.sessions) != 2 {
+		t.Fatalf("sessions = %d, want 2 day segments", len(play.sessions))
+	}
+	wantEnd0 := activity.EndOfLocalCalendarDay(start)
+	if !play.sessions[0].EndTime.Equal(wantEnd0) {
+		t.Fatalf("segment0 EndTime = %v, want %v", play.sessions[0].EndTime, wantEnd0)
+	}
+	wantStart1 := activity.StartOfNextLocalCalendarDay(start)
+	if !play.sessions[1].StartTime.Equal(wantStart1) {
+		t.Fatalf("segment1 StartTime = %v, want %v", play.sessions[1].StartTime, wantStart1)
+	}
+	if !play.sessions[1].EndTime.Equal(end) {
+		t.Fatalf("segment1 EndTime = %v, want %v", play.sessions[1].EndTime, end)
+	}
+}
+
+func TestActivityUseCase_EndPlaySession_ignoresEndBeforeStart(t *testing.T) {
+	ctx := context.Background()
+	const logSource = "/logs/output_log.txt"
+	uc, play, _, _ := newActivityUC(t)
+
+	start := time.Date(2025, 1, 10, 20, 0, 0, 0, time.Local)
+	if err := uc.StartPlaySession(ctx, logSource, "wrld:1~x", start); err != nil {
+		t.Fatal(err)
+	}
+	end := start.Add(-time.Hour)
+	if err := uc.EndPlaySession(ctx, logSource, end); err != nil {
+		t.Fatal(err)
+	}
+	open, _ := play.FindOpenForLogSource(ctx, logSource)
+	if open == nil {
+		t.Fatal("session should stay open when end time is before start")
+	}
+	for _, s := range play.sessions {
+		if s.DurationSec != nil && *s.DurationSec < 0 {
+			t.Fatalf("negative duration persisted: %+v", s)
+		}
+	}
+}
+
 func TestActivityUseCase_EndPlaySession_noOpenSession(t *testing.T) {
 	uc, _, _, _ := newActivityUC(t)
 	if err := uc.EndPlaySession(context.Background(), "/logs/output_log.txt", time.Now()); err != nil {
