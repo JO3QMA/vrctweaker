@@ -549,10 +549,7 @@ func (uc *ActivityUseCase) EndPlaySession(ctx context.Context, logSource string,
 	if err != nil || open == nil {
 		return err
 	}
-	dur := int(endedAt.Sub(open.StartTime).Seconds())
-	open.EndTime = &endedAt
-	open.DurationSec = &dur
-	return uc.playRepo.Save(ctx, open)
+	return uc.closePlaySessionAt(ctx, open, endedAt)
 }
 
 // CloseOpenEncountersAt sets left_at on open encounter rows for one log source.

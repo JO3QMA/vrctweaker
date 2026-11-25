@@ -264,6 +264,53 @@ func TestAggregatePlaySessions(t *testing.T) {
 			},
 		},
 		{
+			name: "overlapping sessions same day are merged not double counted",
+			sessions: []*PlaySession{
+				{
+					ID:          "a",
+					StartTime:   localTime(2024, 1, 2, 10, 0, 0),
+					EndTime:     ptrTime(localTime(2024, 1, 2, 14, 0, 0)),
+					DurationSec: ptrInt(14400),
+				},
+				{
+					ID:          "b",
+					StartTime:   localTime(2024, 1, 2, 12, 0, 0),
+					EndTime:     ptrTime(localTime(2024, 1, 2, 16, 0, 0)),
+					DurationSec: ptrInt(14400),
+				},
+			},
+			from: from,
+			to:   to,
+			wantDaily: []DailyPlaySeconds{
+				{Date: "2024-01-02", Seconds: 21600},
+			},
+			wantTop: []TopWorldSummary{
+				{WorldID: "_total", WorldName: "全セッション", Seconds: 28800, Sessions: 2},
+			},
+		},
+		{
+			name: "overlapping open sessions with lastObserved stay within one day",
+			sessions: []*PlaySession{
+				{
+					ID:        "open-a",
+					StartTime: localTime(2024, 1, 2, 8, 0, 0),
+				},
+				{
+					ID:        "open-b",
+					StartTime: localTime(2024, 1, 2, 9, 0, 0),
+				},
+			},
+			from:         from,
+			to:           to,
+			lastObserved: ptrTime(localTime(2024, 1, 2, 18, 0, 0)),
+			wantDaily: []DailyPlaySeconds{
+				{Date: "2024-01-02", Seconds: 36000},
+			},
+			wantTop: []TopWorldSummary{
+				{WorldID: "_total", WorldName: "全セッション", Seconds: 68400, Sessions: 2},
+			},
+		},
+		{
 			name: "zero duration sec pointer excluded",
 			sessions: []*PlaySession{
 				{

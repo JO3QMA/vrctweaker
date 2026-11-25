@@ -92,14 +92,7 @@ func (a *App) FriendAvatarUsageByVRCUserID(vrcUserID string) ([]FriendAvatarUsag
 			}
 		}
 	}
-	cacheRoot := ""
-	if a.assetCache != nil {
-		resolved, resolveErr := a.assetCache.ResolvePath()
-		if resolveErr == nil {
-			cacheRoot = resolved
-		}
-	}
-	enriched := usecase.EnrichFriendAvatarUsages(list, friend, currentAvatarName, cacheRoot)
+	enriched := usecase.EnrichFriendAvatarUsages(list, friend, currentAvatarName)
 	return toFriendAvatarUsageDTOs(enriched), nil
 }
 
