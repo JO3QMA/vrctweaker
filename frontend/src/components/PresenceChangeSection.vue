@@ -403,7 +403,10 @@ onUnmounted(() => {
   border: 1px solid transparent;
   color: var(--color-text-inverse) !important;
   width: 100%;
+  min-width: 0;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .presence-color-buttons :deep(.presence-color-btn.el-button) {
