@@ -159,13 +159,24 @@
       "statusUnknown": "不明",
       "maintenanceScheduled": "(メンテ予告)",
       "maintenanceInProgress": "(メンテ中)",
-      "maintenanceDateTime": "{month}/{day} {hour}:{minute}",
+      "maintenanceDateTime": "{month}/{day}({weekday}) {hour}:{minute}",
       "maintenanceClock": "{hour}:{minute}",
-      "maintenanceRangeSameDay": "{start}–{endClock}",
-      "maintenanceRangeSpan": "{start}–{end}",
+      "maintenanceRangeSameDay": "{start}〜{endClock}",
+      "maintenanceRangeSpan": "{start}〜{end}",
       "maintenanceUntilClock": "〜{endClock}",
       "maintenanceUntilStamp": "〜{end}",
-      "maintenanceOpenStart": "{start}〜"
+      "maintenanceOpenStart": "{start}〜",
+      "maintenanceWhenWithZone": "{when} {tz}",
+      "maintenanceTitleMaintenanceWindow": "定期メンテナンス",
+      "maintenanceTitleScheduledMaintenance": "予定メンテナンス",
+      "maintenanceTitleEmergencyMaintenance": "緊急メンテナンス",
+      "maintenanceWeekday0": "日",
+      "maintenanceWeekday1": "月",
+      "maintenanceWeekday2": "火",
+      "maintenanceWeekday3": "水",
+      "maintenanceWeekday4": "木",
+      "maintenanceWeekday5": "金",
+      "maintenanceWeekday6": "土"
     }
   },
   "launcher": {

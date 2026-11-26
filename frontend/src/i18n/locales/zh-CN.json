@@ -159,13 +159,24 @@
       "statusUnknown": "未知",
       "maintenanceScheduled": "(维护预告)",
       "maintenanceInProgress": "(维护中)",
-      "maintenanceDateTime": "{month}月{day}日 {hour}:{minute}",
+      "maintenanceDateTime": "{month}月{day}日({weekday}) {hour}:{minute}",
       "maintenanceClock": "{hour}:{minute}",
       "maintenanceRangeSameDay": "{start}–{endClock}",
       "maintenanceRangeSpan": "{start}–{end}",
       "maintenanceUntilClock": "至{endClock}",
       "maintenanceUntilStamp": "至{end}",
-      "maintenanceOpenStart": "{start}〜"
+      "maintenanceOpenStart": "{start}〜",
+      "maintenanceWhenWithZone": "{when} {tz}",
+      "maintenanceTitleMaintenanceWindow": "定期维护",
+      "maintenanceTitleScheduledMaintenance": "计划维护",
+      "maintenanceTitleEmergencyMaintenance": "紧急维护",
+      "maintenanceWeekday0": "日",
+      "maintenanceWeekday1": "一",
+      "maintenanceWeekday2": "二",
+      "maintenanceWeekday3": "三",
+      "maintenanceWeekday4": "四",
+      "maintenanceWeekday5": "五",
+      "maintenanceWeekday6": "六"
     }
   },
   "launcher": {

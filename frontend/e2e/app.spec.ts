@@ -34,6 +34,45 @@ test.describe("VRChat Tweaker", () => {
   });
 
   test.describe("Dashboard", () => {
+    test("displays localized server maintenance details", async ({ page }) => {
+      const scheduledFor = new Date(2026, 11, 1, 10, 0, 0).toISOString();
+      const scheduledUntil = new Date(2026, 11, 1, 14, 0, 0).toISOString();
+      await page.addInitScript(
+        getMockWailsInitScript({
+          serverStatus: {
+            fetchState: "ok",
+            maintenances: [
+              {
+                id: "mapped",
+                name: "Maintenance Window",
+                status: "scheduled",
+                scheduledFor,
+                scheduledUntil,
+                updates: ["No service impact expected."],
+              },
+              {
+                id: "unknown",
+                name: "Partner API rollout",
+                status: "scheduled",
+                scheduledFor,
+                scheduledUntil,
+              },
+            ],
+          },
+        }),
+      );
+      await page.goto("/");
+      const lines = page.getByTestId("server-status-maintenance-line");
+      await expect(lines).toHaveCount(2);
+      await expect(lines.nth(0)).toContainText("定期メンテナンス");
+      const mappedLine = (await lines.nth(0).textContent()) ?? "";
+      expect(mappedLine).toMatch(
+        /12\/1\(.\) 10:00〜14:00 [A-Z]{3,5}([+-]\d{1,2})?$/,
+      );
+      expect(mappedLine.match(/JST|UTC|GMT/g)?.length).toBe(1);
+      await expect(lines.nth(1)).toContainText("Partner API rollout");
+    });
+
     test("displays presence change section", async ({ page }) => {
       await page.goto("/");
       await expect(page.locator("h1")).toContainText("ダッシュボード");
