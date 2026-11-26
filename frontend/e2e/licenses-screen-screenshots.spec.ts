@@ -13,6 +13,21 @@ for (const width of [1280, 768] as const) {
     await page.addInitScript(getMockWailsInitScript());
     await page.goto("/#/licenses");
     await page.waitForSelector(".licenses-view");
+    await page.waitForSelector(".licenses-license-tag");
+    await page.waitForFunction(() => {
+      const tag = document.querySelector(
+        ".licenses-license-tag.el-tag",
+      ) as HTMLElement | null;
+      if (!tag || !(tag.textContent ?? "").trim()) {
+        return false;
+      }
+      const style = getComputedStyle(tag);
+      return (
+        style.opacity === "1" &&
+        style.backgroundColor !== "rgba(0, 0, 0, 0)" &&
+        !tag.classList.contains("el-zoom-in-center-enter-active")
+      );
+    });
     await page.screenshot({
       path: `/opt/cursor/artifacts/licenses-screen-ja-${width}px.png`,
     });
@@ -34,6 +49,21 @@ test("licenses table scroll right edge @ 768px screenshot", async ({
   const page = await context.newPage();
   await page.addInitScript(getMockWailsInitScript());
   await page.goto("/#/licenses");
+  await page.waitForSelector(".licenses-license-tag");
+  await page.waitForFunction(() => {
+    const tag = document.querySelector(
+      ".licenses-license-tag.el-tag",
+    ) as HTMLElement | null;
+    if (!tag || !(tag.textContent ?? "").trim()) {
+      return false;
+    }
+    const style = getComputedStyle(tag);
+    return (
+      style.opacity === "1" &&
+      style.backgroundColor !== "rgba(0, 0, 0, 0)" &&
+      !tag.classList.contains("el-zoom-in-center-enter-active")
+    );
+  });
   const scroll = page.getByTestId("licenses-table-scroll-frontend");
   await scroll.evaluate((el) => {
     el.scrollLeft = el.scrollWidth;

@@ -10,6 +10,36 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(getMockWailsInitScript());
 });
 
+function parseRgbTriplet(cssColor: string): [number, number, number] | null {
+  const match = cssColor.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (!match) {
+    return null;
+  }
+  return [Number(match[1]), Number(match[2]), Number(match[3])];
+}
+
+function colorsVisiblyDiffer(foreground: string, background: string): boolean {
+  const fg = parseRgbTriplet(foreground);
+  const bg = parseRgbTriplet(background);
+  if (!fg || !bg) {
+    return foreground !== background;
+  }
+  return fg.some((channel, index) => Math.abs(channel - bg[index]!) > 12);
+}
+
+function isOpaqueBackground(backgroundColor: string): boolean {
+  if (/rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0\s*\)/.test(backgroundColor)) {
+    return false;
+  }
+  const match = backgroundColor.match(
+    /rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/,
+  );
+  if (match) {
+    return Number(match[4]) >= 0.99;
+  }
+  return parseRgbTriplet(backgroundColor) !== null;
+}
+
 async function measureLicensesTableGeometry(page: Page) {
   return page.evaluate(() => {
     const wrapper = document.querySelector(
@@ -69,9 +99,10 @@ async function measureLicensesTableGeometry(page: Page) {
       ".licenses-table__license-cell",
     ) as HTMLElement | null;
     const licenseTag = licenseCell?.querySelector(
-      ".el-tag, .vt-tag--neutral",
+      ".licenses-license-tag.el-tag",
     ) as HTMLElement | null;
     const licenseText = (licenseCell?.textContent ?? "").trim();
+    const tagStyle = licenseTag ? getComputedStyle(licenseTag) : null;
 
     const packageRight = packageName?.getBoundingClientRect().right ?? 0;
     const versionLeft = versionCell?.getBoundingClientRect().left ?? 0;
@@ -96,6 +127,14 @@ async function measureLicensesTableGeometry(page: Page) {
         licenseText,
         licenseTagWidth: licenseTag?.getBoundingClientRect().width ?? 0,
         licenseVisible: licenseText.length > 0,
+        badge: tagStyle
+          ? {
+              innerText: (licenseTag?.textContent ?? "").trim(),
+              color: tagStyle.color,
+              backgroundColor: tagStyle.backgroundColor,
+              opacity: tagStyle.opacity,
+            }
+          : null,
       },
     };
   });
@@ -189,6 +228,18 @@ test.describe("Detail views", () => {
     expect(metrics.textChecks.repoWhiteSpace).toBe("nowrap");
     expect(metrics.textChecks.licenseVisible).toBe(true);
     expect(metrics.textChecks.licenseText).toContain("MIT");
+    expect(metrics.textChecks.badge).not.toBeNull();
+    expect(metrics.textChecks.badge!.innerText.length).toBeGreaterThan(0);
+    expect(Number(metrics.textChecks.badge!.opacity)).toBe(1);
+    expect(isOpaqueBackground(metrics.textChecks.badge!.backgroundColor)).toBe(
+      true,
+    );
+    expect(
+      colorsVisiblyDiffer(
+        metrics.textChecks.badge!.color,
+        metrics.textChecks.badge!.backgroundColor,
+      ),
+    ).toBe(true);
   });
 
   test("licenses table geometry at 1280px", async ({ page }) => {
@@ -210,6 +261,18 @@ test.describe("Detail views", () => {
     expect(metrics.textChecks.packageWhiteSpace).toBe("nowrap");
     expect(metrics.textChecks.repoWhiteSpace).toBe("nowrap");
     expect(metrics.textChecks.licenseVisible).toBe(true);
+    expect(metrics.textChecks.badge).not.toBeNull();
+    expect(metrics.textChecks.badge!.innerText.length).toBeGreaterThan(0);
+    expect(Number(metrics.textChecks.badge!.opacity)).toBe(1);
+    expect(isOpaqueBackground(metrics.textChecks.badge!.backgroundColor)).toBe(
+      true,
+    );
+    expect(
+      colorsVisiblyDiffer(
+        metrics.textChecks.badge!.color,
+        metrics.textChecks.badge!.backgroundColor,
+      ),
+    ).toBe(true);
     expect(metrics.wrappers.tableWidth).toBeGreaterThanOrEqual(
       metrics.wrappers.wrapperClientWidth - 1,
     );

@@ -56,9 +56,12 @@
                 </td>
                 <td class="licenses-table__version-cell">{{ row.version }}</td>
                 <td class="licenses-table__license-cell">
-                  <VtTag size="small" variant="neutral">{{
-                    row.licenses
-                  }}</VtTag>
+                  <VtTag
+                    size="small"
+                    variant="neutral"
+                    class="licenses-license-tag"
+                    >{{ row.licenses }}</VtTag
+                  >
                 </td>
                 <td class="licenses-table__repo-cell">
                   <a
@@ -114,9 +117,12 @@
                   <span class="package-name">{{ row.path }}</span>
                 </td>
                 <td class="licenses-table__license-cell">
-                  <VtTag size="small" variant="neutral">{{
-                    row.license
-                  }}</VtTag>
+                  <VtTag
+                    size="small"
+                    variant="neutral"
+                    class="licenses-license-tag"
+                    >{{ row.license }}</VtTag
+                  >
                 </td>
                 <td class="licenses-table__repo-cell">
                   <a
@@ -256,12 +262,22 @@ const npmLicensesArray = computed(() => {
   white-space: nowrap;
 }
 
-.licenses-table__license-cell :deep(.el-tag) {
+/*
+ * VtTag neutral → effect plain → Element Plus sets --el-tag-bg-color to
+ * --el-fill-color-blank (transparent); text falls back to --el-color-info on
+ * the row stripe and reads as a faint smudge. Solid muted fill + primary text.
+ */
+.licenses-table__license-cell
+  :deep(.licenses-license-tag.el-tag.el-tag--plain) {
   --el-tag-bg-color: var(--color-bg-muted);
   --el-tag-border-color: var(--color-border);
-  --el-tag-text-color: var(--color-text-secondary);
+  --el-tag-text-color: var(--color-text-primary);
+  background-color: var(--color-bg-muted);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
   display: inline-flex;
   vertical-align: middle;
+  opacity: 1;
 }
 
 .package-name {
