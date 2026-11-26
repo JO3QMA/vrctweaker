@@ -159,13 +159,24 @@
       "statusUnknown": "Unknown",
       "maintenanceScheduled": "(Scheduled)",
       "maintenanceInProgress": "(In progress)",
-      "maintenanceDateTime": "{month}/{day}, {hour12}:{minute} {ampm}",
+      "maintenanceDateTime": "{month}/{day} ({weekday}), {hour12}:{minute} {ampm}",
       "maintenanceClock": "{hour12}:{minute} {ampm}",
       "maintenanceRangeSameDay": "{start}–{endClock}",
       "maintenanceRangeSpan": "{start}–{end}",
       "maintenanceUntilClock": "until {endClock}",
       "maintenanceUntilStamp": "until {end}",
-      "maintenanceOpenStart": "{start}〜"
+      "maintenanceOpenStart": "{start}〜",
+      "maintenanceWhenWithZone": "{when} {tz}",
+      "maintenanceTitleMaintenanceWindow": "Scheduled maintenance",
+      "maintenanceTitleScheduledMaintenance": "Scheduled maintenance",
+      "maintenanceTitleEmergencyMaintenance": "Emergency maintenance",
+      "maintenanceWeekday0": "Sun",
+      "maintenanceWeekday1": "Mon",
+      "maintenanceWeekday2": "Tue",
+      "maintenanceWeekday3": "Wed",
+      "maintenanceWeekday4": "Thu",
+      "maintenanceWeekday5": "Fri",
+      "maintenanceWeekday6": "Sat"
     }
   },
   "launcher": {

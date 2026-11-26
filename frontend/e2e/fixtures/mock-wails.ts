@@ -32,6 +32,19 @@ export interface MockWailsOptions {
   loggedIn?: boolean;
   /** true のとき起動時に AppUpdateDialog が開く */
   startupAppUpdatePrompt?: boolean;
+  /** Dashboard Server status 用の GetServerStatus 応答を上書きする */
+  serverStatus?: {
+    fetchState?: string;
+    summary?: { indicator?: string; description?: string };
+    maintenances?: Array<{
+      id?: string;
+      name?: string;
+      status?: string;
+      scheduledFor?: string;
+      scheduledUntil?: string;
+      updates?: string[];
+    }>;
+  };
 }
 
 /** ページ読み込み前に注入する window.go スタブの初期化スクリプトを返す（中身はブラウザでそのまま実行されるため TypeScript 構文不可） */
@@ -76,13 +89,15 @@ export function getMockWailsInitScript(options: MockWailsOptions = {}): string {
     latestError: "",
   };
   const ytdlpMaintainStatusJson = JSON.stringify(ytdlpMaintainStatus);
-  const serverStatusJson = JSON.stringify({
+  const serverStatus = {
     fetchState: "ok",
     summary: { indicator: "none", description: "All Systems Operational" },
     components: [],
     incidents: [],
     maintenances: [],
-  });
+    ...options.serverStatus,
+  };
+  const serverStatusJson = JSON.stringify(serverStatus);
 
   return `
     (function() {

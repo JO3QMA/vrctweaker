@@ -66,7 +66,7 @@
             popper-class="server-status-maintenance-tooltip"
           >
             <!-- prettier-ignore -->
-            <span class="server-status-maintenance-line" data-testid="server-status-maintenance-line"><span class="server-status-maintenance-label">{{ row.label }}</span>{{ row.rest }}</span>
+            <span class="server-status-maintenance-line" data-testid="server-status-maintenance-line"><span class="server-status-maintenance-label">{{ row.label }}</span> <span class="server-status-maintenance-body"><span class="server-status-maintenance-name">{{ row.name }}</span><span v-if="row.when" class="server-status-maintenance-when">・{{ row.when }}</span></span></span>
           </el-tooltip>
         </li>
         <li
@@ -104,6 +104,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
+import { appLocaleToBcp47 } from "../i18n";
 import { App, type ServerStatusDTO } from "../wails/app";
 import {
   SERVER_STATUS_PAGE_URL,
@@ -118,7 +119,7 @@ import {
 } from "../utils/serverStatus";
 import { useAsyncSectionLoad } from "../composables/useAsyncSectionLoad";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const statusPageUrl = SERVER_STATUS_PAGE_URL;
 const { loading, begin, end, isStale } = useAsyncSectionLoad({
@@ -141,7 +142,12 @@ const summaryLabel = computed(() =>
 );
 
 const maintenanceRows = computed(() =>
-  formatServerMaintenances(maintenances.value, translateMaintenance),
+  formatServerMaintenances(
+    maintenances.value,
+    translateMaintenance,
+    new Date(),
+    { locale: appLocaleToBcp47(String(locale.value)) },
+  ),
 );
 
 const showDetail = computed(
@@ -277,7 +283,7 @@ onUnmounted(() => {
 }
 
 .server-status-maintenance--scheduled .server-status-maintenance-label {
-  color: var(--color-status-maintenance);
+  color: var(--color-brand);
 }
 
 .server-status-maintenance--active {
@@ -287,6 +293,16 @@ onUnmounted(() => {
 
 .server-status-maintenance-line {
   cursor: help;
+}
+
+.server-status-maintenance-body {
+  display: inline;
+}
+
+.server-status-maintenance-when {
+  white-space: nowrap;
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-400);
 }
 
 .server-status-dot {

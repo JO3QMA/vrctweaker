@@ -10,6 +10,9 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [vue(), legalMarkdownPlugin(repoRoot)],
     test: {
+      env: {
+        TZ: "Asia/Tokyo",
+      },
       environment: "jsdom",
       globals: true,
       include: ["src/**/*.{test,spec}.{js,ts,vue}"],

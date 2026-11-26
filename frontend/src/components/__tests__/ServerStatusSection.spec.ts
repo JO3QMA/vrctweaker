@@ -113,6 +113,7 @@ describe("ServerStatusSection", () => {
   });
 
   it("renders maintenance phase, window, and tooltip", async () => {
+    vi.stubEnv("TZ", "Asia/Tokyo");
     vi.setSystemTime(new Date(2026, 11, 23, 15, 0, 0));
     mockGetServerStatus.mockResolvedValue({
       fetchState: "ok",
@@ -157,12 +158,18 @@ describe("ServerStatusSection", () => {
         .replace(/\s+/g, " ")
         .trim(),
     );
-    expect(lines).toEqual([
-      "(In progress) API until 11:45 PM",
-      "(Scheduled) Overnight 12/23, 11:00 PM–12/24, 2:00 AM",
-      "(Scheduled) Later 12/25, 1:00 AM–3:00 AM",
-      "(Scheduled) Open 12/26, 9:05 AM〜",
-    ]);
+    for (const line of lines) {
+      expect(line).toMatch(/ (GMT\+9|JST)$/);
+      expect(line.match(/(GMT\+9|JST)/g)?.length).toBe(1);
+    }
+    expect(lines[0]).toBe("(In progress) API・until 11:45 PM GMT+9");
+    expect(lines[1]).toBe(
+      "(Scheduled) Overnight・12/23 (Wed), 11:00 PM–12/24 (Thu), 2:00 AM GMT+9",
+    );
+    expect(lines[2]).toBe(
+      "(Scheduled) Later・12/25 (Fri), 1:00 AM–3:00 AM GMT+9",
+    );
+    expect(lines[3]).toBe("(Scheduled) Open・12/26 (Sat), 9:05 AM〜 GMT+9");
     expect(rows[0]?.classes()).toContain("server-status-maintenance--active");
     expect(rows[1]?.classes()).toContain(
       "server-status-maintenance--scheduled",

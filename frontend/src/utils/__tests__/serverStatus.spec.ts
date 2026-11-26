@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import en from "../../i18n/locales/en.json";
 import ja from "../../i18n/locales/ja.json";
 import ko from "../../i18n/locales/ko.json";
@@ -6,6 +6,8 @@ import zhCN from "../../i18n/locales/zh-CN.json";
 import zhTW from "../../i18n/locales/zh-TW.json";
 import {
   formatServerMaintenances,
+  localizeMaintenanceTitle,
+  localTimeZoneAbbreviation,
   serverStatusComponentColorClass,
   serverStatusComponentI18nKey,
   serverStatusSummaryColorClass,
@@ -77,6 +79,17 @@ const maintenanceKeys = [
   "maintenanceUntilClock",
   "maintenanceUntilStamp",
   "maintenanceOpenStart",
+  "maintenanceWhenWithZone",
+  "maintenanceTitleMaintenanceWindow",
+  "maintenanceTitleScheduledMaintenance",
+  "maintenanceTitleEmergencyMaintenance",
+  "maintenanceWeekday0",
+  "maintenanceWeekday1",
+  "maintenanceWeekday2",
+  "maintenanceWeekday3",
+  "maintenanceWeekday4",
+  "maintenanceWeekday5",
+  "maintenanceWeekday6",
 ] as const;
 
 function makeT(messages: {
@@ -99,9 +112,52 @@ function at(y: number, m: number, d: number, hh: number, mm: number): string {
   return new Date(y, m - 1, d, hh, mm, 0, 0).toISOString();
 }
 
+function timeZoneOnce(when: string, abbrev: string): void {
+  expect(when.endsWith(` ${abbrev}`)).toBe(true);
+  const matches = when.match(
+    new RegExp(`\\b${abbrev.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "g"),
+  );
+  expect(matches?.length ?? 0).toBe(1);
+}
+
+describe("localizeMaintenanceTitle", () => {
+  const t = makeT(ja);
+
+  it("maps known English maintenance titles", () => {
+    expect(localizeMaintenanceTitle("Maintenance Window", t)).toEqual({
+      displayName: "定期メンテナンス",
+      originalName: "Maintenance Window",
+    });
+    expect(
+      localizeMaintenanceTitle("  scheduled   maintenance  ", t).displayName,
+    ).toBe("予定メンテナンス");
+  });
+
+  it("returns the original title when no mapping exists", () => {
+    expect(localizeMaintenanceTitle("Partner API rollout", t)).toEqual({
+      displayName: "Partner API rollout",
+      originalName: "Partner API rollout",
+    });
+  });
+});
+
 describe("formatServerMaintenances", () => {
   const t = makeT(ja);
   const now = new Date(2026, 11, 23, 15, 0, 0);
+  const jaOpts = { locale: "ja", timeZoneAbbrev: "JST" };
+  const prevTz = process.env.TZ;
+
+  beforeAll(() => {
+    vi.stubEnv("TZ", "Asia/Tokyo");
+  });
+
+  afterAll(() => {
+    if (prevTz === undefined) {
+      vi.unstubAllEnvs();
+    } else {
+      vi.stubEnv("TZ", prevTz);
+    }
+  });
 
   it("defines maintenance copy in every locale", () => {
     for (const messages of [ja, en, ko, zhCN, zhTW]) {
@@ -109,18 +165,18 @@ describe("formatServerMaintenances", () => {
         expect(messages.dashboard.serverStatus[key]?.length).toBeGreaterThan(0);
       }
       expect(messages.dashboard.serverStatus.maintenanceRangeSameDay).toContain(
-        "–",
+        messages === ja ? "〜" : "–",
       );
     }
     expect(ja.dashboard.serverStatus.maintenanceScheduled).toBe("(メンテ予告)");
     expect(ja.dashboard.serverStatus.maintenanceInProgress).toBe("(メンテ中)");
   });
 
-  it("formats a scheduled notice as a same-day window", () => {
+  it("formats a scheduled notice as a same-day window with one time zone", () => {
     const [row] = formatServerMaintenances(
       [
         {
-          name: "API",
+          name: "Maintenance Window",
           status: "scheduled",
           scheduledFor: at(2026, 12, 23, 12, 34),
           scheduledUntil: at(2026, 12, 23, 23, 45),
@@ -129,10 +185,16 @@ describe("formatServerMaintenances", () => {
       ],
       t,
       now,
+      jaOpts,
     );
     expect(row?.phase).toBe("scheduled");
-    expect(row?.text).toBe("(メンテ予告) API 12/23 12:34–23:45");
-    expect(row?.tooltip).toBe("API\n\nEdge cache restart");
+    expect(row?.name).toBe("定期メンテナンス");
+    expect(row?.originalName).toBe("Maintenance Window");
+    expect(row?.text).toBe(
+      "(メンテ予告) 定期メンテナンス 12/23(水) 12:34〜23:45 JST",
+    );
+    timeZoneOnce(row?.when ?? "", "JST");
+    expect(row?.tooltip).toBe("Maintenance Window\n\nEdge cache restart");
   });
 
   it("formats in-progress maintenance with today's end clock only", () => {
@@ -147,9 +209,11 @@ describe("formatServerMaintenances", () => {
       ],
       t,
       now,
+      jaOpts,
     );
     expect(row?.phase).toBe("in_progress");
-    expect(row?.text).toBe("(メンテ中) API 〜23:45");
+    expect(row?.text).toBe("(メンテ中) API 〜23:45 JST");
+    timeZoneOnce(row?.when ?? "", "JST");
   });
 
   it("formats verifying the same way as in progress", () => {
@@ -164,8 +228,9 @@ describe("formatServerMaintenances", () => {
       ],
       t,
       now,
+      jaOpts,
     );
-    expect(row?.text).toBe("(メンテ中) API 〜23:45");
+    expect(row?.text).toBe("(メンテ中) API 〜23:45 JST");
   });
 
   it("includes the end date when an in-progress window ends on another day", () => {
@@ -180,8 +245,10 @@ describe("formatServerMaintenances", () => {
       ],
       t,
       now,
+      jaOpts,
     );
-    expect(row?.text).toBe("(メンテ中) API 〜12/24 02:00");
+    expect(row?.text).toBe("(メンテ中) API 〜12/24(木) 02:00 JST");
+    timeZoneOnce(row?.when ?? "", "JST");
   });
 
   it("formats a scheduled window that crosses midnight with both dates", () => {
@@ -196,8 +263,12 @@ describe("formatServerMaintenances", () => {
       ],
       t,
       now,
+      jaOpts,
     );
-    expect(row?.text).toBe("(メンテ予告) API 12/23 23:00–12/24 02:00");
+    expect(row?.text).toBe(
+      "(メンテ予告) API 12/23(水) 23:00〜12/24(木) 02:00 JST",
+    );
+    timeZoneOnce(row?.when ?? "", "JST");
   });
 
   it("shows only the start when a scheduled window has no end", () => {
@@ -211,8 +282,9 @@ describe("formatServerMaintenances", () => {
       ],
       t,
       now,
+      jaOpts,
     );
-    expect(row?.text).toBe("(メンテ予告) API 12/23 12:34〜");
+    expect(row?.text).toBe("(メンテ予告) API 12/23(水) 12:34〜 JST");
   });
 
   it("shows only the start when an in-progress window has no end", () => {
@@ -226,8 +298,9 @@ describe("formatServerMaintenances", () => {
       ],
       t,
       now,
+      jaOpts,
     );
-    expect(row?.text).toBe("(メンテ中) API 12/23 09:05〜");
+    expect(row?.text).toBe("(メンテ中) API 12/23(水) 09:05〜 JST");
   });
 
   it("puts in-progress windows first and omits scheduled windows that already ended", () => {
@@ -260,6 +333,7 @@ describe("formatServerMaintenances", () => {
       ],
       t,
       now,
+      jaOpts,
     );
     expect(rows.map((row) => row.name)).toEqual(["Live", "Soon", "Later"]);
   });
@@ -274,12 +348,14 @@ describe("formatServerMaintenances", () => {
       ],
       t,
       now,
+      jaOpts,
     );
     expect(row?.name).toBe("API edge cache");
     expect(row?.text).toBe("(メンテ中) API edge cache");
   });
 
-  it("formats English scheduled windows with a 12-hour clock", () => {
+  it("formats English scheduled windows with a 12-hour clock and zone once", () => {
+    const abbrev = "GMT+9";
     const [row] = formatServerMaintenances(
       [
         {
@@ -291,11 +367,16 @@ describe("formatServerMaintenances", () => {
       ],
       makeT(en),
       now,
+      { locale: "en-US", timeZoneAbbrev: abbrev },
     );
-    expect(row?.text).toBe("(Scheduled) API 12/23, 12:34 PM–11:45 PM");
+    expect(row?.text).toBe(
+      "(Scheduled) API 12/23 (Wed), 12:34 PM–11:45 PM GMT+9",
+    );
+    timeZoneOnce(row?.when ?? "", abbrev);
   });
 
   it("marks an English window with no end as open-ended", () => {
+    const abbrev = "GMT+9";
     const scheduled = formatServerMaintenances(
       [
         {
@@ -306,6 +387,7 @@ describe("formatServerMaintenances", () => {
       ],
       makeT(en),
       now,
+      { locale: "en-US", timeZoneAbbrev: abbrev },
     );
     const live = formatServerMaintenances(
       [
@@ -317,8 +399,18 @@ describe("formatServerMaintenances", () => {
       ],
       makeT(en),
       now,
+      { locale: "en-US", timeZoneAbbrev: abbrev },
     );
-    expect(scheduled[0]?.text).toBe("(Scheduled) API 12/23, 12:34 PM〜");
-    expect(live[0]?.text).toBe("(In progress) API 12/23, 9:05 AM〜");
+    expect(scheduled[0]?.text).toBe(
+      "(Scheduled) API 12/23 (Wed), 12:34 PM〜 GMT+9",
+    );
+    expect(live[0]?.text).toBe(
+      "(In progress) API 12/23 (Wed), 9:05 AM〜 GMT+9",
+    );
+  });
+
+  it("derives a local time zone abbreviation via Intl", () => {
+    const sample = new Date(2026, 11, 1, 10, 0, 0);
+    expect(localTimeZoneAbbreviation(sample, "ja")).toBe("JST");
   });
 });

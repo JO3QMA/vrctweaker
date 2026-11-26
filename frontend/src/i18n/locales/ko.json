@@ -159,13 +159,24 @@
       "statusUnknown": "알 수 없음",
       "maintenanceScheduled": "(점검 예정)",
       "maintenanceInProgress": "(점검 중)",
-      "maintenanceDateTime": "{month}/{day} {hour}:{minute}",
+      "maintenanceDateTime": "{month}/{day}({weekday}) {hour}:{minute}",
       "maintenanceClock": "{hour}:{minute}",
       "maintenanceRangeSameDay": "{start}–{endClock}",
       "maintenanceRangeSpan": "{start}–{end}",
       "maintenanceUntilClock": "〜{endClock}",
       "maintenanceUntilStamp": "〜{end}",
-      "maintenanceOpenStart": "{start}〜"
+      "maintenanceOpenStart": "{start}〜",
+      "maintenanceWhenWithZone": "{when} {tz}",
+      "maintenanceTitleMaintenanceWindow": "정기 점검",
+      "maintenanceTitleScheduledMaintenance": "예정된 점검",
+      "maintenanceTitleEmergencyMaintenance": "긴급 점검",
+      "maintenanceWeekday0": "일",
+      "maintenanceWeekday1": "월",
+      "maintenanceWeekday2": "화",
+      "maintenanceWeekday3": "수",
+      "maintenanceWeekday4": "목",
+      "maintenanceWeekday5": "금",
+      "maintenanceWeekday6": "토"
     }
   },
   "launcher": {
