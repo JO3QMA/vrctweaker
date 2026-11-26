@@ -1,17 +1,29 @@
-import { test } from "@playwright/test";
+import { test, expect } from "@playwright/test";
 import { getMockWailsInitScript } from "./fixtures/mock-wails";
 
+const scheduledFor = new Date(2026, 11, 1, 10, 0, 0).toISOString();
+const scheduledUntil = new Date(2026, 11, 1, 14, 0, 0).toISOString();
+
+/** Same maintenance payload as `server-status-maintenance-screenshots.spec.ts` (#409). */
 const serverStatusInit = getMockWailsInitScript({
   serverStatus: {
     fetchState: "ok",
-    summary: { indicator: "none", description: "All Systems Operational" },
     maintenances: [
       {
-        id: "link-demo",
+        id: "mapped",
         name: "Maintenance Window",
         status: "scheduled",
-        scheduledFor: new Date(2026, 11, 1, 10, 0, 0).toISOString(),
-        scheduledUntil: new Date(2026, 11, 1, 14, 0, 0).toISOString(),
+        scheduledFor,
+        scheduledUntil,
+        updates: ["No service impact expected during this window."],
+      },
+      {
+        id: "unknown",
+        name: "Partner API rollout",
+        status: "scheduled",
+        scheduledFor,
+        scheduledUntil,
+        updates: ["Updates stay in the tooltip."],
       },
     ],
   },
@@ -29,7 +41,9 @@ for (const width of [1280, 768] as const) {
     const page = await context.newPage();
     await page.addInitScript({ content: serverStatusInit });
     await page.goto("/");
-    await page.waitForSelector('[data-testid="server-status-section"]');
+    const lines = page.getByTestId("server-status-maintenance-line");
+    await expect(lines).toHaveCount(2);
+    await expect(lines.nth(0)).toContainText("(メンテ予告)");
     await page.getByTestId("server-status-section").screenshot({
       path: `/opt/cursor/artifacts/server-status-link-a11y-${width}px.png`,
     });
