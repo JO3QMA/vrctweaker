@@ -110,6 +110,9 @@ async function measureLicensesTableGeometry(page: Page) {
     const fade = document.querySelector(
       '[data-testid="licenses-table-scroll-fade-frontend"]',
     ) as HTMLElement | null;
+    const intro = document.querySelector(
+      ".intro-with-siblings",
+    ) as HTMLElement | null;
 
     return {
       ok: true as const,
@@ -149,6 +152,9 @@ async function measureLicensesTableGeometry(page: Page) {
           "licenses-table-scroll-fade--visible",
         ),
         pointerEvents: fade ? getComputedStyle(fade).pointerEvents : "",
+      },
+      prose: {
+        introWidth: intro?.getBoundingClientRect().width ?? 0,
       },
     };
   });
@@ -314,6 +320,8 @@ test.describe("Detail views", () => {
     expect(metrics.wrappers.scrollWidth).toBeLessThanOrEqual(
       metrics.wrappers.clientWidth + 1,
     );
+    expect(metrics.prose.introWidth).toBeLessThanOrEqual(900 + 1);
+    expect(metrics.wrappers.clientWidth).toBeGreaterThan(900);
     expect(metrics.scrollFade.visible).toBe(false);
   });
 

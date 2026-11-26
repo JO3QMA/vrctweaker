@@ -1,22 +1,26 @@
 <template>
   <div class="licenses-view route-scroll-root">
     <div class="licenses-view__content">
-      <h1 class="page-title">{{ t("licenses.title") }}</h1>
-      <p class="text-body-sm intro-with-siblings">
-        {{ t("licenses.intro") }}
-      </p>
-      <el-text
-        type="info"
-        size="small"
-        class="hint block-hint unofficial-note"
-        data-testid="licenses-unofficial-disclaimer"
-      >
-        {{ t("common.unofficialDisclaimer") }}
-      </el-text>
-      <LegalDocLinks :intro="t('legal.licensesIntro')" />
+      <div class="licenses-view__prose">
+        <h1 class="page-title">{{ t("licenses.title") }}</h1>
+        <p class="text-body-sm intro-with-siblings">
+          {{ t("licenses.intro") }}
+        </p>
+        <el-text
+          type="info"
+          size="small"
+          class="hint block-hint unofficial-note"
+          data-testid="licenses-unofficial-disclaimer"
+        >
+          {{ t("common.unofficialDisclaimer") }}
+        </el-text>
+        <LegalDocLinks :intro="t('legal.licensesIntro')" />
+      </div>
 
       <section class="licenses-section">
-        <h2 class="text-h2 section-title">{{ t("licenses.frontend") }}</h2>
+        <div class="licenses-view__prose">
+          <h2 class="text-h2 section-title">{{ t("licenses.frontend") }}</h2>
+        </div>
         <LicensesTableScrollShell
           scroll-test-id="licenses-table-scroll-frontend"
           fade-test-id="licenses-table-scroll-fade-frontend"
@@ -84,7 +88,9 @@
       </section>
 
       <section class="licenses-section">
-        <h2 class="text-h2 section-title">{{ t("licenses.backend") }}</h2>
+        <div class="licenses-view__prose">
+          <h2 class="text-h2 section-title">{{ t("licenses.backend") }}</h2>
+        </div>
         <LicensesTableScrollShell
           scroll-test-id="licenses-table-scroll-backend"
           fade-test-id="licenses-table-scroll-fade-backend"
@@ -186,7 +192,12 @@ const npmLicensesArray = computed(() => {
 
 <style scoped>
 .licenses-view__content {
+  width: 100%;
   max-width: 100%;
+}
+
+.licenses-view__prose {
+  max-width: 900px;
 }
 
 .intro-with-siblings {
