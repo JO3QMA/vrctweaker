@@ -124,10 +124,20 @@ export type MaintenanceDisplayRow = {
   label: string;
   /** Text after the label, including the leading space. */
   rest: string;
+  /** Localized or fallback display title. */
   name: string;
+  /** API-original title (tooltip and unmapped fallback). */
+  originalName: string;
   when: string;
   text: string;
   tooltip: string;
+};
+
+export type FormatServerMaintenancesOptions = {
+  /** App locale code (`ja`, `en`, …) for time zone abbreviation formatting. */
+  locale?: string;
+  /** Overrides auto-detected zone label (tests). */
+  timeZoneAbbrev?: string;
 };
 
 export type MaintenanceTranslator = (
@@ -136,6 +146,12 @@ export type MaintenanceTranslator = (
 ) => string;
 
 const MAINTENANCE_I18N = "dashboard.serverStatus";
+
+const MAINTENANCE_TITLE_KEYS: Record<string, string> = {
+  "maintenance window": `${MAINTENANCE_I18N}.maintenanceTitleMaintenanceWindow`,
+  "scheduled maintenance": `${MAINTENANCE_I18N}.maintenanceTitleScheduledMaintenance`,
+  "emergency maintenance": `${MAINTENANCE_I18N}.maintenanceTitleEmergencyMaintenance`,
+};
 
 function maintenancePhase(status: string): MaintenanceDisplayPhase {
   return status === "in_progress" || status === "verifying"
@@ -159,12 +175,17 @@ function isSameLocalDay(a: Date, b: Date): boolean {
   );
 }
 
-function dateParams(date: Date): Record<string, string> {
+function dateParams(
+  date: Date,
+  t: MaintenanceTranslator,
+): Record<string, string> {
   const hour = date.getHours();
   const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+  const weekdayKey = `${MAINTENANCE_I18N}.maintenanceWeekday${date.getDay()}`;
   return {
     month: String(date.getMonth() + 1),
     day: String(date.getDate()),
+    weekday: t(weekdayKey),
     hour: String(hour).padStart(2, "0"),
     minute: String(date.getMinutes()).padStart(2, "0"),
     hour12: String(hour12),
@@ -173,11 +194,41 @@ function dateParams(date: Date): Record<string, string> {
 }
 
 function formatStamp(date: Date, t: MaintenanceTranslator): string {
-  return t(`${MAINTENANCE_I18N}.maintenanceDateTime`, dateParams(date));
+  return t(`${MAINTENANCE_I18N}.maintenanceDateTime`, dateParams(date, t));
 }
 
 function formatClock(date: Date, t: MaintenanceTranslator): string {
-  return t(`${MAINTENANCE_I18N}.maintenanceClock`, dateParams(date));
+  return t(`${MAINTENANCE_I18N}.maintenanceClock`, dateParams(date, t));
+}
+
+/** User-local time zone abbreviation for maintenance time lines (e.g. JST). */
+export function localTimeZoneAbbreviation(
+  date: Date,
+  bcp47Locale: string,
+): string {
+  try {
+    const parts = new Intl.DateTimeFormat(bcp47Locale, {
+      timeZoneName: "short",
+    }).formatToParts(date);
+    return (
+      parts.find((part) => part.type === "timeZoneName")?.value.trim() ?? ""
+    );
+  } catch {
+    return "";
+  }
+}
+
+function finalizeWhen(
+  fragment: string,
+  timeZoneAbbrev: string,
+  t: MaintenanceTranslator,
+): string {
+  if (!fragment) return "";
+  if (!timeZoneAbbrev) return fragment;
+  return t(`${MAINTENANCE_I18N}.maintenanceWhenWithZone`, {
+    when: fragment,
+    tz: timeZoneAbbrev,
+  });
 }
 
 function formatWhen(
@@ -185,35 +236,58 @@ function formatWhen(
   start: Date | null,
   end: Date | null,
   now: Date,
+  timeZoneAbbrev: string,
   t: MaintenanceTranslator,
 ): string {
   if (phase === "in_progress") {
     if (end) {
       if (isSameLocalDay(end, now)) {
-        return t(`${MAINTENANCE_I18N}.maintenanceUntilClock`, {
-          endClock: formatClock(end, t),
-        });
+        return finalizeWhen(
+          t(`${MAINTENANCE_I18N}.maintenanceUntilClock`, {
+            endClock: formatClock(end, t),
+          }),
+          timeZoneAbbrev,
+          t,
+        );
       }
-      return t(`${MAINTENANCE_I18N}.maintenanceUntilStamp`, {
-        end: formatStamp(end, t),
-      });
+      return finalizeWhen(
+        t(`${MAINTENANCE_I18N}.maintenanceUntilStamp`, {
+          end: formatStamp(end, t),
+        }),
+        timeZoneAbbrev,
+        t,
+      );
     }
-    return start ? formatOpenStart(start, t) : "";
+    return start
+      ? finalizeWhen(formatOpenStart(start, t), timeZoneAbbrev, t)
+      : "";
   }
   if (start && end) {
     if (isSameLocalDay(start, end)) {
-      return t(`${MAINTENANCE_I18N}.maintenanceRangeSameDay`, {
-        start: formatStamp(start, t),
-        endClock: formatClock(end, t),
-      });
+      return finalizeWhen(
+        t(`${MAINTENANCE_I18N}.maintenanceRangeSameDay`, {
+          start: formatStamp(start, t),
+          endClock: formatClock(end, t),
+        }),
+        timeZoneAbbrev,
+        t,
+      );
     }
-    return t(`${MAINTENANCE_I18N}.maintenanceRangeSpan`, {
-      start: formatStamp(start, t),
-      end: formatStamp(end, t),
-    });
+    return finalizeWhen(
+      t(`${MAINTENANCE_I18N}.maintenanceRangeSpan`, {
+        start: formatStamp(start, t),
+        end: formatStamp(end, t),
+      }),
+      timeZoneAbbrev,
+      t,
+    );
   }
-  if (start) return formatOpenStart(start, t);
-  if (end) return formatStamp(end, t);
+  if (start) {
+    return finalizeWhen(formatOpenStart(start, t), timeZoneAbbrev, t);
+  }
+  if (end) {
+    return finalizeWhen(formatStamp(end, t), timeZoneAbbrev, t);
+  }
   return "";
 }
 
@@ -228,6 +302,26 @@ function visibleName(name: string): string {
     .replace(/[\r\n]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function maintenanceTitleLookupKey(name: string): string {
+  return visibleName(name).toLowerCase();
+}
+
+/** Maps a statuspage maintenance title to a localized label when known. */
+export function localizeMaintenanceTitle(
+  rawName: string,
+  t: MaintenanceTranslator,
+): { displayName: string; originalName: string } {
+  const originalName = visibleName(rawName);
+  if (!originalName) {
+    return { displayName: "", originalName: "" };
+  }
+  const i18nKey = MAINTENANCE_TITLE_KEYS[maintenanceTitleLookupKey(rawName)];
+  if (!i18nKey) {
+    return { displayName: originalName, originalName };
+  }
+  return { displayName: t(i18nKey), originalName };
 }
 
 function maintenanceTooltip(
@@ -259,11 +353,17 @@ export function formatServerMaintenances(
   items: readonly ServerMaintenanceInput[] | null | undefined,
   t: MaintenanceTranslator,
   now: Date = new Date(),
+  options?: FormatServerMaintenancesOptions,
 ): MaintenanceDisplayRow[] {
+  const bcp47Locale = options?.locale?.trim() || "en-US";
+  const timeZoneAbbrev =
+    options?.timeZoneAbbrev?.trim() ||
+    localTimeZoneAbbreviation(now, bcp47Locale);
   const prepared: Array<{
     key: string;
     phase: MaintenanceDisplayPhase;
-    name: string;
+    displayName: string;
+    originalName: string;
     start: Date | null;
     end: Date | null;
     tooltip: string;
@@ -273,7 +373,10 @@ export function formatServerMaintenances(
   (items ?? []).forEach((item, index) => {
     const status = item.status ?? "";
     const phase = maintenancePhase(status);
-    const name = visibleName(item.name ?? "");
+    const { displayName, originalName } = localizeMaintenanceTitle(
+      item.name ?? "",
+      t,
+    );
     const start = parseMaintenanceInstant(item.scheduledFor);
     const end = parseMaintenanceInstant(item.scheduledUntil);
     if (phase === "scheduled" && end && end.getTime() <= now.getTime()) {
@@ -281,12 +384,14 @@ export function formatServerMaintenances(
     }
     const id = (item.id ?? "").trim();
     prepared.push({
-      key: id || `${index}:${status}:${item.scheduledFor ?? ""}:${name}`,
+      key:
+        id || `${index}:${status}:${item.scheduledFor ?? ""}:${originalName}`,
       phase,
-      name,
+      displayName,
+      originalName,
       start,
       end,
-      tooltip: maintenanceTooltip(name, item.updates),
+      tooltip: maintenanceTooltip(originalName, item.updates),
       order: index,
     });
   });
@@ -305,14 +410,24 @@ export function formatServerMaintenances(
         ? `${MAINTENANCE_I18N}.maintenanceInProgress`
         : `${MAINTENANCE_I18N}.maintenanceScheduled`,
     );
-    const when = formatWhen(row.phase, row.start, row.end, now, t);
-    const text = when ? `${label} ${row.name} ${when}` : `${label} ${row.name}`;
+    const when = formatWhen(
+      row.phase,
+      row.start,
+      row.end,
+      now,
+      timeZoneAbbrev,
+      t,
+    );
+    const text = when
+      ? `${label} ${row.displayName} ${when}`
+      : `${label} ${row.displayName}`;
     return {
       key: row.key,
       phase: row.phase,
       label,
       rest: text.slice(label.length),
-      name: row.name,
+      name: row.displayName,
+      originalName: row.originalName,
       when,
       text,
       tooltip: row.tooltip,

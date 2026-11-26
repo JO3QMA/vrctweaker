@@ -87,6 +87,27 @@ export const ScheduledNotice: Story = {
   decorators: [withStatus(statusDto([scheduled]))],
 };
 
+const maintenanceWindow: MaintenanceFixture = {
+  id: "maintenance-window",
+  name: "Maintenance Window",
+  status: "scheduled",
+  scheduledFor: atLocal(3, 10, 0),
+  scheduledUntil: atLocal(3, 14, 0),
+  updates: ["No user-facing service impact is expected."],
+};
+
+const unknownTitle: MaintenanceFixture = {
+  id: "unknown-title",
+  name: "Partner API rollout",
+  status: "scheduled",
+  scheduledFor: atLocal(4, 18, 30),
+  scheduledUntil: atLocal(4, 20, 0),
+};
+
+export const LocalizedTitles: Story = {
+  decorators: [withStatus(statusDto([maintenanceWindow, unknownTitle]))],
+};
+
 export const InProgress: Story = {
   decorators: [
     withStatus(
