@@ -70,6 +70,22 @@ describe("LicensesView", () => {
     expect(rows.length).toBeGreaterThan(0);
   });
 
+  it("wraps license tables for horizontal scroll on narrow viewports", async () => {
+    await router.push("/licenses");
+    await router.isReady();
+    const wrapper = mount(LicensesView, {
+      global: {
+        plugins: [router],
+      },
+    });
+    expect(
+      wrapper.find('[data-testid="licenses-table-scroll-frontend"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="licenses-table-scroll-backend"]').exists(),
+    ).toBe(true);
+  });
+
   it("filters out vrchat-tweaker-frontend from npm licenses", async () => {
     await router.push("/licenses");
     await router.isReady();

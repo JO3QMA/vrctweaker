@@ -27,6 +27,8 @@ describe("LegalDocLinks", () => {
     expect(wrapper.find('[data-testid="legal-github-privacy"]').exists()).toBe(
       true,
     );
+    const githubLink = wrapper.find('[data-testid="legal-github-privacy"]');
+    expect(githubLink.classes()).toContain("github-supplement");
   });
 
   it("opens dialog in dialog presentation", async () => {

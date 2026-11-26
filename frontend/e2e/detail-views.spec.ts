@@ -72,4 +72,28 @@ test.describe("Detail views", () => {
     const rowCount = await page.locator(".licenses-table tbody tr").count();
     expect(rowCount).toBeGreaterThan(0);
   });
+
+  test("licenses table does not overflow the viewport at 768px width", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 768, height: 900 });
+    await page.goto("/#/licenses");
+    await expect(
+      page.getByTestId("licenses-table-scroll-frontend"),
+    ).toBeVisible();
+
+    const pageOverflows = await page.evaluate(() => {
+      const root = document.documentElement;
+      return root.scrollWidth > root.clientWidth + 1;
+    });
+    expect(pageOverflows).toBe(false);
+
+    const overflowX = await page.evaluate(() => {
+      const el = document.querySelector(
+        '[data-testid="licenses-table-scroll-frontend"]',
+      );
+      return el ? getComputedStyle(el).overflowX : "";
+    });
+    expect(overflowX).toBe("auto");
+  });
 });
