@@ -162,14 +162,14 @@ describe("ServerStatusSection", () => {
       expect(line).toMatch(/ (GMT\+9|JST)$/);
       expect(line.match(/(GMT\+9|JST)/g)?.length).toBe(1);
     }
-    expect(lines[0]).toBe("(In progress) API until 11:45 PM GMT+9");
+    expect(lines[0]).toBe("(In progress) API・until 11:45 PM GMT+9");
     expect(lines[1]).toBe(
-      "(Scheduled) Overnight 12/23 (Wed), 11:00 PM–12/24 (Thu), 2:00 AM GMT+9",
+      "(Scheduled) Overnight・12/23 (Wed), 11:00 PM–12/24 (Thu), 2:00 AM GMT+9",
     );
     expect(lines[2]).toBe(
-      "(Scheduled) Later 12/25 (Fri), 1:00 AM–3:00 AM GMT+9",
+      "(Scheduled) Later・12/25 (Fri), 1:00 AM–3:00 AM GMT+9",
     );
-    expect(lines[3]).toBe("(Scheduled) Open 12/26 (Sat), 9:05 AM〜 GMT+9");
+    expect(lines[3]).toBe("(Scheduled) Open・12/26 (Sat), 9:05 AM〜 GMT+9");
     expect(rows[0]?.classes()).toContain("server-status-maintenance--active");
     expect(rows[1]?.classes()).toContain(
       "server-status-maintenance--scheduled",

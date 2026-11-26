@@ -67,7 +67,7 @@ test.describe("VRChat Tweaker", () => {
       await expect(lines.nth(0)).toContainText("定期メンテナンス");
       const mappedLine = (await lines.nth(0).textContent()) ?? "";
       expect(mappedLine).toMatch(
-        /12\/1\(.\) 10:00〜14:00 [A-Z]{3,5}([+-]\d{1,2})?$/,
+        /・12\/1\(.\) 10:00〜14:00 [A-Z]{3,5}([+-]\d{1,2})?$/,
       );
       expect(mappedLine.match(/JST|UTC|GMT/g)?.length).toBe(1);
       await expect(lines.nth(1)).toContainText("Partner API rollout");

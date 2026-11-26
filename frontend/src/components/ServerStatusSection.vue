@@ -66,7 +66,7 @@
             popper-class="server-status-maintenance-tooltip"
           >
             <!-- prettier-ignore -->
-            <span class="server-status-maintenance-line" data-testid="server-status-maintenance-line"><span class="server-status-maintenance-label">{{ row.label }}</span> <span class="server-status-maintenance-body"><span class="server-status-maintenance-name">{{ row.name }}</span><span v-if="row.when" class="server-status-maintenance-when">{{ " " + row.when }}</span></span></span>
+            <span class="server-status-maintenance-line" data-testid="server-status-maintenance-line"><span class="server-status-maintenance-label">{{ row.label }}</span> <span class="server-status-maintenance-body"><span class="server-status-maintenance-name">{{ row.name }}</span><span v-if="row.when" class="server-status-maintenance-when">・{{ row.when }}</span></span></span>
           </el-tooltip>
         </li>
         <li
@@ -283,7 +283,7 @@ onUnmounted(() => {
 }
 
 .server-status-maintenance--scheduled .server-status-maintenance-label {
-  color: var(--color-status-maintenance);
+  color: var(--color-brand);
 }
 
 .server-status-maintenance--active {
@@ -301,6 +301,8 @@ onUnmounted(() => {
 
 .server-status-maintenance-when {
   white-space: nowrap;
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-400);
 }
 
 .server-status-dot {
