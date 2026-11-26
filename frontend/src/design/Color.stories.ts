@@ -52,7 +52,8 @@ function legacyAliasFor(target: string): string {
 }
 
 function swatchKind(name: string): SwatchRow["kind"] {
-  if (name.includes("--color-text-")) return "text";
+  if (name.includes("--color-text-") || name.includes("--color-link"))
+    return "text";
   if (name === "--color-border" || name.endsWith("-border")) return "border";
   return "fill";
 }
@@ -140,6 +141,8 @@ function swatchStory(
 }
 
 export const Brand: Story = swatchStory("Brand color", colorGroup("Brand"));
+
+export const Link: Story = swatchStory("Link color", colorGroup("Link"));
 
 export const Neutral: Story = swatchStory(
   "Neutral color",

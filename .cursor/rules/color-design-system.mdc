@@ -15,6 +15,7 @@ alwaysApply: false
 | カテゴリ | 変数例 |
 |----------|--------|
 | Brand | `--color-brand`, `--color-brand-hover` |
+| Link (text only) | `--color-link`, `--color-link-hover` |
 | Neutral 表面 | `--color-bg-base`, `--color-bg-elevated`, `--color-bg-muted` |
 | Neutral 文字 | `--color-text-primary`, `--color-text-secondary`, `--color-text-muted` |
 | Neutral 枠 | `--color-border` |
