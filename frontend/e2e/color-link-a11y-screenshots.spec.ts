@@ -52,14 +52,14 @@ for (const width of [1280, 768] as const) {
 
   test(`licenses page with link tokens @ ${width}px`, async ({ browser }) => {
     const context = await browser.newContext({
-      viewport: { width, height: 900 },
+      viewport: { width, height: 800 },
       locale: "ja-JP",
     });
     const page = await context.newPage();
     await page.addInitScript({ content: getMockWailsInitScript() });
     await page.goto("/#/licenses");
     await page.waitForSelector(".licenses-view");
-    await page.locator(".licenses-view").screenshot({
+    await page.screenshot({
       path: `/opt/cursor/artifacts/licenses-link-a11y-${width}px.png`,
     });
     await context.close();

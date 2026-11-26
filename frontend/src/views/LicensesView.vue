@@ -21,56 +21,67 @@
           class="licenses-table-scroll"
           data-testid="licenses-table-scroll-frontend"
         >
-          <el-table
-            :data="npmLicensesArray"
-            class="licenses-table"
-            style="width: 100%"
-            size="small"
-            stripe
-            :aria-label="t('licenses.frontend')"
-            :empty-text="t('licenses.tableEmptyFrontend')"
-          >
-            <el-table-column
-              prop="name"
-              :label="t('licenses.colPackage')"
-              min-width="200"
+          <div class="licenses-table-scroll__track">
+            <el-table
+              :data="npmLicensesArray"
+              class="licenses-table"
+              size="small"
+              stripe
+              :fit="false"
+              :aria-label="t('licenses.frontend')"
+              :empty-text="t('licenses.tableEmptyFrontend')"
             >
-              <template #default="{ row }">
-                <span class="package-name">{{ row.name }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column
-              prop="version"
-              :label="t('licenses.colVersion')"
-              width="100"
-            />
-            <el-table-column
-              :label="t('licenses.colLicense')"
-              width="120"
-              align="left"
-              class-name="licenses-table__license-cell"
-            >
-              <template #default="{ row }">
-                <VtTag size="small" variant="neutral">{{ row.licenses }}</VtTag>
-              </template>
-            </el-table-column>
-            <el-table-column :label="t('licenses.colRepo')" min-width="200">
-              <template #default="{ row }">
-                <a
-                  v-if="row.repository"
-                  :href="row.repository"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="repo-link"
-                >
-                  {{ truncateUrl(row.repository) }}
-                </a>
-                <span v-else class="text-caption repo-missing">{{
-                  t("common.dash")
-                }}</span>
-              </template>
-            </el-table-column>
-          </el-table>
+              <el-table-column
+                prop="name"
+                :label="t('licenses.colPackage')"
+                min-width="200"
+                :show-overflow-tooltip="false"
+                class-name="licenses-table__package-cell"
+              >
+                <template #default="{ row }">
+                  <span class="package-name">{{ row.name }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column
+                prop="version"
+                :label="t('licenses.colVersion')"
+                width="100"
+              />
+              <el-table-column
+                :label="t('licenses.colLicense')"
+                width="120"
+                align="left"
+                class-name="licenses-table__license-cell"
+              >
+                <template #default="{ row }">
+                  <VtTag size="small" variant="neutral">{{
+                    row.licenses
+                  }}</VtTag>
+                </template>
+              </el-table-column>
+              <el-table-column
+                :label="t('licenses.colRepo')"
+                min-width="200"
+                :show-overflow-tooltip="false"
+                class-name="licenses-table__repo-cell"
+              >
+                <template #default="{ row }">
+                  <a
+                    v-if="row.repository"
+                    :href="row.repository"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="repo-link"
+                  >
+                    {{ row.repository }}
+                  </a>
+                  <span v-else class="text-caption repo-missing">{{
+                    t("common.dash")
+                  }}</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
         </div>
       </section>
 
@@ -80,51 +91,62 @@
           class="licenses-table-scroll"
           data-testid="licenses-table-scroll-backend"
         >
-          <el-table
-            :data="goLicenses"
-            class="licenses-table"
-            style="width: 100%"
-            size="small"
-            stripe
-            :aria-label="t('licenses.backend')"
-            :empty-text="t('licenses.tableEmptyBackend')"
-          >
-            <el-table-column
-              prop="path"
-              :label="t('licenses.colPackageGo')"
-              min-width="220"
+          <div class="licenses-table-scroll__track">
+            <el-table
+              :data="goLicenses"
+              class="licenses-table"
+              size="small"
+              stripe
+              :fit="false"
+              :aria-label="t('licenses.backend')"
+              :empty-text="t('licenses.tableEmptyBackend')"
             >
-              <template #default="{ row }">
-                <span class="package-name">{{ row.path }}</span>
-              </template>
-            </el-table-column>
-            <el-table-column
-              :label="t('licenses.colLicense')"
-              width="120"
-              align="left"
-              class-name="licenses-table__license-cell"
-            >
-              <template #default="{ row }">
-                <VtTag size="small" variant="neutral">{{ row.license }}</VtTag>
-              </template>
-            </el-table-column>
-            <el-table-column :label="t('licenses.colRepo')" min-width="200">
-              <template #default="{ row }">
-                <a
-                  v-if="row.repository"
-                  :href="row.repository"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="repo-link"
-                >
-                  {{ truncateUrl(row.repository) }}
-                </a>
-                <span v-else class="text-caption repo-missing">{{
-                  t("common.dash")
-                }}</span>
-              </template>
-            </el-table-column>
-          </el-table>
+              <el-table-column
+                prop="path"
+                :label="t('licenses.colPackageGo')"
+                min-width="220"
+                :show-overflow-tooltip="false"
+                class-name="licenses-table__package-cell"
+              >
+                <template #default="{ row }">
+                  <span class="package-name">{{ row.path }}</span>
+                </template>
+              </el-table-column>
+              <el-table-column
+                :label="t('licenses.colLicense')"
+                width="120"
+                align="left"
+                class-name="licenses-table__license-cell"
+              >
+                <template #default="{ row }">
+                  <VtTag size="small" variant="neutral">{{
+                    row.license
+                  }}</VtTag>
+                </template>
+              </el-table-column>
+              <el-table-column
+                :label="t('licenses.colRepo')"
+                min-width="200"
+                :show-overflow-tooltip="false"
+                class-name="licenses-table__repo-cell"
+              >
+                <template #default="{ row }">
+                  <a
+                    v-if="row.repository"
+                    :href="row.repository"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="repo-link"
+                  >
+                    {{ row.repository }}
+                  </a>
+                  <span v-else class="text-caption repo-missing">{{
+                    t("common.dash")
+                  }}</span>
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
         </div>
       </section>
     </div>
@@ -164,16 +186,6 @@ const npmLicensesArray = computed(() => {
     })
     .sort((a, b) => a.name.localeCompare(b.name));
 });
-
-function truncateUrl(url: string): string {
-  try {
-    const u = new URL(url);
-    const path = u.pathname.replace(/\/$/, "");
-    return path ? `${u.hostname}${path}` : u.hostname;
-  } catch {
-    return url;
-  }
-}
 </script>
 
 <style scoped>
@@ -227,8 +239,17 @@ function truncateUrl(url: string): string {
   color: var(--color-text-secondary);
 }
 
+.licenses-table {
+  width: 100%;
+}
+
 .licenses-table :deep(.licenses-table__license-cell .cell) {
   text-align: left;
+}
+
+.licenses-table-scroll {
+  width: 100%;
+  max-width: 100%;
 }
 
 @media (max-width: 768px) {
@@ -236,7 +257,54 @@ function truncateUrl(url: string): string {
     overflow-x: auto;
   }
 
-  .licenses-table-scroll .package-name {
+  .licenses-table-scroll__track {
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .licenses-table-scroll .licenses-table {
+    width: auto;
+    min-width: 100%;
+  }
+
+  .licenses-table :deep(.el-table__inner-wrapper),
+  .licenses-table :deep(.el-table__header-wrapper),
+  .licenses-table :deep(.el-table__body-wrapper) {
+    overflow: visible;
+  }
+
+  .licenses-table :deep(.el-table__body),
+  .licenses-table :deep(.el-table__header),
+  .licenses-table :deep(table) {
+    width: max-content;
+    min-width: 100%;
+    table-layout: auto;
+  }
+
+  .licenses-table :deep(td.licenses-table__package-cell),
+  .licenses-table :deep(td.licenses-table__repo-cell) {
+    width: max-content;
+    max-width: none;
+    overflow: visible;
+  }
+
+  .licenses-table :deep(.licenses-table__package-cell .cell),
+  .licenses-table :deep(.licenses-table__repo-cell .cell),
+  .licenses-table :deep(.licenses-table__license-cell .cell) {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+    max-width: none;
+    width: max-content;
+    min-width: 100%;
+  }
+
+  .licenses-table-scroll .package-name,
+  .licenses-table-scroll .repo-link {
+    display: inline-block;
+    max-width: none;
+    overflow: visible;
+    text-overflow: clip;
     white-space: nowrap;
   }
 }

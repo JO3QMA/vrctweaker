@@ -70,6 +70,29 @@ describe("LicensesView", () => {
     expect(rows.length).toBeGreaterThan(0);
   });
 
+  it("disables overflow tooltips on package and repository columns", async () => {
+    await router.push("/licenses");
+    await router.isReady();
+    const wrapper = mount(LicensesView, {
+      global: {
+        plugins: [router],
+      },
+    });
+    const columns = wrapper.findAllComponents({ name: "ElTableColumn" });
+    const packageCol = columns.find((c) =>
+      (c.props("className" as never) as string | undefined)?.includes(
+        "licenses-table__package-cell",
+      ),
+    );
+    const repoCol = columns.find((c) =>
+      (c.props("className" as never) as string | undefined)?.includes(
+        "licenses-table__repo-cell",
+      ),
+    );
+    expect(packageCol?.props("showOverflowTooltip")).toBe(false);
+    expect(repoCol?.props("showOverflowTooltip")).toBe(false);
+  });
+
   it("wraps license tables for horizontal scroll on narrow viewports", async () => {
     await router.push("/licenses");
     await router.isReady();
