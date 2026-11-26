@@ -143,6 +143,9 @@ function onTermsClick(event: MouseEvent): void {
   margin: 0;
   padding-left: 1.25rem;
   color: var(--color-text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-action-group);
 }
 
 .legal-link {
@@ -168,18 +171,24 @@ function onTermsClick(event: MouseEvent): void {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-inline-tight);
+  gap: var(--space-action-group);
 }
 
 .legal-doc-item {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 2px;
+  gap: var(--space-inline-tight);
 }
 
 .github-supplement {
   font-size: var(--font-size-12);
-  color: var(--color-text-secondary);
+  color: var(--color-link);
+  text-decoration: none;
+}
+
+.github-supplement:hover {
+  color: var(--color-link-hover);
+  text-decoration: underline;
 }
 </style>

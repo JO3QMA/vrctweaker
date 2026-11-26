@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createRouter, createWebHashHistory } from "vue-router";
 import LicensesView from "../LicensesView.vue";
+import { formatRepositoryDisplayUrl } from "../../utils/formatRepositoryDisplayUrl";
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -68,6 +69,55 @@ describe("LicensesView", () => {
     expect(goSection).toBeDefined();
     const rows = goSection!.findAll("tbody tr");
     expect(rows.length).toBeGreaterThan(0);
+  });
+
+  it("uses native tables for aligned header and body columns", async () => {
+    await router.push("/licenses");
+    await router.isReady();
+    const wrapper = mount(LicensesView, {
+      global: {
+        plugins: [router],
+      },
+    });
+    const tables = wrapper.findAll("table.licenses-table");
+    expect(tables.length).toBe(2);
+    expect(tables[0].find("thead th").exists()).toBe(true);
+    expect(
+      tables[0].find("tbody .licenses-table__license-cell .el-tag").exists(),
+    ).toBe(true);
+  });
+
+  it("wraps license tables for horizontal scroll on narrow viewports", async () => {
+    await router.push("/licenses");
+    await router.isReady();
+    const wrapper = mount(LicensesView, {
+      global: {
+        plugins: [router],
+      },
+    });
+    expect(
+      wrapper.find('[data-testid="licenses-table-scroll-frontend"]').exists(),
+    ).toBe(true);
+    expect(
+      wrapper.find('[data-testid="licenses-table-scroll-backend"]').exists(),
+    ).toBe(true);
+  });
+
+  it("shows repository links without scheme but keeps https href", async () => {
+    await router.push("/licenses");
+    await router.isReady();
+    const wrapper = mount(LicensesView, {
+      global: {
+        plugins: [router],
+      },
+    });
+    const link = wrapper.find(".repo-link");
+    expect(link.exists()).toBe(true);
+    const href = link.attributes("href") ?? "";
+    expect(href).toMatch(/^https:\/\//);
+    const text = link.text();
+    expect(text).not.toMatch(/^https?:\/\//);
+    expect(text).toBe(formatRepositoryDisplayUrl(href));
   });
 
   it("filters out vrchat-tweaker-frontend from npm licenses", async () => {

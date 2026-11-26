@@ -38,6 +38,14 @@ describe("link color contrast (WCAG AA normal text)", () => {
     );
   });
 
+  it("keeps license badge text readable on muted badge fill (LicensesView)", () => {
+    const badgeBg = hexFromStyleCss("--color-bg-muted", ":root");
+    const badgeText = hexFromStyleCss("--color-text-primary", ":root");
+    expect(wcagContrastRatio(badgeText, badgeBg)).toBeGreaterThanOrEqual(
+      WCAG_AA_NORMAL_TEXT,
+    );
+  });
+
   it("keeps reserved light-theme link tokens on light surfaces", () => {
     const link = hexFromStyleCss("--color-link", "html.light");
     const hover = hexFromStyleCss("--color-link-hover", "html.light");
