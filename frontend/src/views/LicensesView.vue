@@ -17,9 +17,9 @@
 
       <section class="licenses-section">
         <h2 class="text-h2 section-title">{{ t("licenses.frontend") }}</h2>
-        <div
-          class="licenses-table-scroll"
-          data-testid="licenses-table-scroll-frontend"
+        <LicensesTableScrollShell
+          scroll-test-id="licenses-table-scroll-frontend"
+          fade-test-id="licenses-table-scroll-fade-frontend"
         >
           <table
             class="licenses-table licenses-data-table"
@@ -71,7 +71,7 @@
                     rel="noopener noreferrer"
                     class="repo-link"
                   >
-                    {{ row.repository }}
+                    {{ formatRepositoryDisplayUrl(row.repository) }}
                   </a>
                   <span v-else class="text-caption repo-missing">{{
                     t("common.dash")
@@ -80,14 +80,14 @@
               </tr>
             </tbody>
           </table>
-        </div>
+        </LicensesTableScrollShell>
       </section>
 
       <section class="licenses-section">
         <h2 class="text-h2 section-title">{{ t("licenses.backend") }}</h2>
-        <div
-          class="licenses-table-scroll"
-          data-testid="licenses-table-scroll-backend"
+        <LicensesTableScrollShell
+          scroll-test-id="licenses-table-scroll-backend"
+          fade-test-id="licenses-table-scroll-fade-backend"
         >
           <table
             class="licenses-table licenses-data-table"
@@ -132,7 +132,7 @@
                     rel="noopener noreferrer"
                     class="repo-link"
                   >
-                    {{ row.repository }}
+                    {{ formatRepositoryDisplayUrl(row.repository) }}
                   </a>
                   <span v-else class="text-caption repo-missing">{{
                     t("common.dash")
@@ -141,7 +141,7 @@
               </tr>
             </tbody>
           </table>
-        </div>
+        </LicensesTableScrollShell>
       </section>
     </div>
   </div>
@@ -152,6 +152,8 @@ import { computed } from "vue";
 import { useI18n } from "vue-i18n";
 import VtTag from "../components/VtTag.vue";
 import LegalDocLinks from "../components/LegalDocLinks.vue";
+import LicensesTableScrollShell from "./licenses/LicensesTableScrollShell.vue";
+import { formatRepositoryDisplayUrl } from "../utils/formatRepositoryDisplayUrl";
 
 const { t } = useI18n();
 import npmLicensesData from "../data/licenses.json";
@@ -184,7 +186,7 @@ const npmLicensesArray = computed(() => {
 
 <style scoped>
 .licenses-view__content {
-  max-width: 900px;
+  max-width: 100%;
 }
 
 .intro-with-siblings {
@@ -211,12 +213,6 @@ const npmLicensesArray = computed(() => {
 .section-title {
   margin: 0 0 var(--space-block);
   color: var(--color-text-primary);
-}
-
-.licenses-table-scroll {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
 }
 
 .licenses-data-table {

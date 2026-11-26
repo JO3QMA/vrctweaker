@@ -107,12 +107,18 @@ async function measureLicensesTableGeometry(page: Page) {
     const packageRight = packageName?.getBoundingClientRect().right ?? 0;
     const versionLeft = versionCell?.getBoundingClientRect().left ?? 0;
 
+    const fade = document.querySelector(
+      '[data-testid="licenses-table-scroll-fade-frontend"]',
+    ) as HTMLElement | null;
+
     return {
       ok: true as const,
       pageOverflows,
       wrappers: {
         overflowX: getComputedStyle(wrapper).overflowX,
-        scrollable: wrapper.scrollWidth > wrapper.clientWidth,
+        scrollable: wrapper.scrollWidth > wrapper.clientWidth + 1,
+        scrollWidth: wrapper.scrollWidth,
+        clientWidth: wrapper.clientWidth,
         tableWidth: table.getBoundingClientRect().width,
         wrapperClientWidth: wrapper.clientWidth,
       },
@@ -124,6 +130,8 @@ async function measureLicensesTableGeometry(page: Page) {
           ? getComputedStyle(packageName).whiteSpace
           : "",
         repoWhiteSpace: repoLink ? getComputedStyle(repoLink).whiteSpace : "",
+        repoHref: repoLink?.getAttribute("href") ?? "",
+        repoDisplayText: (repoLink?.textContent ?? "").trim(),
         licenseText,
         licenseTagWidth: licenseTag?.getBoundingClientRect().width ?? 0,
         licenseVisible: licenseText.length > 0,
@@ -135,6 +143,12 @@ async function measureLicensesTableGeometry(page: Page) {
               opacity: tagStyle.opacity,
             }
           : null,
+      },
+      scrollFade: {
+        visible: fade?.classList.contains(
+          "licenses-table-scroll-fade--visible",
+        ),
+        pointerEvents: fade ? getComputedStyle(fade).pointerEvents : "",
       },
     };
   });
@@ -209,6 +223,12 @@ test.describe("Detail views", () => {
     await expect(
       page.getByTestId("licenses-table-scroll-frontend"),
     ).toBeVisible();
+    await page.waitForFunction(() => {
+      const wrapper = document.querySelector(
+        '[data-testid="licenses-table-scroll-frontend"]',
+      ) as HTMLElement | null;
+      return wrapper != null && wrapper.scrollWidth > wrapper.clientWidth + 1;
+    });
 
     const metrics = await measureLicensesTableGeometry(page);
     expect(metrics.ok, metrics.ok ? "" : metrics.reason).toBe(true);
@@ -240,6 +260,17 @@ test.describe("Detail views", () => {
         metrics.textChecks.badge!.backgroundColor,
       ),
     ).toBe(true);
+    expect(metrics.textChecks.repoHref).toMatch(/^https:\/\//);
+    expect(metrics.textChecks.repoDisplayText).not.toMatch(/^https?:\/\//);
+    await page.waitForFunction(() => {
+      const fade = document.querySelector(
+        '[data-testid="licenses-table-scroll-fade-frontend"]',
+      );
+      return fade?.classList.contains("licenses-table-scroll-fade--visible");
+    });
+    const fadeMetrics = await measureLicensesTableGeometry(page);
+    expect(fadeMetrics.scrollFade?.visible).toBe(true);
+    expect(fadeMetrics.scrollFade?.pointerEvents).toBe("none");
   });
 
   test("licenses table geometry at 1280px", async ({ page }) => {
@@ -273,8 +304,40 @@ test.describe("Detail views", () => {
         metrics.textChecks.badge!.backgroundColor,
       ),
     ).toBe(true);
-    expect(metrics.wrappers.tableWidth).toBeGreaterThanOrEqual(
-      metrics.wrappers.wrapperClientWidth - 1,
+    expect(metrics.textChecks.repoHref).toMatch(/^https:\/\//);
+    expect(metrics.textChecks.repoDisplayText).not.toMatch(/^https?:\/\//);
+    if (metrics.wrappers.scrollable) {
+      throw new Error(
+        `licenses table still overflows at 1280px: scrollWidth=${metrics.wrappers.scrollWidth}, clientWidth=${metrics.wrappers.clientWidth}, tableWidth=${metrics.wrappers.tableWidth}`,
+      );
+    }
+    expect(metrics.wrappers.scrollWidth).toBeLessThanOrEqual(
+      metrics.wrappers.clientWidth + 1,
     );
+    expect(metrics.scrollFade.visible).toBe(false);
+  });
+
+  test("licenses table scroll fade hides at right edge @ 768px", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 768, height: 800 });
+    await page.goto("/#/licenses");
+    const scroll = page.getByTestId("licenses-table-scroll-frontend");
+    await expect(scroll).toBeVisible();
+    await page.waitForFunction(() => {
+      const fade = document.querySelector(
+        '[data-testid="licenses-table-scroll-fade-frontend"]',
+      );
+      return fade?.classList.contains("licenses-table-scroll-fade--visible");
+    });
+    await scroll.evaluate((el) => {
+      el.scrollLeft = el.scrollWidth;
+    });
+    await page.waitForFunction(() => {
+      const fade = document.querySelector(
+        '[data-testid="licenses-table-scroll-fade-frontend"]',
+      );
+      return !fade?.classList.contains("licenses-table-scroll-fade--visible");
+    });
   });
 });

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createRouter, createWebHashHistory } from "vue-router";
 import LicensesView from "../LicensesView.vue";
+import { formatRepositoryDisplayUrl } from "../../utils/formatRepositoryDisplayUrl";
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -100,6 +101,23 @@ describe("LicensesView", () => {
     expect(
       wrapper.find('[data-testid="licenses-table-scroll-backend"]').exists(),
     ).toBe(true);
+  });
+
+  it("shows repository links without scheme but keeps https href", async () => {
+    await router.push("/licenses");
+    await router.isReady();
+    const wrapper = mount(LicensesView, {
+      global: {
+        plugins: [router],
+      },
+    });
+    const link = wrapper.find(".repo-link");
+    expect(link.exists()).toBe(true);
+    const href = link.attributes("href") ?? "";
+    expect(href).toMatch(/^https:\/\//);
+    const text = link.text();
+    expect(text).not.toMatch(/^https?:\/\//);
+    expect(text).toBe(formatRepositoryDisplayUrl(href));
   });
 
   it("filters out vrchat-tweaker-frontend from npm licenses", async () => {
