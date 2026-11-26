@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted（grill-with-docs セッションで合意）
+Accepted（grill-with-docs セッションで合意）  
+Amendment Accepted（2026-11-26、Issue #243 / PR #331）— `AvatarSwitch` の SessionCorrelator 消費（下記 Context・Decision 6 改訂）。
 
 ## Context
 
@@ -10,7 +11,7 @@ Accepted（grill-with-docs セッションで合意）
 - ログ行のパース（`LogParser`）と、インスタンス／ワールド文脈の付与（`sessionWorldID` / `pendingDestination` / `lastLeft*` 等）は別の関心事だが、`ActivityEventHandler`（infrastructure）に混在していた
 - 相関ルールは VRChat の行順序に依存する（例: `OnPlayerLeftRoom` を SessionEnd にしない、`Destination set` 直後の `OnPlayerLeft` は旧インスタンスに帰属、ファイル境界で状態をリセット）
 - 相関のテストは `activity_handler_test.go` にあるが、ActivityUseCase + リポジトリスタブ経由でしか検証できず、永続化とルールが結合している
-- `AvatarSwitch` / `VideoPlayback` はパースされるが Activity では未消費（今回のスコープ外）
+- 当初は `AvatarSwitch` / `VideoPlayback` をパースするが Activity では未消費（当時のスコープ外）としていた。**2026-11-26 改訂（#243 / #331）**: `AvatarSwitch` は SessionCorrelator が `RecordFriendAvatarSwitchCmd` に変換し、Encounter ではなく専用の friend avatar observation ストアへ永続化する。UI はフレンド詳細の Avatar リストタブでアバター別の集計利用のみ（時系列履歴は出さない）。保存期間は Activity retention に追随してローテーション。`VideoPlayback` の消費は ADR 0016 を参照。
 
 ## Decision
 
@@ -19,7 +20,7 @@ Accepted（grill-with-docs セッションで合意）
 3. **ファイル境界**は infrastructure の ingest オーケストレーターが、新ファイルを offset 0 から読む直前に `correlator.Reset()` を呼ぶ。Correlator はファイルパスを知らない
 4. **ファイル末尾の後処理**（`CloseOpenEncountersAt` / `CloseOpenPlaySessionAtLastLogLine`）は行単位 correlator の外とし、bootstrap 完了時にオーケストレーターが明示的に呼ぶ
 5. **UI 通知**（遭遇ログ変更）は Wails 固有の関心とし、correlator は知らない。Adapter が encounter 系 command 適用後に `NotifyEncounterLogChanged` を実行する（bootstrap 中は抑制）
-6. **未消費の ParsedEvent**（`AvatarSwitch` / `VideoPlayback`）はパーサーに残し、correlator は空 command を返す（スコープ外）
+6. **ParsedEvent の correlator 消費**（改訂）: 当初は `AvatarSwitch` / `VideoPlayback` を未消費（空 command）とした。**2026-11-26 改訂**: `AvatarSwitch` は `RecordFriendAvatarSwitchCmd` を返す（#243 / #331）。`VideoPlayback` の未消費条項は ADR 0016 で置き換え済み。
 7. **移行**は 2 段階 PR: PR1 で correlator・command・`ApplyCommand`・domain テスト（挙動不変）、PR2 で adapter 配線と `ActivityEventHandler` 相関ロジック削除
 8. **ponytail #138（2026-06）**: sealed `ActivityCommand` interface は廃止。command は具象 struct のまま、correlator は `[]any` を返し `ApplyCommand(ctx, any)` の type switch で永続化する
 

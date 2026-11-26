@@ -49,7 +49,8 @@ func (c *SessionCorrelator) Restore(snap SessionCorrelator) {
 	*c = snap.Snapshot()
 }
 
-// Apply consumes one parsed event and returns commands to persist. AvatarSwitch yields nil.
+// Apply consumes one parsed event and returns commands to persist.
+// AvatarSwitch yields RecordFriendAvatarSwitchCmd when avatar and display names are set (otherwise nil).
 func (c *SessionCorrelator) Apply(event ParsedEvent) []any {
 	if event == nil {
 		return nil
