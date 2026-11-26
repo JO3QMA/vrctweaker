@@ -15,7 +15,7 @@ Accepted（grill-with-docs / Issue #176）
 1. **SessionCorrelator を拡張**して Video playback を消費する（専用 correlator や adapter 内 pending マップは採らない）
 2. 同一 Log source の session／world 状態と **Video playback correlation**（URL・FIFO）を同居させる。ファイル境界の `Reset`・Log replay は既存と同じライフサイクル
 3. 永続化は fine-grained command → usecase（Encounter / Play session と同型）。UI 通知は Encounter 用イベントと分離（**Video playback history refresh**）
-4. ADR 0002 の「VideoPlayback 未消費」条項は、本 ADR により **Video playback については置き換え**（AvatarSwitch の扱いは 0002 のまま未消費でよい）
+4. ADR 0002 の「VideoPlayback 未消費」条項は、本 ADR により **Video playback については置き換え**。`AvatarSwitch` は ADR 0002 改訂（Issue #243 / PR #331）により SessionCorrelator で別途消費され、本 ADR の対象外。
 
 ## Consequences
 
