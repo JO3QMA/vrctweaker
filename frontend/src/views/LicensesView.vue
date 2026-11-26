@@ -21,51 +21,46 @@
           class="licenses-table-scroll"
           data-testid="licenses-table-scroll-frontend"
         >
-          <div class="licenses-table-scroll__track">
-            <el-table
-              :data="npmLicensesArray"
-              class="licenses-table"
-              size="small"
-              stripe
-              :fit="false"
-              :aria-label="t('licenses.frontend')"
-              :empty-text="t('licenses.tableEmptyFrontend')"
-            >
-              <el-table-column
-                prop="name"
-                :label="t('licenses.colPackage')"
-                min-width="200"
-                :show-overflow-tooltip="false"
-                class-name="licenses-table__package-cell"
+          <table
+            class="licenses-table licenses-data-table"
+            :aria-label="t('licenses.frontend')"
+          >
+            <thead>
+              <tr>
+                <th scope="col" class="licenses-table__package-col">
+                  {{ t("licenses.colPackage") }}
+                </th>
+                <th scope="col" class="licenses-table__version-col">
+                  {{ t("licenses.colVersion") }}
+                </th>
+                <th scope="col" class="licenses-table__license-col">
+                  {{ t("licenses.colLicense") }}
+                </th>
+                <th scope="col" class="licenses-table__repo-col">
+                  {{ t("licenses.colRepo") }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="npmLicensesArray.length === 0">
+                <td colspan="4" class="licenses-table__empty">
+                  {{ t("licenses.tableEmptyFrontend") }}
+                </td>
+              </tr>
+              <tr
+                v-for="row in npmLicensesArray"
+                :key="`${row.name}@${row.version}`"
               >
-                <template #default="{ row }">
+                <td class="licenses-table__package-cell">
                   <span class="package-name">{{ row.name }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column
-                prop="version"
-                :label="t('licenses.colVersion')"
-                width="100"
-              />
-              <el-table-column
-                :label="t('licenses.colLicense')"
-                width="120"
-                align="left"
-                class-name="licenses-table__license-cell"
-              >
-                <template #default="{ row }">
+                </td>
+                <td class="licenses-table__version-cell">{{ row.version }}</td>
+                <td class="licenses-table__license-cell">
                   <VtTag size="small" variant="neutral">{{
                     row.licenses
                   }}</VtTag>
-                </template>
-              </el-table-column>
-              <el-table-column
-                :label="t('licenses.colRepo')"
-                min-width="200"
-                :show-overflow-tooltip="false"
-                class-name="licenses-table__repo-cell"
-              >
-                <template #default="{ row }">
+                </td>
+                <td class="licenses-table__repo-cell">
                   <a
                     v-if="row.repository"
                     :href="row.repository"
@@ -78,10 +73,10 @@
                   <span v-else class="text-caption repo-missing">{{
                     t("common.dash")
                   }}</span>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
@@ -91,46 +86,39 @@
           class="licenses-table-scroll"
           data-testid="licenses-table-scroll-backend"
         >
-          <div class="licenses-table-scroll__track">
-            <el-table
-              :data="goLicenses"
-              class="licenses-table"
-              size="small"
-              stripe
-              :fit="false"
-              :aria-label="t('licenses.backend')"
-              :empty-text="t('licenses.tableEmptyBackend')"
-            >
-              <el-table-column
-                prop="path"
-                :label="t('licenses.colPackageGo')"
-                min-width="220"
-                :show-overflow-tooltip="false"
-                class-name="licenses-table__package-cell"
-              >
-                <template #default="{ row }">
+          <table
+            class="licenses-table licenses-data-table"
+            :aria-label="t('licenses.backend')"
+          >
+            <thead>
+              <tr>
+                <th scope="col" class="licenses-table__package-col">
+                  {{ t("licenses.colPackageGo") }}
+                </th>
+                <th scope="col" class="licenses-table__license-col">
+                  {{ t("licenses.colLicense") }}
+                </th>
+                <th scope="col" class="licenses-table__repo-col">
+                  {{ t("licenses.colRepo") }}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="goLicenses.length === 0">
+                <td colspan="3" class="licenses-table__empty">
+                  {{ t("licenses.tableEmptyBackend") }}
+                </td>
+              </tr>
+              <tr v-for="row in goLicenses" :key="row.path">
+                <td class="licenses-table__package-cell">
                   <span class="package-name">{{ row.path }}</span>
-                </template>
-              </el-table-column>
-              <el-table-column
-                :label="t('licenses.colLicense')"
-                width="120"
-                align="left"
-                class-name="licenses-table__license-cell"
-              >
-                <template #default="{ row }">
+                </td>
+                <td class="licenses-table__license-cell">
                   <VtTag size="small" variant="neutral">{{
                     row.license
                   }}</VtTag>
-                </template>
-              </el-table-column>
-              <el-table-column
-                :label="t('licenses.colRepo')"
-                min-width="200"
-                :show-overflow-tooltip="false"
-                class-name="licenses-table__repo-cell"
-              >
-                <template #default="{ row }">
+                </td>
+                <td class="licenses-table__repo-cell">
                   <a
                     v-if="row.repository"
                     :href="row.repository"
@@ -143,10 +131,10 @@
                   <span v-else class="text-caption repo-missing">{{
                     t("common.dash")
                   }}</span>
-                </template>
-              </el-table-column>
-            </el-table>
-          </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
     </div>
@@ -193,7 +181,6 @@ const npmLicensesArray = computed(() => {
   max-width: 900px;
 }
 
-/* Tighter than other views' intro: unofficial note + legal links follow immediately. */
 .intro-with-siblings {
   display: block;
   margin: 0 0 var(--space-block);
@@ -220,14 +207,73 @@ const npmLicensesArray = computed(() => {
   color: var(--color-text-primary);
 }
 
+.licenses-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.licenses-data-table {
+  width: 100%;
+  min-width: max-content;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: var(--font-size-14);
+  line-height: var(--line-height-normal);
+  color: var(--color-text-primary);
+}
+
+.licenses-data-table th,
+.licenses-data-table td {
+  padding: var(--space-8) var(--space-12);
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.licenses-data-table thead th {
+  background: var(--color-bg-elevated);
+  color: var(--color-text-secondary);
+  font-weight: var(--font-weight-600);
+  white-space: nowrap;
+}
+
+.licenses-data-table tbody tr:nth-child(odd) {
+  background: var(--color-bg-base);
+}
+
+.licenses-data-table tbody tr:nth-child(even) {
+  background: var(--color-bg-elevated);
+}
+
+.licenses-table__package-cell,
+.licenses-table__repo-cell,
+.licenses-table__version-cell {
+  white-space: nowrap;
+}
+
+.licenses-table__license-cell {
+  white-space: nowrap;
+}
+
+.licenses-table__license-cell :deep(.el-tag) {
+  --el-tag-bg-color: var(--color-bg-muted);
+  --el-tag-border-color: var(--color-border);
+  --el-tag-text-color: var(--color-text-secondary);
+  display: inline-flex;
+  vertical-align: middle;
+}
+
 .package-name {
   font-family: ui-monospace, monospace;
   font-size: var(--font-size-14);
+  white-space: nowrap;
 }
 
 .repo-link {
   color: var(--color-link);
   text-decoration: none;
+  white-space: nowrap;
 }
 
 .repo-link:hover {
@@ -239,73 +285,9 @@ const npmLicensesArray = computed(() => {
   color: var(--color-text-secondary);
 }
 
-.licenses-table {
-  width: 100%;
-}
-
-.licenses-table :deep(.licenses-table__license-cell .cell) {
-  text-align: left;
-}
-
-.licenses-table-scroll {
-  width: 100%;
-  max-width: 100%;
-}
-
-@media (max-width: 768px) {
-  .licenses-table-scroll {
-    overflow-x: auto;
-  }
-
-  .licenses-table-scroll__track {
-    width: max-content;
-    min-width: 100%;
-  }
-
-  .licenses-table-scroll .licenses-table {
-    width: auto;
-    min-width: 100%;
-  }
-
-  .licenses-table :deep(.el-table__inner-wrapper),
-  .licenses-table :deep(.el-table__header-wrapper),
-  .licenses-table :deep(.el-table__body-wrapper) {
-    overflow: visible;
-  }
-
-  .licenses-table :deep(.el-table__body),
-  .licenses-table :deep(.el-table__header),
-  .licenses-table :deep(table) {
-    width: max-content;
-    min-width: 100%;
-    table-layout: auto;
-  }
-
-  .licenses-table :deep(td.licenses-table__package-cell),
-  .licenses-table :deep(td.licenses-table__repo-cell) {
-    width: max-content;
-    max-width: none;
-    overflow: visible;
-  }
-
-  .licenses-table :deep(.licenses-table__package-cell .cell),
-  .licenses-table :deep(.licenses-table__repo-cell .cell),
-  .licenses-table :deep(.licenses-table__license-cell .cell) {
-    overflow: visible;
-    text-overflow: clip;
-    white-space: nowrap;
-    max-width: none;
-    width: max-content;
-    min-width: 100%;
-  }
-
-  .licenses-table-scroll .package-name,
-  .licenses-table-scroll .repo-link {
-    display: inline-block;
-    max-width: none;
-    overflow: visible;
-    text-overflow: clip;
-    white-space: nowrap;
-  }
+.licenses-table__empty {
+  text-align: center;
+  color: var(--color-text-secondary);
+  padding: var(--space-24);
 }
 </style>

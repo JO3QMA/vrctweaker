@@ -70,7 +70,7 @@ describe("LicensesView", () => {
     expect(rows.length).toBeGreaterThan(0);
   });
 
-  it("disables overflow tooltips on package and repository columns", async () => {
+  it("uses native tables for aligned header and body columns", async () => {
     await router.push("/licenses");
     await router.isReady();
     const wrapper = mount(LicensesView, {
@@ -78,19 +78,12 @@ describe("LicensesView", () => {
         plugins: [router],
       },
     });
-    const columns = wrapper.findAllComponents({ name: "ElTableColumn" });
-    const packageCol = columns.find((c) =>
-      (c.props("className" as never) as string | undefined)?.includes(
-        "licenses-table__package-cell",
-      ),
-    );
-    const repoCol = columns.find((c) =>
-      (c.props("className" as never) as string | undefined)?.includes(
-        "licenses-table__repo-cell",
-      ),
-    );
-    expect(packageCol?.props("showOverflowTooltip")).toBe(false);
-    expect(repoCol?.props("showOverflowTooltip")).toBe(false);
+    const tables = wrapper.findAll("table.licenses-table");
+    expect(tables.length).toBe(2);
+    expect(tables[0].find("thead th").exists()).toBe(true);
+    expect(
+      tables[0].find("tbody .licenses-table__license-cell .el-tag").exists(),
+    ).toBe(true);
   });
 
   it("wraps license tables for horizontal scroll on narrow viewports", async () => {

@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import { getMockWailsInitScript } from "./fixtures/mock-wails";
 import {
   E2E_TEST_USER_DISPLAY_NAME,
@@ -9,6 +9,97 @@ import {
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(getMockWailsInitScript());
 });
+
+async function measureLicensesTableGeometry(page: Page) {
+  return page.evaluate(() => {
+    const wrapper = document.querySelector(
+      '[data-testid="licenses-table-scroll-frontend"]',
+    ) as HTMLElement | null;
+    const table = wrapper?.querySelector(
+      "table.licenses-table",
+    ) as HTMLTableElement | null;
+    const pageOverflows =
+      document.documentElement.scrollWidth >
+      document.documentElement.clientWidth + 1;
+
+    if (!wrapper || !table) {
+      return { ok: false as const, reason: "missing-table" };
+    }
+
+    const headerRow = table.querySelector("thead tr");
+    const bodyRows = Array.from(table.querySelectorAll("tbody tr")).filter(
+      (row) => !row.querySelector(".licenses-table__empty"),
+    );
+    const headerCells = headerRow
+      ? Array.from(headerRow.querySelectorAll("th"))
+      : [];
+    const sampleRow =
+      bodyRows.find((row) =>
+        (row.querySelector(".package-name")?.textContent ?? "").includes(
+          "@eslint-community/eslint-utils",
+        ),
+      ) ?? bodyRows[0];
+
+    if (!sampleRow || headerCells.length === 0) {
+      return { ok: false as const, reason: "missing-rows" };
+    }
+
+    const bodyCells = Array.from(sampleRow.querySelectorAll("td"));
+    const headerWidths = headerCells.map(
+      (cell) => cell.getBoundingClientRect().width,
+    );
+    const bodyWidths = bodyCells.map(
+      (cell) => cell.getBoundingClientRect().width,
+    );
+
+    const columnWidthDelta = headerWidths.map((w, i) =>
+      Math.abs(w - (bodyWidths[i] ?? 0)),
+    );
+
+    const packageName = sampleRow.querySelector(
+      ".package-name",
+    ) as HTMLElement | null;
+    const versionCell = sampleRow.querySelector(
+      ".licenses-table__version-cell",
+    ) as HTMLElement | null;
+    const repoLink = sampleRow.querySelector(
+      ".repo-link",
+    ) as HTMLElement | null;
+    const licenseCell = sampleRow.querySelector(
+      ".licenses-table__license-cell",
+    ) as HTMLElement | null;
+    const licenseTag = licenseCell?.querySelector(
+      ".el-tag, .vt-tag--neutral",
+    ) as HTMLElement | null;
+    const licenseText = (licenseCell?.textContent ?? "").trim();
+
+    const packageRight = packageName?.getBoundingClientRect().right ?? 0;
+    const versionLeft = versionCell?.getBoundingClientRect().left ?? 0;
+
+    return {
+      ok: true as const,
+      pageOverflows,
+      wrappers: {
+        overflowX: getComputedStyle(wrapper).overflowX,
+        scrollable: wrapper.scrollWidth > wrapper.clientWidth,
+        tableWidth: table.getBoundingClientRect().width,
+        wrapperClientWidth: wrapper.clientWidth,
+      },
+      columnWidthDelta,
+      packageOverlap: packageRight > versionLeft + 0.5,
+      textChecks: {
+        packageText: packageName?.textContent ?? "",
+        packageWhiteSpace: packageName
+          ? getComputedStyle(packageName).whiteSpace
+          : "",
+        repoWhiteSpace: repoLink ? getComputedStyle(repoLink).whiteSpace : "",
+        licenseText,
+        licenseTagWidth: licenseTag?.getBoundingClientRect().width ?? 0,
+        licenseVisible: licenseText.length > 0,
+      },
+    };
+  });
+}
 
 test.describe("Detail views", () => {
   test("encounter-history shows warning for invalid query", async ({
@@ -73,99 +164,54 @@ test.describe("Detail views", () => {
     expect(rowCount).toBeGreaterThan(0);
   });
 
-  test("licenses table scrolls horizontally at 768px without clipping cells", async ({
-    page,
-  }) => {
+  test("licenses table geometry at 768px", async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 800 });
     await page.goto("/#/licenses");
     await expect(
       page.getByTestId("licenses-table-scroll-frontend"),
     ).toBeVisible();
 
-    const metrics = await page.evaluate(() => {
-      const wrapper = document.querySelector(
-        '[data-testid="licenses-table-scroll-frontend"]',
-      ) as HTMLElement | null;
-      const pageOverflows =
-        document.documentElement.scrollWidth >
-        document.documentElement.clientWidth + 1;
-
-      const inspectCell = (cell: HTMLElement | null) => {
-        if (!cell) {
-          return null;
-        }
-        const inner = cell.querySelector(".cell") as HTMLElement | null;
-        if (!inner) {
-          return null;
-        }
-        const content =
-          (inner.querySelector(".package-name, .repo-link") as
-            HTMLElement | undefined) ?? inner;
-        const style = getComputedStyle(inner);
-        const text = content.textContent ?? "";
-        return {
-          textOverflow: style.textOverflow,
-          overflow: style.overflow,
-          whiteSpace: style.whiteSpace,
-          scrollWidth: content.scrollWidth,
-          clientWidth: content.clientWidth,
-          text,
-          hasEllipsisChar: text.includes("…"),
-        };
-      };
-
-      const longPackageRow = Array.from(
-        document.querySelectorAll(".licenses-table tbody tr"),
-      ).find((row) =>
-        (row.querySelector(".package-name")?.textContent ?? "").includes(
-          "@element-plus/icons",
-        ),
-      ) as HTMLElement | undefined;
-
-      const repoRow = Array.from(
-        document.querySelectorAll(".licenses-table tbody tr"),
-      ).find((row) => row.querySelector(".repo-link")) as
-        HTMLElement | undefined;
-
-      return {
-        pageOverflows,
-        wrapperOverflowX: wrapper ? getComputedStyle(wrapper).overflowX : "",
-        wrapperScrollable: wrapper
-          ? wrapper.scrollWidth > wrapper.clientWidth
-          : false,
-        packageCell: inspectCell(
-          longPackageRow?.querySelector(
-            "td.licenses-table__package-cell",
-          ) as HTMLElement | null,
-        ),
-        repoCell: inspectCell(
-          repoRow?.querySelector(
-            "td.licenses-table__repo-cell",
-          ) as HTMLElement | null,
-        ),
-      };
-    });
+    const metrics = await measureLicensesTableGeometry(page);
+    expect(metrics.ok, metrics.ok ? "" : metrics.reason).toBe(true);
+    if (!metrics.ok) {
+      return;
+    }
 
     expect(metrics.pageOverflows).toBe(false);
-    expect(metrics.wrapperOverflowX).toBe("auto");
-    expect(metrics.wrapperScrollable).toBe(true);
-
-    expect(metrics.packageCell).not.toBeNull();
-    expect(metrics.packageCell!.textOverflow).not.toBe("ellipsis");
-    expect(metrics.packageCell!.overflow).toBe("visible");
-    expect(metrics.packageCell!.hasEllipsisChar).toBe(false);
-    expect(metrics.packageCell!.scrollWidth).toBeLessThanOrEqual(
-      metrics.packageCell!.clientWidth + 1,
+    expect(metrics.wrappers.overflowX).toBe("auto");
+    expect(metrics.wrappers.scrollable).toBe(true);
+    expect(Math.max(...metrics.columnWidthDelta)).toBeLessThan(2);
+    expect(metrics.packageOverlap).toBe(false);
+    expect(metrics.textChecks.packageText).toContain(
+      "@eslint-community/eslint-utils",
     );
-    expect(metrics.packageCell!.text).toContain("@element-plus/icons-vue");
+    expect(metrics.textChecks.packageWhiteSpace).toBe("nowrap");
+    expect(metrics.textChecks.repoWhiteSpace).toBe("nowrap");
+    expect(metrics.textChecks.licenseVisible).toBe(true);
+    expect(metrics.textChecks.licenseText).toContain("MIT");
+  });
 
-    expect(metrics.repoCell).not.toBeNull();
-    expect(metrics.repoCell!.textOverflow).not.toBe("ellipsis");
-    expect(metrics.repoCell!.overflow).toBe("visible");
-    expect(metrics.repoCell!.hasEllipsisChar).toBe(false);
-    expect(metrics.repoCell!.scrollWidth).toBeLessThanOrEqual(
-      metrics.repoCell!.clientWidth + 1,
+  test("licenses table geometry at 1280px", async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto("/#/licenses");
+    await expect(
+      page.getByTestId("licenses-table-scroll-frontend"),
+    ).toBeVisible();
+
+    const metrics = await measureLicensesTableGeometry(page);
+    expect(metrics.ok, metrics.ok ? "" : metrics.reason).toBe(true);
+    if (!metrics.ok) {
+      return;
+    }
+
+    expect(metrics.pageOverflows).toBe(false);
+    expect(Math.max(...metrics.columnWidthDelta)).toBeLessThan(2);
+    expect(metrics.packageOverlap).toBe(false);
+    expect(metrics.textChecks.packageWhiteSpace).toBe("nowrap");
+    expect(metrics.textChecks.repoWhiteSpace).toBe("nowrap");
+    expect(metrics.textChecks.licenseVisible).toBe(true);
+    expect(metrics.wrappers.tableWidth).toBeGreaterThanOrEqual(
+      metrics.wrappers.wrapperClientWidth - 1,
     );
-    expect(metrics.repoCell!.text).toMatch(/^https?:\/\//);
   });
 });
