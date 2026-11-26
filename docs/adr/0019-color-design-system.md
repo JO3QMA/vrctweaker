@@ -30,8 +30,19 @@ Accepted（grill-with-docs で合意。2026-10-20 改訂: トークンの正本�
 
 | 役割 | CSS 変数 | 備考 |
 |------|----------|------|
-| 本体 | `--color-brand` | リンク、フォーカス、**Primary button** 塗り等 |
+| 本体 | `--color-brand` | フォーカス、**Primary button** 塗り、枠・Active ナビ等（**文字色のリンクには使わない**） |
 | hover | `--color-brand-hover` | |
+
+#### Link color（文字専用）
+
+| 役割 | CSS 変数 | 備考 |
+|------|----------|------|
+| 本体 | `--color-link` | `<a>`、外部 URL リンク、`SafeExternalUrlLink`、メンテ見出しラベル等の**前景色** |
+| hover | `--color-link-hover` | |
+
+ダークでは `:root` に `#6eaaee`（`--color-bg-elevated` 上 WCAG AA）。ライト用の値は将来用に `html.light` にのみ定義（アプリはダーク固定）。
+
+**Brand color** は白文字ボタン上のコントラストのため明るさを上げない。**Link color** は表面とのコントラストを満たす別トークンとする。
 
 「Primary color」は使わない（**Primary button** と混同するため）。
 

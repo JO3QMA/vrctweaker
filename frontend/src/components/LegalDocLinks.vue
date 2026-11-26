@@ -146,7 +146,7 @@ function onTermsClick(event: MouseEvent): void {
 }
 
 .legal-link {
-  color: var(--color-brand);
+  color: var(--color-link);
   text-decoration: none;
   background: none;
   border: none;
@@ -157,7 +157,7 @@ function onTermsClick(event: MouseEvent): void {
 }
 
 .legal-link:hover {
-  color: var(--color-brand-hover);
+  color: var(--color-link-hover);
   text-decoration: underline;
 }
 

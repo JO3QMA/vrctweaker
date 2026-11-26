@@ -283,7 +283,7 @@ onUnmounted(() => {
 }
 
 .server-status-maintenance--scheduled .server-status-maintenance-label {
-  color: var(--color-brand);
+  color: var(--color-link);
 }
 
 .server-status-maintenance--active {
@@ -314,7 +314,7 @@ onUnmounted(() => {
 }
 
 .server-status-link {
-  color: var(--color-brand);
+  color: var(--color-link);
 }
 
 .server-status--operational {

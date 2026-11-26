@@ -77,7 +77,7 @@ async function onOpen() {
 
 <style scoped>
 .safe-external-url-link {
-  color: var(--color-brand);
+  color: var(--color-link);
   text-decoration: underline;
   cursor: pointer;
 }

@@ -2,9 +2,13 @@
 
 /* ─── App color tokens (ADR 0019) ──────────────────────────────── */
 :root {
-  /* Brand: Main accent. Primary button fill and links use --color-brand. */
-  --color-brand: #5c9ce6; /* リンク・フォーカス・Primary button 塗り */
+  /* Brand: Main accent. Primary button fill, focus rings, borders — not link text. */
+  --color-brand: #5c9ce6; /* フォーカス・Primary button 塗り */
   --color-brand-hover: #7ab3f0; /* brand の hover */
+
+  /* Link: Text-only accent for anchors and link-like labels (WCAG AA on elevated). */
+  --color-link: #6eaaee; /* elevated #243447 5.22:1 */
+  --color-link-hover: #8bbef0; /* link hover on elevated */
 
   /* Neutral: Surfaces, text, and border. Prefer these over legacy --bg-* / --text-* aliases. */
   --color-bg-base: #1b2636; /* 表面 base */
@@ -139,6 +143,12 @@
   --focus-ring-width: 2px;
   --focus-ring-offset: 2px;
   --focus-ring-color: var(--color-brand);
+}
+
+/* Light theme (reserved; app is dark-only per ADR 0019). Link tokens only. */
+html.light {
+  --color-link: #2563eb; /* base #ffffff 5.17:1; elevated #f5f7fa 4.82:1 */
+  --color-link-hover: #1d4ed8;
 }
 
 /* ─── Element Plus dark theme CSS variable overrides ───────────── */
@@ -287,12 +297,12 @@ textarea {
 }
 
 a {
-  color: var(--color-brand);
+  color: var(--color-link);
   text-decoration: none;
 }
 
 a:hover {
-  color: var(--color-brand-hover);
+  color: var(--color-link-hover);
 }
 
 /* ─── Element Plus component tweaks ───────────────────────────── */
@@ -890,7 +900,7 @@ a:hover {
 }
 
 .settings-view .path-open-log-link {
-  color: var(--color-brand);
+  color: var(--color-link);
   font-size: var(--font-size-12);
   line-height: var(--line-height-normal);
   text-decoration: none;
@@ -1070,7 +1080,7 @@ a:hover {
 .settings-view .self-profile-link {
   display: inline-block;
   margin-top: var(--space-action-group);
-  color: var(--color-brand);
+  color: var(--color-link);
   text-decoration: none;
   font-size: var(--font-size-12);
 }

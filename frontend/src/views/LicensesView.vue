@@ -189,12 +189,12 @@ function truncateUrl(url: string): string {
 }
 
 .repo-link {
-  color: var(--color-brand);
+  color: var(--color-link);
   text-decoration: none;
 }
 
 .repo-link:hover {
-  color: var(--color-brand-hover);
+  color: var(--color-link-hover);
   text-decoration: underline;
 }
 

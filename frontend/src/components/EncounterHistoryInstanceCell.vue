@@ -36,14 +36,14 @@ const cell = computed(() => {
 
 <style scoped>
 :deep(.encounter-instance-link) {
-  color: var(--color-brand);
+  color: var(--color-link);
   text-decoration: none;
   font-size: var(--font-size-12);
 }
 
 :deep(.encounter-instance-link:hover) {
   text-decoration: underline;
-  color: var(--color-brand-hover);
+  color: var(--color-link-hover);
 }
 
 .mono {

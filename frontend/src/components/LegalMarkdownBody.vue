@@ -138,12 +138,12 @@ watch(
 }
 
 .legal-markdown-body :deep(.legal-md-external-link) {
-  color: var(--color-brand);
+  color: var(--color-link);
   cursor: pointer;
   text-decoration: underline;
 }
 
 .legal-markdown-body :deep(.legal-md-external-link:hover) {
-  color: var(--color-brand-hover);
+  color: var(--color-link-hover);
 }
 </style>

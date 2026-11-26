@@ -226,7 +226,8 @@ describe("style.css catalog", () => {
 
   it("keeps color groups, usage notes, and var() aliases in source order", () => {
     expect(groupsFor(root, "--color-")).toEqual([
-      "Brand: Main accent. Primary button fill and links use --color-brand.",
+      "Brand: Main accent. Primary button fill, focus rings, borders — not link text.",
+      "Link: Text-only accent for anchors and link-like labels (WCAG AA on elevated).",
       "Neutral: Surfaces, text, and border. Prefer these over legacy --bg-* / --text-* aliases.",
       "Semantic: タグ・メッセージ・検証のフィードバック。サーバー状態とプレゼンスには使わない",
       "Server status (domain): ダッシュボードのサーバー状態。セマンティックには流用しない",

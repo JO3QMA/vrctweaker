@@ -101,7 +101,7 @@ onMounted(async () => {
 }
 
 .settings-link {
-  color: var(--color-brand);
+  color: var(--color-link);
   text-decoration: none;
 }
 

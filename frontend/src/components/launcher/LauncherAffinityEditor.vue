@@ -299,7 +299,7 @@ onMounted(async () => {
   padding: 0;
   border: none;
   background: none;
-  color: var(--color-brand);
+  color: var(--color-link);
   cursor: pointer;
   text-decoration: underline;
 }
